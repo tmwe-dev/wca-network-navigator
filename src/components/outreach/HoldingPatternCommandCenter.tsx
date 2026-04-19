@@ -8,8 +8,6 @@ import { useHoldingMessages, useHoldingUnreadCounts, type HoldingChannel, type H
 import { useHoldingStrategy } from "@/hooks/useHoldingStrategy";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
-import { useOutreachMock } from "@/hooks/useOutreachMock";
-import { MOCK_HOLDING_GROUPS } from "@/lib/outreachMockData";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { HoldingContactList } from "./HoldingContactList";
@@ -25,7 +23,6 @@ export function HoldingPatternCommandCenter() {
   const { data: unreadCounts } = useHoldingUnreadCounts();
   const { analyze, isAnalyzing, strategy, setStrategy, error: strategyError, reset: resetStrategy } = useHoldingStrategy();
   const markAsRead = useMarkAsRead();
-  const { mockEnabled } = useOutreachMock();
 
   const handleApproveResponse = useCallback(async () => {
     if (!selectedMessage || !selectedGroup) return;
@@ -78,21 +75,17 @@ export function HoldingPatternCommandCenter() {
     } catch { toast.error("Errore nella creazione dell'escalation"); }
   }, [selectedMessage, selectedGroup]);
 
-  const displayGroups = mockEnabled ? MOCK_HOLDING_GROUPS as unknown as HoldingMessageGroup[] : groups;
-
   const handleSelectMessage = async (msg: ChannelMessage, group: HoldingMessageGroup) => {
     setSelectedGroup(group);
     setSelectedMessage(msg);
     resetStrategy();
-    if (!msg.read_at && !mockEnabled) markAsRead.mutate(msg.id);
-    if (!mockEnabled) analyze(msg, group.companyName);
+    if (!msg.read_at) markAsRead.mutate(msg.id);
+    analyze(msg, group.companyName);
   };
 
-  const totalUnread = mockEnabled
-    ? MOCK_HOLDING_GROUPS.reduce((s, g) => s + g.unreadCount, 0)
-    : unreadCounts ? unreadCounts.email + unreadCounts.whatsapp + unreadCounts.linkedin : 0;
+  const totalUnread = unreadCounts ? unreadCounts.email + unreadCounts.whatsapp + unreadCounts.linkedin : 0;
 
-  if (isLoading && !groups.length && !mockEnabled) {
+  if (isLoading && !groups.length) {
     return (
       <div className="flex items-center justify-center h-full gap-2 text-muted-foreground">
         <Loader2 className="w-4 h-4 animate-spin" /> Caricamento…
@@ -105,7 +98,7 @@ export function HoldingPatternCommandCenter() {
       <HoldingContactList
         channel={channel}
         onChannelChange={(ch) => { setChannel(ch); setSelectedMessage(null); setSelectedGroup(null); resetStrategy(); }}
-        displayGroups={displayGroups}
+        displayGroups={groups}
         selectedMessageId={selectedMessage?.id || null}
         totalUnread={totalUnread}
         unreadCounts={unreadCounts as Record<string, number> | null}
@@ -119,8 +112,7 @@ export function HoldingPatternCommandCenter() {
           onIgnore={handleIgnore}
           onEscalate={handlePhoneEscalation}
           onRegenerate={() => {
-            if (!mockEnabled && selectedMessage) analyze(selectedMessage, selectedGroup?.companyName || "");
-            else toast.info("Analisi AI rigenerata (mock)");
+            if (selectedMessage) analyze(selectedMessage, selectedGroup?.companyName || "");
           }}
         />
         {selectedMessage && (
@@ -129,7 +121,6 @@ export function HoldingPatternCommandCenter() {
             strategy={strategy}
             isAnalyzing={isAnalyzing}
             strategyError={strategyError}
-            mockEnabled={mockEnabled}
             onStrategyChange={setStrategy}
           />
         )}

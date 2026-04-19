@@ -15,8 +15,6 @@ import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, Mail, Phone, Use
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useOutreachMock } from "@/hooks/useOutreachMock";
-import { MOCK_ACTIVITIES } from "@/lib/outreachMockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
@@ -33,7 +31,6 @@ const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 export function AttivitaTab() {
   const qc = useQueryClient();
   const { filters: gf } = useGlobalFilters();
-  const { mockEnabled } = useOutreachMock();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
@@ -55,10 +52,9 @@ export function AttivitaTab() {
         .limit(200);
       return data || [];
     },
-    enabled: !mockEnabled,
   });
 
-  const all: any[] = mockEnabled ? MOCK_ACTIVITIES : (activities || []); // eslint-disable-line @typescript-eslint/no-explicit-any -- mixed mock/real activity types
+  const all: any[] = activities || []; // eslint-disable-line @typescript-eslint/no-explicit-any -- generic activity row from supabase
 
   const filtered = useMemo(() => {
     let result = all;
@@ -178,7 +174,7 @@ export function AttivitaTab() {
 
       {/* List */}
       <ScrollArea className="flex-1 min-h-0">
-        {isLoading && !mockEnabled ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>

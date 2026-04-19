@@ -9,8 +9,6 @@ import { Check, X, Eye, Bot, Loader2, RefreshCw, Clock, Mail, MessageCircle, Lin
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { useOutreachMock } from "@/hooks/useOutreachMock";
-import { MOCK_AGENT_ACTIONS } from "@/lib/outreachMockData";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +43,6 @@ const CHANNEL_ICONS: Record<string, typeof Mail> = {
 export function CodaAITab() {
   const queryClient = useQueryClient();
   const [previewAction, setPreviewAction] = useState<AgentAction | null>(null);
-  const { mockEnabled } = useOutreachMock();
 
   const { data: pendingActions = [], isLoading } = useQuery({
     queryKey: queryKeys.ai.agentPendingActions,
@@ -63,14 +60,12 @@ export function CodaAITab() {
       return (data || []) as AgentAction[];
     },
     refetchInterval: 30000,
-    enabled: !mockEnabled,
   });
 
-  const displayActions = mockEnabled ? (MOCK_AGENT_ACTIONS as unknown as AgentAction[]) : pendingActions;
+  const displayActions = pendingActions;
 
   const approveAction = useMutation({
     mutationFn: async (actionId: string) => {
-      if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
         .update({ status: "approved" as never, reviewed: true })
@@ -85,7 +80,6 @@ export function CodaAITab() {
 
   const rejectAction = useMutation({
     mutationFn: async (actionId: string) => {
-      if (mockEnabled) return;
       const { error } = await supabase
         .from("activities")
         .update({ status: "cancelled", reviewed: true })
@@ -100,7 +94,6 @@ export function CodaAITab() {
 
   const approveAll = useMutation({
     mutationFn: async () => {
-      if (mockEnabled) return;
       const ids = pendingActions.map(a => a.id);
       for (const id of ids) {
         await approveActivity(id);
@@ -117,7 +110,7 @@ export function CodaAITab() {
     return <Icon className="w-3.5 h-3.5" />;
   };
 
-  if (isLoading && !mockEnabled) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
