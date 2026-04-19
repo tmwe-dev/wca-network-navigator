@@ -1,14 +1,39 @@
 import type { Tool, ToolResult } from "./types";
-import { scanDirectory } from "@/lib/acquisition/scanDirectory";
+import { fetchPartnersPaginated } from "@/v2/io/supabase/queries/partners";
 
-const COUNTRY_MAP: Record<string, string> = {
-  "stati uniti": "US",
-  "stati uniti damerica": "US",
-  "stati uniti d'america": "US",
-  usa: "US",
-  us: "US",
-  "united states": "US",
-  america: "US",
+/**
+ * Scan partner database by country.
+ *
+ * NB: Il sistema NON effettua più scansioni live verso directory WCA esterne.
+ * Tutta la conoscenza partner risiede nelle tabelle Supabase (sincronizzate
+ * dall'estensione Partner Connect). Questo tool interroga direttamente il DB.
+ */
+
+const COUNTRY_MAP: Record<string, { code: string; label: string }> = {
+  "stati uniti": { code: "US", label: "Stati Uniti" },
+  "stati uniti damerica": { code: "US", label: "Stati Uniti" },
+  "stati uniti d'america": { code: "US", label: "Stati Uniti" },
+  usa: { code: "US", label: "Stati Uniti" },
+  us: { code: "US", label: "Stati Uniti" },
+  "united states": { code: "US", label: "Stati Uniti" },
+  america: { code: "US", label: "Stati Uniti" },
+  cina: { code: "CN", label: "Cina" },
+  china: { code: "CN", label: "Cina" },
+  india: { code: "IN", label: "India" },
+  germania: { code: "DE", label: "Germania" },
+  germany: { code: "DE", label: "Germania" },
+  italia: { code: "IT", label: "Italia" },
+  italy: { code: "IT", label: "Italia" },
+  spagna: { code: "ES", label: "Spagna" },
+  francia: { code: "FR", label: "Francia" },
+  france: { code: "FR", label: "Francia" },
+  brasile: { code: "BR", label: "Brasile" },
+  messico: { code: "MX", label: "Messico" },
+  turchia: { code: "TR", label: "Turchia" },
+  vietnam: { code: "VN", label: "Vietnam" },
+  emirati: { code: "AE", label: "Emirati Arabi" },
+  uk: { code: "GB", label: "Regno Unito" },
+  "regno unito": { code: "GB", label: "Regno Unito" },
 };
 
 function normalizePrompt(prompt: string): string {
@@ -21,72 +46,98 @@ function normalizePrompt(prompt: string): string {
     .trim();
 }
 
-function extractCountryCode(prompt: string): string | null {
+function extractCountry(prompt: string): { code: string; label: string } | null {
   const normalized = normalizePrompt(prompt);
 
-  for (const [label, code] of Object.entries(COUNTRY_MAP)) {
-    if (normalized.includes(label)) return code;
+  for (const [key, value] of Object.entries(COUNTRY_MAP)) {
+    if (normalized.includes(key)) return value;
   }
 
-  const explicitCode = normalized.match(/\b([A-Z]{2}|[a-z]{2})\b/);
-  if (explicitCode) return explicitCode[1].toUpperCase();
+  // Fallback: 2-letter ISO code as standalone word
+  const explicitCode = normalized.match(/\b([a-z]{2})\b/);
+  if (explicitCode) {
+    const code = explicitCode[1].toUpperCase();
+    return { code, label: code };
+  }
 
   return null;
 }
 
 export const scanWcaDirectoryTool: Tool = {
   id: "scan-wca-directory",
-  label: "Scan directory WCA",
-  description: "Scansiona la directory WCA per un paese e mostra i membri trovati, anche se il DB locale è vuoto",
+  label: "Scansione partner per paese",
+  description: "Mostra tutti i partner registrati nel database per un paese specifico",
   match: (prompt) => {
     const p = normalizePrompt(prompt);
-    return /(scan|scansiona|cerca|mappa|recupera).*(directory|wca)/i.test(p) || /directory.*(usa|us|stati uniti|united states)/i.test(p);
+    return /(scan|scansiona|cerca|mappa|recupera|mostra|elenco|elenca|lista).*(directory|partner|paese|stati uniti|usa|us\b|cina|india)/i.test(
+      p,
+    ) || /\b(directory|partner)\b.*(usa|us|stati uniti|cina|india|germania)/i.test(p);
   },
 
   execute: async (prompt): Promise<ToolResult> => {
-    const countryCode = extractCountryCode(prompt);
+    const country = extractCountry(prompt);
 
-    if (!countryCode) {
+    if (!country) {
       return {
         kind: "result",
         title: "Paese mancante",
-        message: "Specifica il paese da scansionare nella directory WCA, ad esempio: Scan Directory US.",
+        message:
+          "Specifica il paese da scansionare nel database, ad esempio: 'Mostra partner US' o 'Scansiona partner Cina'.",
         meta: { count: 0, sourceLabel: "Command · parser" },
       };
     }
 
-    const { queue, scanStats } = await scanDirectory([countryCode], []);
+    const result = await fetchPartnersPaginated({
+      countryCode: country.code,
+      sort: "rating",
+      limit: 100,
+    });
+
+    if (result._tag === "Err") {
+      throw new Error(result.error.message);
+    }
+
+    const { partners, total } = result.value;
+
+    if (total === 0) {
+      return {
+        kind: "result",
+        title: `Nessun partner per ${country.label}`,
+        message: `Il database non contiene partner attivi con country_code "${country.code}". Verifica che la sincronizzazione Partner Connect sia stata eseguita.`,
+        meta: { count: 0, sourceLabel: "Supabase · partners" },
+      };
+    }
 
     return {
       kind: "table",
-      title: `WCA DIRECTORY · SCAN ${countryCode}`,
+      title: `PARTNER · ${country.label.toUpperCase()} (${total} totali)`,
       columns: [
-        { key: "wca_id", label: "WCA ID" },
-        { key: "company_name", label: "Azienda" },
+        { key: "companyName", label: "Partner" },
         { key: "city", label: "Città" },
-        { key: "country_code", label: "Paese" },
-        { key: "status", label: "Stato" },
-        { key: "alreadyDownloaded", label: "Nel DB" },
+        { key: "leadStatus", label: "Stato" },
+        { key: "email", label: "Email" },
+        { key: "rating", label: "Rating" },
       ],
-      rows: queue.map((item) => ({
-        id: String(item.wca_id),
-        wca_id: item.wca_id,
-        company_name: item.company_name ?? "—",
-        city: item.city ?? "—",
-        country_code: item.country_code ?? countryCode,
-        status: item.status ?? "pending",
-        alreadyDownloaded: item.alreadyDownloaded ? "Sì" : "No",
+      rows: partners.map((p) => ({
+        id: p.id,
+        companyName: p.companyName,
+        city: p.city ?? "—",
+        leadStatus: p.leadStatus ?? "new",
+        email: p.email ?? "—",
+        rating: p.rating ?? "—",
       })),
       meta: {
-        count: scanStats.total,
-        sourceLabel: "WCA Directory · live scan",
+        count: total,
+        sourceLabel: `Supabase · partners (${country.code})`,
       },
       selectable: true,
       idField: "id",
-      liveSource: "download_jobs",
+      liveSource: "partners",
       bulkActions: [
-        { id: "import-selected", label: "Importa selezionati", promptTemplate: "Importa dalla directory WCA i membri con wca_id: {ids}" },
-        { id: "qualify-selected", label: "Qualifica selezionati", promptTemplate: "Qualifica i partner WCA con wca_id: {ids}" },
+        { id: "outreach", label: "Programma outreach", promptTemplate: "Programma outreach per i partner con id: {ids}" },
+        { id: "campaign", label: "Aggiungi a campagna", promptTemplate: "Crea campagna per i partner con id: {ids}" },
+        { id: "enrich", label: "Arricchisci dati", promptTemplate: "Arricchisci i dati dei partner con id: {ids}" },
+        { id: "score", label: "Calcola lead-score", promptTemplate: "Calcola lead-score per i partner con id: {ids}" },
       ],
     };
   },
