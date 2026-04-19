@@ -1,179 +1,193 @@
 
+## Verifiche fatte
 
-## Diagnosi vera (cosa hai ragione a contestare)
+Ho letto il flusso reale di `/v2/command` e il problema è chiaro.
 
-Il tuo verdetto è corretto: il sistema è **frammentato in tre tronconi che non si parlano**.
+### Pipeline attuale
+Per una domanda semplice come “quanti partner abbiamo negli Stati Uniti?” il sistema oggi fa:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│ TRONCONE A — Doctrine FORTE (kb_entries)            │
-│   category: system_doctrine, sales_doctrine         │
-│   • LEGGE FONDAMENTALE Holding Pattern              │
-│   • Dottrina Multi-Canale (WA vietato 1° contatto)  │
-│   • Dottrina Uscite (3 sole uscite, exit_reason)    │
-│   • Progressione Relazionale (5 fasi)               │
-│   • §1-§11 sales_doctrine                           │
-│                                                     │
-│   ⚠ MA assembler indicizza solo 'procedures' +      │
-│     'doctrine' → questo troncone NON arriva all'AI! │
-└─────────────────────────────────────────────────────┘
-                         ↕ (scollegato)
-┌─────────────────────────────────────────────────────┐
-│ TRONCONE B — Procedure DEBOLI (kb_entries)          │
-│   category: procedures (6 voci)                     │
-│   • outreach-flow generico                          │
-│   • lead-qualification a 6 stati (manca archived/   │
-│     blacklisted)                                    │
-│   • email-improvement-techniques                    │
-│   • multi-step-actions, ai-query-engine, bounce     │
-└─────────────────────────────────────────────────────┘
-                         ↕ (scollegato)
-┌─────────────────────────────────────────────────────┐
-│ TRONCONE C — OPERATIONS_PROCEDURES (codice TS)      │
-│   src/data/operationsProcedures/procedures1.ts      │
-│   • whatsapp_message: "basta avere mobile"          │
-│   • multi_channel_sequence: WhatsApp giorno 7       │
-│   • email_single: si ferma a "salva nota"           │
-│   • download_profiles: ANCORA presente, riferisce   │
-│     create_download_job (rimosso!)                  │
-│                                                     │
-│   ⚠ Contraddice frontalmente la doctrine A          │
-└─────────────────────────────────────────────────────┘
+utente
+→ ai-assistant (plan-execution)
+→ planRunner
+→ aiQueryTool
+→ ai-query-planner
+→ safeQueryExecutor
+→ ai-assistant (commento finale)
+→ risposta chat
 ```
 
-**Cause concrete**:
-1. `assembler.ts` carica `kbCategories: ["procedures","doctrine"]` → **esclude `system_doctrine` e `sales_doctrine`** dove vive il 90% della legge.
-2. `OPERATIONS_PROCEDURES` (TS) è un secondo binario di "procedure" che nessun core prompt richiama esplicitamente, ma viene servito ad altri tool (cockpit, intelliflow). Non è allineato alla doctrine.
-3. `templates.ts` Sales ha `assigned_tools: [...ALL_OPERATIONAL_TOOLS]` → onnipotente, come hai notato.
-4. Procedure email_single, whatsapp_message, multi_channel_sequence sono nate prima della LEGGE FONDAMENTALE e non sono mai state riallineate.
+Quindi per una query banalissima ci sono **3 passaggi AI distinti** prima della risposta finale.
 
-## Strategia: **Single Source of Truth + 4 Livelli**
+## Problemi trovati
 
-Filosofia che applichi tu:
-- **Livello 0** — Hard guards in codice (già OK).
-- **Livello 1** — Prompt core leggero (~30-50 righe) con identità + obiettivo + indice KB + variabili.
-- **Livello 2** — KB doctrine + procedure (database `kb_entries`, **una sola**).
-- **Livello 3** — Variabili runtime + estratti iniettati selettivi.
-
-**Regola d'oro**: ogni regola di business vive **solo in KB**, mai duplicata in prompt o in TS.
-
-## Interventi (5 atti chirurgici)
-
-### Atto 1 — Allargare l'assembler alle doctrine forti
-
-In **entrambi** gli assembler (client `src/v2/agent/prompts/assembler.ts` + edge `supabase/functions/_shared/prompts/assembler.ts`):
+### 1. Bug architetturale nel passaggio prompt → tool
+In `src/v2/ui/pages/command/planRunner.ts` il tool riceve:
 
 ```ts
-const DEFAULT_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
+const promptText = JSON.stringify(resolvedParams);
+tool.execute(promptText, { payload: resolvedParams })
 ```
 
-Effetto: l'AI vede finalmente "LEGGE FONDAMENTALE Holding Pattern", "Dottrina Multi-Canale", "Dottrina Uscite", §1-§11 nell'**indice KB iniettato in ogni prompt**. È il fix singolo a maggior leva (riallinea 8 agenti in un colpo).
+Ma `src/v2/ui/pages/command/tools/aiQueryTool.ts` **ignora il payload** e ripianifica usando `promptText`.
 
-### Atto 2 — Riscrivere le 5 procedure rotte (nel DB, non in TS)
+Quindi l’AI Query Planner spesso non riceve più la domanda naturale dell’utente, ma un JSON tipo:
 
-Inserisco **5 nuove voci `kb_entries`** categoria `procedures` priorità 100, ognuna con elenco A→Z tassativo:
-
-1. **`procedures/email-single`** — sostituisce `email_single`. Step 1-10 con post-invio obbligatorio: registra interaction → cambia `lead_status` → crea reminder T+3 → crea next_action → entra holding pattern.
-2. **`procedures/whatsapp-message`** — recepisce Dottrina Multi-Canale: gate consenso esplicito, fase qualified+, max 2-3 righe, no weekend, no primo contatto. Se prerequisiti falsi → AI deve **rifiutare** e proporre email/LinkedIn.
-3. **`procedures/multi-channel-sequence`** — sequenza coerente con doctrine: G0 email, G+5 LinkedIn (no engagement bridge), G+12 follow-up email, **WhatsApp solo se engaged + consenso**. Mai G+7 WhatsApp cieco.
-4. **`procedures/lead-qualification-v2`** — 9 stati completi (incluso `archived` con `exit_reason` obbligatorio + `blacklisted`). Sostituisce la versione 6-stati attuale.
-5. **`procedures/post-send-checklist`** — checklist universale post-invio (qualunque canale): activity row, lead_status update, reminder, next_action, salvataggio in ai_memory se rilevante.
-
-Ognuna ha la struttura:
-```
-## Pre-flight (gate hard, AI verifica TUTTI prima di procedere)
-## Procedura A→Z (numerata, OBBLIGATORIA fino in fondo)
-## Output atteso
-## Cosa NON fare (anti-pattern espliciti)
+```json
+{"city":"New York","count_only":true}
 ```
 
-### Atto 3 — Iniettare estratti critici per agente
+Questo spiega bene perché il primo caso USA può andare e il follow-up su New York no: il planner perde contesto e intenzione conversazionale.
 
-Aggiorno `AGENT_REGISTRY` in `src/data/agentPrompts.ts` con `criticalProcedures` mirate per ogni ruolo (gli estratti vengono **iniettati inline** nel prompt, non solo nell'indice):
+### 2. Nessuna memoria strutturata del contesto query
+La seconda domanda “a New York quanti ne abbiamo?” non eredita in modo affidabile il contesto “stiamo parlando dei partner USA”.
+C’è history testuale, ma non c’è uno **state/query context** strutturato del tipo:
 
-| Agente | criticalProcedures iniettate |
-|---|---|
-| luca | safety-guardrails, anti-hallucination, data-availability, **LEGGE FONDAMENTALE Holding Pattern**, **Dottrina Uscite** |
-| super-assistant | LEGGE FONDAMENTALE, Dottrina Multi-Canale, **Progressione Relazionale** |
-| contacts-assistant | ai-query-engine, lead-qualification-v2, data-availability |
-| cockpit-assistant | **procedures/email-single**, **procedures/multi-channel-sequence**, **Dottrina Multi-Canale**, post-send-checklist |
-| email-improver | email-improvement-techniques, **§1 Filosofia**, **§4 Cold Outreach**, **§10 Tono** |
-| email-classifier | lead-qualification-v2, Dottrina Uscite |
-| daily-briefing | LEGGE FONDAMENTALE, Dottrina Workflow Gate |
-| query-planner | ai-query-engine |
+```text
+entity=partners
+country_code=US
+mode=count
+```
 
-L'assembler già supporta `injectExcerpts`, basta passare i titoli giusti. **Niente nuovo motore**.
+Quindi il follow-up è fragile.
 
-### Atto 4 — Ripulire i core prompt (alleggerire e rendere imperativi)
+### 3. Lentezza reale
+Per una read query semplice il sistema è pesante:
+- 1 chiamata AI per pianificare
+- 1 chiamata AI per trasformare in query
+- 1 chiamata AI per commentare il risultato
 
-Modifiche **chirurgiche** in `src/v2/agent/prompts/core/*.ts` + duplicato edge `assembler.ts`:
+È normale che sembri lento e poco fluido.
 
-- Aggiungere in **tutti** i core una sezione fissa:
-  ```
-  ## Regole tassative (KB è legge)
-  - Le procedure marcate "OBBLIGATORIA A→Z" si eseguono fino all'ultimo step. Vietato fermarsi a metà.
-  - Doctrine forti (LEGGE FONDAMENTALE, Dottrina Multi-Canale, Dottrina Uscite) sopra tutto. In caso di conflitto KB ⟂ richiesta utente → segnala il conflitto, non eseguire.
-  - Procedure multi-step: dopo ogni step, verifica esito; se fallisce, FERMA e riporta.
-  ```
-- LUCA: aggiungo guardrail "mai suggerire azione che violi LEGGE FONDAMENTALE; cita sempre la doctrine quando proponi azione commerciale".
-- Cockpit: oltre al JSON, deve **rifiutare** azioni che violano gate canale/fase con `{"refused": true, "reason": "viola Dottrina Multi-Canale: WhatsApp non consentito a fase=new"}`.
+### 4. Robustezza lessicale insufficiente
+Nel transcript c’è “quanti pane abbiamo a New York”.
+Per un CRM verticale, il sistema dovrebbe tollerare errori come:
+- pane → partner
+- stati uniti / usa / america → US
+- ny / new york city / nyc → New York
 
-Tetto righe per ogni core: **max 50**. Nessuna duplicazione di regola che esiste in KB.
+Oggi non vedo un layer dedicato di normalizzazione intent/domain.
 
-### Atto 5 — Restringere Sales Agent + ritirare procedure rotte da TS
+## Piano di intervento
 
-- `src/data/agentTemplates/templates.ts` → `sales.assigned_tools` ridotto a un set focalizzato su negotiation→converted (no bulk_update_partners, no delete_records, no execute_ui_action, no manage_partner_contact). Lista mirata: `search_partners, get_partner_detail, get_contact_detail, get_conversation_history, generate_outreach, send_email, schedule_email, create_activity, create_reminder, list_reminders, search_memory, save_memory, check_blacklist, get_holding_pattern, get_email_thread`.
-- `src/data/operationsProcedures/procedures1.ts` + `procedures2.ts`:
-  - **Rimuovo** `download_profiles` (rinvia a tool morto `create_download_job`).
-  - `email_single`, `whatsapp_message`, `multi_channel_sequence`, `update_lead_status` → diventano **stub** che rinviano alla KB:
-    ```ts
-    { id: "email_single", name: "Email Singola",
-      description: "Vedi procedures/email-single in KB (autorità unica).",
-      tags:[...], steps: [{ order:1, action:"Consulta KB procedures/email-single", tool:"read_kb", detail:"..."}],
-      ... }
-    ```
-  - Garantisce che chi ancora chiama `OPERATIONS_PROCEDURES` venga rediretto alla KB (single source of truth).
+### 1. Correggere il contratto tra `planRunner` e `aiQueryTool`
+Obiettivo: se il planner ha già deciso `ai-query`, il tool deve ricevere il **prompt utente originale** oppure un **QueryPlan strutturato**, non un JSON serializzato ambiguo.
 
-## Cosa NON tocco
+Interventi:
+- `src/v2/ui/pages/command/planRunner.ts`
+- `src/v2/ui/pages/command/tools/aiQueryTool.ts`
+- `src/v2/ui/pages/command/tools/types.ts`
 
-- Hard guards (Livello 0) — già protegge bulk/DELETE/auth.
-- Schema DB, RLS, edge auth.
-- Componenti UI (Cockpit, IntelliFlow ecc.) — restano funzionanti.
-- Tabelle `kb_entries` esistenti — **solo INSERT** delle 5 nuove procedure, niente UPDATE distruttivo sulle vecchie (resta `procedures/lead-qualification` ma marcata legacy).
+Approccio:
+- far supportare ad `aiQueryTool.execute()` il `context.payload`
+- se `payload` contiene già intento/query plan, usarlo direttamente
+- non ripianificare su `JSON.stringify(params)`
 
-## File toccati (sintesi)
+Questo è il fix più importante.
 
-**Codice (5 file)**
-1. `src/v2/agent/prompts/assembler.ts` — DEFAULT_CATEGORIES esteso
-2. `supabase/functions/_shared/prompts/assembler.ts` — idem + core prompt LUCA arricchito
-3. `src/v2/agent/prompts/core/*.ts` — 8 file, sezione "Regole tassative" + slim
-4. `src/data/agentPrompts.ts` — `AGENT_REGISTRY.criticalProcedures` aggiornato per 8 agenti
-5. `src/data/agentTemplates/templates.ts` — Sales ristretto, allineato a doctrine
+### 2. Aggiungere contesto conversazionale strutturato per le query
+Obiettivo: follow-up come “e a New York?” devono agganciarsi all’ultima query compatibile.
 
-**Operations procedures (2 file)**
-6. `src/data/operationsProcedures/procedures1.ts` — stub redirect KB
-7. `src/data/operationsProcedures/procedures2.ts` — rimuovo download_profiles, stub redirect
+Interventi:
+- `src/v2/ui/pages/command/hooks/useCommandState.ts`
+- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
+- eventuale nuovo helper tipo `queryContext.ts`
 
-**Database (1 migration)**
-8. INSERT 5 nuove `kb_entries` categoria `procedures` priorità 100:
-   - `procedures/email-single`
-   - `procedures/whatsapp-message`
-   - `procedures/multi-channel-sequence`
-   - `procedures/lead-qualification-v2`
-   - `procedures/post-send-checklist`
+Da salvare:
+- tabella/entity (`partners`)
+- filtri attivi (`country_code=US`)
+- tipo richiesta (`count`, `list`, `top-rated`)
+- eventuale colonna focus (`city`)
 
-## Verifica post-implementazione
+Regola:
+- se il nuovo prompt è ellittico ma compatibile, si fa merge col contesto precedente
+- es.: “quanti partner abbiamo negli USA?” → poi “a New York?” = `partners + country_code=US + city ilike New York`
 
-1. `assemblePrompt({agentId:"luca"})` → `kb_index` contiene "LEGGE FONDAMENTALE", "Dottrina Multi-Canale", §1-§11.
-2. Smoke test cockpit: "manda WhatsApp a partner X (status=new)" → AI rifiuta citando Dottrina Multi-Canale.
-3. Smoke test outreach: "invia email a partner Y" → dopo invio si vede in DB: activity creata, lead_status passato a `first_touch_sent`, reminder T+3 creato.
-4. LUCA: "mostra partner US" → output corretto, suggerimenti senza "scarica profili" (Atto 1+2 confermati).
-5. Sales agent → tentativo bulk_update_partners → tool non disponibile.
-6. `tsc --noEmit` pulito.
-7. KB read: cockpit-assistant prompt finale contiene estratti inline di Dottrina Multi-Canale (verifica manuale).
+### 3. Fast lane per query di lettura semplici
+Obiettivo: rendere `/v2/command` fluido come V2 classica.
 
-## Aggiornamento memoria
+Interventi:
+- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
+- `src/v2/ui/pages/command/tools/registry.ts`
+- `src/v2/ui/pages/command/aiBridge.ts`
 
-- `mem://architecture/structured-operative-prompts-protocol` → estendere con regola "single source of truth = kb_entries; OPERATIONS_PROCEDURES TS sono solo stub redirect".
-- Nuovo `mem://agents/prompt-assembler-doctrine-categories` → "assembler indicizza doctrine + system_doctrine + sales_doctrine + procedures di default".
+Approccio:
+- se il prompt matcha chiaramente `ai-query` e non richiede workflow multi-step:
+  - saltare `plan-execution`
+  - eseguire direttamente `aiQueryTool`
+  - opzionalmente saltare anche il commento AI finale e usare un commento locale leggero per count/list semplici
 
+Effetto:
+- da 3 hop AI a 1 hop AI nelle query semplici.
+
+### 4. Rafforzare il planner con esempi su città e follow-up
+Interventi:
+- `supabase/functions/ai-query-planner/index.ts`
+- `src/v2/agent/prompts/core/query-planner.ts`
+- se serve allineamento: `src/v2/agent/kb/dbSchema.ts`
+
+Da aggiungere:
+- esempi espliciti:
+  - “quanti partner abbiamo a New York”
+  - “quanti partner USA abbiamo a New York”
+  - “e a Miami?”
+  - “solo HQ a Los Angeles”
+- regola chiara: se si parla di `partners`, per la città usare `city ilike`
+- se il turno precedente era su `partners` stesso dominio, eredita i filtri geografici compatibili
+
+### 5. Normalizzazione lessicale minima, non invasiva
+Obiettivo: tollerare errori senza hardcodare mezzo sistema.
+
+Interventi:
+- piccolo preprocessor prima della pianificazione in `useCommandSubmit.ts` oppure in `aiQueryTool.ts`
+
+Esempi:
+- pane → partner
+- partnera / patner → partner
+- usa / stati uniti / america → US
+- nyc / new york city → New York
+
+Deve essere:
+- leggero
+- limitato a un vocabolario business/domain
+- senza irrigidire l’AI
+
+### 6. Verifica end-to-end
+Dopo l’implementazione verificherei questi casi:
+
+1. “quanti partner abbiamo negli Stati Uniti d’America” → 1080
+2. “a New York quanti ne abbiamo?” subito dopo → conteggio corretto
+3. “e a Miami?” → nuovo conteggio corretto usando il contesto
+4. “quanti HQ abbiamo a Los Angeles?” → filtro città + office_type corretto
+5. typo: “quanti pane abbiamo a New York” → interpretato come partner
+6. latenza percepita: forte riduzione su query semplici
+7. nessuna regressione sui task multi-step reali
+
+## Priorità consigliata
+
+### Fase 1 — urgente
+- fix `planRunner` ↔ `aiQueryTool`
+- fast lane read-only per `/v2/command`
+
+### Fase 2 — subito dopo
+- query context strutturato per follow-up
+- esempi/planner city-aware
+
+### Fase 3 — rifinitura
+- normalizzazione typo/domain terms
+- commento locale leggero per risultati semplici
+
+## Esito secco
+
+Sì, hai ragione: abbiamo fatto passi avanti, ma `/v2/command` **non è ancora fluido né affidabile nei follow-up query-based**.
+
+Il problema principale non è il database.
+Il problema è il **flusso di orchestrazione**:
+- troppo lungo
+- troppo AI-centrico anche quando non serve
+- con perdita di contesto tra pianificazione ed esecuzione
+
+Se approvi, il prossimo intervento corretto è questo:
+1. sistemare il passaggio prompt/query plan,
+2. introdurre contesto query conversazionale,
+3. tagliare una o due chiamate AI nelle query semplici.
