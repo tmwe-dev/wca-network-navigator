@@ -1,14 +1,17 @@
 /**
  * CommandCanvas — right-side canvas panel.
- * Live-only: renders the most recent tool result. No mock scenarios anymore.
+ * Live-only: renders the most recent tool result + LiveActivityRail.
+ * Supports selectable canvases with bulk-action dispatch back to the AI loop.
  */
 import { motion, AnimatePresence } from "framer-motion";
-import { TableCanvas } from "@/components/workspace/CanvasViews";
+import TableCanvas from "../canvas/TableCanvas";
 import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
-import type { ToolResult } from "../tools/types";
+import LiveActivityRail from "../canvas/LiveActivityRail";
+import { useCommandRealtime } from "../hooks/useCommandRealtime";
+import type { ToolResult, BulkAction } from "../tools/types";
 import type { CanvasType } from "../constants";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
@@ -17,10 +20,19 @@ interface Props {
   canvas: CanvasType;
   liveResult: ToolResult | null;
   onClose: () => void;
+  selectedIds: Set<string>;
+  toggleSelected: (id: string) => void;
+  selectAll: (ids: string[]) => void;
+  clearSelection: () => void;
+  onBulkAction: (action: BulkAction, ids: string[]) => void;
 }
 
-export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
+export default function CommandCanvas({
+  canvas, liveResult, onClose,
+  selectedIds, toggleSelected, selectAll, clearSelection, onBulkAction,
+}: Props) {
   const handleClose = () => onClose();
+  const { activities } = useCommandRealtime();
 
   return (
     <AnimatePresence>
@@ -33,17 +45,27 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
           className="w-[50%] p-4 overflow-y-auto"
         >
           {canvas === "live-table" && liveResult && liveResult.kind === "table" && (
-            <TableCanvas
-              data={liveResult.rows.map((r: Record<string, string | number | null>) => ({
-                name: String(r["companyName"] ?? r["name"] ?? ""),
-                sector: String(r["countryName"] ?? r["country"] ?? ""),
-                revenue: String(r["email"] ?? "—"),
-                days: String(r["city"] ?? "—"),
-                churn: Number(r["rating"] ?? 0),
-              }))}
-              onClose={handleClose}
-              title={`LIVE · ${liveResult.meta?.count ?? 0} record · ${liveResult.meta?.sourceLabel ?? "Supabase"}`}
-            />
+            <div className="float-panel p-6 rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                <button onClick={handleClose} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+              </div>
+              <TableCanvas
+                columns={liveResult.columns}
+                rows={liveResult.rows}
+                isLive
+                meta={liveResult.meta}
+                selectable={liveResult.selectable}
+                idField={liveResult.idField}
+                selectedIds={selectedIds}
+                onToggleId={toggleSelected}
+                onSelectAll={selectAll}
+                onClearSelection={clearSelection}
+                bulkActions={liveResult.bulkActions}
+                onBulkAction={onBulkAction}
+              />
+              <LiveActivityRail activities={activities} />
+            </div>
           )}
           {canvas === "live-card-grid" && liveResult && liveResult.kind === "card-grid" && (
             <div className="float-panel p-6 rounded-2xl">
@@ -53,6 +75,7 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
               </div>
               <CardGridCanvas
                 items={liveResult.cards.map(c => ({
+                  id: c.id,
                   name: c.title,
                   company: c.subtitle,
                   lastContact: c.lastContact
@@ -64,7 +87,15 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
                 title={`${liveResult.cards.length} contatti`}
                 badge="LIVE"
                 sourceLabel={liveResult.meta?.sourceLabel}
+                selectable={liveResult.selectable}
+                selectedIds={selectedIds}
+                onToggleId={toggleSelected}
+                onSelectAll={selectAll}
+                onClearSelection={clearSelection}
+                bulkActions={liveResult.bulkActions}
+                onBulkAction={onBulkAction}
               />
+              <LiveActivityRail activities={activities} />
             </div>
           )}
           {canvas === "live-timeline" && liveResult && liveResult.kind === "timeline" && (
@@ -86,6 +117,7 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
               ) : (
                 <TimelineCanvas events={[...liveResult.events]} kpis={[...liveResult.kpis]} />
               )}
+              <LiveActivityRail activities={activities} />
             </div>
           )}
           {canvas === "live-flow" && liveResult && liveResult.kind === "flow" && (
@@ -101,6 +133,7 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
               ) : (
                 <FlowCanvas nodes={[...liveResult.nodes]} title={`${liveResult.meta?.count ?? 0} job totali`} badge="LIVE" sourceLabel={liveResult.meta?.sourceLabel} />
               )}
+              <LiveActivityRail activities={activities} />
             </div>
           )}
           {canvas === "live-composer" && liveResult && liveResult.kind === "composer" && (
@@ -126,6 +159,7 @@ export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
                   </div>
                 ))}
               </div>
+              <LiveActivityRail activities={activities} />
             </div>
           )}
         </motion.div>
