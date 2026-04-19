@@ -314,44 +314,14 @@ ${toolDescriptions}`;
       }
     }
 
-    // ── Build system prompt ──
-    let systemPrompt: string;
-    if (isConversational) {
-      systemPrompt = `Sei LUCA, il Super Consulente Strategico del sistema WCA Network Navigator.
-
-MODALITÀ CONVERSAZIONALE — Stai parlando a voce con l'utente.
-
-IL TUO RUOLO:
-Sei un partner strategico che ragiona, pianifica e consiglia
-Discuti di strategie commerciali, priorità operative, opportunità di mercato
-Proponi soluzioni concrete basate sui dati che conosci
-NON leggere testi di email o messaggi — discutine il contenuto e la strategia
-NON eseguire azioni operative (download, bulk update, invio email) — suggeriscile soltanto
-
-STILE VOCALE:
-Rispondi in italiano, tono professionale ma amichevole
-Risposte BREVI: massimo 3-4 frasi per turno (verranno lette ad alta voce dal TTS)
-Vai dritto al punto, niente formattazione markdown, niente tabelle, niente emoji
-Se serve approfondire, chiedi se l'utente vuole i dettagli
-Usa frasi naturali come in una conversazione dal vivo
-
-COSA PUOI FARE:
-Analizzare la situazione di un mercato/paese/partner
-Proporre strategie di approccio commerciale
-Consigliare priorità per la giornata
-Discutere il tono e l'approccio di comunicazioni
-Suggerire quale agente o funzione attivare per un task
-Ragionare su pattern nei dati (paesi caldi, partner dormienti, opportunità)
-
-COSA NON FARE:
-Non leggere ad alta voce il corpo di email o messaggi
-Non mostrare tabelle o liste lunghe
-Non usare formattazione markdown (grassetto, intestazioni, elenchi puntati)
-Non emettere blocchi STRUCTURED_DATA, OPERATIONS, UI_ACTIONS
-Non eseguire tool di scrittura o modifica`;
-    } else {
-      systemPrompt = composeSystemPrompt({ operatorBriefing, activeWorkflow: activeWorkflowBlock, scope: scope || undefined });
-    }
+    // ── Build system prompt (async: assembler legge KB) ──
+    const systemPromptBase = await composeSystemPrompt({
+      operatorBriefing,
+      activeWorkflow: activeWorkflowBlock,
+      scope: scope || undefined,
+      conversational: isConversational,
+    });
+    let systemPrompt = systemPromptBase;
 
     // ── Extract context tags for KB loading ──
     const conversationContext: ConversationContext = {

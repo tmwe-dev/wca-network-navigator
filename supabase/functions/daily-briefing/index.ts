@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
+import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -125,26 +126,23 @@ serve(async (req) => {
       scheduledToday,
     };
 
+    // Build system prompt via assembler (Livello 1 + 2 + 3)
+    const systemPrompt = await assemblePrompt({
+      agentId: "daily-briefing",
+      variables: {
+        available_tools: agents.map(a => a.name).join(", "),
+      },
+      kbCategories: ["procedures", "doctrine"],
+    });
+    const strategyBlock = strategyHint ? `\n\n## Strategia attiva\n${strategyHint}` : "";
+
     // Call LLM via centralized gateway
     let content = "{}";
     try {
       const r = await aiChat({
         models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
         messages: [
-          {
-            role: "system",
-            content: `Sei il direttore operativo di un sistema CRM per freight forwarding. Genera un briefing operativo in italiano diviso in 3 sezioni.
-${strategyHint ? `\n${strategyHint}\n` : ""}
-Rispondi SOLO con un JSON valido, senza markdown o backtick. Formato:
-{
-  "completed": "markdown con bullet points (•) — lavoro svolto nelle ultime 24h: email inviate, task completati dagli agenti, contatti processati",
-  "todo": "markdown — task da effettuare oggi: contatti assegnati, follow-up programmati, contatti non ancora nel circuito da contattare",
-  "suspended": "markdown — attività sospese, messaggi in attesa di revisione, strategia per domani e prossimi giorni, ricerca da programmare",
-  "actions": [array di max 3 oggetti {"label": "testo bottone corto", "agentName": "nome agente o null", "prompt": "prompt completo da inviare all'AI"}]
-}
-I nomi degli agenti disponibili sono: ${agents.map(a => a.name).join(", ")}.
-Suggerisci azioni concrete basate sui dati. Se non ci sono anomalie, suggerisci azioni proattive.`,
-          },
+          { role: "system", content: systemPrompt + strategyBlock },
           { role: "user", content: `Dati operativi attuali:\n${JSON.stringify(context, null, 2)}` },
         ],
         timeoutMs: 25000,
