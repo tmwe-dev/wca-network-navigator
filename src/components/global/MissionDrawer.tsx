@@ -63,11 +63,13 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner shadow-primary/10">
               <Target className="w-5 h-5 text-primary" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold text-foreground">{contextTitle}</h3>
-              <p className="text-[11px] text-muted-foreground">{contextSubtitle}</p>
+              <p className="text-xs text-muted-foreground leading-tight">
+                {contextSubtitle}. Configura goal, allega documenti e seleziona destinatari per la missione.
+              </p>
             </div>
-            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
               {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : "Globale"}
             </span>
           </div>
