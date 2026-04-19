@@ -36,6 +36,9 @@ export interface AssembleArgs {
 
 const EXCERPT_DEFAULT = 800;
 
+/** Single source of truth: tutte le doctrine + procedure indicizzate di default */
+export const DEFAULT_KB_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
+
 export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   const core = CORE_PROMPTS[args.agentId];
   if (!core) throw new Error(`Unknown agentId: ${args.agentId}`);
@@ -46,7 +49,7 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   let kbIndex = "(KB non disponibile)";
   let kbExcerpts = "";
   try {
-    const cats = args.kbCategories ?? ["procedures", "doctrine"];
+    const cats = args.kbCategories ?? DEFAULT_KB_CATEGORIES;
     const { data: indexRows } = await supabase
       .from("kb_entries")
       .select("title, category, chapter")
