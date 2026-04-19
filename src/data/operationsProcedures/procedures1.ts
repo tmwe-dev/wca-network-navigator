@@ -156,7 +156,6 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
   // [REMOVED] download_single — workflow legacy non più usato dagli agenti AI.
   // In questo frangente operativo l'AI deve guidare verso arricchimento, non verso download WCA.
   {
-  {
     id: "deep_search_partner",
     name: "Deep Search Partner",
     description: "Ricerca approfondita sul web per trovare logo, social, informazioni aggiuntive di un partner",
