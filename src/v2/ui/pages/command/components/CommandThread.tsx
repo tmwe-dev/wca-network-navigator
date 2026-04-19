@@ -1,15 +1,15 @@
 /**
- * CommandThread — message list + approval panels + execution flow.
+ * CommandThread — message list + per-step plan timeline + execution flow.
+ * Mock-scenario approval panel removed: approvals now flow through PlanTimeline
+ * (multi-step plans) or the live-approval canvas (single tool approval).
  */
 import { type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wand2 } from "lucide-react";
+import { Wand2, ArrowRight } from "lucide-react";
 import AiEntity from "@/components/ai/AiEntity";
-import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow, { type ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import ToolActivationBar from "@/components/workspace/ToolActivationBar";
-import { TOOLS } from "../tools/registry";
-import type { Message, FlowPhase, ToolPhase, Scenario } from "../constants";
+import type { Message, FlowPhase, ToolPhase } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
 import PlanTimeline from "./PlanTimeline";
 
@@ -17,32 +17,32 @@ const ease = [0.2, 0.8, 0.2, 1] as const;
 
 interface Props {
   messages: Message[];
-  activeScenarioKey: string | null;
+  activeToolKey: string | null;
   showTools: boolean;
   flowPhase: FlowPhase;
   toolPhase: ToolPhase;
   chainHighlight: number | undefined;
-  activeScenario: Scenario | null;
   planState: PlanExecutionState | null;
   execSteps: ExecutionStep[];
   execProgress: number;
   governance: { role: string; permission: string; policy: string };
   chatEndRef: RefObject<HTMLDivElement>;
-  onApprove: () => void;
   onCancel: () => void;
   onApproveStep?: (stepNumber: number) => void;
+  /** Send a follow-up prompt when user clicks a suggested action button */
+  onSuggestedAction?: (prompt: string) => void;
 }
 
 export default function CommandThread({
-  messages, activeScenarioKey, showTools, flowPhase, toolPhase, chainHighlight,
-  activeScenario, planState, execSteps, execProgress, governance, chatEndRef,
-  onApprove, onCancel, onApproveStep,
+  messages, activeToolKey, showTools, flowPhase, toolPhase, chainHighlight,
+  planState, execSteps, execProgress, chatEndRef,
+  onCancel, onApproveStep, onSuggestedAction,
 }: Props) {
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6">
       <div className="max-w-xl mx-auto space-y-6">
         <ToolActivationBar
-          scenarioKey={activeScenarioKey}
+          scenarioKey={activeToolKey}
           visible={showTools && flowPhase !== "idle"}
           phase={toolPhase}
           chainHighlight={chainHighlight}
@@ -57,7 +57,7 @@ export default function CommandThread({
                   {[0, 1, 2].map((dot) => (
                     <motion.div key={dot} className="w-1.5 h-1.5 rounded-full bg-primary/95" animate={{ opacity: [0.2, 0.7, 0.2], scale: [0.8, 1.1, 0.8] }} transition={{ duration: 1.2, repeat: Infinity, delay: dot * 0.2 }} />
                   ))}
-                  <span className="text-[11px] text-muted-foreground/100 ml-2 font-light">Attivo tool operativi...</span>
+                  <span className="text-[11px] text-muted-foreground/100 ml-2 font-light">Sto ragionando...</span>
                 </div>
               </motion.div>
             ) : (
@@ -91,6 +91,20 @@ export default function CommandThread({
                         : <span key={i}>{part}</span>
                     )}
                   </div>
+                  {msg.suggestedActions && msg.suggestedActions.length > 0 && onSuggestedAction && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/[0.16]">
+                      {msg.suggestedActions.map((action, i) => (
+                        <button
+                          key={i}
+                          onClick={() => onSuggestedAction(action.prompt)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 hover:bg-primary/15 hover:border-primary/50 text-[11px] text-foreground/90 transition-colors"
+                        >
+                          <span>{action.label}</span>
+                          <ArrowRight className="w-3 h-3 text-primary/70" />
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
                   {msg.meta && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex items-center gap-2 mt-3 pt-2 border-t border-border/[0.16]">
                       <Wand2 className="w-2.5 h-2.5 text-primary/92" />
@@ -110,22 +124,7 @@ export default function CommandThread({
           </AnimatePresence>
         ))}
 
-        {activeScenario?.approval && (flowPhase === "proposal" || flowPhase === "approval") && !planState && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-            <ApprovalPanel
-              visible
-              title={activeScenario.approval.title}
-              description={activeScenario.approval.description}
-              details={activeScenario.approval.details}
-              governance={activeScenario.approval.governance}
-              onApprove={onApprove}
-              onModify={() => {}}
-              onCancel={onCancel}
-            />
-          </motion.div>
-        )}
-
-        {/* PlanTimeline — per-step approval */}
+        {/* PlanTimeline — per-step approval (multi-step plans) */}
         {planState && planState.stepStates && planState.stepStates.length > 0 && (
           <PlanTimeline
             stepStates={planState.stepStates}
