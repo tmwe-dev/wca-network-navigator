@@ -7,8 +7,7 @@ interface GovernanceData {
 }
 
 const actionPermissions: Record<string, string> = {
-  "partner-search": "READ:PARTNERS",
-  "scan-wca-directory": "READ:PARTNERS",
+  "ai-query": "READ:DB",
   "followup-batch": "EXECUTE:OUTREACH",
   "agent-report": "READ:AGENTS",
   "campaign-preview": "WRITE:CAMPAIGN",
