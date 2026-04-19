@@ -31,9 +31,9 @@ export const ALL_OPERATIONAL_TOOLS: string[] = [
   // Partner
   "search_partners", "get_partner_detail", "update_partner", "add_partner_note",
   "manage_partner_contact", "bulk_update_partners",
-  // Network — create_download_job RIMOSSO: dati WCA arrivano via sync esterno (doctrine/data-availability)
-  "get_country_overview", "get_directory_status", "scan_directory",
-  "download_single_partner", "list_jobs", "check_job_status", "get_partners_without_contacts",
+  // Network / data quality — niente download/scansioni WCA nei workflow AI conversazionali
+  "get_country_overview", "get_directory_status",
+  "list_jobs", "check_job_status", "get_partners_without_contacts",
   // Ricerca
   "deep_search_partner", "deep_search_contact", "enrich_partner_website", "generate_aliases",
   // CRM

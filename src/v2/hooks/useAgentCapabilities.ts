@@ -22,8 +22,7 @@ const TOOL_CATEGORIES: Record<string, string[]> = {
     "add_partner_note", "manage_partner_contact", "bulk_update_partners",
   ],
   Network: [
-    "get_country_overview", "get_directory_status", "scan_directory",
-    "download_single_partner", "list_jobs",
+    "get_country_overview", "get_directory_status", "list_jobs",
     "check_job_status", "get_partners_without_contacts",
   ],
   Ricerca: [
