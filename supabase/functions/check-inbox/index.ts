@@ -138,9 +138,22 @@ Deno.serve(async (req) => {
       // Pre-check: skip if already in DB
       const { data: existingByUid } = await supabase.from("channel_messages").select("id").eq("imap_uid", uid).eq("user_id", userId).maybeSingle();
       if (existingByUid) {
-        console.log(`[check-inbox] UID ${uid}: already in DB (fast-forward skip)`);
-        maxUid = uid;
-        await supabase.from("email_sync_state").update({ last_uid: uid, last_sync_at: new Date().toISOString() }).eq("user_id", userId);
+        // Fast-forward: jump cursor to MAX(imap_uid) in DB so we don't re-scan old UIDs forever
+        const { data: maxRow } = await supabase
+          .from("channel_messages")
+          .select("imap_uid")
+          .eq("user_id", userId)
+          .eq("channel", "email")
+          .not("imap_uid", "is", null)
+          .order("imap_uid", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const dbMaxUid = (maxRow?.imap_uid as number | undefined) ?? uid;
+        const jumpTo = Math.max(dbMaxUid, uid, lastUid);
+        console.log(`[check-inbox] UID ${uid}: already in DB — fast-forward cursor to ${jumpTo} (DB max=${dbMaxUid})`);
+        maxUid = jumpTo;
+        lastUid = jumpTo;
+        await supabase.from("email_sync_state").update({ last_uid: jumpTo, last_sync_at: new Date().toISOString() }).eq("user_id", userId);
         continue;
       }
 
