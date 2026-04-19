@@ -129,10 +129,7 @@ export function CompanyList({
     setExpandedPartners(prev => { const next = new Set(prev); if (next.has(partnerId)) next.delete(partnerId); else next.add(partnerId); return next; });
   }, []);
 
-  const handleSortToggle = useCallback((field: SortField) => {
-    if (sortField === field) g.setFilter("campaignsSortAsc", !sortAsc);
-    else { g.setFilter("campaignsSortField", field); g.setFilter("campaignsSortAsc", field !== "contacts"); }
-  }, [sortField, sortAsc, g]);
+  // Sort toggle handled by FiltersDrawer (CampaignsFiltersSection).
 
   const virtualizer = useVirtualizer({
     count: filteredPartners.length,
