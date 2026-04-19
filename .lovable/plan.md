@@ -1,81 +1,90 @@
 
 
-## Obiettivo
+## Diagnosi
 
-Rimuovere completamente i limiti/credit gate dal sistema AI per uso aziendale interno. Le API si usano liberamente, senza budget, senza saldo, senza BYOK forzato. Quando si commercializzerà, si reintrodurranno i limiti via toggle.
+Conferma dal DB (12.286 partner totali):
+- `profile_description`: **12.268 valorizzati** (≈ 99.85%)
+- `raw_profile_html`: 0
+- `raw_profile_markdown`: 0
+- `ai_parsed_at`: 0
 
-## Esplorazione
+I tre campi vuoti erano alimentati dal **vecchio scraper client-side** (Claude Engine V8 / wca-app). Oggi i dati arrivano dalla tabella esterna sincronizzata, che popola `profile_description` direttamente. Quindi:
 
-Punti dove esiste un blocco/gate:
-- `supabase/functions/ai-assistant/index.ts` — gate `credits.balance <= 0` (appena modificato)
-- `supabase/functions/consume-credits/index.ts` — calcolo costi e `deduct_credits` RPC
-- `supabase/functions/_shared/costGuardrail.ts` — `checkDailyBudget` / `budgetExceededResponse`
-- `supabase/functions/_shared/rateLimiter.ts` — token bucket per-isolate
-- `src/lib/api/costTracker.ts` — `checkBudget` client-side che lancia `BudgetExceededError`
-- `src/hooks/useCredits.ts` — visualizza saldo
-- Edge functions che importano `consumeCredits` / `checkDailyBudget` / `checkRateLimit` (da censire)
+- "**has_profile**" calcolato come `raw_profile_html IS NOT NULL` → sempre falso → AI dice "0 profili scaricati".
+- Tool `create_download_job`, `download_single_partner`, modalità `no_profile` → riferiti a un workflow morto.
+- Suggerimento "scarica profili → arricchirà i 1.080 record" → falso, i record sono già pieni.
 
-Memoria correlata: `mem://tech/cost-control-guardrails` e `mem://tech/billing-internal-credits` — vanno aggiornate per riflettere la nuova policy "uso libero interno".
+## Strategia: 3 livelli
 
-## Strategia
+### Livello 1 — Ridefinire "has_profile" sul campo giusto
 
-Introduco un **kill-switch unico** invece di cancellare il codice (così è facile riattivarlo per la commercializzazione futura).
+Cambio la sorgente di verità da `raw_profile_html` a `profile_description`. Touchpoint:
 
-### Livello 1 — Edge functions
+1. `supabase/functions/_shared/toolHandlersRead.ts`
+   - `has_profile === true/false` → filtra su `profile_description IS [NOT] NULL`.
+   - Output `has_profile` → `!!p.profile_description`.
+   - `profile_summary` → usa `profile_description` se `raw_profile_markdown` assente.
+2. `supabase/functions/_shared/platformTools.ts` (interface `CountryStatRow`).
+3. `supabase/functions/ai-assistant/toolDefinitions.ts` → descrizione `has_profile`: "Has profile description (sourced from WCA sync)".
+4. `src/hooks/usePartnerListStats.ts` → `withProfile` conta `profile_description`, `emailVerified/phoneVerified` non dipendono più da `raw_profile_html`.
+5. Eventuali viste DB / RPC `get_country_stats` se calcolano `with_profile` sul campo vecchio (verifico in migration).
 
-Variabile d'ambiente `AI_USAGE_LIMITS_ENABLED` (default: `false`).
+### Livello 2 — Disattivare i tool di download bulk dall'AI
 
-Modifico in modalità "bypass quando disabled":
-- `checkDailyBudget` → ritorna sempre `{ allowed: true, ... }` se flag off
-- `checkRateLimit` → ritorna sempre `{ allowed: true, remaining: 999 }` se flag off
-- `consume-credits` → ritorna sempre `{ allowed: true, byok: false, credits_consumed: 0, message: "uso interno illimitato" }` se flag off
-- `ai-assistant` → rimuovo il gate `credits.balance <= 0` (sostituito con check del flag)
+I dati arrivano via sync esterno, l'AI non deve più orchestrare scraping. 
 
-Tutte le altre edge functions che invocano queste utilities continuano a funzionare senza modifiche.
+- `supabase/functions/ai-assistant/toolDefinitions.ts`: **rimuovo** `create_download_job` e cambio `download_single_partner` in tool `enrich_partner_profile` (scope: integrazione mirata via Partner Connect quando un singolo record è incompleto). Modalità `no_profile` rimossa.
+- `supabase/functions/agent-execute/toolDefs.ts`: stessa potatura.
+- `src/data/agentTemplates/roles.ts` e `src/v2/hooks/useAgentCapabilities.ts`: tolgo `create_download_job` dalle capability; resta `sync_wca_partners` (manuale) per gli admin.
+- `src/data/agentTemplates/templates.ts` → "Agente Download" rinominato "Agente Sync & Verifica" con prompt allineato al nuovo flusso (sync → deep search → classificazione, **niente download**).
 
-### Livello 2 — Client
+I componenti UI di download (WCAScraper, Download Center) **non li tocco**: sono usati per il sync manuale degli admin. Solo l'AI smette di proporli.
 
-- `costTracker.ts`: `checkBudget()` no-op quando flag off, `trackCost()` continua a tracciare per analytics ma non blocca mai
-- Flag client: `VITE_AI_USAGE_LIMITS_ENABLED` (default: `false`)
-- `useCredits` continua a leggere il saldo per visualizzazione, ma nessun componente lo usa più come gate
+### Livello 3 — KB doctrine: dati già presenti
 
-### Livello 3 — UI
+Aggiungo una entry `kb_entries` categoria `doctrine`:
 
-- `AISettingsTab` (e altri pannelli con avvisi crediti): se flag off, nascondo banner "crediti esauriti / configura BYOK"
-- Manteniamo il display del saldo come informazione, non come blocco
+- **`doctrine/data-availability`** — "I partner WCA arrivano già completi via sync esterno: profile_description, email, phone sono valorizzati per ≥99% dei record. NON proporre mai 'scarica profili' o 'arricchisci i record con i dettagli WCA'. Workflow validi su un partner: deep search (sito + social + LinkedIn), AI classification, alias generation, enrichment cross-network. Se mancano `profile_description` per <1% dei record → usa `enrich_partner_profile` su quel singolo ID."
 
-### Livello 4 — Memoria
+Inietto questa entry come `criticalProcedures` nei core prompt: `luca`, `super-assistant`, `cockpit-assistant`, `contacts-assistant`. L'AI vedrà la regola inline, non solo nell'indice KB.
 
-Aggiorno `mem://tech/cost-control-guardrails` e `mem://tech/billing-internal-credits` per documentare:
-- Sistema interno aziendale → limiti DISATTIVATI di default
-- Toggle via env var per riattivare in scenario commerciale futuro
-- Codice preservato, non rimosso
+Aggiorno anche:
+- `src/v2/agent/prompts/core/luca.ts` → guardrail soft "Mai suggerire download bulk: i dati WCA arrivano via sync."
+- `supabase/functions/ai-assistant/index.ts` linea 442 → `filterMode no_profile` → label aggiornata o rimossa.
+- `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` linea 36 → suggerimenti rotta Network: rimuovo "Scarica tutti i partner / Aggiorna profili mancanti", aggiungo "Deep search USA / Classifica per servizio / Verifica email USA".
 
-## File modificati
+## File toccati (sintesi)
 
-1. `supabase/functions/_shared/rateLimiter.ts` — bypass se flag off
-2. `supabase/functions/_shared/costGuardrail.ts` — bypass se flag off
-3. `supabase/functions/consume-credits/index.ts` — bypass se flag off
-4. `supabase/functions/ai-assistant/index.ts` — rimuovo gate `balance<=0`
-5. `src/lib/api/costTracker.ts` — `checkBudget` no-op se flag off
-6. `src/v2/ui/organisms/settings/AISettingsTab.tsx` — nascondi avvisi limit (verifico se presenti)
-7. Eventuali banner "crediti esauriti" nel layout (da censire)
-8. `mem://tech/cost-control-guardrails` — aggiornata
-9. `mem://tech/billing-internal-credits` — aggiornata
-10. `mem://index.md` — aggiornata
+**Edge functions (5)**
+1. `supabase/functions/_shared/toolHandlersRead.ts` — has_profile su profile_description
+2. `supabase/functions/_shared/platformTools.ts` — interface stats
+3. `supabase/functions/ai-assistant/toolDefinitions.ts` — rimuovo create_download_job, ridefinisco download_single_partner
+4. `supabase/functions/agent-execute/toolDefs.ts` — stessa potatura
+5. `supabase/functions/ai-assistant/index.ts` — labels filterMode
 
-## Cosa NON tocco
+**Client (5)**
+6. `src/hooks/usePartnerListStats.ts` — sorgente profilo
+7. `src/data/agentTemplates/roles.ts` — capability ridotte
+8. `src/data/agentTemplates/templates.ts` — Agente Download → Sync & Verifica
+9. `src/v2/hooks/useAgentCapabilities.ts` — capability ridotte
+10. `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` — suggerimenti Network
 
-- Hard guards di sicurezza (`hardGuards.ts`): NO DELETE, NO bulk > 5, NO auth tables. Restano attivi sempre — sono sicurezza, non costo.
-- Schema DB tabelle `user_credits`, `credit_transactions`, `usage_daily_budget`: restano (utili per analytics futuri).
-- Funzione `deduct_credits` DB: resta (chiamata diventa no-op via flag).
+**Prompt + KB (3)**
+11. `src/v2/agent/prompts/core/luca.ts` (+ super/cockpit/contacts) — guardrail soft
+12. `src/data/agentPrompts.ts` — aggiungo `doctrine/data-availability` ai criticalProcedures dei 4 agenti
+13. **Migration DB** — INSERT in `kb_entries` la nuova entry doctrine
+
+**NON tocco**
+- `WCAScraper`, `Download Center`, `useWcaJobs`, `sync-wca-partners` (uso admin manuale).
+- Schema DB `partners` (i campi vecchi restano per analytics storica).
+- Hard guards / auth / pannelli UI principali.
 
 ## Verifica post-implementazione
 
-1. LUCA risponde anche con `balance = 0`.
-2. Edge function logs di `ai-assistant` → nessun blocco crediti.
-3. `consume-credits` ritorna `allowed: true` senza scalare nulla.
-4. UI: nessun banner "crediti esauriti" visibile.
-5. Hard guards ancora attivi: tentativo DELETE da AI → bloccato.
-6. Riattivazione test: settando `AI_USAGE_LIMITS_ENABLED=true` i limiti tornano funzionanti.
+1. Query `partners US` → riassunto mostra "1.078 con profilo (sync WCA)" non "0 scaricati".
+2. AI **non suggerisce più** "Vuoi scaricare i profili?" come azione.
+3. Suggerimenti su `/network` aggiornati (no "Aggiorna profili mancanti").
+4. `tsc --noEmit` pulito.
+5. Smoke test su LUCA: "mostra partner US" → output corretto + azioni suggerite valide (deep search / filtro città / alias / classificazione servizi).
+6. Hard guards intatti: tentativo `DELETE` da AI ancora bloccato.
 
