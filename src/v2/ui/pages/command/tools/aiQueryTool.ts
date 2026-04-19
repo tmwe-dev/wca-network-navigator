@@ -14,8 +14,18 @@
  */
 import type { Tool, ToolResult, ToolResultColumn } from "./types";
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
-import { executeQueryPlan, QueryValidationError } from "../lib/safeQueryExecutor";
+import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
+
+/** Module-level cache of the LAST successful QueryPlan, read by useCommandSubmit
+ *  to update conversational query context. Single-tab assumption is fine here. */
+let _lastSuccessfulPlan: QueryPlan | null = null;
+export function getLastSuccessfulQueryPlan(): QueryPlan | null {
+  return _lastSuccessfulPlan;
+}
+export function clearLastSuccessfulQueryPlan(): void {
+  _lastSuccessfulPlan = null;
+}
 
 /* ─── Bulk action templates per tabella ─── */
 
@@ -165,6 +175,9 @@ export const aiQueryTool: Tool = {
         meta: { count: 0, sourceLabel: "Safe Query Executor" },
       };
     }
+
+    // Cache plan for conversational context
+    _lastSuccessfulPlan = plan;
 
     const { rows, count, table, columnsUsed } = execResult;
 
