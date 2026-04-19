@@ -5,6 +5,7 @@ import type { PartnerWithRelations } from "@/data/partners";
 
 interface PartnerLike extends Record<string, unknown> {
   raw_profile_html?: string | null;
+  profile_description?: string | null;
   enrichment_data?: unknown;
   email?: string | null;
   phone?: string | null;
@@ -73,7 +74,8 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
     const total = list.length;
     let withProfile = 0, withDeep = 0, withEmail = 0, withPhone = 0, withAliasCo = 0, withAliasCt = 0;
     list.forEach((p) => {
-      if (p.raw_profile_html) withProfile++;
+      // Sorgente verità: profile_description (sync WCA). Fallback su raw_profile_html per backward-compat.
+      if (p.profile_description || p.raw_profile_html) withProfile++;
       if (asEnrichment(p.enrichment_data)?.deep_search_at) withDeep++;
       if (p.email || (p.partner_contacts || []).some((c) => c.email)) withEmail++;
       if (p.phone || (p.partner_contacts || []).some((c) => c.direct_phone || c.mobile)) withPhone++;
@@ -85,10 +87,11 @@ export function usePartnerListStats({ countryCodes, partners }: UsePartnerListSt
 
   const verified = useMemo(() => {
     const list = partners || [];
+    const hasProfile = (p: PartnerLike) => !!(p.profile_description || p.raw_profile_html);
     const missingEmailList = list.filter((p) => !p.email && !(p.partner_contacts || []).some((c) => c.email));
-    const emailVerified = missingEmailList.length === 0 || missingEmailList.every((p) => !!p.raw_profile_html);
+    const emailVerified = missingEmailList.length === 0 || missingEmailList.every(hasProfile);
     const missingPhoneList = list.filter((p) => !p.phone && !(p.partner_contacts || []).some((c) => c.direct_phone || c.mobile));
-    const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every((p) => !!p.raw_profile_html);
+    const phoneVerified = missingPhoneList.length === 0 || missingPhoneList.every(hasProfile);
     const missingDeepList = list.filter((p) => !asEnrichment(p.enrichment_data)?.deep_search_at);
     const deepVerified = missingDeepList.length === 0 || missingDeepList.every((p) => !!asEnrichment(p.enrichment_data)?.deep_search_at);
     const missingAliasCoList = list.filter((p) => !p.company_alias);

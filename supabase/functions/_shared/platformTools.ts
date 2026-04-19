@@ -15,7 +15,7 @@ import { escapeLike } from "./sqlEscape.ts";
 // ── Local interfaces for query row shapes ──
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; }
 interface DirectoryCountRow { country_code: string; member_count: number; }
-interface PartnerSummary { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; raw_profile_html: string | null; raw_profile_markdown: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; }
+interface PartnerSummary { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; phone: string | null; rating: number | null; wca_id: number | null; website: string | null; profile_description: string | null; raw_profile_markdown: string | null; is_favorite: boolean; office_type: string | null; lead_status: string | null; }
 interface ServiceRow { service_category: string; }
 interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; error_message: string | null; created_at: string; }
 interface EmailQueueRow { id: string; status: string; scheduled_at: string | null; sent_at: string | null; recipient_email: string; subject: string; }
@@ -147,15 +147,16 @@ export async function executePlatformTool(
     case "search_partners": {
       const isCount = !!args.count_only;
       let query = supabase.from("partners").select(
-        isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, lead_status",
+        isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, profile_description, is_favorite, office_type, lead_status",
         isCount ? { count: "exact", head: true } : undefined
       );
       if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
       if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
       if (args.search_name) query = query.ilike("company_name", `%${escapeLike(String(args.search_name))}%`);
       if (args.has_email === true) query = query.not("email", "is", null);
-      if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
-      if (args.has_profile === false) query = query.is("raw_profile_html", null);
+      // has_profile uses profile_description (WCA sync) not raw_profile_html (legacy scraper, empty)
+      if (args.has_profile === true) query = query.not("profile_description", "is", null);
+      if (args.has_profile === false) query = query.is("profile_description", null);
       if (args.min_rating) query = query.gte("rating", Number(args.min_rating));
       if (args.office_type) query = query.eq("office_type", args.office_type);
       if (args.is_favorite === true) query = query.eq("is_favorite", true);
@@ -163,7 +164,7 @@ export async function executePlatformTool(
       const { data, error, count } = await query;
       if (error) return { error: error.message };
       if (isCount) return { count };
-      return { count: data?.length, partners: (data || []).map((p: { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; rating: number | null; raw_profile_html: string | null; lead_status: string | null }) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.raw_profile_html, lead_status: p.lead_status })) };
+      return { count: data?.length, partners: (data || []).map((p: { id: string; company_name: string; city: string; country_code: string; country_name: string; email: string | null; rating: number | null; profile_description: string | null; lead_status: string | null }) => ({ id: p.id, company_name: p.company_name, city: p.city, country_code: p.country_code, country_name: p.country_name, email: p.email, rating: p.rating, has_profile: !!p.profile_description, lead_status: p.lead_status })) };
     }
 
     case "get_partner_detail": {

@@ -23,7 +23,7 @@ const TOOL_CATEGORIES: Record<string, string[]> = {
   ],
   Network: [
     "get_country_overview", "get_directory_status", "scan_directory",
-    "create_download_job", "download_single_partner", "list_jobs",
+    "download_single_partner", "list_jobs",
     "check_job_status", "get_partners_without_contacts",
   ],
   Ricerca: [

@@ -33,7 +33,8 @@ function useSystemStats() {
 const QUICK_PROMPTS: Record<string, string[]> = {
   default: ["Riepilogo del giorno", "Partner senza contatti", "Attività in scadenza", "Stato campagne attive"],
   [`/${ROUTE_OUTREACH}`]: ["Filtra contatti italiani", "Seleziona tutti con priorità alta", "Prepara email per i contatti selezionati", "Deep search dei selezionati"],
-  [`/${ROUTE_NETWORK}`]: ["Scarica tutti i partner", "Scarica partner USA", "Aggiorna profili mancanti", "Stato download attivi"],
+  // Suggerimenti Network allineati a doctrine/data-availability: dati WCA già sincronizzati, focus su deep search/classificazione/verifica
+  [`/${ROUTE_NETWORK}`]: ["Deep search partner USA", "Classifica per servizio", "Verifica email partner USA", "Genera alias commerciali"],
   [`/${ROUTE_CRM}`]: ["Contatti importati per origine", "Contatti senza email", "Statistiche per paese", "Contatti più recenti"],
 };
 

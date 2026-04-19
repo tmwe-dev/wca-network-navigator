@@ -26,7 +26,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           search_name: { type: "string", description: "Company name (partial match)" },
           has_email: { type: "boolean", description: "Has email address" },
           has_phone: { type: "boolean", description: "Has phone number (in partner_contacts)" },
-          has_profile: { type: "boolean", description: "Has downloaded profile (raw_profile_html)" },
+          has_profile: { type: "boolean", description: "Has profile description (sourced from WCA sync — populated for ≥99% of records)" },
           min_rating: { type: "number", description: "Minimum rating (0-5)" },
           office_type: { type: "string", enum: ["head_office", "branch"], description: "Filter by office type" },
           is_favorite: { type: "boolean", description: "Filter favorites only" },
@@ -157,37 +157,20 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "create_download_job",
-      description: "Create a download job. Modes: 'new', 'no_profile', 'all'. Check active jobs first.",
-      parameters: {
-        type: "object",
-        properties: {
-          country_code: { type: "string" },
-          country_name: { type: "string" },
-          mode: { type: "string", enum: ["new", "no_profile", "all"] },
-          network_name: { type: "string" },
-          delay_seconds: { type: "number" },
-        },
-        required: ["country_code", "country_name"],
-        additionalProperties: false,
-      },
-    },
-  },
+  // create_download_job RIMOSSO: i partner WCA arrivano già completi via sync esterno (vedi doctrine/data-availability).
+  // Bulk download è gestito manualmente dagli admin via WCAScraper / Download Center.
   {
     type: "function",
     function: {
       name: "download_single_partner",
-      description: "Download the profile of a SINGLE specific partner by company name (and optionally city/country). Use this when the user asks to download ONE specific company — NOT for bulk downloads. First searches the local DB and cache, then searches the WCA directory directly by company name if not found locally. Supports WCA search fields: CompanyName, CountryCode, City, MemberID.",
+      description: "Recupera/aggiorna il profilo di UN SINGOLO partner per ID o nome (uso eccezionale, <1% dei record). I dati WCA arrivano già completi via sync esterno: usa questo SOLO se profile_description è vuoto per quello specifico partner. NON usare per bulk download.",
       parameters: {
         type: "object",
         properties: {
-          company_name: { type: "string", description: "Name of the company to download" },
-          city: { type: "string", description: "City (optional, helps narrow search)" },
+          company_name: { type: "string", description: "Name of the company" },
+          city: { type: "string", description: "City (optional)" },
           country_code: { type: "string", description: "ISO 2-letter country code (optional)" },
-          wca_id: { type: "number", description: "If you already know the wca_id, pass it directly" },
+          wca_id: { type: "number", description: "Known wca_id" },
         },
         required: ["company_name"],
         additionalProperties: false,

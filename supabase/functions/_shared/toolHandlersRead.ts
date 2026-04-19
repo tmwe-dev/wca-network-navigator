@@ -47,7 +47,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     }
 
     let query = supabase.from("partners").select(
-      isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, raw_profile_html, is_favorite, office_type, has_branches, member_since",
+      isCount ? "id" : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, profile_description, raw_profile_markdown, is_favorite, office_type, has_branches, member_since",
       isCount ? { count: "exact", head: true } : undefined
     );
 
@@ -58,8 +58,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (args.search_name) query = query.ilike("company_name", `%${escapeLike(args.search_name)}%`);
     if (args.has_email === true) query = query.not("email", "is", null);
     if (args.has_email === false) query = query.is("email", null);
-    if (args.has_profile === true) query = query.not("raw_profile_html", "is", null);
-    if (args.has_profile === false) query = query.is("raw_profile_html", null);
+    // has_profile uses profile_description (sourced from WCA sync) — NOT raw_profile_html (legacy scraper, empty)
+    if (args.has_profile === true) query = query.not("profile_description", "is", null);
+    if (args.has_profile === false) query = query.is("profile_description", null);
     if (args.min_rating) query = query.gte("rating", Number(args.min_rating));
     if (args.office_type) query = query.eq("office_type", args.office_type);
     if (args.is_favorite === true) query = query.eq("is_favorite", true);
@@ -84,7 +85,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
         id: p.id, company_name: p.company_name, city: p.city,
         country: `${p.country_name} (${p.country_code})`,
         email: p.email || null, phone: p.phone || null, rating: p.rating ?? null,
-        has_profile: !!p.raw_profile_html, website: p.website || null,
+        has_profile: !!p.profile_description, website: p.website || null,
         is_favorite: p.is_favorite, office_type: p.office_type, has_branches: p.has_branches,
         member_since: p.member_since || null,
       })),
@@ -189,8 +190,10 @@ export function createReadHandlers(supabase: SupabaseClient) {
       office_type: partner.office_type, has_branches: partner.has_branches, branch_cities: partner.branch_cities,
       is_favorite: partner.is_favorite, is_active: partner.is_active, wca_id: partner.wca_id,
       member_since: partner.member_since, membership_expires: partner.membership_expires,
-      has_profile: !!partner.raw_profile_html,
-      profile_summary: partner.raw_profile_markdown ? String(partner.raw_profile_markdown).substring(0, 2000) : null,
+      has_profile: !!partner.profile_description,
+      profile_summary: partner.profile_description
+        ? String(partner.profile_description).substring(0, 2000)
+        : (partner.raw_profile_markdown ? String(partner.raw_profile_markdown).substring(0, 2000) : null),
       contacts: (contactsRes.data || []).map((c: Record<string, unknown>) => ({ name: c.name, title: c.title, email: c.email, phone: c.direct_phone || c.mobile, is_primary: c.is_primary })),
       networks: (networksRes.data || []).map((n: Record<string, unknown>) => ({ name: n.network_name, expires: n.expires })),
       services: (servicesRes.data || []).map((s: { service_category: string }) => s.service_category),
