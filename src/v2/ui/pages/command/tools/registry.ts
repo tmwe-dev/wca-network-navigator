@@ -4,6 +4,7 @@ import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
 import { browserFillFormTool } from "./browserFillForm";
 import { browserAutoCompleteTool } from "./browserAutoComplete";
 import { partnerSearchTool } from "./partnerSearch";
+import { scanWcaDirectoryTool } from "./scanWcaDirectory";
 import { followupBatchTool } from "./followupBatch";
 import { agentReportTool } from "./agentReport";
 import { campaignStatusTool } from "./campaignStatus";
@@ -39,6 +40,7 @@ const TOOLS: readonly Tool[] = [
   composeEmailTool,
   // Reads
   contactSearchTool,
+  scanWcaDirectoryTool,
   partnerSearchTool,
   prospectSearchTool,
   dashboardSnapshotTool,
