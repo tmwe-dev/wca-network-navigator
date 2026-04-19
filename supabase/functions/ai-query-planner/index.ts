@@ -216,7 +216,7 @@ Deno.serve(async (req: Request) => {
     const aiJson = await aiResp.json();
     const content: string = aiJson?.choices?.[0]?.message?.content ?? "";
 
-    let plan: unknown;
+    let plan: Record<string, unknown> | null;
     try {
       plan = JSON.parse(content);
     } catch {
@@ -229,6 +229,16 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Planner non ha prodotto JSON valido", raw: content.slice(0, 500) }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // ── Bonus optimization: COUNT detection from user prompt ──
+    // For "quanti / quante / totale / numero di ..." force columns=[id], drop sort,
+    // limit=1 (Postgrest count header still returns full count).
+    const isCountIntent = /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
+    if (isCountIntent && plan.table && plan.table !== "INVALID") {
+      plan.columns = ["id"];
+      delete plan.sort;
+      plan.limit = 1;
     }
 
     return new Response(JSON.stringify(plan), {
