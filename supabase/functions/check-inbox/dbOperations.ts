@@ -107,11 +107,18 @@ export async function saveMessageToDb(
 
   const parseStatus = params.parseWarnings.length > 0 ? "warning" : "ok";
 
-  // Guard: source_id deve essere un UUID valido o null (la colonna è di tipo uuid)
+  // Guard: source_id e partner_id devono essere UUID validi o null (colonne di tipo uuid).
+  // Se source_type è "unknown", forziamo source_id=null perché non c'è entità corrispondente.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const safeSourceId =
-    params.match.source_id && UUID_RE.test(String(params.match.source_id))
+    params.match.source_type !== "unknown" &&
+    params.match.source_id &&
+    UUID_RE.test(String(params.match.source_id))
       ? params.match.source_id
+      : null;
+  const safePartnerId =
+    params.match.partner_id && UUID_RE.test(String(params.match.partner_id))
+      ? params.match.partner_id
       : null;
 
   const msgData: Record<string, unknown> = {
@@ -121,7 +128,7 @@ export async function saveMessageToDb(
     direction: "inbound",
     source_type: params.match.source_type,
     source_id: safeSourceId,
-    partner_id: params.match.partner_id,
+    partner_id: safePartnerId,
     from_address: params.fromAddr,
     to_address: params.toAddr,
     cc_addresses: params.ccAddresses || null,
