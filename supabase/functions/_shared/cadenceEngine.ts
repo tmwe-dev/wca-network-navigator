@@ -126,7 +126,7 @@ export function checkCadence(
   channel: "email" | "linkedin" | "whatsapp",
   hasWhatsAppConsent: boolean,
 ): CadenceCheckResult {
-  const rule = CADENCE_BY_STATE[commercialState] || CADENCE_BY_STATE.contacted;
+  const rule = CADENCE_BY_STATE[commercialState] || CADENCE_BY_STATE.first_touch_sent;
 
   // 1. Canale permesso?
   if (!rule.allowedChannels.includes(channel)) {
