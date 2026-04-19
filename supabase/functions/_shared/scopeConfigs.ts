@@ -40,7 +40,13 @@ export const STRATEGIC_OPERATIVE_PROMPT = "";
 // ━━━━━━━━━━ SCOPE CONFIG FACTORY ━━━━━━━━━━
 
 export interface ScopeConfig {
-  systemPrompt: string;
+  /**
+   * Optional. Solo gli scope SPECIALIZZATI lo dichiarano (kb-supervisor,
+   * deep-search, chat, mission-builder). Per gli scope operativi
+   * (cockpit/contacts/import/extension/strategic) il prompt arriva da
+   * composeSystemPrompt() in ai-assistant/systemPrompt.ts.
+   */
+  systemPrompt?: string;
   tools: Array<Record<string, unknown>>;
   localToolHandler?: (name: string, args: Record<string, unknown>, supabase: Record<string, unknown>) => Promise<unknown | null>;
   temperature?: number;
