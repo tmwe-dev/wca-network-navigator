@@ -1,193 +1,119 @@
 
-## Verifiche fatte
 
-Ho letto il flusso reale di `/v2/command` e il problema è chiaro.
+## Diagnosi del percorso reale (dal network log appena registrato)
 
-### Pipeline attuale
-Per una domanda semplice come “quanti partner abbiamo negli Stati Uniti?” il sistema oggi fa:
+Domanda utente: *"senti quanti parlano abbiamo in Spagna e in Francia"*
 
-```text
-utente
-→ ai-assistant (plan-execution)
-→ planRunner
-→ aiQueryTool
-→ ai-query-planner
-→ safeQueryExecutor
-→ ai-assistant (commento finale)
-→ risposta chat
-```
-
-Quindi per una query banalissima ci sono **3 passaggi AI distinti** prima della risposta finale.
-
-## Problemi trovati
-
-### 1. Bug architetturale nel passaggio prompt → tool
-In `src/v2/ui/pages/command/planRunner.ts` il tool riceve:
-
-```ts
-const promptText = JSON.stringify(resolvedParams);
-tool.execute(promptText, { payload: resolvedParams })
-```
-
-Ma `src/v2/ui/pages/command/tools/aiQueryTool.ts` **ignora il payload** e ripianifica usando `promptText`.
-
-Quindi l’AI Query Planner spesso non riceve più la domanda naturale dell’utente, ma un JSON tipo:
-
-```json
-{"city":"New York","count_only":true}
-```
-
-Questo spiega bene perché il primo caso USA può andare e il follow-up su New York no: il planner perde contesto e intenzione conversazionale.
-
-### 2. Nessuna memoria strutturata del contesto query
-La seconda domanda “a New York quanti ne abbiamo?” non eredita in modo affidabile il contesto “stiamo parlando dei partner USA”.
-C’è history testuale, ma non c’è uno **state/query context** strutturato del tipo:
+Sequenza misurata sui timestamp delle network requests:
 
 ```text
-entity=partners
-country_code=US
-mode=count
+17:27:38  utente invia
+17:27:42  POST ai-assistant (mode=plan-execution)        → 4.1s
+          risposta: 1 step ai-query, params={query:"Seleziona il numero..."}
+17:27:46  POST ai-query-planner                          → ~1s
+          risposta: { table:"partners", filters:[country_code in (ES,FR)], limit:1 }
+17:27:47  GET  /partners?select=country_code&...&limit=1 → 0.3s (DB)
+          count=383, sample 1 riga
+17:27:53  POST ai-assistant (mode=tool-result-comment)   → 6s
+          risposta: messaggio finale + spokenSummary + suggestedActions
+17:27:59  POST tts (sintesi vocale)                      → 1-2s
+~17:28:00 messaggio mostrato in chat
 ```
 
-Quindi il follow-up è fragile.
+**Tempo totale ≈ 22 secondi**, di cui:
+- 4.1s plan-execution (LLM)
+- 1.0s query-planner (LLM)
+- 0.3s query DB reale
+- 6.0s commento finale (LLM)
+- 1-2s TTS
 
-### 3. Lentezza reale
-Per una read query semplice il sistema è pesante:
-- 1 chiamata AI per pianificare
-- 1 chiamata AI per trasformare in query
-- 1 chiamata AI per commentare il risultato
+Il DB ci mette **300ms su 22s totali**. Il resto è tutto LLM in serie.
 
-È normale che sembri lento e poco fluido.
+### Cosa sta succedendo davvero
 
-### 4. Robustezza lessicale insufficiente
-Nel transcript c’è “quanti pane abbiamo a New York”.
-Per un CRM verticale, il sistema dovrebbe tollerare errori come:
-- pane → partner
-- stati uniti / usa / america → US
-- ny / new york city / nyc → New York
+1. **Fast lane non scattata.** La domanda era una read-only banale ("quanti partner in ES+FR"), ma è passata comunque dal `plan-execution` (Atto 1 della scorsa sessione). La normalizzazione lessicale ha lasciato "parlano" → l'euristica fast-lane non ha riconosciuto "partner" → fallback su pipeline lenta.
+2. **Doppio LLM su una query banale.** plan-execution + query-planner = 5s solo per decidere che dobbiamo fare `SELECT count(id) WHERE country_code IN (ES,FR)`.
+3. **Commento finale ancora da LLM (6s)** anche per un risultato che è "1 numero".
+4. **Plan ridondante.** plan-execution genera `params:{query:"Seleziona il numero..."}` poi il query-planner riparte da zero: due AI fanno la stessa cosa.
+5. **STT typo non gestito**: "parlano" → "partner". Il normalizer attuale non copre questo caso.
+6. **Bug minore nel planner**: ha messo `limit:1` su una query di conteggio (vede 1 sola riga, ma il count Postgrest restituisce comunque 383 dall'header).
 
-Oggi non vedo un layer dedicato di normalizzazione intent/domain.
+### Anche un altro spreco
+Le chiamate `GET /profiles?select=id&limit=1` ogni 30s sono heartbeat, non c'entrano con la lentezza percepita ma popolano il network log.
 
-## Piano di intervento
+## Strategia: 3 interventi mirati
 
-### 1. Correggere il contratto tra `planRunner` e `aiQueryTool`
-Obiettivo: se il planner ha già deciso `ai-query`, il tool deve ricevere il **prompt utente originale** oppure un **QueryPlan strutturato**, non un JSON serializzato ambiguo.
+Obiettivo: query semplici read-only sotto i **3 secondi** end-to-end.
 
-Interventi:
-- `src/v2/ui/pages/command/planRunner.ts`
-- `src/v2/ui/pages/command/tools/aiQueryTool.ts`
-- `src/v2/ui/pages/command/tools/types.ts`
+### Intervento 1 — Fast lane più aggressiva e robusta
 
-Approccio:
-- far supportare ad `aiQueryTool.execute()` il `context.payload`
-- se `payload` contiene già intento/query plan, usarlo direttamente
-- non ripianificare su `JSON.stringify(params)`
+File: `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
 
-Questo è il fix più importante.
+- Estendere `lexicalNormalizer.ts`:
+  - "parlano / partnar / parnter / partn" → "partner"
+  - "spagnoli / francesi" → mantenuti ma il planner sa già che sono nazionalità
+- Cambiare il detector fast-lane:
+  - **prima** prova a riconoscere come `ai-query` qualunque prompt che contenga: "quant*", "mostr*", "elenc*", "trov*", "lista", "cerca", + un sostantivo del dominio (partner, contatto, attivit*, email, agente, biglietto, campagna, prospect)
+  - se match → salta plan-execution → vai diretto a `aiQueryTool`
+- Effetto: **−4s** (eliminata 1 chiamata LLM)
 
-### 2. Aggiungere contesto conversazionale strutturato per le query
-Obiettivo: follow-up come “e a New York?” devono agganciarsi all’ultima query compatibile.
+### Intervento 2 — Commento locale per query semplici (skip ultimo LLM)
 
-Interventi:
-- `src/v2/ui/pages/command/hooks/useCommandState.ts`
-- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
-- eventuale nuovo helper tipo `queryContext.ts`
+File: `src/v2/ui/pages/command/tools/aiQueryTool.ts` + nuovo `src/v2/ui/pages/command/lib/localResultFormatter.ts`
 
-Da salvare:
-- tabella/entity (`partners`)
-- filtri attivi (`country_code=US`)
-- tipo richiesta (`count`, `list`, `top-rated`)
-- eventuale colonna focus (`city`)
+- Quando il risultato è:
+  - count puro (1 numero) → "Abbiamo X partner in [paesi]" + 3 suggested actions standard locali
+  - lista corta (<5 righe) → riepilogo template
+- L'AI commenter (mode=tool-result-comment) viene chiamata **solo** se:
+  - risultato complesso (>5 righe), oppure
+  - utente ha disattivato "fast mode", oppure
+  - il prompt richiede analisi ("analizza", "spiegami", "perché")
+- Le suggested actions semplici sono pre-compilate da template locali parametrizzati sui filtri del query plan (es. paesi, città presenti).
+- Effetto: **−6s** sulle query semplici (eliminata seconda chiamata LLM)
 
-Regola:
-- se il nuovo prompt è ellittico ma compatibile, si fa merge col contesto precedente
-- es.: “quanti partner abbiamo negli USA?” → poi “a New York?” = `partners + country_code=US + city ilike New York`
+### Intervento 3 — Telemetria visibile dei tool/step (chiesta dall'utente)
 
-### 3. Fast lane per query di lettura semplici
-Obiettivo: rendere `/v2/command` fluido come V2 classica.
+File: nuovo `src/v2/ui/pages/command/lib/toolTrace.ts` + integrazione nel `MessageList.tsx` o nel pannello "Step"
 
-Interventi:
-- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
-- `src/v2/ui/pages/command/tools/registry.ts`
-- `src/v2/ui/pages/command/aiBridge.ts`
+- Ogni invocazione registra: `{ step, tool, model?, durationMs, source: "fast-lane"|"planner"|"comment" }`
+- Salvataggio in stato locale + log su `console.info("[command-trace]", trace)` in dev
+- Esposizione opzionale in UI: pannello collassabile sotto la risposta del Direttore tipo:
+  ```
+  ⚡ 1.8s • fast-lane → ai-query (DB: 280ms) → local-comment
+  ```
+- In modalità "trace verbose" mostra anche modello LLM, token count se disponibile, payload sintetico.
+- Persistenza opzionale (futura): tabella `command_traces` per audit. Per ora solo client-side.
 
-Approccio:
-- se il prompt matcha chiaramente `ai-query` e non richiede workflow multi-step:
-  - saltare `plan-execution`
-  - eseguire direttamente `aiQueryTool`
-  - opzionalmente saltare anche il commento AI finale e usare un commento locale leggero per count/list semplici
+### Bonus rapido (5 minuti)
 
-Effetto:
-- da 3 hop AI a 1 hop AI nelle query semplici.
+- `ai-query-planner`: per query di conteggio (rilevate dal prompt: "quanti", "totale", "numero di") → forzare `limit: null` e `columns: ["id"]`, evitando l'orderby `rating.desc` che oggi spreca un index scan inutile.
+- `useCommandSubmit.ts`: chiamata TTS in **parallelo** con il render del messaggio invece che dopo (oggi i 1-2s di TTS si percepiscono perché la spunta finale del messaggio ritarda).
 
-### 4. Rafforzare il planner con esempi su città e follow-up
-Interventi:
-- `supabase/functions/ai-query-planner/index.ts`
-- `src/v2/agent/prompts/core/query-planner.ts`
-- se serve allineamento: `src/v2/agent/kb/dbSchema.ts`
+## Verifica post-intervento
 
-Da aggiungere:
-- esempi espliciti:
-  - “quanti partner abbiamo a New York”
-  - “quanti partner USA abbiamo a New York”
-  - “e a Miami?”
-  - “solo HQ a Los Angeles”
-- regola chiara: se si parla di `partners`, per la città usare `city ilike`
-- se il turno precedente era su `partners` stesso dominio, eredita i filtri geografici compatibili
+1. "quanti partner abbiamo in Spagna e Francia?" → ≤ 3s (target 2.5s)
+2. "e a Madrid?" → ≤ 2.5s (segue la fast lane + context)
+3. "parlano in Spagna" (typo STT) → riconosciuto come "partner in Spagna"
+4. "analizzami il portafoglio USA" → ancora 2-3 hop AI (giusto, è analisi)
+5. Pannello trace mostra: step / tool / durata per ogni messaggio
+6. Console log: `[command-trace] { steps: [{tool:"ai-query", ms:280}, ...], totalMs: 2400 }`
 
-### 5. Normalizzazione lessicale minima, non invasiva
-Obiettivo: tollerare errori senza hardcodare mezzo sistema.
+## File toccati (sintesi)
 
-Interventi:
-- piccolo preprocessor prima della pianificazione in `useCommandSubmit.ts` oppure in `aiQueryTool.ts`
+| # | File | Cambiamento |
+|---|---|---|
+| 1 | `src/v2/ui/pages/command/lib/lexicalNormalizer.ts` | +typo "parlano/partnar/parnter" |
+| 2 | `src/v2/ui/pages/command/hooks/useCommandSubmit.ts` | fast-lane robusta + TTS parallelo |
+| 3 | `src/v2/ui/pages/command/tools/aiQueryTool.ts` | branch local-comment per risultati semplici |
+| 4 | `src/v2/ui/pages/command/lib/localResultFormatter.ts` | **nuovo** — template count/lista corta |
+| 5 | `src/v2/ui/pages/command/lib/toolTrace.ts` | **nuovo** — tracciamento tool + durata |
+| 6 | `src/v2/ui/pages/command/components/MessageList.tsx` (o equivalente) | pannello trace collassabile |
+| 7 | `supabase/functions/ai-query-planner/index.ts` | count detection → no order, columns:[id] |
 
-Esempi:
-- pane → partner
-- partnera / patner → partner
-- usa / stati uniti / america → US
-- nyc / new york city → New York
+## Cosa NON tocco
 
-Deve essere:
-- leggero
-- limitato a un vocabolario business/domain
-- senza irrigidire l’AI
+- DB / RLS / schema partners
+- Edge function `ai-assistant` (resta uguale, semplicemente la chiamiamo meno)
+- TTS, auth, hard guards
+- Le doctrine KB (intervento precedente)
 
-### 6. Verifica end-to-end
-Dopo l’implementazione verificherei questi casi:
-
-1. “quanti partner abbiamo negli Stati Uniti d’America” → 1080
-2. “a New York quanti ne abbiamo?” subito dopo → conteggio corretto
-3. “e a Miami?” → nuovo conteggio corretto usando il contesto
-4. “quanti HQ abbiamo a Los Angeles?” → filtro città + office_type corretto
-5. typo: “quanti pane abbiamo a New York” → interpretato come partner
-6. latenza percepita: forte riduzione su query semplici
-7. nessuna regressione sui task multi-step reali
-
-## Priorità consigliata
-
-### Fase 1 — urgente
-- fix `planRunner` ↔ `aiQueryTool`
-- fast lane read-only per `/v2/command`
-
-### Fase 2 — subito dopo
-- query context strutturato per follow-up
-- esempi/planner city-aware
-
-### Fase 3 — rifinitura
-- normalizzazione typo/domain terms
-- commento locale leggero per risultati semplici
-
-## Esito secco
-
-Sì, hai ragione: abbiamo fatto passi avanti, ma `/v2/command` **non è ancora fluido né affidabile nei follow-up query-based**.
-
-Il problema principale non è il database.
-Il problema è il **flusso di orchestrazione**:
-- troppo lungo
-- troppo AI-centrico anche quando non serve
-- con perdita di contesto tra pianificazione ed esecuzione
-
-Se approvi, il prossimo intervento corretto è questo:
-1. sistemare il passaggio prompt/query plan,
-2. introdurre contesto query conversazionale,
-3. tagliare una o due chiamate AI nelle query semplici.
