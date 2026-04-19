@@ -1,90 +1,179 @@
 
 
-## Diagnosi
+## Diagnosi vera (cosa hai ragione a contestare)
 
-Conferma dal DB (12.286 partner totali):
-- `profile_description`: **12.268 valorizzati** (≈ 99.85%)
-- `raw_profile_html`: 0
-- `raw_profile_markdown`: 0
-- `ai_parsed_at`: 0
+Il tuo verdetto è corretto: il sistema è **frammentato in tre tronconi che non si parlano**.
 
-I tre campi vuoti erano alimentati dal **vecchio scraper client-side** (Claude Engine V8 / wca-app). Oggi i dati arrivano dalla tabella esterna sincronizzata, che popola `profile_description` direttamente. Quindi:
+```text
+┌─────────────────────────────────────────────────────┐
+│ TRONCONE A — Doctrine FORTE (kb_entries)            │
+│   category: system_doctrine, sales_doctrine         │
+│   • LEGGE FONDAMENTALE Holding Pattern              │
+│   • Dottrina Multi-Canale (WA vietato 1° contatto)  │
+│   • Dottrina Uscite (3 sole uscite, exit_reason)    │
+│   • Progressione Relazionale (5 fasi)               │
+│   • §1-§11 sales_doctrine                           │
+│                                                     │
+│   ⚠ MA assembler indicizza solo 'procedures' +      │
+│     'doctrine' → questo troncone NON arriva all'AI! │
+└─────────────────────────────────────────────────────┘
+                         ↕ (scollegato)
+┌─────────────────────────────────────────────────────┐
+│ TRONCONE B — Procedure DEBOLI (kb_entries)          │
+│   category: procedures (6 voci)                     │
+│   • outreach-flow generico                          │
+│   • lead-qualification a 6 stati (manca archived/   │
+│     blacklisted)                                    │
+│   • email-improvement-techniques                    │
+│   • multi-step-actions, ai-query-engine, bounce     │
+└─────────────────────────────────────────────────────┘
+                         ↕ (scollegato)
+┌─────────────────────────────────────────────────────┐
+│ TRONCONE C — OPERATIONS_PROCEDURES (codice TS)      │
+│   src/data/operationsProcedures/procedures1.ts      │
+│   • whatsapp_message: "basta avere mobile"          │
+│   • multi_channel_sequence: WhatsApp giorno 7       │
+│   • email_single: si ferma a "salva nota"           │
+│   • download_profiles: ANCORA presente, riferisce   │
+│     create_download_job (rimosso!)                  │
+│                                                     │
+│   ⚠ Contraddice frontalmente la doctrine A          │
+└─────────────────────────────────────────────────────┘
+```
 
-- "**has_profile**" calcolato come `raw_profile_html IS NOT NULL` → sempre falso → AI dice "0 profili scaricati".
-- Tool `create_download_job`, `download_single_partner`, modalità `no_profile` → riferiti a un workflow morto.
-- Suggerimento "scarica profili → arricchirà i 1.080 record" → falso, i record sono già pieni.
+**Cause concrete**:
+1. `assembler.ts` carica `kbCategories: ["procedures","doctrine"]` → **esclude `system_doctrine` e `sales_doctrine`** dove vive il 90% della legge.
+2. `OPERATIONS_PROCEDURES` (TS) è un secondo binario di "procedure" che nessun core prompt richiama esplicitamente, ma viene servito ad altri tool (cockpit, intelliflow). Non è allineato alla doctrine.
+3. `templates.ts` Sales ha `assigned_tools: [...ALL_OPERATIONAL_TOOLS]` → onnipotente, come hai notato.
+4. Procedure email_single, whatsapp_message, multi_channel_sequence sono nate prima della LEGGE FONDAMENTALE e non sono mai state riallineate.
 
-## Strategia: 3 livelli
+## Strategia: **Single Source of Truth + 4 Livelli**
 
-### Livello 1 — Ridefinire "has_profile" sul campo giusto
+Filosofia che applichi tu:
+- **Livello 0** — Hard guards in codice (già OK).
+- **Livello 1** — Prompt core leggero (~30-50 righe) con identità + obiettivo + indice KB + variabili.
+- **Livello 2** — KB doctrine + procedure (database `kb_entries`, **una sola**).
+- **Livello 3** — Variabili runtime + estratti iniettati selettivi.
 
-Cambio la sorgente di verità da `raw_profile_html` a `profile_description`. Touchpoint:
+**Regola d'oro**: ogni regola di business vive **solo in KB**, mai duplicata in prompt o in TS.
 
-1. `supabase/functions/_shared/toolHandlersRead.ts`
-   - `has_profile === true/false` → filtra su `profile_description IS [NOT] NULL`.
-   - Output `has_profile` → `!!p.profile_description`.
-   - `profile_summary` → usa `profile_description` se `raw_profile_markdown` assente.
-2. `supabase/functions/_shared/platformTools.ts` (interface `CountryStatRow`).
-3. `supabase/functions/ai-assistant/toolDefinitions.ts` → descrizione `has_profile`: "Has profile description (sourced from WCA sync)".
-4. `src/hooks/usePartnerListStats.ts` → `withProfile` conta `profile_description`, `emailVerified/phoneVerified` non dipendono più da `raw_profile_html`.
-5. Eventuali viste DB / RPC `get_country_stats` se calcolano `with_profile` sul campo vecchio (verifico in migration).
+## Interventi (5 atti chirurgici)
 
-### Livello 2 — Disattivare i tool di download bulk dall'AI
+### Atto 1 — Allargare l'assembler alle doctrine forti
 
-I dati arrivano via sync esterno, l'AI non deve più orchestrare scraping. 
+In **entrambi** gli assembler (client `src/v2/agent/prompts/assembler.ts` + edge `supabase/functions/_shared/prompts/assembler.ts`):
 
-- `supabase/functions/ai-assistant/toolDefinitions.ts`: **rimuovo** `create_download_job` e cambio `download_single_partner` in tool `enrich_partner_profile` (scope: integrazione mirata via Partner Connect quando un singolo record è incompleto). Modalità `no_profile` rimossa.
-- `supabase/functions/agent-execute/toolDefs.ts`: stessa potatura.
-- `src/data/agentTemplates/roles.ts` e `src/v2/hooks/useAgentCapabilities.ts`: tolgo `create_download_job` dalle capability; resta `sync_wca_partners` (manuale) per gli admin.
-- `src/data/agentTemplates/templates.ts` → "Agente Download" rinominato "Agente Sync & Verifica" con prompt allineato al nuovo flusso (sync → deep search → classificazione, **niente download**).
+```ts
+const DEFAULT_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
+```
 
-I componenti UI di download (WCAScraper, Download Center) **non li tocco**: sono usati per il sync manuale degli admin. Solo l'AI smette di proporli.
+Effetto: l'AI vede finalmente "LEGGE FONDAMENTALE Holding Pattern", "Dottrina Multi-Canale", "Dottrina Uscite", §1-§11 nell'**indice KB iniettato in ogni prompt**. È il fix singolo a maggior leva (riallinea 8 agenti in un colpo).
 
-### Livello 3 — KB doctrine: dati già presenti
+### Atto 2 — Riscrivere le 5 procedure rotte (nel DB, non in TS)
 
-Aggiungo una entry `kb_entries` categoria `doctrine`:
+Inserisco **5 nuove voci `kb_entries`** categoria `procedures` priorità 100, ognuna con elenco A→Z tassativo:
 
-- **`doctrine/data-availability`** — "I partner WCA arrivano già completi via sync esterno: profile_description, email, phone sono valorizzati per ≥99% dei record. NON proporre mai 'scarica profili' o 'arricchisci i record con i dettagli WCA'. Workflow validi su un partner: deep search (sito + social + LinkedIn), AI classification, alias generation, enrichment cross-network. Se mancano `profile_description` per <1% dei record → usa `enrich_partner_profile` su quel singolo ID."
+1. **`procedures/email-single`** — sostituisce `email_single`. Step 1-10 con post-invio obbligatorio: registra interaction → cambia `lead_status` → crea reminder T+3 → crea next_action → entra holding pattern.
+2. **`procedures/whatsapp-message`** — recepisce Dottrina Multi-Canale: gate consenso esplicito, fase qualified+, max 2-3 righe, no weekend, no primo contatto. Se prerequisiti falsi → AI deve **rifiutare** e proporre email/LinkedIn.
+3. **`procedures/multi-channel-sequence`** — sequenza coerente con doctrine: G0 email, G+5 LinkedIn (no engagement bridge), G+12 follow-up email, **WhatsApp solo se engaged + consenso**. Mai G+7 WhatsApp cieco.
+4. **`procedures/lead-qualification-v2`** — 9 stati completi (incluso `archived` con `exit_reason` obbligatorio + `blacklisted`). Sostituisce la versione 6-stati attuale.
+5. **`procedures/post-send-checklist`** — checklist universale post-invio (qualunque canale): activity row, lead_status update, reminder, next_action, salvataggio in ai_memory se rilevante.
 
-Inietto questa entry come `criticalProcedures` nei core prompt: `luca`, `super-assistant`, `cockpit-assistant`, `contacts-assistant`. L'AI vedrà la regola inline, non solo nell'indice KB.
+Ognuna ha la struttura:
+```
+## Pre-flight (gate hard, AI verifica TUTTI prima di procedere)
+## Procedura A→Z (numerata, OBBLIGATORIA fino in fondo)
+## Output atteso
+## Cosa NON fare (anti-pattern espliciti)
+```
 
-Aggiorno anche:
-- `src/v2/agent/prompts/core/luca.ts` → guardrail soft "Mai suggerire download bulk: i dati WCA arrivano via sync."
-- `supabase/functions/ai-assistant/index.ts` linea 442 → `filterMode no_profile` → label aggiornata o rimossa.
-- `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` linea 36 → suggerimenti rotta Network: rimuovo "Scarica tutti i partner / Aggiorna profili mancanti", aggiungo "Deep search USA / Classifica per servizio / Verifica email USA".
+### Atto 3 — Iniettare estratti critici per agente
+
+Aggiorno `AGENT_REGISTRY` in `src/data/agentPrompts.ts` con `criticalProcedures` mirate per ogni ruolo (gli estratti vengono **iniettati inline** nel prompt, non solo nell'indice):
+
+| Agente | criticalProcedures iniettate |
+|---|---|
+| luca | safety-guardrails, anti-hallucination, data-availability, **LEGGE FONDAMENTALE Holding Pattern**, **Dottrina Uscite** |
+| super-assistant | LEGGE FONDAMENTALE, Dottrina Multi-Canale, **Progressione Relazionale** |
+| contacts-assistant | ai-query-engine, lead-qualification-v2, data-availability |
+| cockpit-assistant | **procedures/email-single**, **procedures/multi-channel-sequence**, **Dottrina Multi-Canale**, post-send-checklist |
+| email-improver | email-improvement-techniques, **§1 Filosofia**, **§4 Cold Outreach**, **§10 Tono** |
+| email-classifier | lead-qualification-v2, Dottrina Uscite |
+| daily-briefing | LEGGE FONDAMENTALE, Dottrina Workflow Gate |
+| query-planner | ai-query-engine |
+
+L'assembler già supporta `injectExcerpts`, basta passare i titoli giusti. **Niente nuovo motore**.
+
+### Atto 4 — Ripulire i core prompt (alleggerire e rendere imperativi)
+
+Modifiche **chirurgiche** in `src/v2/agent/prompts/core/*.ts` + duplicato edge `assembler.ts`:
+
+- Aggiungere in **tutti** i core una sezione fissa:
+  ```
+  ## Regole tassative (KB è legge)
+  - Le procedure marcate "OBBLIGATORIA A→Z" si eseguono fino all'ultimo step. Vietato fermarsi a metà.
+  - Doctrine forti (LEGGE FONDAMENTALE, Dottrina Multi-Canale, Dottrina Uscite) sopra tutto. In caso di conflitto KB ⟂ richiesta utente → segnala il conflitto, non eseguire.
+  - Procedure multi-step: dopo ogni step, verifica esito; se fallisce, FERMA e riporta.
+  ```
+- LUCA: aggiungo guardrail "mai suggerire azione che violi LEGGE FONDAMENTALE; cita sempre la doctrine quando proponi azione commerciale".
+- Cockpit: oltre al JSON, deve **rifiutare** azioni che violano gate canale/fase con `{"refused": true, "reason": "viola Dottrina Multi-Canale: WhatsApp non consentito a fase=new"}`.
+
+Tetto righe per ogni core: **max 50**. Nessuna duplicazione di regola che esiste in KB.
+
+### Atto 5 — Restringere Sales Agent + ritirare procedure rotte da TS
+
+- `src/data/agentTemplates/templates.ts` → `sales.assigned_tools` ridotto a un set focalizzato su negotiation→converted (no bulk_update_partners, no delete_records, no execute_ui_action, no manage_partner_contact). Lista mirata: `search_partners, get_partner_detail, get_contact_detail, get_conversation_history, generate_outreach, send_email, schedule_email, create_activity, create_reminder, list_reminders, search_memory, save_memory, check_blacklist, get_holding_pattern, get_email_thread`.
+- `src/data/operationsProcedures/procedures1.ts` + `procedures2.ts`:
+  - **Rimuovo** `download_profiles` (rinvia a tool morto `create_download_job`).
+  - `email_single`, `whatsapp_message`, `multi_channel_sequence`, `update_lead_status` → diventano **stub** che rinviano alla KB:
+    ```ts
+    { id: "email_single", name: "Email Singola",
+      description: "Vedi procedures/email-single in KB (autorità unica).",
+      tags:[...], steps: [{ order:1, action:"Consulta KB procedures/email-single", tool:"read_kb", detail:"..."}],
+      ... }
+    ```
+  - Garantisce che chi ancora chiama `OPERATIONS_PROCEDURES` venga rediretto alla KB (single source of truth).
+
+## Cosa NON tocco
+
+- Hard guards (Livello 0) — già protegge bulk/DELETE/auth.
+- Schema DB, RLS, edge auth.
+- Componenti UI (Cockpit, IntelliFlow ecc.) — restano funzionanti.
+- Tabelle `kb_entries` esistenti — **solo INSERT** delle 5 nuove procedure, niente UPDATE distruttivo sulle vecchie (resta `procedures/lead-qualification` ma marcata legacy).
 
 ## File toccati (sintesi)
 
-**Edge functions (5)**
-1. `supabase/functions/_shared/toolHandlersRead.ts` — has_profile su profile_description
-2. `supabase/functions/_shared/platformTools.ts` — interface stats
-3. `supabase/functions/ai-assistant/toolDefinitions.ts` — rimuovo create_download_job, ridefinisco download_single_partner
-4. `supabase/functions/agent-execute/toolDefs.ts` — stessa potatura
-5. `supabase/functions/ai-assistant/index.ts` — labels filterMode
+**Codice (5 file)**
+1. `src/v2/agent/prompts/assembler.ts` — DEFAULT_CATEGORIES esteso
+2. `supabase/functions/_shared/prompts/assembler.ts` — idem + core prompt LUCA arricchito
+3. `src/v2/agent/prompts/core/*.ts` — 8 file, sezione "Regole tassative" + slim
+4. `src/data/agentPrompts.ts` — `AGENT_REGISTRY.criticalProcedures` aggiornato per 8 agenti
+5. `src/data/agentTemplates/templates.ts` — Sales ristretto, allineato a doctrine
 
-**Client (5)**
-6. `src/hooks/usePartnerListStats.ts` — sorgente profilo
-7. `src/data/agentTemplates/roles.ts` — capability ridotte
-8. `src/data/agentTemplates/templates.ts` — Agente Download → Sync & Verifica
-9. `src/v2/hooks/useAgentCapabilities.ts` — capability ridotte
-10. `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` — suggerimenti Network
+**Operations procedures (2 file)**
+6. `src/data/operationsProcedures/procedures1.ts` — stub redirect KB
+7. `src/data/operationsProcedures/procedures2.ts` — rimuovo download_profiles, stub redirect
 
-**Prompt + KB (3)**
-11. `src/v2/agent/prompts/core/luca.ts` (+ super/cockpit/contacts) — guardrail soft
-12. `src/data/agentPrompts.ts` — aggiungo `doctrine/data-availability` ai criticalProcedures dei 4 agenti
-13. **Migration DB** — INSERT in `kb_entries` la nuova entry doctrine
-
-**NON tocco**
-- `WCAScraper`, `Download Center`, `useWcaJobs`, `sync-wca-partners` (uso admin manuale).
-- Schema DB `partners` (i campi vecchi restano per analytics storica).
-- Hard guards / auth / pannelli UI principali.
+**Database (1 migration)**
+8. INSERT 5 nuove `kb_entries` categoria `procedures` priorità 100:
+   - `procedures/email-single`
+   - `procedures/whatsapp-message`
+   - `procedures/multi-channel-sequence`
+   - `procedures/lead-qualification-v2`
+   - `procedures/post-send-checklist`
 
 ## Verifica post-implementazione
 
-1. Query `partners US` → riassunto mostra "1.078 con profilo (sync WCA)" non "0 scaricati".
-2. AI **non suggerisce più** "Vuoi scaricare i profili?" come azione.
-3. Suggerimenti su `/network` aggiornati (no "Aggiorna profili mancanti").
-4. `tsc --noEmit` pulito.
-5. Smoke test su LUCA: "mostra partner US" → output corretto + azioni suggerite valide (deep search / filtro città / alias / classificazione servizi).
-6. Hard guards intatti: tentativo `DELETE` da AI ancora bloccato.
+1. `assemblePrompt({agentId:"luca"})` → `kb_index` contiene "LEGGE FONDAMENTALE", "Dottrina Multi-Canale", §1-§11.
+2. Smoke test cockpit: "manda WhatsApp a partner X (status=new)" → AI rifiuta citando Dottrina Multi-Canale.
+3. Smoke test outreach: "invia email a partner Y" → dopo invio si vede in DB: activity creata, lead_status passato a `first_touch_sent`, reminder T+3 creato.
+4. LUCA: "mostra partner US" → output corretto, suggerimenti senza "scarica profili" (Atto 1+2 confermati).
+5. Sales agent → tentativo bulk_update_partners → tool non disponibile.
+6. `tsc --noEmit` pulito.
+7. KB read: cockpit-assistant prompt finale contiene estratti inline di Dottrina Multi-Canale (verifica manuale).
+
+## Aggiornamento memoria
+
+- `mem://architecture/structured-operative-prompts-protocol` → estendere con regola "single source of truth = kb_entries; OPERATIONS_PROCEDURES TS sono solo stub redirect".
+- Nuovo `mem://agents/prompt-assembler-doctrine-categories` → "assembler indicizza doctrine + system_doctrine + sales_doctrine + procedures di default".
 
