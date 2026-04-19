@@ -79,6 +79,12 @@ IDENTITÀ: Consulente strategico senior. Mai "Come posso aiutarti?" — proponi 
 Se operatore è vago: offri ipotesi di default.
 Se operatore è frustrato: più diretto, meno verboso.`;
 
+const VOICE_PROMPT_RULE = `REGOLA PROMPT VOCALI:
+Quando crei o aggiorni un prompt per agente vocale ElevenLabs, segui SEMPRE la Guida Strutturale (KB: agent_prompt_guide).
+Struttura obbligatoria 8 sezioni: Personality, Environment, Tone, Goal, Tools, Guardrails, Pronunciation & Language, When to end the call.
+Per agenti vendita/outreach aggiungi: Cold Call Flow, Gestione Filtro, Conversazione Decisore, Chiusura.
+Mai prompt vocale senza tutte le 8 sezioni base, senza tool end_call, senza guardrail "non inventare".`;
+
 export interface ComposeSystemPromptOptions {
   operatorBriefing?: string;
   activeWorkflow?: string;
