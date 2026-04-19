@@ -17,10 +17,10 @@ type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"]
 const log = createLogger("useTrackActivity");
 
 /**
- * Returns true only if the current status allows escalation to "contacted".
- * Never downgrades advanced states (in_progress, negotiation, converted, lost).
+ * Returns true only if the current status allows escalation to "first_touch_sent".
+ * Never downgrades advanced states (holding, engaged, qualified, negotiation, converted, archived, blacklisted).
  */
-function canEscalateToContacted(status: string | null | undefined): boolean {
+function canEscalateToFirstTouch(status: string | null | undefined): boolean {
   return !status || status === "new";
 }
 
@@ -59,10 +59,10 @@ export function useTrackActivity() {
           .eq("id", params.partnerId)
           .maybeSingle();
 
-        if (canEscalateToContacted(currentPartner?.lead_status)) {
-          await updatePartner(params.partnerId, { lead_status: "contacted", last_interaction_at: now });
+        if (canEscalateToFirstTouch(currentPartner?.lead_status)) {
+          await updatePartner(params.partnerId, { lead_status: "first_touch_sent", last_interaction_at: now });
         } else {
-          // Advanced state (in_progress / negotiation / converted / lost) — refresh timestamp only
+          // Advanced state (holding / engaged / qualified / negotiation / converted / archived) — refresh timestamp only
           await updatePartner(params.partnerId, { last_interaction_at: now });
         }
 
@@ -80,8 +80,8 @@ export function useTrackActivity() {
           .eq("id", params.sourceId)
           .maybeSingle();
 
-        if (canEscalateToContacted(currentContact?.lead_status)) {
-          await updateContact(params.sourceId, { lead_status: "contacted", last_interaction_at: now });
+        if (canEscalateToFirstTouch(currentContact?.lead_status)) {
+          await updateContact(params.sourceId, { lead_status: "first_touch_sent", last_interaction_at: now });
         } else {
           await updateContact(params.sourceId, { last_interaction_at: now });
         }
@@ -100,8 +100,8 @@ export function useTrackActivity() {
           .eq("id", params.sourceId)
           .maybeSingle();
 
-        if (canEscalateToContacted(currentBca?.lead_status)) {
-          await updateBusinessCard(params.sourceId, { lead_status: "contacted" });
+        if (canEscalateToFirstTouch(currentBca?.lead_status)) {
+          await updateBusinessCard(params.sourceId, { lead_status: "first_touch_sent" });
         }
         // No timestamp column on business_cards — nothing else to update
       }

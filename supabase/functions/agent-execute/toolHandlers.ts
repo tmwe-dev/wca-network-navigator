@@ -849,7 +849,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       const { count: partnersWithEmail } = await supabase.from("partners").select("id", { count: "exact", head: true }).not("email", "is", null);
       const { count: partnersWithProfile } = await supabase.from("partners").select("id", { count: "exact", head: true }).not("raw_profile_html", "is", null);
       const { count: partnersConverted } = await supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "converted");
-      const { count: partnersContacted } = await supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "contacted");
+      const { count: partnersContacted } = await supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent");
       results.partners = { total: totalPartners, with_email: partnersWithEmail, with_profile: partnersWithProfile, converted: partnersConverted, contacted: partnersContacted };
       const { count: totalContacts } = await supabase.from("imported_contacts").select("id", { count: "exact", head: true });
       const { count: contactsWithEmail } = await supabase.from("imported_contacts").select("id", { count: "exact", head: true }).not("email", "is", null);
@@ -931,7 +931,7 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
 
     case "get_holding_pattern": {
       const items: HoldingItem[] = [];
-      const activeStatuses = ["contacted", "in_progress", "negotiation"];
+      const activeStatuses = ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"];
       const now = new Date();
       if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
         let pq = supabase.from("partners").select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")

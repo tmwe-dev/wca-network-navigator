@@ -29,10 +29,14 @@ interface PartnerCard {
 
 const leadStatusLabel: Record<string, string> = {
   new: "Nuovo — mai contattato",
-  contacted: "Contattato — in attesa di risposta",
-  qualified: "Qualificato — lead valido",
+  first_touch_sent: "Primo contatto — in attesa di risposta",
+  holding: "In attesa — nurturing diradato",
+  engaged: "Agganciato — dialogo attivo",
+  qualified: "Qualificato — bisogno esplicito",
+  negotiation: "Trattativa — proposta in corso",
   converted: "Convertito — cliente attivo",
-  lost: "Perso — opportunità chiusa",
+  archived: "Archiviato — opportunità chiusa",
+  blacklisted: "Blacklist — non contattare",
 };
 
 export default function AgendaCardView() {
@@ -174,7 +178,7 @@ export default function AgendaCardView() {
                           className={cn(
                             "text-[8px] px-1.5 py-0 h-4 shrink-0",
                             p.lead_status === "qualified" && "border-emerald-500/30 text-emerald-500",
-                            p.lead_status === "contacted" && "border-blue-500/30 text-blue-500",
+                            p.lead_status === "first_touch_sent" && "border-blue-500/30 text-blue-500",
                             p.lead_status === "new" && "border-muted-foreground/30 text-muted-foreground"
                           )}
                         >

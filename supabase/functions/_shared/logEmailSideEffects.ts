@@ -63,11 +63,11 @@ export async function logEmailSideEffects({
     ...(thread_id ? { thread_id } : {}),
   });
 
-  // 3. Update partner: escalate lead_status from 'new' to 'contacted'
+  // 3. Update partner: escalate lead_status from 'new' to 'first_touch_sent'
   await supabase
     .from("partners")
     .update({
-      lead_status: "contacted",
+      lead_status: "first_touch_sent",
       last_interaction_at: now,
     })
     .eq("id", partner_id)

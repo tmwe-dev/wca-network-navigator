@@ -452,7 +452,7 @@ export async function executePlatformTool(
 
     case "get_holding_pattern": {
       const items: HoldingItem[] = [];
-      const activeStatuses = ["contacted", "in_progress", "negotiation"];
+      const activeStatuses = ["first_touch_sent", "holding", "engaged", "qualified", "negotiation"];
       const now = new Date();
       if (!args.source_type || args.source_type === "wca" || args.source_type === "all") {
         let pq = supabase.from("partners").select("id, company_name, country_code, city, email, lead_status, last_interaction_at, interaction_count")

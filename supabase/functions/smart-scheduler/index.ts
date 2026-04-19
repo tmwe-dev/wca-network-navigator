@@ -24,12 +24,12 @@ Deno.serve(async (req) => {
       const userId = user.user_id;
       const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();
 
-      // 1. Stale contacts (last interaction > 14 days, status contacted/in_progress)
+      // 1. Stale contacts (last interaction > 14 days, in holding pattern)
       const { data: staleContacts } = await supabase
         .from("imported_contacts")
         .select("id, name, email, company_name, country, lead_score")
         .eq("user_id", userId)
-        .in("lead_status", ["contacted", "in_progress"])
+        .in("lead_status", ["first_touch_sent", "holding", "engaged"])
         .lt("last_interaction_at", fourteenDaysAgo)
         .not("email", "is", null)
         .order("lead_score", { ascending: false })
