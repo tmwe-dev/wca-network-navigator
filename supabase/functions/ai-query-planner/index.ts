@@ -117,6 +117,21 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 "mostra partner US attivi con rating > 4"
 → {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"is_active","op":"eq","value":true},{"column":"rating","op":"gt","value":4}],"sort":{"column":"rating","ascending":false},"limit":50,"title":"Partner US attivi rating > 4","rationale":"Country mappato a ISO-2 US, filtro rating numerico"}
 
+"quanti partner abbiamo negli Stati Uniti"
+→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"}],"limit":1,"title":"Conteggio partner USA","rationale":"Conteggio: solo id, count esatto via Supabase"}
+
+"quanti partner a New York" (senza contesto)
+→ {"table":"partners","columns":["id"],"filters":[{"column":"city","op":"ilike","value":"New York"}],"limit":1,"title":"Conteggio partner New York","rationale":"city ilike per match parziale (gestisce varianti tipo 'New York City')"}
+
+"quanti partner USA abbiamo a New York"
+→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"New York"}],"limit":1,"title":"Conteggio partner USA a New York","rationale":"Combinazione country + città"}
+
+"e a Miami?" (CONTESTO TURNO PRECEDENTE: tabella=partners, filtri=[country_code eq \"US\"])
+→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"Miami"}],"limit":1,"title":"Conteggio partner USA a Miami","rationale":"Eredita country_code=US dal contesto, sostituisce/aggiunge filtro city"}
+
+"solo HQ a Los Angeles" (CONTESTO TURNO PRECEDENTE: tabella=partners, filtri=[country_code eq \"US\"])
+→ {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"Los Angeles"},{"column":"office_type","op":"ilike","value":"HQ"}],"limit":50,"title":"HQ partner USA a Los Angeles","rationale":"Eredita country, aggiunge city + office_type"}
+
 "ultimi 20 prospect aggiunti"
 → {"table":"imported_contacts","filters":[],"sort":{"column":"created_at","ascending":false},"limit":20,"title":"Ultimi 20 contatti","rationale":"Ordinamento per data creazione decrescente"}
 
@@ -128,6 +143,13 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 
 "messaggi non letti dell'ultima settimana"
 → {"table":"channel_messages","filters":[{"column":"direction","op":"eq","value":"inbound"},{"column":"read_at","op":"is","value":null}],"sort":{"column":"email_date","ascending":false},"limit":100,"title":"Inbound non letti","rationale":"direction inbound + read_at null"}
+
+═══ FOLLOW-UP ELLITTICI ═══
+Se ricevi un CONTESTO TURNO PRECEDENTE (lo trovi nel system prompt esteso), e il nuovo prompt utente è breve / ellittico (es. "e a New York?", "anche a Miami", "solo gli attivi"), DEVI:
+- Ereditare la tabella del contesto.
+- Ereditare i filtri compatibili (country, status) dal contesto.
+- Sovrascrivere SOLO i filtri esplicitamente cambiati dal nuovo prompt (es. città).
+- Mantenere il mode (count/list) coerente col contesto, salvo sia chiaramente cambiato.
 
 Se la richiesta richiede operazioni di scrittura, scansioni esterne o azioni, rispondi:
 {"table":"INVALID","filters":[],"limit":1,"title":"N/A","rationale":"Richiesta non è una query di lettura"}
@@ -149,6 +171,7 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const prompt = typeof body?.prompt === "string" ? body.prompt : "";
     const history = Array.isArray(body?.history) ? body.history : [];
+    const contextHint = typeof body?.contextHint === "string" ? body.contextHint : "";
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "prompt richiesto" }), {
@@ -157,8 +180,11 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Inject conversational context (previous query shape) directly into the system prompt
+    const systemWithContext = SYSTEM_PROMPT + (contextHint ? `\n\n${contextHint}` : "");
+
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemWithContext },
       ...history.slice(-6).map((m: { role: string; content: string }) => ({
         role: m.role === "user" ? "user" : "assistant",
         content: m.content,
