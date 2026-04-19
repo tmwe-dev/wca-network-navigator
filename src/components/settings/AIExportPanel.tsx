@@ -51,9 +51,11 @@ type KbRow = {
 type OperativePromptRow = {
   id: string;
   name: string;
-  objective: string | null;
-  scope: string | null;
-  body: string | null;
+  context: string;
+  objective: string;
+  procedure: string;
+  criteria: string;
+  examples: string;
   priority: number;
   tags: string[] | null;
   is_active: boolean;
@@ -122,18 +124,24 @@ ${k.content}
 function mdOperativePrompt(p: OperativePromptRow): string {
   return `# ${p.name}
 
-- **Scope**: ${p.scope ?? "—"}
-- **Obiettivo**: ${p.objective ?? "—"}
+- **Contesto**: ${p.context}
+- **Obiettivo**: ${p.objective || "—"}
 - **Priorità**: ${p.priority}
 - **Tag**: ${(p.tags ?? []).join(", ") || "—"}
 - **Stato**: ${p.is_active ? "attivo" : "disattivo"}
 - **ID**: \`${p.id}\`
 
-## Body
+## Procedura
 
-\`\`\`
-${p.body ?? "(vuoto)"}
-\`\`\`
+${p.procedure || "_(vuota)_"}
+
+## Criteri
+
+${p.criteria || "_(vuoti)_"}
+
+## Esempi
+
+${p.examples || "_(nessuno)_"}
 `;
 }
 
@@ -154,17 +162,21 @@ function mdAgentPromptsCatalog(): string {
 
 function mdAgentTemplatesCatalog(): string {
   let out = `# Catalogo template agenti predefiniti\n\nFonte: \`src/data/agentTemplates/\`.\n\n`;
-  for (const t of AGENT_TEMPLATES) {
-    out += `## ${t.avatar_emoji ?? ""} ${t.name} — ${t.role}\n\n`;
+  for (const [key, t] of Object.entries(AGENT_TEMPLATES)) {
+    out += `## ${t.name} (\`${key}\`)\n\n`;
     out += `\`\`\`\n${t.system_prompt}\n\`\`\`\n\n`;
-    if (t.assigned_tools) {
+    if (t.assigned_tools?.length) {
       out += `**Tool**: \`${JSON.stringify(t.assigned_tools)}\`\n\n`;
     }
     out += `---\n\n`;
   }
-  out += `\n# Knowledge Base di default\n\n`;
-  for (const kb of AGENT_DEFAULT_KB) {
-    out += `## ${kb.title}\n\n${kb.content}\n\n---\n\n`;
+  out += `\n# Knowledge Base di default per ruolo\n\n`;
+  for (const [role, items] of Object.entries(AGENT_DEFAULT_KB)) {
+    out += `## Ruolo: \`${role}\`\n\n`;
+    for (const kb of items) {
+      out += `### ${kb.title}\n\n${kb.content}\n\n`;
+    }
+    out += `---\n\n`;
   }
   return out;
 }
@@ -181,9 +193,13 @@ function mdProcedures(): string {
       out += `\n`;
     }
     out += `### Step\n`;
-    p.steps.forEach((s, i) => {
-      out += `${i + 1}. **${s.label}**${s.detail ? ` — ${s.detail}` : ""}\n`;
+    p.steps.forEach((s) => {
+      out += `${s.order}. **${s.action}**${s.detail ? ` — ${s.detail}` : ""}${s.tool ? ` _(tool: ${s.tool})_` : ""}${s.optional ? " _[opzionale]_" : ""}\n`;
     });
+    if (p.tips?.length) {
+      out += `\n### Tips\n`;
+      for (const t of p.tips) out += `- ${t}\n`;
+    }
     out += `\n---\n\n`;
   }
   return out;
@@ -241,7 +257,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
           .order("priority", { ascending: false }),
         supabase
           .from("operative_prompts")
-          .select("id,name,objective,scope,body,priority,tags,is_active,created_at")
+          .select("id,name,context,objective,procedure,criteria,examples,priority,tags,is_active,created_at")
           .eq("user_id", userId)
           .order("priority", { ascending: false }),
         supabase
