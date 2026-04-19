@@ -48,6 +48,7 @@ export const partnerSearchTool: Tool = {
     const { partners, total } = result.value;
 
     const rows = partners.map((p) => ({
+      id: p.id,
       companyName: p.companyName,
       countryName: p.countryName,
       city: p.city,
@@ -72,6 +73,15 @@ export const partnerSearchTool: Tool = {
         count: total,
         sourceLabel: "Supabase · partners",
       },
+      selectable: true,
+      idField: "id",
+      liveSource: "partners",
+      bulkActions: [
+        { id: "outreach", label: "Programma outreach", promptTemplate: "Programma outreach per i partner con id: {ids}" },
+        { id: "campaign", label: "Aggiungi a campagna", promptTemplate: "Crea campagna per i partner con id: {ids}" },
+        { id: "enrich", label: "Arricchisci dati", promptTemplate: "Arricchisci i dati dei partner con id: {ids}" },
+        { id: "score", label: "Calcola lead-score", promptTemplate: "Calcola lead-score per i partner con id: {ids}" },
+      ],
     };
   },
 };

@@ -26,6 +26,8 @@ export function useCommandState() {
   const [liveResult, setLiveResult] = useState<ToolResult | null>(null);
   const [pendingApproval, setPendingApproval] = useState<{ toolId: string; payload: Record<string, unknown>; prompt: string } | null>(null);
   const [planState, setPlanState] = useState<PlanExecutionState | null>(null);
+  /** Selected row IDs (for selectable canvases) */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isEmpty = messages.length === 0;
@@ -36,6 +38,21 @@ export function useCommandState() {
     setMessages((prev) => [...prev, { ...msg, id: Date.now() + Math.random() }]);
   }, []);
 
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
   const resetForNewMessage = useCallback(() => {
     setCanvas(null);
     setFlowPhase("idle");
@@ -45,6 +62,7 @@ export function useCommandState() {
     setLiveResult(null);
     setPlanState(null);
     setActiveToolKey(null);
+    setSelectedIds(new Set());
   }, []);
 
   return {
@@ -64,6 +82,7 @@ export function useCommandState() {
     liveResult, setLiveResult,
     pendingApproval, setPendingApproval,
     planState, setPlanState,
+    selectedIds, setSelectedIds, toggleSelected, selectAll, clearSelection,
     chatEndRef,
     isEmpty,
     ts,

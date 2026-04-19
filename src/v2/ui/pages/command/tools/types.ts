@@ -35,6 +35,13 @@ export interface ToolResultMeta {
   readonly sourceLabel: string;
 }
 
+export interface BulkAction {
+  readonly id: string;
+  readonly label: string;
+  /** Prompt template; placeholder `{ids}` will be replaced with comma-joined selected IDs */
+  readonly promptTemplate: string;
+}
+
 export interface ApprovalDetail {
   readonly label: string;
   readonly value: string;
@@ -53,12 +60,23 @@ export type ToolResult =
       readonly columns: ToolResultColumn[];
       readonly rows: Record<string, string | number | null>[];
       readonly meta?: ToolResultMeta;
+      /** Enables row-selection (checkbox column) */
+      readonly selectable?: boolean;
+      /** Bulk actions exposed when ≥1 row is selected */
+      readonly bulkActions?: readonly BulkAction[];
+      /** Field name in each row that uniquely identifies it (default: "id") */
+      readonly idField?: string;
+      /** Source kind for realtime auto-refresh (e.g. "partners", "outreach_queue") */
+      readonly liveSource?: string;
     }
   | {
       readonly kind: "card-grid";
       readonly title: string;
       readonly cards: readonly CardItem[];
       readonly meta?: ToolResultMeta;
+      readonly selectable?: boolean;
+      readonly bulkActions?: readonly BulkAction[];
+      readonly liveSource?: string;
     }
   | {
       readonly kind: "timeline";
