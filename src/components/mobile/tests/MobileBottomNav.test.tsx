@@ -36,7 +36,8 @@ describe("MobileBottomNav", () => {
     expect(screen.getByText("nav.dashboard")).toBeInTheDocument();
     expect(screen.getByText("nav.crm")).toBeInTheDocument();
     expect(screen.getByText("nav.outreach")).toBeInTheDocument();
-    expect(screen.getByText("nav.email_intelligence")).toBeInTheDocument();
     expect(screen.getByText("nav.settings")).toBeInTheDocument();
+    // Central FAB shows the literal label "Mission"
+    expect(screen.getByText("Mission")).toBeInTheDocument();
   });
 });

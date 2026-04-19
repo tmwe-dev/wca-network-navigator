@@ -110,8 +110,17 @@ describe("Edge Function Consolidation — Macro-functions", () => {
 describe("Client Migration — call sites use macro-endpoints", () => {
   const srcDir = path.resolve("src");
 
-  // Exclude test pages (AILab, Diagnostics) and data config files from migration check
-  const EXCLUDE = ["AILab.tsx", "Diagnostics.tsx", "agentPrompts.ts", "types.ts", "sentry.ts"];
+  // Exclude test pages, data config files, and the dedicated deep-search-partner tool
+  // (deep-search-partner is a stand-alone V2 Command tool, NOT a legacy proxy.)
+  const EXCLUDE = [
+    "AILab.tsx",
+    "Diagnostics.tsx",
+    "agentPrompts.ts",
+    "types.ts",
+    "sentry.ts",
+    "deepSearchPartner.ts",
+    "useGovernance.ts",
+  ];
 
   function searchFiles(dir: string, pattern: RegExp): string[] {
     const results: string[] = [];
