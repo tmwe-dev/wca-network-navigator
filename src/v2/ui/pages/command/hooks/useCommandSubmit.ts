@@ -389,13 +389,17 @@ export function useCommandSubmit(state: CommandStateApi) {
       setFlowPhase("executing");
       setExecSteps([{ label: "Ricerca AI", detail: "Query DB diretta", status: "pending" as const }]);
 
+      const trace = startTrace(userPrompt);
+
       try {
+        const tFast = Date.now();
         const result = await aiQueryTool.execute(userPrompt, {
           confirmed: false,
           originalPrompt: userPrompt,
           contextHint: hint,
           history: buildHistory(),
         });
+        trace.add({ source: "fast-lane", label: "ai-query", durationMs: Date.now() - tFast });
 
         setLiveResult(result);
         setCanvas(canvasForResult(result));
@@ -416,9 +420,12 @@ export function useCommandSubmit(state: CommandStateApi) {
         });
 
         if (result.kind !== "approval") {
-          await commentOnResult(userPrompt, "ai-query", result);
+          await commentOnResult(userPrompt, "ai-query", result, trace);
+        } else {
+          trace.finish();
         }
       } catch (err: unknown) {
+        trace.finish();
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         toast.error(msg);
         addMessage({
