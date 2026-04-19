@@ -140,7 +140,7 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
-          <Route path="network" element={<Navigate to="/v2/deep-search" replace />} />
+          <Route path="network" element={guardedPage(DeepSearchPage, "Network")} />
 
           {/* CRM + figli */}
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
@@ -191,7 +191,7 @@ export function V2Routes(): React.ReactElement {
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
           <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
-          <Route path="deep-search" element={guardedPage(DeepSearchPage, "DeepSearch")} />
+          <Route path="deep-search" element={<Navigate to="/v2/network" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
           <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
