@@ -22,6 +22,14 @@ function getServiceClient() {
 }
 
 /**
+ * Kill-switch: per uso interno aziendale i budget sono disattivati.
+ * Riattivare in scenario commerciale settando AI_USAGE_LIMITS_ENABLED=true.
+ */
+function limitsEnabled(): boolean {
+  return Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
+}
+
+/**
  * Checks if user is within daily budget. Returns allowed=false if cap exceeded.
  */
 export async function checkDailyBudget(
@@ -29,6 +37,15 @@ export async function checkDailyBudget(
   type: "ai" | "tts",
   requestedAmount: number,
 ): Promise<BudgetCheck> {
+  if (!limitsEnabled()) {
+    return {
+      allowed: true,
+      aiTokensUsed: 0,
+      aiTokenCap: Number.MAX_SAFE_INTEGER,
+      ttsCharsUsed: 0,
+      ttsCharCap: Number.MAX_SAFE_INTEGER,
+    };
+  }
   const sb = getServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
