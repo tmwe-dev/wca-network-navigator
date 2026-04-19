@@ -100,6 +100,7 @@ export function composeSystemPrompt(opts: ComposeSystemPromptOptions): string {
     GOLDEN_RULES,
     COMMERCIAL_DOCTRINE,
     CONTEXT_ENGAGEMENT_RULES,
+    VOICE_PROMPT_RULE,
     KB_LOADING_INSTRUCTION,
   ];
 
