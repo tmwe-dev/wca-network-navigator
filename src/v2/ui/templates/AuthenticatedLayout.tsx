@@ -140,6 +140,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen(o => !o); }
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen(o => !o); }
+      // Mission Control: Cmd/Ctrl+M
+      if (e.key === "m" && (e.metaKey || e.ctrlKey) && !e.shiftKey) { e.preventDefault(); setMissionOpen(o => !o); }
+      // Filters Drawer: Cmd/Ctrl+Shift+F
+      if (e.key === "F" && (e.metaKey || e.ctrlKey) && e.shiftKey) { e.preventDefault(); setFiltersOpen(o => !o); }
     };
     const drawerHandler = (e: Event) => {
       const d = (e as CustomEvent).detail?.drawer;
