@@ -35,6 +35,13 @@ export interface ToolResultMeta {
   readonly sourceLabel: string;
 }
 
+export interface BulkAction {
+  readonly id: string;
+  readonly label: string;
+  /** Prompt template; placeholder `{ids}` will be replaced with comma-joined selected IDs */
+  readonly promptTemplate: string;
+}
+
 export interface ApprovalDetail {
   readonly label: string;
   readonly value: string;
