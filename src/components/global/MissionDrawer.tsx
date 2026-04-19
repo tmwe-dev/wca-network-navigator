@@ -63,11 +63,13 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner shadow-primary/10">
               <Target className="w-5 h-5 text-primary" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold text-foreground">{contextTitle}</h3>
-              <p className="text-[11px] text-muted-foreground">{contextSubtitle}</p>
+              <p className="text-xs text-muted-foreground leading-tight">
+                {contextSubtitle}. Configura goal, allega documenti e seleziona destinatari per la missione.
+              </p>
             </div>
-            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
               {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : "Globale"}
             </span>
           </div>
@@ -95,13 +97,13 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             <>
               <DrawerPresetManager presets={m.presets} activePresetId={m.activePresetId} quality={m.quality} onLoadPreset={m.loadPreset} onSavePreset={m.savePreset} onDeletePreset={m.deletePreset} onSetQuality={m.setQuality} />
               <div className="flex items-center gap-2">
-                <ActionIcon icon={Target} label="Obiettivo" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
-                <ActionIcon icon={FileText} label="Proposta" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-muted-foreground/25 to-muted-foreground/5" iconColor="text-muted-foreground" onClick={() => setProposalDialogOpen(true)} />
+                <ActionIcon icon={Target} label="Obiettivo" tooltip="Cosa vuoi ottenere con questa missione (es. fissare meeting, presentare il servizio)" active={!!m.goal} activeName={m.goal ? (m.goal.length > 18 ? m.goal.slice(0, 18) + "…" : m.goal) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setGoalDialogOpen(true)} />
+                <ActionIcon icon={FileText} label="Proposta" tooltip="Il messaggio base / value proposition che l'AI userà come scheletro per le email" active={!!m.baseProposal} activeName={m.baseProposal ? (m.baseProposal.length > 18 ? m.baseProposal.slice(0, 18) + "…" : m.baseProposal) : undefined} color="from-muted-foreground/25 to-muted-foreground/5" iconColor="text-muted-foreground" onClick={() => setProposalDialogOpen(true)} />
               </div>
               <div className="flex items-center gap-2">
-                <ActionIcon icon={MessageSquareText} label="Contesto" active={!!m.context} activeName={m.context ? (m.context.length > 18 ? m.context.slice(0, 18) + "…" : m.context) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setContextDialogOpen(true)} />
-                <ActionIcon icon={Paperclip} label="Docs" active={m.documents.length > 0} count={m.documents.length} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setDocsDialogOpen(true)} />
-                <ActionIcon icon={Link2} label="Link" active={m.referenceLinks.length > 0} count={m.referenceLinks.length} color="from-emerald-500/25 to-emerald-500/5" iconColor="text-emerald-500" onClick={() => setLinksDialogOpen(true)} />
+                <ActionIcon icon={MessageSquareText} label="Contesto" tooltip="Da dove arriva il lead (fiera, referral, online…) — guida tono e apertura" active={!!m.context} activeName={m.context ? (m.context.length > 18 ? m.context.slice(0, 18) + "…" : m.context) : undefined} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setContextDialogOpen(true)} />
+                <ActionIcon icon={Paperclip} label="Docs" tooltip="Allegati che l'AI può citare o inviare (PDF, presentazioni, listini)" active={m.documents.length > 0} count={m.documents.length} color="from-primary/25 to-primary/5" iconColor="text-primary" onClick={() => setDocsDialogOpen(true)} />
+                <ActionIcon icon={Link2} label="Link" tooltip="URL di riferimento (sito, case study, calendario booking)" active={m.referenceLinks.length > 0} count={m.referenceLinks.length} color="from-emerald-500/25 to-emerald-500/5" iconColor="text-emerald-500" onClick={() => setLinksDialogOpen(true)} />
               </div>
             </>
           )}
@@ -143,12 +145,12 @@ function ContextActionPanel({ title, icon: Icon, color, actions }: {
   );
 }
 
-function ActionIcon({ icon: Icon, label, active, activeName, count, color, iconColor, onClick }: {
-  icon: React.ElementType; label: string; active: boolean; activeName?: string; count?: number;
+function ActionIcon({ icon: Icon, label, tooltip, active, activeName, count, color, iconColor, onClick }: {
+  icon: React.ElementType; label: string; tooltip?: string; active: boolean; activeName?: string; count?: number;
   color: string; iconColor: string; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border transition-all flex-1 min-w-0", active ? "border-primary/20 bg-primary/5 shadow-sm" : "border-border/30 bg-muted/10 hover:border-primary/20 hover:bg-primary/5")}>
+    <button onClick={onClick} title={tooltip} className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border transition-all flex-1 min-w-0", active ? "border-primary/20 bg-primary/5 shadow-sm" : "border-border/30 bg-muted/10 hover:border-primary/20 hover:bg-primary/5")}>
       <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 shadow-inner", color)}><Icon className={cn("w-4 h-4", iconColor)} /></div>
       <div className="flex-1 min-w-0 text-left">
         <p className="text-[10px] text-muted-foreground font-medium">{label}</p>

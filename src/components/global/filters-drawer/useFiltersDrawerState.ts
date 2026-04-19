@@ -18,6 +18,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isCRM = seg === `/${ROUTE_CRM}`;
   const isAgenda = seg === `/${ROUTE_AGENDA}`;
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
+  const isCampaigns = seg === "/campaigns";
 
   const outreachTab = g.filters.outreachTab;
   const isCockpit = isOutreach && outreachTab === "cockpit";
@@ -44,7 +45,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -149,7 +150,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     g, drawerWidth, sectionTitle, activeCount, countryStats,
     isCockpit, isWorkspace, isInUscita, isCircuito, isAttivita,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
-    isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer,
+    isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer, isCampaigns,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
   };

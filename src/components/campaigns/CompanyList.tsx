@@ -1,5 +1,6 @@
 /**
- * CompanyList — shell composing Header, Filters, and virtualized rows
+ * CompanyList — shell composing Header, Filters, and virtualized rows.
+ * Filtri ora globali via GlobalFiltersContext (gestiti dal FiltersDrawer).
  */
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,9 +9,9 @@ import { Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
-import { CompanyListFilters } from "./CompanyListFilters";
 import { CompanyListRow } from "./CompanyListRow";
 import { queryKeys } from "@/lib/queryKeys";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 interface Partner {
   id: string;
@@ -70,11 +71,12 @@ export function CompanyList({
   onAddToCampaign, countryName, bcaPartnerIds, source = "partners",
   selectedContacts, onToggleContact,
 }: CompanyListProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [aiQuery, setAiQuery] = useState("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortAsc, setSortAsc] = useState(true);
+  const g = useGlobalFilters();
+  const searchQuery = g.filters.campaignsSearch;
+  const typeFilter = g.filters.campaignsTypeFilter;
+  const aiQuery = g.filters.campaignsAiQuery;
+  const sortField = g.filters.campaignsSortField;
+  const sortAsc = g.filters.campaignsSortAsc;
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const listParentRef = useRef<HTMLDivElement>(null);
 
@@ -86,11 +88,6 @@ export function CompanyList({
   const { data: bcaDetails = {} } = useBcaDetails(partnerIdsWithBca);
   const allPartnerIds = useMemo(() => partners.map(p => p.id), [partners]);
   const { data: contactsMap = {} } = usePartnerContacts(allPartnerIds);
-
-  const partnerTypes = useMemo(() => {
-    const types = new Set(partners.map(p => p.partner_type).filter(Boolean));
-    return Array.from(types) as string[];
-  }, [partners]);
 
   const filteredPartners = useMemo(() => {
     let result = partners;
@@ -132,10 +129,7 @@ export function CompanyList({
     setExpandedPartners(prev => { const next = new Set(prev); if (next.has(partnerId)) next.delete(partnerId); else next.add(partnerId); return next; });
   }, []);
 
-  const handleSortToggle = useCallback((field: SortField) => {
-    if (sortField === field) setSortAsc(prev => !prev);
-    else { setSortField(field); setSortAsc(field !== "contacts"); }
-  }, [sortField]);
+  // Sort toggle handled by FiltersDrawer (CampaignsFiltersSection).
 
   const virtualizer = useVirtualizer({
     count: filteredPartners.length,
@@ -143,6 +137,8 @@ export function CompanyList({
     estimateSize: () => 80,
     overscan: 10,
   });
+
+  const filtersActive = !!(searchQuery || aiQuery || typeFilter !== "all" || sortField !== "name" || !sortAsc);
 
   return (
     <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
@@ -158,19 +154,22 @@ export function CompanyList({
           onAddToCampaign={onAddToCampaign}
           hasPartners={partners.length > 0}
         />
-        <CompanyListFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          typeFilter={typeFilter}
-          onTypeFilterChange={setTypeFilter}
-          partnerTypes={partnerTypes}
-          aiQuery={aiQuery}
-          onAiQueryChange={setAiQuery}
-          sortField={sortField}
-          sortAsc={sortAsc}
-          onSortToggle={handleSortToggle}
-          isBcaSource={isBcaSource}
-        />
+        {filtersActive && (
+          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded-md px-2 py-1.5">
+            <span>Filtri attivi — usa il drawer Filtri (←) per modificarli.</span>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => {
+                g.setFilter("campaignsSearch", "");
+                g.setFilter("campaignsAiQuery", "");
+                g.setFilter("campaignsTypeFilter", "all");
+                g.setFilter("campaignsSortField", "name");
+                g.setFilter("campaignsSortAsc", true);
+              }}
+            >Reset</button>
+          </div>
+        )}
       </div>
 
       <div ref={listParentRef} className="flex-1 overflow-auto">
