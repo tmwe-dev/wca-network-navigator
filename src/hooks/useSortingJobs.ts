@@ -165,8 +165,8 @@ export function useSendJob() {
 
       // Update partner lead_status and last_interaction_at
       if (job.partner_id) {
-        // Conditional update: only escalate if currently "new"
-        await updatePartner(job.partner_id, { lead_status: "contacted", last_interaction_at: now });
+        // Conditional update: only escalate if currently "new" → "first_touch_sent"
+        await updatePartner(job.partner_id, { lead_status: "first_touch_sent", last_interaction_at: now });
 
         // Create interaction record
         await createInteraction({

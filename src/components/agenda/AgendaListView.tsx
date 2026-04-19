@@ -148,7 +148,7 @@ export default function AgendaListView() {
                     <Badge variant="outline" className={cn(
                       "text-[8px] px-1.5 py-0 h-4",
                       p.lead_status === "qualified" && "border-emerald-500/30 text-emerald-500",
-                      p.lead_status === "contacted" && "border-blue-500/30 text-blue-500",
+                      p.lead_status === "first_touch_sent" && "border-blue-500/30 text-blue-500",
                     )}>
                       {p.lead_status}
                     </Badge>
