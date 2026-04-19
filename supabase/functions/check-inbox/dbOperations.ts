@@ -1,6 +1,7 @@
 /**
  * dbOperations.ts — Sender matching and DB save operations.
  * Extracted from check-inbox/index.ts (lines 361-389, 1291-1404).
+ * Hotfix 2026-04-19: hardened UUID guards on source_id + partner_id.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
