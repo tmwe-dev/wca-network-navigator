@@ -130,9 +130,9 @@ export function CompanyList({
   }, []);
 
   const handleSortToggle = useCallback((field: SortField) => {
-    if (sortField === field) setSortAsc(prev => !prev);
-    else { setSortField(field); setSortAsc(field !== "contacts"); }
-  }, [sortField]);
+    if (sortField === field) g.setFilter("campaignsSortAsc", !sortAsc);
+    else { g.setFilter("campaignsSortField", field); g.setFilter("campaignsSortAsc", field !== "contacts"); }
+  }, [sortField, sortAsc, g]);
 
   const virtualizer = useVirtualizer({
     count: filteredPartners.length,
@@ -140,6 +140,8 @@ export function CompanyList({
     estimateSize: () => 80,
     overscan: 10,
   });
+
+  const filtersActive = !!(searchQuery || aiQuery || typeFilter !== "all" || sortField !== "name" || !sortAsc);
 
   return (
     <div className="flex flex-col h-full space-panel-amber animate-in fade-in slide-in-from-left-4 duration-500">
@@ -155,19 +157,22 @@ export function CompanyList({
           onAddToCampaign={onAddToCampaign}
           hasPartners={partners.length > 0}
         />
-        <CompanyListFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          typeFilter={typeFilter}
-          onTypeFilterChange={setTypeFilter}
-          partnerTypes={partnerTypes}
-          aiQuery={aiQuery}
-          onAiQueryChange={setAiQuery}
-          sortField={sortField}
-          sortAsc={sortAsc}
-          onSortToggle={handleSortToggle}
-          isBcaSource={isBcaSource}
-        />
+        {filtersActive && (
+          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 border border-border/30 rounded-md px-2 py-1.5">
+            <span>Filtri attivi — usa il drawer Filtri (←) per modificarli.</span>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => {
+                g.setFilter("campaignsSearch", "");
+                g.setFilter("campaignsAiQuery", "");
+                g.setFilter("campaignsTypeFilter", "all");
+                g.setFilter("campaignsSortField", "name");
+                g.setFilter("campaignsSortAsc", true);
+              }}
+            >Reset</button>
+          </div>
+        )}
       </div>
 
       <div ref={listParentRef} className="flex-1 overflow-auto">
