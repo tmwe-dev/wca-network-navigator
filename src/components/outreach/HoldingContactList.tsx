@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
 import type { HoldingChannel, HoldingMessageGroup } from "@/hooks/useHoldingMessages";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
-import { getCountryFlag } from "@/lib/outreachMockData";
+import { getCountryFlag } from "@/lib/countryFlag";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const CHANNEL_TABS: { key: HoldingChannel; label: string; icon: typeof Mail }[] = [

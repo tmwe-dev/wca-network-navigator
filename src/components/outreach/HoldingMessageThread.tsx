@@ -11,7 +11,6 @@ interface HoldingMessageThreadProps {
   strategy: HoldingStrategy | null;
   isAnalyzing: boolean;
   strategyError: string | null;
-  mockEnabled: boolean;
   onStrategyChange: (s: HoldingStrategy) => void;
 }
 
@@ -32,7 +31,7 @@ function StrategyCard({ icon: Icon, label, value, color }: {
 }
 
 export function HoldingMessageThread({
-  selectedMessage, strategy, isAnalyzing, strategyError, mockEnabled, onStrategyChange,
+  selectedMessage, strategy, isAnalyzing, strategyError, onStrategyChange,
 }: HoldingMessageThreadProps) {
   return (
     <Tabs defaultValue="risposta" className="flex-1 flex flex-col overflow-hidden">
@@ -48,15 +47,7 @@ export function HoldingMessageThread({
       </div>
 
       <TabsContent value="risposta" className="flex-1 overflow-auto px-4 py-3 m-0">
-        {mockEnabled ? (
-          <div className="space-y-3">
-            <Textarea
-              defaultValue="Gentile cliente, grazie per il suo messaggio. Stiamo preparando una risposta dettagliata con tutte le informazioni richieste. La contatteremo al più presto."
-              className="min-h-[200px] text-sm resize-none"
-              placeholder="Bozza di risposta..."
-            />
-          </div>
-        ) : isAnalyzing ? (
+        {isAnalyzing ? (
           <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-xs">AI sta analizzando...</span>
@@ -89,20 +80,7 @@ export function HoldingMessageThread({
       </TabsContent>
 
       <TabsContent value="strategia" className="flex-1 overflow-auto px-4 py-3 m-0">
-        {mockEnabled ? (
-          <div className="space-y-3">
-            <StrategyCard icon={AlertTriangle} label="Sentiment" value="Positivo — interesse dichiarato" color="text-emerald-500" />
-            <StrategyCard icon={TrendingUp} label="Intent Rilevato" value="Richiesta informazioni / preventivo" color="text-primary" />
-            <StrategyCard icon={Mail} label="Azione Suggerita" value="Rispondere con dettagli tecnici e proposta call" color="text-primary" />
-            <StrategyCard icon={Clock} label="Prossimo Step" value="Follow-up tra 3 giorni se nessuna risposta" color="text-muted-foreground" />
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
-                <div className="h-full bg-primary/60 rounded-full" style={{ width: "92%" }} />
-              </div>
-              <span>Confidenza: 92%</span>
-            </div>
-          </div>
-        ) : isAnalyzing ? (
+        {isAnalyzing ? (
           <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-xs">Analisi in corso...</span>

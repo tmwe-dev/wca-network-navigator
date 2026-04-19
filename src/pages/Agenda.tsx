@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { Calendar, TestTube2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { useOutreachMock } from "@/hooks/useOutreachMock";
+import { Calendar } from "lucide-react";
 import AgendaCalendarPage, { type ActivityTypeFilter, type ResponseFilter } from "@/components/agenda/AgendaCalendarPage";
 import AgendaDayDetail from "@/components/agenda/AgendaDayDetail";
-import { cn } from "@/lib/utils";
 
 export default function Agenda() {
   const [selectedDay, setSelectedDay] = useState(new Date());
@@ -16,7 +12,6 @@ export default function Agenda() {
     activityType: "all",
     responseStatus: "all",
   });
-  const { mockEnabled, toggleMock } = useOutreachMock();
 
   return (
     <div className="flex flex-col h-full">
@@ -30,17 +25,6 @@ export default function Agenda() {
               <p className="text-[10px] text-muted-foreground">Attività, follow-up e scadenze</p>
             </div>
           </div>
-          <InfoTooltip content="Mostra/nascondi dati demo per visualizzare la grafica finale">
-            <Button
-              variant={mockEnabled ? "default" : "outline"}
-              size="sm"
-              className={cn("h-7 gap-1.5 text-[10px]", mockEnabled && "bg-amber-600 hover:bg-amber-700")}
-              onClick={toggleMock}
-            >
-              <TestTube2 className="w-3 h-3" />
-              {mockEnabled ? "Mock ON" : "Mock"}
-            </Button>
-          </InfoTooltip>
         </div>
       </div>
 
