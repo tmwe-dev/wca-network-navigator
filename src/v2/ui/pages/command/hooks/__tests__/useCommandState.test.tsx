@@ -38,7 +38,7 @@ describe("useCommandState — selection helpers", () => {
     act(() => {
       result.current.selectAll(["a", "b"]);
       result.current.setActiveToolKey("partner-search");
-      result.current.setCanvas("table");
+      result.current.setCanvas("live-table");
     });
     act(() => result.current.resetForNewMessage());
     expect(result.current.selectedIds.size).toBe(0);
