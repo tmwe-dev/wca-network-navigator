@@ -16,6 +16,7 @@ import { InboxFiltersSection } from "./InboxFiltersSection";
 import { NetworkFiltersSection } from "./NetworkFiltersSection";
 import { CRMFiltersSection } from "./CRMFiltersSection";
 import { BCAFiltersSection } from "./BCAFiltersSection";
+import { CampaignsFiltersSection } from "./CampaignsFiltersSection";
 import type { FiltersDrawerProps } from "./types";
 
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
@@ -78,9 +79,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isCRM && state.g.filters.crmActiveTab === "contatti" && <CRMFiltersSection />}
             {state.isCRM && state.g.filters.crmActiveTab === "biglietti" && <BCAFiltersSection />}
             {state.isAgenda && <AgendaFiltersSection />}
+            {state.isCampaigns && <CampaignsFiltersSection />}
             {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>
