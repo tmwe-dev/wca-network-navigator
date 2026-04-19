@@ -40,10 +40,21 @@ export interface RateLimitResult {
   retryAfterMs: number;
 }
 
+/**
+ * Kill-switch: per uso interno aziendale i limiti sono disattivati.
+ * Riattivare in scenario commerciale settando AI_USAGE_LIMITS_ENABLED=true.
+ */
+function limitsEnabled(): boolean {
+  return Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
+}
+
 export function checkRateLimit(
   key: string,
   config: Partial<RateLimitConfig> = {},
 ): RateLimitResult {
+  if (!limitsEnabled()) {
+    return { allowed: true, remaining: 999, retryAfterMs: 0 };
+  }
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const now = Date.now();
 
