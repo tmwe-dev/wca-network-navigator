@@ -7,6 +7,7 @@ import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import type { ToolResult } from "../tools/types";
 import type { PlanExecutionState } from "../planRunner";
 import type { Message, CanvasType, FlowPhase, ToolPhase } from "../constants";
+import type { QueryContext } from "../lib/queryContext";
 
 export function useCommandState() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,6 +29,8 @@ export function useCommandState() {
   const [planState, setPlanState] = useState<PlanExecutionState | null>(null);
   /** Selected row IDs (for selectable canvases) */
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /** Last successful query "shape" — enables follow-up queries like "e a New York?" */
+  const [queryContext, setQueryContext] = useState<QueryContext | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isEmpty = messages.length === 0;
@@ -83,6 +86,7 @@ export function useCommandState() {
     pendingApproval, setPendingApproval,
     planState, setPlanState,
     selectedIds, setSelectedIds, toggleSelected, selectAll, clearSelection,
+    queryContext, setQueryContext,
     chatEndRef,
     isEmpty,
     ts,
