@@ -144,12 +144,16 @@ export const CRM_ORIGIN = [
   { value: "bca", label: "BCA" },
 ];
 
+// Tassonomia 9 stati — CRM mostra 7 stati (esclusi blacklisted e negotiation interno cockpit)
 export const CRM_LEAD_STATUS = [
   { value: "all", label: "Tutti" },
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Agganciato" },
   { value: "qualified", label: "Qualificato" },
   { value: "converted", label: "Convertito" },
+  { value: "archived", label: "Archiviato" },
 ];
 
 export const CRM_HOLDING = [
