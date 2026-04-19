@@ -1,78 +1,110 @@
 
+## Analisi Generale Sistema WCA Network Navigator
 
-## Piano — Bonifica residua tassonomia 9 stati
+**Modalità:** Read-only — questa è una valutazione, non richiede modifiche al codice (ma identifica bug critici da fixare in modalità default).
 
-I file core sono già aggiornati nei messaggi precedenti (`LeadStatus` in `contacts.ts`, `RALeadStatus` in `ra.ts`, `stateTransitions.ts`, `leadEscalation.ts`, `COCKPIT_STATUS`). Resta da chiudere il giro su:
+---
 
-### A. Costanti UI rimaste indietro (1 file)
+### 📊 Scala del sistema (oggettiva)
 
-**`src/components/global/filters-drawer/constants.ts`** — `CRM_LEAD_STATUS` ha ancora `"contacted"`. Lo aggiorno a 7 stati: `all, new, first_touch_sent, holding, engaged, qualified, converted, archived`.
-
-### B. Cadence engine (riscrittura semantica) (1 file)
-
-**`supabase/functions/_shared/cadenceEngine.ts`** — `CADENCE_BY_STATE` indicizzato su 6 stati vecchi. Riscrivo con i nuovi 9 stati:
-- `new` (solo email primo touch)
-- `first_touch_sent` (follow-up email + LinkedIn dopo 3-7gg)
-- `holding` (cadenza diradata, 1/14gg)
-- `engaged` (tutti i canali, dialogo attivo)
-- `qualified` (proposta/discovery)
-- `negotiation` (rapida, email+WA)
-- `converted` (mantenimento)
-- `archived` (zero contatti)
-- `blacklisted` (zero contatti, GDPR)
-
-Aggiorno anche header docstring e fallback `CADENCE_BY_STATE.contacted` → `CADENCE_BY_STATE.first_touch_sent`. Rimuovo alias `lost`/retro-compat.
-
-### C. Tool definitions AI (1 file)
-
-**`supabase/functions/ai-assistant/toolDefinitions.ts`** — 6 enum `lead_status` con vecchia tassonomia. Sostituisco tutti con i 9 stati nuovi (mantengo solo enum su `status` di `activities` che usa `pending/in_progress/completed` — semantica diversa, NON tocco).
-
-### D. Logica produzione (4 file)
-
-| File | Cosa |
+| Metrica | Valore |
 |---|---|
-| `supabase/functions/_shared/logEmailSideEffects.ts` | `lead_status: "contacted"` → `"first_touch_sent"` |
-| `supabase/functions/check-inbox/dbOperations.ts` | 2 update `"contacted"` → `"first_touch_sent"` |
-| `supabase/functions/smart-scheduler/index.ts` | filtro `["contacted","in_progress"]` → `["first_touch_sent","holding","engaged"]` |
-| `supabase/functions/agent-autonomous-cycle/index.ts` | filtri `["new","contacted","in_progress","negotiation"]` + filtro `"contacted"` → nuovi stati |
-| `supabase/functions/_shared/platformTools.ts` | `activeStatuses = ["contacted","in_progress","negotiation"]` → `["first_touch_sent","holding","engaged","qualified","negotiation"]` |
-| `supabase/functions/agent-execute/toolHandlers.ts` | idem `activeStatuses` + count `"contacted"` → `"first_touch_sent"` |
+| Edge Functions | **89** |
+| Pagine V2 | **54** |
+| File TS/TSX | **1.434** |
+| Tabelle business | 100+ (di cui 19 solo per email/missioni/outreach) |
+| Partner attivi | **12.286** |
+| Contatti CRM | **11.413** |
+| KB entries attive | **98** |
+| Cron jobs attivi | **15** |
+| Messaggi multicanale (7gg) | **2.905** |
+| Agenti AI configurati | **23** |
 
-### E. Hook UI (3 file)
+Sistema di scala enterprise con copertura funzionale altissima: CRM, multichannel outreach (Email/WA/LI), AI orchestration, AI Arena, Mission Builder, Autopilot, Learning Loop, Bridge Extension, Compliance, Observability.
 
-| File | Cosa |
-|---|---|
-| `src/hooks/useTrackActivity.ts` | 3× `lead_status: "contacted"` → `"first_touch_sent"` (inclusa funzione `canEscalateToContacted` → rinomino concettualmente o solo aggiorno target) |
-| `src/hooks/useUnreadCounts.ts` | filtro `["contacted","in_progress","negotiation"]` → nuovi stati |
-| `src/hooks/useHoldingMessages.ts` | default `leadStatus || "contacted"` → `"first_touch_sent"` |
+---
 
-### F. Componenti UI (1 file)
+### ✅ Punti di forza
 
-**`src/components/agenda/AgendaCardView.tsx`** — badge `lead_status === "contacted"` → `"first_touch_sent"` (mantengo il colore blue).
+1. **Architettura solida e documentata** — V2 con separazione UI/logica, DAL centralizzato, query keys atomizzate, IO Resilience (Result+Zod), Edge Functions modulari sotto 200 LOC, RBAC, soft-delete trigger globale.
+2. **Tassonomia 9 stati confermata** — Database mostra solo `new` e `first_touch_sent` in uso (12.286/69 partners, 11.401/12 contacts). Nessuno stato legacy contaminato. ✓
+3. **Gate WhatsApp implementato** — `agent-execute/index.ts` riga 124-132 contiene il blocco esplicito "VIETATO come primo contatto, consentito solo se stato >= engaged". ✓
+4. **Cron infrastructure operativa** — 15 jobs attivi (outreach scheduler ogni minuto, autonomous cycle ogni 2', email sync ogni 3', autopilot ogni 10'). ✓
+5. **AI Arena strutturata** — Componenti dedicati (3D card, typewriter, effetti conferma, session summary) + edge function `ai-arena-suggest`. ✓
+6. **Memoria cognitiva governata** — 98 KB entries attive, 80+ regole memory, doctrine layer, learning loop notturno.
+7. **Debito tecnico contenuto** — Solo **31** occorrenze di `: any` su 1.434 file (≈2%), 53 eslint-disable, 28 TODO. Eccellente per un'app di questa scala.
 
-### G. File da NON toccare
+---
 
-- **Test legacy**: `src/test/bug-registry-confirmation.test.ts`, `src/test/state-enum-integrity.test.ts`, `src/test/workflow-coherence-scorecard.test.ts`, `src/__tests__/holding-statuses.test.ts`, `src/components/contact-drawer/ContactRecordFields.test.tsx`. Questi documentano il comportamento storico — l'utente ha detto "non toccare commenti legacy", li tratto come tali. Aggiungerò invece **nuovi test** se necessario (o aggiorno minimamente i fixture in 1-2 file più visibili: `holding-statuses.test.ts` e `ContactRecordFields.test.tsx`).
-- **Falsi positivi** semantici (NON toccare):
-  - `ActivityStatus = "pending" | "in_progress" | "completed" | "cancelled"` in `entities.ts`
-  - `CampaignJobStatus` in `campaign-schema.ts`
-  - `validAgentTaskStatuses` (workflow agente, semantica diversa)
-  - `ATTIVITA_STATUS` filtri attività in `constants.ts`
-  - Commenti JSDoc che spiegano storicamente la migrazione
+### 🔴 Incongruenze e bug attivi (da fixare)
 
-### H. Verifica finale
+#### CRITICO — Bug in produzione confermato dai log
+**`check-inbox` fallisce a salvare email** con errore SQL ricorrente:
+```
+[check-inbox] Save error UID 105474:
+column "source_id" is of type uuid but expression is of type text
+```
+Visibile su 3+ utenti diversi negli ultimi minuti (rotationtl.be, gnv.it, fedex.com). Il commento di guard alla riga 110 di `dbOperations.ts` menziona la regola, ma evidentemente non è applicata sempre. **Email reali stanno andando perse.** Va fixato urgentemente.
 
-Eseguo grep mirato finale: `lead_status.*"(contacted|in_progress|lost)"` e `leadStatus:\s*"(contacted|in_progress|lost)"` su tutto il progetto escludendo `migrations/` e `__tests__/` legacy → zero risultati attivi.
+#### ALTO — 13 record agente duplicati nel DB
+- **Luca**: 5 copie attive (tutte con prompt 595 char identico)
+- **Marco**: 4 copie (prompt 51 char — sospettosamente corto)
+- **Robin**: 2 copie (una a 2190 char, una a 40 char — incoerente)
+- **Sara**: 2 copie
 
-## File toccati: ~13 modifiche
+Impatto: la funzione che seleziona l'agente ("trova Luca") può restituire una qualunque delle 5 copie → comportamento non deterministico. Inoltre Marco/Sara con prompt da 40-51 caratteri non sono operativi.
 
-**TS/TSX (8):** `constants.ts`, `useTrackActivity.ts`, `useUnreadCounts.ts`, `useHoldingMessages.ts`, `AgendaCardView.tsx`, + eventuale aggiornamento fixture test (`ContactRecordFields.test.tsx`, `holding-statuses.test.ts`).
+#### MEDIO — Sistema multicanale "freddo"
+- **0** missioni totali in DB (tabella esiste ma non usata)
+- **0** activities nelle ultime 24h
+- **0** classificazioni email negli ultimi 7gg (tranne 1)
+- **0** record nel supervisor_audit_log ultime 24h
 
-**Edge Functions (6):** `cadenceEngine.ts`, `toolDefinitions.ts`, `logEmailSideEffects.ts`, `check-inbox/dbOperations.ts`, `smart-scheduler/index.ts`, `agent-autonomous-cycle/index.ts`, `platformTools.ts`, `agent-execute/toolHandlers.ts`.
+Tutta l'infrastruttura outreach/audit/learning è cablata ma **non attivata operativamente**. Non è un bug strutturale, ma il sistema è vuoto rispetto alla sua capacità.
 
-## Note operative
+#### BASSO — Heartbeat funzioni
+`agent-autonomous-cycle` sembra non emettere metriche di esecuzione (solo boot/shutdown nei log). `outreach-scheduler` invece logga correttamente ogni minuto. Potenziale silent failure.
 
-- Procedo end-to-end senza ulteriori conferme come da preferenza.
-- Nessuna migration DB necessaria (già fatta in fase precedente).
-- I commenti JSDoc che citano `"contacted"`/`"in_progress"` come **esempi di valori legacy** li lascio (rispetto vincolo utente "non toccare commenti legacy"), salvo dove descrivono il comportamento attuale del codice (lì li aggiorno per coerenza).
+---
 
+### 🎯 Verifica per modulo richiesto
+
+| Modulo | Stato | Note |
+|---|---|---|
+| **Agenti AI** | ⚠️ 8/10 | Architettura ottima, ma 13 duplicati e Marco/Sara/Robin con prompt vuoti |
+| **Email** | ⚠️ 7/10 | Pipeline completa ma bug `source_id` causa perdite di inbound |
+| **WhatsApp** | ✅ 9/10 | Gate engaged implementato, 2.905 msg/7gg sincronizzati via bridge |
+| **LinkedIn** | ✅ 9/10 | Stealth sync manuale conforme alla policy, protocollo specifico OK |
+| **Missioni** | ✅ 8/10 | Mission Builder + Executor + slot config + audit completi, ma 0 missioni create |
+| **AI Arena** | ✅ 9/10 | Pre/Active session, 3D, typewriter, summary, edge ai-arena-suggest tutti presenti |
+| **Attività** | ✅ 8/10 | DAL + tracking + escalation lead_status corretti, 0 nelle ultime 24h |
+| **Knowledge Base** | ✅ 10/10 | 98 entries, doctrine governance, learning loop attivo |
+| **Sicurezza** | ✅ 9/10 | RLS, RBAC, CORS whitelist, security headers, soft-delete trigger |
+| **Osservabilità** | ✅ 8/10 | 15 cron, logging JSON strutturato, supervisor audit (sotto-utilizzato) |
+
+---
+
+### 🏆 Valutazione finale
+
+**Punteggio: 78.500 / 100.000**
+
+**Breakdown:**
+- Architettura & design: 92/100 → struttura V2 esemplare
+- Copertura funzionale: 95/100 → 89 edge functions, 54 pagine, multichannel completo
+- Qualità del codice: 88/100 → debito tecnico minimo per la scala
+- Stato operativo run-time: 55/100 → bug `source_id` attivo + 13 duplicati agenti + sistema "vuoto"
+- Documentazione & memoria: 95/100 → 98 KB entries + 80+ regole + doctrine
+- Conformità alle proprie regole interne: 70/100 → 5 Luca duplicati violano la regola "single source of truth"
+
+**Verdetto:** Sistema di **altissima qualità architetturale** con un **gap operativo significativo**. È una Ferrari parcheggiata: motore eccezionale, ma serve manutenzione (3 fix concreti) per passare da 78.500 a 90.000+.
+
+---
+
+### 🛠 Azioni consigliate (in ordine di priorità)
+
+1. **Fix bug `source_id` in `check-inbox/dbOperations.ts`** — sta perdendo email inbound reali ogni minuto.
+2. **Migration di pulizia agenti duplicati** — tenere 1 record per nome (il più recente con prompt completo), soft-delete gli altri.
+3. **Riallineare prompt Marco/Sara/Robin** (40-51 char) ai prompt completi documentati in `docs/PROMPT_11LABS_*.md`.
+4. **Attivare almeno 1 missione end-to-end** per validare il flusso autopilot in produzione.
+
+Approva il piano per procedere con i fix in modalità default.
