@@ -16,11 +16,33 @@ function isValidProvider(p: string): p is Provider {
   return (SUPPORTED_PROVIDERS as readonly string[]).includes(p);
 }
 
+/**
+ * Kill-switch: per uso interno aziendale i crediti sono disattivati.
+ * Riattivare in scenario commerciale settando AI_USAGE_LIMITS_ENABLED=true.
+ */
+function limitsEnabled(): boolean {
+  return Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
+}
+
 serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
+
+  // ── Bypass globale per uso interno ──
+  if (!limitsEnabled()) {
+    return new Response(JSON.stringify({
+      allowed: true,
+      byok: false,
+      credits_consumed: 0,
+      balance: Number.MAX_SAFE_INTEGER,
+      message: "Uso interno illimitato — credit gate disattivato",
+    }), {
+      headers: { ...dynCors, "Content-Type": "application/json" },
+      status: 200,
+    });
+  }
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
