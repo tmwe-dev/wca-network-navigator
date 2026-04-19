@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AIExportPanel } from "./AIExportPanel";
 import { AIBackupPanel } from "./AIBackupPanel";
+import { KBIngestPanel } from "./KBIngestPanel";
 import { Loader2 } from "lucide-react";
 
 export function BackupExportTab() {
@@ -41,6 +42,7 @@ export function BackupExportTab() {
           memorie, prompt operativi e logica applicata.
         </p>
       </div>
+      <KBIngestPanel />
       <AIExportPanel userId={userId} />
       <AIBackupPanel userId={userId} />
     </div>
