@@ -1,12 +1,12 @@
 /**
  * useCommandState — centralized state for CommandPage.
- * Extracted from CommandPage.tsx.
+ * No mock scenarios anymore; tracks the live tool currently running for the activation bar.
  */
 import { useState, useRef, useCallback } from "react";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import type { ToolResult } from "../tools/types";
 import type { PlanExecutionState } from "../planRunner";
-import type { Message, CanvasType, FlowPhase, ToolPhase, Scenario } from "../constants";
+import type { Message, CanvasType, FlowPhase, ToolPhase } from "../constants";
 
 export function useCommandState() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,8 +16,8 @@ export function useCommandState() {
   const [lang, setLang] = useState<"it" | "en">("it");
   const [canvas, setCanvas] = useState<CanvasType>(null);
   const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
-  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
-  const [activeScenarioKey, setActiveScenarioKey] = useState<string | null>(null);
+  /** Active tool id (for ToolActivationBar + governance), e.g. "partner-search" */
+  const [activeToolKey, setActiveToolKey] = useState<string | null>(null);
   const [showTools, setShowTools] = useState(false);
   const [toolPhase, setToolPhase] = useState<ToolPhase>("active");
   const [chainHighlight, setChainHighlight] = useState<number | undefined>(undefined);
@@ -44,6 +44,7 @@ export function useCommandState() {
     setChainHighlight(undefined);
     setLiveResult(null);
     setPlanState(null);
+    setActiveToolKey(null);
   }, []);
 
   return {
@@ -54,8 +55,7 @@ export function useCommandState() {
     lang, setLang,
     canvas, setCanvas,
     flowPhase, setFlowPhase,
-    activeScenario, setActiveScenario,
-    activeScenarioKey, setActiveScenarioKey,
+    activeToolKey, setActiveToolKey,
     showTools, setShowTools,
     toolPhase, setToolPhase,
     chainHighlight, setChainHighlight,

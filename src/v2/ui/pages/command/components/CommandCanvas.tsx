@@ -1,26 +1,25 @@
 /**
- * CommandCanvas — right-side canvas panel with all canvas types.
+ * CommandCanvas — right-side canvas panel.
+ * Live-only: renders the most recent tool result. No mock scenarios anymore.
  */
 import { motion, AnimatePresence } from "framer-motion";
-import { TableCanvas, CampaignCanvas, ReportCanvas, ResultCanvas } from "@/components/workspace/CanvasViews";
+import { TableCanvas } from "@/components/workspace/CanvasViews";
 import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
 import type { ToolResult } from "../tools/types";
 import type { CanvasType } from "../constants";
-import { tableData } from "../constants";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
 interface Props {
   canvas: CanvasType;
   liveResult: ToolResult | null;
-  activeScenarioKey: string | null;
   onClose: () => void;
 }
 
-export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, onClose }: Props) {
+export default function CommandCanvas({ canvas, liveResult, onClose }: Props) {
   const handleClose = () => onClose();
 
   return (
@@ -33,21 +32,17 @@ export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, o
           transition={{ duration: 0.7, ease }}
           className="w-[50%] p-4 overflow-y-auto"
         >
-          {canvas === "table" && <TableCanvas data={tableData} onClose={handleClose} />}
-          {canvas === "campaign" && <CampaignCanvas onClose={handleClose} />}
-          {canvas === "report" && <ReportCanvas onClose={handleClose} />}
-          {canvas === "result" && <ResultCanvas onClose={handleClose} scenarioKey={activeScenarioKey || undefined} />}
-          {canvas === "live-table" && liveResult && (
+          {canvas === "live-table" && liveResult && liveResult.kind === "table" && (
             <TableCanvas
-              data={liveResult.kind === "table" ? liveResult.rows.map((r: Record<string, string | number | null>) => ({
+              data={liveResult.rows.map((r: Record<string, string | number | null>) => ({
                 name: String(r["companyName"] ?? r["name"] ?? ""),
                 sector: String(r["countryName"] ?? r["country"] ?? ""),
                 revenue: String(r["email"] ?? "—"),
                 days: String(r["city"] ?? "—"),
                 churn: Number(r["rating"] ?? 0),
-              })) : []}
+              }))}
               onClose={handleClose}
-              title={`LIVE · ${liveResult.meta?.count ?? 0} partner · ${liveResult.meta?.sourceLabel ?? "Supabase"}`}
+              title={`LIVE · ${liveResult.meta?.count ?? 0} record · ${liveResult.meta?.sourceLabel ?? "Supabase"}`}
             />
           )}
           {canvas === "live-card-grid" && liveResult && liveResult.kind === "card-grid" && (
@@ -66,7 +61,7 @@ export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, o
                   action: c.suggestedAction,
                   meta: [...c.meta],
                 }))}
-                title={`${liveResult.cards.length} contatti inattivi`}
+                title={`${liveResult.cards.length} contatti`}
                 badge="LIVE"
                 sourceLabel={liveResult.meta?.sourceLabel}
               />
@@ -86,7 +81,7 @@ export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, o
               )}
               {liveResult.events.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-[12px] text-muted-foreground/60 font-light">Nessuna attività registrata negli ultimi 7gg</p>
+                  <p className="text-[12px] text-muted-foreground/60 font-light">Nessuna attività registrata</p>
                 </div>
               ) : (
                 <TimelineCanvas events={[...liveResult.events]} kpis={[...liveResult.kpis]} />
@@ -101,7 +96,7 @@ export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, o
               </div>
               {liveResult.nodes.length <= 1 && liveResult.nodes[0]?.type === "end" ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-[12px] text-muted-foreground/60 font-light">Nessuna campagna in corso</p>
+                  <p className="text-[12px] text-muted-foreground/60 font-light">Nessun flusso in corso</p>
                 </div>
               ) : (
                 <FlowCanvas nodes={[...liveResult.nodes]} title={`${liveResult.meta?.count ?? 0} job totali`} badge="LIVE" sourceLabel={liveResult.meta?.sourceLabel} />
@@ -116,6 +111,22 @@ export default function CommandCanvas({ canvas, liveResult, activeScenarioKey, o
               promptHint={liveResult.promptHint}
               onClose={handleClose}
             />
+          )}
+          {canvas === "live-report" && liveResult && liveResult.kind === "report" && (
+            <div className="float-panel p-6 rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                <button onClick={handleClose} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+              </div>
+              <div className="space-y-4">
+                {liveResult.sections.map((sec, i) => (
+                  <div key={i} className="border border-border/30 rounded-lg p-4">
+                    <h4 className="text-[12px] font-medium text-foreground mb-2">{sec.heading}</h4>
+                    <p className="text-[11px] text-muted-foreground whitespace-pre-line leading-relaxed">{sec.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </motion.div>
       )}
