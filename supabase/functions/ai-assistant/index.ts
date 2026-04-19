@@ -117,9 +117,15 @@ serve(async (req) => {
     if (!provider.isUserKey) {
       const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
       if (credits && credits.balance <= 0) {
+        // Status 200 con ok:false per garantire che il client riceva il body
+        // (alcuni SDK scartano il body su 4xx/5xx → "Failed to send a request").
         return new Response(
-          JSON.stringify({ error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni." }),
-          { status: 402, headers: { ...dynCors, "Content-Type": "application/json" } },
+          JSON.stringify({
+            ok: false,
+            error: "Crediti AI esauriti. Acquista crediti extra o aggiungi le tue chiavi API nelle impostazioni.",
+            code: "CREDITS_EXHAUSTED",
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
     }
