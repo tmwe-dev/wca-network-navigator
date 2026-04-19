@@ -24,7 +24,7 @@ const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "": "/v2",
-  "network": "/v2/deep-search",
+  "network": "/v2/network",
   "crm": "/v2/crm",
   "outreach": "/v2/outreach",
   "inreach": "/v2/inreach",
