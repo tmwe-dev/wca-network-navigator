@@ -1,5 +1,6 @@
 /**
- * CompanyList — shell composing Header, Filters, and virtualized rows
+ * CompanyList — shell composing Header, Filters, and virtualized rows.
+ * Filtri ora globali via GlobalFiltersContext (gestiti dal FiltersDrawer).
  */
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,9 +9,9 @@ import { Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePartnerContacts } from "@/hooks/usePartnerContacts";
 import { CompanyListHeader } from "./CompanyListHeader";
-import { CompanyListFilters } from "./CompanyListFilters";
 import { CompanyListRow } from "./CompanyListRow";
 import { queryKeys } from "@/lib/queryKeys";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 interface Partner {
   id: string;
@@ -70,11 +71,12 @@ export function CompanyList({
   onAddToCampaign, countryName, bcaPartnerIds, source = "partners",
   selectedContacts, onToggleContact,
 }: CompanyListProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [aiQuery, setAiQuery] = useState("");
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortAsc, setSortAsc] = useState(true);
+  const g = useGlobalFilters();
+  const searchQuery = g.filters.campaignsSearch;
+  const typeFilter = g.filters.campaignsTypeFilter;
+  const aiQuery = g.filters.campaignsAiQuery;
+  const sortField = g.filters.campaignsSortField;
+  const sortAsc = g.filters.campaignsSortAsc;
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
   const listParentRef = useRef<HTMLDivElement>(null);
 
@@ -86,11 +88,6 @@ export function CompanyList({
   const { data: bcaDetails = {} } = useBcaDetails(partnerIdsWithBca);
   const allPartnerIds = useMemo(() => partners.map(p => p.id), [partners]);
   const { data: contactsMap = {} } = usePartnerContacts(allPartnerIds);
-
-  const partnerTypes = useMemo(() => {
-    const types = new Set(partners.map(p => p.partner_type).filter(Boolean));
-    return Array.from(types) as string[];
-  }, [partners]);
 
   const filteredPartners = useMemo(() => {
     let result = partners;
