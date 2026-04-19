@@ -1,43 +1,46 @@
 
-## Stato test sistema
+## Piano: estensione Command con interattività, real-time e copertura completa
 
-Riepilogo dello stato attuale, senza nessuna modifica.
+Eseguo le 3 fasi end-to-end, preservando rigorosamente l'estetica esistente (float-panel, gradient, animazioni framer-motion, badge LIVE/DEMO, font mono/extralight).
 
-### Test eseguiti e completati ✅
+### FASE 1 — Canvas interattivi
+1. Estendere `tools/types.ts`: aggiungere `selectable?: boolean` e `bulkActions?: { id, label, prompt }[]` ai result `table` e `card-grid`.
+2. Aggiungere `selectedRows: Record<string, Set<string>>` in `useCommandState.ts` con helper toggle/clear.
+3. `TableCanvas.tsx`: aggiungere colonna checkbox (stile minimal mono) + barra azioni bulk in alto con stessa estetica float-panel-subtle. Rimuovere KPI hardcoded da `src/components/workspace/CanvasViews.tsx`.
+4. `CardGridCanvas.tsx`: aggiungere checkbox angolo card con animazione scale-in + bulk bar.
+5. Quando l'utente clicca una bulk-action → costruisce un prompt arricchito con gli ID selezionati e lo invia a `useCommandSubmit` (riusa il loop AI esistente).
 
-| Layer | Stato | Risultato |
-|---|---|---|
-| **Vitest (frontend unit)** | ✅ Completo | 1567/1567 pass su 194 file |
-| **Build production** | ✅ Completo | Build OK, nessun errore |
-| **Security scan Supabase** | ✅ Completo | 0 ERROR critici (post-migrazione Blocco 1) |
-| **Supabase linter** | ✅ Completo | Sotto soglia warning |
-| **Tassonomia lead status** | ✅ Allineata | DB ↔ codice ↔ test sincronizzati (9 stati) |
+### FASE 2 — Real-time monitoring
+1. Nuovo hook `useCommandRealtime.ts`: subscription Supabase su `download_jobs`, `outreach_queue`, `agent_action_log`, `mission_runs`, `campaign_jobs`. Filtrato per user_id, cleanup su unmount (pattern async-hook-resilience).
+2. Nuovo componente `LiveActivityRail.tsx`: striscia laterale destra del canvas con job in corso (progress bar gradient-primary), ultime 8 azioni AI, palpitio success/warning. Stessa estetica float-panel.
+3. Auto-refresh canvas: quando un job collegato al `liveResult` completa via realtime, ri-esegue silenziosamente la query del tool e aggiorna il canvas con animazione fade-in.
 
-### Test NON eseguiti ❌
+### FASE 3 — 10 nuovi tool (copertura ~70%)
+Aggiunti in `tools/registry.ts` con definizioni in `aiBridge.ts`:
+- **Inbox**: `inboxList`, `replyToEmail` (canvas card-grid + composer)
+- **Mission**: `createMission`, `missionStatus` (canvas flow + timeline)
+- **Agenda**: `agendaToday`, `addAgendaActivity` (canvas timeline)
+- **Governance**: `approvalsQueue`, `approveAction` (canvas table selectable + bulk)
+- **System**: `runDiagnostics`, `kbSupervisorScan` (canvas report)
 
-| Layer | Stato | Motivo |
-|---|---|---|
-| **Playwright E2E** (`e2e/smoke/*`) | ❌ Skipped | Sandbox Lovable non supporta Playwright headed/headless con auth reale |
-| **Deno edge function tests** | ⚠️ Parziale | 19 file falsi positivi (Vitest invece di Deno runner); le 2 reali rilevanti già coperte da Blocco 1 |
-| **Test manuali UX** (login, invio email, sync IMAP reali) | ❌ Non eseguibili | Richiedono interazione utente reale + credenziali production |
+Ogni tool: query DAL reale (no mock), Zod schema su edge dove serve, riuso canvas esistenti.
 
-### Conclusione
+### Garanzie estetiche
+- Zero modifiche a token colore, gradient, font, ease curves.
+- Nuovi elementi (checkbox, rail, bulk bar) ereditano `float-panel`, `text-gradient-primary`, animazioni framer (`ease = [0.2, 0.8, 0.2, 1]`).
+- Nessun componente shadcn introdotto se non già presente (Checkbox da `@/components/ui/checkbox` già esistente).
 
-**I test automatizzabili nell'ambiente Lovable sono completati al 100%.**
+### File principali toccati
+- `src/v2/ui/pages/command/tools/types.ts`
+- `src/v2/ui/pages/command/canvas/TableCanvas.tsx`
+- `src/v2/ui/pages/command/canvas/CardGridCanvas.tsx`
+- `src/v2/ui/pages/command/canvas/LiveActivityRail.tsx` (nuovo)
+- `src/v2/ui/pages/command/hooks/useCommandState.ts`
+- `src/v2/ui/pages/command/hooks/useCommandRealtime.ts` (nuovo)
+- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
+- `src/v2/ui/pages/command/aiBridge.ts`
+- `src/v2/ui/pages/command/tools/registry.ts` + 10 nuovi file tool
+- `src/components/workspace/CanvasViews.tsx` (fix KPI hardcoded)
+- `src/v2/ui/pages/command/components/CommandCanvas.tsx` (montaggio rail)
 
-Restano fuori solo:
-1. **E2E Playwright** → da eseguire in CI esterna (GitHub Actions) o localmente
-2. **Smoke test manuale produzione** → da fare tu su `https://wca-network-navigator.lovable.app`:
-   - Login con whitelist
-   - Apertura `/v2/network`, `/v2/outreach`, `/v2/crm`
-   - Invio email di test
-   - Verifica check-inbox
-
-### Prossimo passo consigliato
-
-Decidere se:
-- **A)** Considerare la sessione test chiusa e passare ad altro
-- **B)** Configurare CI GitHub Actions per E2E Playwright (lavoro separato, ~1h)
-- **C)** Smoke manuale guidato sulla preview (io ti elenco i passi, tu clicchi)
-
-Nessuna modifica al codice prevista in questa risposta.
+Nessun mock reintrodotto. Tutto live dal DB.
