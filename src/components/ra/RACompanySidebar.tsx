@@ -11,7 +11,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("RACompanySidebar");
 
-const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "contacted", "qualified", "negotiation", "converted", "lost"];
+const LEAD_STATUS_OPTIONS: RALeadStatus[] = ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"];
 
 function formatDate(dateString: string) {
   try {

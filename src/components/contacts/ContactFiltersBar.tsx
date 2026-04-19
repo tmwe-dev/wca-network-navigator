@@ -23,11 +23,14 @@ import { ContactAIBar, type AICommand } from "./ContactAIBar";
 const STATUSES: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "Tutti" },
   { value: "new", label: "Nuovo" },
-  { value: "contacted", label: "Contattato" },
-  { value: "in_progress", label: "In corso" },
+  { value: "first_touch_sent", label: "Primo contatto" },
+  { value: "holding", label: "In attesa" },
+  { value: "engaged", label: "Agganciato" },
+  { value: "qualified", label: "Qualificato" },
   { value: "negotiation", label: "Trattativa" },
   { value: "converted", label: "Cliente" },
-  { value: "lost", label: "Perso" },
+  { value: "archived", label: "Archiviato" },
+  { value: "blacklisted", label: "Blacklist" },
 ];
 
 const GROUP_MODES = [

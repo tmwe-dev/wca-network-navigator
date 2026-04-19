@@ -134,7 +134,7 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
 
       {/* Status + Holding Pattern */}
       <div className="flex items-center gap-2">
-        <HoldingPatternIndicator status={record.leadStatus as "new" | "contacted" | "in_progress" | "negotiation" | "converted" | "lost"} />
+        <HoldingPatternIndicator status={record.leadStatus as "new" | "first_touch_sent" | "holding" | "engaged" | "qualified" | "negotiation" | "converted" | "archived" | "blacklisted"} />
         {editing ? (
           <Select value={draft.lead_status} onValueChange={v => setDraft(d => ({ ...d, lead_status: v }))}>
             <SelectTrigger className="h-7 w-36 text-xs">
