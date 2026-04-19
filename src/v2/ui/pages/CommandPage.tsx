@@ -1,6 +1,7 @@
 /**
  * CommandPage — AI Command Center.
  * Composition-only file. Logic in hooks/, UI in components/.
+ * The AI agent (LUCA) drives the full conversation: plan → execute tools → comment + propose next.
  */
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -30,9 +31,31 @@ function isMissionPrompt(text: string): boolean {
 const CommandPage = () => {
   const s = useCommandState();
   const tts = useVoiceOutput();
-  const governance = useGovernance(s.activeScenarioKey ?? undefined);
+  const governance = useGovernance(s.activeToolKey ?? undefined);
   const agent = useAgentLoop();
   const [missionMode, setMissionMode] = useState(false);
+
+  const submit = useCommandSubmit({
+    addMessage: s.addMessage,
+    setMessages: s.setMessages,
+    setCanvas: s.setCanvas,
+    setFlowPhase: s.setFlowPhase,
+    setShowTools: s.setShowTools,
+    setToolPhase: s.setToolPhase,
+    setChainHighlight: s.setChainHighlight,
+    setExecSteps: s.setExecSteps,
+    setExecProgress: s.setExecProgress,
+    setLiveResult: s.setLiveResult,
+    setPendingApproval: s.setPendingApproval,
+    setPlanState: s.setPlanState,
+    setActiveToolKey: s.setActiveToolKey,
+    setVoiceSpeaking: s.setVoiceSpeaking,
+    resetForNewMessage: s.resetForNewMessage,
+    ts: s.ts,
+    governance,
+    ttsSpeak: tts.speak,
+    messages: s.messages,
+  });
 
   const voice = useVoiceInput({
     onTranscript: (text) => s.setInput(text),
@@ -58,34 +81,12 @@ const CommandPage = () => {
     s.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [s.messages]);
 
-  const submit = useCommandSubmit({
-    addMessage: s.addMessage,
-    setMessages: s.setMessages,
-    setCanvas: s.setCanvas,
-    setFlowPhase: s.setFlowPhase,
-    setShowTools: s.setShowTools,
-    setToolPhase: s.setToolPhase,
-    setChainHighlight: s.setChainHighlight,
-    setExecSteps: s.setExecSteps,
-    setExecProgress: s.setExecProgress,
-    setLiveResult: s.setLiveResult,
-    setPendingApproval: s.setPendingApproval,
-    setPlanState: s.setPlanState,
-    setActiveScenario: s.setActiveScenario,
-    setActiveScenarioKey: s.setActiveScenarioKey,
-    setVoiceSpeaking: s.setVoiceSpeaking,
-    resetForNewMessage: s.resetForNewMessage,
-    ts: s.ts,
-    governance,
-    ttsSpeak: tts.speak,
-  });
-
   const handleSendFromInput = useCallback(() => {
     const text = s.input.trim();
     if (!text) return;
     s.setInput("");
 
-    // Auto-detect mission mode or use toggle
+    // Auto-detect mission mode (long, multi-clause prompts) → use the autonomous agent loop
     if (missionMode || isMissionPrompt(text)) {
       s.addMessage({ role: "user", content: text, timestamp: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) });
       agent.start(text);
@@ -110,20 +111,19 @@ const CommandPage = () => {
           ) : (
             <CommandThread
               messages={s.messages}
-              activeScenarioKey={s.activeScenarioKey}
+              activeToolKey={s.activeToolKey}
               showTools={s.showTools}
               flowPhase={s.flowPhase}
               toolPhase={s.toolPhase}
               chainHighlight={s.chainHighlight}
-              activeScenario={s.activeScenario}
               planState={s.planState}
               execSteps={s.execSteps}
               execProgress={s.execProgress}
               governance={governance}
               chatEndRef={s.chatEndRef as React.RefObject<HTMLDivElement>}
-              onApprove={() => submit.handleApprove(s.planState, s.pendingApproval, s.activeScenario)}
               onCancel={submit.handleCancel}
-              onApproveStep={(stepNum) => s.planState && submit.handleApproveStep(s.planState)}
+              onApproveStep={() => s.planState && submit.handleApproveStep(s.planState, "")}
+              onSuggestedAction={(prompt) => submit.sendMessage(prompt)}
             />
           )}
 
@@ -167,7 +167,6 @@ const CommandPage = () => {
         <CommandCanvas
           canvas={s.canvas}
           liveResult={s.liveResult}
-          activeScenarioKey={s.activeScenarioKey}
           onClose={() => { s.setCanvas(null); s.setLiveResult(null); }}
         />
       </div>
