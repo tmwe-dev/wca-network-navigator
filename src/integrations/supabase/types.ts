@@ -7002,6 +7002,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      topup_credits: {
+        Args: { p_amount: number; p_description?: string; p_user_id: string }
+        Returns: number
+      }
       update_mission_progress: { Args: { p_mission_id: string }; Returns: Json }
     }
     Enums: {
