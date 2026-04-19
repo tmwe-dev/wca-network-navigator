@@ -2,32 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
-// getKBSlice deprecated — kb_entries is the single source of truth
-
-/** Fetch KB entries optimized for email improvement — focus on style and techniques */
-async function fetchKbEntriesForImprove(
-  supabase: ReturnType<typeof createClient>,
-  userId: string
-): Promise<{ text: string; sections: string[] }> {
-  const { data: entries } = await supabase
-    .from("kb_entries")
-    .select("title, content, category, chapter, tags")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .in("category", ["regole_sistema", "struttura_email", "chris_voss", "negoziazione", "hook", "persuasione", "tono", "errori"])
-    .gte("priority", 6)
-    .order("priority", { ascending: false })
-    .order("sort_order")
-    .limit(15);
-
-  if (!entries || entries.length === 0) return { text: "", sections: [] };
-
-  const sections = [...new Set(entries.map((e: { category: string }) => e.category))];
-  return {
-    text: entries.map((e: { title: string; content: string }) => `### ${e.title}\n${e.content}`).join("\n\n---\n\n"),
-    sections,
-  };
-}
+import { assemblePrompt } from "../_shared/prompts/assembler.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
