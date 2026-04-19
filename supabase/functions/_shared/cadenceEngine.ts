@@ -2,9 +2,8 @@
  * cadenceEngine.ts — Regole di cadenza multi-canale e sequencing attività.
  * Definisce QUANDO e CON QUALE CANALE contattare, basandosi sullo stato commerciale.
  *
- * TASSONOMIA STATI: usa SOLO i lead_status canonici del prodotto:
- *   new | contacted | in_progress | negotiation | converted | lost
- * (più "archived" come alias tollerato di "lost" per retro-compat).
+ * TASSONOMIA STATI (9 canonici — Costituzione Commerciale):
+ *   new | first_touch_sent | holding | engaged | qualified | negotiation | converted | archived | blacklisted
  */
 
 // ── Cadenza per stato commerciale ──
@@ -25,21 +24,37 @@ export const CADENCE_BY_STATE: Record<string, CadenceRule> = {
     escalationAfterDays: 5,
     notes: "Solo email per primo contatto. MAI WhatsApp o LinkedIn come primo touch.",
   },
-  // Primo touch inviato, in attesa di risposta — follow-up email + LinkedIn
-  contacted: {
+  // Primo touch inviato, in attesa di risposta — follow-up email + LinkedIn dopo 3-7gg
+  first_touch_sent: {
     allowedChannels: ["email", "linkedin"],
     minDaysBetweenContacts: 3,
     maxContactsPerWeek: 2,
     escalationAfterDays: 5,
-    notes: "Dopo 3 giorni senza risposta: follow-up email. Dopo 5 giorni: LinkedIn connection.",
+    notes: "Dopo 3 giorni senza risposta: follow-up email. Dopo 5-7 giorni: LinkedIn connection.",
   },
-  // Dialogo attivo / qualificazione in corso — tutti i canali con consenso
-  in_progress: {
+  // Holding pattern — cadenza diradata, nurturing soft
+  holding: {
+    allowedChannels: ["email", "linkedin"],
+    minDaysBetweenContacts: 14,
+    maxContactsPerWeek: 1,
+    escalationAfterDays: 30,
+    notes: "Lead in attesa: cadenza diradata (1 contatto/14gg max). Solo nurturing soft, no pressing.",
+  },
+  // Dialogo attivo — tutti i canali, risposta ricevuta
+  engaged: {
     allowedChannels: ["email", "linkedin", "whatsapp"],
     minDaysBetweenContacts: 2,
     maxContactsPerWeek: 3,
     escalationAfterDays: 7,
     notes: "Dialogo attivo. Tutti i canali aperti. WhatsApp solo con consenso esplicito.",
+  },
+  // Qualificato — bisogno esplicito, proposta/discovery in corso
+  qualified: {
+    allowedChannels: ["email", "linkedin", "whatsapp"],
+    minDaysBetweenContacts: 2,
+    maxContactsPerWeek: 4,
+    escalationAfterDays: 5,
+    notes: "Bisogno esplicito identificato. Proposta/discovery in corso. Tutti i canali ammessi con consenso.",
   },
   // Trattativa attiva — risposte rapide
   negotiation: {
@@ -57,21 +72,21 @@ export const CADENCE_BY_STATE: Record<string, CadenceRule> = {
     escalationAfterDays: 30,
     notes: "Cliente acquisito. Contatto di mantenimento. Auguri, aggiornamenti, cross-sell.",
   },
-  // Perso / archiviato — nessun contatto automatico
-  lost: {
-    allowedChannels: [],
-    minDaysBetweenContacts: 90,
-    maxContactsPerWeek: 0,
-    escalationAfterDays: 999,
-    notes: "Lead perso/archiviato. Nessun contatto automatico. Solo riattivazione manuale.",
-  },
-  // Alias retro-compat
+  // Archiviato — nessun contatto automatico
   archived: {
     allowedChannels: [],
     minDaysBetweenContacts: 90,
     maxContactsPerWeek: 0,
     escalationAfterDays: 999,
-    notes: "Alias di 'lost'. Nessun contatto automatico.",
+    notes: "Lead archiviato. Nessun contatto automatico. Solo riattivazione manuale con exit_reason valido.",
+  },
+  // Blacklisted — zero contatti (GDPR/frode/abuso)
+  blacklisted: {
+    allowedChannels: [],
+    minDaysBetweenContacts: 99999,
+    maxContactsPerWeek: 0,
+    escalationAfterDays: 99999,
+    notes: "BLACKLISTED: zero contatti consentiti (GDPR/frode/abuso). Mai riattivare automaticamente.",
   },
 };
 
