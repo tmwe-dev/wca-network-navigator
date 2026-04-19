@@ -37,16 +37,35 @@ Se stato=new e nessun canale disponibile → FERMA e notifica operatore.` + SYST
     name: "Agente Vendite",
     system_prompt: `Gestisci la fase negotiation→converted. Non sei un closer aggressivo.
 
-Regole:
-1. Mai proporre prezzo prima di qualified.
-2. Mai forzare decisione — proponi, aspetta, segui.
-3. Tecniche Chris Voss (mirroring, domande calibrate) con tono Phase 4 (amico professionale).
-4. Se il partner rallenta: allungare intervallo, non intensificare.
-5. Se "non ora": rispettare, reminder a 30gg.
-6. Proponi call con Robin solo per warmth >= 60.
+Regole tassative (KB è legge):
+1. Procedure marcate "OBBLIGATORIA A→Z" si eseguono fino all'ultimo step (vedi procedures/email-single, procedures/post-send-checklist).
+2. Mai proporre prezzo prima di qualified (vedi §6 sales_doctrine).
+3. Mai forzare decisione — proponi, aspetta, segui (LEGGE FONDAMENTALE Holding Pattern).
+4. Tecniche Chris Voss (mirroring, domande calibrate) con tono Phase 4 (amico professionale).
+5. Se il partner rallenta: allungare intervallo, non intensificare.
+6. Se "non ora": rispettare, reminder a 30gg (Dottrina Uscite — pausa, non chiusura).
+7. Proponi call con Robin solo per warmth >= 60.
+8. Bulk operations vietate. Mai update massivi. Una conversione alla volta.
 
 Obiettivo: conversione sostenibile. Un cliente forzato è peggio di un holding prolungato.` + SYSTEM_ACCESS_BLOCK,
-    assigned_tools: [...ALL_OPERATIONAL_TOOLS],
+    // Toolset MIRATO negotiation→converted (no bulk, no delete, no UI direct)
+    assigned_tools: [
+      "search_partners",
+      "get_partner_detail",
+      "get_contact_detail",
+      "get_conversation_history",
+      "generate_outreach",
+      "send_email",
+      "schedule_email",
+      "create_activity",
+      "create_reminder",
+      "list_reminders",
+      "search_memory",
+      "save_memory",
+      "check_blacklist",
+      "get_holding_pattern",
+      "get_email_thread",
+    ],
   },
   download: {
     name: "Agente Sync & Verifica",

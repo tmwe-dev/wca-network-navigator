@@ -68,18 +68,19 @@ export const PROCEDURES_PART2: OperationProcedure[] = [
   {
     id: "update_lead_status",
     name: "Aggiornamento Stato Lead",
-    description: "Aggiorna lo stato di avanzamento (lead status) di contatti o partner",
-    tags: ["lead", "status", "stato", "aggiorna", "pipeline", "contatto", "partner"],
+    description: "[STUB] Migrata in KB. Vedi procedures/lead-qualification-v2 (9 stati, exit_reason obbligatorio per archived/blacklisted).",
+    tags: ["lead", "status", "stub", "kb-redirect"],
     category: "crm",
-    prerequisites: [],
+    prerequisites: [
+      { check: "kb_consult", label: "Consulta KB procedures/lead-qualification-v2", tool: "search_kb" },
+    ],
     steps: [
-      { order: 1, action: "Identifica i record", tool: "search_contacts", detail: "Filtra per criteri (paese, azienda, status attuale)." },
-      { order: 2, action: "Conferma selezione", tool: null, detail: "Mostra quanti record verranno aggiornati." },
-      { order: 3, action: "Aggiorna lo stato", tool: "update_lead_status", detail: "Passa nuovi status: new→contacted→in_progress→negotiation→converted." },
+      { order: 1, action: "Consulta KB procedures/lead-qualification-v2", tool: "search_kb", detail: "9 stati: new, first_touch_sent, holding, engaged, qualified, negotiation, converted, archived, blacklisted. Exit_reason obbligatorio per uscite." },
+      { order: 2, action: "Bulk >5 record → CONFERMA esplicita utente", tool: null, detail: "Mai update massivi senza approvazione." },
     ],
     related_pages: ["/contacts", "/partner-hub"],
-    ai_tools_required: ["search_contacts", "update_lead_status"],
-    tips: ["Per aggiornamenti massivi (>5 record), chiedi sempre conferma"],
+    ai_tools_required: ["search_kb", "update_lead_status"],
+    tips: ["Single source of truth: kb_entries title='procedures/lead-qualification-v2'."],
   },
   {
     id: "export_contacts",
