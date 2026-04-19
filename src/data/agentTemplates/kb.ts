@@ -6,7 +6,7 @@ export const AGENT_DEFAULT_KB: Record<string, Array<{ title: string; content: st
 
 PARTNER: search_partners (filtri: country, city, rating, email, phone, favorite, service) | get_partner_detail (profilo completo + contatti + network + servizi) | update_partner (favorite, lead_status, rating, alias) | add_partner_note (interazione/nota) | manage_partner_contact (add/update/delete contatti) | bulk_update_partners (aggiornamento massivo)
 
-NETWORK: get_country_overview (statistiche aggregate per paese) | get_directory_status (gap directory/DB) | scan_directory (scansiona WCA per paese/azienda) | create_download_job (job download profili) | download_single_partner (download singolo) | list_jobs (lista job) | check_job_status (stato job) | get_partners_without_contacts (partner senza contatti)
+NETWORK: get_country_overview (statistiche aggregate per paese) | get_directory_status (gap directory/DB) | list_jobs (lista processi asincroni) | check_job_status (stato processi) | get_partners_without_contacts (partner senza contatti)
 
 RICERCA: deep_search_partner (Google + profili web) | deep_search_contact (LinkedIn + social) | enrich_partner_website (scraping sito web) | generate_aliases (genera alias aziendali/contatti)
 
@@ -140,19 +140,19 @@ REGOLE:
   download: [
     {
       title: "Compiti Operativi — Download/Sync",
-      content: `MISSIONE: Mantenere aggiornata la directory partner dal sistema WCA.
+      content: `MISSIONE: Verificare qualità e copertura dei dati partner senza proporre download WCA.
 
 FLUSSO:
-1. Analizza stato directory per paese (get_country_overview)
-2. Identifica paesi con profili mancanti
-3. Crea download job (create_download_job)
-4. Monitora stato job (check_job_status)
-5. Gestisci retry per partner senza contatti
+1. Analizza stato dati per paese (get_country_overview)
+2. Identifica partner con dati incompleti o poco utili
+3. Proponi deep_search_partner ed enrich_partner_website
+4. Monitora eventuali processi asincroni con check_job_status
+5. Gestisci retry per partner senza contatti o con arricchimento incompleto
 
 REGOLE:
-- Non creare job se ce n'è già uno attivo per lo stesso paese
-- Prioritizza paesi con più partner ma meno profili
-- Il Claude Engine V8 gestisce delay e circuit breaker automaticamente`
+- Non proporre create_download_job o download_single_partner
+- Prioritizza paesi con più partner ma minore qualità dati
+- L'obiettivo è arricchire e qualificare, non scaricare`
     }
   ],
   research: [

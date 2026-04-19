@@ -114,8 +114,8 @@ function suggestedActionsFor(table: string, filters: readonly FilterShape[]): Su
       : "";
     return [
       { label: `🔍 Mostra i top rated`, prompt: `mostra i top 20 partner ${filtersDesc} per rating` },
-      { label: `🏙️ Filtra per città`, prompt: `quali città hanno più partner ${filtersDesc}` },
-      { label: `📊 Analisi lead status`, prompt: `analizza la distribuzione dei lead status dei partner ${filtersDesc}` },
+      { label: `🌐 Avvia deep search`, prompt: `avvia una deep search sui partner ${filtersDesc}` },
+      { label: `🏢 Arricchisci i siti web`, prompt: `arricchisci i siti web dei partner ${filtersDesc}` },
     ];
   }
   if (table === "imported_contacts") {

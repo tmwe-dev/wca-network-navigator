@@ -62,7 +62,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "get_directory_status",
-      description: "Check directory scanning status for countries: directory members vs downloaded partners.",
+      description: "Check data coverage status for countries: internal coverage and sync quality indicators.",
       parameters: {
         type: "object",
         properties: {
@@ -76,7 +76,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "list_jobs",
-      description: "List download jobs with their status, progress, and errors.",
+      description: "List asynchronous jobs with their status, progress, and errors.",
       parameters: {
         type: "object",
         properties: {
@@ -157,26 +157,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
-  // create_download_job RIMOSSO: i partner WCA arrivano già completi via sync esterno (vedi doctrine/data-availability).
-  // Bulk download è gestito manualmente dagli admin via WCAScraper / Download Center.
-  {
-    type: "function",
-    function: {
-      name: "download_single_partner",
-      description: "Recupera/aggiorna il profilo di UN SINGOLO partner per ID o nome (uso eccezionale, <1% dei record). I dati WCA arrivano già completi via sync esterno: usa questo SOLO se profile_description è vuoto per quello specifico partner. NON usare per bulk download.",
-      parameters: {
-        type: "object",
-        properties: {
-          company_name: { type: "string", description: "Name of the company" },
-          city: { type: "string", description: "City (optional)" },
-          country_code: { type: "string", description: "ISO 2-letter country code (optional)" },
-          wca_id: { type: "number", description: "Known wca_id" },
-        },
-        required: ["company_name"],
-        additionalProperties: false,
-      },
-    },
-  },
+  // Download/scansioni WCA esclusi dai workflow AI conversazionali.
+  // Se mancano dati qualitativi, usare deep_search_partner o enrich_partner_website.
+
   // ━━━ Memory & Plans Tools ━━━
   {
     type: "function",
@@ -458,11 +441,11 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "check_job_status",
-      description: "Check the real-time status of a specific download job, or get a summary of all active background processes (download jobs, email queue). Use AFTER triggering any action to verify its outcome. MANDATORY after create_download_job, download_single_partner, bulk_update_partners, and any plan step execution.",
+      description: "Check the real-time status of a specific background job, or get a summary of all active background processes (jobs, email queue). Use AFTER triggering any asynchronous action to verify its outcome.",
       parameters: {
         type: "object",
         properties: {
-          job_id: { type: "string", description: "UUID of a specific download job to check. If omitted, returns a summary of ALL active processes." },
+          job_id: { type: "string", description: "UUID of a specific background job to check. If omitted, returns a summary of ALL active processes." },
           include_email_queue: { type: "boolean", description: "Also check email campaign queue status (default: true)" },
         },
         additionalProperties: false,
@@ -686,25 +669,9 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
-  // ━━━ Directory Scanning Tool ━━━
-  {
-    type: "function",
-    function: {
-      name: "scan_directory",
-      description: "Scan the WCA directory for a specific country or search by company name/city. Updates the directory cache with member lists.",
-      parameters: {
-        type: "object",
-        properties: {
-          country_code: { type: "string", description: "ISO 2-letter country code" },
-          search_by: { type: "string", enum: ["CountryCode", "CompanyName", "City", "MemberID"], description: "Search mode (default: CountryCode)" },
-          company_name: { type: "string", description: "Company name (for CompanyName search)" },
-          city: { type: "string", description: "City (for City search)" },
-          member_id: { type: "number", description: "WCA Member ID (for MemberID search)" },
-        },
-        additionalProperties: false,
-      },
-    },
-  },
+  // scan_directory escluso dai workflow AI conversazionali.
+  // Per gap qualitativi usare deep_search_partner / enrich_partner_website.
+
   // ━━━ Alias Generation Tool ━━━
   {
     type: "function",

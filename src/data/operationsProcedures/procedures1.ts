@@ -142,41 +142,20 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
       { check: "wca_session_active", label: "Sessione WCA attiva (cookie valido)", path: "/settings" },
     ],
     steps: [
-      { order: 1, action: "Verifica stato directory corrente", tool: "get_directory_status", detail: "Controlla se il paese è già nella cache e quando è stato scansionato." },
-      { order: 2, action: "Avvia scansione", tool: "scan_directory", detail: "search_by='CountryCode', country_code=XX. Aggiorna la directory_cache." },
-      { order: 3, action: "Confronta con DB locale", tool: "get_country_overview", detail: "Compara membri directory vs partner già scaricati." },
-      { order: 4, action: "Suggerisci azione successiva", tool: null, detail: "Se ci sono nuovi membri, suggerisci download." },
+      { order: 1, action: "Verifica stato dati corrente", tool: "get_directory_status", detail: "Controlla copertura e qualità dati del paese." },
+      { order: 2, action: "Confronta con DB locale", tool: "get_country_overview", detail: "Valuta quantità e qualità dei partner presenti." },
+      { order: 3, action: "Scegli arricchimento", tool: null, detail: "Se mancano rating o dati qualitativi, proponi deep search o arricchimento sito web." },
     ],
     related_pages: ["/operations", "/partner-hub"],
-    ai_tools_required: ["get_directory_status", "scan_directory", "get_country_overview"],
+    ai_tools_required: ["get_directory_status", "get_country_overview"],
     tips: [
-      "Scansiona periodicamente i paesi prioritari (ogni 2-4 settimane)",
-      "La scansione non scarica profili, solo l'elenco dei membri",
+      "Non proporre scansioni o download WCA",
+      "Usa deep search e website enrichment come azione successiva",
     ],
   },
-  // [REMOVED] download_profiles — workflow morto. I dati WCA arrivano via sync esterno.
-  // Vedi doctrine/data-availability. Per <1% incompleti: download_single_partner sul singolo ID.
+  // [REMOVED] download_single — workflow legacy non più usato dagli agenti AI.
+  // In questo frangente operativo l'AI deve guidare verso arricchimento, non verso download WCA.
   {
-    id: "download_single",
-    name: "Download Singolo Partner",
-    description: "Scarica il profilo completo di un singolo partner specifico dal sito WCA",
-    tags: ["download", "singolo", "partner", "profilo", "scarica"],
-    category: "network",
-    prerequisites: [
-      { check: "wca_session_active", label: "Sessione WCA attiva", path: "/settings" },
-    ],
-    steps: [
-      { order: 1, action: "Identifica il partner", tool: "search_partners", detail: "Cerca per nome. Se non trovato, cerca nella directory WCA." },
-      { order: 2, action: "Avvia download singolo", tool: "download_single_partner", detail: "Passa company_name e opzionalmente country_code." },
-      { order: 3, action: "Verifica completamento", tool: "check_job_status", detail: "Conferma che il profilo sia stato scaricato." },
-    ],
-    related_pages: ["/partner-hub", "/operations"],
-    ai_tools_required: ["search_partners", "download_single_partner", "check_job_status"],
-    tips: [
-      "Non usare create_download_job per un singolo partner — è uno spreco",
-      "Se il partner non esiste nel DB, verrà creato automaticamente",
-    ],
-  },
   {
     id: "deep_search_partner",
     name: "Deep Search Partner",

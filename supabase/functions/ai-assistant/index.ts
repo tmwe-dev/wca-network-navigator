@@ -641,11 +641,6 @@ ${toolDescriptions}`;
           }));
         }
 
-        // Track job creation
-        if ((tc.function.name === "create_download_job" || tc.function.name === "download_single_partner") && tr?.success && tr?.job_id) {
-          lastJobCreated = { job_id: tr.job_id, country: tr.country, mode: tr.mode, total_partners: tr.total_partners, estimated_time_minutes: tr.estimated_time_minutes };
-        }
-
         // Track UI actions
         if (tr?.ui_action) uiActions.push(tr.ui_action as Record<string, unknown>);
         if ((tr?.step_result as Record<string, unknown> | undefined)?.ui_action) {
@@ -656,8 +651,6 @@ ${toolDescriptions}`;
         if (userId && tr?.success) {
           const autoSaveTools: Record<string, (a: Record<string, unknown>, r: Record<string, unknown>) => string | null> = {
             send_email: (a) => `Email inviata a ${a.to_email} — oggetto: "${a.subject}"`,
-            create_download_job: (_a, r) => `Download avviato per ${r.country}, ${r.total_partners} partner (mode: ${r.mode})`,
-            download_single_partner: (a, r) => `Download singolo: "${a.company_name}" (WCA ID: ${r.wca_id})`,
             deep_search_partner: (a) => `Deep search su "${a.company_name || a.partner_id}"`,
             deep_search_contact: (a) => `Deep search contatto: "${a.contact_name || a.contact_id}"`,
             bulk_update_partners: (_a, r) => `Aggiornamento bulk: ${r.updated_count} partner — ${(Array.isArray(r.changes) ? r.changes.join(", ") : "")}`,
