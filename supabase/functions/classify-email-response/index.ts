@@ -468,9 +468,10 @@ serve(async (req) => {
 
         if (partner) {
           const statusMap: Record<string, string> = {
-            "new": "contacted",
-            "contacted": "in_progress",
-            "in_progress": classification.category === "meeting_request" ? "negotiation" : "in_progress",
+            "new": "first_touch_sent",
+            "first_touch_sent": "engaged",
+            "holding": "engaged",
+            "engaged": classification.category === "meeting_request" ? "qualified" : "engaged",
           };
           const newStatus = statusMap[partner.lead_status];
           if (newStatus && newStatus !== partner.lead_status) {
@@ -500,9 +501,10 @@ serve(async (req) => {
 
         if (contact) {
           const statusMap: Record<string, string> = {
-            "new": "contacted",
-            "contacted": "in_progress",
-            "in_progress": classification.category === "meeting_request" ? "negotiation" : "in_progress",
+            "new": "first_touch_sent",
+            "first_touch_sent": "engaged",
+            "holding": "engaged",
+            "engaged": classification.category === "meeting_request" ? "qualified" : "engaged",
           };
           const newStatus = statusMap[contact.lead_status];
           if (newStatus && newStatus !== contact.lead_status) {

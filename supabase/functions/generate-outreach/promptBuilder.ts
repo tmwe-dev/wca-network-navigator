@@ -159,15 +159,17 @@ ${email_type_prompt ? `STRUTTURA EMAIL OBBLIGATORIA (tipo: ${email_type_id}):\n$
     const ws = warmthScore ?? 0;
     const stateToTone: Record<string, string> = {
       new: "PRIMO CONTATTO — Freddo-professionale. Presentati brevemente, vai al punto. Nessuna familiarità.",
-      contacted: "FOLLOW-UP INIZIALE — Professionale. Hai già scritto. Non ripresentarti. Aggiungi valore.",
-      in_progress: "DIALOGO ATTIVO — Collega amichevole. Puoi essere diretto e propositivo. Mostra interesse per il suo business.",
-      negotiation: "TRATTATIVA — Partner diretto. Focus su termini, condizioni, next steps.",
-      converted: "CLIENTE — Pari livello. Tono naturale, relazione consolidata.",
-      lost: "RIATTIVAZIONE — Cordiale, non insistente. Nuova ragione di contatto, valore concreto.",
+      first_touch_sent: "FOLLOW-UP INIZIALE — Professionale con riferimento al primo messaggio. Non ripresentarti. Aggiungi valore.",
+      holding: "RIATTIVAZIONE — Cordiale, richiamo al contatto precedente. Nuova ragione di contatto, valore concreto.",
+      engaged: "DIALOGO ATTIVO — Collega amichevole, riferimenti specifici. Puoi essere diretto e propositivo.",
+      qualified: "QUALIFICATO — Partner diretto, proposta di valore. Focus su next steps concreti.",
+      negotiation: "TRATTATIVA — Partner diretto, dettagli operativi. Focus su termini, condizioni, chiusura.",
+      converted: "CLIENTE — Pari livello, tono collaborativo. Relazione consolidata.",
+      archived: "RIATTIVAZIONE — Cordiale, verifica interesse. Nuova ragione di contatto.",
     };
     const toneInstruction = commercialState
-      ? (stateToTone[commercialState] || stateToTone.contacted)
-      : (tc === 0 ? stateToTone.new : stateToTone.contacted);
+      ? (stateToTone[commercialState] || stateToTone.first_touch_sent)
+      : (tc === 0 ? stateToTone.new : stateToTone.first_touch_sent);
     commercialBlock = `\n--- STATO COMMERCIALE ---
 - Fase: ${(commercialState || "new").toUpperCase()}
 - Contatti totali inviati: ${tc}
