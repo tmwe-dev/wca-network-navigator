@@ -11,6 +11,10 @@ vi.mock("@/lib/log", () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
 
+vi.mock("@/providers/AuthProvider", () => ({
+  useAuth: () => ({ status: "authenticated", user: { id: "u1" }, session: {} }),
+}));
+
 import { useEmailAutoSync } from "./useEmailAutoSync";
 
 beforeEach(() => {
