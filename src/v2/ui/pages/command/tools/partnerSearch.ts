@@ -9,7 +9,28 @@ const STOPWORDS = new Set([
   "i", "gli", "un", "una", "che", "da", "con", "su", "non", "del", "dei",
   "al", "ai", "dal", "nel", "sono", "più", "attivi", "attivo", "inattivi",
   "nuovi", "nuovo", "miei", "mia", "mio", "tutti", "tutto",
+  "stati", "uniti", "america", "usa", "cina", "india", "germania",
+  "italia", "spagna", "francia", "brasile", "messico", "turchia",
 ]);
+
+const COUNTRY_HINTS: Record<string, string> = {
+  "stati uniti": "US", usa: "US", "united states": "US", america: "US",
+  cina: "CN", china: "CN", india: "IN", germania: "DE", germany: "DE",
+  italia: "IT", italy: "IT", spagna: "ES", francia: "FR", france: "FR",
+  brasile: "BR", messico: "MX", turchia: "TR", vietnam: "VN",
+  emirati: "AE", uk: "GB", "regno unito": "GB",
+};
+
+function extractCountryCode(prompt: string): string | undefined {
+  const lower = prompt.toLowerCase();
+  for (const [key, code] of Object.entries(COUNTRY_HINTS)) {
+    if (lower.includes(key)) return code;
+  }
+  // Standalone 2-letter ISO code (preceded/followed by space or end)
+  const match = lower.match(/(?:^|\s)([a-z]{2})(?:\s|$|[.,!?])/);
+  if (match) return match[1].toUpperCase();
+  return undefined;
+}
 
 function extractSearchTerms(prompt: string): string {
   const words = prompt
@@ -23,22 +44,24 @@ function extractSearchTerms(prompt: string): string {
 export const partnerSearchTool: Tool = {
   id: "partner-search",
   label: "Ricerca partner",
-  description: "Cerca partner WCA nel database",
+  description: "Cerca partner nel database (filtra per paese se rilevato nel prompt)",
 
   match(prompt: string): boolean {
     const lower = prompt.toLowerCase();
-    // Don't match if it's clearly a mock scenario
     if (lower.includes("email") || lower.includes("follow-up") || lower.includes("followup")) return false;
     if (lower.includes("agent") || lower.includes("riepilogo") || lower.includes("report") || lower.includes("performance")) return false;
     return MATCH_KEYWORDS.some((kw) => lower.includes(kw));
   },
 
   async execute(prompt: string): Promise<ToolResult> {
+    const countryCode = extractCountryCode(prompt);
     const search = extractSearchTerms(prompt);
 
     const result = await fetchPartnersPaginated({
-      search: search || undefined,
-      limit: 25,
+      countryCode,
+      search: !countryCode && search ? search : undefined,
+      sort: "rating",
+      limit: 50,
     });
 
     if (result._tag === "Err") {
