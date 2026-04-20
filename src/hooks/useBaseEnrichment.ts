@@ -201,7 +201,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         description: `${slugFound} LinkedIn · ${logoFound} loghi · ${siteScraped} siti letti · ${errors} errori`,
       });
     }
-  }, [getTargets]);
+  }, [getTargets, fsBridge]);
 
   return { progress, start, stop };
 }
