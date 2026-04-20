@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, RotateCcw, Check, Mail, MessageCircle, Linkedin } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, Check, Mail, MessageCircle, Linkedin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
@@ -17,6 +17,7 @@ import { NetworkFiltersSection } from "./NetworkFiltersSection";
 import { CRMFiltersSection } from "./CRMFiltersSection";
 import { BCAFiltersSection } from "./BCAFiltersSection";
 import { CampaignsFiltersSection } from "./CampaignsFiltersSection";
+import { FilterSection, ChipGroup, Chip } from "./shared";
 import type { FiltersDrawerProps } from "./types";
 
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
