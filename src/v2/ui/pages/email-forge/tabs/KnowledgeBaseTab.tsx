@@ -62,7 +62,11 @@ export function KnowledgeBaseTab({ categories }: Props) {
                 <div className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{e.content}</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Switch checked={e.is_active} onCheckedChange={(v) => toggleActive(e.id, v)} disabled={savingId === e.id} />
+                <Switch
+                  checked={e.is_active}
+                  onCheckedChange={async (v) => { await toggleActive(e.id, v); setSavedAt(Date.now()); }}
+                  disabled={savingId === e.id}
+                />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditing(e)}>
                   <Pencil className="w-3 h-3" />
                 </Button>
