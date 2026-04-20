@@ -13,6 +13,7 @@ import { EmailToolbar } from "@/components/email/EmailToolbar";
 import { EmailRecipientFields } from "@/components/email/EmailRecipientFields";
 import { EmailAIPanel } from "@/components/email/EmailAIPanel";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
+import { RecipientSnapshotHeader } from "@/components/email/RecipientSnapshotHeader";
 
 export default function EmailComposer() {
   const c = useEmailComposerState();
@@ -41,6 +42,20 @@ export default function EmailComposer() {
                 onManualCompanyNameChange={(v) => c.dispatch({ type: "SET_MANUAL_COMPANY_NAME", payload: v })}
                 onConfirmUnknownEmail={c.confirmUnknownEmail}
               />
+
+              {/* Recipient snapshot — shows context Oracolo will use */}
+              {(() => {
+                const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
+                const hasRealId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
+                return (
+                  <RecipientSnapshotHeader
+                    partnerId={hasRealId ? single!.partnerId : null}
+                    recipientCount={c.recipientsWithEmail.length}
+                    fallbackCompany={single?.companyAlias || single?.companyName}
+                    fallbackCountry={single?.countryName}
+                  />
+                );
+              })()}
 
               {/* Subject */}
               <div className="flex items-center gap-2 mb-3">
