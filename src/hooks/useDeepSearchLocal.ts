@@ -227,12 +227,47 @@ export function useDeepSearchLocal() {
     const companyLinks = await searchCompanyLinkedIn(partner.company_name as string, partnerId, existingSet);
     const { logoFound, websiteQualityScore } = await scrapeWebsite(partner.website as string | null, partnerId, contacts);
 
+    // ============ NUOVE FONTI V2 (eseguite solo se abilitate) ============
+    const extras: Record<string, unknown> = {};
+
+    // 1) Google generale per ogni contatto (max 3 contatti per evitare rate limit)
+    if (cfg("googleGeneral", false) && contacts.length > 0) {
+      const mentionsByContact: Record<string, unknown[]> = {};
+      for (const c of contacts.slice(0, 3)) {
+        if (!c.name) continue;
+        const m = await searchGoogleGeneral(fs, cleanPersonName(c.name), partner.company_name as string, googleSearch);
+        if (m.length > 0) mentionsByContact[c.id] = m;
+        await delay(800);
+      }
+      if (Object.keys(mentionsByContact).length > 0) extras.contact_mentions = mentionsByContact;
+    }
+
+    // 2) Google Maps / Place
+    if (cfg("googleMaps", false)) {
+      const gm = await scrapeGoogleMaps(fs, partner.company_name as string, (partner.city as string) || "", (partner.country_name as string) || "");
+      if (gm) extras.google_maps = gm;
+    }
+
+    // 3) Sito multi-pagina (about/team/contacts)
+    if (cfg("websiteMultiPage", false) && partner.website) {
+      const wmp = await scrapeWebsiteSubpages(fs, partner.website as string);
+      if (wmp.pagesScraped.length > 0) extras.website_multipage = wmp;
+    }
+
+    // 4) Reputation (Trustpilot + Wikipedia + News)
+    if (cfg("reputation", false)) {
+      const rep = await scrapeReputation(fs, partner.company_name as string, partner.website as string | null, googleSearch);
+      // Salva solo se almeno una fonte ha prodotto risultati
+      if (rep.trustpilot || rep.wikipedia || rep.news.length > 0) extras.reputation = rep;
+    }
+
     const existing = (partner.enrichment_data as Record<string, unknown>) || {};
     const updated = {
       ...existing,
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
-      deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.3",
+      ...extras,
+      deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.4",
     };
     await updatePartner(partnerId, { enrichment_data: updated as unknown as Record<string, string> });
 
