@@ -115,6 +115,8 @@ export function useSherlock(args: UseSherlockArgs) {
               const idx = next.findIndex((r) => r.order === ev.result.order);
               if (idx >= 0) next[idx] = ev.result;
               else next.push(ev.result);
+              // Mantieni l'ordine naturale per step.order così la UI è sempre 1→N
+              next.sort((a, b) => a.order - b.order);
               return next;
             });
             setConsolidated(ev.consolidated);
@@ -122,7 +124,7 @@ export function useSherlock(args: UseSherlockArgs) {
         });
         setSummary(result.summary);
         setConsolidated(result.consolidated);
-        setStepResults(result.results);
+        setStepResults([...result.results].sort((a, b) => a.order - b.order));
 
         if (invId) {
           await updateInvestigation(invId, {
