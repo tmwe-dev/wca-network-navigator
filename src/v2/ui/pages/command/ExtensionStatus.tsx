@@ -1,15 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { pingExtension } from "@/v2/io/extensions/bridge";
-import type { ExtensionRequest } from "@/v2/io/extensions/bridge";
+import type { ExtensionTarget } from "@/v2/io/extensions/bridge";
 
 interface ExtensionInfo {
-  target: ExtensionRequest["target"];
+  target: ExtensionTarget;
   label: string;
 }
 
 const EXTENSIONS: ExtensionInfo[] = [
-  { target: "linkedin-scraper", label: "LinkedIn Scraper" },
-  { target: "firescrape", label: "Firescrape" },
+  { target: "firescrape", label: "FireScrape" },
+  { target: "whatsapp", label: "WhatsApp" },
+  { target: "linkedin", label: "LinkedIn" },
 ];
 
 const POLL_INTERVAL = 10_000;
