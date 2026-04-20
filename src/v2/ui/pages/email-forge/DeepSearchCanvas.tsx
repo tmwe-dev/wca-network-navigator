@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Flame, Play, Loader2, CheckCircle2, AlertCircle, Globe, MapPin,
-  Star, Search, FileText, Copy, Eye, Code2, X, Trash2, Square,
+  Star, Search, FileText, Copy, Eye, Code2, X, Trash2, Square, Database,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fs } from "@/v2/io/extensions/bridge";
@@ -26,7 +26,40 @@ import {
   ALL_PIPELINES, resolvePipelineUrls, type PipelineKey,
 } from "@/v2/io/extensions/deep-search-pipelines";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
+
+/** Salva il markdown nello storage persistente (tabella scrape_cache, dedup per URL). */
+async function persistScrape(args: {
+  url: string;
+  markdown: string;
+  pipelineKey: string;
+  recipient: ForgeRecipient | null;
+}): Promise<boolean> {
+  try {
+    const { error } = await untypedFrom("scrape_cache").upsert({
+      url: args.url,
+      mode: "static",
+      payload: {
+        markdown: args.markdown,
+        pipeline: args.pipelineKey,
+        recipient: args.recipient
+          ? {
+              partnerId: args.recipient.partnerId ?? null,
+              contactId: args.recipient.contactId ?? null,
+              companyName: args.recipient.companyName ?? null,
+              countryCode: args.recipient.countryCode ?? null,
+            }
+          : null,
+        captured_at: new Date().toISOString(),
+      },
+      scraped_at: new Date().toISOString(),
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
 
 interface CapturedPage {
   id: string;
@@ -37,6 +70,7 @@ interface CapturedPage {
   error?: string;
   startedAt: number;
   durationMs?: number;
+  persisted?: boolean;
 }
 
 interface Props {
@@ -137,13 +171,22 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
         skipCache: true,
       });
 
+      const md = res.ok ? extractMarkdown(res.data) : "";
+      let persisted = false;
+      if (res.ok && md) {
+        persisted = await persistScrape({
+          url: plan.urls[i], markdown: md, pipelineKey: key, recipient,
+        });
+      }
+
       setPages((prev) => prev.map((p) => p.id === id
         ? {
             ...p,
             status: res.ok ? "done" : "error",
-            markdown: res.ok ? extractMarkdown(res.data) : "",
+            markdown: md,
             error: !res.ok ? res.error : undefined,
             durationMs: Date.now() - startedAt,
+            persisted,
           }
         : p,
       ));
@@ -188,19 +231,25 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
     setSelectedId(id);
 
     const res = await fs.readUrl(manualUrl, { settleMs: 2500, signal: controller.signal, skipCache: true });
+    const md = res.ok ? extractMarkdown(res.data) : "";
+    let persisted = false;
+    if (res.ok && md) {
+      persisted = await persistScrape({ url: manualUrl, markdown: md, pipelineKey: "manual", recipient });
+    }
     setPages((prev) => prev.map((p) => p.id === id
       ? {
           ...p,
           status: res.ok ? "done" : "error",
-          markdown: res.ok ? extractMarkdown(res.data) : "",
+          markdown: md,
           error: !res.ok ? res.error : undefined,
           durationMs: Date.now() - p.startedAt,
+          persisted,
         }
       : p,
     ));
     abortRef.current = null;
     setRunning(null);
-    if (res.ok) toast.success("Pagina letta");
+    if (res.ok) toast.success(persisted ? "Pagina letta e salvata" : "Pagina letta");
     else if (!controller.signal.aborted) toast.error(res.error);
   };
 
@@ -348,12 +397,17 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
                   <StatusIcon status={selected.status} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-mono truncate text-foreground">{selected.url}</div>
-                    <div className="text-[9px] text-muted-foreground flex items-center gap-2">
+                    <div className="text-[9px] text-muted-foreground flex items-center gap-2 mt-0.5">
                       <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-mono">
                         {selected.pipelineKey}
                       </Badge>
-                      {selected.markdown && <span>{selected.markdown.length} char</span>}
-                      {selected.durationMs && <span>{(selected.durationMs / 1000).toFixed(1)}s</span>}
+                      {selected.markdown && <span>{selected.markdown.length.toLocaleString()} char</span>}
+                      {selected.durationMs && <span>· {(selected.durationMs / 1000).toFixed(1)}s</span>}
+                      {selected.persisted && (
+                        <span className="inline-flex items-center gap-0.5 text-primary font-medium">
+                          · <Database className="w-2.5 h-2.5" /> Salvato
+                        </span>
+                      )}
                     </div>
                   </div>
                   {selected.markdown && (
@@ -395,11 +449,23 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
                     </TabsList>
                     <TabsContent value="formatted" className="flex-1 min-h-0 mt-0">
                       <ScrollArea className="h-full">
-                        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-4
-                          prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
-                          prose-p:text-[12px] prose-li:text-[12px] prose-a:text-primary prose-a:no-underline
-                          hover:prose-a:underline prose-code:text-[11px] prose-pre:text-[11px]">
-                          <LazyMarkdown>{selected.markdown}</LazyMarkdown>
+                        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
+                          prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground
+                          prose-h1:text-base prose-h1:text-primary prose-h1:border-b prose-h1:border-primary/30 prose-h1:pb-1.5 prose-h1:mb-3
+                          prose-h2:text-sm prose-h2:text-primary prose-h2:mt-5 prose-h2:mb-2
+                          prose-h3:text-[13px] prose-h3:text-primary/90 prose-h3:mt-4 prose-h3:mb-1.5
+                          prose-h4:text-[12px] prose-h4:text-foreground/90
+                          prose-p:text-[12.5px] prose-p:leading-relaxed prose-p:my-2 prose-p:text-foreground/85
+                          prose-li:text-[12.5px] prose-li:my-0.5 prose-li:text-foreground/85
+                          prose-ul:my-2 prose-ol:my-2
+                          prose-strong:text-primary prose-strong:font-semibold
+                          prose-em:text-foreground/90 prose-em:not-italic prose-em:font-medium
+                          prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline
+                          prose-code:text-[11px] prose-code:bg-primary/10 prose-code:text-primary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+                          prose-pre:text-[11px] prose-pre:bg-muted prose-pre:border prose-pre:border-border
+                          prose-blockquote:border-l-2 prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground/85
+                          prose-hr:border-border/60">
+                          <LazyMarkdown>{enhanceMarkdown(selected.markdown)}</LazyMarkdown>
                         </article>
                       </ScrollArea>
                     </TabsContent>
@@ -448,9 +514,14 @@ function PageRow({ page, active, onClick }: { page: CapturedPage; active: boolea
         <div className="font-medium truncate">{host}</div>
         <div className="text-[9px] text-muted-foreground font-mono truncate">{page.url}</div>
         {page.status === "done" && (
-          <div className="text-[9px] text-muted-foreground mt-0.5">
-            {page.markdown.length.toLocaleString()} char
-            {page.durationMs && ` · ${(page.durationMs / 1000).toFixed(1)}s`}
+          <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1">
+            <span>{page.markdown.length.toLocaleString()} char</span>
+            {page.durationMs && <span>· {(page.durationMs / 1000).toFixed(1)}s</span>}
+            {page.persisted && (
+              <span className="inline-flex items-center gap-0.5 text-primary font-medium">
+                · <Database className="w-2.5 h-2.5" />
+              </span>
+            )}
           </div>
         )}
         {page.status === "error" && (
@@ -480,4 +551,30 @@ function extractMarkdown(data: unknown): string {
     if (typeof r.markdown === "string") return r.markdown;
   }
   return "";
+}
+
+/**
+ * Pre-processa il markdown per evidenziare automaticamente le informazioni chiave
+ * (email, telefoni internazionali, P.IVA) come **strong** → renderizzati in primary.
+ * Pulisce anche encoding URL leggibili e collassa whitespace eccessivo.
+ */
+function enhanceMarkdown(md: string): string {
+  if (!md) return md;
+  let out = md;
+
+  // Email → bold (skip se già dentro link/bold)
+  out = out.replace(
+    /(?<![*[\]`(\w@.])([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?![*\w@.])/g,
+    "**$1**",
+  );
+  // Telefoni internazionali (+xx ...)
+  out = out.replace(
+    /(?<![*\d])(\+\d{1,3}[\s.-]?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4})(?!\d)/g,
+    "**$1**",
+  );
+  // P.IVA / VAT IT
+  out = out.replace(/\b(P\.?\s?IVA[:\s]+\d{8,13})/gi, "**$1**");
+  // Collassa più di 2 newline consecutive
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out;
 }
