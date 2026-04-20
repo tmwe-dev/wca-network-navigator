@@ -6312,6 +6312,125 @@ export type Database = {
           },
         ]
       }
+      sherlock_investigations: {
+        Row: {
+          completed_at: string | null
+          contact_id: string | null
+          created_at: string
+          duration_ms: number | null
+          findings: Json
+          id: string
+          level: number
+          operator_id: string | null
+          partner_id: string | null
+          playbook_id: string | null
+          started_at: string
+          status: string
+          step_log: Json
+          summary: string | null
+          target_label: string | null
+          updated_at: string
+          user_id: string
+          vars: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          findings?: Json
+          id?: string
+          level: number
+          operator_id?: string | null
+          partner_id?: string | null
+          playbook_id?: string | null
+          started_at?: string
+          status?: string
+          step_log?: Json
+          summary?: string | null
+          target_label?: string | null
+          updated_at?: string
+          user_id: string
+          vars?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          findings?: Json
+          id?: string
+          level?: number
+          operator_id?: string | null
+          partner_id?: string | null
+          playbook_id?: string | null
+          started_at?: string
+          status?: string
+          step_log?: Json
+          summary?: string | null
+          target_label?: string | null
+          updated_at?: string
+          user_id?: string
+          vars?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sherlock_investigations_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "sherlock_playbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sherlock_playbooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimated_seconds: number
+          id: string
+          is_active: boolean
+          level: number
+          name: string
+          sort_order: number
+          steps: Json
+          target_fields: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_seconds?: number
+          id?: string
+          is_active?: boolean
+          level: number
+          name: string
+          sort_order?: number
+          steps?: Json
+          target_fields?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_seconds?: number
+          id?: string
+          is_active?: boolean
+          level?: number
+          name?: string
+          sort_order?: number
+          steps?: Json
+          target_fields?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       supervisor_audit_log: {
         Row: {
           action_category: string

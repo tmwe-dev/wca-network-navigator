@@ -1,0 +1,173 @@
+/**
+ * useSherlock — hook React per orchestrare un'indagine Sherlock con UI feedback.
+ */
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  listPlaybooks,
+  getPlaybookByLevel,
+  createInvestigation,
+  updateInvestigation,
+  sherlockKeys,
+} from "@/data/sherlockPlaybooks";
+import { runSherlock } from "@/v2/services/sherlock/sherlockEngine";
+import type {
+  SherlockLevel,
+  SherlockStepResult,
+  SherlockPlaybook,
+} from "@/v2/services/sherlock/sherlockTypes";
+
+export interface UseSherlockArgs {
+  partnerId: string | null;
+  contactId: string | null;
+  targetLabel: string | null;
+  vars: Record<string, string>;
+}
+
+export function useSherlock(args: UseSherlockArgs) {
+  const [running, setRunning] = React.useState<SherlockLevel | null>(null);
+  const [stepResults, setStepResults] = React.useState<SherlockStepResult[]>([]);
+  const [consolidated, setConsolidated] = React.useState<Record<string, unknown>>({});
+  const [summary, setSummary] = React.useState<string>("");
+  const [investigationId, setInvestigationId] = React.useState<string | null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
+
+  const playbooksQuery = useQuery({
+    queryKey: sherlockKeys.playbooks,
+    queryFn: listPlaybooks,
+    staleTime: 60_000,
+  });
+
+  const stop = React.useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setRunning(null);
+    if (investigationId) {
+      updateInvestigation(investigationId, {
+        status: "aborted",
+        completed_at: new Date().toISOString(),
+      }).catch(() => null);
+    }
+    toast.info("Indagine interrotta");
+  }, [investigationId]);
+
+  const reset = React.useCallback(() => {
+    if (running) return;
+    setStepResults([]);
+    setConsolidated({});
+    setSummary("");
+    setInvestigationId(null);
+  }, [running]);
+
+  const start = React.useCallback(
+    async (level: SherlockLevel) => {
+      if (running) return;
+      const playbook = await getPlaybookByLevel(level);
+      if (!playbook) {
+        toast.error(`Nessun playbook attivo per livello ${level}`);
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        toast.error("Sessione utente non disponibile");
+        return;
+      }
+
+      setRunning(level);
+      setStepResults([]);
+      setConsolidated({});
+      setSummary("");
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      let invId: string | null = null;
+      try {
+        const inv = await createInvestigation({
+          user_id: userId,
+          playbook_id: playbook.id,
+          level,
+          partner_id: args.partnerId,
+          contact_id: args.contactId,
+          target_label: args.targetLabel,
+          vars: args.vars,
+        });
+        invId = inv.id;
+        setInvestigationId(inv.id);
+      } catch (e) {
+        console.warn("[sherlock] create investigation fallita, proseguo senza persist", e);
+      }
+
+      try {
+        const result = await runSherlock({
+          playbook,
+          vars: args.vars,
+          partnerId: args.partnerId,
+          contactId: args.contactId,
+          signal: controller.signal,
+          onProgress: (ev) => {
+            setStepResults((prev) => {
+              const next = [...prev];
+              const idx = next.findIndex((r) => r.order === ev.result.order);
+              if (idx >= 0) next[idx] = ev.result;
+              else next.push(ev.result);
+              return next;
+            });
+            setConsolidated(ev.consolidated);
+          },
+        });
+        setSummary(result.summary);
+        setConsolidated(result.consolidated);
+        setStepResults(result.results);
+
+        if (invId) {
+          await updateInvestigation(invId, {
+            status: controller.signal.aborted ? "aborted" : "completed",
+            findings: result.consolidated,
+            step_log: result.results,
+            summary: result.summary,
+            duration_ms: result.durationMs,
+            completed_at: new Date().toISOString(),
+          });
+        }
+
+        if (!controller.signal.aborted) {
+          toast.success(`Indagine "${playbook.name}" completata`);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Errore sconosciuto";
+        if (msg !== "Aborted") {
+          toast.error(`Indagine fallita: ${msg}`);
+        }
+        if (invId) {
+          await updateInvestigation(invId, {
+            status: "failed",
+            summary: msg,
+            completed_at: new Date().toISOString(),
+          }).catch(() => null);
+        }
+      } finally {
+        abortRef.current = null;
+        setRunning(null);
+      }
+    },
+    [args.partnerId, args.contactId, args.targetLabel, args.vars, running],
+  );
+
+  return {
+    playbooks: (playbooksQuery.data ?? []) as SherlockPlaybook[],
+    isLoadingPlaybooks: playbooksQuery.isLoading,
+    running,
+    stepResults,
+    consolidated,
+    summary,
+    investigationId,
+    start,
+    stop,
+    reset,
+  };
+}
