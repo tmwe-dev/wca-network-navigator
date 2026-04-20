@@ -46,6 +46,9 @@ export interface GlobalFilterState {
   campaignsSortAsc: boolean;
   campaignsTypeFilter: string;
   campaignsAiQuery: string;
+  // Inreach (pagina dedicata /v2/inreach)
+  inreachChannel: "email" | "whatsapp" | "linkedin";
+  inreachGroupBySender: boolean;
 }
 
 // --- Reducer ---
@@ -94,6 +97,8 @@ const defaults: GlobalFilterState = {
   campaignsSortAsc: true,
   campaignsTypeFilter: "all",
   campaignsAiQuery: "",
+  inreachChannel: "email",
+  inreachGroupBySender: false,
 };
 
 function cloneDefaults(): GlobalFilterState {
