@@ -81,9 +81,15 @@ function V1DeprecationRedirect() {
   return (
     <Navigate
       to={resolveLegacyV1Path(location.pathname, location.search, location.hash)}
+      state={location.state}
       replace
     />
   );
+}
+
+function LegacyRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={to} state={location.state} replace />;
 }
 
 const App = () => (
@@ -115,14 +121,14 @@ const App = () => (
                   <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
 
                   {/* Legacy bare paths — redirect to V2 equivalents */}
-                  <Route path="/email-composer" element={<Navigate to="/v2/outreach/composer" replace />} />
-                  <Route path="/network" element={<Navigate to="/v2/network" replace />} />
-                  <Route path="/crm" element={<Navigate to="/v2/crm" replace />} />
-                  <Route path="/outreach" element={<Navigate to="/v2/outreach" replace />} />
-                  <Route path="/inreach" element={<Navigate to="/v2/inreach" replace />} />
-                  <Route path="/agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
-                  <Route path="/campaigns" element={<Navigate to="/v2/campaigns" replace />} />
-                  <Route path="/settings" element={<Navigate to="/v2/settings" replace />} />
+                  <Route path="/email-composer" element={<LegacyRedirect to="/v2/outreach/composer" />} />
+                  <Route path="/network" element={<LegacyRedirect to="/v2/network" />} />
+                  <Route path="/crm" element={<LegacyRedirect to="/v2/crm" />} />
+                  <Route path="/outreach" element={<LegacyRedirect to="/v2/outreach" />} />
+                  <Route path="/inreach" element={<LegacyRedirect to="/v2/inreach" />} />
+                  <Route path="/agenda" element={<LegacyRedirect to="/v2/outreach/agenda" />} />
+                  <Route path="/campaigns" element={<LegacyRedirect to="/v2/campaigns" />} />
+                  <Route path="/settings" element={<LegacyRedirect to="/v2/settings" />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -162,7 +162,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
           <Route path="outreach/composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
           <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
-          <Route path="email-composer" element={<Navigate to="/v2/outreach/composer" replace />} />
+          <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposerAlias")} />
           <Route path="agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
 
