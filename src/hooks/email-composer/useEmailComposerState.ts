@@ -2,7 +2,7 @@
  * useEmailComposerState — All state + async logic for EmailComposer.
  * Types, reducer, and utils extracted to sibling files.
  */
-import { useReducer, useCallback, useEffect, useMemo, useRef } from "react";
+import { useReducer, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -18,6 +18,7 @@ import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
 import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
+import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
 import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 import type {
   EmailTemplate, EmailComposerLocationState, GenerateContentResponse,
@@ -40,6 +41,9 @@ export function useEmailComposerState() {
 
   const [state, dispatch] = useReducer(reducer, initialState);
   const { email, ui, ai, template, queue: _queue } = state;
+
+  // Last context summary returned by generate-email/improve-email — drives OracleContextPanel
+  const [lastContextSummary, setLastContextSummary] = useState<OracleContextSummary | null>(null);
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
   const isEditedAfterGeneration = ai.aiGeneratedBody && (email.htmlBody !== ai.aiGeneratedBody || email.subject !== ai.aiGeneratedSubject);
