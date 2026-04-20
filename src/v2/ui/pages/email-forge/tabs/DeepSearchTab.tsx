@@ -1,13 +1,21 @@
 /**
- * DeepSearchTab — inspect last enrichment + trigger live Deep Search.
+ * DeepSearchTab — inspect last enrichment + trigger live Deep Search con
+ * config panel (4 toggle + slider + dominio prioritario) e cascade timeline live.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { setDeepSearchRuntimeConfig } from "@/hooks/useDeepSearchLocal";
+import { cascadeBus, type CascadeEvent } from "@/hooks/useDeepSearchHelpers";
+import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Globe, Linkedin, MessageCircle, Building2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
@@ -26,8 +34,55 @@ interface PartnerEnrichment {
   raw_data?: Record<string, unknown> | null;
 }
 
+interface TimelineRow {
+  query: string;
+  status: "running" | "done";
+  results: number | null;
+  index: number;
+  total: number;
+}
+
 export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   const ds = useDeepSearch();
+  const lab = useForgeLab();
+  const dsConfig = lab.deepSearchConfig;
+
+  // Sync runtime config -> hook modulo ad ogni cambio
+  React.useEffect(() => {
+    setDeepSearchRuntimeConfig({
+      scrapeWebsite: dsConfig.scrapeWebsite,
+      linkedinContacts: dsConfig.linkedinContacts,
+      linkedinCompany: dsConfig.linkedinCompany,
+      whatsapp: dsConfig.whatsapp,
+      maxQueriesPerContact: dsConfig.maxQueriesPerContact,
+      priorityDomain: dsConfig.priorityDomain,
+    });
+  }, [dsConfig]);
+
+  // Sottoscrivi cascade bus per timeline
+  const [timeline, setTimeline] = React.useState<TimelineRow[]>([]);
+  React.useEffect(() => {
+    if (!ds.running) return;
+    setTimeline([]);
+    const off = cascadeBus.subscribe((e: CascadeEvent) => {
+      if (e.type === "query-start") {
+        setTimeline((prev) => [...prev, { query: e.query, status: "running", results: null, index: e.index, total: e.total }]);
+      } else if (e.type === "query-result") {
+        setTimeline((prev) => {
+          const next = [...prev];
+          // aggiorna ultima riga matching senza risultati
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].query === e.query && next[i].status === "running") {
+              next[i] = { ...next[i], status: "done", results: e.results };
+              break;
+            }
+          }
+          return next;
+        });
+      }
+    });
+    return off;
+  }, [ds.running]);
 
   const enrichmentQuery = useQuery({
     queryKey: ["forge-enrichment", recipient?.source, recipient?.recordId],
@@ -64,9 +119,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   });
 
   if (!recipient) {
-    return (
-      <Empty msg="Seleziona un destinatario reale a sinistra per ispezionare la sua deep search." />
-    );
+    return <Empty msg="Seleziona un destinatario reale a sinistra per ispezionare la sua deep search." />;
   }
 
   const handleRun = (mode: "partner" | "contact") => {
@@ -76,6 +129,10 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       return;
     }
     ds.start([targetId], true, mode);
+  };
+
+  const updateConfig = (patch: Partial<typeof dsConfig>) => {
+    forgeLabStore.set({ deepSearchConfig: { ...dsConfig, ...patch } });
   };
 
   const enrichment = enrichmentQuery.data?.data as PartnerEnrichment | null;
@@ -93,6 +150,62 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
   return (
     <div className="space-y-2 text-xs">
+      {/* CONFIG PANEL */}
+      <div className="rounded-md border border-border/40 bg-muted/30 p-2 space-y-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Configurazione Deep Search</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <ConfigToggle
+            icon={Globe}
+            label="Sito web (scrape + qualità)"
+            checked={dsConfig.scrapeWebsite}
+            onChange={(v) => updateConfig({ scrapeWebsite: v })}
+          />
+          <ConfigToggle
+            icon={Linkedin}
+            label="LinkedIn contatti"
+            checked={dsConfig.linkedinContacts}
+            onChange={(v) => updateConfig({ linkedinContacts: v })}
+          />
+          <ConfigToggle
+            icon={Building2}
+            label="LinkedIn azienda"
+            checked={dsConfig.linkedinCompany}
+            onChange={(v) => updateConfig({ linkedinCompany: v })}
+          />
+          <ConfigToggle
+            icon={MessageCircle}
+            label="WhatsApp (mobile→wa.me)"
+            checked={dsConfig.whatsapp}
+            onChange={(v) => updateConfig({ whatsapp: v })}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-0.5">
+            <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
+              <span>Max query / contatto</span>
+              <span className="font-mono text-foreground">{dsConfig.maxQueriesPerContact}</span>
+            </Label>
+            <Slider
+              value={[dsConfig.maxQueriesPerContact]}
+              min={1}
+              max={5}
+              step={1}
+              onValueChange={([v]) => updateConfig({ maxQueriesPerContact: v })}
+            />
+          </div>
+          <div className="space-y-0.5">
+            <Label className="text-[10px] text-muted-foreground">Dominio prioritario (override)</Label>
+            <Input
+              value={dsConfig.priorityDomain}
+              onChange={(e) => updateConfig({ priorityDomain: e.target.value })}
+              placeholder="es. transmgmt"
+              className="h-6 text-[10px]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* PROFILE STATUS */}
       {isPartnerKind && (
         <div className={`rounded-md border p-2.5 ${profileMissing ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/40 bg-emerald-500/10"}`}>
           <div className="flex items-start gap-2">
@@ -107,8 +220,8 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
               </div>
               <div className={`text-[10px] ${profileMissing ? "text-amber-800/80 dark:text-amber-200/80" : "text-emerald-800/80 dark:text-emerald-200/80"}`}>
                 {profileMissing
-                  ? "Nessuna descrizione, HTML o markdown presente per questo partner. La Deep Search funzionerà ma senza contesto testuale."
-                  : "L'AI dispone del profilo sincronizzato del partner. La Deep Search aggiunge social, contatti e rating."}
+                  ? "Nessuna descrizione, HTML o markdown presente. La Deep Search funzionerà ma senza contesto testuale."
+                  : "L'AI dispone del profilo sincronizzato. La Deep Search aggiunge social, contatti e rating."}
               </div>
             </div>
           </div>
@@ -123,6 +236,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         </div>
       )}
 
+      {/* RUN BUTTONS */}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={!recipient.partnerId || ds.running}
           onClick={() => handleRun("partner")} className="h-7 text-[10px]">
@@ -141,6 +255,34 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         )}
       </div>
 
+      {/* CASCADE TIMELINE */}
+      {(ds.running || timeline.length > 0) && (
+        <div className="rounded border border-border/40 p-2 bg-muted/20 space-y-1">
+          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <Loader2 className={`w-2.5 h-2.5 ${ds.running ? "animate-spin" : ""}`} />
+            Cascade query · {timeline.length}
+          </div>
+          {timeline.length === 0 && (
+            <div className="text-[10px] text-muted-foreground italic">In attesa della prima query…</div>
+          )}
+          {timeline.map((t, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[10px] font-mono">
+              {t.status === "running" ? (
+                <Loader2 className="w-2.5 h-2.5 animate-spin text-primary shrink-0" />
+              ) : t.results && t.results > 0 ? (
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <Circle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+              )}
+              <span className="truncate flex-1">{t.query}</span>
+              <span className="text-muted-foreground shrink-0">
+                {t.status === "running" ? "…" : `${t.results ?? 0} risultati`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
         <Badge variant="outline">{recipient.source}</Badge>
         {deepAt ? (
@@ -152,12 +294,6 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
           <Badge variant="outline" className="text-muted-foreground">
             <AlertCircle className="w-2.5 h-2.5 mr-1" />
             Nessuna deep search registrata
-          </Badge>
-        )}
-        {ds.running && (
-          <Badge className="bg-primary/10 text-primary border-primary/30">
-            <Loader2 className="w-2.5 h-2.5 mr-1 animate-spin" />
-            In esecuzione…
           </Badge>
         )}
       </div>
@@ -182,6 +318,20 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
           {enrichmentJson ? JSON.stringify(enrichmentJson, null, 2) : "(nessun dato)"}
         </pre>
       </div>
+    </div>
+  );
+}
+
+function ConfigToggle({
+  icon: Icon, label, checked, onChange,
+}: { icon: React.ComponentType<{ className?: string }>; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded border border-border/40 bg-card px-2 py-1">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
+        <span className="text-[10px] truncate">{label}</span>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
