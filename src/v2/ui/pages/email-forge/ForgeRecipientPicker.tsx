@@ -295,6 +295,17 @@ function EmptyRow() {
   );
 }
 
+function CountBar({ shown, total }: { shown: number; total: number }) {
+  const truncated = shown < total;
+  return (
+    <div className={`text-[9px] px-1.5 py-1 rounded ${truncated ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+      {truncated
+        ? `Mostrati ${shown} di ${total} — affina la ricerca per vedere gli altri.`
+        : `${total} risultati`}
+    </div>
+  );
+}
+
 function CountryFilter({ selected, onChange }: { selected: string | null; onChange: (c: string | null) => void }) {
   const codes = ["IT", "FR", "DE", "ES", "GB", "US", "CN", "IN", "BR", "AE"];
   return (
