@@ -63,8 +63,17 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   const addRecipient = (r: SelectedRecipient) => {
     setRecipients(prev => {
-      const key = r.contactId ? `${r.partnerId}-${r.contactId}` : r.partnerId;
-      if (prev.some(x => (x.contactId ? `${x.partnerId}-${x.contactId}` : x.partnerId) === key)) return prev;
+      // Dedupe primarily by email (stable identifier from any source).
+      // Fallback to partnerId+contactId when email is missing.
+      const newKey = r.email
+        ? `email:${r.email.toLowerCase()}`
+        : `pc:${r.partnerId || ""}-${r.contactId || ""}`;
+      if (prev.some(x => {
+        const xKey = x.email
+          ? `email:${x.email.toLowerCase()}`
+          : `pc:${x.partnerId || ""}-${x.contactId || ""}`;
+        return xKey === newKey;
+      })) return prev;
       return [...prev, r];
     });
   };
