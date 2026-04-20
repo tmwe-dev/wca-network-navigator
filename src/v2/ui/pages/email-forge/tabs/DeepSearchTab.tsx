@@ -3,12 +3,11 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Download, AlertTriangle } from "lucide-react";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
@@ -17,9 +16,18 @@ interface Props {
   onRefreshGeneration?: () => void;
 }
 
+interface PartnerEnrichment {
+  enrichment_data?: Record<string, unknown> | null;
+  profile_description?: string | null;
+  raw_profile_html?: string | null;
+  raw_profile_markdown?: string | null;
+  ai_parsed_at?: string | null;
+  deep_search_at?: string | null;
+  raw_data?: Record<string, unknown> | null;
+}
+
 export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   const ds = useDeepSearch();
-  const navigate = useNavigate();
 
   const enrichmentQuery = useQuery({
     queryKey: ["forge-enrichment", recipient?.source, recipient?.recordId],
@@ -30,7 +38,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         const id = recipient.partnerId!;
         const { data } = await supabase
           .from("partners")
-          .select("id, enrichment_data, raw_profile_html, raw_profile_markdown, ai_parsed_at")
+          .select("id, enrichment_data, profile_description, raw_profile_html, raw_profile_markdown, ai_parsed_at")
           .eq("id", id)
           .maybeSingle();
         return { kind: "partner" as const, data };
@@ -70,42 +78,47 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
     ds.start([targetId], true, mode);
   };
 
-  const enrichment = enrichmentQuery.data?.data as { enrichment_data?: Record<string, unknown> | null; deep_search_at?: string | null; raw_profile_html?: string | null; raw_profile_markdown?: string | null; ai_parsed_at?: string | null; raw_data?: Record<string, unknown> | null } | null;
+  const enrichment = enrichmentQuery.data?.data as PartnerEnrichment | null;
   const enrichmentJson = enrichment?.enrichment_data ?? enrichment?.raw_data ?? null;
   const deepAt = enrichment?.deep_search_at
     ?? (enrichmentJson && typeof enrichmentJson === "object" && "deep_search_at" in enrichmentJson ? String((enrichmentJson as Record<string, unknown>).deep_search_at) : null);
 
-  // Per partner: serve il profilo WCA scaricato prima della Deep Search.
   const isPartnerKind = enrichmentQuery.data?.kind === "partner";
-  const hasWcaProfile = !!(enrichment?.raw_profile_html || enrichment?.raw_profile_markdown);
-  const missingWcaProfile = isPartnerKind && !hasWcaProfile;
-
-  const goToDownloadCenter = () => {
-    navigate("/v2/settings?tab=download");
-  };
+  const profileDescription = enrichment?.profile_description ?? null;
+  const rawHtmlLen = enrichment?.raw_profile_html?.length ?? 0;
+  const rawMdLen = enrichment?.raw_profile_markdown?.length ?? 0;
+  const profileDescLen = profileDescription?.length ?? 0;
+  const hasSyncedProfile = !!(profileDescription || rawHtmlLen || rawMdLen);
+  const profileMissing = isPartnerKind && !hasSyncedProfile;
 
   return (
     <div className="space-y-2 text-xs">
-      {missingWcaProfile && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 space-y-1.5">
+      {isPartnerKind && (
+        <div className={`rounded-md border p-2.5 ${profileMissing ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/40 bg-emerald-500/10"}`}>
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            {profileMissing ? (
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            )}
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
-                Profilo WCA mancante
+              <div className={`text-[11px] font-semibold ${profileMissing ? "text-amber-900 dark:text-amber-200" : "text-emerald-900 dark:text-emerald-200"}`}>
+                {profileMissing ? "Profilo testuale assente" : "Profilo sincronizzato disponibile"}
               </div>
-              <div className="text-[10px] text-amber-800/80 dark:text-amber-200/80">
-                Questo partner non ha ancora il profilo WCA scaricato. Scaricalo prima dal Download Center, poi esegui la Deep Search per ottenere risultati di qualità.
+              <div className={`text-[10px] ${profileMissing ? "text-amber-800/80 dark:text-amber-200/80" : "text-emerald-800/80 dark:text-emerald-200/80"}`}>
+                {profileMissing
+                  ? "Nessuna descrizione, HTML o markdown presente per questo partner. La Deep Search funzionerà ma senza contesto testuale."
+                  : "L'AI dispone del profilo sincronizzato del partner. La Deep Search aggiunge social, contatti e rating."}
               </div>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={goToDownloadCenter} className="h-6 text-[10px] gap-1 border-amber-500/40">
-              <Download className="w-3 h-3" /> Apri Download Center
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => handleRun("partner")} disabled={ds.running} className="h-6 text-[10px] gap-1">
-              <Search className="w-3 h-3" /> Esegui comunque
-            </Button>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono">
+            <SourceRow label="profile_description" value={profileDescLen ? `${profileDescLen} char` : null} />
+            <SourceRow label="raw_profile_html" value={rawHtmlLen ? `${rawHtmlLen} char` : null} />
+            <SourceRow label="raw_profile_markdown" value={rawMdLen ? `${rawMdLen} char` : null} />
+            <SourceRow label="enrichment_data" value={enrichmentJson ? "presente" : null} />
+            <SourceRow label="ai_parsed_at" value={enrichment?.ai_parsed_at ? new Date(enrichment.ai_parsed_at).toLocaleDateString("it-IT") : null} />
+            <SourceRow label="deep_search_at" value={deepAt ? new Date(deepAt).toLocaleDateString("it-IT") : null} />
           </div>
         </div>
       )}
@@ -169,6 +182,15 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
           {enrichmentJson ? JSON.stringify(enrichmentJson, null, 2) : "(nessun dato)"}
         </pre>
       </div>
+    </div>
+  );
+}
+
+function SourceRow({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-muted-foreground truncate">{label}</span>
+      <span className={value ? "text-foreground" : "text-muted-foreground/50"}>{value ?? "—"}</span>
     </div>
   );
 }
