@@ -1,22 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MessageSquare, Sparkles, Mail, MessageCircle, Linkedin, Layers, Zap, Shield, Settings } from "lucide-react";
-
-const items = [
-  { to: "/v2", icon: Home, label: "Home" },
-  { to: "/v2/command", icon: MessageSquare, label: "Command" },
-  { to: "/v2/agents", icon: Sparkles, label: "Agenti" },
-  { to: "/v2/inreach", icon: Mail, label: "Email" },
-  { to: "/v2/outreach", icon: MessageCircle, label: "Comunicazioni" },
-  { to: "/v2/crm/contacts", icon: Linkedin, label: "Contatti" },
-  { to: "/v2/templates", icon: Layers, label: "Template" },
-  { to: "/v2/automations", icon: Zap, label: "Automazioni" },
-  { to: "/v2/audit", icon: Shield, label: "Audit" },
-  { to: "/v2/settings", icon: Settings, label: "Impostazioni" },
-];
+import { useTranslation } from "react-i18next";
+import { pinnedNavItems } from "@/v2/ui/templates/navConfig";
 
 const FloatingDock = () => {
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const isActive = (path: string) =>
+    path === "/v2" ? location.pathname === "/v2" : location.pathname.startsWith(path);
 
   return (
     <motion.div
@@ -26,16 +18,18 @@ const FloatingDock = () => {
       className="fixed left-3 top-1/2 -translate-y-1/2 z-50"
     >
       <div className="float-panel flex flex-col items-center gap-0.5 px-1.5 py-2">
-        {items.map((item) => {
-          const isActive = location.pathname === item.to;
+        {pinnedNavItems.map((item) => {
+          const active = isActive(item.path);
           return (
-            <NavLink key={item.to} to={item.to} className="relative group" title={item.label}>
-              <div className={`p-2.5 rounded-xl transition-all duration-300 ${
-                isActive ? "text-primary bg-primary/30" : "text-muted-foreground/96 hover:text-foreground"
-              }`}>
-                <item.icon className="w-4 h-4" strokeWidth={1.5} />
+            <NavLink key={item.path} to={item.path} className="relative group" title={t(item.labelKey)}>
+              <div
+                className={`p-2.5 rounded-xl transition-all duration-300 ${
+                  active ? "text-primary bg-primary/30" : "text-muted-foreground/90 hover:text-foreground"
+                }`}
+              >
+                {item.icon}
               </div>
-              {isActive && (
+              {active && (
                 <motion.div
                   layoutId="dock-dot"
                   className="absolute top-1/2 -right-1 -translate-y-1/2 w-1.5 h-1.5 bg-primary/90 rounded-full"

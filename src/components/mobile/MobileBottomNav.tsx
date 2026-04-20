@@ -1,34 +1,31 @@
 /**
  * MobileBottomNav — Fixed bottom navigation for mobile (<768px)
  * Shows 4 destinations + central Mission button (opens MissionDrawer).
+ * Items are derived from the canonical navConfig (single source of truth).
  */
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Mail, Settings, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { navGroupsDef, mobileBottomNavPaths, type NavItemDef } from "@/v2/ui/templates/navConfig";
 
-const NAV_ITEMS = [
-  { labelKey: "nav.dashboard", path: "/v2", icon: LayoutDashboard, exact: true },
-  { labelKey: "nav.crm", path: "/v2/crm", icon: Users },
-  { labelKey: "nav.outreach", path: "/v2/outreach", icon: Mail },
-  { labelKey: "nav.settings", path: "/v2/settings", icon: Settings },
-] as const;
+const allItems: readonly NavItemDef[] = navGroupsDef.flatMap((g) => g.items);
+const NAV_ITEMS: readonly NavItemDef[] = mobileBottomNavPaths
+  .map((p) => allItems.find((i) => i.path === p))
+  .filter((i): i is NavItemDef => Boolean(i));
 
 export function MobileBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
 
-  const isActive = (path: string, exact: boolean) => {
-    if (exact) return location.pathname === path;
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path: string) =>
+    path === "/v2" ? location.pathname === "/v2" : location.pathname.startsWith(path);
 
   const openMission = () => {
     window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "mission" } }));
   };
 
-  // Layout: 2 voci + Mission centrale + 2 voci
   const left = NAV_ITEMS.slice(0, 2);
   const right = NAV_ITEMS.slice(2);
 
@@ -39,9 +36,7 @@ export function MobileBottomNav() {
     >
       <div className="flex items-end justify-around h-16">
         {left.map((item) => {
-          const Icon = item.icon;
-          const hasExact = "exact" in item && item.exact;
-          const active = isActive(item.path, !!hasExact);
+          const active = isActive(item.path);
           return (
             <button
               key={item.path}
@@ -51,7 +46,7 @@ export function MobileBottomNav() {
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
-              <Icon className={cn("h-5 w-5", active && "drop-shadow-sm")} />
+              <span className={cn(active && "drop-shadow-sm")}>{item.icon}</span>
               <span className="text-[10px] font-medium leading-tight">{t(item.labelKey)}</span>
             </button>
           );
@@ -70,9 +65,7 @@ export function MobileBottomNav() {
         </button>
 
         {right.map((item) => {
-          const Icon = item.icon;
-          const hasExact = "exact" in item && item.exact;
-          const active = isActive(item.path, !!hasExact);
+          const active = isActive(item.path);
           return (
             <button
               key={item.path}
@@ -82,7 +75,7 @@ export function MobileBottomNav() {
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
-              <Icon className={cn("h-5 w-5", active && "drop-shadow-sm")} />
+              <span className={cn(active && "drop-shadow-sm")}>{item.icon}</span>
               <span className="text-[10px] font-medium leading-tight">{t(item.labelKey)}</span>
             </button>
           );
