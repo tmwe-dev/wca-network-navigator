@@ -404,7 +404,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         </div>
       </div>
 
-      {/* === KB LINK + ACTION BUTTONS (pinned bottom) === */}
+      {/* === KB LINK + ACTION BUTTONS + CONTEXT PANEL (pinned bottom) === */}
       <div className="shrink-0 border-t border-border/30 px-3 py-2.5 space-y-2">
         <button
           onClick={() => navigate("/settings?tab=ai-prompt")}
@@ -430,9 +430,12 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           onClick={() => onImprove(config)}
           disabled={improving || generating || !hasBody}
         >
-          {improving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-amber-500" />}
+          {improving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-warning" />}
           {improving ? "Miglioramento..." : "Migliora"}
         </Button>
+
+        {/* === CONTEXT PANEL — sempre visibile, accordion chiuso di default === */}
+        <OracleContextPanel summary={contextSummary} hasRecipient={recipientCount > 0} />
       </div>
 
       <EmailTypeDetailDialog
