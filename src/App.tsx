@@ -81,6 +81,7 @@ function V1DeprecationRedirect() {
   return (
     <Navigate
       to={resolveLegacyV1Path(location.pathname, location.search, location.hash)}
+      state={location.state}
       replace
     />
   );
@@ -115,14 +116,14 @@ const App = () => (
                   <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
 
                   {/* Legacy bare paths — redirect to V2 equivalents */}
-                  <Route path="/email-composer" element={<Navigate to="/v2/outreach/composer" replace />} />
-                  <Route path="/network" element={<Navigate to="/v2/network" replace />} />
-                  <Route path="/crm" element={<Navigate to="/v2/crm" replace />} />
-                  <Route path="/outreach" element={<Navigate to="/v2/outreach" replace />} />
-                  <Route path="/inreach" element={<Navigate to="/v2/inreach" replace />} />
-                  <Route path="/agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
-                  <Route path="/campaigns" element={<Navigate to="/v2/campaigns" replace />} />
-                  <Route path="/settings" element={<Navigate to="/v2/settings" replace />} />
+                  <Route path="/email-composer" element={<Navigate to="/v2/outreach/composer" state={location.state} replace />} />
+                  <Route path="/network" element={<Navigate to="/v2/network" state={location.state} replace />} />
+                  <Route path="/crm" element={<Navigate to="/v2/crm" state={location.state} replace />} />
+                  <Route path="/outreach" element={<Navigate to="/v2/outreach" state={location.state} replace />} />
+                  <Route path="/inreach" element={<Navigate to="/v2/inreach" state={location.state} replace />} />
+                  <Route path="/agenda" element={<Navigate to="/v2/outreach/agenda" state={location.state} replace />} />
+                  <Route path="/campaigns" element={<Navigate to="/v2/campaigns" state={location.state} replace />} />
+                  <Route path="/settings" element={<Navigate to="/v2/settings" state={location.state} replace />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
