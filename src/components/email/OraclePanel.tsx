@@ -157,10 +157,10 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           <Textarea
             value={speech.listening ? (customGoal + (speech.interimText ? " " + speech.interimText : "")) : customGoal}
             onChange={(e) => setCustomGoal(e.target.value)}
-            placeholder="Descrivi l'obiettivo della email..."
+            placeholder={getCustomGoalPlaceholder(selectedType?.id ?? null)}
             className={cn(
               "text-xs min-h-[160px] max-h-[240px] resize-none pr-8",
-              speech.listening && "ring-1 ring-red-400/50"
+              speech.listening && "ring-1 ring-destructive/40"
             )}
             rows={6}
           />
@@ -171,7 +171,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
               className={cn(
                 "absolute right-1.5 top-1.5 p-1 rounded-full transition-colors",
                 speech.listening
-                  ? "bg-red-500/10 text-red-500 animate-pulse"
+                  ? "bg-destructive/10 text-destructive animate-pulse"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               )}
               title={speech.listening ? "Ferma registrazione" : "Dettatura vocale"}
@@ -180,6 +180,19 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             </button>
           )}
         </div>
+
+        {/* Coherence warning chip — soft, non blocking */}
+        {!coherence.ok && coherence.warning && (
+          <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-md bg-warning/10 border border-warning/30 text-[10px] text-warning-foreground/90">
+            <Info className="w-3 h-3 shrink-0 mt-[1px] text-warning" />
+            <div className="flex-1">
+              <div className="text-foreground/90">{coherence.warning}</div>
+              {coherence.suggestion && (
+                <div className="text-muted-foreground mt-0.5">{coherence.suggestion}</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* === TIPO EMAIL — CHIP ROW === */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
