@@ -97,7 +97,7 @@ export function EmailForgePage(): React.ReactElement {
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={22} minSize={18} maxSize={32}>
-            <ForgeSummaryPanel onOpenDrawer={openDrawer} />
+            <ForgeSummaryPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
 
