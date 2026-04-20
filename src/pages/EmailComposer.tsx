@@ -119,20 +119,29 @@ export default function EmailComposer() {
           </div>
 
           {/* RIGHT: Oracle + AI dialogs */}
-          <EmailAIPanel
-            aiGenerating={ai.aiGenerating}
-            aiImproving={ai.aiImproving}
-            hasBody={!!email.htmlBody.trim()}
-            learningDialogOpen={ai.learningDialogOpen}
-            editAnalysis={ai.editAnalysis}
-            onGenerate={c.handleAIGenerate}
-            onImprove={c.handleAIImprove}
-            onLoadTemplate={c.handleLoadTemplate}
-            onInsertImage={c.handleInsertImage}
-            onCloseLearningDialog={c.closeLearningDialog}
-            onSendAndSave={c.handleSendAndSave}
-            onSendWithoutSaving={() => { c.closeLearningDialog(); c.executeEnqueue(); }}
-          />
+          {(() => {
+            const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
+            const hasRealPartnerId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
+            return (
+              <EmailAIPanel
+                aiGenerating={ai.aiGenerating}
+                aiImproving={ai.aiImproving}
+                hasBody={!!email.htmlBody.trim()}
+                learningDialogOpen={ai.learningDialogOpen}
+                editAnalysis={ai.editAnalysis}
+                onGenerate={c.handleAIGenerate}
+                onImprove={c.handleAIImprove}
+                onLoadTemplate={c.handleLoadTemplate}
+                onInsertImage={c.handleInsertImage}
+                onCloseLearningDialog={c.closeLearningDialog}
+                onSendAndSave={c.handleSendAndSave}
+                onSendWithoutSaving={() => { c.closeLearningDialog(); c.executeEnqueue(); }}
+                recipientPartnerId={hasRealPartnerId ? single!.partnerId : null}
+                recipientCount={c.recipientsWithEmail.length}
+                contextSummary={c.lastContextSummary}
+              />
+            );
+          })()}
         </div>
       </div>
 
