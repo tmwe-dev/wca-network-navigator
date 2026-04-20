@@ -212,11 +212,18 @@ export function useEmailComposerState() {
     if (!email.htmlBody.trim()) { toast.error("Scrivi prima il testo dell'email da migliorare"); return; }
     dispatch({ type: "SET_AI_IMPROVING", payload: true });
     try {
+      const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
+      const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
       const data = await invokeEdge<ImproveEmailResponse>("improve-email", { body: {
         subject: email.subject, html_body: email.htmlBody,
         recipient_count: recipientsWithEmail.length,
         recipient_countries: [...new Set(recipients.map((r) => r.countryName))].join(", "),
         oracle_tone: config.tone, use_kb: config.useKB,
+        email_type_id: config.emailType?.id || null,
+        email_type_prompt: config.emailType?.prompt || null,
+        custom_goal: config.customGoal || null,
+        partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
+        contact_id: singleRecipient?.contactId || null,
       }, context: "EmailComposer.improve_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
