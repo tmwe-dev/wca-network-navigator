@@ -413,7 +413,8 @@ export async function assembleContextBlocks(
   // ── Edit Patterns ──
   let editPatternsContext = "";
   {
-    const emailCategory = opts.oracle_type || "primo_contatto";
+    // Fix 3 (Gap C): inferenza category sicura — qui non abbiamo ancora touchCount, usiamo solo oracle_type esplicito
+    const emailCategory = opts.oracle_type || null;
     const countryFilter = partner.country_code || null;
     let epQuery = supabase.from("ai_edit_patterns")
       .select("email_type, country_code, hook_original, hook_final, cta_original, cta_final, tone_delta, formality_shift, length_delta_percent")
