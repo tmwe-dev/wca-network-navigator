@@ -598,14 +598,26 @@ async function handleGoogleSearch(msg) {
 // 1. SCRAPE
 // ============================================================
 async function handleScrape(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const url = tab.url;
+  // Se è disponibile il background tab (navigate background appena fatto), preferiscilo
+  let tabId = null;
+  let url = null;
+  if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) { tabId = bt.id; url = bt.url; }
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+    url = tab.url;
+  }
   if (!msg.skipCache) {
     const cached = await Cache.get('domain', url);
     if (cached) return { ...cached, _fromCache: true };
   }
-  const result = await scrapeTab(tab.id);
+  const result = await scrapeTab(tabId);
   RateLimiter.recordRequest(url);
   await Cache.set('domain', url, result);
   return result;
@@ -863,8 +875,19 @@ async function captureFullPage(tabId, format, quality) {
 // 6. EXTRACT (con validazione schema + ReDoS protection)
 // ============================================================
 async function handleExtract(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  // Preferisci il background tab se attivo (allineato a handleScrape)
+  let tabId = null;
+  if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) tabId = bt.id;
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+  }
   if (!msg.schema || typeof msg.schema !== 'object') {
     throw new FireScrapeError('Schema non valido', 'INVALID_SCHEMA');
   }
