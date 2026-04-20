@@ -20,13 +20,6 @@ export function EmailForgeFiltersSection() {
 
   return (
     <div className="space-y-3">
-      <FilterSection icon={UserIcon} label="Destinatario">
-        <ForgeRecipientPicker
-          value={lab.recipient}
-          onChange={(r) => forgeLabStore.set({ recipient: r })}
-        />
-      </FilterSection>
-
       <FilterSection icon={Mail} label="Tipo email">
         <div className="grid grid-cols-2 gap-1">
           {DEFAULT_EMAIL_TYPES.map((t) => (
@@ -96,6 +89,13 @@ export function EmailForgeFiltersSection() {
             className="min-h-[50px] text-xs"
           />
         </div>
+      </FilterSection>
+
+      <FilterSection icon={UserIcon} label="Destinatario">
+        <ForgeRecipientPicker
+          value={lab.recipient}
+          onChange={(r) => forgeLabStore.set({ recipient: r })}
+        />
       </FilterSection>
 
       <Button
