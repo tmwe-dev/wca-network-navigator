@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Linkedin, Image, Brain, Download, Rocket, StopCircle, Loader2 } from "lucide-react";
 import type { EnrichedRow } from "@/hooks/useEnrichmentData";
-import { useBaseEnrichment } from "@/hooks/useBaseEnrichment";
-import type { BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
-import { useCallback } from "react";
+import type { BaseEnrichmentProgress } from "@/hooks/useBaseEnrichment";
 
 interface Props {
   selectedCount: number;
@@ -16,33 +14,18 @@ interface Props {
   onDeepSearch: (rows: EnrichedRow[]) => void;
   getSelectedRows: () => EnrichedRow[];
   onJobComplete?: () => void;
+  // Base enrichment job (state lifted to parent)
+  progress: BaseEnrichmentProgress;
+  onStartBaseEnrichment: () => void | Promise<void>;
+  onStopBaseEnrichment: () => void;
 }
 
-export function BulkActionBar({ selectedCount, onLinkedInBatch, onBulkLogoSearch, onDeepSearch, getSelectedRows, onJobComplete }: Props) {
-  const getTargets = useCallback((): BaseEnrichTarget[] => {
-    return getSelectedRows()
-      .filter((r) => r.source === "wca" || r.source === "contacts")
-      .map((r) => ({
-        id: r.realId || r.id,
-        source: r.source as "wca" | "contacts",
-        name: r.name,
-        companyName: r.source === "wca" ? r.name : undefined,
-        domain: r.domain,
-        email: r.email,
-        hasLogo: r.hasLogo,
-        hasLinkedin: r.hasLinkedin,
-        hasWebsiteExcerpt: false,
-      }));
-  }, [getSelectedRows]);
-
-  const { progress, start, stop } = useBaseEnrichment(getTargets);
+export function BulkActionBar({
+  selectedCount, onLinkedInBatch, onBulkLogoSearch, onDeepSearch, getSelectedRows,
+  progress, onStartBaseEnrichment, onStopBaseEnrichment,
+}: Props) {
   const isRunning = progress.status === "running";
   const showProgress = progress.status !== "idle" && progress.total > 0;
-
-  const handleStart = async () => {
-    await start();
-    onJobComplete?.();
-  };
 
   return (
     <div className="space-y-2">
@@ -52,7 +35,7 @@ export function BulkActionBar({ selectedCount, onLinkedInBatch, onBulkLogoSearch
           <Button
             size="sm"
             className="h-7 text-[10px] gap-1"
-            onClick={isRunning ? stop : handleStart}
+            onClick={isRunning ? onStopBaseEnrichment : onStartBaseEnrichment}
             disabled={selectedCount === 0 && !isRunning}
             title="Pre-fill batch: Google search per slug LinkedIn + logo + scraping sito (zero AI, zero login LinkedIn)"
           >
