@@ -40,6 +40,7 @@ export interface ForgeResult {
 
 export interface ForgeRunParams {
   partner_id?: string | null;
+  contact_id?: string | null;
   recipient_name?: string;
   recipient_company?: string;
   recipient_countries?: string;
@@ -73,6 +74,7 @@ export function useEmailForge() {
         body: {
           standalone: true,
           partner_id: params.partner_id ?? null,
+          contact_id: params.contact_id ?? null,
           recipient_name: params.recipient_name,
           recipient_company: params.recipient_company,
           recipient_countries: params.recipient_countries,
