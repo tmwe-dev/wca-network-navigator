@@ -48,7 +48,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
