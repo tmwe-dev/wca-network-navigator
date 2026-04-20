@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Partner Connect",
-  "version": "3.3.0",
-  "description": "Scraping + Agent browser + Hydra Memory. Analizza, naviga e opera come un umano.",
+  "version": "3.4.0",
+  "description": "Scraping + Agent browser + Hydra Memory + Background Tab Singleton (Deep Search senza tab visibili).",
   "permissions": [
     "activeTab",
     "scripting",

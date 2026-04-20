@@ -23,6 +23,63 @@ class FireScrapeError extends Error {
 }
 
 // ============================================================
+// BACKGROUND TAB SINGLETON — riusa 1 solo tab nascosto
+// per le navigate Deep Search (no tab visibili, no proliferazione).
+// ============================================================
+const BackgroundTab = {
+  tabId: null,
+  windowId: null,
+  busy: false,
+
+  async _ensure() {
+    // Se già esiste e vivo, riusa
+    if (this.tabId !== null) {
+      try {
+        const t = await chrome.tabs.get(this.tabId);
+        if (t && t.id) return this.tabId;
+      } catch { /* tab chiuso, ricreiamo */ }
+    }
+    // Crea finestra minimizzata fuori schermo (no focus stealing)
+    try {
+      const win = await chrome.windows.create({
+        url: 'about:blank',
+        focused: false,
+        state: 'minimized',
+        type: 'normal',
+        width: 1024,
+        height: 768,
+        left: -2000,
+        top: -2000,
+      });
+      this.windowId = win.id;
+      this.tabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
+    } catch (err) {
+      // Fallback: tab inattivo nella finestra corrente
+      const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
+      this.tabId = tab.id;
+      this.windowId = tab.windowId;
+    }
+    return this.tabId;
+  },
+
+  async navigate(url) {
+    const tabId = await this._ensure();
+    await chrome.tabs.update(tabId, { url, active: false });
+    await waitForTabLoad(tabId);
+    await sleep(800);
+    return tabId;
+  },
+
+  async close() {
+    if (this.tabId !== null) {
+      try { await chrome.tabs.remove(this.tabId); } catch {}
+    }
+    this.tabId = null;
+    this.windowId = null;
+  },
+};
+
+// ============================================================
 // RELAY CONFIG (Claude Bridge)
 // ============================================================
 const RELAY = {
@@ -541,14 +598,26 @@ async function handleGoogleSearch(msg) {
 // 1. SCRAPE
 // ============================================================
 async function handleScrape(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const url = tab.url;
+  // Se è disponibile il background tab (navigate background appena fatto), preferiscilo
+  let tabId = null;
+  let url = null;
+  if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) { tabId = bt.id; url = bt.url; }
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+    url = tab.url;
+  }
   if (!msg.skipCache) {
     const cached = await Cache.get('domain', url);
     if (cached) return { ...cached, _fromCache: true };
   }
-  const result = await scrapeTab(tab.id);
+  const result = await scrapeTab(tabId);
   RateLimiter.recordRequest(url);
   await Cache.set('domain', url, result);
   return result;
@@ -806,14 +875,25 @@ async function captureFullPage(tabId, format, quality) {
 // 6. EXTRACT (con validazione schema + ReDoS protection)
 // ============================================================
 async function handleExtract(msg) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+  // Preferisci il background tab se attivo (allineato a handleScrape)
+  let tabId = null;
+  if (BackgroundTab.tabId !== null) {
+    try {
+      const bt = await chrome.tabs.get(BackgroundTab.tabId);
+      if (bt && bt.url && !/^about:/.test(bt.url)) tabId = bt.id;
+    } catch { /* ignore */ }
+  }
+  if (tabId === null) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
+    tabId = tab.id;
+  }
   if (!msg.schema || typeof msg.schema !== 'object') {
     throw new FireScrapeError('Schema non valido', 'INVALID_SCHEMA');
   }
 
   const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId },
     func: (schema) => {
       const extracted = {};
       for (const [key, selector] of Object.entries(schema)) {
@@ -840,17 +920,29 @@ async function handleExtract(msg) {
     },
     args: [msg.schema]
   });
-  return { data: results?.[0]?.result, url: tab.url };
+  let finalUrl = '';
+  try { const t = await chrome.tabs.get(tabId); finalUrl = t.url || ''; } catch {}
+  return { data: results?.[0]?.result, url: finalUrl };
 }
 
 // ============================================================
 // 7. AGENT — Azioni singole + sequenze
 // ============================================================
 async function handleAgentAction(msg) {
+  const step = msg.step || {};
+  // Fast path: navigate in background (riusa singleton tab nascosto)
+  if (step.action === 'navigate' && (step.background === true || step.reuseTab === true)) {
+    if (!step.url) throw new FireScrapeError('URL mancante', 'NO_URL');
+    const tabId = await BackgroundTab.navigate(step.url);
+    const result = { ok: true, action: 'navigate', url: step.url, tabId, background: true };
+    relayLog({ type: 'agent-action', step, result });
+    return result;
+  }
+  // Default: usa tab attivo
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const result = await Agent.executeAction(tab.id, msg.step);
-  relayLog({ type: 'agent-action', step: msg.step, result });
+  const result = await Agent.executeAction(tab.id, step);
+  relayLog({ type: 'agent-action', step, result });
   return result;
 }
 
