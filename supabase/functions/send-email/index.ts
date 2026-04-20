@@ -72,6 +72,27 @@ Deno.serve(async (req) => {
       return edgeError("VALIDATION_ERROR", "Invalid recipient email format", to);
     }
 
+    // ── HARD GUARD: blocca invio a email bounced/invalid ─────────────────
+    // Controlla email_status (fatto tecnico, separato da lead_status commerciale).
+    const [contactCheck, partnerCheck] = await Promise.all([
+      supabase.from("imported_contacts").select("email_status").ilike("email", to).limit(1).maybeSingle(),
+      supabase.from("partners").select("email_status").ilike("email", to).limit(1).maybeSingle(),
+    ]);
+    const blockedStatus =
+      (contactCheck.data?.email_status && contactCheck.data.email_status !== "valid")
+        ? contactCheck.data.email_status
+        : (partnerCheck.data?.email_status && partnerCheck.data.email_status !== "valid")
+          ? partnerCheck.data.email_status
+          : null;
+    if (blockedStatus) {
+      console.warn(`[send-email] BLOCKED — ${to} has email_status='${blockedStatus}'`);
+      return edgeError(
+        "VALIDATION_ERROR",
+        `Email non inviabile: indirizzo segnato come "${blockedStatus}". Aggiorna lo stato in CRM se è tornato valido.`,
+        to,
+      );
+    }
+
     // Read SMTP settings from app_settings (scoped to authenticated user)
     const { data: settingsRows } = await supabase
       .from("app_settings")
