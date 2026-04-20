@@ -13,6 +13,56 @@ export function toWhatsAppNumber(phone: string): string {
   return phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "");
 }
 
+/**
+ * Rimuove prefissi onorifici (Mr., Mrs., Dr., Dott., Ing., Eng., Sig., Sig.ra)
+ * per rendere le query Google meno restrittive.
+ */
+export function cleanPersonName(raw: string): string {
+  if (!raw) return raw;
+  let s = raw.trim();
+  // prefissi onorifici (con o senza punto)
+  s = s.replace(/^(mr|mrs|ms|miss|mx|dr|dott(?:oressa|or)?|ing|eng|sig(?:nor|nora|\.ra)?|prof|avv|arch)\.?\s+/i, "");
+  // suffissi titoli
+  s = s.replace(/\s+(jr|sr|phd|md|mba|esq)\.?$/i, "");
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Rimuove suffissi legali e sigle societarie per ottenere un nome ricercabile.
+ */
+export function cleanCompanyName(raw: string): string {
+  if (!raw) return raw;
+  let s = raw.trim();
+  // suffissi legali in coda
+  const legal = /\s*[,.\-]?\s*\b(s\.?\s?r\.?\s?l\.?(?:\s?s)?|s\.?\s?p\.?\s?a\.?|s\.?\s?n\.?\s?c\.?|s\.?\s?a\.?\s?s\.?|ltd\.?|limited|llc\.?|inc\.?|corp\.?|corporation|gmbh|ag|kg|ohg|bv|nv|sa|sl|oy|ab|as|aps|pvt\.?|pty\.?|co\.?|company|holding|group|grp|international|int\.?l)\b\.?$/i;
+  // applica fino a 3 volte (es. "X Ltd. Co.")
+  for (let i = 0; i < 3; i++) {
+    const next = s.replace(legal, "").trim();
+    if (next === s) break;
+    s = next;
+  }
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/* ---------- Cascade event bus (per cascade visibility nel Lab Forge) ---------- */
+export type CascadeEvent =
+  | { type: "query-start"; subjectId: string; query: string; index: number; total: number }
+  | { type: "query-result"; subjectId: string; query: string; index: number; total: number; results: number }
+  | { type: "subject-done"; subjectId: string; matched: boolean };
+
+type CascadeListener = (e: CascadeEvent) => void;
+const cascadeListeners = new Set<CascadeListener>();
+
+export const cascadeBus = {
+  subscribe(fn: CascadeListener): () => void {
+    cascadeListeners.add(fn);
+    return () => { cascadeListeners.delete(fn); };
+  },
+  emit(e: CascadeEvent): void {
+    cascadeListeners.forEach((fn) => { try { fn(e); } catch { /* noop */ } });
+  },
+};
+
 export function extractSeniority(title: string | undefined): { seniority: string; linkedin_title: string } | null {
   if (!title) return null;
   const parts = title.split(" - ");
