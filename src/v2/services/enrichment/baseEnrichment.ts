@@ -183,10 +183,7 @@ export async function scrapeSiteExcerpt(fs: FsBridge, domain: string): Promise<W
   for (const url of pages) {
     await throttleDomain(d);
     try {
-      const nav = await fs.agentAction({ action: "navigate", url, background: true, reuseTab: true });
-      if (!nav.success) continue;
-      await new Promise((r) => setTimeout(r, 1500));
-      const sc = await fs.scrape(true);
+      const sc = await fs.scrapeUrl(url);
       if (sc.success) {
         if (!title && sc.metadata?.title) title = sc.metadata.title;
         collectedText += "\n" + (sc.markdown || "");
