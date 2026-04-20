@@ -87,6 +87,12 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
 
     return sorted;
   }, [messages, g.filters.sortingFilter, g.filters.emailSort, g.filters.inreachGroupBySender]);
+
+  const selectedMsg = useMemo(
+    () => (selectedId ? inbound.find((message) => message.id === selectedId) ?? null : null),
+    [inbound, selectedId],
+  );
+
   const showSyncPanel = isSyncing || progress.status === "done" || progress.status === "error";
   const hasNextPage = messages.length === pageSize;
   const hasPrevPage = page > 0;
@@ -119,7 +125,14 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
               <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  // Se la search globale è vuota, scriviamo nello stato locale; altrimenti aggiorniamo il globale
+                  if (g.filters.sortingSearch) {
+                    g.setSortingSearch(event.target.value);
+                  } else {
+                    setLocalSearch(event.target.value);
+                  }
+                }}
                 placeholder="Cerca email..."
                 className="h-7 pl-8 text-xs"
               />
