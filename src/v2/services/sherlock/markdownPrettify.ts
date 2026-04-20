@@ -38,6 +38,19 @@ const NOISE_PATTERNS: RegExp[] = [
   /^\s*Skip to (main content|navigation)\s*$/gim,
   // "Show more"/"Show less" toggles
   /^\s*(Show more|Show less|Mostra altro|Mostra meno)\s*$/gim,
+  // URL grezzi su singola riga (no testo descrittivo) — tipico dei dump scraper
+  /^\s*https?:\/\/\S+\s*$/gim,
+  // Blob query lunghi (es. ?q=%22%22AL...&tbs=qdr:y) presi da SERP Google
+  /^[^\n]{0,40}\?q=%[0-9A-Fa-f]{2}.{40,}$/gim,
+  // Google "unusual traffic" preamble (gestito anche da pageQuality, ma se passa ripuliamo)
+  /^\s*Informazioni su questa pagina\s*$/gim,
+  /^\s*About this page\s*$/gim,
+  /^\s*Indirizzo IP:\s*[\d.]+.*$/gim,
+  /^\s*IP address:\s*[\d.]+.*$/gim,
+  // Continuation links Google
+  /^\s*continue=https?:\/\/.*$/gim,
+  // Image alt placeholder generici
+  /^\s*!\[\]\([^)]*\)\s*$/gim,
 ];
 
 const HOURS_TABLE_RE =

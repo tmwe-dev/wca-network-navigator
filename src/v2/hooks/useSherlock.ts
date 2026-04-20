@@ -12,7 +12,7 @@ import {
   updateInvestigation,
   sherlockKeys,
 } from "@/data/sherlockPlaybooks";
-import { runSherlock } from "@/v2/services/sherlock/sherlockEngine";
+import { runAgenticSherlock } from "@/v2/services/sherlock/agenticEngine";
 import type {
   SherlockLevel,
   SherlockStepResult,
@@ -64,11 +64,6 @@ export function useSherlock(args: UseSherlockArgs) {
   const start = React.useCallback(
     async (level: SherlockLevel) => {
       if (running) return;
-      const playbook = await getPlaybookByLevel(level);
-      if (!playbook) {
-        toast.error(`Nessun playbook attivo per livello ${level}`);
-        return;
-      }
 
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
@@ -85,11 +80,14 @@ export function useSherlock(args: UseSherlockArgs) {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Persist investigation (best effort, non blocca se fallisce)
       let invId: string | null = null;
       try {
+        // Recupera un playbook di riferimento solo per FK (legacy schema)
+        const playbook = await getPlaybookByLevel(level).catch(() => null);
         const inv = await createInvestigation({
           user_id: userId,
-          playbook_id: playbook.id,
+          playbook_id: playbook?.id ?? null,
           level,
           partner_id: args.partnerId,
           contact_id: args.contactId,
@@ -99,12 +97,12 @@ export function useSherlock(args: UseSherlockArgs) {
         invId = inv.id;
         setInvestigationId(inv.id);
       } catch (e) {
-        console.warn("[sherlock] create investigation fallita, proseguo senza persist", e);
+        console.warn("[sherlock] create investigation skipped", e);
       }
 
       try {
-        const result = await runSherlock({
-          playbook,
+        const result = await runAgenticSherlock({
+          level,
           vars: args.vars,
           partnerId: args.partnerId,
           contactId: args.contactId,
@@ -115,7 +113,6 @@ export function useSherlock(args: UseSherlockArgs) {
               const idx = next.findIndex((r) => r.order === ev.result.order);
               if (idx >= 0) next[idx] = ev.result;
               else next.push(ev.result);
-              // Mantieni l'ordine naturale per step.order così la UI è sempre 1→N
               next.sort((a, b) => a.order - b.order);
               return next;
             });
@@ -134,17 +131,15 @@ export function useSherlock(args: UseSherlockArgs) {
             summary: result.summary,
             duration_ms: result.durationMs,
             completed_at: new Date().toISOString(),
-          });
+          }).catch(() => null);
         }
 
         if (!controller.signal.aborted) {
-          toast.success(`Indagine "${playbook.name}" completata`);
+          toast.success(`Indagine completata`);
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Errore sconosciuto";
-        if (msg !== "Aborted") {
-          toast.error(`Indagine fallita: ${msg}`);
-        }
+        if (msg !== "Aborted") toast.error(`Indagine fallita: ${msg}`);
         if (invId) {
           await updateInvestigation(invId, {
             status: "failed",
