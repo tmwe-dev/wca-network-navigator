@@ -414,6 +414,20 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       }
     }
 
+    // 8b. Runtime discovery LinkedIn company: cerca un link nel markdown del sito
+    //     se lo slug non è ancora popolato. Persisti su partner.
+    if (!liveVars.linkedinCompanySlug && markdown) {
+      const liUrl = findLinkedinCompanyUrl(markdown);
+      const slug = extractLinkedinCompanySlug(liUrl);
+      if (slug && liUrl) {
+        liveVars.linkedinCompanySlug = slug;
+        consolidated.linkedin_company_url_discovered = liUrl;
+        if (partnerId) {
+          updatePartnerLinkedinIfMissing(partnerId, liUrl).catch(() => null);
+        }
+      }
+    }
+
     const done: SherlockStepResult = {
       ...running,
       status: cacheHit ? "cached" : "done",
