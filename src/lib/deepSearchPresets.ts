@@ -2,33 +2,31 @@
  * deepSearchPresets — Policy unica: Quality (Fast/Standard/Premium) determina
  * automaticamente quali fonti vengono lette dal Deep Search.
  *
- * Mappa concordata:
- *  - Fast      → Google + sito home (verifica esistenza + favicon + quality score)
- *  - Standard  → + LinkedIn contatti/azienda + pagina About del sito
- *  - Premium   → + post LinkedIn (ultimi 3-5) + Google News azienda (30gg)
+ * V2 (2026-04): aggiunte 4 nuove fonti opzionali, attivabili anche granularmente
+ * dalla sidebar (non più solo via preset shortcut):
+ *  - googleGeneral: ricerca Google senza site:linkedin per trovare menzioni varie
+ *  - googleMaps: scrape pannello Google Maps (indirizzo, tel, orari, rating)
+ *  - websiteMultiPage: naviga /about /team /contacts e estrae team con AI
+ *  - reputation: Trustpilot + Google News + Wikipedia
  */
 
 export type DeepSearchQuality = "fast" | "standard" | "premium";
 
 /** Set completo di sorgenti che il Deep Search può consultare. */
 export interface DeepSearchSources {
-  /** Cascade Google SERP per trovare link verificati. */
   googleSerp: boolean;
-  /** Scrape della homepage del sito aziendale (favicon + quality score). */
   websiteHome: boolean;
-  /** Scrape pagina /about del sito aziendale per value proposition. */
   websiteAbout: boolean;
-  /** Cerca profili LinkedIn dei contatti (snippet SERP). */
   linkedinContacts: boolean;
-  /** Cerca pagina LinkedIn azienda (snippet SERP). */
   linkedinCompany: boolean;
-  /** Estrae ultimi post LinkedIn (richiede estensione loggata). */
   linkedinPosts: boolean;
-  /** Verifica numero WhatsApp (mobile→wa.me). */
   whatsapp: boolean;
-  /** Cerca news Google ultimi 30 giorni sull'azienda. */
   googleNews30d: boolean;
-  /** Numero massimo di query Google nella cascade per contatto. */
+  /** Nuove fonti V2 */
+  googleGeneral: boolean;
+  googleMaps: boolean;
+  websiteMultiPage: boolean;
+  reputation: boolean;
   maxQueriesPerContact: number;
 }
 
@@ -36,9 +34,7 @@ export interface DeepSearchPresetMeta {
   quality: DeepSearchQuality;
   label: string;
   description: string;
-  /** Etichette user-friendly delle fonti incluse, per il badge. */
   includedLabels: string[];
-  /** Stima durata indicativa per partner. */
   estimatedSecondsPerRecord: number;
 }
 
@@ -52,6 +48,10 @@ const PRESETS: Record<DeepSearchQuality, DeepSearchSources> = {
     linkedinPosts: false,
     whatsapp: false,
     googleNews30d: false,
+    googleGeneral: false,
+    googleMaps: false,
+    websiteMultiPage: false,
+    reputation: false,
     maxQueriesPerContact: 2,
   },
   standard: {
@@ -63,6 +63,10 @@ const PRESETS: Record<DeepSearchQuality, DeepSearchSources> = {
     linkedinPosts: false,
     whatsapp: true,
     googleNews30d: false,
+    googleGeneral: false,
+    googleMaps: true,
+    websiteMultiPage: false,
+    reputation: false,
     maxQueriesPerContact: 4,
   },
   premium: {
@@ -71,9 +75,13 @@ const PRESETS: Record<DeepSearchQuality, DeepSearchSources> = {
     websiteAbout: true,
     linkedinContacts: true,
     linkedinCompany: true,
-    linkedinPosts: true,
+    linkedinPosts: false, // disattivato come da scelta utente: no scraping deep LinkedIn
     whatsapp: true,
     googleNews30d: true,
+    googleGeneral: true,
+    googleMaps: true,
+    websiteMultiPage: true,
+    reputation: true,
     maxQueriesPerContact: 5,
   },
 };
@@ -82,31 +90,30 @@ const META: Record<DeepSearchQuality, DeepSearchPresetMeta> = {
   fast: {
     quality: "fast",
     label: "Fast",
-    description: "Verifica veloce: solo Google + homepage del sito.",
+    description: "Verifica veloce: Google + homepage del sito.",
     includedLabels: ["Google SERP", "Sito home"],
     estimatedSecondsPerRecord: 8,
   },
   standard: {
     quality: "standard",
     label: "Standard",
-    description: "Bilanciato: aggiunge LinkedIn contatti/azienda, pagina About e WhatsApp.",
-    includedLabels: ["Google SERP", "Sito home + About", "LinkedIn contatti", "LinkedIn azienda", "WhatsApp"],
-    estimatedSecondsPerRecord: 18,
+    description: "Bilanciato: aggiunge LinkedIn, About, WhatsApp, Google Maps.",
+    includedLabels: ["Google SERP", "Sito home + About", "LinkedIn", "WhatsApp", "Google Maps"],
+    estimatedSecondsPerRecord: 25,
   },
   premium: {
     quality: "premium",
     label: "Premium",
-    description: "Massima profondità: include post LinkedIn recenti e Google News ultimi 30 giorni.",
+    description: "Massima profondità: tutte le fonti incluso sito multi-pagina, reputation e news.",
     includedLabels: [
-      "Google SERP",
-      "Sito home + About",
-      "LinkedIn contatti",
-      "LinkedIn azienda",
-      "Post LinkedIn (3-5 recenti)",
+      "Google SERP + generale",
+      "Sito multi-pagina (about/team/contacts)",
+      "LinkedIn contatti + azienda",
       "WhatsApp",
-      "Google News 30gg",
+      "Google Maps / Place",
+      "Reputation (Trustpilot + News + Wikipedia)",
     ],
-    estimatedSecondsPerRecord: 35,
+    estimatedSecondsPerRecord: 90,
   },
 };
 
@@ -119,6 +126,31 @@ export function getDeepSearchMeta(quality: DeepSearchQuality): DeepSearchPresetM
 }
 
 /**
+ * Definizione human-friendly di ogni fonte, per la checklist granulare.
+ */
+export interface SourceDescriptor {
+  key: keyof DeepSearchSources;
+  label: string;
+  description: string;
+  icon: "search" | "globe" | "users" | "linkedin" | "whatsapp" | "map" | "star" | "newspaper";
+  group: "google" | "site" | "social" | "extra";
+}
+
+export const SOURCE_DESCRIPTORS: SourceDescriptor[] = [
+  { key: "googleSerp", label: "Google SERP cascade", description: "Cerca link verificati con cascade di query", icon: "search", group: "google" },
+  { key: "googleGeneral", label: "Google generale (no LinkedIn)", description: "Menzioni sui media e directory settoriali", icon: "search", group: "google" },
+  { key: "googleNews30d", label: "Google News (30gg)", description: "Notizie recenti sull'azienda", icon: "newspaper", group: "google" },
+  { key: "websiteHome", label: "Sito web — homepage", description: "Favicon, qualità grafica e contenuto", icon: "globe", group: "site" },
+  { key: "websiteAbout", label: "Sito web — pagina About", description: "Value proposition e mission", icon: "globe", group: "site" },
+  { key: "websiteMultiPage", label: "Sito web — multi-pagina (team/contatti)", description: "Naviga /team /contacts /chi-siamo per scoprire team e indirizzi", icon: "users", group: "site" },
+  { key: "linkedinContacts", label: "LinkedIn contatti (URL)", description: "Trova URL profili personali via Google", icon: "linkedin", group: "social" },
+  { key: "linkedinCompany", label: "LinkedIn azienda (URL)", description: "Trova URL pagina /company", icon: "linkedin", group: "social" },
+  { key: "whatsapp", label: "WhatsApp (wa.me)", description: "Costruisce link chat dal numero mobile", icon: "whatsapp", group: "social" },
+  { key: "googleMaps", label: "Google Maps / Place", description: "Indirizzo, tel, orari, rating, recensioni count", icon: "map", group: "extra" },
+  { key: "reputation", label: "Reputation (Trustpilot + Wikipedia)", description: "Rating Trustpilot e voce Wikipedia se esistono", icon: "star", group: "extra" },
+];
+
+/**
  * Adatta il preset al formato legacy DeepSearchConfig usato dallo store v2.
  */
 export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain = ""): {
@@ -126,6 +158,10 @@ export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain =
   linkedinContacts: boolean;
   linkedinCompany: boolean;
   whatsapp: boolean;
+  googleGeneral: boolean;
+  googleMaps: boolean;
+  websiteMultiPage: boolean;
+  reputation: boolean;
   maxQueriesPerContact: number;
   priorityDomain: string;
 } {
@@ -135,6 +171,10 @@ export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain =
     linkedinContacts: s.linkedinContacts,
     linkedinCompany: s.linkedinCompany,
     whatsapp: s.whatsapp,
+    googleGeneral: s.googleGeneral,
+    googleMaps: s.googleMaps,
+    websiteMultiPage: s.websiteMultiPage,
+    reputation: s.reputation,
     maxQueriesPerContact: s.maxQueriesPerContact,
     priorityDomain,
   };

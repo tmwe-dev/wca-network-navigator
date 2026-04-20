@@ -15,6 +15,11 @@ export interface DeepSearchConfig {
   linkedinContacts: boolean;
   linkedinCompany: boolean;
   whatsapp: boolean;
+  /** Nuove fonti V2 — attivabili granularmente */
+  googleGeneral: boolean;
+  googleMaps: boolean;
+  websiteMultiPage: boolean;
+  reputation: boolean;
   maxQueriesPerContact: number;
   priorityDomain: string;
 }
