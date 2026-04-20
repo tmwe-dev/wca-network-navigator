@@ -7,15 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { setDeepSearchRuntimeConfig } from "@/hooks/useDeepSearchLocal";
 import { cascadeBus, type CascadeEvent } from "@/hooks/useDeepSearchHelpers";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Globe, Linkedin, MessageCircle, Building2, Circle } from "lucide-react";
+import { getDeepSearchMeta, getDeepSearchSources } from "@/lib/deepSearchPresets";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Circle, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
