@@ -65,7 +65,7 @@ function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
     <div className="flex flex-wrap gap-1.5">
       {c.email && (
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10"
-          onClick={() => handleSendEmail({ email: c.email!, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined })}>
+          onClick={() => handleSendEmail({ email: c.email!, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId: (c as { wca_partner_id?: string }).wca_partner_id || undefined })}>
           <Mail className="w-3.5 h-3.5 text-primary" />
           <span className="truncate max-w-[180px]">{c.email}</span>
         </Button>

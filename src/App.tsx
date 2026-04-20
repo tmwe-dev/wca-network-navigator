@@ -113,6 +113,17 @@ const App = () => (
 
                   {/* V2 routes */}
                   <Route path="/v2/*" element={withFeatureBoundary(<V2Routes />, "V2")} />
+
+                  {/* Legacy bare paths — redirect to V2 equivalents */}
+                  <Route path="/email-composer" element={<Navigate to="/v2/outreach/composer" replace />} />
+                  <Route path="/network" element={<Navigate to="/v2/network" replace />} />
+                  <Route path="/crm" element={<Navigate to="/v2/crm" replace />} />
+                  <Route path="/outreach" element={<Navigate to="/v2/outreach" replace />} />
+                  <Route path="/inreach" element={<Navigate to="/v2/inreach" replace />} />
+                  <Route path="/agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
+                  <Route path="/campaigns" element={<Navigate to="/v2/campaigns" replace />} />
+                  <Route path="/settings" element={<Navigate to="/v2/settings" replace />} />
+
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

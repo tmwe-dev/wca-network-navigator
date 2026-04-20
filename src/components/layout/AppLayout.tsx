@@ -57,7 +57,7 @@ export function AppLayout() {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setCommandOpen((o) => !o); }
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setIntelliflowOpen((o) => !o); }
-      if (e.key === "n" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v1/email-composer"); }
+      if (e.key === "n" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v2/email-composer"); }
       if (e.key === "m" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); navigate("/v1/mission-builder"); }
       if (e.key === "Escape") { setCommandOpen(false); setIntelliflowOpen(false); setMissionOpen(false); setFiltersOpen(false); }
     };
