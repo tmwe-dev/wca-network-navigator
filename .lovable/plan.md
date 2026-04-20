@@ -1,80 +1,77 @@
 
 
-## Diagnosi precisa dei 3 problemi
+## Verifica fatta sul DB
 
-### Problema 1 — Formattazione brutta del Markdown
-Il sistema mostra **il markdown grezzo restituito dallo scraper** (vedi `SherlockCanvas.tsx` riga 238: `<LazyMarkdown>{selected.markdown}</LazyMarkdown>`). Non c'è filtro: arrivano interi blocchi di navigazione Google (`Visualizza foto`, `Suggerisci nuovi orari`, `Aggiungi un'etichetta`), tabelle malformate degli orari (`| lunedì | - Aperto 24 ore |`), header ripetuti, footer di siti, link `[Learn more](...)` lasciati visibili. **Il valore vero** (l'AI extraction) è nascosto nella tab "Findings AI" che mostra solo JSON crudo.
+Ho interrogato il database reale e ho trovato i numeri **veri**:
 
-### Problema 2 — LinkedIn azienda saltato
-Step 6 del Detective ha `required_vars: ["linkedinCompanySlug"]` ma in `SherlockCanvas.tsx` riga 52 viene passato **stringa vuota hardcoded** → skip immediato. Lo slug non viene mai derivato né dal DB partner (`linkedin_url`) né dallo scrape del sito ufficiale (l'AI dello step "Sito — Home" potrebbe estrarlo, ma il valore non viene messo in `liveVars`).
+| Sorgente | Vero count | Mostrato in Settings | Stato |
+|---|---|---|---|
+| Partners WCA | **12.286** | 1.000 | ❌ cap |
+| Contatti importati | **11.414** | 1.000 | ❌ cap |
+| BCA | 383 | 383 | ✅ ok |
+| Email senders | 7.468 msg | ? | ❌ cap |
+| **Partner con LinkedIn slug** | **0** | — | mai compilato! |
+| Logo partner | 1.310 / 12.286 | — | 89% mancante |
 
-### Problema 3 — Nessun rate limit LinkedIn dedicato
-L'engine usa `extFs.readUrl` direttamente. Il rate limit di 1 req/sec esiste solo in `src/v2/agent/runtime/tools/scrape.ts` (un altro path). Per Sherlock **non c'è alcun limite per LinkedIn**: con 10 indagini parallele potresti fare 10 hit/sec a LinkedIn = ban garantito.
+**Causa del bug "1000"**: il loader `loadAllRows` in `useEnrichmentData.ts` chiama `range(0, 1999)` ma Supabase applica un hard cap implicito di 1000 quando non passi esplicitamente `limit`. Risultato: prende 1000, vede `data.length < batchSize`, esce, conteggi sbagliati.
 
----
-
-## Piano fix (4 interventi)
-
-### Fix 1 — Formattazione intelligente del markdown raw (Pulizia + Sezioni)
-Nuovo modulo `src/v2/services/sherlock/markdownPrettify.ts` che applica regole deterministiche **prima** del rendering:
-
-- **Rimuove rumore Google Maps**: pattern `Visualizza foto`, `Salva`, `Condividi`, `Invia al telefono`, `Suggerisci…`, `Cronologia di Maps`, `Aggiungi un'etichetta`, `Orari di punta`.
-- **Compatta tabelle orari**: `| lunedì | - Aperto 24 ore | | | --- | --- | --- |` → `**Orari**: 24/7`.
-- **Linkifica vs nasconde**: `[Learn more](url)` su pagine generiche → rimosso; URL utili (email, telefono) → preservati come elenco puntato.
-- **Deduplica righe consecutive identiche** e collassa multiple newline.
-- **Toglie il blocco "Source: …"** (lo mostriamo già nell'header come URL).
-- **Tronca a 800 righe** con avviso "[…contenuto troncato per leggibilità]".
-
-Il markdown grezzo originale resta accessibile via toggle "Mostra raw" (tasto code icon).
-
-### Fix 2 — Tab "Findings AI" come scheda leggibile (non più JSON crudo)
-Sostituisce il `<pre>{JSON.stringify(...)}</pre>` con una **card view**:
-- Titolo del campo (es. "Indirizzo") → valore in evidenza.
-- Sintesi AI (campo `_summary`) in cima come callout.
-- `other_findings` come lista chiara key→value.
-- `suggested_next_url` come bottone "Indaga questo URL" (riutilizzabile).
-- JSON raw resta dietro toggle "Vedi JSON".
-
-### Fix 3 — LinkedIn slug discovery + persistenza
-Tre layer di fallback in `sherlockEngine.ts`:
-
-1. **Pre-run**: se `recipient.linkedinUrl` esiste sul partner DB → estrai slug (`/company/(.+?)/?$`) e popola `liveVars.linkedinCompanySlug`. Estendere `ForgeRecipientPicker.tsx` per leggere `partners.linkedin_url`.
-2. **Runtime**: dopo lo step "Sito — Home", se l'AI ha trovato un link LinkedIn company nei `findings`, l'engine lo estrae e popola `liveVars.linkedinCompanySlug` (heuristica: regex `linkedin\.com/company/([^/?]+)`).
-3. **Discovery automatica**: se anche dopo fix 1+2 lo slug manca, ricerca Google `"{companyName} site:linkedin.com/company"` e prendi il primo match.
-
-Persistenza: se lo slug viene scoperto, scrivilo in `partners.linkedin_url` via DAL (analogo a `updatePartnerWebsiteIfMissing`).
-
-### Fix 4 — Rate limiter globale LinkedIn (10 sec/req per dominio)
-Nuovo modulo `src/v2/services/sherlock/rateLimiter.ts` con politica per `channel`:
-
-| Channel    | Min interval | Note |
-|------------|--------------|------|
-| `linkedin` | **10000 ms** | Stealth: 1 hit ogni 10s globale per evitare ban |
-| `generic`  | 1000 ms      | 1 req/s per dominio |
-
-Implementato come **Map<domain, lastTs>** in modulo singleton, così è condiviso fra tutte le indagini Sherlock simultanee dell'utente. Prima di `extFs.readUrl` l'engine fa `await throttle(channel, url)` che attende se necessario. Lo step LinkedIn mostra un sub-text "⏱ throttle 10s in corso…" se in attesa.
-
-Memo aggiornata in `mem://features/sherlock-investigator` per documentare le 3 nuove regole.
+**Da quali tabelle prende oggi**: `partners`, `imported_contacts`, `business_cards`, `channel_messages` (per email senders), `cockpit_queue`. Tutte corrette ma cappate.
 
 ---
 
-## File modificati
+## Piano in 2 fasi (faccio tutto, niente più conferme)
 
-**Nuovi:**
-- `src/v2/services/sherlock/markdownPrettify.ts` (pulizia regex)
-- `src/v2/services/sherlock/rateLimiter.ts` (throttle per channel)
-- `src/v2/ui/pages/email-forge/sherlock/FindingsView.tsx` (card view findings)
+### Fase A — FIX contatori reali e loader (15 min)
 
-**Edit:**
-- `src/v2/services/sherlock/sherlockEngine.ts` (LinkedIn slug discovery + throttle)
-- `src/v2/ui/pages/email-forge/SherlockCanvas.tsx` (usa prettify + FindingsView + toggle raw)
-- `src/v2/ui/pages/email-forge/ForgeRecipientPicker.tsx` (leggi `linkedin_url` dal DB)
-- `src/data/sherlockPlaybooks.ts` (`updatePartnerLinkedinIfMissing`)
+1. **`useEnrichmentData.ts`**: sostituire `loadAllRows` con paginazione esplicita `.limit(1000)` per pagina e ciclo finché `data.length === 1000`. Aggiungere parametro deleted_at IS NULL su tutte le tabelle business.
+2. **`SourceTabBar`**: i count mostrati saranno quelli reali (12.286 / 11.414 / 383 / N email).
+3. **Test**: dopo il fix, il tab "Tutti" deve mostrare ~31.000 righe totali (12286 + 11414 + 383 + email senders unici).
+
+### Fase B — Nuovo job "Arricchimento Base" (zero costo, background)
+
+Implementazione di un **pre-fill batch** che NON tocca LinkedIn né AI, solo Google search pubblica + scraping pubblico. Esegue per ogni record selezionato (o "tutti i mancanti"):
+
+| Step | Cosa fa | Costo | Salva su |
+|---|---|---|---|
+| 1. Slug LinkedIn azienda | Google `site:linkedin.com/company "Azienda"` | 0 | `partners.enrichment_data.linkedin_url` |
+| 2. Slug LinkedIn persona (solo contatti) | Google `site:linkedin.com/in "Nome" "Azienda"` | 0 | `imported_contacts.enrichment_data.linkedin_url` |
+| 3. Logo azienda | Clearbit `logo.clearbit.com/{domain}` con fallback Google Favicon | 0 | `partners.logo_url` |
+| 4. Mini-scrape sito (homepage + /about + /contact) | fetch HTML pubblico, regex per email/telefono/descrizione | 0 | `partners.enrichment_data.website_excerpt` |
+
+**Vincoli operativi**:
+- Throttle Google: 1 req/sec globale (riusa `rateLimiter.ts` esistente)
+- Throttle siti: 1 req/sec per dominio
+- Concorrenza: 3 worker paralleli (perché ogni worker gira su domini diversi)
+- Resume: salva l'ID dell'ultimo record processato in `localStorage`, ripartenza automatica
+- Idempotente: skip dei record già arricchiti (campo già pieno)
+- **Zero LinkedIn hits** (solo Google), zero AI calls
+- Sherlock/Deep Search restano on-demand e separati
+
+**UI nella pagina Arricchimento**:
+- Nuovo pulsante "🚀 Arricchimento Base (background)" in `EnrichmentBatchActions.tsx`
+- Barra progresso con: progresso/totale, slug trovati, loghi trovati, siti letti, errori
+- Pulsante Stop, indicatori per riga (✓ slug ✓ logo ✓ sito)
+- Lavora **anche in background** (l'utente può navigare via, riparte alla riapertura)
+
+**File toccati**:
+- `src/hooks/useEnrichmentData.ts` (fix loader + count exact)
+- `src/v2/services/enrichment/baseEnrichment.ts` (nuovo) — engine
+- `src/hooks/useBaseEnrichment.ts` (nuovo) — orchestrazione UI + persistenza progresso
+- `src/components/settings/enrichment/BulkActionBar.tsx` — aggiungo pulsante
+- `src/components/settings/enrichment/EnrichmentRowList.tsx` — indicatori per riga
+- `src/data/partners.ts` + `src/data/contacts.ts` — funzione `updateEnrichmentBase()`
+
+**Cosa NON faccio (esplicito)**:
+- Niente nuove tabelle DB, riuso colonne esistenti (`enrichment_data` JSONB già presente)
+- Niente edge function nuove, tutto client-side (così sfrutto il bridge browser per i fetch e il throttle è autoritativo)
+- Niente modifiche a Sherlock/Deep Search, restano separati
+- Niente login LinkedIn
+
+---
 
 ## Risultato atteso
 
-- **Markdown leggibile**: niente più "Visualizza foto" o tabelle orari rotte; il dump Google Maps sintetizzato in 5-10 righe utili.
-- **Findings AI presentati come scheda**: vedi subito "📍 Indirizzo: 630 Supreme Dr…", "📞 +1 630 616 5555", "🌐 anchorexpressinc.com" senza leggere JSON.
-- **LinkedIn azienda funzionante**: scoperto via 3 fallback, persistito sul partner per le indagini future.
-- **Rate limiter globale LinkedIn**: massimo 1 hit ogni 10s in tutta l'app, anche con 10 indagini parallele, evitando ban.
+1. Contatori in pagina = 12.286 partner + 11.414 contatti + 383 BCA (numeri reali, non cap).
+2. Pulsante "Arricchimento Base" che gira in background e in pochi giorni avrà popolato `linkedin_url`, `logo_url` e `website_excerpt` su quasi tutti i 12.286 partner senza spendere un solo token AI e senza un solo hit a LinkedIn.
+3. Quando poi si lancia Sherlock su un partner, troverà già LinkedIn e info sito → spesso non servirà nemmeno fare deep search.
 
