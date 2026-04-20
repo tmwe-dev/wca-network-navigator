@@ -66,14 +66,21 @@ export async function handleBounce(
         is_active: true,
       }, { onConflict: "user_id,email_address" });
 
-      // Archive contact (lead_status valido nella tassonomia 9-stati).
-      // NB: "bounced" NON è uno stato valido — usiamo "archived" + activity log.
+      // Marca SOLO l'email come bounced (fatto tecnico).
+      // Il lead_status (decisione commerciale) resta INVARIATO: il contatto
+      // può ancora essere lavorato via altri canali (telefono, WhatsApp, LinkedIn).
       const { data: bouncedContacts } = await supabase
         .from("imported_contacts")
-        .update({ lead_status: "archived" })
+        .update({ email_status: "bounced" })
         .ilike("email", bounce.bouncedEmail)
         .eq("user_id", userId)
         .select("id");
+
+      // Stessa logica per partners (potrebbe avere email aziendale bouncata).
+      await supabase
+        .from("partners")
+        .update({ email_status: "bounced" })
+        .ilike("email", bounce.bouncedEmail);
 
       // Log dell'evento bounce come activity (audit trail leggibile).
       if (bouncedContacts && bouncedContacts.length > 0) {
@@ -81,7 +88,7 @@ export async function handleBounce(
           user_id: userId,
           activity_type: "other",
           title: `Email bounce rilevato: ${bounce.bouncedEmail}`,
-          description: `Hard bounce — contatto archiviato automaticamente. Email non valida.`,
+          description: `Hard bounce — email_status='bounced'. lead_status invariato (lavorabile via altri canali).`,
           status: "completed",
           source_type: "system",
           source_id: savedMessageId,

@@ -3905,6 +3905,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           email: string | null
+          email_status: string
           enrichment_data: Json | null
           external_id: string | null
           id: string
@@ -3944,6 +3945,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          email_status?: string
           enrichment_data?: Json | null
           external_id?: string | null
           id?: string
@@ -3983,6 +3985,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          email_status?: string
           enrichment_data?: Json | null
           external_id?: string | null
           id?: string
@@ -5390,6 +5393,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           email: string | null
+          email_status: string
           emergency_phone: string | null
           enriched_at: string | null
           enrichment_data: Json | null
@@ -5433,6 +5437,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          email_status?: string
           emergency_phone?: string | null
           enriched_at?: string | null
           enrichment_data?: Json | null
@@ -5476,6 +5481,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           email?: string | null
+          email_status?: string
           emergency_phone?: string | null
           enriched_at?: string | null
           enrichment_data?: Json | null
