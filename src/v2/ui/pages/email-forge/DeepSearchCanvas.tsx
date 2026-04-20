@@ -26,7 +26,40 @@ import {
   ALL_PIPELINES, resolvePipelineUrls, type PipelineKey,
 } from "@/v2/io/extensions/deep-search-pipelines";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
+
+/** Salva il markdown nello storage persistente (tabella scrape_cache, dedup per URL). */
+async function persistScrape(args: {
+  url: string;
+  markdown: string;
+  pipelineKey: string;
+  recipient: ForgeRecipient | null;
+}): Promise<boolean> {
+  try {
+    const { error } = await untypedFrom("scrape_cache").upsert({
+      url: args.url,
+      mode: "static",
+      payload: {
+        markdown: args.markdown,
+        pipeline: args.pipelineKey,
+        recipient: args.recipient
+          ? {
+              partnerId: args.recipient.partnerId ?? null,
+              contactId: args.recipient.contactId ?? null,
+              companyName: args.recipient.companyName ?? null,
+              countryCode: args.recipient.countryCode ?? null,
+            }
+          : null,
+        captured_at: new Date().toISOString(),
+      },
+      scraped_at: new Date().toISOString(),
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
 
 interface CapturedPage {
   id: string;
