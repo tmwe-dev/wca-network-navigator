@@ -85,7 +85,7 @@ function ChannelSection({
         <div>📊 Preview 10 messaggi → ultimo invio: <span className="font-medium text-foreground">{preview10.humanLabel}</span></div>
         <div>📊 Preview 50 messaggi → ultimo invio: <span className="font-medium text-foreground">{preview50.humanLabel}</span></div>
       </div>
-      <Button onClick={onSave} isLoading={saving} variant="primary">Salva timing {title}</Button>
+      <Button onClick={onSave} isLoading={saving}>Salva timing {title}</Button>
     </div>
   );
 }
