@@ -51,6 +51,9 @@ export interface EmailPromptContext {
   oracle_type?: string;
   oracle_tone?: string;
   use_kb?: boolean;
+  // Fix 1+2: structured email-type metadata propagated from Composer
+  email_type_prompt?: string | null;
+  email_type_structure?: string | null;
   networks: NetworkRow[];
   services: ServiceRow[];
   socialLinks: SocialLinkRow[];
