@@ -2,7 +2,81 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
-import { assemblePrompt } from "../_shared/prompts/assembler.ts";
+
+interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
+
+async function fetchKbEntriesForImprove(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  emailTypeId: string | null,
+  isFollowUp: boolean,
+): Promise<{ text: string; sections: string[] }> {
+  const categories: string[] = ["regole_sistema", "filosofia", "struttura_email", "hook"];
+  if (emailTypeId === "follow_up" || isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
+  if (emailTypeId === "primo_contatto") categories.push("cold_outreach");
+  categories.push("negoziazione", "tono", "frasi_modello");
+  const { data: entries } = await supabase
+    .from("kb_entries").select("title, content, category, chapter, tags")
+    .eq("user_id", userId).eq("is_active", true)
+    .in("category", [...new Set(categories)])
+    .order("priority", { ascending: false }).order("sort_order").limit(15);
+  if (!entries || entries.length === 0) return { text: "", sections: [] };
+  const sections = [...new Set((entries as KbEntry[]).map((e) => e.category))];
+  const text = (entries as KbEntry[]).map((e) => `### ${e.title} [${e.chapter}]\n${e.content}`).join("\n\n---\n\n");
+  return { text, sections };
+}
+
+interface PartnerCtx {
+  company_name: string | null;
+  company_alias: string | null;
+  country_name: string | null;
+  city: string | null;
+  lead_status: string | null;
+}
+interface ContactCtx {
+  name: string | null;
+  contact_alias: string | null;
+  title: string | null;
+}
+
+async function loadPartnerContact(
+  supabase: ReturnType<typeof createClient>,
+  partnerId: string | null,
+  contactId: string | null,
+): Promise<{ partner: PartnerCtx | null; contact: ContactCtx | null }> {
+  let partner: PartnerCtx | null = null;
+  let contact: ContactCtx | null = null;
+  if (partnerId) {
+    const { data } = await supabase.from("partners")
+      .select("company_name, company_alias, country_name, city, lead_status")
+      .eq("id", partnerId).maybeSingle();
+    if (data) partner = data as PartnerCtx;
+  }
+  if (contactId) {
+    const { data } = await supabase.from("partner_contacts")
+      .select("name, contact_alias, title")
+      .eq("id", contactId).maybeSingle();
+    if (data) contact = data as ContactCtx;
+  }
+  return { partner, contact };
+}
+
+async function loadHistoryStats(
+  supabase: ReturnType<typeof createClient>,
+  partnerId: string | null,
+): Promise<{ touchCount: number; daysSince: number | null; lastChannel: string | null }> {
+  if (!partnerId) return { touchCount: 0, daysSince: null, lastChannel: null };
+  const { data } = await supabase.from("activities")
+    .select("activity_type, sent_at, created_at")
+    .eq("partner_id", partnerId)
+    .in("activity_type", ["email", "whatsapp", "linkedin"])
+    .order("created_at", { ascending: false }).limit(20);
+  const rows = (data || []) as Array<{ activity_type: string; sent_at: string | null; created_at: string }>;
+  if (!rows.length) return { touchCount: 0, daysSince: null, lastChannel: null };
+  const lastTs = rows[0].sent_at || rows[0].created_at;
+  const daysSince = lastTs ? Math.floor((Date.now() - new Date(lastTs).getTime()) / 86400000) : null;
+  return { touchCount: rows.length, daysSince, lastChannel: rows[0].activity_type };
+}
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -33,45 +107,60 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { subject, html_body, recipient_count, recipient_countries, oracle_tone, use_kb, email_type_id, email_type_structure } = await req.json();
+    const {
+      subject, html_body, recipient_count, recipient_countries,
+      oracle_tone, use_kb,
+      email_type_id, email_type_prompt, email_type_structure,
+      custom_goal, partner_id, contact_id,
+    } = await req.json();
     if (!html_body) throw new Error("html_body is required");
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Fetch user settings (scoped to authenticated user)
+    // ── Settings ──
     const { data: settingsRows } = await supabase
       .from("app_settings")
       .select("key, value")
       .eq("user_id", userId)
       .like("key", "ai_%");
-
     const settings: Record<string, string> = {};
     (settingsRows || []).forEach((r: { key: string; value: string | null }) => { settings[r.key] = r.value || ""; });
 
     const senderAlias = settings.ai_contact_alias || settings.ai_contact_name || "";
     const senderCompany = settings.ai_company_alias || settings.ai_company_name || "";
 
-    // Use granular kb_entries first, fallback to legacy monolithic
-    const kbResult = await fetchKbEntriesForImprove(supabase, userId);
+    // ── Context (partner/contact + history) ──
+    const { partner, contact } = await loadPartnerContact(supabase, partner_id || null, contact_id || null);
+    const history = await loadHistoryStats(supabase, partner_id || null);
+    const isFollowUp = email_type_id === "follow_up" || history.touchCount > 0;
+
+    // ── KB strategica (filtrata per tipo) ──
+    const kbResult = use_kb !== false
+      ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp)
+      : { text: "", sections: [] };
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
-    const salesKBSlice = kbResult.text;
     if (!kbResult.text && fullSalesKB) {
-      console.warn("[improve-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
+      console.warn("[improve-email] kb_entries vuoto, fallback monolitico");
     }
 
-    // ─── Decision Object ───
+    // ── Decision Object ──
+    const improvementFocus = isFollowUp
+      ? "urgenza_soft_e_cta_specifica"
+      : email_type_id === "primo_contatto"
+        ? "hook_e_personalizzazione"
+        : email_type_id === "proposta"
+          ? "concretezza_e_valore"
+          : "struttura_e_impatto";
+
     const decision = {
       email_type: email_type_id || "generico",
       tone: oracle_tone || settings.ai_tone || "professionale",
       max_length_lines: 12,
-      improvement_focus: email_type_id === "follow_up"
-        ? "urgenza_soft_e_cta"
-        : email_type_id === "primo_contatto"
-          ? "hook_e_personalizzazione"
-          : "struttura_e_impatto",
+      improvement_focus: improvementFocus,
+      is_follow_up: isFollowUp,
+      touch_count: history.touchCount,
     };
 
-    // ─── Readiness Scoring (simplified for improve) ───
     const readiness = {
       sender: [
         settings.ai_contact_alias || settings.ai_contact_name ? 30 : 0,
@@ -80,7 +169,26 @@ serve(async (req) => {
         settings.ai_contact_role ? 20 : 0,
       ].reduce((a, b) => a + b, 0),
       kb: kbResult.text ? Math.min(100, kbResult.sections.length * 20) : 0,
+      context: (partner ? 50 : 0) + (history.touchCount > 0 ? 30 : 0) + (contact ? 20 : 0),
     };
+
+    // ── Recipient context block ──
+    let recipientBlock = "";
+    if (partner) {
+      recipientBlock += `\nDESTINATARIO:\n- Azienda: ${partner.company_alias || partner.company_name}\n- Paese: ${partner.country_name || "?"}\n- Città: ${partner.city || "?"}\n- Lead status: ${partner.lead_status || "?"}\n`;
+      if (contact) {
+        recipientBlock += `- Contatto: ${contact.contact_alias || contact.name || "?"}${contact.title ? ` (${contact.title})` : ""}\n`;
+      }
+    }
+    if (history.touchCount > 0) {
+      recipientBlock += `\nSTORIA RELAZIONE:\n- Interazioni precedenti: ${history.touchCount}\n- Ultimo contatto: ${history.daysSince != null ? `${history.daysSince} giorni fa` : "?"} via ${history.lastChannel || "?"}\n- ⚠️ ATTENZIONE: questa NON è una prima email. EVITA frasi tipo "Mi chiamo X", "Volevo presentarmi", "Vi scrivo per la prima volta".\n`;
+    }
+
+    // ── Coherence check ──
+    let coherenceWarning = "";
+    if (email_type_id === "primo_contatto" && history.touchCount > 0) {
+      coherenceWarning = `\n⚠️ INCOERENZA RILEVATA: tipo selezionato "primo_contatto" ma esistono ${history.touchCount} interazioni precedenti. Trattalo come FOLLOW-UP, non ripetere presentazione.\n`;
+    }
 
     const systemPrompt = `Sei un esperto copywriter, stratega di vendita B2B e consulente di comunicazione nel settore della logistica internazionale e del freight forwarding.
 
@@ -89,12 +197,17 @@ Il tuo compito è MIGLIORARE un'email scritta manualmente dall'utente. NON riscr
 DECISION OBJECT (contesto per il miglioramento):
 ${JSON.stringify(decision, null, 2)}
 
+${recipientBlock}${coherenceWarning}
+
+${custom_goal ? `OBIETTIVO DICHIARATO DALL'UTENTE:\n${custom_goal}\nDai PRIORITÀ a questo obiettivo nel migliorare il messaggio.\n` : ""}
+
 ## Come migliorare:
 1. ANALIZZA l'email e identifica punti deboli (hook mancante, CTA assente, tono piatto, struttura confusa)
 2. APPLICA tecniche dalla KB: Label, Mirroring, domande calibrate, urgenza soft — dove appropriato
 3. RAFFORZA la call-to-action: se manca, aggiungine una. Se è debole, rendila specifica.
-4. MIGLIORA l'hook iniziale: la prima riga deve catturare l'attenzione
+4. MIGLIORA l'hook iniziale: la prima riga deve catturare l'attenzione (e tenere conto della STORIA se presente)
 5. TAGLIA il superfluo: ogni riga deve avere uno scopo
+6. FOCUS principale: ${improvementFocus}
 
 PROFILO MITTENTE:
 - Nome: ${senderAlias}
@@ -104,8 +217,9 @@ PROFILO MITTENTE:
 - Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
 ${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
-${use_kb !== false && salesKBSlice ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${kbResult.sections.join(", ")}):\nApplica queste tecniche dove migliorano l'email.\n\n${salesKBSlice}\n` : ""}
+${use_kb !== false && kbResult.text ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${kbResult.sections.join(", ")}):\nApplica queste tecniche dove migliorano l'email.\n\n${kbResult.text}\n` : ""}
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
+${email_type_prompt ? `\nLINEE GUIDA TIPO EMAIL "${email_type_id}":\n${email_type_prompt}\n` : ""}
 ${email_type_structure ? `STRUTTURA EMAIL RICHIESTA:\n${email_type_structure}\n` : ""}
 
 REGOLE DI MIGLIORAMENTO:
@@ -146,7 +260,6 @@ ${html_body}`;
     });
     const rawText = result.content || "";
 
-    // Parse subject and body
     let improvedSubject = subject || "";
     let improvedBody = rawText;
 
@@ -156,7 +269,6 @@ ${html_body}`;
       improvedBody = rawText.substring(subjectMatch[0].length).trim();
     }
 
-    // Clean markdown code fences if present
     improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
     return new Response(JSON.stringify({
@@ -164,6 +276,15 @@ ${html_body}`;
       body: improvedBody,
       readiness,
       decision,
+      _context_summary: {
+        kb_sections: kbResult.sections,
+        touch_count: history.touchCount,
+        days_since_last_contact: history.daysSince,
+        last_channel: history.lastChannel,
+        coherence_warning: !!coherenceWarning,
+        partner_loaded: !!partner,
+        contact_loaded: !!contact,
+      },
     }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
