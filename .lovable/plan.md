@@ -1,102 +1,83 @@
 
-## Obiettivo
-Trasformare Email Forge in un **Lab di Calibrazione AI** completo: oltre a editare i prompt, l'utente può ispezionare e migliorare TUTTE le fonti dati che alimentano l'AI (destinatario, deep search, KB, profilo mittente, dottrina) direttamente dalla pagina, con feedback visivo immediato dell'impatto.
+## Diagnosi confermata
+Il problema non è nei dati di Transport Management, ma nel criterio sbagliato usato dal Lab.
 
-## Layout target
+Ho verificato che:
+- in `public.partners`, **Transport Management srl** esiste ed è valorizzato:
+  - `profile_description` presente, lunghezza `2343`
+  - `raw_profile_html = null`
+  - `raw_profile_markdown = null`
+- la pagina Network mostra infatti correttamente il blocco **Profilo Aziendale**, che legge `profile_description`
+- invece il Lab/Deep Search controlla ancora i campi legacy:
+  - `src/hooks/useDeepSearchRunner.ts` blocca la deep search se manca `raw_profile_html`
+  - `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx` mostra “Profilo WCA mancante” se mancano `raw_profile_html/raw_profile_markdown`
 
+Quindi l’errore nasce perché:
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  HEADER · Email Forge — Lab AI                                         │
-├──────────────┬──────────────────────────────┬─────────────────────────┤
-│ ORACOLO+SEL. │   PROMPT ASSEMBLATO          │   RISULTATO             │
-│ (sinistra)   │   (centro · editabile)       │   (destra)              │
-│              │                              │                          │
-│ • Picker     │   System Blocks              │   Subject + Body        │
-│   contatto   │   User Blocks                │   Metriche              │
-│   reale (Cerca│   [Rerun con modifiche]     │   Context Summary       │
-│   Partner /  │                              │                          │
-│   Contatto / │                              │                          │
-│   BCA)       │                              │                          │
-│ • Tipo email │                              │                          │
-│ • Tono / KB  │                              │                          │
-│ • Quality    │                              │                          │
-│ • Goal       │                              │                          │
-│ • [Genera]   │                              │                          │
-├──────────────┴──────────────────────────────┴─────────────────────────┤
-│  PANNELLO INFERIORE A TAB · "Cosa legge l'AI" (collassabile)          │
-│  [Deep Search] [KB] [Profilo Mittente] [Dottrina] [Storico] [Docs]    │
-└────────────────────────────────────────────────────────────────────────┘
+Network: profilo = profile_description (corretto)
+Email Forge / Deep Search: profilo = raw_profile_html/raw_profile_markdown (sbagliato, legacy)
 ```
 
-## Cosa costruisco
+## Obiettivo
+Allineare Email Forge e Deep Search alla realtà del sistema:
+- il profilo sincronizzato valido è `profile_description`
+- i campi `raw_profile_*` sono solo fallback legacy
+- eliminare ogni riferimento a “Download Center” / “scaricare profili”
 
-### 1. Selettore destinatario REALE (sinistra)
-Sostituisco i 3 input testo (Azienda/Nome/Paese) con un **picker compatto** che riusa `EmailComposerContactPicker` (già pronto, con tab Partner/Contatto/BCA, ricerca, country strip). 
-- Modalità: tab "Partner WCA · Contatto importato · Biglietto da visita".
-- Selezione singola → popola `partner_id` o `contact_id` reale, così `generate-email` carica davvero history, enrichment, BCA badges.
-- Fallback "Destinatario fittizio" per test rapidi senza CRM.
+## Piano di intervento
 
-### 2. Pannello inferiore "Cosa legge l'AI" (5 tab)
-Barra inferiore espandibile con 5 schede, ognuna mostra esattamente cosa l'AI ha visto per QUESTA generazione + permette di intervenire:
+### 1) Correggere la sorgente di verità del profilo
+Aggiorno il check profilo in modo uniforme:
+- `hasProfile = !!(profile_description || raw_profile_html || raw_profile_markdown)`
 
-**Tab A — Deep Search** 
-Riusa `useDeepSearchRunner` + `DeepSearchCanvas` (in versione embedded inline).
-- Mostra: ultimo `enrichment_data` del record selezionato (raw JSON + summary) e `deep_search_at`.
-- 3 pulsanti: "Deep Search Partner", "Deep Search Contatto", "Deep Search BCA" (chiama `start([id], force=true, mode)` con il mode corretto).
-- Risultati live + bottone "Re-genera mail con dati freschi".
-- Indicatore "extension Partner Connect attiva/non disponibile".
+Questo va applicato in:
+- `src/hooks/useDeepSearchRunner.ts`
+- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx`
 
-**Tab B — Knowledge Base**
-- Lista `kb_entries` filtrate per le `kb_categories` del tipo email selezionato (es. follow_up → vendita+negoziazione+email_modelli).
-- Per ogni entry: title, category, priority, character count, toggle `is_active`, pulsante **"Modifica"** che apre dialog inline (textarea) e salva su DB.
-- Bottone "Aggiungi entry" che inserisce nuova kb_entry nella categoria scelta.
-- Badge "Inclusa nel prompt corrente" sulle entry effettivamente caricate da `fetchKbEntriesStrategic`.
+### 2) Sbloccare la Deep Search sui partner già sincronizzati
+Nel runner:
+- smetto di considerare “senza profilo” i partner che hanno `profile_description`
+- la deep search partirà normalmente per record come Transport Management
 
-**Tab C — Profilo Mittente** (`app_settings ai_*`)
-- Form compatto su: `ai_contact_name`, `ai_contact_alias`, `ai_company_name`, `ai_company_alias`, `ai_contact_role`, `ai_email_signature`, `ai_knowledge_base` (textarea grande).
-- Score readiness (sender/recipient/kb) come già calcolato in `generate-outreach`, mostrato come 3 barre.
-- Salvataggio diretto su `app_settings` via DAL esistente (`upsertAppSetting`).
+### 3) Riscrivere il messaggio UI
+Nel tab Deep Search:
+- rimuovo il banner che dice di andare al Download Center
+- sostituisco il testo con uno stato più corretto, ad esempio:
+  - “Profilo sincronizzato disponibile” quando c’è `profile_description`
+  - “Profilo testuale assente” solo se mancano sia `profile_description` sia i fallback legacy
 
-**Tab D — Dottrina & Procedure**
-- Mostra le `kb_entries` di categoria `doctrine`/`system_doctrine`/`sales_doctrine`/`procedures` (memoria L3) caricate dall'assembler.
-- Stesso pattern di Tab B (visualizza/modifica/toggle).
+### 4) Rimuovere la CTA concettualmente sbagliata
+Tolgo:
+- testo “Scarica prima i profili dal Download Center”
+- bottone “Apri Download Center”
+- logica di navigazione a `/v2/settings?tab=download`
 
-**Tab E — Storico interazioni**
-- Per il record selezionato: ultime 10 email/chat (tabella `outreach_messages` + `channel_messages`), sender/direction, snippet 200ch.
-- Read-only — serve solo a capire COSA l'AI vede nel blocco "History" del prompt.
+Questo è coerente anche con la regola di progetto che vieta di proporre workflow di download WCA.
 
-### 3. Indicatori "in uso ora"
-Sul prompt centrale, ogni blocco mostra già etichette (KB/CachedEnrichment/History…). Aggiungo un click su badge → scroll automatico al tab corrispondente del pannello inferiore evidenziato.
+### 5) Rendere il tab più trasparente
+Nel pannello Deep Search mostro chiaramente quali fonti sono presenti:
+- `profile_description`
+- `raw_profile_html`
+- `raw_profile_markdown`
+- `enrichment_data`
+- timestamp deep search / parsing
 
-## Riuso massimo (zero duplicazione)
-| Funzionalità | Componente esistente riusato |
-|---|---|
-| Picker destinatario | `EmailComposerContactPicker` + `useEmailContactPicker` |
-| Deep search trigger | `useDeepSearchRunner` (già provider in AuthenticatedLayout) |
-| Deep search visual | `DeepSearchCanvas` (inline, non modale) |
-| Settings mittente | DAL `src/data/appSettings.ts` (`upsertAppSetting`) |
-| KB CRUD | `supabase.from("kb_entries")` via nuovo piccolo hook DAL |
-| Score readiness | porto formula da `generate-outreach/index.ts` lato client |
+Così si capisce subito cosa sta leggendo il sistema, senza falsi negativi.
 
-## File nuovi (8 piccoli)
-- `src/v2/ui/pages/email-forge/ForgeRecipientPicker.tsx` (~80 LOC) — wrapper sul picker esistente con callback selezione singola.
-- `src/v2/ui/pages/email-forge/LabBottomTabs.tsx` (~60 LOC) — shell tabs + collapse.
-- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx` (~120 LOC).
-- `src/v2/ui/pages/email-forge/tabs/KnowledgeBaseTab.tsx` (~150 LOC).
-- `src/v2/ui/pages/email-forge/tabs/SenderProfileTab.tsx` (~120 LOC).
-- `src/v2/ui/pages/email-forge/tabs/DoctrineTab.tsx` (~100 LOC) — variante di KB filtrata.
-- `src/v2/ui/pages/email-forge/tabs/HistoryTab.tsx` (~80 LOC).
-- `src/v2/hooks/useForgeKb.ts` (~80 LOC) — list/update/toggle/insert kb_entries.
+### 6) Facoltativo ma consigliato: centralizzare il criterio
+Per evitare nuove divergenze, estraggo una piccola helper condivisa tipo:
+- `hasPartnerProfile(...)`
 
-## File modificati (3)
-- `src/v2/ui/pages/EmailForgePage.tsx` — aggiungo riga inferiore con `LabBottomTabs`, sposto config in `ForgeOraclePanel` riducendolo ai soli campi non-destinatario.
-- `src/v2/ui/pages/email-forge/ForgeOraclePanel.tsx` — sostituisco i 3 input con `ForgeRecipientPicker`, espongo `partner_id`/`contact_id` reali.
-- `src/v2/hooks/useEmailForge.ts` — passa `partner_id` reale al payload (oggi è sempre null).
+e la riuso dove oggi esistono check simili, così Network, Lab e future viste non si disallineano più.
 
-## Out-of-scope (futura iterazione)
-- Editing di `system_doctrine` cards complesse (solo list+toggle ora).
-- Diff visivo tra due generazioni con setting diversi.
-- A/B test automatico (genera 2 varianti e confronta).
+## File da toccare
+- `src/hooks/useDeepSearchRunner.ts`
+- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx`
+- opzionale helper condivisa in un modulo comune profilo/partner
 
-## Effort stimato
-~800 LOC frontend, zero migrazioni DB, zero edge function changes. Tutto leverage di codice già in produzione.
+## Risultato atteso
+Dopo la modifica:
+- Transport Management non verrà più segnalato come “senza profilo WCA”
+- la Deep Search non verrà bloccata inutilmente
+- il Lab parlerà di **profilo sincronizzato** invece che di download
+- il comportamento sarà coerente con ciò che già vedi in Network
