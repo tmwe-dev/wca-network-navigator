@@ -552,3 +552,29 @@ function extractMarkdown(data: unknown): string {
   }
   return "";
 }
+
+/**
+ * Pre-processa il markdown per evidenziare automaticamente le informazioni chiave
+ * (email, telefoni internazionali, P.IVA) come **strong** → renderizzati in primary.
+ * Pulisce anche encoding URL leggibili e collassa whitespace eccessivo.
+ */
+function enhanceMarkdown(md: string): string {
+  if (!md) return md;
+  let out = md;
+
+  // Email → bold (skip se già dentro link/bold)
+  out = out.replace(
+    /(?<![*[\]`(\w@.])([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?![*\w@.])/g,
+    "**$1**",
+  );
+  // Telefoni internazionali (+xx ...)
+  out = out.replace(
+    /(?<![*\d])(\+\d{1,3}[\s.-]?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4})(?!\d)/g,
+    "**$1**",
+  );
+  // P.IVA / VAT IT
+  out = out.replace(/\b(P\.?\s?IVA[:\s]+\d{8,13})/gi, "**$1**");
+  // Collassa più di 2 newline consecutive
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out;
+}
