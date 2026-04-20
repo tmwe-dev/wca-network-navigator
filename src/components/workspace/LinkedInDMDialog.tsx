@@ -147,16 +147,23 @@ export default function LinkedInDMDialog({
                 <Linkedin className="w-3 h-3 text-[#0A66C2]" />
                 URL profilo LinkedIn
               </label>
-              <div className="flex gap-1">
-                <Button
-                  type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
-                  onClick={handleLiveSearch}
-                  disabled={lookup.isSearching}
-                  title="Ricerca live profilo LinkedIn"
-                >
-                  {lookup.isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-                  Cerca
-                </Button>
+              <div className="flex gap-1 items-center">
+                {hadInitialUrl && urlValid && (
+                  <span className="text-[10px] text-success flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> ID già salvato
+                  </span>
+                )}
+                {!hadInitialUrl && (
+                  <Button
+                    type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                    onClick={handleLiveSearch}
+                    disabled={lookup.isSearching}
+                    title="Cerca profilo su Google/LinkedIn"
+                  >
+                    {lookup.isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                    Cerca
+                  </Button>
+                )}
                 {urlValid && (
                   <Button
                     type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
