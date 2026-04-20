@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Send, Search, ExternalLink, Linkedin } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
 
@@ -15,21 +18,61 @@ interface LinkedInDMDialogProps {
   profileUrl: string;
   contactName: string | null;
   companyName: string;
+  contactId?: string;
+  contactEmail?: string | null;
   initialMessage?: string;
 }
 
 export default function LinkedInDMDialog({
-  open, onOpenChange, profileUrl, contactName, companyName, initialMessage,
+  open, onOpenChange, profileUrl, contactName, companyName, contactId, contactEmail, initialMessage,
 }: LinkedInDMDialogProps) {
   const [message, setMessage] = useState(initialMessage || "");
+  const [url, setUrl] = useState(profileUrl || "");
   const [sending, setSending] = useState(false);
   const { isAvailable, sendDirectMessage } = useLinkedInExtensionBridge();
+  const lookup = useLinkedInLookup();
+
+  useEffect(() => { setUrl(profileUrl || ""); }, [profileUrl, open]);
+
+  const normalized = normalizeLinkedInProfileUrl(url);
+  const urlValid = !!normalized;
+  const remaining = 300 - message.length;
+
+  const handleLiveSearch = async () => {
+    if (!contactName?.trim() && !companyName?.trim()) {
+      toast({ title: "Manca nome o azienda per la ricerca", variant: "destructive" });
+      return;
+    }
+    const res = await lookup.searchSingle({
+      name: contactName || companyName,
+      company: companyName,
+      email: contactEmail,
+      sourceType: contactId ? "contact" : undefined,
+      sourceId: contactId,
+    });
+    if (res.url) {
+      setUrl(res.url);
+      toast({ title: "✅ Profilo trovato", description: res.url });
+    } else {
+      // Fallback: open Google manually
+      const q = `site:linkedin.com/in "${contactName || companyName}"${companyName && contactName ? ` "${companyName}"` : ""}`;
+      toast({
+        title: "Nessun match automatico",
+        description: "Apro Google: copia l'URL del profilo qui sotto.",
+      });
+      window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, "_blank");
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
+    if (!urlValid) {
+      toast({ title: "URL profilo LinkedIn non valido", description: "Formato richiesto: linkedin.com/in/...", variant: "destructive" });
+      return;
+    }
     setSending(true);
     try {
-      const res = await sendDirectMessage(profileUrl, message.trim());
+      const res = await sendDirectMessage(normalized!, message.trim());
       if (res.success) {
         toast({ title: "Messaggio LinkedIn inviato!" });
         setMessage("");
@@ -58,9 +101,7 @@ export default function LinkedInDMDialog({
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{contactName || companyName}</span>
-            {contactName && companyName && (
-              <span> · {companyName}</span>
-            )}
+            {contactName && companyName && (<span> · {companyName}</span>)}
           </div>
 
           {!isAvailable && (
@@ -69,26 +110,69 @@ export default function LinkedInDMDialog({
             </div>
           )}
 
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Scrivi il tuo messaggio..."
-            rows={5}
-            className="resize-none"
-          />
+          {/* URL profilo LinkedIn (obbligatorio) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium flex items-center gap-1">
+                <Linkedin className="w-3 h-3 text-[#0A66C2]" />
+                URL profilo LinkedIn
+              </label>
+              <div className="flex gap-1">
+                <Button
+                  type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                  onClick={handleLiveSearch}
+                  disabled={lookup.isSearching}
+                  title="Ricerca live profilo LinkedIn"
+                >
+                  {lookup.isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                  Cerca
+                </Button>
+                {urlValid && (
+                  <Button
+                    type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                    onClick={() => window.open(normalized!, "_blank")}
+                    title="Apri profilo in nuova scheda"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://linkedin.com/in/..."
+              className={`h-8 text-xs ${url && !urlValid ? "border-destructive" : ""}`}
+            />
+            {url && !urlValid && (
+              <p className="text-[10px] text-destructive">Formato non valido. Atteso: linkedin.com/in/nome-cognome</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 300))}
+              placeholder="Scrivi il tuo messaggio..."
+              rows={5}
+              className="resize-none"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Max 300 caratteri (limite LinkedIn)</span>
+              <span className={remaining < 30 ? "text-warning" : ""}>{remaining}</span>
+            </div>
+          </div>
 
           <p className="text-[10px] text-muted-foreground">
-            Il messaggio verrà inviato tramite l'estensione LinkedIn. Assicurati di essere connesso.
+            Il messaggio verrà inviato tramite l'estensione LinkedIn. Max 3/ora per evitare blocchi.
           </p>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">
-            Annulla
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm">Annulla</Button>
           <Button
             onClick={handleSend}
-            disabled={!message.trim() || sending || !isAvailable}
+            disabled={!message.trim() || sending || !isAvailable || !urlValid}
             size="sm"
             className="bg-[#0A66C2] hover:bg-[#004182] text-white gap-1.5"
           >
