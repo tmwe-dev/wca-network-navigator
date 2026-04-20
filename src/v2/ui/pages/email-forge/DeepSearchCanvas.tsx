@@ -514,9 +514,14 @@ function PageRow({ page, active, onClick }: { page: CapturedPage; active: boolea
         <div className="font-medium truncate">{host}</div>
         <div className="text-[9px] text-muted-foreground font-mono truncate">{page.url}</div>
         {page.status === "done" && (
-          <div className="text-[9px] text-muted-foreground mt-0.5">
-            {page.markdown.length.toLocaleString()} char
-            {page.durationMs && ` · ${(page.durationMs / 1000).toFixed(1)}s`}
+          <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1">
+            <span>{page.markdown.length.toLocaleString()} char</span>
+            {page.durationMs && <span>· {(page.durationMs / 1000).toFixed(1)}s</span>}
+            {page.persisted && (
+              <span className="inline-flex items-center gap-0.5 text-primary font-medium">
+                · <Database className="w-2.5 h-2.5" />
+              </span>
+            )}
           </div>
         )}
         {page.status === "error" && (
