@@ -47,7 +47,7 @@ serve(async (req) => {
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt, _system_prompt_override, _user_prompt_override } = await req.json();
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -98,12 +98,20 @@ serve(async (req) => {
     }
 
     // ── Build prompts ──
-    const { systemPrompt, userPrompt, blocks, systemBlocks } = buildEmailPrompts({
+    const built = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
       email_type_prompt, email_type_structure,
       ...ctx,
     });
+    // Prompt-Lab overrides: replace system/user prompt entirely if provided
+    const systemPrompt = (typeof _system_prompt_override === "string" && _system_prompt_override.trim().length > 0)
+      ? _system_prompt_override : built.systemPrompt;
+    const userPrompt = (typeof _user_prompt_override === "string" && _user_prompt_override.trim().length > 0)
+      ? _user_prompt_override : built.userPrompt;
+    const blocks = built.blocks;
+    const systemBlocks = built.systemBlocks;
+    const promptOverridden = systemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
 
     // ── AI call ──
     const model = getModel(quality);
@@ -171,6 +179,7 @@ serve(async (req) => {
           ai_latency_ms: aiLatencyMs,
           tokens_in: result.usage?.promptTokens ?? null,
           tokens_out: result.usage?.completionTokens ?? null,
+          prompt_overridden: promptOverridden,
         },
       } : {}),
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
