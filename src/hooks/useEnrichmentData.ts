@@ -38,6 +38,7 @@ interface PartnerRow {
   website: string | null;
   country_code: string | null;
   logo_url: string | null;
+  enrichment_data: Record<string, unknown> | null;
 }
 
 interface ContactRow {
@@ -86,22 +87,30 @@ interface ContactLookupRow {
   email: string | null;
 }
 
-/** Iterative batch loader — fetches ALL rows from a table, 2000 at a time */
+/**
+ * Iterative batch loader — fetches ALL rows from a table.
+ * Supabase impone un cap implicito di 1000 righe per query: usiamo limit() esplicito
+ * + range() per paginare e raccogliere il dataset reale (non più cappato a 1000).
+ */
 async function loadAllRows<T>(
   table: string,
   select: string,
   filters?: (q: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>,
-  batchSize = 2000
+  batchSize = 1000
 ): Promise<T[]> {
   const all: T[] = [];
   let page = 0;
-   
-  while (true) {
+  // Hard safety stop: 200 pagine = 200k righe max
+  while (page < 200) {
     let q = supabase.from(table as "partners").select(select) as unknown as ReturnType<typeof supabase.from>;
     if (filters) q = filters(q);
-    const { data, error } = await (q as unknown as { range: (a: number, b: number) => { data: T[] | null; error: { message: string } | null } }).range(page * batchSize, (page + 1) * batchSize - 1);
+    const from = page * batchSize;
+    const to = from + batchSize - 1;
+    const { data, error } = await (q as unknown as {
+      range: (a: number, b: number) => { limit: (n: number) => Promise<{ data: T[] | null; error: { message: string } | null }> }
+    }).range(from, to).limit(batchSize);
     if (error) throw error;
-    if (data) all.push(...data);
+    if (data && data.length) all.push(...data);
     if (!data || data.length < batchSize) break;
     page++;
   }
@@ -129,16 +138,21 @@ export function useEnrichmentData() {
 
   // ── Data queries ──
 
-  const { data: partners = [] } = useQuery({
+  const { data: partners = [], refetch: refetchPartners } = useQuery({
     queryKey: queryKeys.partners.enrichment(),
     queryFn: async () => {
-      const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url");
-      return data.map((p): EnrichedRow => ({
-        id: p.id, name: p.company_name,
-        domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
-        source: "wca", hasLogo: !!p.logo_url, hasLinkedin: false,
-        email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
-      }));
+      const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url, enrichment_data");
+      return data.map((p): EnrichedRow => {
+        const ed = (p.enrichment_data || {}) as Record<string, unknown>;
+        const liUrl = (ed.linkedin_url as string) || null;
+        return {
+          id: p.id, name: p.company_name,
+          domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
+          source: "wca", hasLogo: !!p.logo_url, hasLinkedin: !!liUrl,
+          linkedinUrl: liUrl || undefined,
+          email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
+        };
+      });
     },
     staleTime: 60_000,
   });
@@ -367,6 +381,8 @@ export function useEnrichmentData() {
     changeSourceTab, setEnrichFilter, setSearch, toggleSort, toggleAll, toggleOne,
     openDeepSearchDialog, handleDeepSearchConfirm, handleLinkedInBatch, handleBulkLogoSearch,
     getSelectedRows,
+    // Refetch
+    refetchPartners, refetchContacts,
     // External hooks
     deepSearch,
   };
