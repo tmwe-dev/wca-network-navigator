@@ -48,7 +48,7 @@ export const DB_SCHEMA: readonly TableDescriptor[] = [
         name: "lead_status",
         type: "enum",
         description: "Stato commerciale del lead",
-        enumValues: ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted", "contacted"],
+        enumValues: ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted", "archived", "blacklisted"],
       },
       { name: "office_type", type: "string", description: "Tipo ufficio: HQ o branch" },
       { name: "interaction_count", type: "number", description: "Numero interazioni registrate" },
