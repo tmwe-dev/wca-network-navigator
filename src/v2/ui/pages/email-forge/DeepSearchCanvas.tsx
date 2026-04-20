@@ -397,12 +397,17 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
                   <StatusIcon status={selected.status} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-mono truncate text-foreground">{selected.url}</div>
-                    <div className="text-[9px] text-muted-foreground flex items-center gap-2">
+                    <div className="text-[9px] text-muted-foreground flex items-center gap-2 mt-0.5">
                       <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-mono">
                         {selected.pipelineKey}
                       </Badge>
-                      {selected.markdown && <span>{selected.markdown.length} char</span>}
-                      {selected.durationMs && <span>{(selected.durationMs / 1000).toFixed(1)}s</span>}
+                      {selected.markdown && <span>{selected.markdown.length.toLocaleString()} char</span>}
+                      {selected.durationMs && <span>· {(selected.durationMs / 1000).toFixed(1)}s</span>}
+                      {selected.persisted && (
+                        <span className="inline-flex items-center gap-0.5 text-primary font-medium">
+                          · <Database className="w-2.5 h-2.5" /> Salvato
+                        </span>
+                      )}
                     </div>
                   </div>
                   {selected.markdown && (
