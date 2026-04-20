@@ -19,9 +19,8 @@ export function useAgents() {
   const query = useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      return findAgents(user.id);
+      // Visibilità globale: tutti gli operatori vedono tutti gli agenti del sistema.
+      return findAgents();
     },
   });
 
