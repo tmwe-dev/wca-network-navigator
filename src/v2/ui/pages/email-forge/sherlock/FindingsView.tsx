@@ -89,8 +89,8 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
   return (
     <div className="space-y-3">
       {summary && (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+        <div className="rounded-md border border-primary/30 bg-primary/10 p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1 flex items-center gap-1.5">
             <Sparkles className="w-3 h-3" /> Sintesi AI
           </div>
           <div className="text-xs text-foreground leading-relaxed">{summary}</div>
