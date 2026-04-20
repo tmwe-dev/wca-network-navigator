@@ -224,7 +224,17 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
             )}
           </DialogTitle>
           <div className="flex items-center gap-1.5">
-            <Button size="sm" variant="ghost" onClick={clearAll} disabled={pages.length === 0}
+            {running && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stop}
+                className="h-7 text-[11px] gap-1"
+              >
+                <Square className="w-3 h-3 fill-current" /> Stop
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={clearAll} disabled={pages.length === 0 || !!running}
               className="h-7 text-[11px]">
               <Trash2 className="w-3 h-3 mr-1" /> Pulisci
             </Button>
