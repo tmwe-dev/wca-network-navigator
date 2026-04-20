@@ -89,6 +89,17 @@ export function UnifiedBulkActionBar({
           </TooltipTrigger><TooltipContent className="text-xs">Invia WhatsApp</TooltipContent></Tooltip>
         )}
 
+        {onLinkedInDM && (
+          <Tooltip><TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className={btn} onClick={onLinkedInDM} disabled={linkedInDMLoading || withLinkedIn === 0}>
+              {linkedInDMLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 text-[#0A66C2]" />}
+              LinkedIn DM ({withLinkedIn}/{count})
+            </Button>
+          </TooltipTrigger><TooltipContent className="text-xs">
+            Invia DM LinkedIn (rate limit: 3/ora — distribuiti su ~{Math.max(1, Math.ceil(withLinkedIn * 21 / 60))}h)
+          </TooltipContent></Tooltip>
+        )}
+
         {onDeepSearch && (
           <Tooltip><TooltipTrigger asChild>
             <Button size="sm" variant="ghost" className={btn} onClick={onDeepSearch} disabled={deepSearchLoading}>
