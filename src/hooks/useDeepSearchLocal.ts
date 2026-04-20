@@ -241,26 +241,32 @@ export function useDeepSearchLocal() {
     const contactName = s("name");
     const contactEmail = s("email") || null;
     const contactPosition = s("position");
-    if (contactName && contactName.length >= 3) {
-      const domainKw = extractDomainKeyword(contactEmail);
-      const lastName = getLastName(contactName);
+    if (cfg("linkedinContacts", true) && contactName && contactName.length >= 3) {
+      const cleanName = cleanPersonName(contactName);
+      const cleanCo = cleanCompanyName(companyName);
+      const domainKw = (runtimeConfig.priorityDomain || "").trim() || extractDomainKeyword(contactEmail) || "";
+      const lastName = getLastName(cleanName);
+      const maxQ = Math.max(1, Math.min(5, cfg("maxQueriesPerContact", 5)));
       const cascadeQueries = [
-        `"${contactName}" "${companyName}" site:linkedin.com/in`,
-        ...(domainKw ? [`"${contactName}" "${domainKw}" site:linkedin.com/in`] : []),
-        `"${contactName}" site:linkedin.com/in`,
+        `"${cleanName}" "${cleanCo}" site:linkedin.com/in`,
+        ...(domainKw ? [`"${cleanName}" "${domainKw}" site:linkedin.com/in`] : []),
+        `"${cleanName}" site:linkedin.com/in`,
         ...(domainKw ? [`"${lastName}" "${domainKw}" site:linkedin.com/in`] : []),
-        `${contactName} LinkedIn`,
-      ];
+        `${cleanName} ${cleanCo} LinkedIn`,
+      ].slice(0, maxQ);
       let results: GoogleSearchResult[] = [];
-      for (const q of cascadeQueries) {
+      for (let qi = 0; qi < cascadeQueries.length; qi++) {
+        const q = cascadeQueries[qi];
+        cascadeBus.emit({ type: "query-start", subjectId: contactId, query: q, index: qi, total: cascadeQueries.length });
         results = (await googleSearch(q, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+        cascadeBus.emit({ type: "query-result", subjectId: contactId, query: q, index: qi, total: cascadeQueries.length, results: results.length });
         if (results.length > 0) break;
         await delay(500);
       }
       if (results.length > 0) {
         const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
         const answer = await aiCall(
-          `Find the PERSONAL LinkedIn profile of "${contactName}" at "${companyName}" in ${location}.${contactPosition ? ` Title: "${contactPosition}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
+          `Find the PERSONAL LinkedIn profile of "${cleanName}" at "${cleanCo}" in ${location}.${contactPosition ? ` Title: "${contactPosition}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
         );
         if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
           const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
@@ -271,8 +277,13 @@ export function useDeepSearchLocal() {
             if (partnerId) {
               await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
             }
+            cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: true });
           }
+        } else {
+          cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: false });
         }
+      } else {
+        cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: false });
       }
       await delay(800);
     }
