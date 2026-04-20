@@ -37,7 +37,9 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "em
 ];
 
 export function InArrivoTab() {
-  const [channel, setChannel] = useState<Channel>("email");
+  const g = useGlobalFilters();
+  const channel = g.filters.inreachChannel;
+  const setChannel = (c: Channel) => g.setFilter("inreachChannel", c);
   const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
