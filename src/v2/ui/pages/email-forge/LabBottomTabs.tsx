@@ -40,7 +40,7 @@ export function LabBottomTabs({ recipient, emailKbCategories }: Props) {
             <Button
               size="sm"
               onClick={() => setCanvasOpen(true)}
-              className="h-7 px-2.5 text-[11px] gap-1.5 bg-orange-500 hover:bg-orange-600 text-white"
+              className="h-7 px-2.5 text-[11px] gap-1.5"
             >
               <Flame className="w-3.5 h-3.5" />
               FireScrape Canvas
