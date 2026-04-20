@@ -5411,6 +5411,7 @@ export type Database = {
           is_favorite: boolean | null
           last_interaction_at: string | null
           lead_status: string
+          linkedin_url: string | null
           logo_url: string | null
           member_since: string | null
           membership_expires: string | null
@@ -5456,6 +5457,7 @@ export type Database = {
           is_favorite?: boolean | null
           last_interaction_at?: string | null
           lead_status?: string
+          linkedin_url?: string | null
           logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
@@ -5501,6 +5503,7 @@ export type Database = {
           is_favorite?: boolean | null
           last_interaction_at?: string | null
           lead_status?: string
+          linkedin_url?: string | null
           logo_url?: string | null
           member_since?: string | null
           membership_expires?: string | null
