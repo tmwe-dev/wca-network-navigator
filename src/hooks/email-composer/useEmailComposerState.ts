@@ -2,7 +2,7 @@
  * useEmailComposerState — All state + async logic for EmailComposer.
  * Types, reducer, and utils extracted to sibling files.
  */
-import { useReducer, useCallback, useEffect, useMemo, useRef } from "react";
+import { useReducer, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -18,6 +18,7 @@ import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
 import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
+import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
 import type { EditAnalysis } from "@/components/email/EmailEditLearningDialog";
 import type {
   EmailTemplate, EmailComposerLocationState, GenerateContentResponse,
@@ -40,6 +41,9 @@ export function useEmailComposerState() {
 
   const [state, dispatch] = useReducer(reducer, initialState);
   const { email, ui, ai, template, queue: _queue } = state;
+
+  // Last context summary returned by generate-email/improve-email — drives OracleContextPanel
+  const [lastContextSummary, setLastContextSummary] = useState<OracleContextSummary | null>(null);
 
   const recipientsWithEmail = recipients.filter((r) => r.email);
   const isEditedAfterGeneration = ai.aiGeneratedBody && (email.htmlBody !== ai.aiGeneratedBody || email.subject !== ai.aiGeneratedSubject);
@@ -201,6 +205,7 @@ export function useEmailComposerState() {
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       if (data?.subject || data?.body) dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
+      if (data?._context_summary) setLastContextSummary(data._context_summary as OracleContextSummary);
       toast.success("Email generata con Oracolo 🔮");
     } catch (err: unknown) {
       toast.error("Errore generazione AI: " + (err instanceof Error ? err.message : "Sconosciuto"));
@@ -221,13 +226,19 @@ export function useEmailComposerState() {
         oracle_tone: config.tone, use_kb: config.useKB,
         email_type_id: config.emailType?.id || null,
         email_type_prompt: config.emailType?.prompt || null,
-        custom_goal: config.customGoal || null,
+        // Permanent business goal — improve è SEMPRE context-aware:
+        // promuovere servizi/piattaforma + costruire relazioni di amicizia e supporto
+        custom_goal: [
+          "OBIETTIVO COMMERCIALE FISSO: promuovere i nostri servizi e la piattaforma WCA, acquisire clienti, e costruire relazioni durature di amicizia e supporto operativo.",
+          config.customGoal || "",
+        ].filter(Boolean).join("\n\n"),
         partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
         contact_id: singleRecipient?.contactId || null,
       }, context: "EmailComposer.improve_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
+      if (data?._context_summary) setLastContextSummary(data._context_summary as OracleContextSummary);
       toast.success("Email migliorata con AI 🪄");
     } catch (err: unknown) {
       toast.error("Errore miglioramento: " + (err instanceof Error ? err.message : "Sconosciuto"));
@@ -387,5 +398,6 @@ export function useEmailComposerState() {
     handleSaveDraft, handleEnqueue, executeEnqueue,
     handleInsertImage, closeLearningDialog, handleSendAndSave,
     closeQueueMonitor, buildFinalHtml,
+    lastContextSummary,
   };
 }

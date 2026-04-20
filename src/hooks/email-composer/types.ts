@@ -37,11 +37,13 @@ export interface EmailComposerLocationState {
 export interface GenerateContentResponse {
   body?: string;
   subject?: string;
+  _context_summary?: Record<string, unknown>;
 }
 
 export interface ImproveEmailResponse {
   body?: string;
   subject?: string;
+  _context_summary?: Record<string, unknown>;
 }
 
 export interface PartnerPreviewData {
