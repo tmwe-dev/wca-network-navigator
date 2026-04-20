@@ -151,12 +151,35 @@ export function useLinkedInBackfill() {
           }
         }
 
+        // Etichette UI LinkedIn da NON salvare come contatti
+        const LI_UI_LABELS = new Set([
+          "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
+          "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
+          "sponsored", "tutti", "filtri", "messages", "unread", "archived",
+        ]);
+        // Anteprime/placeholder LinkedIn da scartare
+        const LI_GHOST_BODIES = new Set([
+          "foto", "video", "audio", "gif", "documento", "allegato",
+          "ha reagito", "ha risposto", "ha ritirato un messaggio",
+          "messaggio rimosso", "image", "attachment",
+        ]);
+
         // Step 3: Save all messages to DB via upsert (ignores duplicates)
         let chatRecovered = 0;
         for (const msg of messages) {
           const text = String(msg.text || "").trim();
           if (!text) continue;
           const sender = String(msg.sender || msg.contact || thread.name).trim();
+
+          // Hard-skip: etichette UI come "contatto"
+          if (LI_UI_LABELS.has(sender.toLowerCase())) continue;
+          if (LI_UI_LABELS.has(thread.name.toLowerCase())) continue;
+          // Hard-skip: ghost preview (testo troppo breve, solo numeri, placeholder media)
+          const lowerText = text.toLowerCase();
+          if (text.length < 3) continue;
+          if (/^[0-9]{1,3}$/.test(text)) continue;
+          if (LI_GHOST_BODIES.has(lowerText)) continue;
+
           const timestamp = String(msg.timestamp || new Date().toISOString());
           const direction = String(msg.direction || "inbound");
           const extId = buildDeterministicId("li", thread.name, text, timestamp);
