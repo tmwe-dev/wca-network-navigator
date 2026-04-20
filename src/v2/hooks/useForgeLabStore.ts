@@ -9,6 +9,15 @@ import type { ForgeRecipient } from "@/v2/ui/pages/email-forge/ForgeRecipientPic
 import type { EmailType } from "@/data/defaultEmailTypes";
 import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
 
+export interface DeepSearchConfig {
+  scrapeWebsite: boolean;
+  linkedinContacts: boolean;
+  linkedinCompany: boolean;
+  whatsapp: boolean;
+  maxQueriesPerContact: number;
+  priorityDomain: string;
+}
+
 export interface ForgeLabState {
   recipient: ForgeRecipient | null;
   emailType: EmailType | null;
@@ -19,6 +28,7 @@ export interface ForgeLabState {
   quality: "fast" | "standard" | "premium";
   /** Bumped each time the user clicks "Genera" from the drawer to trigger a run on the page. */
   runCounter: number;
+  deepSearchConfig: DeepSearchConfig;
 }
 
 const initial: ForgeLabState = {
@@ -30,6 +40,14 @@ const initial: ForgeLabState = {
   baseProposal: "",
   quality: "standard",
   runCounter: 0,
+  deepSearchConfig: {
+    scrapeWebsite: true,
+    linkedinContacts: true,
+    linkedinCompany: true,
+    whatsapp: true,
+    maxQueriesPerContact: 5,
+    priorityDomain: "",
+  },
 };
 
 let state: ForgeLabState = initial;
