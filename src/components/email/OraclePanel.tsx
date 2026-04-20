@@ -102,7 +102,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
-  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh" || deepSearch.status === "cached", customGoal: customGoal.trim() };
+  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh", customGoal: customGoal.trim() };
 
   const handleAddType = () => {
     if (!newName.trim() || !newPrompt.trim()) return;
