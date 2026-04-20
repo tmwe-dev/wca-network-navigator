@@ -165,7 +165,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         }));
         let rSlug = false, rLogo = false, rSite = false, rErr = 0;
         try {
-          const r = await enrichBaseTarget(t);
+          const r = await enrichBaseTarget(fsBridge, t);
           rSlug = r.slugFound; rLogo = r.logoFound; rSite = r.siteScraped; rErr = r.errors.length;
           if (r.slugFound) slugFound++;
           if (r.logoFound) logoFound++;
