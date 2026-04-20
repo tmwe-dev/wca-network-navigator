@@ -552,11 +552,20 @@ export async function runAgenticSherlock(opts: RunAgenticOptions): Promise<Agent
       if (usedBudget >= budget || signal.aborted) break;
       const norm = normalizeUrl(action.url);
       if (!norm || visited.has(norm)) continue;
+
+      // ── HARD GUARD: nessuna chiamata diretta a LinkedIn dal motore agentico.
+      // Anti-ban: LinkedIn viene SOLO rilevato (URL company estratto dalla home)
+      // e l'arricchimento profondo è demandato al sync manuale dell'estensione.
+      if (/(?:^|\.)linkedin\.com$/i.test(safeHost(norm))) {
+        visited.add(norm); // marca come "già gestito" per non riproporlo
+        continue;
+      }
+
       visited.add(norm);
       usedBudget++;
       stepOrder++;
 
-      const channel: SherlockChannel = /linkedin\.com/i.test(norm) ? "linkedin" : "generic";
+      const channel: SherlockChannel = "generic";
       const startedAt = Date.now();
       const step = makeStepResult({ order: stepOrder, label: action.label || norm, url: norm, channel, startedAt });
       emit(step);
