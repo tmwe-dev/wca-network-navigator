@@ -46,14 +46,15 @@ export const scrapeLinkedInProfileTool: Tool = {
       } as ToolResult;
     }
 
-    const res = await callExtension<LinkedInProfile>(
-      "linkedin-scraper",
+    const res = await callExtension<{ profile: LinkedInProfile } | LinkedInProfile>(
+      "linkedin",
       "extractProfile",
       {},
     );
     if (!res.ok) throw new Error(res.error);
 
-    const profile = res.data;
+    // L'estensione può restituire { success, profile } o direttamente i campi.
+    const profile = ("profile" in res.data ? res.data.profile : res.data) as LinkedInProfile;
 
     // Get current user
     const {
