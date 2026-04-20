@@ -1,35 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Globe, Linkedin, Phone, Brain, Loader2 } from "lucide-react";
-import { useAppSettings } from "@/hooks/useAppSettings";
-import { createLogger } from "@/lib/log";
-
-const log = createLogger("DeepSearchOptionsDialog");
-
-interface DeepSearchOption {
-  key: "scrapeWebsite" | "scrapeLinkedin" | "verifyWhatsapp" | "aiAnalysis";
-  label: string;
-  description: string;
-  icon: React.ElementType;
-}
-
-const OPTIONS: DeepSearchOption[] = [
-  { key: "scrapeWebsite", label: "Scrape sito web", description: "Analizza il sito aziendale", icon: Globe },
-  { key: "scrapeLinkedin", label: "Scrape LinkedIn", description: "Analizza profilo LinkedIn", icon: Linkedin },
-  { key: "verifyWhatsapp", label: "Verifica WhatsApp", description: "Controlla numero su WhatsApp", icon: Phone },
-  { key: "aiAnalysis", label: "Analisi AI profilo", description: "Genera briefing AI", icon: Brain },
-];
-
-const DEFAULT_CONFIG = {
-  scrapeWebsite: true,
-  scrapeLinkedin: true,
-  verifyWhatsapp: false,
-  aiAnalysis: true,
-};
+import { Badge } from "@/components/ui/badge";
+import { Brain, Loader2, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
+import {
+  ALL_QUALITIES, getDeepSearchMeta, presetToCockpitConfig, type DeepSearchQuality,
+} from "@/lib/deepSearchPresets";
 
 interface DeepSearchOptionsDialogProps {
   open: boolean;
@@ -39,52 +17,74 @@ interface DeepSearchOptionsDialogProps {
   loading?: boolean;
 }
 
+const QUALITY_ICONS = { fast: Zap, standard: ThumbsUp, premium: Trophy } as const;
+
 export function DeepSearchOptionsDialog({
   open, onOpenChange, count, onConfirm, loading,
 }: DeepSearchOptionsDialogProps) {
-  const { data: settings } = useAppSettings();
-  const [options, setOptions] = useState(DEFAULT_CONFIG);
+  const [quality, setQuality] = useState<DeepSearchQuality>("standard");
+  const meta = getDeepSearchMeta(quality);
+  const totalSeconds = meta.estimatedSecondsPerRecord * count;
 
-  useEffect(() => {
-    if (settings?.deep_search_config) {
-      try {
-        const parsed = JSON.parse(settings.deep_search_config);
-        const ctx = parsed.contacts || parsed.cockpit || DEFAULT_CONFIG;
-        setOptions({ ...DEFAULT_CONFIG, ...ctx });
-      } catch (e) { log.debug("fallback used", { error: e instanceof Error ? e.message : String(e) }); /* use defaults */ }
-    }
-  }, [settings?.deep_search_config]);
-
-  const toggle = (key: keyof typeof DEFAULT_CONFIG) => {
-    setOptions(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleConfirm = () => {
+    // Le opzioni sono determinate automaticamente dal preset Quality.
+    onConfirm(presetToCockpitConfig(quality));
   };
-
-  const activeCount = Object.values(options).filter(Boolean).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-sm">Configura Deep Search</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {count} record selezionat{count === 1 ? "o" : "i"} — scegli le operazioni da eseguire
+            {count} record selezionat{count === 1 ? "o" : "i"} — scegli la profondità di analisi
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          {OPTIONS.map(opt => (
-            <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
-              <Checkbox
-                checked={options[opt.key]}
-                onCheckedChange={() => toggle(opt.key)}
-              />
-              <opt.icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium">{opt.label}</span>
-                <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+          {/* Selettore Quality */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {ALL_QUALITIES.map((q) => {
+              const Icon = QUALITY_ICONS[q];
+              const m = getDeepSearchMeta(q);
+              const active = q === quality;
+              return (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => setQuality(q)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded border px-2 py-2 transition-colors ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card hover:bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-xs font-medium">{m.label}</span>
+                  <span className="text-[10px] text-muted-foreground">~{m.estimatedSecondsPerRecord}s</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Badge informativo cosa include */}
+          <div className="rounded border border-primary/20 bg-primary/5 p-2 flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-foreground">{meta.label} include:</div>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {meta.includedLabels.map((l) => (
+                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
+                ))}
               </div>
-            </label>
-          ))}
+              <div className="text-[10px] text-muted-foreground mt-1.5 leading-tight">{meta.description}</div>
+            </div>
+          </div>
+
+          {/* Stima tempo totale */}
+          <div className="text-[11px] text-muted-foreground text-center">
+            Tempo stimato totale: <span className="font-mono text-foreground">~{Math.ceil(totalSeconds / 60)} min</span>
+          </div>
         </div>
 
         <DialogFooter className="gap-2">
@@ -94,11 +94,11 @@ export function DeepSearchOptionsDialog({
           <Button
             size="sm"
             className="text-xs gap-1.5"
-            disabled={activeCount === 0 || loading}
-            onClick={() => onConfirm(options)}
+            disabled={loading}
+            onClick={handleConfirm}
           >
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
-            Avvia ({activeCount} operazion{activeCount === 1 ? "e" : "i"})
+            Avvia Deep Search {meta.label}
           </Button>
         </DialogFooter>
       </DialogContent>
