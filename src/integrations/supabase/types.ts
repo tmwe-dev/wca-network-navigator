@@ -3674,6 +3674,7 @@ export type Database = {
           partner_id: string | null
           recipient: string
           retry_count: number
+          scheduled_for: string | null
           status: string
           updated_at: string
           user_id: string
@@ -3694,6 +3695,7 @@ export type Database = {
           partner_id?: string | null
           recipient: string
           retry_count?: number
+          scheduled_for?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -3714,6 +3716,7 @@ export type Database = {
           partner_id?: string | null
           recipient?: string
           retry_count?: number
+          scheduled_for?: string | null
           status?: string
           updated_at?: string
           user_id?: string
