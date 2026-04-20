@@ -160,6 +160,19 @@ serve(async (req) => {
         sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
         oracle_type: oracle_type ?? null,
       },
+      ...(_debug_return_prompt ? {
+        _debug: {
+          systemPrompt,
+          userPrompt,
+          systemBlocks,
+          blocks,
+          model,
+          quality,
+          ai_latency_ms: aiLatencyMs,
+          tokens_in: result.usage?.promptTokens ?? null,
+          tokens_out: result.usage?.completionTokens ?? null,
+        },
+      } : {}),
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e: unknown) {
     logEdgeError("generate-email", e);
