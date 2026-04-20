@@ -7,15 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { setDeepSearchRuntimeConfig } from "@/hooks/useDeepSearchLocal";
 import { cascadeBus, type CascadeEvent } from "@/hooks/useDeepSearchHelpers";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Globe, Linkedin, MessageCircle, Building2, Circle } from "lucide-react";
+import { getDeepSearchMeta, getDeepSearchSources } from "@/lib/deepSearchPresets";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Circle, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
@@ -135,6 +134,14 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
     forgeLabStore.set({ deepSearchConfig: { ...dsConfig, ...patch } });
   };
 
+  const setQuality = (q: "fast" | "standard" | "premium") => {
+    // Cambia quality → lo store ricalcola automaticamente deepSearchConfig dal preset.
+    forgeLabStore.set({ quality: q });
+  };
+
+  const meta = getDeepSearchMeta(lab.quality);
+  const sources = getDeepSearchSources(lab.quality);
+
   const enrichment = enrichmentQuery.data?.data as PartnerEnrichment | null;
   const enrichmentJson = enrichment?.enrichment_data ?? enrichment?.raw_data ?? null;
   const deepAt = enrichment?.deep_search_at
@@ -150,58 +157,44 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
   return (
     <div className="space-y-2 text-xs">
-      {/* CONFIG PANEL */}
+      {/* QUALITY PRESET PANEL — auto-determina le fonti */}
       <div className="rounded-md border border-border/40 bg-muted/30 p-2 space-y-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Configurazione Deep Search</div>
-        <div className="grid grid-cols-2 gap-1.5">
-          <ConfigToggle
-            icon={Globe}
-            label="Sito web (scrape + qualità)"
-            checked={dsConfig.scrapeWebsite}
-            onChange={(v) => updateConfig({ scrapeWebsite: v })}
-          />
-          <ConfigToggle
-            icon={Linkedin}
-            label="LinkedIn contatti"
-            checked={dsConfig.linkedinContacts}
-            onChange={(v) => updateConfig({ linkedinContacts: v })}
-          />
-          <ConfigToggle
-            icon={Building2}
-            label="LinkedIn azienda"
-            checked={dsConfig.linkedinCompany}
-            onChange={(v) => updateConfig({ linkedinCompany: v })}
-          />
-          <ConfigToggle
-            icon={MessageCircle}
-            label="WhatsApp (mobile→wa.me)"
-            checked={dsConfig.whatsapp}
-            onChange={(v) => updateConfig({ whatsapp: v })}
-          />
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Profondità Deep Search</div>
+          <span className="text-[9px] text-muted-foreground font-mono">~{meta.estimatedSecondsPerRecord}s/record</span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-0.5">
-            <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
-              <span>Max query / contatto</span>
-              <span className="font-mono text-foreground">{dsConfig.maxQueriesPerContact}</span>
-            </Label>
-            <Slider
-              value={[dsConfig.maxQueriesPerContact]}
-              min={1}
-              max={5}
-              step={1}
-              onValueChange={([v]) => updateConfig({ maxQueriesPerContact: v })}
-            />
+
+        <div className="grid grid-cols-3 gap-1">
+          <QualityButton icon={Zap} label="Fast" active={lab.quality === "fast"} onClick={() => setQuality("fast")} />
+          <QualityButton icon={ThumbsUp} label="Standard" active={lab.quality === "standard"} onClick={() => setQuality("standard")} />
+          <QualityButton icon={Trophy} label="Premium" active={lab.quality === "premium"} onClick={() => setQuality("premium")} />
+        </div>
+
+        <div className="rounded border border-primary/20 bg-primary/5 p-1.5 flex items-start gap-1.5">
+          <Info className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-medium text-foreground">{meta.label} include:</div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {meta.includedLabels.map((l) => (
+                <Badge key={l} variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
+              ))}
+            </div>
+            <div className="text-[9px] text-muted-foreground mt-1 leading-tight">{meta.description}</div>
           </div>
-          <div className="space-y-0.5">
-            <Label className="text-[10px] text-muted-foreground">Dominio prioritario (override)</Label>
-            <Input
-              value={dsConfig.priorityDomain}
-              onChange={(e) => updateConfig({ priorityDomain: e.target.value })}
-              placeholder="es. transmgmt"
-              className="h-6 text-[10px]"
-            />
-          </div>
+        </div>
+
+        {/* Override avanzato: solo dominio prioritario, nessun toggle. */}
+        <div className="space-y-0.5">
+          <Label className="text-[10px] text-muted-foreground flex items-center justify-between">
+            <span>Dominio prioritario (override avanzato)</span>
+            <span className="font-mono text-muted-foreground/60">max {sources.maxQueriesPerContact} query</span>
+          </Label>
+          <Input
+            value={dsConfig.priorityDomain}
+            onChange={(e) => updateConfig({ priorityDomain: e.target.value })}
+            placeholder="es. transmgmt — opzionale"
+            className="h-6 text-[10px]"
+          />
         </div>
       </div>
 
@@ -322,17 +315,22 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   );
 }
 
-function ConfigToggle({
-  icon: Icon, label, checked, onChange,
-}: { icon: React.ComponentType<{ className?: string }>; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function QualityButton({
+  icon: Icon, label, active, onClick,
+}: { icon: React.ComponentType<{ className?: string }>; label: string; active: boolean; onClick: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-border/40 bg-card px-2 py-1">
-      <div className="flex items-center gap-1.5 min-w-0">
-        <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
-        <span className="text-[10px] truncate">{label}</span>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded border px-2 py-1.5 transition-colors ${
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border/40 bg-card hover:bg-muted text-muted-foreground"
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-[10px] font-medium">{label}</span>
+    </button>
   );
 }
 

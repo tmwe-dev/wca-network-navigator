@@ -1,16 +1,32 @@
+import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import type { MissionStepProps, DeepSearchConfig } from "./types";
+import { Badge } from "@/components/ui/badge";
+import { Zap, ThumbsUp, Trophy, Info } from "lucide-react";
+import {
+  ALL_QUALITIES, getDeepSearchMeta, presetToMissionConfig, type DeepSearchQuality,
+} from "@/lib/deepSearchPresets";
+import type { MissionStepProps } from "./types";
+
+const QUALITY_ICONS = { fast: Zap, standard: ThumbsUp, premium: Trophy } as const;
 
 export function DeepSearchStep({ data, onChange }: MissionStepProps) {
   const ds = data.deepSearch || { enabled: false, scrapeWebsite: true, scrapeLinkedIn: true, verifyWhatsApp: false, aiAnalysis: true };
-  const set = (patch: Partial<DeepSearchConfig>) => onChange({ ...data, deepSearch: { ...ds, ...patch } });
+  const [quality, setQuality] = useState<DeepSearchQuality>("standard");
+  const meta = getDeepSearchMeta(quality);
 
-  const options: { key: keyof Pick<DeepSearchConfig, "scrapeWebsite" | "scrapeLinkedIn" | "verifyWhatsApp" | "aiAnalysis">; label: string; desc: string }[] = [
-    { key: "scrapeWebsite", label: "🌐 Scrape sito web aziendale", desc: "Analizza il sito per capire servizi e specializzazioni" },
-    { key: "scrapeLinkedIn", label: "🔗 Scrape profilo LinkedIn", desc: "Raccoglie headline, about e posizione del contatto" },
-    { key: "verifyWhatsApp", label: "💬 Verifica WhatsApp", desc: "Controlla se il numero è attivo su WhatsApp" },
-    { key: "aiAnalysis", label: "🤖 Analisi AI del profilo", desc: "Genera un riepilogo intelligente per personalizzare il messaggio" },
-  ];
+  const setEnabled = (v: boolean) => {
+    if (v) {
+      // Quando attivo, applica subito il preset corrente.
+      onChange({ ...data, deepSearch: presetToMissionConfig(quality) });
+    } else {
+      onChange({ ...data, deepSearch: { ...ds, enabled: false } });
+    }
+  };
+
+  const pickQuality = (q: DeepSearchQuality) => {
+    setQuality(q);
+    onChange({ ...data, deepSearch: presetToMissionConfig(q) });
+  };
 
   return (
     <div className="space-y-4">
@@ -19,21 +35,55 @@ export function DeepSearchStep({ data, onChange }: MissionStepProps) {
           <p className="text-sm font-medium">Attivare Deep Search prima dell'invio?</p>
           <p className="text-xs text-muted-foreground">Arricchisce i dati dei contatti per messaggi più personalizzati</p>
         </div>
-        <Switch checked={ds.enabled} onCheckedChange={v => set({ enabled: v })} />
+        <Switch checked={ds.enabled} onCheckedChange={setEnabled} />
       </div>
+
       {ds.enabled && (
-        <div className="space-y-2 pl-1 border-l-2 border-primary/30 ml-2">
-          {options.map(opt => (
-            <label key={opt.key} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 cursor-pointer">
-              <Switch checked={ds[opt.key]} onCheckedChange={v => set({ [opt.key]: v })} className="mt-0.5" />
-              <div>
-                <div className="text-sm">{opt.label}</div>
-                <div className="text-xs text-muted-foreground">{opt.desc}</div>
+        <div className="space-y-3 pl-1 border-l-2 border-primary/30 ml-2">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              Profondità di analisi
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {ALL_QUALITIES.map((q) => {
+                const Icon = QUALITY_ICONS[q];
+                const m = getDeepSearchMeta(q);
+                const active = q === quality;
+                return (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => pickQuality(q)}
+                    className={`flex flex-col items-center justify-center gap-1 rounded border px-2 py-2 transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-xs font-medium">{m.label}</span>
+                    <span className="text-[10px] text-muted-foreground">~{m.estimatedSecondsPerRecord}s/record</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded border border-primary/20 bg-primary/5 p-2.5 flex items-start gap-2">
+            <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-foreground">{meta.label} include:</div>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {meta.includedLabels.map((l) => (
+                  <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
+                ))}
               </div>
-            </label>
-          ))}
+              <div className="text-[10px] text-muted-foreground mt-1.5 leading-tight">{meta.description}</div>
+            </div>
+          </div>
         </div>
       )}
+
       {!ds.enabled && (
         <div className="bg-muted/20 rounded-lg p-3 text-xs text-muted-foreground">
           💡 Senza Deep Search, i messaggi saranno generati con i dati già presenti nel database. Puoi sempre attivarlo dopo.
