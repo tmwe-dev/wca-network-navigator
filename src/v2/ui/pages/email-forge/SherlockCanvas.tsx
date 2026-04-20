@@ -322,3 +322,36 @@ function StatusIcon({ status, small }: { status: SherlockStepResult["status"]; s
   if (status === "pending") return <div className={`${cls} rounded-full border border-muted-foreground/40 shrink-0`} />;
   return <AlertCircle className={`${cls} text-destructive shrink-0`} />;
 }
+
+function MarkdownPane({ markdown }: { markdown: string }) {
+  const [showRaw, setShowRaw] = React.useState(false);
+  const pretty = React.useMemo(() => prettifyScrapedMarkdown(markdown), [markdown]);
+  const content = showRaw ? markdown : pretty;
+  const reduction = markdown.length > 0 ? Math.round((1 - pretty.length / markdown.length) * 100) : 0;
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/40 shrink-0">
+        <div className="text-[10px] text-muted-foreground">
+          {showRaw
+            ? `Markdown grezzo · ${markdown.length.toLocaleString()} caratteri`
+            : `Markdown pulito · ${pretty.length.toLocaleString()} caratteri${reduction > 0 ? ` (−${reduction}% rumore)` : ""}`}
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 text-[10px] gap-1"
+          onClick={() => setShowRaw((v) => !v)}
+        >
+          <Code2 className="w-3 h-3" />
+          {showRaw ? "Versione pulita" : "Mostra raw"}
+        </Button>
+      </div>
+      <ScrollArea className="flex-1">
+        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
+          prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
+          <LazyMarkdown>{content}</LazyMarkdown>
+        </article>
+      </ScrollArea>
+    </div>
+  );
+}
