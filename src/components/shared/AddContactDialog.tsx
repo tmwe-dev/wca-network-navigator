@@ -296,7 +296,7 @@ export default function AddContactDialog({
             className="gap-1.5"
             disabled={!form.email.trim()}
             onClick={() => {
-              navigate("/email-composer", {
+              navigate("/v2/email-composer", {
                 state: {
                   prefilledRecipient: {
                     email: form.email.trim(),

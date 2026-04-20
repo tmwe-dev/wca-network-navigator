@@ -105,7 +105,7 @@ export function ContactActionMenu({ contact, children }: Props) {
   };
 
   const handleSendEmail = () => {
-    navigate("/email-composer", {
+    navigate("/v2/email-composer", {
       state: {
         partnerIds: contact.partnerId ? [contact.partnerId] : [],
         prefilledRecipient: {

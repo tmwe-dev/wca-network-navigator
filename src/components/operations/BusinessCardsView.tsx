@@ -137,7 +137,7 @@ export function BusinessCardsView() {
                 onWorkspace={() => {
                   const selected = g.filtered.filter(c => selectedBca.has(c.id) && c.email);
                   if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
-                  navigate("/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+                  navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
                 }}
                 onLinkedIn={() => {
                   const selected = g.filtered.filter(c => selectedBca.has(c.id));
@@ -147,7 +147,7 @@ export function BusinessCardsView() {
                 onCampaign={() => {
                   const selected = g.filtered.filter(c => selectedBca.has(c.id) && c.email);
                   if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
-                  navigate("/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+                  navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
                 }}
                 withEmail={g.filtered.filter(c => selectedBca.has(c.id) && c.email).length}
                 withPhone={g.filtered.filter(c => selectedBca.has(c.id) && (c.phone || c.mobile)).length}

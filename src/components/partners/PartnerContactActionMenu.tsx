@@ -78,7 +78,7 @@ export function PartnerContactActionMenu({ contact, partner, onSendEmail, onSend
     if (onSendEmail) {
       onSendEmail(contact);
     } else {
-      navigate("/email-composer", {
+      navigate("/v2/email-composer", {
         state: {
           partnerIds: [partner.id],
           prefilledRecipient: {

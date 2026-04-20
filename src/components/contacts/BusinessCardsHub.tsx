@@ -76,7 +76,7 @@ export default function BusinessCardsHub() {
     if (selected.length === 1) {
       handleSendEmail({ email: selected[0].email!, name: selected[0].contact_name || undefined, company: selected[0].company_name || undefined });
     } else {
-      navigate("/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+      navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
     }
   }, [cards, selectedIds, handleSendEmail, navigate]);
 
@@ -103,7 +103,7 @@ export default function BusinessCardsHub() {
   const handleBulkWorkspace = useCallback(() => {
     const selected = cards.filter(c => selectedIds.has(c.id) && c.email);
     if (selected.length === 0) { toast({ title: "Nessun contatto con email" }); return; }
-    navigate("/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+    navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
   }, [cards, selectedIds, navigate]);
 
   const handleBulkDelete = useCallback(async () => {
@@ -147,7 +147,7 @@ export default function BusinessCardsHub() {
         onCampaign={() => {
           const selected = cards.filter(c => selectedIds.has(c.id) && c.email);
           if (selected.length === 0) { toast({ title: "Nessun contatto con email" }); return; }
-          navigate("/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
+          navigate("/v2/email-composer", { state: { partnerIds: selected.filter(c => c.matched_partner_id).map(c => c.matched_partner_id) } });
         }}
         withEmail={cards.filter(c => selectedIds.has(c.id) && c.email).length}
         withPhone={cards.filter(c => selectedIds.has(c.id) && (c.phone || c.mobile)).length}

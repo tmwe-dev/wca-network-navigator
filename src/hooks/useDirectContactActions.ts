@@ -23,7 +23,7 @@ export function useDirectContactActions() {
       partnerId?: string;
       contactId?: string;
     }) => {
-      navigate("/email-composer", {
+      navigate("/v2/email-composer", {
         state: {
           ...(opts.partnerId ? { partnerIds: [opts.partnerId] } : {}),
           prefilledRecipient: {

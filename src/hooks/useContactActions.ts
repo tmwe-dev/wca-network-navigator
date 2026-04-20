@@ -166,7 +166,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
 
   if (contacts.length === 1) {
     const ct = contacts[0] as Record<string, unknown>;
-    navigate("/email-composer", {
+    navigate("/v2/email-composer", {
       state: {
         prefilledRecipient: {
           email: ct.email,
@@ -185,7 +185,7 @@ async function sendToWorkspace(contactIds: string[], navigate: ReturnType<typeof
     company: ct.company_name || undefined,
     contactId: ct.id,
   }));
-  navigate("/email-composer", {
+  navigate("/v2/email-composer", {
     state: { prefilledRecipients: recipients },
   });
 }
