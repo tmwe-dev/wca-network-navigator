@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 import { fs } from "@/v2/io/extensions/bridge";
 import {
-  ALL_PIPELINES, resolvePipelineSteps, type PipelineKey,
+  ALL_PIPELINES, resolvePipelineUrls, type PipelineKey,
 } from "@/v2/io/extensions/deep-search-pipelines";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
