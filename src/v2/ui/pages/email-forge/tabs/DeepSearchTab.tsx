@@ -53,6 +53,10 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       linkedinContacts: dsConfig.linkedinContacts,
       linkedinCompany: dsConfig.linkedinCompany,
       whatsapp: dsConfig.whatsapp,
+      googleGeneral: dsConfig.googleGeneral,
+      googleMaps: dsConfig.googleMaps,
+      websiteMultiPage: dsConfig.websiteMultiPage,
+      reputation: dsConfig.reputation,
       maxQueriesPerContact: dsConfig.maxQueriesPerContact,
       priorityDomain: dsConfig.priorityDomain,
     });
