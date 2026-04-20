@@ -40,8 +40,8 @@ const navGroupsDef: readonly NavGroup[] = [
     items: [
       { labelKey: "nav.dashboard", path: "/v2", icon: <LayoutDashboard className="h-4 w-4" /> },
       { labelKey: "nav.network", path: "/v2/network", icon: <Globe className="h-4 w-4" /> },
+      { labelKey: "nav.globe", path: "/v2/globe", icon: <Earth className="h-4 w-4" /> },
       { labelKey: "nav.crm", path: "/v2/crm", icon: <Users className="h-4 w-4" /> },
-      { labelKey: "nav.partner_directory", path: "/v2/partner-directory", icon: <Search className="h-4 w-4" /> },
     ],
   },
   {
@@ -50,6 +50,8 @@ const navGroupsDef: readonly NavGroup[] = [
       { labelKey: "nav.outreach", path: "/v2/outreach", icon: <Mail className="h-4 w-4" /> },
       { labelKey: "nav.inreach", path: "/v2/inreach", icon: <ArrowDownLeft className="h-4 w-4" /> },
       { labelKey: "nav.campaigns", path: "/v2/campaigns", icon: <Megaphone className="h-4 w-4" /> },
+      { labelKey: "nav.approvals", path: "/v2/sorting", icon: <ArrowUpDown className="h-4 w-4" /> },
+      { labelKey: "nav.ai_arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
     ],
   },
   {

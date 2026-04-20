@@ -201,10 +201,12 @@ export function V2Routes(): React.ReactElement {
           <Route path="research/scraping" element={<Navigate to="/v2/ra-scraping" replace />} />
           <Route path="research/company/:id" element={<RACompanyRedirect />} />
 
-          {/* Partner directory + alias */}
-          <Route path="partner-directory" element={guardedPage(OperationsPage, "PartnerDirectory")} />
-          <Route path="operations" element={<Navigate to="/v2/partner-directory" replace />} />
-          <Route path="import" element={<Navigate to="/v2/partner-directory" replace />} />
+          {/* Partner directory + alias → unificati su Network */}
+          <Route path="partner-directory" element={<Navigate to="/v2/network" replace />} />
+          <Route path="operations" element={<Navigate to="/v2/network" replace />} />
+          <Route path="import" element={<Navigate to="/v2/network" replace />} />
+          {/* Mantengo OperationsPage raggiungibile via deep-link legacy se serve */}
+          <Route path="operations-legacy" element={guardedPage(OperationsPage, "PartnerDirectory")} />
 
           {/* Settings + figli admin/system */}
           <Route path="settings" element={guardedPage(SettingsPage, "Settings")} />
