@@ -22,18 +22,22 @@ export default function EnrichmentSettings() {
 
   const getTargets = useCallback((): BaseEnrichTarget[] => {
     return d.getSelectedRows()
-      .filter((r) => r.source === "wca" || r.source === "contacts")
-      .map((r) => ({
-        id: r.realId || r.id,
-        source: r.source as "wca" | "contacts",
-        name: r.name,
-        companyName: r.source === "wca" ? r.name : undefined,
-        domain: r.domain,
-        email: r.email,
-        hasLogo: r.hasLogo,
-        hasLinkedin: r.hasLinkedin,
-        hasWebsiteExcerpt: false,
-      }));
+      .filter((r) => r.source === "wca" || r.source === "contacts" || r.source === "bca")
+      .map((r) => {
+        // BCA → trattato come azienda (logo + sito + LinkedIn azienda); persiste su business_cards.raw_data.enrichment
+        const isCompanyLike = r.source === "wca" || r.source === "bca";
+        return {
+          id: r.realId || r.id,
+          source: r.source as "wca" | "contacts" | "bca",
+          name: r.name,
+          companyName: isCompanyLike ? r.name : undefined,
+          domain: r.domain,
+          email: r.email,
+          hasLogo: r.hasLogo,
+          hasLinkedin: r.hasLinkedin,
+          hasWebsiteExcerpt: false,
+        };
+      });
   }, [d]);
 
   const { progress, start, stop } = useBaseEnrichment(getTargets);
