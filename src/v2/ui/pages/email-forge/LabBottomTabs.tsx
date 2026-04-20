@@ -6,7 +6,7 @@ import * as React from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronDown, ChevronUp, BookOpen, User, Scroll, History, Wand2, Flame,
+  ChevronDown, ChevronUp, BookOpen, User, Scroll, History, Wand2, Search,
 } from "lucide-react";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
 import { KnowledgeBaseTab } from "./tabs/KnowledgeBaseTab";
@@ -14,7 +14,7 @@ import { SenderProfileTab } from "./tabs/SenderProfileTab";
 import { DoctrineTab } from "./tabs/DoctrineTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { PromptsTab } from "./tabs/PromptsTab";
-import { DeepSearchCanvas } from "./DeepSearchCanvas";
+import { SherlockCanvas } from "./SherlockCanvas";
 
 interface Props {
   recipient: ForgeRecipient | null;
@@ -36,14 +36,14 @@ export function LabBottomTabs({ recipient, emailKbCategories }: Props) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* CTA principale: apre il canvas FireScrape */}
+            {/* CTA principale: apre Sherlock */}
             <Button
               size="sm"
               onClick={() => setCanvasOpen(true)}
               className="h-7 px-2.5 text-[11px] gap-1.5"
             >
-              <Flame className="w-3.5 h-3.5" />
-              FireScrape Canvas
+              <Search className="w-3.5 h-3.5" />
+              Apri Sherlock
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)} className="h-6 px-2 text-[10px]">
               {open
@@ -82,7 +82,7 @@ export function LabBottomTabs({ recipient, emailKbCategories }: Props) {
         )}
       </div>
 
-      <DeepSearchCanvas
+      <SherlockCanvas
         open={canvasOpen}
         onOpenChange={setCanvasOpen}
         recipient={recipient}
