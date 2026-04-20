@@ -31,6 +31,10 @@ export interface ForgeRecipient {
   email: string | null;
   countryCode: string | null;
   countryName: string | null;
+  /** Optional website (popolato se disponibile sul partner). */
+  website?: string | null;
+  /** Optional city (utile per discovery sito). */
+  city?: string | null;
 }
 
 interface Props {
@@ -57,7 +61,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, country_code, city, email", { count: "exact" })
+        .select("id, company_name, country_code, city, email, website", { count: "exact" })
         .eq("is_active", true)
         .order("company_name", { ascending: true })
         .limit(partnerLimit);
@@ -183,6 +187,8 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
                 email: p.email,
                 countryCode: p.country_code,
                 countryName: p.country_code ? WCA_COUNTRIES_MAP[p.country_code]?.name ?? null : null,
+                website: (p as { website?: string | null }).website ?? null,
+                city: p.city ?? null,
               })}
             />
           ))}

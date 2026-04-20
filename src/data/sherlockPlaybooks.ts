@@ -126,3 +126,30 @@ export async function listInvestigationsForTarget(
   if (error) throw error;
   return (data ?? []) as SherlockInvestigation[];
 }
+
+/**
+ * Persiste un sito web scoperto durante una indagine sul record partner,
+ * solo se il campo è ancora vuoto (non sovrascrive dati inseriti dall'utente).
+ */
+export async function updatePartnerWebsiteIfMissing(
+  partnerId: string,
+  website: string,
+): Promise<boolean> {
+  if (!partnerId || !website) return false;
+  try {
+    const { data: current } = await untypedFrom("partners")
+      .select("website")
+      .eq("id", partnerId)
+      .maybeSingle();
+    const existing = (current as { website?: string | null } | null)?.website;
+    if (existing && existing.trim().length > 0) return false;
+    const { error } = await untypedFrom("partners")
+      .update({ website } as Record<string, unknown>)
+      .eq("id", partnerId);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.warn("[sherlock] updatePartnerWebsiteIfMissing failed", e);
+    return false;
+  }
+}

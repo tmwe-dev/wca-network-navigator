@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import {
   Search, Loader2, CheckCircle2, AlertCircle, X, Square, Database,
-  FileText, Eye, Code2, Sparkles, SkipForward, ListChecks,
+  FileText, Eye, Code2, Sparkles, SkipForward, ListChecks, Globe,
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
@@ -33,16 +34,24 @@ const LEVEL_META: Record<SherlockLevel, { label: string; icon: string; eta: stri
 };
 
 export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
+  // Sito web modificabile manualmente: pre-popolato dal recipient se presente,
+  // altrimenti scoperto automaticamente dall'engine al primo step.
+  const [manualWebsite, setManualWebsite] = React.useState<string>("");
+  React.useEffect(() => {
+    setManualWebsite(recipient?.website?.trim() ?? "");
+  }, [recipient?.recordId, recipient?.website]);
+
   const vars = React.useMemo<Record<string, string>>(() => {
     const r = recipient;
+    const website = manualWebsite.trim();
     return {
       companyName: r?.companyName ?? "",
-      city: r?.countryName ?? r?.countryCode ?? "",
-      websiteUrl: "",
+      city: r?.city ?? r?.countryName ?? r?.countryCode ?? "",
+      websiteUrl: website,
       query: r ? `${r.companyName ?? ""} ${r.countryName ?? ""}`.trim() : "",
       linkedinCompanySlug: "",
     };
-  }, [recipient]);
+  }, [recipient, manualWebsite]);
 
   const sherlock = useSherlock({
     partnerId: recipient?.partnerId ?? null,
@@ -50,6 +59,9 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
     targetLabel: recipient?.companyName ?? recipient?.contactName ?? null,
     vars,
   });
+
+  const skippedCount = sherlock.stepResults.filter((r) => r.status === "skipped").length;
+  const discoveredWebsite = (sherlock.consolidated as { website_discovered?: string }).website_discovered;
 
   const [selectedOrder, setSelectedOrder] = React.useState<number | null>(null);
   React.useEffect(() => {
@@ -115,6 +127,35 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>
+        </div>
+
+        {/* SUB-HEADER — input sito web manuale (cruciale per Detective/Sherlock) */}
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border/60 bg-muted/30 shrink-0">
+          <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <label className="text-[10px] font-medium text-muted-foreground shrink-0">Sito web partner:</label>
+          <Input
+            value={manualWebsite}
+            onChange={(e) => setManualWebsite(e.target.value)}
+            placeholder={discoveredWebsite ? `Auto-scoperto: ${discoveredWebsite}` : "https://… (lascia vuoto per scoperta automatica via Google)"}
+            disabled={!!sherlock.running}
+            className="h-7 text-[11px] flex-1 max-w-md"
+          />
+          {discoveredWebsite && !manualWebsite && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setManualWebsite(discoveredWebsite)}
+              className="h-7 text-[10px]"
+            >
+              Usa scoperto
+            </Button>
+          )}
+          {skippedCount > 0 && (
+            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400">
+              <SkipForward className="w-3 h-3" />
+              {skippedCount} step saltati
+            </Badge>
+          )}
         </div>
 
         {/* SPLIT BODY */}
