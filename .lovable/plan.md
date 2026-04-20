@@ -1,83 +1,112 @@
 
-## Diagnosi confermata
-Il problema non è nei dati di Transport Management, ma nel criterio sbagliato usato dal Lab.
 
-Ho verificato che:
-- in `public.partners`, **Transport Management srl** esiste ed è valorizzato:
-  - `profile_description` presente, lunghezza `2343`
-  - `raw_profile_html = null`
-  - `raw_profile_markdown = null`
-- la pagina Network mostra infatti correttamente il blocco **Profilo Aziendale**, che legge `profile_description`
-- invece il Lab/Deep Search controlla ancora i campi legacy:
-  - `src/hooks/useDeepSearchRunner.ts` blocca la deep search se manca `raw_profile_html`
-  - `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx` mostra “Profilo WCA mancante” se mancano `raw_profile_html/raw_profile_markdown`
+## Diagnosi
 
-Quindi l’errore nasce perché:
-```text
-Network: profilo = profile_description (corretto)
-Email Forge / Deep Search: profilo = raw_profile_html/raw_profile_markdown (sbagliato, legacy)
+### 1. Perché Google si apre con "0 risultati"
+La Deep Search per partner usa un **cascading di 5 query LinkedIn** in `useDeepSearchLocal.ts` riga 64-69. Per un contatto come "Mr. Luca Arcana", la PRIMA query è:
 ```
+"Mr. Luca Arcana" "Transport Management srl" site:linkedin.com/in
+```
+Google non trova nulla perché:
+- Il prefisso **"Mr."** è incluso nelle virgolette → match esatto fallisce
+- Il nome aziendale ha varianti ("Transport Management S.r.l.", "Transport Management SRL", ecc.)
+- Le virgolette doppie su entrambi i termini sono troppo restrittive
 
-## Obiettivo
-Allineare Email Forge e Deep Search alla realtà del sistema:
-- il profilo sincronizzato valido è `profile_description`
-- i campi `raw_profile_*` sono solo fallback legacy
-- eliminare ogni riferimento a “Download Center” / “scaricare profili”
+L'extension **dovrebbe** poi cascare alla query 2, 3, 4, 5… ma:
+- Le query successive vengono eseguite dall'extension una alla volta
+- L'utente vede solo la PRIMA tab Google aperta (con 0 risultati) e pensa che sia finita
+- Il sistema in realtà sta provando le altre, ma è invisibile
+
+**Soluzione**: pulire i nomi prima della query (rimuovere `Mr.`, `Mrs.`, `Dott.`, `S.r.l.`, `SRL`, `S.p.A.` ecc.) e mostrare in UI quale query è in corso (cascade visibility).
+
+### 2. Manca il pannello di setting Deep Search
+Il piano originale prevedeva un **Deep Search Config Panel** dove scegliere le 4 modalità:
+- 🌐 Scrape sito web
+- 🔗 Scrape LinkedIn (contatti + azienda)
+- 💬 Verifica WhatsApp
+- 🤖 Analisi AI profilo
+
+Oggi nel `DeepSearchTab` ci sono solo i **bottoni Run** (partner / contatto), nessun toggle. Il `DeepSearchOptionsDialog` esiste già ma è usato solo nei Settings/Cockpit, mai nel Lab Forge.
+
+Inoltre **non si può configurare la qualità delle query** (numero risultati, query custom, lingua, dominio aziendale prioritario).
+
+### 3. KB e Prompt: aggiornamento immediatamente verificabile?
+Lo stato attuale:
+- ✅ KB tab: edit/toggle/insert funzionanti, salva su `knowledge_base` table
+- ✅ Sender tab: edit `app_settings` funzionante
+- ✅ Doctrine tab: edit dottrine L3 funzionante
+- ❌ MANCA: pulsante **"Re-genera mail con nuova KB"** prominente dopo ogni save
+- ❌ MANCA: badge "modificato → genera per vedere effetto"
+- ❌ I prompt operativi (`operative_prompts`) **non sono editabili dal Lab**: l'utente vede solo le KB
 
 ## Piano di intervento
 
-### 1) Correggere la sorgente di verità del profilo
-Aggiorno il check profilo in modo uniforme:
-- `hasProfile = !!(profile_description || raw_profile_html || raw_profile_markdown)`
+### A. Cleanup query Google (impatto immediato)
+Modifico `useDeepSearchHelpers.ts`:
+- Aggiungo `cleanPersonName()` → rimuove prefissi (`Mr.`, `Mrs.`, `Ms.`, `Dr.`, `Dott.`, `Ing.`, `Eng.`)
+- Aggiungo `cleanCompanyName()` → rimuove suffissi legali (`S.r.l.`, `SRL`, `S.p.A.`, `Ltd`, `LLC`, `GmbH`, `Inc.`, `Co.`)
+- Le query usano i nomi puliti; aggiungo anche query "loose" senza virgolette come prima fallback
 
-Questo va applicato in:
-- `src/hooks/useDeepSearchRunner.ts`
-- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx`
+### B. Deep Search Config Panel nel Lab Forge
+In `DeepSearchTab.tsx` aggiungo in alto un pannello compatto con:
+- 4 toggle (sito, LinkedIn contatti, LinkedIn azienda, WhatsApp)
+- Slider "max query per contatto" (1-5)
+- Input "dominio prioritario" (override del domain extracted)
+- I toggle si salvano nel `forgeLabStore` come `deepSearchConfig`
+- Il `useDeepSearchLocal` riceve e rispetta i toggle (skip rami disattivati)
 
-### 2) Sbloccare la Deep Search sui partner già sincronizzati
-Nel runner:
-- smetto di considerare “senza profilo” i partner che hanno `profile_description`
-- la deep search partirà normalmente per record come Transport Management
+### C. Cascade visibility (capire cosa fa AI)
+Sotto i bottoni Run, mostro una **timeline live** delle query in corso:
+```text
+✓ "Luca Arcana" "Transport Management" site:linkedin.com/in   → 0 risultati
+⏳ "Luca Arcana" "transmgmt.it" site:linkedin.com/in          → in corso…
+○ "Luca Arcana" site:linkedin.com/in                          → in coda
+```
+Aggiungo un event bus leggero in `useDeepSearchLocal` (`onQueryStart`/`onQueryResult`) → callback opzionale che il tab sottoscrive.
 
-### 3) Riscrivere il messaggio UI
-Nel tab Deep Search:
-- rimuovo il banner che dice di andare al Download Center
-- sostituisco il testo con uno stato più corretto, ad esempio:
-  - “Profilo sincronizzato disponibile” quando c’è `profile_description`
-  - “Profilo testuale assente” solo se mancano sia `profile_description` sia i fallback legacy
+### D. Verifica immediata dopo ogni save (KB / Sender / Doctrine)
+- Quando l'utente modifica KB/Sender/Doctrine, mostro banner sticky in fondo al tab:
+  > "Modifica salvata · [Re-genera mail per vedere l'effetto]"
+- Bottone esegue `forgeLabStore.triggerRun()` che la pagina già osserva.
 
-### 4) Rimuovere la CTA concettualmente sbagliata
-Tolgo:
-- testo “Scarica prima i profili dal Download Center”
-- bottone “Apri Download Center”
-- logica di navigazione a `/v2/settings?tab=download`
+### E. Editor Prompt Operativi (nuovo tab "Prompts")
+Aggiungo un 6° tab `PromptsTab` accanto a Doctrine:
+- Lista i prompt rilevanti per Email Forge dalla tabella `operative_prompts` (filtrati per `category=email` o `agent_type` collegato)
+- Edit inline del campo `content` con preview char count
+- Toggle "attivo"
+- Stesso pattern Re-genera dopo save
 
-Questo è coerente anche con la regola di progetto che vieta di proporre workflow di download WCA.
+### F. Test data quality panel (Insights)
+Sotto il banner profilo aggiungo un mini-report:
+- "Sito web raggiungibile: ✓/✗"  
+- "Email valide: 2/3"
+- "Telefoni E.164: 1/3"
+- "Ultima Deep Search: X giorni fa"
 
-### 5) Rendere il tab più trasparente
-Nel pannello Deep Search mostro chiaramente quali fonti sono presenti:
-- `profile_description`
-- `raw_profile_html`
-- `raw_profile_markdown`
-- `enrichment_data`
-- timestamp deep search / parsing
-
-Così si capisce subito cosa sta leggendo il sistema, senza falsi negativi.
-
-### 6) Facoltativo ma consigliato: centralizzare il criterio
-Per evitare nuove divergenze, estraggo una piccola helper condivisa tipo:
-- `hasPartnerProfile(...)`
-
-e la riuso dove oggi esistono check simili, così Network, Lab e future viste non si disallineano più.
+Ogni voce è un click che apre il dettaglio nella tab pertinente.
 
 ## File da toccare
-- `src/hooks/useDeepSearchRunner.ts`
-- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx`
-- opzionale helper condivisa in un modulo comune profilo/partner
+
+- `src/hooks/useDeepSearchHelpers.ts` — aggiungere `cleanPersonName`, `cleanCompanyName`, esportare event bus
+- `src/hooks/useDeepSearchLocal.ts` — applicare cleanup, rispettare config toggles, emettere eventi cascade
+- `src/v2/hooks/useForgeLabStore.ts` — aggiungere `deepSearchConfig: { website, linkedinContacts, linkedinCompany, whatsapp, maxQueriesPerContact, priorityDomain }`
+- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx` — aggiungere config panel + cascade timeline
+- `src/v2/ui/pages/email-forge/tabs/KnowledgeBaseTab.tsx` — banner "re-genera" dopo save
+- `src/v2/ui/pages/email-forge/tabs/SenderProfileTab.tsx` — idem
+- `src/v2/ui/pages/email-forge/tabs/DoctrineTab.tsx` — idem
+- `src/v2/ui/pages/email-forge/tabs/PromptsTab.tsx` — **nuovo file**
+- `src/v2/ui/pages/email-forge/LabBottomTabs.tsx` — aggiungere tab "Prompts"
 
 ## Risultato atteso
-Dopo la modifica:
-- Transport Management non verrà più segnalato come “senza profilo WCA”
-- la Deep Search non verrà bloccata inutilmente
-- il Lab parlerà di **profilo sincronizzato** invece che di download
-- il comportamento sarà coerente con ciò che già vedi in Network
+
+1. Google non aprirà più tab vuote: query pulite + cascade visibile.
+2. L'utente potrà spegnere le 4 modalità singolarmente e vedere immediatamente l'impatto sul tempo e sui dati raccolti.
+3. Ogni modifica a KB / Sender / Doctrine / Prompts sarà accompagnata da un bottone "Re-genera ora" → feedback immediato sulla mail prodotta.
+4. Il Lab diventa un vero ambiente di calibrazione end-to-end.
+
+## Out-of-scope
+
+- Salvataggio persistente dei `deepSearchConfig` (resta in memoria sessione; persistenza in iterazione successiva).
+- Editor visuale grafico dei prompt (solo textarea per ora).
+- A/B test automatico tra due configurazioni.
+
