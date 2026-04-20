@@ -256,9 +256,29 @@ export function useWhatsAppBackfill() {
           else chatDupes++;
         }
 
-        // Update cursor
-        const reachedBeginning = messages.length === 0 && !attemptError;
+        // Update cursor.
+        // FIX: non marcare mai "reached_beginning" senza prove concrete:
+        //  - dev'esserci già un cursore (almeno un round precedente con dati)
+        //  - dev'esserci almeno 1 messaggio importato in totale per quella chat
+        //  - dev'essere un'estrazione completata senza errori e che ha effettivamente
+        //    restituito messaggi (>0): se l'extractor restituisce 0 senza errore è
+        //    quasi sempre fallimento DOM, NON fine cronologia.
+        const totalImportedForChat = chat.cursorMsgCount + chatRecovered;
+        const reachedBeginning =
+          !attemptError &&
+          !!chat.cursorOldestId &&
+          totalImportedForChat > 0 &&
+          messages.length > 0 &&
+          chatRecovered === 0; // niente di nuovo dopo aver risalito → fine vera
         if (reachedBeginning) totalCompleted++;
+
+        const attemptStatus = attemptError
+          ? "error"
+          : messages.length === 0
+            ? "empty" // nuovo: distinguiamo da "partial"
+            : chatRecovered > 0
+              ? "ok"
+              : "partial";
 
         await supabase.from("channel_backfill_state").upsert({
           operator_id: operatorId,
@@ -267,10 +287,10 @@ export function useWhatsAppBackfill() {
           chat_display_name: chat.name,
           ...(oldestExtId ? { oldest_message_external_id: oldestExtId, oldest_message_at: oldestAt } : {}),
           ...(newestExtId ? { newest_message_external_id: newestExtId, newest_message_at: newestAt } : {}),
-          messages_imported: chat.cursorMsgCount + chatRecovered,
+          messages_imported: totalImportedForChat,
           reached_beginning: reachedBeginning,
           last_attempt_at: new Date().toISOString(),
-          last_attempt_status: attemptError ? "error" : (messages.length > 0 ? "ok" : "partial"),
+          last_attempt_status: attemptStatus,
           last_error: attemptError,
         } as never, { onConflict: "operator_id,channel,external_chat_id" });
 
