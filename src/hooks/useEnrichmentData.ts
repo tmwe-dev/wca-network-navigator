@@ -38,6 +38,7 @@ interface PartnerRow {
   website: string | null;
   country_code: string | null;
   logo_url: string | null;
+  enrichment_data: Record<string, unknown> | null;
 }
 
 interface ContactRow {
