@@ -205,6 +205,7 @@ export function useEmailComposerState() {
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       if (data?.subject || data?.body) dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || "", subject: data?.subject || "" } });
+      if (data?._context_summary) setLastContextSummary(data._context_summary as OracleContextSummary);
       toast.success("Email generata con Oracolo 🔮");
     } catch (err: unknown) {
       toast.error("Errore generazione AI: " + (err instanceof Error ? err.message : "Sconosciuto"));
@@ -225,13 +226,19 @@ export function useEmailComposerState() {
         oracle_tone: config.tone, use_kb: config.useKB,
         email_type_id: config.emailType?.id || null,
         email_type_prompt: config.emailType?.prompt || null,
-        custom_goal: config.customGoal || null,
+        // Permanent business goal — improve è SEMPRE context-aware:
+        // promuovere servizi/piattaforma + costruire relazioni di amicizia e supporto
+        custom_goal: [
+          "OBIETTIVO COMMERCIALE FISSO: promuovere i nostri servizi e la piattaforma WCA, acquisire clienti, e costruire relazioni durature di amicizia e supporto operativo.",
+          config.customGoal || "",
+        ].filter(Boolean).join("\n\n"),
         partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
         contact_id: singleRecipient?.contactId || null,
       }, context: "EmailComposer.improve_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
       dispatch({ type: "SET_AI_GENERATED", payload: { body: data?.body || email.htmlBody, subject: data?.subject || email.subject } });
+      if (data?._context_summary) setLastContextSummary(data._context_summary as OracleContextSummary);
       toast.success("Email migliorata con AI 🪄");
     } catch (err: unknown) {
       toast.error("Errore miglioramento: " + (err instanceof Error ? err.message : "Sconosciuto"));
@@ -391,5 +398,6 @@ export function useEmailComposerState() {
     handleSaveDraft, handleEnqueue, executeEnqueue,
     handleInsertImage, closeLearningDialog, handleSendAndSave,
     closeQueueMonitor, buildFinalHtml,
+    lastContextSummary,
   };
 }
