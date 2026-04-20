@@ -16,6 +16,7 @@ import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
 import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const EmailInboxView = lazyRetry(() =>
   import("@/components/outreach/EmailInboxView").then(m => ({ default: m.EmailInboxView }))
