@@ -162,8 +162,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="partner" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {partnersQuery.isLoading && <LoadingRow />}
-          {partnersQuery.data?.length === 0 && <EmptyRow />}
-          {partnersQuery.data?.map((p) => (
+          {partnersQuery.data && partnersQuery.data.rows.length === 0 && <EmptyRow />}
+          {partnersQuery.data && partnersQuery.data.rows.length > 0 && (
+            <CountBar shown={partnersQuery.data.rows.length} total={partnersQuery.data.total} />
+          )}
+          {partnersQuery.data?.rows.map((p) => (
             <ResultRow
               key={p.id}
               title={p.company_name || "(senza nome)"}
@@ -187,8 +190,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="contact" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {contactsQuery.isLoading && <LoadingRow />}
-          {contactsQuery.data?.length === 0 && <EmptyRow />}
-          {contactsQuery.data?.map((c) => (
+          {contactsQuery.data && contactsQuery.data.rows.length === 0 && <EmptyRow />}
+          {contactsQuery.data && contactsQuery.data.rows.length > 0 && (
+            <CountBar shown={contactsQuery.data.rows.length} total={contactsQuery.data.total} />
+          )}
+          {contactsQuery.data?.rows.map((c) => (
             <ResultRow
               key={c.id}
               title={c.name || c.company_name || "(senza nome)"}
@@ -211,8 +217,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="bca" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {bcaQuery.isLoading && <LoadingRow />}
-          {bcaQuery.data?.length === 0 && <EmptyRow />}
-          {bcaQuery.data?.map((c) => (
+          {bcaQuery.data && bcaQuery.data.rows.length === 0 && <EmptyRow />}
+          {bcaQuery.data && bcaQuery.data.rows.length > 0 && (
+            <CountBar shown={bcaQuery.data.rows.length} total={bcaQuery.data.total} />
+          )}
+          {bcaQuery.data?.rows.map((c) => (
             <ResultRow
               key={c.id}
               title={c.contact_name || c.company_name || "(senza nome)"}
