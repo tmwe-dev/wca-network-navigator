@@ -1,17 +1,17 @@
 /**
  * baseEnrichment — Pre-fill batch a costo zero per Partner WCA, BCA e Contatti.
  *
- * Usa lo STESSO sistema di scraping di Email Forge / Sherlock:
- *  - `extFs.readUrl()` (navigateBackground → settle → scrape) dal bridge unificato
+ * USA ESATTAMENTE LO STESSO BRIDGE DI EMAIL FORGE / DEEP SEARCH:
+ *  - hook `useFireScrapeExtensionBridge` (NON il wrapper `@/v2/io/extensions/bridge`)
+ *  - `googleSearch(query, limit, skipCache=false)` action nativa
+ *  - `agentAction({ action: "navigate", url, background: true, reuseTab: true })`
+ *  - `scrape(skipCache=true)` per leggere il markdown della pagina caricata
  *  - cache `scrape_cache` (TTL 7gg) condivisa
- *  - `prettifyScrapedMarkdown` per pulizia output
- *  - `throttle` per rate limiting per-host / per-channel
- *  - `extFs.googleSearch` (action nativa dell'estensione) invece di scraping della SERP
  *
  * Filosofia:
  * - Zero AI calls
- * - Zero hit a LinkedIn (solo Google search per scoprire lo slug)
  * - Idempotente: skip se il campo è già pieno
+ * - Logging dettagliato di ogni step
  *
  * Salva su:
  * - partners.enrichment_data.linkedin_url + partners.logo_url + website_excerpt
@@ -23,9 +23,6 @@ import { updateContactEnrichment } from "@/data/contacts";
 import { updateBusinessCard } from "@/data/businessCards";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
-import { fs as extFs } from "@/v2/io/extensions/bridge";
-import { throttle } from "@/v2/services/sherlock/rateLimiter";
-import { prettifyScrapedMarkdown } from "@/v2/services/sherlock/markdownPrettify";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,6 +46,7 @@ export interface BaseEnrichResult {
   readonly logoFound: boolean;
   readonly siteScraped: boolean;
   readonly errors: readonly string[];
+  readonly logs: readonly string[];
 }
 
 export interface WebsiteExcerpt {
@@ -58,21 +56,30 @@ export interface WebsiteExcerpt {
   readonly scraped_at: string;
 }
 
+/**
+ * Sottoinsieme del bridge usato da Email Forge / DeepSearch
+ * (`useFireScrapeExtensionBridge`). Le risposte sono oggetti
+ * `{ success: boolean, error?, data?, markdown?, ... }`.
+ */
+export interface FsBridge {
+  readonly isAvailable: boolean;
+  googleSearch: (query: string, limit?: number, skipCache?: boolean) => Promise<{
+    success: boolean;
+    error?: string;
+    data?: Array<{ url?: string; title?: string; description?: string }>;
+  }>;
+  agentAction: (step: { action: string; [k: string]: unknown }) => Promise<{ success: boolean; error?: string }>;
+  scrape: (skipCache?: boolean) => Promise<{
+    success: boolean;
+    error?: string;
+    markdown?: string;
+    metadata?: { title?: string; description?: string; url?: string };
+  }>;
+}
+
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ── Cache helpers (stessa tabella di Sherlock) ───────────────────────────────
-
-function extractMarkdown(data: unknown): string {
-  if (!data || typeof data !== "object") return "";
-  const d = data as Record<string, unknown>;
-  if (typeof d.markdown === "string") return d.markdown;
-  if (typeof d.content === "string") return d.content;
-  if (d.result && typeof d.result === "object") {
-    const r = d.result as Record<string, unknown>;
-    if (typeof r.markdown === "string") return r.markdown;
-  }
-  return "";
-}
 
 async function checkCache(url: string): Promise<string | null> {
   try {
@@ -103,26 +110,44 @@ async function persistScrape(url: string, markdown: string): Promise<void> {
 }
 
 /**
- * Lettura unificata di un URL — STESSO metodo di Sherlock/Email Forge.
- * - Pre-check cache
- * - Throttle per canale/host
- * - extFs.readUrl (navigateBackground + scrape)
- * - prettifyScrapedMarkdown
- * - persistenza in scrape_cache
+ * Lettura unificata di un URL — STESSO metodo di Email Forge / DeepSearch:
+ *   navigate(background:true, reuseTab:true) → delay → scrape(skipCache:true)
  */
-async function readUrlSmart(url: string, channel: "google" | "generic" = "generic", signal?: AbortSignal): Promise<string> {
+async function readUrlSmart(
+  bridge: FsBridge,
+  url: string,
+  log: (msg: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
   const cached = await checkCache(url);
-  if (cached) return cached;
-
-  try { await throttle(channel, url, signal ?? new AbortController().signal); } catch { /* aborted */ }
-
-  const res = await extFs.readUrl(url, { settleMs: 2000, skipCache: true, signal });
-  if (!res.ok) return "";
-  const raw = extractMarkdown(res.data);
-  if (!raw) return "";
-  const pretty = prettifyScrapedMarkdown(raw);
-  if (pretty) persistScrape(url, pretty).catch(() => null);
-  return pretty;
+  if (cached) {
+    log(`📦 cache hit · ${url}`);
+    return cached;
+  }
+  log(`🌐 navigate · ${url}`);
+  const nav = await bridge.agentAction({ action: "navigate", url, background: true, reuseTab: true });
+  if (!nav.success) {
+    log(`✗ navigate fallita: ${nav.error || "errore sconosciuto"}`);
+    return "";
+  }
+  await new Promise<void>((res) => {
+    const t = setTimeout(res, 2000);
+    signal?.addEventListener("abort", () => { clearTimeout(t); res(); }, { once: true });
+  });
+  if (signal?.aborted) return "";
+  const sc = await bridge.scrape(true);
+  if (!sc.success) {
+    log(`✗ scrape fallito: ${sc.error || "errore sconosciuto"}`);
+    return "";
+  }
+  const md = sc.markdown || "";
+  if (md) {
+    log(`✓ scrape ok · ${md.length} chars`);
+    persistScrape(url, md).catch(() => null);
+  } else {
+    log(`⚠ scrape vuoto`);
+  }
+  return md;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -148,30 +173,43 @@ function isLinkedInPersonUrl(url: string): boolean {
   return /linkedin\.com\/in\//i.test(url);
 }
 
-// ── Google search via action nativa estensione (stesso metodo Sherlock) ────
+// ── Google search via action nativa estensione (stesso metodo Email Forge) ──
 
-async function googleSearchNative(query: string, limit = 5): Promise<Array<{ url: string; title: string; snippet: string }>> {
+async function googleSearch(
+  bridge: FsBridge,
+  query: string,
+  log: (msg: string) => void,
+  limit = 5,
+): Promise<Array<{ url: string; title: string; snippet: string }>> {
+  log(`🔍 google: ${query}`);
   try {
-    const res = await extFs.googleSearch(query, limit);
-    if (res.ok) {
-      const data = (res.data as { data?: Array<{ url?: string; title?: string; description?: string }> }).data;
-      if (Array.isArray(data)) {
-        return data.map((r) => ({ url: r.url || "", title: r.title || "", snippet: r.description || "" }));
-      }
+    const res = await bridge.googleSearch(query, limit, false);
+    if (res?.success && Array.isArray(res.data)) {
+      log(`  → ${res.data.length} risultati`);
+      return res.data.map((r) => ({ url: r.url || "", title: r.title || "", snippet: r.description || "" }));
     }
-  } catch { /* fallthrough */ }
+    log(`  → 0 risultati (${res?.error || "no data"})`);
+  } catch (e) {
+    log(`  ✗ errore: ${(e as Error).message}`);
+  }
   return [];
 }
 
 // ── Step 1: slug LinkedIn azienda ───────────────────────────────────────────
 
-export async function findCompanyLinkedInSlug(companyName: string): Promise<string | null> {
+export async function findCompanyLinkedInSlug(
+  bridge: FsBridge,
+  companyName: string,
+  log: (msg: string) => void,
+): Promise<string | null> {
   if (!companyName || companyName.length < 2) return null;
   const q = `site:linkedin.com/company "${companyName}"`;
-  const results = await googleSearchNative(q, 5);
+  const results = await googleSearch(bridge, q, log, 5);
   for (const r of results) {
     if (isLinkedInCompanyUrl(r.url)) {
-      return r.url.split("?")[0].replace(/\/$/, "");
+      const slug = r.url.split("?")[0].replace(/\/$/, "");
+      log(`  ✓ slug: ${slug}`);
+      return slug;
     }
   }
   return null;
@@ -179,7 +217,12 @@ export async function findCompanyLinkedInSlug(companyName: string): Promise<stri
 
 // ── Step 2: slug LinkedIn persona ───────────────────────────────────────────
 
-export async function findPersonLinkedInSlug(personName: string, companyHint?: string): Promise<string | null> {
+export async function findPersonLinkedInSlug(
+  bridge: FsBridge,
+  personName: string,
+  log: (msg: string) => void,
+  companyHint?: string,
+): Promise<string | null> {
   if (!personName || personName.length < 3) return null;
   const queries = [
     companyHint ? `"${personName}" "${companyHint}" site:linkedin.com/in` : null,
@@ -187,10 +230,12 @@ export async function findPersonLinkedInSlug(personName: string, companyHint?: s
   ].filter((q): q is string => !!q);
 
   for (const q of queries) {
-    const results = await googleSearchNative(q, 5);
+    const results = await googleSearch(bridge, q, log, 5);
     for (const r of results) {
       if (isLinkedInPersonUrl(r.url)) {
-        return r.url.split("?")[0].replace(/\/$/, "");
+        const slug = r.url.split("?")[0].replace(/\/$/, "");
+        log(`  ✓ slug: ${slug}`);
+        return slug;
       }
     }
   }
@@ -213,7 +258,12 @@ export async function findCompanyLogo(domain: string): Promise<string | null> {
 
 // ── Step 4: mini-scrape sito (homepage + /about + /contact) ─────────────────
 
-export async function scrapeSiteExcerpt(domain: string, signal?: AbortSignal): Promise<WebsiteExcerpt | null> {
+export async function scrapeSiteExcerpt(
+  bridge: FsBridge,
+  domain: string,
+  log: (msg: string) => void,
+  signal?: AbortSignal,
+): Promise<WebsiteExcerpt | null> {
   if (!domain) return null;
   const d = extractDomain(domain);
   if (!d) return null;
@@ -223,7 +273,7 @@ export async function scrapeSiteExcerpt(domain: string, signal?: AbortSignal): P
 
   for (const url of pages) {
     if (signal?.aborted) break;
-    const md = await readUrlSmart(url, "generic", signal);
+    const md = await readUrlSmart(bridge, url, log, signal);
     if (md) {
       collectedText += "\n" + md;
       if (collectedText.length > 8000) break;
@@ -278,27 +328,47 @@ async function persistEnrichmentPatch(
 
 // ── Orchestrazione per singolo target ───────────────────────────────────────
 
-export async function enrichBaseTarget(target: BaseEnrichTarget, signal?: AbortSignal): Promise<BaseEnrichResult> {
+export async function enrichBaseTarget(
+  bridge: FsBridge,
+  target: BaseEnrichTarget,
+  signal?: AbortSignal,
+  onLog?: (msg: string) => void,
+): Promise<BaseEnrichResult> {
   const errors: string[] = [];
+  const logs: string[] = [];
+  const log = (m: string): void => {
+    logs.push(m);
+    if (onLog) onLog(m);
+    // Console: utile per debugging dal devtools
+    // eslint-disable-next-line no-console
+    console.info(`[enrich:${target.source}:${target.name}] ${m}`);
+  };
+
   let slugFound = false;
   let logoFound = false;
   let siteScraped = false;
 
   const isCompanyLike = target.source === "wca" || target.source === "bca";
+  log(`▶ start (linkedin:${target.hasLinkedin?"✓":"✗"} logo:${target.hasLogo?"✓":"✗"} site:${target.hasWebsiteExcerpt?"✓":"✗"} domain:${target.domain || "—"})`);
 
   // Slug LinkedIn
   if (!target.hasLinkedin) {
     try {
       const company = target.companyName || target.name;
       const slug = isCompanyLike
-        ? await findCompanyLinkedInSlug(company)
-        : await findPersonLinkedInSlug(target.name, target.companyName);
+        ? await findCompanyLinkedInSlug(bridge, company, log)
+        : await findPersonLinkedInSlug(bridge, target.name, log, target.companyName);
       if (slug) {
         slugFound = true;
         await persistEnrichmentPatch(target.source, target.id, { linkedin_url: slug });
+        log(`💾 saved linkedin_url`);
+      } else {
+        log(`✗ nessun slug LinkedIn trovato`);
       }
     } catch (e) {
-      errors.push(`slug: ${(e as Error).message}`);
+      const msg = `slug: ${(e as Error).message}`;
+      errors.push(msg);
+      log(`✗ ${msg}`);
     }
   }
 
@@ -309,24 +379,33 @@ export async function enrichBaseTarget(target: BaseEnrichTarget, signal?: AbortS
       if (logoUrl) {
         await persistEnrichmentPatch(target.source, target.id, {}, { logo_url: logoUrl });
         logoFound = true;
+        log(`💾 saved logo_url`);
       }
     } catch (e) {
-      errors.push(`logo: ${(e as Error).message}`);
+      const msg = `logo: ${(e as Error).message}`;
+      errors.push(msg);
+      log(`✗ ${msg}`);
     }
   }
 
   // Mini-scrape sito (solo aziende)
   if (isCompanyLike && !target.hasWebsiteExcerpt && target.domain) {
     try {
-      const excerpt = await scrapeSiteExcerpt(target.domain, signal);
+      const excerpt = await scrapeSiteExcerpt(bridge, target.domain, log, signal);
       if (excerpt) {
         await persistEnrichmentPatch(target.source, target.id, { website_excerpt: excerpt });
         siteScraped = true;
+        log(`💾 saved website_excerpt (${excerpt.emails.length} email, ${excerpt.phones.length} tel)`);
+      } else {
+        log(`✗ excerpt vuoto`);
       }
     } catch (e) {
-      errors.push(`site: ${(e as Error).message}`);
+      const msg = `site: ${(e as Error).message}`;
+      errors.push(msg);
+      log(`✗ ${msg}`);
     }
   }
 
-  return { id: target.id, slugFound, logoFound, siteScraped, errors };
+  log(`■ done (slug:${slugFound?"✓":"✗"} logo:${logoFound?"✓":"✗"} site:${siteScraped?"✓":"✗"})`);
+  return { id: target.id, slugFound, logoFound, siteScraped, errors, logs };
 }

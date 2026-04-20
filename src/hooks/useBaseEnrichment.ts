@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { enrichBaseTarget, type BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { toast } from "@/hooks/use-toast";
 
 const STORAGE_KEY = "enrichment.base.state.v1";
@@ -55,6 +56,7 @@ function savePersisted(s: PersistedState | null): void {
 }
 
 export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
+  const fsBridge = useFireScrapeExtensionBridge();
   const [progress, setProgress] = useState<BaseEnrichmentProgress>({
     status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0, rowStates: {},
   });
@@ -86,6 +88,14 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
   const start = useCallback(async () => {
     if (runningRef.current) {
       toast({ title: "Job già in esecuzione" });
+      return;
+    }
+    if (!fsBridge.isAvailable) {
+      toast({
+        title: "Estensione Partner Connect non rilevata",
+        description: "Apri un sito qualsiasi e assicurati che l'estensione sia installata e attiva, poi riprova.",
+        variant: "destructive",
+      });
       return;
     }
     const allTargets = getTargets();
@@ -155,7 +165,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         }));
         let rSlug = false, rLogo = false, rSite = false, rErr = 0;
         try {
-          const r = await enrichBaseTarget(t);
+          const r = await enrichBaseTarget(fsBridge, t);
           rSlug = r.slugFound; rLogo = r.logoFound; rSite = r.siteScraped; rErr = r.errors.length;
           if (r.slugFound) slugFound++;
           if (r.logoFound) logoFound++;
@@ -191,7 +201,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         description: `${slugFound} LinkedIn · ${logoFound} loghi · ${siteScraped} siti letti · ${errors} errori`,
       });
     }
-  }, [getTargets]);
+  }, [getTargets, fsBridge]);
 
   return { progress, start, stop };
 }
