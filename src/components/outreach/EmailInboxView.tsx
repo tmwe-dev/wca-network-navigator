@@ -8,6 +8,8 @@ import { useChannelMessages, useMarkAsRead, useContinuousSync, type ChannelMessa
 import { useEmailCount } from "@/hooks/useEmailCount";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { extractSenderBrand } from "./email/emailUtils";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -16,7 +18,10 @@ function formatElapsed(seconds: number): string {
 }
 
 export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) {
-  const [search, setSearch] = useState("");
+  const g = useGlobalFilters();
+  // La search globale (sortingSearch) ha priorità su quella locale; manteniamo quella locale come fallback.
+  const [localSearch, setLocalSearch] = useState("");
+  const search = g.filters.sortingSearch || localSearch;
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -35,14 +40,59 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
   const { isSyncing, progress } = useContinuousSync();
   const { data: emailCount = 0 } = useEmailCount(isSyncing);
 
-  const inbound = useMemo(
-    () => messages.filter((message) => message.direction === "inbound"),
-    [messages],
-  );
+  const inbound = useMemo(() => {
+    const base = messages.filter((message) => message.direction === "inbound");
+
+    // Filtro stato lette/non lette dalla sidebar globale
+    const stateFilter = g.filters.sortingFilter;
+    const stateFiltered = stateFilter === "unreviewed"
+      ? base.filter(m => !m.read_at)
+      : stateFilter === "reviewed"
+        ? base.filter(m => !!m.read_at)
+        : base;
+
+    // Ordinamento dalla sidebar globale (emailSort)
+    const sort = g.filters.emailSort;
+    const sorted = [...stateFiltered].sort((a, b) => {
+      const da = new Date(a.email_date || a.created_at).getTime();
+      const db = new Date(b.email_date || b.created_at).getTime();
+      if (sort === "date_asc") return da - db;
+      if (sort === "unread") {
+        const ua = a.read_at ? 1 : 0;
+        const ub = b.read_at ? 1 : 0;
+        if (ua !== ub) return ua - ub;
+        return db - da;
+      }
+      // default date_desc
+      return db - da;
+    });
+
+    // Raggruppamento per mittente: cluster contigui per brand normalizzato
+    if (g.filters.inreachGroupBySender) {
+      const buckets = new Map<string, ChannelMessage[]>();
+      for (const m of sorted) {
+        const { brand } = extractSenderBrand(m.from_address || "");
+        const key = (brand || m.from_address || "—").toLowerCase();
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key)!.push(m);
+      }
+      // Ordina i bucket per data più recente del primo elemento
+      const bucketArr = Array.from(buckets.entries()).sort((a, b) => {
+        const da = new Date(a[1][0].email_date || a[1][0].created_at).getTime();
+        const dbb = new Date(b[1][0].email_date || b[1][0].created_at).getTime();
+        return dbb - da;
+      });
+      return bucketArr.flatMap(([, arr]) => arr);
+    }
+
+    return sorted;
+  }, [messages, g.filters.sortingFilter, g.filters.emailSort, g.filters.inreachGroupBySender]);
+
   const selectedMsg = useMemo(
     () => (selectedId ? inbound.find((message) => message.id === selectedId) ?? null : null),
     [inbound, selectedId],
   );
+
   const showSyncPanel = isSyncing || progress.status === "done" || progress.status === "error";
   const hasNextPage = messages.length === pageSize;
   const hasPrevPage = page > 0;
@@ -75,7 +125,14 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
               <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  // Se la search globale è vuota, scriviamo nello stato locale; altrimenti aggiorniamo il globale
+                  if (g.filters.sortingSearch) {
+                    g.setSortingSearch(event.target.value);
+                  } else {
+                    setLocalSearch(event.target.value);
+                  }
+                }}
                 placeholder="Cerca email..."
                 className="h-7 pl-8 text-xs"
               />

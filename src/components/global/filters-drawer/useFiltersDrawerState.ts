@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA, ROUTE_EMAIL_COMPOSER } from "@/constants/routes";
+import { ROUTE_OUTREACH, ROUTE_NETWORK, ROUTE_CRM, ROUTE_AGENDA, ROUTE_EMAIL_COMPOSER, ROUTE_INREACH } from "@/constants/routes";
 import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter, type WorkspaceFilterKey } from "@/contexts/GlobalFiltersContext";
 import { useCockpitContacts } from "@/hooks/useCockpitContacts";
 import { FLAG } from "./constants";
@@ -19,6 +19,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isAgenda = seg === `/${ROUTE_AGENDA}`;
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
   const isCampaigns = seg === "/campaigns";
+  const isInreach = seg === `/${ROUTE_INREACH}`;
 
   const outreachTab = g.filters.outreachTab;
   const isCockpit = isOutreach && outreachTab === "cockpit";
@@ -26,9 +27,11 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isInUscita = isOutreach && outreachTab === "inuscita";
   const isCircuito = isOutreach && outreachTab === "circuito";
   const isAttivita = isOutreach && outreachTab === "attivita";
-  const isEmail = isOutreach && outreachTab === "email";
-  const isWhatsApp = isOutreach && outreachTab === "whatsapp";
-  const isLinkedIn = isOutreach && outreachTab === "linkedin";
+  // Inreach: il canale attivo è guidato dallo stato globale `inreachChannel`
+  const inreachCh = g.filters.inreachChannel;
+  const isEmail = (isOutreach && outreachTab === "email") || (isInreach && inreachCh === "email");
+  const isWhatsApp = (isOutreach && outreachTab === "whatsapp") || (isInreach && inreachCh === "whatsapp");
+  const isLinkedIn = (isOutreach && outreachTab === "linkedin") || (isInreach && inreachCh === "linkedin");
   const isInbox = isEmail || isWhatsApp || isLinkedIn;
 
   const { contacts } = useCockpitContacts();
@@ -45,7 +48,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -151,6 +154,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     isCockpit, isWorkspace, isInUscita, isCircuito, isAttivita,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
     isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer, isCampaigns,
+    isInreach,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
   };

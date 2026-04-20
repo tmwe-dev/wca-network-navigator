@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, RotateCcw, Check, Mail, MessageCircle, Linkedin } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, Check, Mail, MessageCircle, Linkedin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
@@ -17,6 +17,7 @@ import { NetworkFiltersSection } from "./NetworkFiltersSection";
 import { CRMFiltersSection } from "./CRMFiltersSection";
 import { BCAFiltersSection } from "./BCAFiltersSection";
 import { CampaignsFiltersSection } from "./CampaignsFiltersSection";
+import { FilterSection, ChipGroup, Chip } from "./shared";
 import type { FiltersDrawerProps } from "./types";
 
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
@@ -75,6 +76,25 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 channelIcon={state.isEmail ? Mail : state.isWhatsApp ? MessageCircle : Linkedin}
               />
             )}
+            {/* Sezione esclusiva di /v2/inreach: raggruppamento per mittente */}
+            {state.isInreach && (
+              <FilterSection icon={Users} label="Visualizzazione">
+                <ChipGroup>
+                  <Chip
+                    active={!state.g.filters.inreachGroupBySender}
+                    onClick={() => state.g.setFilter("inreachGroupBySender", false)}
+                  >
+                    Lista cronologica
+                  </Chip>
+                  <Chip
+                    active={state.g.filters.inreachGroupBySender}
+                    onClick={() => state.g.setFilter("inreachGroupBySender", true)}
+                  >
+                    Raggruppa per mittente
+                  </Chip>
+                </ChipGroup>
+              </FilterSection>
+            )}
             {state.isNetwork && <NetworkFiltersSection />}
             {state.isCRM && state.g.filters.crmActiveTab === "contatti" && <CRMFiltersSection />}
             {state.isCRM && state.g.filters.crmActiveTab === "biglietti" && <BCAFiltersSection />}
@@ -82,7 +102,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isCampaigns && <CampaignsFiltersSection />}
             {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>
