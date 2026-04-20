@@ -365,7 +365,7 @@ async function loadActivePlaybook(
 export async function assembleContextBlocks(
   supabase: SupabaseClient, userId: string, partner: PartnerData, contact: ContactData | null,
   contactEmail: string | null, sourceType: string, quality: Quality, standalone: boolean,
-  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null; deep_search?: boolean; authHeader?: string },
+  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null; deep_search?: boolean; authHeader?: string; email_type_kb_categories?: string[] | null },
 ): Promise<ContextBlocks> {
   const isPartnerSource = (sourceType === "partner" && partner.id) && (!standalone || opts.partner_id);
 
