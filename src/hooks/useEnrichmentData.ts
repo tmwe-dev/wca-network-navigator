@@ -86,22 +86,30 @@ interface ContactLookupRow {
   email: string | null;
 }
 
-/** Iterative batch loader — fetches ALL rows from a table, 2000 at a time */
+/**
+ * Iterative batch loader — fetches ALL rows from a table.
+ * Supabase impone un cap implicito di 1000 righe per query: usiamo limit() esplicito
+ * + range() per paginare e raccogliere il dataset reale (non più cappato a 1000).
+ */
 async function loadAllRows<T>(
   table: string,
   select: string,
   filters?: (q: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>,
-  batchSize = 2000
+  batchSize = 1000
 ): Promise<T[]> {
   const all: T[] = [];
   let page = 0;
-   
-  while (true) {
+  // Hard safety stop: 200 pagine = 200k righe max
+  while (page < 200) {
     let q = supabase.from(table as "partners").select(select) as unknown as ReturnType<typeof supabase.from>;
     if (filters) q = filters(q);
-    const { data, error } = await (q as unknown as { range: (a: number, b: number) => { data: T[] | null; error: { message: string } | null } }).range(page * batchSize, (page + 1) * batchSize - 1);
+    const from = page * batchSize;
+    const to = from + batchSize - 1;
+    const { data, error } = await (q as unknown as {
+      range: (a: number, b: number) => { limit: (n: number) => Promise<{ data: T[] | null; error: { message: string } | null }> }
+    }).range(from, to).limit(batchSize);
     if (error) throw error;
-    if (data) all.push(...data);
+    if (data && data.length) all.push(...data);
     if (!data || data.length < batchSize) break;
     page++;
   }
