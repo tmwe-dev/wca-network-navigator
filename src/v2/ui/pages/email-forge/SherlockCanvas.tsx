@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
+import { prettifyScrapedMarkdown } from "@/v2/services/sherlock/markdownPrettify";
+import { extractLinkedinCompanySlug } from "@/v2/services/sherlock/sherlockEngine";
+import { FindingsView } from "./sherlock/FindingsView";
 import type { SherlockLevel, SherlockStepResult } from "@/v2/services/sherlock/sherlockTypes";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
 
@@ -44,12 +47,13 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
   const vars = React.useMemo<Record<string, string>>(() => {
     const r = recipient;
     const website = manualWebsite.trim();
+    const liSlug = extractLinkedinCompanySlug(r?.linkedinUrl) ?? "";
     return {
       companyName: r?.companyName ?? "",
       city: r?.city ?? r?.countryName ?? r?.countryCode ?? "",
       websiteUrl: website,
       query: r ? `${r.companyName ?? ""} ${r.countryName ?? ""}`.trim() : "",
-      linkedinCompanySlug: "",
+      linkedinCompanySlug: liSlug,
     };
   }, [recipient, manualWebsite]);
 
