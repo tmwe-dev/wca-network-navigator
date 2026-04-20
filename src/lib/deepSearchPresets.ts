@@ -158,6 +158,10 @@ export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain =
   linkedinContacts: boolean;
   linkedinCompany: boolean;
   whatsapp: boolean;
+  googleGeneral: boolean;
+  googleMaps: boolean;
+  websiteMultiPage: boolean;
+  reputation: boolean;
   maxQueriesPerContact: number;
   priorityDomain: string;
 } {
@@ -167,6 +171,10 @@ export function presetToForgeConfig(quality: DeepSearchQuality, priorityDomain =
     linkedinContacts: s.linkedinContacts,
     linkedinCompany: s.linkedinCompany,
     whatsapp: s.whatsapp,
+    googleGeneral: s.googleGeneral,
+    googleMaps: s.googleMaps,
+    websiteMultiPage: s.websiteMultiPage,
+    reputation: s.reputation,
     maxQueriesPerContact: s.maxQueriesPerContact,
     priorityDomain,
   };
