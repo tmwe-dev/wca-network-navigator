@@ -21,6 +21,7 @@
  * archived/blacklisted sono terminali e si applicano solo manualmente.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -170,31 +171,33 @@ export async function evaluateTransitions(
 }
 
 // ── Applica una transizione ──
+// Cron consumer: agent_autonomous_cycle_tick (ogni 2 min) chiama evaluateTransitions
+// e poi applyTransition per ciascun risultato con autoApply=true.
 export async function applyTransition(
   supabase: SupabaseClient,
   partnerId: string,
   userId: string,
   transition: TransitionResult,
 ): Promise<boolean> {
-  if (!isValidTransition(transition.from, transition.to)) {
-    console.warn("[StateTransition] BLOCKED invalid transition:", JSON.stringify(transition));
-    return false;
-  }
+  const res = await applyLeadStatusChange(supabase, {
+    table: "partners",
+    recordId: partnerId,
+    newStatus: transition.to,
+    userId,
+    actor: { type: "cron", name: "stateTransitions/applyTransition" },
+    decisionOrigin: "system_cron",
+    trigger: transition.trigger,
+    metadata: { from_declared: transition.from, auto_apply: transition.autoApply },
+  });
 
-  const { error } = await supabase
-    .from("partners")
-    .update({ lead_status: transition.to })
-    .eq("id", partnerId)
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("[StateTransition] Failed to apply:", JSON.stringify({
-      partner_id: partnerId, from: transition.from, to: transition.to, error: error.message,
+  if (!res.applied) {
+    console.warn("[StateTransition] BLOCKED:", JSON.stringify({
+      partner_id: partnerId, from: transition.from, to: transition.to, reason: res.blockedReason,
     }));
     return false;
   }
 
-  // Log transizione come activity
+  // Log transizione come activity (per timeline UI)
   const { error: logError } = await supabase.from("activities").insert({
     user_id: userId,
     source_id: partnerId,
@@ -204,7 +207,6 @@ export async function applyTransition(
     description: `Transizione. Trigger: ${transition.trigger}. ${transition.autoApply ? "Auto-applicata." : "Approvata manualmente."}`,
     status: "completed",
   });
-
   if (logError) console.warn("[StateTransition] Log activity failed:", logError.message);
 
   console.log("[StateTransition] APPLIED", JSON.stringify({

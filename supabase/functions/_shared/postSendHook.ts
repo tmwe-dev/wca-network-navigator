@@ -9,6 +9,7 @@
  * Costituzione §3 (cadence) + §5 (post-invio).
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -44,7 +45,7 @@ export async function runPostSendHook(
 ): Promise<{ stateUpdated: boolean; reminderCreated: boolean; nextActionEnsured: boolean }> {
   const out = { stateUpdated: false, reminderCreated: false, nextActionEnsured: false };
 
-  // 1) Aggiorna stato new → first_touch_sent
+  // 1) Aggiorna stato new → first_touch_sent (via guard centralizzato + audit)
   if (input.partnerId) {
     try {
       const { data: p } = await supabase
@@ -54,13 +55,19 @@ export async function runPostSendHook(
         .eq("user_id", input.userId)
         .maybeSingle();
       if (p && (p.lead_status === "new" || !p.lead_status)) {
-        const { error } = await supabase
-          .from("partners")
-          .update({ lead_status: "first_touch_sent", last_interaction_at: new Date().toISOString() })
-          .eq("id", input.partnerId)
-          .eq("user_id", input.userId);
-        if (!error) out.stateUpdated = true;
+        const res = await applyLeadStatusChange(supabase, {
+          table: "partners",
+          recordId: input.partnerId,
+          newStatus: "first_touch_sent",
+          userId: input.userId,
+          actor: { type: "system", name: "postSendHook" },
+          decisionOrigin: "system_trigger",
+          trigger: `Primo messaggio inviato (${input.channel})`,
+          metadata: { channel: input.channel, sequence_day: input.sequenceDay ?? 0 },
+        });
+        if (res.applied) out.stateUpdated = true;
       } else if (p) {
+        // Stato avanzato: aggiorno solo timestamp, no transizione
         await supabase
           .from("partners")
           .update({ last_interaction_at: new Date().toISOString() })

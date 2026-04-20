@@ -5,6 +5,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
@@ -456,7 +457,7 @@ serve(async (req) => {
       }
     }
 
-    // ═══ GAP 2: AUTO-ESCALATION basata su classificazione ═══
+    // ═══ AUTO-ESCALATION basata su classificazione (via guard centralizzato) ═══
     const ESCALATION_CATEGORIES = ["interested", "meeting_request"];
     const POSITIVE_SENTIMENTS = ["positive", "very_positive"];
 
@@ -464,34 +465,37 @@ serve(async (req) => {
       ESCALATION_CATEGORIES.includes(classification.category) &&
       POSITIVE_SENTIMENTS.includes(classification.sentiment)
     ) {
+      // Mappa: lo stato corrente determina la destinazione
+      const escalationMap: Record<string, string> = {
+        new: "first_touch_sent",
+        first_touch_sent: "engaged",
+        holding: "engaged",
+        engaged: classification.category === "meeting_request" ? "qualified" : "engaged",
+      };
+
       if (input.partner_id) {
         const { data: partner } = await supabase
           .from("partners")
           .select("lead_status")
           .eq("id", input.partner_id)
           .single();
-
         if (partner) {
-          const statusMap: Record<string, string> = {
-            "new": "first_touch_sent",
-            "first_touch_sent": "engaged",
-            "holding": "engaged",
-            "engaged": classification.category === "meeting_request" ? "qualified" : "engaged",
-          };
-          const newStatus = statusMap[partner.lead_status];
-          if (newStatus && newStatus !== partner.lead_status) {
-            await supabase
-              .from("partners")
-              .update({ lead_status: newStatus, last_interaction_at: new Date().toISOString() })
-              .eq("id", input.partner_id);
-
-            logSupervisorAudit(supabase, {
-              user_id: input.user_id, actor_type: "system", actor_name: "classify-email-response",
-              action_category: "contact_updated",
-              action_detail: `Lead status auto-update: ${partner.lead_status} → ${newStatus}`,
-              target_type: "partner", partner_id: input.partner_id,
-              decision_origin: "system_trigger",
-              metadata: { old_status: partner.lead_status, new_status: newStatus, trigger: `email_classified_as_${classification.category}_${classification.sentiment}`, email_address: input.email_address, confidence: classification.confidence },
+          const target = escalationMap[partner.lead_status as string];
+          if (target && target !== partner.lead_status) {
+            await applyLeadStatusChange(supabase, {
+              table: "partners",
+              recordId: input.partner_id,
+              newStatus: target,
+              userId: input.user_id,
+              actor: { type: "system", name: "classify-email-response" },
+              decisionOrigin: "ai_auto",
+              trigger: `email_classified_as_${classification.category}_${classification.sentiment}`,
+              metadata: {
+                email_address: input.email_address,
+                confidence: classification.confidence,
+                category: classification.category,
+                sentiment: classification.sentiment,
+              },
             });
           }
         }
@@ -503,49 +507,60 @@ serve(async (req) => {
           .select("lead_status")
           .eq("id", input.contact_id)
           .single();
-
         if (contact) {
-          const statusMap: Record<string, string> = {
-            "new": "first_touch_sent",
-            "first_touch_sent": "engaged",
-            "holding": "engaged",
-            "engaged": classification.category === "meeting_request" ? "qualified" : "engaged",
-          };
-          const newStatus = statusMap[contact.lead_status];
-          if (newStatus && newStatus !== contact.lead_status) {
-            await supabase
-              .from("imported_contacts")
-              .update({ lead_status: newStatus })
-              .eq("id", input.contact_id);
-
-            logSupervisorAudit(supabase, {
-              user_id: input.user_id, actor_type: "system", actor_name: "classify-email-response",
-              action_category: "contact_updated",
-              action_detail: `Imported contact lead status auto-update: ${contact.lead_status} → ${newStatus}`,
-              target_type: "imported_contact",
-              decision_origin: "system_trigger",
-              metadata: { contact_id: input.contact_id, old_status: contact.lead_status, new_status: newStatus, trigger: `email_classified_as_${classification.category}_${classification.sentiment}` },
+          const target = escalationMap[contact.lead_status as string];
+          if (target && target !== contact.lead_status) {
+            await applyLeadStatusChange(supabase, {
+              table: "imported_contacts",
+              recordId: input.contact_id,
+              newStatus: target,
+              userId: input.user_id,
+              actor: { type: "system", name: "classify-email-response" },
+              decisionOrigin: "ai_auto",
+              trigger: `email_classified_as_${classification.category}_${classification.sentiment}`,
+              metadata: {
+                email_address: input.email_address,
+                confidence: classification.confidence,
+              },
             });
           }
         }
       }
     }
 
-    // ═══ GAP 2: AUTO-ARCHIVE per not_interested (tassonomia 9 stati) ═══
+    // ═══ NOT_INTERESTED: NON archivia mai automaticamente ═══
+    // Costituzione commerciale: archived richiede 3+ tentativi + 90+ giorni + reason + approvazione manuale.
+    // Se l'AI rileva un "non interessato" ad alta confidenza, sposta SOLO a "holding"
+    // e logga la richiesta. L'archiviazione resta sempre manuale (Director).
     if (classification.category === "not_interested" && classification.confidence >= 0.80) {
-      if (input.partner_id) {
-        await supabase
-          .from("partners")
-          .update({ lead_status: "archived" })
-          .eq("id", input.partner_id)
-          .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified"]);
-      }
-      if (input.contact_id) {
-        await supabase
-          .from("imported_contacts")
-          .update({ lead_status: "archived" })
-          .eq("id", input.contact_id)
-          .in("lead_status", ["first_touch_sent", "holding", "engaged", "qualified"]);
+      const targets: Array<{ table: "partners" | "imported_contacts"; id: string }> = [];
+      if (input.partner_id) targets.push({ table: "partners", id: input.partner_id });
+      if (input.contact_id) targets.push({ table: "imported_contacts", id: input.contact_id });
+
+      for (const t of targets) {
+        // Sposta a holding solo se attualmente in stato attivo (non già holding/archiviato/blacklist)
+        const { data: cur } = await supabase
+          .from(t.table)
+          .select("lead_status")
+          .eq("id", t.id)
+          .maybeSingle();
+        const currentStatus = (cur as { lead_status: string } | null)?.lead_status;
+        if (currentStatus && ["first_touch_sent", "engaged", "qualified"].includes(currentStatus)) {
+          await applyLeadStatusChange(supabase, {
+            table: t.table,
+            recordId: t.id,
+            newStatus: "holding",
+            userId: input.user_id,
+            actor: { type: "system", name: "classify-email-response" },
+            decisionOrigin: "ai_auto",
+            trigger: "not_interested_detected — moved to holding (archived requires manual Director approval)",
+            metadata: {
+              email_address: input.email_address,
+              confidence: classification.confidence,
+              note: "Auto-archive bloccato: regola 3+ tentativi + 90gg + reason + approvazione Director",
+            },
+          });
+        }
       }
     }
 

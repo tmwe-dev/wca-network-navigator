@@ -3927,6 +3927,7 @@ export type Database = {
           position: string | null
           raw_data: Json | null
           row_number: number
+          status_reason: string | null
           user_id: string | null
           wca_match_confidence: number | null
           wca_partner_id: string | null
@@ -3967,6 +3968,7 @@ export type Database = {
           position?: string | null
           raw_data?: Json | null
           row_number?: number
+          status_reason?: string | null
           user_id?: string | null
           wca_match_confidence?: number | null
           wca_partner_id?: string | null
@@ -4007,6 +4009,7 @@ export type Database = {
           position?: string | null
           raw_data?: Json | null
           row_number?: number
+          status_reason?: string | null
           user_id?: string | null
           wca_match_confidence?: number | null
           wca_partner_id?: string | null
@@ -5418,6 +5421,7 @@ export type Database = {
           rating_details: Json | null
           raw_profile_html: string | null
           raw_profile_markdown: string | null
+          status_reason: string | null
           updated_at: string | null
           user_id: string | null
           wca_id: number | null
@@ -5462,6 +5466,7 @@ export type Database = {
           rating_details?: Json | null
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
+          status_reason?: string | null
           updated_at?: string | null
           user_id?: string | null
           wca_id?: number | null
@@ -5506,6 +5511,7 @@ export type Database = {
           rating_details?: Json | null
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
+          status_reason?: string | null
           updated_at?: string | null
           user_id?: string | null
           wca_id?: number | null
