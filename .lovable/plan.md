@@ -1,157 +1,58 @@
 
-L'utente vuole:
-1. **Backup** della versione FireScrape attuale (funziona bene).
-2. Trasformare Deep Search in **"Sherlock"** — un investigatore con 3 livelli di profondità.
-3. Le istruzioni di ricerca devono stare in una **Knowledge Base modificabile** (non hardcoded).
-4. L'AI deve assistere lo scraper: parsing intelligente + decidere prossimo step in base a cosa trova.
-5. Esecuzione **sequenziale e iterativa**: una richiesta alla volta, raccogli, valuta, poi prossima.
+## Diagnosi: 2 menu V2 con voci diverse
 
-## Cosa abbiamo già che funziona (NON toccare)
+Nella V2 oggi convivono **due sistemi di navigazione separati**, ciascuno con la propria lista di voci hardcoded:
 
-- `bridge.ts` → `fs.readUrl(url)` con `navigate` + `settleMs` + `scrape` top-level. Testato, allineato all'API estensione v3.4.0.
-- `DeepSearchCanvas.tsx` → UI canvas con feed live, Stop, render markdown formattato, persistenza in `scrape_cache`.
-- `scrape_cache` → tabella con TTL 7gg già attiva.
-- 4 pipeline base (Google Maps, sito multi-pagina, reputation, Google generale).
-- Gate timing LI/WA (Fase 1 piano precedente, da completare).
+### Menu 1 — `FloatingDock` (dock verticale a sinistra, sempre visibile)
+File: `src/components/layout/FloatingDock.tsx`  
+**10 voci**: Home, Command, Agenti, Email, Comunicazioni, Contatti, Template, Automazioni, Audit, Impostazioni
 
-## Piano "Sherlock"
+### Menu 2 — `LayoutSidebarNav` (pannello hamburger, si apre cliccando ☰)
+File: `src/v2/ui/templates/LayoutSidebarNav.tsx`  
+**~20 voci** organizzate in 6 gruppi: Command, Overview (Dashboard, Network, Globe, CRM), Comunicazione (Outreach, Inreach, Agenda, Campagne, Approvazioni, AI Arena), Intelligence (Email Intelligence, Email Forge, Research), AI Operations (Agenti, Missioni, AI Staff, AI Control), Sistema (Impostazioni, Guida)
 
-### 1. Backup versione corrente
-- Copiare i 3 file chiave in `src/v2/io/extensions/_backup/2026-04-20-firescrape-v1/`:
-  - `bridge.ts`, `deep-search-pipelines.ts`, `DeepSearchCanvas.tsx`
-- README breve con data, contratto API estensione, screenshot di funzionamento.
-- Memoria `mem://features/firescrape-baseline-2026-04-20` con riferimento al backup.
+### Perché succede
+- Le **due liste sono fisicamente diverse e non condividono sorgente dati**.
+- Il `FloatingDock` punta a rotte semplificate (`/v2/agents`, `/v2/templates`, `/v2/automations`, `/v2/audit`) di cui alcune **non esistono** nel router V2 (es. `/v2/templates`, `/v2/automations`, `/v2/audit` non sono mappate → portano a 404 o a fallback).
+- Il `LayoutSidebarNav` è la **navigazione canonica** (allineata alle rotte reali in `src/v2/routes.tsx`).
+- In produzione vedi le voci dell'hamburger perché è quello realmente collegato al router; il dock laterale invece propone label "marketing" inventate (Template/Automazioni/Audit) che non corrispondono al sistema.
 
-### 2. Nuova KB "Sherlock Playbooks" (DB + UI)
-
-Tabella `sherlock_playbooks`:
-```text
-id | level (1|2|3) | name | description | is_active | sort_order
-   | steps (jsonb) — array di step ordinati
-   | target_fields (text[]) — es. {email, phone, role, linkedin}
-   | created_at | updated_at | user_id
-```
-
-Ogni **step** in `steps`:
-```text
-{
-  order: 1,
-  label: "Scheda Google Maps",
-  url_template: "https://google.com/maps/search/{companyName}+{city}",
-  required_vars: ["companyName"],
-  settle_ms: 3000,
-  channel: "generic" | "linkedin" | "whatsapp",
-  ai_extract_prompt: "Estrai indirizzo, telefono, sito, orari…",
-  ai_decide_next: true | false,   // se true, AI può saltare step successivi
-  depends_on: [step.order]        // opzionale
-}
-```
-
-**3 livelli predefiniti** (seed):
-- **Livello 1 — Scout** (~30s): solo Google Maps + sito home. Per validazioni rapide.
-- **Livello 2 — Detective** (~2min): + sito multi-pagina + LinkedIn company + reputation.
-- **Livello 3 — Sherlock** (~5min): + LinkedIn profili dei contatti chiave + news ultimi 12 mesi + ricerche email pattern + cross-reference.
-
-**UI editor** in Impostazioni → "Sherlock Playbooks":
-- Lista livelli, drag-drop step, editor template URL con preview variabili, editor prompt AI per step, toggle attivo.
-- Riusa pattern esistente `KBIngestPanel` / `BackupExportTab`.
-
-### 3. Esecutore Sherlock (orchestratore sequenziale)
-
-Nuovo file `src/v2/services/sherlock/sherlockEngine.ts`:
+### Diagramma
 
 ```text
-runSherlock(level, vars, signal) {
-  playbook = loadPlaybook(level)
-  context = { vars, findings: {}, history: [] }
-
-  for step in playbook.steps:
-    if signal.aborted: break
-    if !checkRequiredVars(step, context): skip
-    
-    url = renderTemplate(step.url_template, context)
-    
-    // Pre-check cache + rate gate (riusa fasi precedenti)
-    if cacheHit(url): markdown = cached
-    else: 
-      awaitChannelSlot(step.channel, signal)
-      markdown = await fs.readUrl(url, signal)
-      persistScrape(...)
-    
-    // AI parsing mirato per QUESTO step
-    extracted = await callAI({
-      system: SHERLOCK_SYSTEM,
-      user: step.ai_extract_prompt + markdown + JSON(context.findings)
-    })
-    
-    context.findings[step.order] = extracted
-    emitProgress({ step, extracted, markdown })
-    
-    // AI decide se continuare/saltare
-    if step.ai_decide_next:
-      decision = await callAI(decideNextPrompt(context))
-      if decision.skip_to: jumpTo(decision.skip_to)
-      if decision.stop_reason: break
-  
-  return consolidateFindings(context)
-}
+AuthenticatedLayout
+├── FloatingDock (dock a sx) ────► lista A (10 voci, alcune broken)
+└── LayoutSidebarNav (hamburger) ──► lista B (20 voci, canonica)
+                                     ▲
+                                     └── allineata a src/v2/routes.tsx
 ```
 
-### 4. Edge function `sherlock-extract`
+## Piano di consolidamento
 
-Riusa Lovable AI Gateway (`google/gemini-3-flash-preview` default).
-- Input: `{ markdown, extract_prompt, target_fields, prior_findings }`
-- Tool calling con schema dinamico generato da `target_fields` (no JSON-by-prompt).
-- Output: `{ findings: {...}, confidence: 0-1, suggested_next_url?: string }`
-- Il campo `suggested_next_url` è la "intelligenza Sherlock": se trova nel markdown un link LinkedIn del CEO, lo propone come prossimo step.
+Obiettivo: **una sola sorgente di verità** per la navigazione V2, così che dock + hamburger + mobile bottom nav mostrino **identiche etichette e portino a rotte esistenti**.
 
-### 5. UI Canvas evoluzione (minimal change)
+### Step 1 — Sorgente unica
+Creare `src/v2/ui/templates/navConfig.ts` che esporta `navGroupsDef` (oggi dentro `LayoutSidebarNav`). Questa diventa l'unica lista canonica.
 
-Rinominare `DeepSearchCanvas` → `SherlockCanvas`:
-- Header: selettore livello (Scout / Detective / Sherlock) con stima tempo + chip target_fields.
-- Sidebar sinistra: timeline step (✓ done, ⏳ running, 💡 AI-suggested-next, ⏭ skipped-by-AI).
-- Centro: tab **Markdown** | **Findings AI** (JSON formattato per step) | **Sintesi finale**.
-- Pulsante "Salva risultati nel CRM" → applica findings al partner/contatto via DAL esistente.
+### Step 2 — Rifare `FloatingDock` come "Top picks" del menu canonico
+Il dock laterale mostra **8 scorciatoie** prese dal `navGroupsDef` (non più voci inventate), selezionate con flag `pinned: true` nel config. Esempio: Dashboard, Command, Network, CRM, Outreach, Inreach, Agenti, Impostazioni. Tutte rotte reali, label uguali a quelle dell'hamburger.
 
-### 6. Integrazione futura (cockpit/email)
-Esposto come hook `useSherlock(level)` riusabile in EmailComposer per arricchire contatti prima di un invio (toggle "Approfondisci con Sherlock prima di scrivere").
+### Step 3 — Rimuovere voci "fantasma"
+Elimino dal dock le voci che non esistono nelle rotte V2: Template, Automazioni, Audit, Comunicazioni (era duplicato di Outreach), Email (duplicato).
 
-## File interessati
+### Step 4 — Allineamento mobile
+`MobileBottomNav` continua a mostrare le 4 voci principali + Mission, ma le pesca anch'esso da `navConfig.ts` (oggi è hardcoded a parte).
 
-**Nuovi**:
-- `src/v2/io/extensions/_backup/2026-04-20-firescrape-v1/` (3 file)
-- `supabase/migrations/<ts>_sherlock_playbooks.sql`
-- `src/data/sherlockPlaybooks.ts` (DAL)
-- `src/v2/services/sherlock/sherlockEngine.ts`
-- `src/v2/services/sherlock/sherlockTemplates.ts` (render `{var}`)
-- `src/v2/hooks/useSherlock.ts`
-- `src/v2/ui/pages/email-forge/SherlockCanvas.tsx` (sostituisce DeepSearchCanvas)
-- `src/components/settings/SherlockPlaybooksEditor.tsx`
-- `supabase/functions/sherlock-extract/index.ts`
-- Memoria `mem://features/sherlock-investigator`
+### Step 5 — Verifica
+Eseguire mentalmente il check: ogni `path` nel config esiste in `src/v2/routes.tsx`. I tre menu (dock, hamburger, bottom nav mobile) mostrano label coerenti e vanno alle stesse pagine.
 
-**Edit**:
-- `LabBottomTabs.tsx` — bottone "Apri Sherlock" invece di "FireScrape Canvas"
-- `BackupExportTab.tsx` — aggiunge editor playbooks
-- `mem://index.md` — registra Sherlock + backup
+## File toccati
 
-## Ordine di esecuzione (autonomo dopo approvazione)
+- **Nuovo**: `src/v2/ui/templates/navConfig.ts` (sorgente unica con flag `pinned`).
+- **Edit**: `src/components/layout/FloatingDock.tsx` → legge da `navConfig`, mostra solo `pinned`, label tradotte come l'hamburger.
+- **Edit**: `src/v2/ui/templates/LayoutSidebarNav.tsx` → importa `navGroupsDef` da `navConfig`.
+- **Edit**: `src/components/mobile/MobileBottomNav.tsx` → legge da `navConfig`.
 
-1. Backup file (copy + README + memoria).
-2. Migration `sherlock_playbooks` + seed 3 livelli.
-3. DAL + tipi.
-4. Edge function `sherlock-extract`.
-5. Engine + hook.
-6. SherlockCanvas (basato su DeepSearchCanvas, riusa render markdown già perfetto).
-7. Editor playbooks in Impostazioni.
-8. Wire in LabBottomTabs.
-9. Test E2E sui 3 livelli.
+## Esito atteso
 
-## Tecnica chiave
-
-- **Sequenzialità rigorosa**: `for await` loop, mai `Promise.all` (rispetto rate limit LI/WA).
-- **AI in 2 punti**: estrazione strutturata per step (tool calling) + decisione next-step (opzionale per step).
-- **Cache-first**: ogni URL passa da `scrape_cache` prima di chiamare l'estensione.
-- **Abortable a ogni step**: `AbortSignal` propagato a `fs.readUrl` e a `fetch` AI.
-- **KB editabile**: tutti i prompt, URL template e step in DB → l'utente può raffinare senza redeploy.
-- **Persistenza findings**: nuova tabella `sherlock_investigations` (run, livello, partner_id, findings jsonb, status) per audit + riusabilità.
+Dopo l'intervento, dock laterale e hamburger mostreranno **le stesse etichette per le stesse destinazioni**, e ogni voce del dock porterà a una pagina realmente esistente. La differenza che hai visto sparirà sia in preview sia in produzione (dopo Publish).
