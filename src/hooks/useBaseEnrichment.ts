@@ -7,7 +7,6 @@
  * - Idempotente: skip target già arricchiti
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { enrichBaseTarget, type BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
 import { toast } from "@/hooks/use-toast";
 
@@ -56,7 +55,6 @@ function savePersisted(s: PersistedState | null): void {
 }
 
 export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
-  const fs = useFireScrapeExtensionBridge();
   const [progress, setProgress] = useState<BaseEnrichmentProgress>({
     status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0, rowStates: {},
   });
@@ -157,7 +155,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         }));
         let rSlug = false, rLogo = false, rSite = false, rErr = 0;
         try {
-          const r = await enrichBaseTarget(fs as never, t);
+          const r = await enrichBaseTarget(t);
           rSlug = r.slugFound; rLogo = r.logoFound; rSite = r.siteScraped; rErr = r.errors.length;
           if (r.slugFound) slugFound++;
           if (r.logoFound) logoFound++;
@@ -179,6 +177,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
     };
 
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    void persist;
 
     runningRef.current = false;
     if (abortRef.current) {
@@ -192,7 +191,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         description: `${slugFound} LinkedIn · ${logoFound} loghi · ${siteScraped} siti letti · ${errors} errori`,
       });
     }
-  }, [fs, getTargets]);
+  }, [getTargets]);
 
   return { progress, start, stop };
 }
