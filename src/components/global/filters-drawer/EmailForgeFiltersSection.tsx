@@ -1,96 +1,182 @@
 /**
  * EmailForgeFiltersSection — drawer "linguetta" content for /v2/ai-staff/email-forge.
- * Contains the recipient picker + email type / tone / KB / quality / goal,
- * pushing config into the shared forgeLabStore so the page reacts.
+ * Layout iconico: tipo email + tono + qualità in righe orizzontali con icone,
+ * KB compatto, obiettivo+proposta full-width impilate verticalmente.
  */
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Mail, User as UserIcon, BookOpen, Target } from "lucide-react";
-import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS } from "@/data/defaultEmailTypes";
+import {
+  Sparkles,
+  Mail,
+  User as UserIcon,
+  BookOpen,
+  Target,
+  Award,
+  PersonStanding,
+  Search,
+  Briefcase,
+  Handshake,
+  Truck,
+  GraduationCap,
+  UserCheck,
+  Smile,
+  Hand,
+  Zap,
+  ThumbsUp,
+  Trophy,
+  Gauge,
+  FileText,
+} from "lucide-react";
+import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
 import { ForgeRecipientPicker } from "@/v2/ui/pages/email-forge/ForgeRecipientPicker";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
 import { FilterSection } from "./shared";
+import { cn } from "@/lib/utils";
+
+// Mappa id tipo-email → icona richiesta
+const EMAIL_TYPE_ICON: Record<string, React.ElementType> = {
+  primo_contatto: Award,        // medaglia
+  follow_up: PersonStanding,    // uomo in corsa
+  richiesta_info: Search,       // lente
+  proposta: Briefcase,          // valigetta
+  partnership: Handshake,       // mani che si stringono
+  network_espresso: Truck,      // camioncino
+};
+
+const TONE_ITEMS = [
+  { value: "formale", label: "Formale", Icon: GraduationCap },
+  { value: "professionale", label: "Professionale", Icon: UserCheck },
+  { value: "amichevole", label: "Amichevole", Icon: Smile },
+  { value: "diretto", label: "Diretto", Icon: Hand },
+];
+
+const QUALITY_ITEMS: Array<{ value: "fast" | "standard" | "premium"; label: string; Icon: React.ElementType }> = [
+  { value: "fast", label: "Fast", Icon: Zap },
+  { value: "standard", label: "Standard", Icon: ThumbsUp },
+  { value: "premium", label: "Premium", Icon: Trophy },
+];
+
+function IconTile({
+  active,
+  onClick,
+  Icon,
+  label,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  Icon: React.ElementType;
+  label: string;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title ?? label}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 rounded-md border px-1 py-1.5 transition-colors min-w-0",
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border/40 hover:border-border bg-card text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <Icon className="w-4 h-4 shrink-0" />
+      <span className="text-[9px] leading-tight font-medium truncate w-full text-center">{label}</span>
+    </button>
+  );
+}
 
 export function EmailForgeFiltersSection() {
   const lab = useForgeLab();
 
   return (
     <div className="space-y-2">
+      {/* TIPO EMAIL — 6 icone in riga orizzontale */}
       <FilterSection icon={Mail} label="Tipo email">
-        <div className="grid grid-cols-3 gap-1">
-          {DEFAULT_EMAIL_TYPES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => forgeLabStore.set({ emailType: t })}
-              className={`text-[10px] leading-tight rounded border px-1.5 py-1 text-left transition-colors ${
-                lab.emailType?.id === t.id
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border/40 hover:border-border bg-card"
-              }`}
-            >
-              {t.name}
-            </button>
+        <div className="grid grid-cols-6 gap-1">
+          {DEFAULT_EMAIL_TYPES.map((t) => {
+            const Icon = EMAIL_TYPE_ICON[t.id] ?? Mail;
+            return (
+              <IconTile
+                key={t.id}
+                active={lab.emailType?.id === t.id}
+                onClick={() => forgeLabStore.set({ emailType: t })}
+                Icon={Icon}
+                label={t.name}
+                title={t.name}
+              />
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      {/* STILE — 4 toni a icona */}
+      <FilterSection icon={BookOpen} label="Stile">
+        <div className="grid grid-cols-4 gap-1">
+          {TONE_ITEMS.map((t) => (
+            <IconTile
+              key={t.value}
+              active={lab.tone === t.value}
+              onClick={() => forgeLabStore.set({ tone: t.value })}
+              Icon={t.Icon}
+              label={t.label}
+            />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={BookOpen} label="Stile & modello">
-        <div className="space-y-1.5">
-          <div className="grid grid-cols-2 gap-1.5">
-            <div className="space-y-0.5">
-              <Label className="text-[9px] text-muted-foreground">Tono</Label>
-              <Select value={lab.tone} onValueChange={(v) => forgeLabStore.set({ tone: v })}>
-                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent position="popper" side="bottom" align="start" sideOffset={4} avoidCollisions={false}>
-                  {TONE_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-0.5">
-              <Label className="text-[9px] text-muted-foreground">Quality</Label>
-              <Select value={lab.quality} onValueChange={(v) => forgeLabStore.set({ quality: v as "fast" | "standard" | "premium" })}>
-                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent position="popper" side="bottom" align="start" sideOffset={4} avoidCollisions={false}>
-                  <SelectItem value="fast" className="text-xs">Fast</SelectItem>
-                  <SelectItem value="standard" className="text-xs">Standard</SelectItem>
-                  <SelectItem value="premium" className="text-xs">Premium</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-2 rounded border border-border/40 bg-card px-2 py-1">
-            <Label htmlFor="forge-kb" className="text-[11px] cursor-pointer">Usa Knowledge Base</Label>
-            <Switch
-              id="forge-kb"
-              checked={lab.useKB}
-              onCheckedChange={(v) => forgeLabStore.set({ useKB: v })}
+      {/* QUALITÀ + KB sulla stessa riga: 3 icone qualità + box KB compatto */}
+      <FilterSection icon={Gauge} label="Qualità & KB">
+        <div className="grid grid-cols-4 gap-1">
+          {QUALITY_ITEMS.map((q) => (
+            <IconTile
+              key={q.value}
+              active={lab.quality === q.value}
+              onClick={() => forgeLabStore.set({ quality: q.value })}
+              Icon={q.Icon}
+              label={q.label}
             />
-          </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => forgeLabStore.set({ useKB: !lab.useKB })}
+            title={lab.useKB ? "Knowledge Base attiva" : "Knowledge Base disattiva"}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 rounded-md border px-1 py-1.5 transition-colors",
+              lab.useKB
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border/40 hover:border-border bg-card text-muted-foreground"
+            )}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[9px] leading-tight font-medium">
+              KB {lab.useKB ? "ON" : "OFF"}
+            </span>
+          </button>
         </div>
       </FilterSection>
 
+      {/* OBIETTIVO + PROPOSTA — full width impilati */}
       <FilterSection icon={Target} label="Obiettivo">
-        <div className="grid grid-cols-2 gap-1.5">
-          <Textarea
-            value={lab.customGoal}
-            onChange={(e) => forgeLabStore.set({ customGoal: e.target.value })}
-            placeholder="Obiettivo (es. scambio IT→USA)"
-            className="min-h-[56px] text-[11px] resize-none"
-          />
-          <Textarea
-            value={lab.baseProposal}
-            onChange={(e) => forgeLabStore.set({ baseProposal: e.target.value })}
-            placeholder="Proposta base (opzionale)"
-            className="min-h-[56px] text-[11px] resize-none"
-          />
-        </div>
+        <Textarea
+          value={lab.customGoal}
+          onChange={(e) => forgeLabStore.set({ customGoal: e.target.value })}
+          placeholder="Obiettivo (es. scambio IT→USA)"
+          className="min-h-[56px] text-[11px] resize-none w-full"
+        />
+      </FilterSection>
+
+      <FilterSection icon={FileText} label="Proposta base">
+        <Textarea
+          value={lab.baseProposal}
+          onChange={(e) => forgeLabStore.set({ baseProposal: e.target.value })}
+          placeholder="Proposta base (opzionale)"
+          className="min-h-[56px] text-[11px] resize-none w-full"
+        />
       </FilterSection>
 
       <FilterSection icon={UserIcon} label="Destinatario">
