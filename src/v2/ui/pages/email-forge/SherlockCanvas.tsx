@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import {
   Search, Loader2, CheckCircle2, AlertCircle, X, Square, Database,
-  FileText, Eye, Code2, Sparkles, SkipForward, ListChecks,
+  FileText, Eye, Code2, Sparkles, SkipForward, ListChecks, Globe,
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
@@ -33,16 +34,24 @@ const LEVEL_META: Record<SherlockLevel, { label: string; icon: string; eta: stri
 };
 
 export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
+  // Sito web modificabile manualmente: pre-popolato dal recipient se presente,
+  // altrimenti scoperto automaticamente dall'engine al primo step.
+  const [manualWebsite, setManualWebsite] = React.useState<string>("");
+  React.useEffect(() => {
+    setManualWebsite(recipient?.website?.trim() ?? "");
+  }, [recipient?.recordId, recipient?.website]);
+
   const vars = React.useMemo<Record<string, string>>(() => {
     const r = recipient;
+    const website = manualWebsite.trim();
     return {
       companyName: r?.companyName ?? "",
-      city: r?.countryName ?? r?.countryCode ?? "",
-      websiteUrl: "",
+      city: r?.city ?? r?.countryName ?? r?.countryCode ?? "",
+      websiteUrl: website,
       query: r ? `${r.companyName ?? ""} ${r.countryName ?? ""}`.trim() : "",
       linkedinCompanySlug: "",
     };
-  }, [recipient]);
+  }, [recipient, manualWebsite]);
 
   const sherlock = useSherlock({
     partnerId: recipient?.partnerId ?? null,
@@ -50,6 +59,9 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
     targetLabel: recipient?.companyName ?? recipient?.contactName ?? null,
     vars,
   });
+
+  const skippedCount = sherlock.stepResults.filter((r) => r.status === "skipped").length;
+  const discoveredWebsite = (sherlock.consolidated as { website_discovered?: string }).website_discovered;
 
   const [selectedOrder, setSelectedOrder] = React.useState<number | null>(null);
   React.useEffect(() => {
