@@ -129,6 +129,35 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
           </div>
         </div>
 
+        {/* SUB-HEADER — input sito web manuale (cruciale per Detective/Sherlock) */}
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border/60 bg-muted/30 shrink-0">
+          <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <label className="text-[10px] font-medium text-muted-foreground shrink-0">Sito web partner:</label>
+          <Input
+            value={manualWebsite}
+            onChange={(e) => setManualWebsite(e.target.value)}
+            placeholder={discoveredWebsite ? `Auto-scoperto: ${discoveredWebsite}` : "https://… (lascia vuoto per scoperta automatica via Google)"}
+            disabled={!!sherlock.running}
+            className="h-7 text-[11px] flex-1 max-w-md"
+          />
+          {discoveredWebsite && !manualWebsite && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setManualWebsite(discoveredWebsite)}
+              className="h-7 text-[10px]"
+            >
+              Usa scoperto
+            </Button>
+          )}
+          {skippedCount > 0 && (
+            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400">
+              <SkipForward className="w-3 h-3" />
+              {skippedCount} step saltati
+            </Badge>
+          )}
+        </div>
+
         {/* SPLIT BODY */}
         <div className="flex-1 flex min-h-0">
           {/* LEFT — Timeline step */}
