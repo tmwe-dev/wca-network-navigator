@@ -56,6 +56,7 @@ function savePersisted(s: PersistedState | null): void {
 }
 
 export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
+  const fsBridge = useFireScrapeExtensionBridge();
   const [progress, setProgress] = useState<BaseEnrichmentProgress>({
     status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0, rowStates: {},
   });
@@ -87,6 +88,14 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
   const start = useCallback(async () => {
     if (runningRef.current) {
       toast({ title: "Job già in esecuzione" });
+      return;
+    }
+    if (!fsBridge.isAvailable) {
+      toast({
+        title: "Estensione Partner Connect non rilevata",
+        description: "Apri un sito qualsiasi e assicurati che l'estensione sia installata e attiva, poi riprova.",
+        variant: "destructive",
+      });
       return;
     }
     const allTargets = getTargets();
