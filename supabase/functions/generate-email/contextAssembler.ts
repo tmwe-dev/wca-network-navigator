@@ -16,14 +16,48 @@ interface BusinessCardRow { contact_name: string | null; event_name: string | nu
 
 // ── KB fetcher ──
 
+/**
+ * Always-on KB categories. Loaded from `system_doctrine` table when available
+ * (rows with category in this prefix list), with safe fallback to the codebase
+ * defaults if the table is empty / unreachable.
+ *
+ * Fix 5 (Gap E): rimuove l'hardcoding diretto delle 6 categorie always-on.
+ */
+const FALLBACK_ALWAYS_ON_CATEGORIES = [
+  "regole_sistema",
+  "filosofia",
+  "struttura_email",
+  "hook",
+  "cold_outreach",
+  "dati_partner",
+] as const;
+
+async function loadAlwaysOnCategories(supabase: SupabaseClient): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from("system_doctrine")
+      .select("category")
+      .eq("is_active", true)
+      .eq("always_on", true)
+      .limit(50);
+    const cats = (data ?? [])
+      .map((r: { category: string | null }) => r.category)
+      .filter((c): c is string => !!c);
+    if (cats.length) return [...new Set(cats)];
+  } catch {
+    // Table may not exist or be readable — fall back silently
+  }
+  return [...FALLBACK_ALWAYS_ON_CATEGORIES];
+}
+
 export async function fetchKbEntriesStrategic(
   supabase: SupabaseClient, quality: Quality, userId: string,
   context: { emailCategory?: string; hasInteractionHistory?: boolean; isFollowUp?: boolean; kb_categories?: string[] },
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
-  const categories: string[] = ["regole_sistema", "filosofia"];
+  const alwaysOn = await loadAlwaysOnCategories(supabase);
+  const categories: string[] = [...alwaysOn];
   if (context.kb_categories?.length) categories.push(...context.kb_categories);
-  categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
   if (context.isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
   if (quality !== "fast") categories.push("negoziazione", "tono", "frasi_modello");
   if (quality === "premium") categories.push("arsenale", "persuasione", "chiusura", "errori");
