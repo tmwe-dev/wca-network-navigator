@@ -300,21 +300,42 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             </TooltipContent>
           </Tooltip>
 
-          {/* Deep Search toggle */}
+          {/* Deep Search — manual on-demand button */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setDeepSearch(!deepSearch)}
+                onClick={() => deepSearch.trigger()}
+                disabled={!deepSearch.canRun || deepSearch.status === "running"}
                 className={cn(
-                  "p-1.5 rounded-md border transition-all",
-                  deepSearch ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground/40 hover:border-primary/30 hover:text-foreground"
+                  "p-1.5 rounded-md border transition-all relative",
+                  !deepSearch.canRun && "opacity-40 cursor-not-allowed",
+                  deepSearch.status === "running" && "border-primary/30 bg-primary/10 text-primary",
+                  deepSearch.status === "fresh" && "border-success/30 bg-success/10 text-success",
+                  deepSearch.status === "stale" && "border-warning/30 bg-warning/10 text-warning",
+                  (deepSearch.status === "missing" || deepSearch.status === "idle") && "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                  deepSearch.status === "failed" && "border-destructive/30 bg-destructive/10 text-destructive",
                 )}
               >
-                <Search className="w-4 h-4" />
+                {deepSearch.status === "running" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {deepSearch.status === "fresh" && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-success" />
+                )}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-[10px]">
-              Deep Search: {deepSearch ? "attivo" : "spento"}
+              {!deepSearch.canRun
+                ? "Deep Search: richiede 1 destinatario CRM"
+                : deepSearch.status === "running"
+                  ? "Deep Search in corso..."
+                  : deepSearch.status === "fresh"
+                    ? `Deep Search aggiornata (${deepSearch.ageDays}gg fa)`
+                    : deepSearch.status === "stale"
+                      ? `Vecchia (${deepSearch.ageDays}gg) — clicca per ricompilare`
+                      : deepSearch.status === "missing"
+                        ? "Clicca per eseguire Deep Search"
+                        : deepSearch.status === "failed"
+                          ? "Errore — clicca per ritentare"
+                          : "Deep Search"}
             </TooltipContent>
           </Tooltip>
         </div>
