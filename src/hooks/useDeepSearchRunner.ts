@@ -32,7 +32,7 @@ export function useDeepSearch(): DeepSearchState {
 
 const STEP_TIMEOUT_MS = 60_000;
 
-interface PartnerFilterRow { id: string; raw_profile_html?: string | null; enrichment_data?: Record<string, unknown> | null }
+interface PartnerFilterRow { id: string; profile_description?: string | null; raw_profile_html?: string | null; raw_profile_markdown?: string | null; enrichment_data?: Record<string, unknown> | null }
 interface PartnerInfoRow { id: string; company_name?: string; country_code?: string; logo_url?: string }
 interface ContactInfoRow { id: string; company_name?: string | null; name?: string | null; country?: string | null }
 interface DeepSearchAlreadyDoneRow { id: string; deep_search_at?: string | null; enrichment_data?: Record<string, unknown> | null }
@@ -70,15 +70,15 @@ export function useDeepSearchRunner(): DeepSearchState {
     // Pre-check: for partners, detect missing profiles
     let noProfileIds: string[] = [];
     if (mode === "partner") {
-      const allPartnerData = await getPartnersByIds(ids, "id, raw_profile_html, enrichment_data") as unknown as PartnerFilterRow[];
+      const allPartnerData = await getPartnersByIds(ids, "id, profile_description, raw_profile_html, raw_profile_markdown, enrichment_data") as unknown as PartnerFilterRow[];
 
       noProfileIds = allPartnerData
-        .filter((p) => !p.raw_profile_html)
+        .filter((p) => !p.profile_description && !p.raw_profile_html && !p.raw_profile_markdown)
         .map((p) => p.id);
 
       if (noProfileIds.length > 0 && noProfileIds.length === ids.length) {
         toast.warning(
-          `Tutti i ${ids.length} partner sono senza profilo WCA. Scarica prima i profili dal Download Center, poi esegui la Deep Search.`,
+          `Tutti i ${ids.length} partner sono senza profilo sincronizzato. Esegui prima la sincronizzazione del paese dalla pagina Network.`,
           { id: "deep-search-global", duration: 8000 }
         );
         return;
@@ -87,7 +87,7 @@ export function useDeepSearchRunner(): DeepSearchState {
       if (noProfileIds.length > 0) {
         const withProfile = ids.length - noProfileIds.length;
         toast.warning(
-          `${noProfileIds.length} partner senza profilo WCA (saltati). Deep Search su ${withProfile} con profilo.`,
+          `${noProfileIds.length} partner senza profilo sincronizzato (saltati). Deep Search su ${withProfile} con profilo.`,
           { id: "deep-search-global", duration: 6000 }
         );
       }
