@@ -315,17 +315,22 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   );
 }
 
-function ConfigToggle({
-  icon: Icon, label, checked, onChange,
-}: { icon: React.ComponentType<{ className?: string }>; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function QualityButton({
+  icon: Icon, label, active, onClick,
+}: { icon: React.ComponentType<{ className?: string }>; label: string; active: boolean; onClick: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-border/40 bg-card px-2 py-1">
-      <div className="flex items-center gap-1.5 min-w-0">
-        <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
-        <span className="text-[10px] truncate">{label}</span>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded border px-2 py-1.5 transition-colors ${
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border/40 bg-card hover:bg-muted text-muted-foreground"
+      }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-[10px] font-medium">{label}</span>
+    </button>
   );
 }
 
