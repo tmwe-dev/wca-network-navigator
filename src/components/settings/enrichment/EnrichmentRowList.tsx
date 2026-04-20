@@ -9,11 +9,12 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  Mail, SortAsc, SortDesc, MoreVertical, Linkedin, CheckCircle2, ImageOff, Brain, Image,
+  Mail, SortAsc, SortDesc, MoreVertical, Linkedin, CheckCircle2, ImageOff, Brain, Image, Loader2, Globe,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
 import type { EnrichedRow, SortField, SortDir } from "@/hooks/useEnrichmentData";
+import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
@@ -50,6 +51,7 @@ interface Props {
   allSelected: boolean;
   sortField: SortField;
   sortDir: SortDir;
+  rowStates?: Record<string, RowEnrichmentState>;
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onToggleSort: (field: SortField) => void;
@@ -57,7 +59,7 @@ interface Props {
 }
 
 export function EnrichmentRowList({
-  rows, selected, allSelected, sortField, sortDir,
+  rows, selected, allSelected, sortField, sortDir, rowStates,
   onToggleAll, onToggleOne, onToggleSort, onDeepSearch,
 }: Props) {
   const SortIcon = sortDir === "asc" ? SortAsc : SortDesc;
@@ -108,13 +110,18 @@ export function EnrichmentRowList({
               const row = rows[virtualItem.index];
               const isSelected = selected.has(row.id);
               const flag = getFlag(row.country);
+              const realId = row.realId || row.id;
+              const liveState = rowStates?.[realId];
+              const isLive = liveState?.status === "running";
+              const isLiveDone = liveState?.status === "done";
               return (
                 <div
                   key={row.id}
                   className={cn(
                     "absolute left-0 w-full grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px] border-b border-border/50",
                     ORIGIN_ACCENT[row.source] || "border-l-transparent",
-                    isSelected ? "bg-primary/5" : "hover:bg-accent/30"
+                    isSelected ? "bg-primary/5" : "hover:bg-accent/30",
+                    isLive && "bg-primary/10 ring-1 ring-primary/40"
                   )}
                   style={{ top: virtualItem.start, height: virtualItem.size }}
                 >
@@ -143,12 +150,29 @@ export function EnrichmentRowList({
                   <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", ORIGIN_BADGE_CLASS[row.source])}>
                     {sourceLabel(row.source)}
                   </Badge>
-                  <div className="flex items-center gap-1">
-                    <Linkedin className={cn("w-3.5 h-3.5", row.hasLinkedin ? "text-primary" : "text-muted-foreground/20")} />
-                    {row.hasLogo ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <div className="flex items-center gap-1" title={
+                    isLive ? "Arricchimento in corso..." :
+                    isLiveDone && liveState.status === "done" ? `Slug: ${liveState.slug ? "✓" : "—"} | Logo: ${liveState.logo ? "✓" : "—"} | Sito: ${liveState.site ? "✓" : "—"}` :
+                    undefined
+                  }>
+                    {isLive ? (
+                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
                     ) : (
-                      <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
+                      <>
+                        <Linkedin className={cn(
+                          "w-3.5 h-3.5",
+                          (row.hasLinkedin || (isLiveDone && liveState.status === "done" && liveState.slug)) ? "text-primary" : "text-muted-foreground/20",
+                          isLiveDone && liveState.status === "done" && liveState.slug && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
+                        )} />
+                        {(row.hasLogo || (isLiveDone && liveState.status === "done" && liveState.logo)) ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
+                        )}
+                        {isLiveDone && liveState.status === "done" && liveState.site && (
+                          <Globe className="w-3.5 h-3.5 text-primary" />
+                        )}
+                      </>
                     )}
                   </div>
                   <DropdownMenu>

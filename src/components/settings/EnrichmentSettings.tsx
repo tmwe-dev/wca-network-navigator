@@ -1,7 +1,10 @@
 /**
  * EnrichmentSettings — Orchestrator (refactored from 638-line monolith)
  */
+import { useCallback } from "react";
 import { useEnrichmentData } from "@/hooks/useEnrichmentData";
+import { useBaseEnrichment } from "@/hooks/useBaseEnrichment";
+import type { BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
 import { SourceTabBar } from "./enrichment/SourceTabBar";
 import { EnrichmentToolbar } from "./enrichment/EnrichmentToolbar";
 import { BulkActionBar } from "./enrichment/BulkActionBar";
@@ -16,6 +19,30 @@ export type { EnrichedRow } from "@/hooks/useEnrichmentData";
 
 export default function EnrichmentSettings() {
   const d = useEnrichmentData();
+
+  const getTargets = useCallback((): BaseEnrichTarget[] => {
+    return d.getSelectedRows()
+      .filter((r) => r.source === "wca" || r.source === "contacts")
+      .map((r) => ({
+        id: r.realId || r.id,
+        source: r.source as "wca" | "contacts",
+        name: r.name,
+        companyName: r.source === "wca" ? r.name : undefined,
+        domain: r.domain,
+        email: r.email,
+        hasLogo: r.hasLogo,
+        hasLinkedin: r.hasLinkedin,
+        hasWebsiteExcerpt: false,
+      }));
+  }, [d]);
+
+  const { progress, start, stop } = useBaseEnrichment(getTargets);
+
+  const handleStart = useCallback(async () => {
+    await start();
+    d.refetchPartners();
+    d.refetchContacts();
+  }, [start, d]);
 
   return (
     <PageErrorBoundary>
@@ -41,7 +68,9 @@ export default function EnrichmentSettings() {
           onBulkLogoSearch={d.handleBulkLogoSearch}
           onDeepSearch={d.openDeepSearchDialog}
           getSelectedRows={d.getSelectedRows}
-          onJobComplete={() => { d.refetchPartners(); d.refetchContacts(); }}
+          progress={progress}
+          onStartBaseEnrichment={handleStart}
+          onStopBaseEnrichment={stop}
         />
       )}
 
@@ -51,6 +80,7 @@ export default function EnrichmentSettings() {
         allSelected={d.allSelected}
         sortField={d.sortField}
         sortDir={d.sortDir}
+        rowStates={progress.rowStates}
         onToggleAll={d.toggleAll}
         onToggleOne={d.toggleOne}
         onToggleSort={d.toggleSort}

@@ -187,12 +187,33 @@ export function useEnrichmentData() {
         "business_cards",
         "id, company_name, contact_name, email, phone, mobile, location, matched_partner_id"
       );
-      return data.map((b): EnrichedRow => ({
-        id: b.id, name: b.company_name || b.contact_name || b.email || "?",
-        domain: extractDomainFromEmail(b.email || ""),
-        source: "bca", hasLogo: false, hasLinkedin: false,
-        email: b.email || undefined, country: undefined, realId: b.id,
-      }));
+      // Join sui partner matchati per ricavare country + logo
+      const partnerIds = [...new Set(data.filter(b => b.matched_partner_id).map(b => b.matched_partner_id!))];
+      const pMap = new Map<string, { country_code: string | null; website: string | null; logo_url: string | null }>();
+      if (partnerIds.length > 0) {
+        // Batch in chunk da 200 per evitare URL troppo lunghi
+        for (let i = 0; i < partnerIds.length; i += 200) {
+          const slice = partnerIds.slice(i, i + 200);
+          const { data: pData } = await supabase
+            .from("partners")
+            .select("id, country_code, website, logo_url")
+            .in("id", slice);
+          (pData || []).forEach(p => pMap.set(p.id, { country_code: p.country_code, website: p.website, logo_url: p.logo_url }));
+        }
+      }
+      return data.map((b): EnrichedRow => {
+        const p = b.matched_partner_id ? pMap.get(b.matched_partner_id) : null;
+        // Estrai country da location (es. "Bangkok, Thailand" → ultimo segmento)
+        const locCountry = b.location?.split(",").pop()?.trim();
+        return {
+          id: b.id, name: b.company_name || b.contact_name || b.email || "?",
+          domain: p?.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(b.email || ""),
+          source: "bca", hasLogo: !!p?.logo_url, hasLinkedin: false,
+          email: b.email || undefined,
+          country: p?.country_code || locCountry || undefined,
+          realId: b.id,
+        };
+      });
     },
     staleTime: 60_000,
   });
