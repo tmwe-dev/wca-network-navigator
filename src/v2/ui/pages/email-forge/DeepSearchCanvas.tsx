@@ -449,11 +449,23 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
                     </TabsList>
                     <TabsContent value="formatted" className="flex-1 min-h-0 mt-0">
                       <ScrollArea className="h-full">
-                        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-4
-                          prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
-                          prose-p:text-[12px] prose-li:text-[12px] prose-a:text-primary prose-a:no-underline
-                          hover:prose-a:underline prose-code:text-[11px] prose-pre:text-[11px]">
-                          <LazyMarkdown>{selected.markdown}</LazyMarkdown>
+                        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
+                          prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground
+                          prose-h1:text-base prose-h1:text-primary prose-h1:border-b prose-h1:border-primary/30 prose-h1:pb-1.5 prose-h1:mb-3
+                          prose-h2:text-sm prose-h2:text-primary prose-h2:mt-5 prose-h2:mb-2
+                          prose-h3:text-[13px] prose-h3:text-primary/90 prose-h3:mt-4 prose-h3:mb-1.5
+                          prose-h4:text-[12px] prose-h4:text-foreground/90
+                          prose-p:text-[12.5px] prose-p:leading-relaxed prose-p:my-2 prose-p:text-foreground/85
+                          prose-li:text-[12.5px] prose-li:my-0.5 prose-li:text-foreground/85
+                          prose-ul:my-2 prose-ol:my-2
+                          prose-strong:text-primary prose-strong:font-semibold
+                          prose-em:text-foreground/90 prose-em:not-italic prose-em:font-medium
+                          prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline
+                          prose-code:text-[11px] prose-code:bg-primary/10 prose-code:text-primary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+                          prose-pre:text-[11px] prose-pre:bg-muted prose-pre:border prose-pre:border-border
+                          prose-blockquote:border-l-2 prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-foreground/85
+                          prose-hr:border-border/60">
+                          <LazyMarkdown>{enhanceMarkdown(selected.markdown)}</LazyMarkdown>
                         </article>
                       </ScrollArea>
                     </TabsContent>
