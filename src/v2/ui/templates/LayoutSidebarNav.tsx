@@ -40,11 +40,6 @@ const navGroupsDef: readonly NavGroup[] = [
     items: [
       { labelKey: "nav.dashboard", path: "/v2", icon: <LayoutDashboard className="h-4 w-4" /> },
       { labelKey: "nav.network", path: "/v2/network", icon: <Globe className="h-4 w-4" /> },
-    ],
-  },
-  {
-    titleKey: "nav.group_management",
-    items: [
       { labelKey: "nav.crm", path: "/v2/crm", icon: <Users className="h-4 w-4" /> },
       { labelKey: "nav.partner_directory", path: "/v2/partner-directory", icon: <Search className="h-4 w-4" /> },
     ],
