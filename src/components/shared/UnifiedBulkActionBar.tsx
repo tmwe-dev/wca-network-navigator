@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   X, Briefcase, ClipboardList, Sparkles, Linkedin, MessageCircle,
-  Megaphone, Trash2, Loader2, Globe, Send, Layers, Link2,
+  Megaphone, Trash2, Loader2, Globe, Send, Layers, Link2, Mail,
 } from "lucide-react";
 
 export type BulkSourceType = "partner" | "contact" | "business_card";
@@ -17,6 +17,7 @@ export interface UnifiedBulkActionBarProps {
   onCockpit?: () => void;
   onEmail?: () => void;
   onWhatsApp?: () => void;
+  onLinkedInDM?: () => void;
   onDeepSearch?: () => void;
   onLinkedIn?: () => void;
   onGoogleLogo?: () => void;
@@ -28,10 +29,12 @@ export interface UnifiedBulkActionBarProps {
   /* Counts for contextual labels */
   withEmail?: number;
   withPhone?: number;
+  withLinkedIn?: number;
 
   /* Loading states */
   deepSearchLoading?: boolean;
   linkedInLoading?: boolean;
+  linkedInDMLoading?: boolean;
   deduplicateLoading?: boolean;
   sendingToWorkspace?: boolean;
   wcaMatchLoading?: boolean;
@@ -39,11 +42,11 @@ export interface UnifiedBulkActionBarProps {
 
 export function UnifiedBulkActionBar({
   count, onClear,
-  onWorkspace, onCockpit, onEmail, onWhatsApp,
+  onWorkspace, onCockpit, onEmail, onWhatsApp, onLinkedInDM,
   onDeepSearch, onLinkedIn, onGoogleLogo, onCampaign,
   onDelete, onDeduplicate, onWcaMatch,
-  withEmail = 0, withPhone = 0,
-  deepSearchLoading, linkedInLoading, deduplicateLoading, sendingToWorkspace, wcaMatchLoading,
+  withEmail = 0, withPhone = 0, withLinkedIn = 0,
+  deepSearchLoading, linkedInLoading, linkedInDMLoading, deduplicateLoading, sendingToWorkspace, wcaMatchLoading,
 }: UnifiedBulkActionBarProps) {
   if (count === 0) return null;
 
