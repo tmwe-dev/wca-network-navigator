@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react";
 import type { ForgeRecipient } from "@/v2/ui/pages/email-forge/ForgeRecipientPicker";
 import type { EmailType } from "@/data/defaultEmailTypes";
 import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import { presetToForgeConfig, type DeepSearchQuality } from "@/lib/deepSearchPresets";
 
 export interface DeepSearchConfig {
   scrapeWebsite: boolean;
@@ -40,14 +41,7 @@ const initial: ForgeLabState = {
   baseProposal: "",
   quality: "standard",
   runCounter: 0,
-  deepSearchConfig: {
-    scrapeWebsite: true,
-    linkedinContacts: true,
-    linkedinCompany: true,
-    whatsapp: true,
-    maxQueriesPerContact: 5,
-    priorityDomain: "",
-  },
+  deepSearchConfig: presetToForgeConfig("standard"),
 };
 
 let state: ForgeLabState = initial;
@@ -60,7 +54,19 @@ function emit() {
 export const forgeLabStore = {
   get: () => state,
   set: (patch: Partial<ForgeLabState>) => {
-    state = { ...state, ...patch };
+    // Auto-sync: se cambia quality, ricalcola deepSearchConfig dal preset
+    // (preserva priorityDomain manuale).
+    let next = { ...state, ...patch };
+    if (patch.quality && patch.quality !== state.quality) {
+      next = {
+        ...next,
+        deepSearchConfig: presetToForgeConfig(
+          patch.quality as DeepSearchQuality,
+          state.deepSearchConfig.priorityDomain,
+        ),
+      };
+    }
+    state = next;
     emit();
   },
   triggerRun: () => {
