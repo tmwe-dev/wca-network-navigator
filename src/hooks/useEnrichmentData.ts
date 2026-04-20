@@ -381,6 +381,8 @@ export function useEnrichmentData() {
     changeSourceTab, setEnrichFilter, setSearch, toggleSort, toggleAll, toggleOne,
     openDeepSearchDialog, handleDeepSearchConfirm, handleLinkedInBatch, handleBulkLogoSearch,
     getSelectedRows,
+    // Refetch
+    refetchPartners, refetchContacts,
     // External hooks
     deepSearch,
   };
