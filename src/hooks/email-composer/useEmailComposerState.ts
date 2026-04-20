@@ -230,6 +230,8 @@ export function useEmailComposerState() {
         oracle_tone: config.tone, use_kb: config.useKB,
         email_type_id: config.emailType?.id || null,
         email_type_prompt: config.emailType?.prompt || null,
+        email_type_structure: config.emailType?.structure || null,
+        email_type_kb_categories: config.emailType?.kb_categories || null,
         // Permanent business goal — improve è SEMPRE context-aware:
         // promuovere servizi/piattaforma + costruire relazioni di amicizia e supporto
         custom_goal: [
