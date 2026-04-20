@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 import { fs } from "@/v2/io/extensions/bridge";
 import {
-  ALL_PIPELINES, resolvePipelineSteps, type PipelineKey,
+  ALL_PIPELINES, resolvePipelineUrls, type PipelineKey,
 } from "@/v2/io/extensions/deep-search-pipelines";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
@@ -98,9 +98,10 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
     setRunning(key);
     const controller = new AbortController();
     abortRef.current = controller;
-    let steps: Array<Record<string, unknown>>;
+
+    let plan: { urls: string[]; settleMs: number };
     try {
-      steps = resolvePipelineSteps(ALL_PIPELINES[key], vars);
+      plan = resolvePipelineUrls(ALL_PIPELINES[key], vars);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore pipeline");
       setRunning(null);
@@ -108,55 +109,43 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
       return;
     }
 
-    let currentPageId: string | null = null;
+    // Pre-crea le card delle pagine così l'utente vede subito la lista completa
+    const idByIdx = plan.urls.map((url, i) => `${key}-${i}-${Date.now()}`);
+    const initial: CapturedPage[] = plan.urls.map((url, i) => ({
+      id: idByIdx[i],
+      pipelineKey: key,
+      url,
+      status: i === 0 ? "running" : "running",
+      markdown: "",
+      startedAt: Date.now(),
+    }));
+    setPages((prev) => [...prev, ...initial]);
+    setSelectedId((s) => s ?? idByIdx[0]);
 
-    await fs.runSequenceWithProgress(steps, (i, total, step, result) => {
-      const action = step.action as string;
-      const url = typeof step.url === "string" ? step.url : "";
-
-      if (action === "nav" && url) {
-        // Chiudi la pagina precedente come "done" se era ancora running
+    await fs.runUrls(
+      plan.urls,
+      (i, total, url, result) => {
+        const id = idByIdx[i];
         setPages((prev) => prev.map((p) =>
-          p.id === currentPageId && p.status === "running"
-            ? { ...p, status: "done", durationMs: Date.now() - p.startedAt }
-            : p,
-        ));
-        const id = `${key}-${i}-${Date.now()}`;
-        currentPageId = id;
-        const page: CapturedPage = {
-          id, pipelineKey: key, url,
-          status: result.ok ? "running" : "error",
-          markdown: "",
-          error: result.ok ? undefined : result.error,
-          startedAt: Date.now(),
-          durationMs: result.ok ? undefined : 0,
-        };
-        setPages((prev) => [...prev, page]);
-        setSelectedId((s) => s ?? id);
-      }
-
-      if (action === "scrape" && currentPageId) {
-        const md = result.ok ? extractMarkdown(result.data) : "";
-        const errorMsg = !result.ok ? result.error : undefined;
-        setPages((prev) => prev.map((p) =>
-          p.id === currentPageId
+          p.id === id
             ? {
                 ...p,
                 status: result.ok ? "done" : "error",
-                markdown: md,
-                error: errorMsg,
+                markdown: result.ok ? extractMarkdown(result.data) : "",
+                error: !result.ok ? result.error : undefined,
                 durationMs: Date.now() - p.startedAt,
               }
             : p,
         ));
-        setSelectedId((s) => s ?? currentPageId);
-      }
-    }, { signal: controller.signal, stepTimeoutMs: 25_000 });
+        setSelectedId((s) => (s === idByIdx[0] && result.ok ? id : s));
+      },
+      { signal: controller.signal, settleMs: plan.settleMs },
+    );
 
-    // Chiudi eventuali pagine ancora "running" (es. ultimo nav senza scrape)
+    // Marca eventuali pagine ancora "running" (caso aborto a metà) come errore
     setPages((prev) => prev.map((p) =>
-      p.status === "running"
-        ? { ...p, status: "done", durationMs: Date.now() - p.startedAt }
+      p.status === "running" && idByIdx.includes(p.id)
+        ? { ...p, status: "error", error: "Non eseguito (interrotto)", durationMs: Date.now() - p.startedAt }
         : p,
     ));
 
@@ -170,6 +159,8 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
   const runManual = async () => {
     if (running || !manualUrl.trim()) return;
     setRunning("manual");
+    const controller = new AbortController();
+    abortRef.current = controller;
     const id = `manual-${Date.now()}`;
     setPages((prev) => [...prev, {
       id, pipelineKey: "manual", url: manualUrl,
@@ -177,7 +168,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
     }]);
     setSelectedId(id);
 
-    const res = await fs.scrapeUrl(manualUrl, true);
+    const res = await fs.readUrl(manualUrl, { settleMs: 2500, signal: controller.signal, skipCache: true });
     setPages((prev) => prev.map((p) => p.id === id
       ? {
           ...p,
@@ -188,9 +179,10 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
         }
       : p,
     ));
+    abortRef.current = null;
     setRunning(null);
     if (res.ok) toast.success("Pagina letta");
-    else toast.error(res.error);
+    else if (!controller.signal.aborted) toast.error(res.error);
   };
 
   const clearAll = () => {

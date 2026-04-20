@@ -1,79 +1,75 @@
 /**
  * Pipeline pre-configurate per il deep search dei contatti/partner.
  *
- * Ogni pipeline è una sequenza di step `agent-sequence` eseguibile dall'estensione
- * Partner Connect. Lo step set sfrutta `background: true, reuseTab: true` quando
- * disponibile, in modo da riusare un singolo tab nascosto.
+ * Modello semplificato (allineato all'API reale di Partner Connect v3.4.0):
+ * ogni pipeline produce una lista di URL da leggere. L'esecutore (DeepSearchCanvas)
+ * per ogni URL invoca:
+ *   1) agent-action { action:"navigate", url, background:true, reuseTab:true }
+ *   2) attesa client-side (settleMs)
+ *   3) action:"scrape" — legge il BackgroundTab già aperto
  *
- * NB: i template usano la sintassi `{{var}}` che viene espansa al momento dell'esecuzione.
+ * Questo è l'unico flusso supportato dall'estensione (vedi background.js
+ * handleAgentAction fast-path navigate+background, e handleScrape che preferisce
+ * BackgroundTab.tabId quando aperto).
  */
 
 export interface DeepSearchPipeline {
   readonly id: string;
   readonly label: string;
   readonly description: string;
-  /** Variabili obbligatorie da passare a runDeepSearchPipeline. */
   readonly requiredVars: ReadonlyArray<string>;
-  /** Steps in formato `agent-sequence` di Partner Connect. */
-  readonly steps: ReadonlyArray<Record<string, unknown>>;
+  /** Costruisce la lista di URL da leggere a partire dalle variabili. */
+  buildUrls(vars: Record<string, string>): string[];
+  /** ms di attesa client-side dopo il navigate, prima dello scrape. Default 2500. */
+  readonly settleMs?: number;
 }
 
-const COMMON = { background: true, reuseTab: true } as const;
+function enc(s: string): string {
+  return encodeURIComponent(s ?? "");
+}
 
 export const PIPELINE_GOOGLE_MAPS: DeepSearchPipeline = {
   id: "deep-google-maps",
   label: "Google Maps / Place",
-  description: "Cerca l'azienda su Google Maps e estrae scheda Place (indirizzo, telefono, sito, ore, recensioni).",
-  requiredVars: ["companyName", "city"],
-  steps: [
-    { action: "nav", url: "https://www.google.com/maps/search/{{companyName}}+{{city}}", ...COMMON },
-    { action: "wait", ms: 2500 },
-    { action: "scrape", format: "markdown", ...COMMON },
+  description: "Cerca l'azienda su Google Maps: scheda Place (indirizzo, telefono, sito, ore).",
+  requiredVars: ["companyName"],
+  settleMs: 3000,
+  buildUrls: (v) => [
+    `https://www.google.com/maps/search/${enc(v.companyName)}+${enc(v.city ?? "")}`,
   ],
 };
 
 export const PIPELINE_WEBSITE_MULTI_PAGE: DeepSearchPipeline = {
   id: "deep-website-multipage",
   label: "Sito web multi-pagina",
-  description: "Map del sito ufficiale + scrape parallelo di home, about, team, contact.",
+  description: "Home + about + team + contact del sito ufficiale.",
   requiredVars: ["websiteUrl"],
-  steps: [
-    { action: "nav", url: "{{websiteUrl}}", ...COMMON },
-    { action: "wait", ms: 1500 },
-    { action: "scrape", format: "markdown", ...COMMON },
-    { action: "nav", url: "{{websiteUrl}}/about", ...COMMON },
-    { action: "wait", ms: 1500 },
-    { action: "scrape", format: "markdown", ...COMMON },
-    { action: "nav", url: "{{websiteUrl}}/team", ...COMMON },
-    { action: "wait", ms: 1500 },
-    { action: "scrape", format: "markdown", ...COMMON },
-    { action: "nav", url: "{{websiteUrl}}/contact", ...COMMON },
-    { action: "wait", ms: 1500 },
-    { action: "scrape", format: "markdown", ...COMMON },
-  ],
+  settleMs: 1800,
+  buildUrls: (v) => {
+    const base = (v.websiteUrl ?? "").replace(/\/+$/, "");
+    return [base, `${base}/about`, `${base}/team`, `${base}/contact`];
+  },
 };
 
 export const PIPELINE_REPUTATION: DeepSearchPipeline = {
   id: "deep-reputation",
   label: "Reputation & news",
-  description: "Cerca menzioni, recensioni e news dell'azienda su Google (filtro ultimi 12 mesi).",
+  description: "Menzioni, recensioni e news dell'azienda su Google (ultimo anno).",
   requiredVars: ["companyName"],
-  steps: [
-    { action: "nav", url: "https://www.google.com/search?q=%22{{companyName}}%22+(reviews+OR+news+OR+complaints)&tbs=qdr:y", ...COMMON },
-    { action: "wait", ms: 2000 },
-    { action: "scrape", format: "markdown", ...COMMON },
+  settleMs: 2500,
+  buildUrls: (v) => [
+    `https://www.google.com/search?q=%22${enc(v.companyName)}%22+(reviews+OR+news+OR+complaints)&tbs=qdr:y`,
   ],
 };
 
 export const PIPELINE_GOOGLE_GENERAL: DeepSearchPipeline = {
   id: "deep-google-general",
   label: "Google generale (presenza web)",
-  description: "Ricerca Google generica per scoprire altre presenze web dell'azienda/persona.",
+  description: "Ricerca Google generica per scoprire presenze web dell'azienda.",
   requiredVars: ["query"],
-  steps: [
-    { action: "nav", url: "https://www.google.com/search?q={{query}}", ...COMMON },
-    { action: "wait", ms: 2000 },
-    { action: "scrape", format: "markdown", ...COMMON },
+  settleMs: 2500,
+  buildUrls: (v) => [
+    `https://www.google.com/search?q=${enc(v.query)}`,
   ],
 };
 
@@ -86,39 +82,18 @@ export const ALL_PIPELINES = {
 
 export type PipelineKey = keyof typeof ALL_PIPELINES;
 
-/** Espande i `{{var}}` nei valori string di uno step. */
-function expandStep(
-  step: Record<string, unknown>,
-  vars: Record<string, string>,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(step)) {
-    if (typeof v === "string") {
-      out[k] = v.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-        const value = vars[key];
-        if (value === undefined) return "";
-        return encodeURIComponent(value);
-      });
-    } else {
-      out[k] = v;
-    }
-  }
-  return out;
-}
-
-/**
- * Risolve i template di una pipeline restituendo gli step pronti per `agent-sequence`.
- * NON esegue la pipeline — quella è responsabilità di chi importa il bridge.
- */
-export function resolvePipelineSteps(
+/** Risolve una pipeline → lista URL pronti, validando le variabili obbligatorie. */
+export function resolvePipelineUrls(
   pipeline: DeepSearchPipeline,
   vars: Record<string, string>,
-): Array<Record<string, unknown>> {
+): { urls: string[]; settleMs: number } {
   const missing = pipeline.requiredVars.filter((v) => !vars[v]);
   if (missing.length > 0) {
-    throw new Error(
-      `Pipeline "${pipeline.id}" richiede le variabili: ${missing.join(", ")}`,
-    );
+    throw new Error(`Pipeline "${pipeline.id}" richiede: ${missing.join(", ")}`);
   }
-  return pipeline.steps.map((step) => expandStep(step, vars));
+  const urls = pipeline.buildUrls(vars).filter((u) => /^https?:\/\//i.test(u));
+  if (urls.length === 0) {
+    throw new Error(`Pipeline "${pipeline.id}" non ha prodotto URL validi`);
+  }
+  return { urls, settleMs: pipeline.settleMs ?? 2500 };
 }

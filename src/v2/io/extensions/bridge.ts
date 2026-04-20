@@ -125,9 +125,66 @@ export const fs = {
   cacheStats: () => callExtension("firescrape", "cache-stats", {}),
 
   /**
-   * Esegue una sequenza di step `agent-action` uno alla volta, invocando
-   * `onStep` dopo ogni risposta. Ritorna l'array completo dei risultati.
-   * Supporta abort tramite AbortSignal e timeout custom per step (default 25s).
+   * Naviga il BackgroundTab dell'estensione su `url` (tab nascosto, riusato).
+   * Equivalente a `agent-action { action:"navigate", background:true, reuseTab:true }`.
+   */
+  navigateBackground: (url: string, timeoutMs = 30_000) =>
+    callExtension("firescrape", "agent-action", {
+      step: { action: "navigate", url, background: true, reuseTab: true },
+    }, { timeoutMs }),
+
+  /**
+   * Esegue navigate(BackgroundTab) → delay → scrape, restituendo il risultato
+   * dello scrape (con markdown). Supporta AbortSignal per interruzione immediata.
+   */
+  async readUrl(
+    url: string,
+    options: { settleMs?: number; signal?: AbortSignal; skipCache?: boolean } = {},
+  ): Promise<CallResult<ExtensionResponse>> {
+    const settleMs = options.settleMs ?? 2500;
+    const signal = options.signal;
+
+    if (signal?.aborted) return { ok: false, error: "Interrotto" };
+    const nav = await this.navigateBackground(url, 30_000);
+    if (!nav.ok) return nav;
+    if (signal?.aborted) return { ok: false, error: "Interrotto" };
+
+    // Attesa client-side, interrompibile
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, settleMs);
+      signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+    });
+    if (signal?.aborted) return { ok: false, error: "Interrotto" };
+
+    return callExtension("firescrape", "scrape", { skipCache: options.skipCache ?? true }, { timeoutMs: 30_000 });
+  },
+
+  /**
+   * Esegue una sequenza di URL, invocando `onProgress` dopo ogni URL letto.
+   * Supporta abort. Ritorna i risultati nell'ordine.
+   */
+  async runUrls(
+    urls: string[],
+    onProgress: (i: number, total: number, url: string, result: CallResult<ExtensionResponse>) => void,
+    options: { settleMs?: number; signal?: AbortSignal } = {},
+  ): Promise<Array<CallResult<ExtensionResponse>>> {
+    const results: Array<CallResult<ExtensionResponse>> = [];
+    for (let i = 0; i < urls.length; i++) {
+      if (options.signal?.aborted) {
+        const aborted: CallResult<ExtensionResponse> = { ok: false, error: "Interrotto dall'utente" };
+        try { onProgress(i, urls.length, urls[i], aborted); } catch { /* swallow */ }
+        results.push(aborted);
+        break;
+      }
+      const res = await this.readUrl(urls[i], { settleMs: options.settleMs, signal: options.signal });
+      results.push(res);
+      try { onProgress(i, urls.length, urls[i], res); } catch { /* swallow */ }
+    }
+    return results;
+  },
+
+  /**
+   * @deprecated Usa runUrls. Mantenuto per compatibilità con codice esistente.
    */
   async runSequenceWithProgress(
     steps: Array<Record<string, unknown>>,
