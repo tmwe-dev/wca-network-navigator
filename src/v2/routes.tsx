@@ -3,7 +3,14 @@
  */
 import * as React from "react";
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation, useParams, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useParams, useSearchParams, Outlet } from "react-router-dom";
+
+/** Preserva il query param `?agent=` quando si redirige dal vecchio path /v2/agent-chat. */
+function AgentChatRedirect() {
+  const [searchParams] = useSearchParams();
+  const agentId = searchParams.get("agent");
+  return <Navigate to={agentId ? `/v2/agents?agent=${agentId}` : "/v2/agents"} replace />;
+}
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -172,7 +179,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="autopilot-missions" element={<Navigate to="/v2/agents/autopilot" replace />} />
           <Route path="agent-capabilities" element={<Navigate to="/v2/agents/capabilities" replace />} />
           <Route path="agent-tasks" element={<Navigate to="/v2/agents/tasks" replace />} />
-          <Route path="agent-chat" element={<Navigate to="/v2/agents" replace />} />
+          <Route path="agent-chat" element={<AgentChatRedirect />} />
 
           {/* Campaigns + figli */}
           <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
