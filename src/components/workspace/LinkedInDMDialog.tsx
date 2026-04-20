@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Search, ExternalLink, Linkedin } from "lucide-react";
+import { Loader2, Send, Search, ExternalLink, Linkedin, CheckCircle2 } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
+import { insertPartnerSocialLink, findSocialLinksByPartnerIds } from "@/data/partnerRelations";
+import { updateContactEnrichment } from "@/data/contacts";
 
 const log = createLogger("LinkedInDMDialog");
 
@@ -19,24 +21,48 @@ interface LinkedInDMDialogProps {
   contactName: string | null;
   companyName: string;
   contactId?: string;
+  partnerId?: string;
   contactEmail?: string | null;
   initialMessage?: string;
 }
 
 export default function LinkedInDMDialog({
-  open, onOpenChange, profileUrl, contactName, companyName, contactId, contactEmail, initialMessage,
+  open, onOpenChange, profileUrl, contactName, companyName, contactId, partnerId, contactEmail, initialMessage,
 }: LinkedInDMDialogProps) {
   const [message, setMessage] = useState(initialMessage || "");
   const [url, setUrl] = useState(profileUrl || "");
   const [sending, setSending] = useState(false);
+  const lastSavedUrlRef = useRef<string | null>(null);
   const { isAvailable, sendDirectMessage } = useLinkedInExtensionBridge();
   const lookup = useLinkedInLookup();
 
-  useEffect(() => { setUrl(profileUrl || ""); }, [profileUrl, open]);
+  useEffect(() => {
+    setUrl(profileUrl || "");
+    lastSavedUrlRef.current = profileUrl || null;
+  }, [profileUrl, open]);
 
   const normalized = normalizeLinkedInProfileUrl(url);
   const urlValid = !!normalized;
   const remaining = 300 - message.length;
+  const hadInitialUrl = !!normalizeLinkedInProfileUrl(profileUrl);
+
+  // Auto-save URL trovato/incollato (solo se valido e diverso dall'iniziale)
+  const persistUrl = async (newUrl: string) => {
+    if (!newUrl || lastSavedUrlRef.current === newUrl) return;
+    try {
+      if (partnerId) {
+        const existing = await findSocialLinksByPartnerIds([partnerId], "linkedin");
+        if (!existing.some(l => l.url === newUrl)) {
+          await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: newUrl });
+        }
+      } else if (contactId) {
+        await updateContactEnrichment(contactId, { linkedin_profile_url: newUrl });
+      }
+      lastSavedUrlRef.current = newUrl;
+    } catch (e) {
+      log.warn("auto-save url failed", { error: e instanceof Error ? e.message : String(e) });
+    }
+  };
 
   const handleLiveSearch = async () => {
     if (!contactName?.trim() && !companyName?.trim()) {
@@ -52,9 +78,9 @@ export default function LinkedInDMDialog({
     });
     if (res.url) {
       setUrl(res.url);
-      toast({ title: "✅ Profilo trovato", description: res.url });
+      void persistUrl(res.url);
+      toast({ title: "✅ Profilo trovato e salvato", description: res.url });
     } else {
-      // Fallback: open Google manually
       const q = `site:linkedin.com/in "${contactName || companyName}"${companyName && contactName ? ` "${companyName}"` : ""}`;
       toast({
         title: "Nessun match automatico",
@@ -69,6 +95,10 @@ export default function LinkedInDMDialog({
     if (!urlValid) {
       toast({ title: "URL profilo LinkedIn non valido", description: "Formato richiesto: linkedin.com/in/...", variant: "destructive" });
       return;
+    }
+    // Salva URL se modificato manualmente prima dell'invio
+    if (normalized && normalized !== lastSavedUrlRef.current) {
+      await persistUrl(normalized);
     }
     setSending(true);
     try {
@@ -117,16 +147,23 @@ export default function LinkedInDMDialog({
                 <Linkedin className="w-3 h-3 text-[#0A66C2]" />
                 URL profilo LinkedIn
               </label>
-              <div className="flex gap-1">
-                <Button
-                  type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
-                  onClick={handleLiveSearch}
-                  disabled={lookup.isSearching}
-                  title="Ricerca live profilo LinkedIn"
-                >
-                  {lookup.isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-                  Cerca
-                </Button>
+              <div className="flex gap-1 items-center">
+                {hadInitialUrl && urlValid && (
+                  <span className="text-[10px] text-success flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> ID già salvato
+                  </span>
+                )}
+                {!hadInitialUrl && (
+                  <Button
+                    type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"
+                    onClick={handleLiveSearch}
+                    disabled={lookup.isSearching}
+                    title="Cerca profilo su Google/LinkedIn"
+                  >
+                    {lookup.isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                    Cerca
+                  </Button>
+                )}
                 {urlValid && (
                   <Button
                     type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px] gap-1"

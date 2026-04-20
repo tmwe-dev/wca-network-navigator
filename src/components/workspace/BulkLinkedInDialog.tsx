@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,12 +13,12 @@ interface Props {
 
 export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Props) {
   const [message, setMessage] = useState("");
-  const { dispatch, sending, progress, spacingMinutes } = useBulkLinkedInDispatch();
+  const { dispatch, sending, progress, timing, previewSchedule } = useBulkLinkedInDispatch();
 
   const eligible = targets.filter(t => !!t.profileUrl);
   const skipped = targets.length - eligible.length;
   const remaining = 300 - message.length;
-  const totalHours = Math.max(1, Math.ceil(eligible.length * spacingMinutes / 60));
+  const preview = useMemo(() => previewSchedule(eligible.length), [eligible.length, previewSchedule]);
 
   const handleSend = async () => {
     const result = await dispatch(targets, message);
@@ -52,10 +52,20 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
             )}
             <div className="flex justify-between items-center pt-1 border-t border-border/40">
               <span className="text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Distribuzione:
+                <Clock className="w-3 h-3" /> Finestra:
               </span>
-              <span className="font-semibold">~{totalHours}h (1 ogni {spacingMinutes}min)</span>
+              <span className="font-semibold">{timing.startHour}:00 → {timing.endHour}:00</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Delay tra invii:</span>
+              <span className="font-semibold">{timing.minDelaySeconds}-{timing.maxDelaySeconds}s</span>
+            </div>
+            {eligible.length > 0 && (
+              <div className="flex justify-between text-primary">
+                <span>Ultimo invio stimato:</span>
+                <span className="font-semibold">{preview.humanLabel}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -87,7 +97,7 @@ export default function BulkLinkedInDialog({ open, onOpenChange, targets }: Prop
           )}
 
           <p className="text-[10px] text-muted-foreground">
-            ⚠️ I messaggi vengono accodati con timing distribuito per rispettare il limite LinkedIn (3/ora).
+            ⚠️ Timing configurabile in <span className="font-medium">Settings → Connessioni → Timing multichannel</span>.
             L'invio reale avviene tramite la tua estensione browser.
           </p>
         </div>
