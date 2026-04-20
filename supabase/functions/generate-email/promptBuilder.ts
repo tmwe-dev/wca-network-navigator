@@ -293,10 +293,11 @@ ${strategicAdvisor}
 
   // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
   const systemBlocks: PromptBlock[] = [];
-  systemBlocks.push({ label: "Identity", content: "Stratega B2B logistica + freight forwarding internazionale. Accesso a KB tecniche." });
+  systemBlocks.push({ label: "Identity", content: "Consulente B2B logistica + freight forwarding internazionale. NO selling aggressivo. Scrive con dati veri + KB." });
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
+  systemBlocks.push({ label: "Anti-Hallucination Rules", content: "VIETATO inventare numeri/percentuali/tempi/prezzi/casi cliente/certificazioni. Solo dati forniti o letteralmente in KB." });
   systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (holding pattern + tone modulation)
