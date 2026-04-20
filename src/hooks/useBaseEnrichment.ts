@@ -14,6 +14,11 @@ import { toast } from "@/hooks/use-toast";
 const STORAGE_KEY = "enrichment.base.state.v1";
 const CONCURRENCY = 3;
 
+export type RowEnrichmentState =
+  | { status: "pending" }
+  | { status: "running" }
+  | { status: "done"; slug: boolean; logo: boolean; site: boolean; errors: number };
+
 export interface BaseEnrichmentProgress {
   status: "idle" | "running" | "paused" | "done";
   total: number;
@@ -23,6 +28,8 @@ export interface BaseEnrichmentProgress {
   siteScraped: number;
   errors: number;
   currentName?: string;
+  /** Stato per-record per UI live (id → stato). */
+  rowStates: Record<string, RowEnrichmentState>;
 }
 
 interface PersistedState {
@@ -51,7 +58,7 @@ function savePersisted(s: PersistedState | null): void {
 export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
   const fs = useFireScrapeExtensionBridge();
   const [progress, setProgress] = useState<BaseEnrichmentProgress>({
-    status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0,
+    status: "idle", total: 0, done: 0, slugFound: 0, logoFound: 0, siteScraped: 0, errors: 0, rowStates: {},
   });
   const abortRef = useRef(false);
   const runningRef = useRef(false);
@@ -68,6 +75,7 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
         logoFound: p.logoFound,
         siteScraped: p.siteScraped,
         errors: p.errors,
+        rowStates: {},
       });
     }
   }, []);
@@ -105,11 +113,17 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
 
     abortRef.current = false;
     runningRef.current = true;
+    // Inizializza rowStates: tutti pending tranne quelli già done
+    const initialRowStates: Record<string, RowEnrichmentState> = {};
+    for (const t of targets) {
+      initialRowStates[t.id] = doneIds.has(t.id) ? { status: "done", slug: false, logo: false, site: false, errors: 0 } : { status: "pending" };
+    }
     setProgress({
       status: "running",
       total: targets.length,
       done: doneIds.size,
       slugFound, logoFound, siteScraped, errors,
+      rowStates: initialRowStates,
     });
 
     const queue = targets.filter((t) => !doneIds.has(t.id));
@@ -126,19 +140,31 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
       while (queue.length > 0 && !abortRef.current) {
         const t = queue.shift();
         if (!t) break;
-        setProgress((p) => ({ ...p, currentName: t.name }));
+        setProgress((p) => ({
+          ...p,
+          currentName: t.name,
+          rowStates: { ...p.rowStates, [t.id]: { status: "running" } },
+        }));
+        let rSlug = false, rLogo = false, rSite = false, rErr = 0;
         try {
           const r = await enrichBaseTarget(fs as never, t);
+          rSlug = r.slugFound; rLogo = r.logoFound; rSite = r.siteScraped; rErr = r.errors.length;
           if (r.slugFound) slugFound++;
           if (r.logoFound) logoFound++;
           if (r.siteScraped) siteScraped++;
           if (r.errors.length) errors++;
         } catch {
           errors++;
+          rErr = 1;
         }
         doneIds.add(t.id);
         persist();
-        setProgress((p) => ({ ...p, done: doneIds.size, slugFound, logoFound, siteScraped, errors }));
+        setProgress((p) => ({
+          ...p,
+          done: doneIds.size,
+          slugFound, logoFound, siteScraped, errors,
+          rowStates: { ...p.rowStates, [t.id]: { status: "done", slug: rSlug, logo: rLogo, site: rSite, errors: rErr } },
+        }));
       }
     };
 
