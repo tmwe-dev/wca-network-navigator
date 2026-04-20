@@ -13,6 +13,9 @@ import {
   delay, aiCall, calculateRating, cleanPersonName, cleanCompanyName, cascadeBus,
   type GoogleSearchResult,
 } from "./useDeepSearchHelpers";
+import {
+  searchGoogleGeneral, scrapeGoogleMaps, scrapeWebsiteSubpages, scrapeReputation,
+} from "./useDeepSearchExtraSources";
 
 const _log = createLogger("useDeepSearchLocal");
 
@@ -22,6 +25,11 @@ export interface DeepSearchRuntimeConfig {
   linkedinContacts?: boolean;
   linkedinCompany?: boolean;
   whatsapp?: boolean;
+  /** Nuove fonti V2 — attivabili granularmente */
+  googleGeneral?: boolean;
+  googleMaps?: boolean;
+  websiteMultiPage?: boolean;
+  reputation?: boolean;
   maxQueriesPerContact?: number;
   priorityDomain?: string;
 }
