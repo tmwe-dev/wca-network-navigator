@@ -1,23 +1,20 @@
 /**
  * ForgeOraclePanel — left panel of Email Forge.
- * Self-contained Oracle controls (does NOT reuse the heavy email-composer-bound
- * OraclePanel, to keep this test page free of composer side-effects).
+ * Recipient picker (Partner/Contact/BCA) + tipo email + tono + KB + quality + goal.
  */
 import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { ForgeRecipientPicker, type ForgeRecipient } from "./ForgeRecipientPicker";
 
 export interface ForgeConfig {
-  recipientCompany: string;
-  recipientName: string;
-  recipientCountry: string;
+  recipient: ForgeRecipient | null;
   emailType: EmailType | null;
   tone: string;
   useKB: boolean;
@@ -30,12 +27,14 @@ interface Props {
   initial?: Partial<ForgeConfig>;
   onRun: (config: ForgeConfig) => void;
   isLoading: boolean;
+  /** Notifica al parent il destinatario corrente per il pannello "Cosa legge l'AI". */
+  onRecipientChange?: (r: ForgeRecipient | null) => void;
+  /** Notifica al parent le KB categories del tipo email selezionato. */
+  onEmailTypeChange?: (t: EmailType | null) => void;
 }
 
 const DEFAULT_CONFIG: ForgeConfig = {
-  recipientCompany: "Acme Logistics SpA",
-  recipientName: "Mario Rossi",
-  recipientCountry: "IT",
+  recipient: null,
   emailType: DEFAULT_EMAIL_TYPES[0] ?? null,
   tone: "professionale",
   useKB: true,
@@ -44,11 +43,21 @@ const DEFAULT_CONFIG: ForgeConfig = {
   quality: "standard",
 };
 
-export function ForgeOraclePanel({ initial, onRun, isLoading }: Props) {
+export function ForgeOraclePanel({ initial, onRun, isLoading, onRecipientChange, onEmailTypeChange }: Props) {
   const [config, setConfig] = useState<ForgeConfig>({ ...DEFAULT_CONFIG, ...initial });
 
   const update = <K extends keyof ForgeConfig>(k: K, v: ForgeConfig[K]) =>
     setConfig((prev) => ({ ...prev, [k]: v }));
+
+  const handleRecipient = (r: ForgeRecipient | null) => {
+    update("recipient", r);
+    onRecipientChange?.(r);
+  };
+
+  const handleEmailType = (t: EmailType) => {
+    update("emailType", t);
+    onEmailTypeChange?.(t);
+  };
 
   const handleSubmit = () => {
     onRun(config);
@@ -63,28 +72,8 @@ export function ForgeOraclePanel({ initial, onRun, isLoading }: Props) {
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         <section className="space-y-2">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Destinatario test</div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rc" className="text-[11px]">Azienda</Label>
-            <Input id="rc" value={config.recipientCompany}
-              onChange={(e) => update("recipientCompany", e.target.value)}
-              className="h-7 text-xs"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rn" className="text-[11px]">Nome contatto</Label>
-            <Input id="rn" value={config.recipientName}
-              onChange={(e) => update("recipientName", e.target.value)}
-              className="h-7 text-xs"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cc" className="text-[11px]">Paese (ISO 2)</Label>
-            <Input id="cc" value={config.recipientCountry} maxLength={2}
-              onChange={(e) => update("recipientCountry", e.target.value.toUpperCase())}
-              className="h-7 text-xs uppercase"
-            />
-          </div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Destinatario</div>
+          <ForgeRecipientPicker value={config.recipient} onChange={handleRecipient} />
         </section>
 
         <section className="space-y-2 pt-2 border-t border-border/30">
@@ -94,7 +83,7 @@ export function ForgeOraclePanel({ initial, onRun, isLoading }: Props) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => update("emailType", t)}
+                onClick={() => handleEmailType(t)}
                 className={`text-[11px] rounded border px-2 py-1.5 text-left transition-colors ${
                   config.emailType?.id === t.id
                     ? "border-primary bg-primary/10 text-primary"
@@ -161,7 +150,7 @@ export function ForgeOraclePanel({ initial, onRun, isLoading }: Props) {
       <div className="p-3 border-t border-border/40 shrink-0">
         <Button
           onClick={handleSubmit}
-          disabled={isLoading || !config.recipientCompany}
+          disabled={isLoading}
           className="w-full"
           size="sm"
         >
