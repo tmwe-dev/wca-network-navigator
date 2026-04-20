@@ -65,7 +65,7 @@ export async function updatePlaybook(
 export interface CreateInvestigationInput {
   user_id: string;
   operator_id?: string | null;
-  playbook_id: string;
+  playbook_id: string | null;
   level: SherlockLevel;
   partner_id?: string | null;
   contact_id?: string | null;
