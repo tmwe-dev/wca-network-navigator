@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Flame, Play, Loader2, CheckCircle2, AlertCircle, Globe, MapPin,
-  Star, Search, FileText, Copy, Eye, Code2, X, Trash2,
+  Star, Search, FileText, Copy, Eye, Code2, X, Trash2, Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fs } from "@/v2/io/extensions/bridge";
@@ -57,6 +57,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [running, setRunning] = React.useState<PipelineKey | "manual" | null>(null);
   const [manualUrl, setManualUrl] = React.useState("");
+  const abortRef = React.useRef<AbortController | null>(null);
 
   const selected = pages.find((p) => p.id === selectedId) ?? null;
 
@@ -71,20 +72,42 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
     };
   }, [recipient]);
 
+  const stop = React.useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPages((prev) => prev.map((p) =>
+      p.status === "running"
+        ? { ...p, status: "error", error: "Interrotto dall'utente", durationMs: Date.now() - p.startedAt }
+        : p,
+    ));
+    setRunning(null);
+    toast.info("Operazione interrotta");
+  }, []);
+
+  // Reset abort se si chiude il dialog
+  React.useEffect(() => {
+    if (!open && abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+      setRunning(null);
+    }
+  }, [open]);
+
   const runPipeline = async (key: PipelineKey) => {
     if (running) return;
     setRunning(key);
+    const controller = new AbortController();
+    abortRef.current = controller;
     let steps: Array<Record<string, unknown>>;
     try {
       steps = resolvePipelineSteps(ALL_PIPELINES[key], vars);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore pipeline");
       setRunning(null);
+      abortRef.current = null;
       return;
     }
 
-    // Per ogni step di tipo "nav" creiamo una "pagina" e la riempiamo quando
-    // arriva il risultato del successivo step "scrape".
     let currentPageId: string | null = null;
 
     await fs.runSequenceWithProgress(steps, (i, total, step, result) => {
@@ -92,24 +115,28 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
       const url = typeof step.url === "string" ? step.url : "";
 
       if (action === "nav" && url) {
+        // Chiudi la pagina precedente come "done" se era ancora running
+        setPages((prev) => prev.map((p) =>
+          p.id === currentPageId && p.status === "running"
+            ? { ...p, status: "done", durationMs: Date.now() - p.startedAt }
+            : p,
+        ));
         const id = `${key}-${i}-${Date.now()}`;
         currentPageId = id;
         const page: CapturedPage = {
           id, pipelineKey: key, url,
-          status: "running", markdown: "",
+          status: result.ok ? "running" : "error",
+          markdown: "",
+          error: result.ok ? undefined : result.error,
           startedAt: Date.now(),
+          durationMs: result.ok ? undefined : 0,
         };
-        setPages((prev) => {
-          const next = [...prev, page];
-          if (!selectedId) setSelectedId(id);
-          return next;
-        });
+        setPages((prev) => [...prev, page]);
+        setSelectedId((s) => s ?? id);
       }
 
       if (action === "scrape" && currentPageId) {
-        const md = result.ok
-          ? extractMarkdown(result.data)
-          : "";
+        const md = result.ok ? extractMarkdown(result.data) : "";
         const errorMsg = !result.ok ? result.error : undefined;
         setPages((prev) => prev.map((p) =>
           p.id === currentPageId
@@ -122,13 +149,22 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
               }
             : p,
         ));
-        // auto-seleziona l'ultima pagina completata
         setSelectedId((s) => s ?? currentPageId);
       }
-    });
+    }, { signal: controller.signal, stepTimeoutMs: 25_000 });
 
+    // Chiudi eventuali pagine ancora "running" (es. ultimo nav senza scrape)
+    setPages((prev) => prev.map((p) =>
+      p.status === "running"
+        ? { ...p, status: "done", durationMs: Date.now() - p.startedAt }
+        : p,
+    ));
+
+    abortRef.current = null;
     setRunning(null);
-    toast.success(`Pipeline "${ALL_PIPELINES[key].label}" completata`);
+    if (!controller.signal.aborted) {
+      toast.success(`Pipeline "${ALL_PIPELINES[key].label}" completata`);
+    }
   };
 
   const runManual = async () => {
@@ -158,6 +194,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
   };
 
   const clearAll = () => {
+    if (running) return;
     setPages([]);
     setSelectedId(null);
   };
@@ -187,7 +224,17 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
             )}
           </DialogTitle>
           <div className="flex items-center gap-1.5">
-            <Button size="sm" variant="ghost" onClick={clearAll} disabled={pages.length === 0}
+            {running && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stop}
+                className="h-7 text-[11px] gap-1"
+              >
+                <Square className="w-3 h-3 fill-current" /> Stop
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={clearAll} disabled={pages.length === 0 || !!running}
               className="h-7 text-[11px]">
               <Trash2 className="w-3 h-3 mr-1" /> Pulisci
             </Button>

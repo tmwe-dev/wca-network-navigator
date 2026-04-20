@@ -127,17 +127,26 @@ export const fs = {
   /**
    * Esegue una sequenza di step `agent-action` uno alla volta, invocando
    * `onStep` dopo ogni risposta. Ritorna l'array completo dei risultati.
-   * Permette di ricostruire una "live feed" lato webapp anche se l'estensione
-   * non emette eventi di progresso intermedi.
+   * Supporta abort tramite AbortSignal e timeout custom per step (default 25s).
    */
   async runSequenceWithProgress(
     steps: Array<Record<string, unknown>>,
     onStep: (i: number, total: number, step: Record<string, unknown>, result: CallResult<ExtensionResponse>) => void,
+    options: { signal?: AbortSignal; stepTimeoutMs?: number } = {},
   ): Promise<Array<CallResult<ExtensionResponse>>> {
     const results: Array<CallResult<ExtensionResponse>> = [];
+    const stepTimeoutMs = options.stepTimeoutMs ?? 25_000;
     for (let i = 0; i < steps.length; i++) {
+      if (options.signal?.aborted) {
+        const aborted: CallResult<ExtensionResponse> = { ok: false, error: "Interrotto dall'utente" };
+        try { onStep(i, steps.length, steps[i], aborted); } catch { /* swallow */ }
+        results.push(aborted);
+        break;
+      }
       const step = steps[i];
-      const res = await callExtension<ExtensionResponse>("firescrape", "agent-action", { step }, { timeoutMs: 60_000 });
+      const res = await callExtension<ExtensionResponse>(
+        "firescrape", "agent-action", { step }, { timeoutMs: stepTimeoutMs },
+      );
       results.push(res);
       try { onStep(i, steps.length, step, res); } catch { /* swallow */ }
       if (!res.ok) break; // interrompi al primo errore
