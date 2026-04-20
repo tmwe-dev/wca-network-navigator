@@ -9,11 +9,12 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  Mail, SortAsc, SortDesc, MoreVertical, Linkedin, CheckCircle2, ImageOff, Brain, Image,
+  Mail, SortAsc, SortDesc, MoreVertical, Linkedin, CheckCircle2, ImageOff, Brain, Image, Loader2, Globe,
 } from "lucide-react";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
 import type { EnrichedRow, SortField, SortDir } from "@/hooks/useEnrichmentData";
+import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
@@ -50,6 +51,7 @@ interface Props {
   allSelected: boolean;
   sortField: SortField;
   sortDir: SortDir;
+  rowStates?: Record<string, RowEnrichmentState>;
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onToggleSort: (field: SortField) => void;
@@ -57,7 +59,7 @@ interface Props {
 }
 
 export function EnrichmentRowList({
-  rows, selected, allSelected, sortField, sortDir,
+  rows, selected, allSelected, sortField, sortDir, rowStates,
   onToggleAll, onToggleOne, onToggleSort, onDeepSearch,
 }: Props) {
   const SortIcon = sortDir === "asc" ? SortAsc : SortDesc;
