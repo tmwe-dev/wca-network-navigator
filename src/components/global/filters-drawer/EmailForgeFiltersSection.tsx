@@ -91,6 +91,13 @@ export function EmailForgeFiltersSection() {
         </div>
       </FilterSection>
 
+      <FilterSection icon={UserIcon} label="Destinatario">
+        <ForgeRecipientPicker
+          value={lab.recipient}
+          onChange={(r) => forgeLabStore.set({ recipient: r })}
+        />
+      </FilterSection>
+
       <Button
         size="sm"
         className="w-full"
