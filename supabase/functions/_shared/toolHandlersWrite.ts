@@ -5,6 +5,7 @@
  */
 
 import { escapeLike } from "./sqlEscape.ts";
+import { applyLeadStatusChange, TERMINAL_STATUSES } from "./leadStatusGuard.ts";
 
 type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient>;
 
@@ -25,16 +26,42 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
   async function executeUpdatePartner(args: Record<string, unknown>, userId: string) {
     const partner = await resolvePartnerId(args);
     if (!partner) return { error: "Partner non trovato" };
+
+    // ═══ HARD GUARD: lead_status passa SEMPRE dal guard centralizzato ═══
+    if (args.lead_status) {
+      const target = String(args.lead_status);
+      if (TERMINAL_STATUSES.has(target) && !args.reason) {
+        return { error: `Per impostare "${target}" serve il parametro "reason" (motivo obbligatorio).` };
+      }
+      const res = await applyLeadStatusChange(supabase, {
+        table: "partners",
+        recordId: partner.id,
+        newStatus: target,
+        userId,
+        actor: { type: "ai_agent", name: "agent_tool:update_partner" },
+        decisionOrigin: "ai_auto",
+        trigger: `agent tool update_partner${args.reason ? ` — ${String(args.reason)}` : ""}`,
+        reason: args.reason ? String(args.reason) : undefined,
+      });
+      if (!res.applied) {
+        return { error: `Cambio stato bloccato: ${res.blockedReason}` };
+      }
+    }
+
+    // Altri campi (no lead_status, già gestito sopra)
     const updates: Record<string, unknown> = {};
     const changes: string[] = [];
     if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
-    if (args.lead_status) { updates.lead_status = args.lead_status; changes.push(`lead status: ${args.lead_status}`); }
+    if (args.lead_status) changes.push(`lead status: ${args.lead_status}`); // già applicato
     if (args.rating !== undefined) { updates.rating = Math.min(5, Math.max(0, Number(args.rating))); changes.push(`rating: ${updates.rating}`); }
     if (args.company_alias) { updates.company_alias = args.company_alias; changes.push(`alias: ${args.company_alias}`); }
-    if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare specificato" };
-    updates.updated_at = new Date().toISOString();
-    const { error } = await supabase.from("partners").update(updates).eq("user_id", userId).eq("id", partner.id);
-    if (error) return { error: error.message };
+    if (Object.keys(updates).length === 0 && !args.lead_status) return { error: "Nessun campo da aggiornare specificato" };
+
+    if (Object.keys(updates).length > 0) {
+      updates.updated_at = new Date().toISOString();
+      const { error } = await supabase.from("partners").update(updates).eq("user_id", userId).eq("id", partner.id);
+      if (error) return { error: error.message };
+    }
     return { success: true, partner_id: partner.id, company_name: partner.name, changes, message: `Partner "${partner.name}" aggiornato: ${changes.join(", ")}` };
   }
 
@@ -66,33 +93,110 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
 
   async function executeUpdateLeadStatus(args: Record<string, unknown>) {
     const status = String(args.status);
-    if (args.contact_ids && Array.isArray(args.contact_ids) && args.contact_ids.length > 0) {
-      const ids = args.contact_ids as string[];
-      const updates: Record<string, unknown> = { lead_status: status };
-      if (status === "converted") updates.converted_at = new Date().toISOString();
-      const { error, count } = await supabase.from("imported_contacts").update(updates).in("id", ids);
-      if (error) return { error: error.message };
-      return { success: true, updated_count: count || ids.length, status, message: `${count || ids.length} contatti aggiornati a "${status}"` };
+    const reason = args.reason ? String(args.reason) : undefined;
+    if (TERMINAL_STATUSES.has(status) && !reason) {
+      return { error: `Per impostare "${status}" serve il parametro "reason" (motivo obbligatorio).` };
     }
-    let query = supabase.from("imported_contacts").select("id", { count: "exact" });
-    if (args.company_name) query = query.ilike("company_name", `%${escapeLike(args.company_name)}%`);
-    if (args.country) query = query.ilike("country", `%${escapeLike(args.country)}%`);
-    const { data: matches, count } = await query.limit(200);
-    if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
-    if (matches.length > 5) return { needs_confirmation: true, count: count || matches.length, status, message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?` };
-    const ids = matches.map((c: Record<string, unknown>) => c.id);
-    const updates: Record<string, unknown> = { lead_status: status };
-    if (status === "converted") updates.converted_at = new Date().toISOString();
-    const { error } = await supabase.from("imported_contacts").update(updates).in("id", ids);
-    if (error) return { error: error.message };
-    return { success: true, updated_count: ids.length, status, message: `${ids.length} contatti aggiornati a "${status}"` };
+    // Risolvi gli id target
+    let targetIds: string[] = [];
+    if (args.contact_ids && Array.isArray(args.contact_ids) && args.contact_ids.length > 0) {
+      targetIds = args.contact_ids as string[];
+    } else {
+      let query = supabase.from("imported_contacts").select("id", { count: "exact" });
+      if (args.company_name) query = query.ilike("company_name", `%${escapeLike(String(args.company_name))}%`);
+      if (args.country) query = query.ilike("country", `%${escapeLike(String(args.country))}%`);
+      const { data: matches, count } = await query.limit(200);
+      if (!matches || matches.length === 0) return { error: "Nessun contatto trovato con i filtri specificati" };
+      if (matches.length > 5) return { needs_confirmation: true, count: count || matches.length, status, message: `Trovati ${count || matches.length} contatti. Confermi l'aggiornamento a "${status}"?` };
+      targetIds = matches.map((c: Record<string, unknown>) => c.id as string);
+    }
+
+    // Applica via guard a uno a uno (per ottenere validazione + audit per ciascuno)
+    let updated = 0; const blocked: string[] = [];
+    const { data: { user } } = await (supabase as { auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> } }).auth.getUser();
+    const userId = user?.id;
+    for (const id of targetIds) {
+      const res = await applyLeadStatusChange(supabase, {
+        table: "imported_contacts",
+        recordId: id,
+        newStatus: status,
+        userId: userId ?? "",
+        actor: { type: "ai_agent", name: "agent_tool:update_lead_status" },
+        decisionOrigin: "ai_auto",
+        trigger: `agent tool update_lead_status${reason ? ` — ${reason}` : ""}`,
+        reason,
+      });
+      if (res.applied) {
+        updated++;
+        if (status === "converted") {
+          await supabase.from("imported_contacts").update({ converted_at: new Date().toISOString() }).eq("id", id);
+        }
+      } else {
+        blocked.push(`${id}: ${res.blockedReason}`);
+      }
+    }
+    return {
+      success: updated > 0,
+      updated_count: updated,
+      blocked_count: blocked.length,
+      status,
+      message: `${updated} contatti aggiornati a "${status}"${blocked.length ? `, ${blocked.length} bloccati (transizione non valida o reason mancante)` : ""}`,
+      ...(blocked.length ? { blocked_details: blocked.slice(0, 10) } : {}),
+    };
   }
 
   async function executeBulkUpdatePartners(args: Record<string, unknown>, userId: string) {
+    // Lead_status bulk passa SEMPRE dal guard, partner per partner
+    if (args.lead_status) {
+      const status = String(args.lead_status);
+      const reason = args.reason ? String(args.reason) : undefined;
+      if (TERMINAL_STATUSES.has(status) && !reason) {
+        return { error: `Per impostare "${status}" serve il parametro "reason" (motivo obbligatorio).` };
+      }
+      let idQuery = supabase.from("partners").select("id").eq("user_id", userId);
+      if (args.partner_ids && Array.isArray(args.partner_ids)) idQuery = idQuery.in("id", args.partner_ids as string[]);
+      else if (args.country_code) idQuery = idQuery.eq("country_code", String(args.country_code).toUpperCase());
+      else return { error: "Specifica country_code o partner_ids" };
+      const { data: rows } = await idQuery.limit(500);
+      const ids = (rows ?? []).map((r: Record<string, unknown>) => r.id as string);
+      if (ids.length === 0) return { error: "Nessun partner trovato" };
+      if (ids.length > 5) return { needs_confirmation: true, count: ids.length, message: `Trovati ${ids.length} partner. Confermi cambio stato a "${status}"?` };
+
+      let updated = 0; const blocked: string[] = [];
+      for (const id of ids) {
+        const res = await applyLeadStatusChange(supabase, {
+          table: "partners",
+          recordId: id,
+          newStatus: status,
+          userId,
+          actor: { type: "ai_agent", name: "agent_tool:bulk_update_partners" },
+          decisionOrigin: "ai_auto",
+          trigger: `agent tool bulk_update_partners${reason ? ` — ${reason}` : ""}`,
+          reason,
+        });
+        if (res.applied) updated++;
+        else blocked.push(`${id}: ${res.blockedReason}`);
+      }
+
+      // Aggiorna eventuali altri campi non lead_status
+      const otherUpdates: Record<string, unknown> = {};
+      if (args.is_favorite !== undefined) otherUpdates.is_favorite = args.is_favorite;
+      if (Object.keys(otherUpdates).length > 0) {
+        otherUpdates.updated_at = new Date().toISOString();
+        await supabase.from("partners").update(otherUpdates).in("id", ids).eq("user_id", userId);
+      }
+
+      return {
+        success: updated > 0, updated_count: updated, blocked_count: blocked.length,
+        message: `${updated} partner aggiornati a "${status}"${blocked.length ? `, ${blocked.length} bloccati` : ""}`,
+        ...(blocked.length ? { blocked_details: blocked.slice(0, 10) } : {}),
+      };
+    }
+
+    // Bulk senza lead_status → comportamento legacy
     const updates: Record<string, unknown> = {};
     const changes: string[] = [];
     if (args.is_favorite !== undefined) { updates.is_favorite = args.is_favorite; changes.push(`preferito: ${args.is_favorite ? "sì" : "no"}`); }
-    if (args.lead_status) { updates.lead_status = args.lead_status; changes.push(`lead status: ${args.lead_status}`); }
     if (Object.keys(updates).length === 0) return { error: "Nessun aggiornamento specificato" };
     updates.updated_at = new Date().toISOString();
     let countQuery = supabase.from("partners").select("id", { count: "exact", head: true }).eq("user_id", userId);
