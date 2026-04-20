@@ -45,32 +45,38 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
   const debounced = useDebounced(search, 250);
 
+  // Limite dinamico: con filtro paese o ricerca → 1000 (rispetta cap Supabase di default)
+  // Senza filtri → 100 (lista iniziale leggera)
+  const partnerLimit = country || debounced.length >= 2 ? 1000 : 100;
+  const contactLimit = country || debounced.length >= 2 ? 1000 : 100;
+  const bcaLimit = debounced.length >= 2 ? 1000 : 100;
+
   const partnersQuery = useQuery({
-    queryKey: ["forge-picker", "partners", debounced, country],
+    queryKey: ["forge-picker", "partners", debounced, country, partnerLimit],
     enabled: tab === "partner",
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, country_code, city, email")
+        .select("id, company_name, country_code, city, email", { count: "exact" })
         .eq("is_active", true)
-        .order("company_name")
-        .limit(60);
+        .order("company_name", { ascending: true })
+        .limit(partnerLimit);
       if (debounced.length >= 2) q = q.ilike("company_name", `%${debounced}%`);
       if (country) q = q.eq("country_code", country);
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
   const contactsQuery = useQuery({
-    queryKey: ["forge-picker", "contacts", debounced, country],
+    queryKey: ["forge-picker", "contacts", debounced, country, contactLimit],
     enabled: tab === "contact",
     queryFn: async () => {
       let q = supabase
         .from("imported_contacts")
-        .select("id, name, company_name, email, country, position")
-        .order("name")
-        .limit(60);
+        .select("id, name, company_name, email, country, position", { count: "exact" })
+        .order("name", { ascending: true })
+        .limit(contactLimit);
       if (debounced.length >= 2) {
         q = q.or(`name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
       }
@@ -78,25 +84,25 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
         const cn = WCA_COUNTRIES_MAP[country]?.name;
         if (cn) q = q.ilike("country", `%${cn}%`);
       }
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
   const bcaQuery = useQuery({
-    queryKey: ["forge-picker", "bca", debounced, country],
+    queryKey: ["forge-picker", "bca", debounced, country, bcaLimit],
     enabled: tab === "bca",
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
-        .select("id, contact_name, company_name, email, location, matched_partner_id")
-        .order("created_at", { ascending: false })
-        .limit(60);
+        .select("id, contact_name, company_name, email, location, matched_partner_id", { count: "exact" })
+        .order("company_name", { ascending: true })
+        .limit(bcaLimit);
       if (debounced.length >= 2) {
         q = q.or(`contact_name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
       }
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
