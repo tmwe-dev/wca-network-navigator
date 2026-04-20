@@ -76,6 +76,25 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
                 channelIcon={state.isEmail ? Mail : state.isWhatsApp ? MessageCircle : Linkedin}
               />
             )}
+            {/* Sezione esclusiva di /v2/inreach: raggruppamento per mittente */}
+            {state.isInreach && (
+              <FilterSection icon={Users} label="Visualizzazione">
+                <ChipGroup>
+                  <Chip
+                    active={!state.g.filters.inreachGroupBySender}
+                    onClick={() => state.g.setFilter("inreachGroupBySender", false)}
+                  >
+                    Lista cronologica
+                  </Chip>
+                  <Chip
+                    active={state.g.filters.inreachGroupBySender}
+                    onClick={() => state.g.setFilter("inreachGroupBySender", true)}
+                  >
+                    Raggruppa per mittente
+                  </Chip>
+                </ChipGroup>
+              </FilterSection>
+            )}
             {state.isNetwork && <NetworkFiltersSection />}
             {state.isCRM && state.g.filters.crmActiveTab === "contatti" && <CRMFiltersSection />}
             {state.isCRM && state.g.filters.crmActiveTab === "biglietti" && <BCAFiltersSection />}
@@ -83,7 +102,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isCampaigns && <CampaignsFiltersSection />}
             {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>
