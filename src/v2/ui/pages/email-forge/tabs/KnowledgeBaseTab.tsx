@@ -81,7 +81,7 @@ export function KnowledgeBaseTab({ categories }: Props) {
           entry={editing}
           saving={savingId === editing.id}
           onClose={() => setEditing(null)}
-          onSave={async (patch) => { await update(editing.id, patch); setEditing(null); }}
+          onSave={async (patch) => { await update(editing.id, patch); setEditing(null); setSavedAt(Date.now()); }}
         />
       )}
 
@@ -89,9 +89,11 @@ export function KnowledgeBaseTab({ categories }: Props) {
         <CreateEntryDialog
           defaultCategory={categories?.[0] ?? "vendita"}
           onClose={() => setCreating(false)}
-          onCreate={async (input) => { const r = await insert(input); if (r) setCreating(false); }}
+          onCreate={async (input) => { const r = await insert(input); if (r) { setCreating(false); setSavedAt(Date.now()); } }}
         />
       )}
+
+      <RegenerateBanner visible={savedAt > 0} message="KB aggiornata" onDismiss={() => setSavedAt(0)} />
     </div>
   );
 }
