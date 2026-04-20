@@ -220,6 +220,17 @@ export function useWhatsAppBackfill() {
         let newestAt: string | null = null;
         let newestExtId: string | null = null;
 
+        // Etichette UI WhatsApp da NON salvare come contatti
+        const WA_UI_LABELS = new Set([
+          "gruppi", "da leggere", "ferie permessi malattie", "name", "group 1",
+          "non letti", "preferiti", "archiviate", "tutti",
+        ]);
+        // Anteprime sidebar / placeholder media da scartare
+        const WA_GHOST_BODIES = new Set([
+          "foto", "video", "audio", "sticker", "gif", "documento",
+          "posizione", "contatto", "messaggio", "messaggio eliminato",
+        ]);
+
         for (const msg of messages) {
           const contact = String(msg.contact || msg.from || chat.name).trim();
           const rawText = String(msg.text || msg.lastMessage || "");
@@ -229,6 +240,14 @@ export function useWhatsAppBackfill() {
           const finalDirection = String(msg.direction || direction);
           const text = cleanText.trim();
           if (!text) continue;
+
+          // Hard-skip: etichette UI come "contatto"
+          if (WA_UI_LABELS.has(contact.toLowerCase())) continue;
+          // Hard-skip: ghost preview (testi <3 char, soli numeri brevi, placeholder media)
+          const lowerText = text.toLowerCase();
+          if (text.length < 3) continue;
+          if (/^[0-9]{1,3}$/.test(text)) continue;
+          if (WA_GHOST_BODIES.has(lowerText)) continue;
 
           const rawTime = String(msg.time || msg.timestamp || "");
           const extId = buildDeterministicId("wa", contact, text, rawTime || new Date().toISOString());
