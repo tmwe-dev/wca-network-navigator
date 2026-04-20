@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Flame, Play, Loader2, CheckCircle2, AlertCircle, Globe, MapPin,
-  Star, Search, FileText, Copy, Eye, Code2, X, Trash2,
+  Star, Search, FileText, Copy, Eye, Code2, X, Trash2, Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { fs } from "@/v2/io/extensions/bridge";
