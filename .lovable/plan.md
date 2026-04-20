@@ -1,112 +1,157 @@
 
+L'utente vuole:
+1. **Backup** della versione FireScrape attuale (funziona bene).
+2. Trasformare Deep Search in **"Sherlock"** — un investigatore con 3 livelli di profondità.
+3. Le istruzioni di ricerca devono stare in una **Knowledge Base modificabile** (non hardcoded).
+4. L'AI deve assistere lo scraper: parsing intelligente + decidere prossimo step in base a cosa trova.
+5. Esecuzione **sequenziale e iterativa**: una richiesta alla volta, raccogli, valuta, poi prossima.
 
-## Diagnosi
+## Cosa abbiamo già che funziona (NON toccare)
 
-### 1. Perché Google si apre con "0 risultati"
-La Deep Search per partner usa un **cascading di 5 query LinkedIn** in `useDeepSearchLocal.ts` riga 64-69. Per un contatto come "Mr. Luca Arcana", la PRIMA query è:
-```
-"Mr. Luca Arcana" "Transport Management srl" site:linkedin.com/in
-```
-Google non trova nulla perché:
-- Il prefisso **"Mr."** è incluso nelle virgolette → match esatto fallisce
-- Il nome aziendale ha varianti ("Transport Management S.r.l.", "Transport Management SRL", ecc.)
-- Le virgolette doppie su entrambi i termini sono troppo restrittive
+- `bridge.ts` → `fs.readUrl(url)` con `navigate` + `settleMs` + `scrape` top-level. Testato, allineato all'API estensione v3.4.0.
+- `DeepSearchCanvas.tsx` → UI canvas con feed live, Stop, render markdown formattato, persistenza in `scrape_cache`.
+- `scrape_cache` → tabella con TTL 7gg già attiva.
+- 4 pipeline base (Google Maps, sito multi-pagina, reputation, Google generale).
+- Gate timing LI/WA (Fase 1 piano precedente, da completare).
 
-L'extension **dovrebbe** poi cascare alla query 2, 3, 4, 5… ma:
-- Le query successive vengono eseguite dall'extension una alla volta
-- L'utente vede solo la PRIMA tab Google aperta (con 0 risultati) e pensa che sia finita
-- Il sistema in realtà sta provando le altre, ma è invisibile
+## Piano "Sherlock"
 
-**Soluzione**: pulire i nomi prima della query (rimuovere `Mr.`, `Mrs.`, `Dott.`, `S.r.l.`, `SRL`, `S.p.A.` ecc.) e mostrare in UI quale query è in corso (cascade visibility).
+### 1. Backup versione corrente
+- Copiare i 3 file chiave in `src/v2/io/extensions/_backup/2026-04-20-firescrape-v1/`:
+  - `bridge.ts`, `deep-search-pipelines.ts`, `DeepSearchCanvas.tsx`
+- README breve con data, contratto API estensione, screenshot di funzionamento.
+- Memoria `mem://features/firescrape-baseline-2026-04-20` con riferimento al backup.
 
-### 2. Manca il pannello di setting Deep Search
-Il piano originale prevedeva un **Deep Search Config Panel** dove scegliere le 4 modalità:
-- 🌐 Scrape sito web
-- 🔗 Scrape LinkedIn (contatti + azienda)
-- 💬 Verifica WhatsApp
-- 🤖 Analisi AI profilo
+### 2. Nuova KB "Sherlock Playbooks" (DB + UI)
 
-Oggi nel `DeepSearchTab` ci sono solo i **bottoni Run** (partner / contatto), nessun toggle. Il `DeepSearchOptionsDialog` esiste già ma è usato solo nei Settings/Cockpit, mai nel Lab Forge.
-
-Inoltre **non si può configurare la qualità delle query** (numero risultati, query custom, lingua, dominio aziendale prioritario).
-
-### 3. KB e Prompt: aggiornamento immediatamente verificabile?
-Lo stato attuale:
-- ✅ KB tab: edit/toggle/insert funzionanti, salva su `knowledge_base` table
-- ✅ Sender tab: edit `app_settings` funzionante
-- ✅ Doctrine tab: edit dottrine L3 funzionante
-- ❌ MANCA: pulsante **"Re-genera mail con nuova KB"** prominente dopo ogni save
-- ❌ MANCA: badge "modificato → genera per vedere effetto"
-- ❌ I prompt operativi (`operative_prompts`) **non sono editabili dal Lab**: l'utente vede solo le KB
-
-## Piano di intervento
-
-### A. Cleanup query Google (impatto immediato)
-Modifico `useDeepSearchHelpers.ts`:
-- Aggiungo `cleanPersonName()` → rimuove prefissi (`Mr.`, `Mrs.`, `Ms.`, `Dr.`, `Dott.`, `Ing.`, `Eng.`)
-- Aggiungo `cleanCompanyName()` → rimuove suffissi legali (`S.r.l.`, `SRL`, `S.p.A.`, `Ltd`, `LLC`, `GmbH`, `Inc.`, `Co.`)
-- Le query usano i nomi puliti; aggiungo anche query "loose" senza virgolette come prima fallback
-
-### B. Deep Search Config Panel nel Lab Forge
-In `DeepSearchTab.tsx` aggiungo in alto un pannello compatto con:
-- 4 toggle (sito, LinkedIn contatti, LinkedIn azienda, WhatsApp)
-- Slider "max query per contatto" (1-5)
-- Input "dominio prioritario" (override del domain extracted)
-- I toggle si salvano nel `forgeLabStore` come `deepSearchConfig`
-- Il `useDeepSearchLocal` riceve e rispetta i toggle (skip rami disattivati)
-
-### C. Cascade visibility (capire cosa fa AI)
-Sotto i bottoni Run, mostro una **timeline live** delle query in corso:
+Tabella `sherlock_playbooks`:
 ```text
-✓ "Luca Arcana" "Transport Management" site:linkedin.com/in   → 0 risultati
-⏳ "Luca Arcana" "transmgmt.it" site:linkedin.com/in          → in corso…
-○ "Luca Arcana" site:linkedin.com/in                          → in coda
+id | level (1|2|3) | name | description | is_active | sort_order
+   | steps (jsonb) — array di step ordinati
+   | target_fields (text[]) — es. {email, phone, role, linkedin}
+   | created_at | updated_at | user_id
 ```
-Aggiungo un event bus leggero in `useDeepSearchLocal` (`onQueryStart`/`onQueryResult`) → callback opzionale che il tab sottoscrive.
 
-### D. Verifica immediata dopo ogni save (KB / Sender / Doctrine)
-- Quando l'utente modifica KB/Sender/Doctrine, mostro banner sticky in fondo al tab:
-  > "Modifica salvata · [Re-genera mail per vedere l'effetto]"
-- Bottone esegue `forgeLabStore.triggerRun()` che la pagina già osserva.
+Ogni **step** in `steps`:
+```text
+{
+  order: 1,
+  label: "Scheda Google Maps",
+  url_template: "https://google.com/maps/search/{companyName}+{city}",
+  required_vars: ["companyName"],
+  settle_ms: 3000,
+  channel: "generic" | "linkedin" | "whatsapp",
+  ai_extract_prompt: "Estrai indirizzo, telefono, sito, orari…",
+  ai_decide_next: true | false,   // se true, AI può saltare step successivi
+  depends_on: [step.order]        // opzionale
+}
+```
 
-### E. Editor Prompt Operativi (nuovo tab "Prompts")
-Aggiungo un 6° tab `PromptsTab` accanto a Doctrine:
-- Lista i prompt rilevanti per Email Forge dalla tabella `operative_prompts` (filtrati per `category=email` o `agent_type` collegato)
-- Edit inline del campo `content` con preview char count
-- Toggle "attivo"
-- Stesso pattern Re-genera dopo save
+**3 livelli predefiniti** (seed):
+- **Livello 1 — Scout** (~30s): solo Google Maps + sito home. Per validazioni rapide.
+- **Livello 2 — Detective** (~2min): + sito multi-pagina + LinkedIn company + reputation.
+- **Livello 3 — Sherlock** (~5min): + LinkedIn profili dei contatti chiave + news ultimi 12 mesi + ricerche email pattern + cross-reference.
 
-### F. Test data quality panel (Insights)
-Sotto il banner profilo aggiungo un mini-report:
-- "Sito web raggiungibile: ✓/✗"  
-- "Email valide: 2/3"
-- "Telefoni E.164: 1/3"
-- "Ultima Deep Search: X giorni fa"
+**UI editor** in Impostazioni → "Sherlock Playbooks":
+- Lista livelli, drag-drop step, editor template URL con preview variabili, editor prompt AI per step, toggle attivo.
+- Riusa pattern esistente `KBIngestPanel` / `BackupExportTab`.
 
-Ogni voce è un click che apre il dettaglio nella tab pertinente.
+### 3. Esecutore Sherlock (orchestratore sequenziale)
 
-## File da toccare
+Nuovo file `src/v2/services/sherlock/sherlockEngine.ts`:
 
-- `src/hooks/useDeepSearchHelpers.ts` — aggiungere `cleanPersonName`, `cleanCompanyName`, esportare event bus
-- `src/hooks/useDeepSearchLocal.ts` — applicare cleanup, rispettare config toggles, emettere eventi cascade
-- `src/v2/hooks/useForgeLabStore.ts` — aggiungere `deepSearchConfig: { website, linkedinContacts, linkedinCompany, whatsapp, maxQueriesPerContact, priorityDomain }`
-- `src/v2/ui/pages/email-forge/tabs/DeepSearchTab.tsx` — aggiungere config panel + cascade timeline
-- `src/v2/ui/pages/email-forge/tabs/KnowledgeBaseTab.tsx` — banner "re-genera" dopo save
-- `src/v2/ui/pages/email-forge/tabs/SenderProfileTab.tsx` — idem
-- `src/v2/ui/pages/email-forge/tabs/DoctrineTab.tsx` — idem
-- `src/v2/ui/pages/email-forge/tabs/PromptsTab.tsx` — **nuovo file**
-- `src/v2/ui/pages/email-forge/LabBottomTabs.tsx` — aggiungere tab "Prompts"
+```text
+runSherlock(level, vars, signal) {
+  playbook = loadPlaybook(level)
+  context = { vars, findings: {}, history: [] }
 
-## Risultato atteso
+  for step in playbook.steps:
+    if signal.aborted: break
+    if !checkRequiredVars(step, context): skip
+    
+    url = renderTemplate(step.url_template, context)
+    
+    // Pre-check cache + rate gate (riusa fasi precedenti)
+    if cacheHit(url): markdown = cached
+    else: 
+      awaitChannelSlot(step.channel, signal)
+      markdown = await fs.readUrl(url, signal)
+      persistScrape(...)
+    
+    // AI parsing mirato per QUESTO step
+    extracted = await callAI({
+      system: SHERLOCK_SYSTEM,
+      user: step.ai_extract_prompt + markdown + JSON(context.findings)
+    })
+    
+    context.findings[step.order] = extracted
+    emitProgress({ step, extracted, markdown })
+    
+    // AI decide se continuare/saltare
+    if step.ai_decide_next:
+      decision = await callAI(decideNextPrompt(context))
+      if decision.skip_to: jumpTo(decision.skip_to)
+      if decision.stop_reason: break
+  
+  return consolidateFindings(context)
+}
+```
 
-1. Google non aprirà più tab vuote: query pulite + cascade visibile.
-2. L'utente potrà spegnere le 4 modalità singolarmente e vedere immediatamente l'impatto sul tempo e sui dati raccolti.
-3. Ogni modifica a KB / Sender / Doctrine / Prompts sarà accompagnata da un bottone "Re-genera ora" → feedback immediato sulla mail prodotta.
-4. Il Lab diventa un vero ambiente di calibrazione end-to-end.
+### 4. Edge function `sherlock-extract`
 
-## Out-of-scope
+Riusa Lovable AI Gateway (`google/gemini-3-flash-preview` default).
+- Input: `{ markdown, extract_prompt, target_fields, prior_findings }`
+- Tool calling con schema dinamico generato da `target_fields` (no JSON-by-prompt).
+- Output: `{ findings: {...}, confidence: 0-1, suggested_next_url?: string }`
+- Il campo `suggested_next_url` è la "intelligenza Sherlock": se trova nel markdown un link LinkedIn del CEO, lo propone come prossimo step.
 
-- Salvataggio persistente dei `deepSearchConfig` (resta in memoria sessione; persistenza in iterazione successiva).
-- Editor visuale grafico dei prompt (solo textarea per ora).
-- A/B test automatico tra due configurazioni.
+### 5. UI Canvas evoluzione (minimal change)
 
+Rinominare `DeepSearchCanvas` → `SherlockCanvas`:
+- Header: selettore livello (Scout / Detective / Sherlock) con stima tempo + chip target_fields.
+- Sidebar sinistra: timeline step (✓ done, ⏳ running, 💡 AI-suggested-next, ⏭ skipped-by-AI).
+- Centro: tab **Markdown** | **Findings AI** (JSON formattato per step) | **Sintesi finale**.
+- Pulsante "Salva risultati nel CRM" → applica findings al partner/contatto via DAL esistente.
+
+### 6. Integrazione futura (cockpit/email)
+Esposto come hook `useSherlock(level)` riusabile in EmailComposer per arricchire contatti prima di un invio (toggle "Approfondisci con Sherlock prima di scrivere").
+
+## File interessati
+
+**Nuovi**:
+- `src/v2/io/extensions/_backup/2026-04-20-firescrape-v1/` (3 file)
+- `supabase/migrations/<ts>_sherlock_playbooks.sql`
+- `src/data/sherlockPlaybooks.ts` (DAL)
+- `src/v2/services/sherlock/sherlockEngine.ts`
+- `src/v2/services/sherlock/sherlockTemplates.ts` (render `{var}`)
+- `src/v2/hooks/useSherlock.ts`
+- `src/v2/ui/pages/email-forge/SherlockCanvas.tsx` (sostituisce DeepSearchCanvas)
+- `src/components/settings/SherlockPlaybooksEditor.tsx`
+- `supabase/functions/sherlock-extract/index.ts`
+- Memoria `mem://features/sherlock-investigator`
+
+**Edit**:
+- `LabBottomTabs.tsx` — bottone "Apri Sherlock" invece di "FireScrape Canvas"
+- `BackupExportTab.tsx` — aggiunge editor playbooks
+- `mem://index.md` — registra Sherlock + backup
+
+## Ordine di esecuzione (autonomo dopo approvazione)
+
+1. Backup file (copy + README + memoria).
+2. Migration `sherlock_playbooks` + seed 3 livelli.
+3. DAL + tipi.
+4. Edge function `sherlock-extract`.
+5. Engine + hook.
+6. SherlockCanvas (basato su DeepSearchCanvas, riusa render markdown già perfetto).
+7. Editor playbooks in Impostazioni.
+8. Wire in LabBottomTabs.
+9. Test E2E sui 3 livelli.
+
+## Tecnica chiave
+
+- **Sequenzialità rigorosa**: `for await` loop, mai `Promise.all` (rispetto rate limit LI/WA).
+- **AI in 2 punti**: estrazione strutturata per step (tool calling) + decisione next-step (opzionale per step).
+- **Cache-first**: ogni URL passa da `scrape_cache` prima di chiamare l'estensione.
+- **Abortable a ogni step**: `AbortSignal` propagato a `fs.readUrl` e a `fetch` AI.
+- **KB editabile**: tutti i prompt, URL template e step in DB → l'utente può raffinare senza redeploy.
+- **Persistenza findings**: nuova tabella `sherlock_investigations` (run, livello, partner_id, findings jsonb, status) per audit + riusabilità.
