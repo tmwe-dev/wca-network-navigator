@@ -54,7 +54,12 @@ export default function SuperHome3D() {
 
   const activeJobs = useMemo(() => jobs.filter((j) => ["pending", "running"].includes(j.status)).length, [jobs]);
 
-  const greeting = new Date().getHours() < 13 ? "Buongiorno" : "Buonasera";
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 13) return "Buongiorno";
+    if (h < 18) return "Buon pomeriggio";
+    return "Buonasera";
+  })();
 
   const statForCard = (key: string) => {
     switch (key) {
@@ -103,7 +108,7 @@ export default function SuperHome3D() {
             </Suspense>
           </div>
           <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns as any} />
+            <AgentStatusPanel agents={briefing?.agentStatus ?? []} breakdowns={dashData?.agentBreakdowns} />
           </Suspense>
         </div>
 

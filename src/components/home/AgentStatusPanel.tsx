@@ -11,7 +11,7 @@ import type { AgentTaskBreakdown } from "@/v2/io/supabase/queries/dashboard";
 
 interface Props {
   agents: AgentStatusItem[];
-  breakdowns?: AgentTaskBreakdown[];
+  breakdowns?: readonly AgentTaskBreakdown[];
 }
 
 export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
