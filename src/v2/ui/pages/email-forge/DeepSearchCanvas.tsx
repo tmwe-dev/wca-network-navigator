@@ -171,13 +171,22 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
         skipCache: true,
       });
 
+      const md = res.ok ? extractMarkdown(res.data) : "";
+      let persisted = false;
+      if (res.ok && md) {
+        persisted = await persistScrape({
+          url: plan.urls[i], markdown: md, pipelineKey: key, recipient,
+        });
+      }
+
       setPages((prev) => prev.map((p) => p.id === id
         ? {
             ...p,
             status: res.ok ? "done" : "error",
-            markdown: res.ok ? extractMarkdown(res.data) : "",
+            markdown: md,
             error: !res.ok ? res.error : undefined,
             durationMs: Date.now() - startedAt,
+            persisted,
           }
         : p,
       ));
