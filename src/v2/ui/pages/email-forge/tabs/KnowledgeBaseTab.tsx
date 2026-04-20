@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Plus, Pencil, BookOpen } from "lucide-react";
+import { RegenerateBanner } from "../RegenerateBanner";
 
 interface Props {
   categories: string[] | null;
@@ -19,6 +20,7 @@ export function KnowledgeBaseTab({ categories }: Props) {
   const { entries, loading, savingId, update, toggleActive, insert } = useForgeKb(categories);
   const [editing, setEditing] = React.useState<ForgeKbEntry | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const [savedAt, setSavedAt] = React.useState(0);
 
   return (
     <div className="space-y-2 text-xs">
