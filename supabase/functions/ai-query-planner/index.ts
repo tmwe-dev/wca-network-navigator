@@ -23,7 +23,7 @@ const SCHEMA_TEXT = `
   Scopo: Partner della rete WCA (~25.000 record). Logistica/spedizionieri.
   Colonne: id, company_name, country_code (ISO-2: US, IT, CN, DE...), country_name, city,
            email, phone, mobile, website, rating (0-5), is_active, is_favorite,
-           lead_status [new|first_touch_sent|holding|engaged|qualified|negotiation|converted|archived|blacklisted|contacted],
+           lead_status [new|first_touch_sent|holding|engaged|qualified|negotiation|converted|archived|blacklisted],
            office_type, interaction_count, last_interaction_at, member_since, created_at
 
 📊 imported_contacts
