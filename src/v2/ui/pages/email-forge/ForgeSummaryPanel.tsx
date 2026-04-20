@@ -65,9 +65,6 @@ export function ForgeSummaryPanel({ onOpenDrawer }: Props) {
           {lab.emailType ? (
             <div className="rounded-md border border-border/40 bg-card p-2">
               <div className="font-medium">{lab.emailType.name}</div>
-              {lab.emailType.description && (
-                <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{lab.emailType.description}</div>
-              )}
             </div>
           ) : (
             <EmptyHint onOpenDrawer={onOpenDrawer}>Scegli un tipo email.</EmptyHint>
