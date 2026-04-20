@@ -289,7 +289,7 @@ export function useDeepSearchLocal() {
     }
 
     const waNumber = s("mobile") || s("phone") || null;
-    if (waNumber) {
+    if (cfg("whatsapp", true) && waNumber) {
       const cleaned = toWhatsAppNumber(waNumber);
       if (cleaned.length >= 8) {
         socialLinksFound++;
@@ -298,9 +298,12 @@ export function useDeepSearchLocal() {
     }
 
     let companyProfileFound = false;
-    if (companyName !== "Unknown") {
-      const q = `"${companyName}" site:linkedin.com/company`;
+    if (cfg("linkedinCompany", true) && companyName !== "Unknown") {
+      const cleanCo = cleanCompanyName(companyName);
+      const q = `"${cleanCo}" site:linkedin.com/company`;
+      cascadeBus.emit({ type: "query-start", subjectId: `company:${contactId}`, query: q, index: 0, total: 1 });
       const res = await googleSearch(q, 3);
+      cascadeBus.emit({ type: "query-result", subjectId: `company:${contactId}`, query: q, index: 0, total: 1, results: res.length });
       const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
       if (match) {
         companyProfileFound = true; socialLinksFound++;
@@ -316,7 +319,7 @@ export function useDeepSearchLocal() {
     }
     let logoFound = false;
     let websiteQualityScore = 0;
-    if (websiteUrl) {
+    if (cfg("scrapeWebsite", true) && websiteUrl) {
       const scraped = await scrapeUrl(websiteUrl);
       if (scraped) {
         try { const domain = new URL(websiteUrl).hostname; if (`https://www.google.com/s2/favicons?domain=${domain}&sz=128`) logoFound = true; } catch { /* best-effort */ }
