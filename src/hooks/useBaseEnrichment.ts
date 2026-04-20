@@ -91,10 +91,20 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
       return;
     }
     const allTargets = getTargets();
-    // Filtra solo quelli che hanno qualcosa da arricchire
-    const targets = allTargets.filter((t) => !t.hasLinkedin || (t.source === "wca" && (!t.hasLogo || !t.hasWebsiteExcerpt)));
+    // Filtra: aziende (WCA+BCA) → arricchisci se manca LinkedIn O logo O sito; contatti → solo se manca LinkedIn
+    const isCompanyLike = (s: string): boolean => s === "wca" || s === "bca";
+    const targets = allTargets.filter((t) =>
+      !t.hasLinkedin || (isCompanyLike(t.source) && (!t.hasLogo || !t.hasWebsiteExcerpt))
+    );
+    console.info(`[BaseEnrichment] Selezionati: ${allTargets.length} · Da arricchire: ${targets.length}`, {
+      sources: allTargets.reduce((acc, t) => { acc[t.source] = (acc[t.source] || 0) + 1; return acc; }, {} as Record<string, number>),
+      withDomain: allTargets.filter(t => !!t.domain).length,
+    });
     if (targets.length === 0) {
-      toast({ title: "Nessun record da arricchire", description: "Tutti i record selezionati sono già arricchiti." });
+      toast({
+        title: "Nessun record da arricchire",
+        description: `Tutti i ${allTargets.length} record selezionati hanno già LinkedIn, logo e sito.`,
+      });
       return;
     }
 

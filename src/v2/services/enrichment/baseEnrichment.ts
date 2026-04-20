@@ -16,12 +16,16 @@
  */
 import { updatePartner } from "@/data/partners";
 import { updateContactEnrichment } from "@/data/contacts";
+import { updateBusinessCard } from "@/data/businessCards";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
+export type BaseEnrichSource = "wca" | "contacts" | "bca";
+
 export interface BaseEnrichTarget {
   readonly id: string;
-  readonly source: "wca" | "contacts";
+  readonly source: BaseEnrichSource;
   readonly name: string;
   readonly companyName?: string;
   readonly domain?: string | null;
@@ -48,8 +52,7 @@ export interface WebsiteExcerpt {
 
 interface FsBridge {
   googleSearch: (query: string, limit: number, visible: boolean) => Promise<{ success: boolean; data?: Array<{ url: string; title: string; description: string }> }>;
-  agentAction: (args: Record<string, unknown>) => Promise<{ success: boolean }>;
-  scrape: (background: boolean) => Promise<{ success: boolean; markdown?: string; metadata?: { title?: string; description?: string } }>;
+  scrapeUrl: (url: string) => Promise<{ success: boolean; markdown?: string; metadata?: { title?: string; description?: string } }>;
 }
 
 // ── Throttle globale Google + per-domain ────────────────────────────────────
@@ -180,10 +183,7 @@ export async function scrapeSiteExcerpt(fs: FsBridge, domain: string): Promise<W
   for (const url of pages) {
     await throttleDomain(d);
     try {
-      const nav = await fs.agentAction({ action: "navigate", url, background: true, reuseTab: true });
-      if (!nav.success) continue;
-      await new Promise((r) => setTimeout(r, 1500));
-      const sc = await fs.scrape(true);
+      const sc = await fs.scrapeUrl(url);
       if (sc.success) {
         if (!title && sc.metadata?.title) title = sc.metadata.title;
         collectedText += "\n" + (sc.markdown || "");
