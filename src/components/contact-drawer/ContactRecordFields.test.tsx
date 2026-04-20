@@ -29,6 +29,7 @@ const RECORD: UnifiedRecord = {
   website: "https://acme.com",
   note: "Good partner",
   leadStatus: "contacted",
+  emailStatus: "valid",
   linkedinUrl: null,
   enrichmentData: null,
   deepSearchAt: null,

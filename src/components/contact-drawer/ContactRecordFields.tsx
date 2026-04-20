@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Save, Pencil, X, Globe, Mail, Phone, MapPin, Briefcase, Building2, Linkedin, StickyNote } from "lucide-react";
 import { HoldingPatternIndicator } from "@/components/contacts/HoldingPatternIndicator";
 import type { UnifiedRecord } from "@/hooks/useContactRecord";
@@ -156,7 +157,23 @@ export function ContactRecordFields({ record, onSave, isSaving }: Props) {
       <div className="bg-muted/30 rounded-xl p-3 space-y-0.5">
         <FieldRow icon={<Building2 className="w-3.5 h-3.5" />} label="Azienda" value={val("company_name")} editing={editing} onChange={v => setDraft(d => ({ ...d, company_name: v }))} />
         <FieldRow icon={<Briefcase className="w-3.5 h-3.5" />} label="Ruolo" value={val("position") || record.position || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, position: v }))} />
-        <FieldRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={val("email") || record.email || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, email: v }))} type="email" />
+        <div className="flex items-center gap-2 py-1.5">
+          <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <span className="text-[11px] text-muted-foreground w-20 flex-shrink-0">Email</span>
+          {editing ? (
+            <Input value={val("email") || record.email || ""} onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs flex-1" type="email" />
+          ) : (
+            <span className={cn("text-xs flex-1 truncate flex items-center gap-1.5", (val("email") || record.email) ? "text-foreground" : "text-muted-foreground/50")}>
+              {val("email") || record.email || "—"}
+              {record.emailStatus === "bounced" && (
+                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Bounced</Badge>
+              )}
+              {record.emailStatus === "invalid" && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-destructive/50 text-destructive">Invalid</Badge>
+              )}
+            </span>
+          )}
+        </div>
         <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Telefono" value={val("phone") || record.phone || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, phone: v }))} />
         <FieldRow icon={<Phone className="w-3.5 h-3.5" />} label="Mobile" value={val("mobile") || record.mobile || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, mobile: v }))} />
         <FieldRow icon={<MapPin className="w-3.5 h-3.5" />} label="Città" value={val("city") || record.city || ""} editing={editing} onChange={v => setDraft(d => ({ ...d, city: v }))} />
