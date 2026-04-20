@@ -17,6 +17,7 @@ import { NetworkFiltersSection } from "./NetworkFiltersSection";
 import { CRMFiltersSection } from "./CRMFiltersSection";
 import { BCAFiltersSection } from "./BCAFiltersSection";
 import { CampaignsFiltersSection } from "./CampaignsFiltersSection";
+import { EmailForgeFiltersSection } from "./EmailForgeFiltersSection";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import type { FiltersDrawerProps } from "./types";
 
@@ -24,7 +25,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const state = useFiltersDrawerState(onOpenChange);
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  const defaultWidthClass = state.isEmailComposer
+  const defaultWidthClass = state.isEmailComposer || state.isEmailForge
     ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]"
     : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
 
@@ -100,9 +101,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isCRM && state.g.filters.crmActiveTab === "biglietti" && <BCAFiltersSection />}
             {state.isAgenda && <AgendaFiltersSection />}
             {state.isCampaigns && <CampaignsFiltersSection />}
+            {state.isEmailForge && <EmailForgeFiltersSection />}
             {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>

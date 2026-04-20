@@ -3,11 +3,12 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Download, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
@@ -18,6 +19,7 @@ interface Props {
 
 export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   const ds = useDeepSearch();
+  const navigate = useNavigate();
 
   const enrichmentQuery = useQuery({
     queryKey: ["forge-enrichment", recipient?.source, recipient?.recordId],
@@ -28,7 +30,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         const id = recipient.partnerId!;
         const { data } = await supabase
           .from("partners")
-          .select("id, enrichment_data, raw_profile_html")
+          .select("id, enrichment_data, raw_profile_html, raw_profile_markdown, ai_parsed_at")
           .eq("id", id)
           .maybeSingle();
         return { kind: "partner" as const, data };
@@ -68,13 +70,46 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
     ds.start([targetId], true, mode);
   };
 
-  const enrichment = enrichmentQuery.data?.data as { enrichment_data?: Record<string, unknown> | null; deep_search_at?: string | null; raw_profile_html?: string | null; raw_data?: Record<string, unknown> | null } | null;
+  const enrichment = enrichmentQuery.data?.data as { enrichment_data?: Record<string, unknown> | null; deep_search_at?: string | null; raw_profile_html?: string | null; raw_profile_markdown?: string | null; ai_parsed_at?: string | null; raw_data?: Record<string, unknown> | null } | null;
   const enrichmentJson = enrichment?.enrichment_data ?? enrichment?.raw_data ?? null;
   const deepAt = enrichment?.deep_search_at
     ?? (enrichmentJson && typeof enrichmentJson === "object" && "deep_search_at" in enrichmentJson ? String((enrichmentJson as Record<string, unknown>).deep_search_at) : null);
 
+  // Per partner: serve il profilo WCA scaricato prima della Deep Search.
+  const isPartnerKind = enrichmentQuery.data?.kind === "partner";
+  const hasWcaProfile = !!(enrichment?.raw_profile_html || enrichment?.raw_profile_markdown);
+  const missingWcaProfile = isPartnerKind && !hasWcaProfile;
+
+  const goToDownloadCenter = () => {
+    navigate("/v2/settings?tab=download");
+  };
+
   return (
     <div className="space-y-2 text-xs">
+      {missingWcaProfile && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 space-y-1.5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                Profilo WCA mancante
+              </div>
+              <div className="text-[10px] text-amber-800/80 dark:text-amber-200/80">
+                Questo partner non ha ancora il profilo WCA scaricato. Scaricalo prima dal Download Center, poi esegui la Deep Search per ottenere risultati di qualità.
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="outline" onClick={goToDownloadCenter} className="h-6 text-[10px] gap-1 border-amber-500/40">
+              <Download className="w-3 h-3" /> Apri Download Center
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => handleRun("partner")} disabled={ds.running} className="h-6 text-[10px] gap-1">
+              <Search className="w-3 h-3" /> Esegui comunque
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={!recipient.partnerId || ds.running}
           onClick={() => handleRun("partner")} className="h-7 text-[10px]">
