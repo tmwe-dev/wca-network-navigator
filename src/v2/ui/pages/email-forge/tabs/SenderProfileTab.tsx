@@ -45,6 +45,7 @@ export function SenderProfileTab() {
 
   const [draft, setDraft] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState<string | null>(null);
+  const [savedAt, setSavedAt] = React.useState(0);
   React.useEffect(() => { if (settingsQuery.data) setDraft({ ...settingsQuery.data }); }, [settingsQuery.data]);
 
   const handleSave = async (key: string) => {
@@ -54,6 +55,7 @@ export function SenderProfileTab() {
       await upsertAppSetting(userId, key, draft[key] ?? "");
       toast.success("Profilo aggiornato");
       qc.invalidateQueries({ queryKey: ["forge-sender-settings", userId] });
+      setSavedAt(Date.now());
     } catch (e) {
       toast.error("Salvataggio fallito", { description: e instanceof Error ? e.message : String(e) });
     } finally {
