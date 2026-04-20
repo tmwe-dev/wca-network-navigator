@@ -577,10 +577,17 @@ export async function assembleContextBlocks(
   const conversationIntelligenceContext = buildConversationBlock(convIntel);
 
   // ── Sales KB ──
-  const emailCategory = opts.oracle_type || "primo_contatto";
+  // Fix 3 (Gap C): nessun fallback hardcoded — se oracle_type manca, deriva da touchCount/commercialState
+  const tcForCategory = touchCount ?? 0;
+  const inferredCategory = tcForCategory === 0 ? "primo_contatto" : "follow_up";
+  const emailCategory = opts.oracle_type || inferredCategory;
+  const isFollowUp = emailCategory === "follow_up" || historyContext.includes("[") || tcForCategory > 0;
   const kbResult = await fetchKbEntriesStrategic(supabase, quality, userId, {
-    emailCategory, hasInteractionHistory: !!historyContext,
-    isFollowUp: emailCategory === "follow_up" || historyContext.includes("["),
+    emailCategory,
+    hasInteractionHistory: !!historyContext,
+    isFollowUp,
+    // Fix 1 (Gap A): propagate KB categories defined by the selected EmailType
+    kb_categories: opts.email_type_kb_categories ?? undefined,
   });
   if (!kbResult.text && settings.ai_sales_knowledge_base) {
     console.warn("[generate-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
