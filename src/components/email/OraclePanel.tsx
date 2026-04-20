@@ -14,6 +14,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import { checkOracleCoherence, getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
+import OracleContextPanel, { type OracleContextSummary } from "./OracleContextPanel";
+import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { ImageGalleryTab } from "./ImageGalleryTab";
