@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { enrichBaseTarget, type BaseEnrichTarget } from "@/v2/services/enrichment/baseEnrichment";
+import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { toast } from "@/hooks/use-toast";
 
 const STORAGE_KEY = "enrichment.base.state.v1";
