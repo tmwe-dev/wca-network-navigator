@@ -124,9 +124,10 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 
 ## Guardrail:
 - Se c'è storia interazioni → non ripetere approcci già usati
-- Se dati enrichment scarsi → resta generico ma vero
-- Ogni comunicazione deve portare VALORE NUOVO
+- Se dati enrichment scarsi → resta generico ma vero (NON colmare con numeri inventati)
+- Ogni comunicazione deve portare VALORE NUOVO — ma il valore è qualitativo, mai numerico inventato
 - Adattare il tono alla fase della relazione (mai forzare familiarità in FASE 1-2)
+- Le tecniche di vendita SERVONO PER STRUTTURARE il messaggio, NON per inventare prove (numeri, %, casi cliente)
 `;
 }
 
