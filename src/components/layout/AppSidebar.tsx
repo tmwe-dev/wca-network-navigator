@@ -27,7 +27,7 @@ function getNavSections(pathname: string) {
         { title: "Nuova Missione", url: "/v1/mission-builder", icon: Target },
         { title: "Outreach", url: "/v1/outreach", icon: Rocket },
         { title: "Inreach", url: "/v1/inreach", icon: Inbox },
-        { title: "Email", url: "/v1/email-composer", icon: Mail },
+        { title: "Email", url: "/v2/email-composer", icon: Mail },
         { title: "Agenda", url: "/v1/agenda", icon: Calendar },
       ],
     },
