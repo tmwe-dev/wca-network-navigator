@@ -268,6 +268,9 @@ export interface ContextBlocks {
   // ── Fix 3.2: active playbook (governs tone/content/CTA) ──
   playbookBlock?: string;
   playbookActive?: boolean;
+  // ── Deep Search status (per _context_summary) ──
+  deepSearchStatus?: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed";
+  deepSearchAgeDays?: number | null;
 }
 
 /**
@@ -575,5 +578,6 @@ export async function assembleContextBlocks(
     signatureBlock, networks, services, socialLinks, settings,
     commercialState, touchCount, daysSinceLastContact, warmthScore, lastChannel, lastOutcome,
     playbookBlock: playbook.block, playbookActive: playbook.active,
+    deepSearchStatus, deepSearchAgeDays,
   };
 }
