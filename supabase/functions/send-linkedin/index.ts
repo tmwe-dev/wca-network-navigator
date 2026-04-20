@@ -35,10 +35,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id } = body;
+    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, scheduled_for } = body;
 
     if (!recipient || !message_text) {
       return new Response(JSON.stringify({ error: "recipient and message_text required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate LinkedIn profile URL
+    if (!/^https?:\/\/([\w-]+\.)?linkedin\.com\/(in|pub)\//i.test(recipient)) {
+      return new Response(JSON.stringify({ error: "invalid_linkedin_url", detail: "Recipient must be a linkedin.com/in/... profile URL" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -50,11 +57,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check rate limit
-    const { data: rlResult } = await supabase.rpc("check_channel_rate_limit", {
-      _user_id: user.id,
-      _channel: "linkedin",
-    });
+    // Validate scheduled_for if provided
+    let scheduledForIso: string | null = null;
+    if (scheduled_for) {
+      const d = new Date(scheduled_for);
+      if (isNaN(d.getTime())) {
+        return new Response(JSON.stringify({ error: "invalid_scheduled_for" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      scheduledForIso = d.toISOString();
+    }
+
+    // Check rate limit only for IMMEDIATE sends (not scheduled batches)
+    const isImmediate = !scheduledForIso || new Date(scheduledForIso).getTime() <= Date.now() + 60_000;
+
+    const { data: rlResult } = isImmediate
+      ? await supabase.rpc("check_channel_rate_limit", {
+          _user_id: user.id,
+          _channel: "linkedin",
+        })
+      : { data: { allowed: true } };
 
     if (rlResult && !rlResult.allowed) {
       return new Response(JSON.stringify({
@@ -84,8 +107,9 @@ Deno.serve(async (req) => {
         mission_id: mission_id || null,
         outreach_queue_id: outreach_queue_id || null,
         status: "pending",
+        scheduled_for: scheduledForIso,
       })
-      .select("id")
+      .select("id, scheduled_for")
       .single();
 
     if (insertErr) {
@@ -95,12 +119,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[send-linkedin] Queued ${queued.id} for ${recipient}`);
+    console.log(`[send-linkedin] Queued ${queued.id} for ${recipient}${scheduledForIso ? ` scheduled ${scheduledForIso}` : ""}`);
 
     return new Response(JSON.stringify({
       success: true,
       dispatch_id: queued.id,
-      message: "Messaggio LinkedIn in coda. L'estensione lo invierà a breve.",
+      scheduled_for: queued.scheduled_for,
+      message: scheduledForIso
+        ? `Messaggio LinkedIn programmato per ${new Date(scheduledForIso).toLocaleString("it-IT")}.`
+        : "Messaggio LinkedIn in coda. L'estensione lo invierà a breve.",
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

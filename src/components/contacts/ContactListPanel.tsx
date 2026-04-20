@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ContactSegments, type SegmentKey } from "@/components/contacts/ContactSegments";
 
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
+const BulkLinkedInDialog = lazy(() => import("@/components/workspace/BulkLinkedInDialog"));
 
 interface Props {
   selectedId: string | null;
@@ -40,6 +41,25 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     handleDelete, handleDeduplicate, handleWcaMatch } = h;
 
   const isBulk = selection.count > 0;
+  const [bulkLiOpen, setBulkLiOpen] = useState(false);
+
+  const bulkLiTargets = useMemo(() => {
+    if (!isBulk) return [];
+    return contacts
+      .filter((c) => selection.selectedIds.has(c.id))
+      .map((c) => {
+        const ed = ((c as Record<string, unknown>).enrichment_data as Record<string, unknown>) || {};
+        const url = (ed.linkedin_profile_url as string) || (ed.linkedin_url as string) || null;
+        return {
+          contactId: c.id as string,
+          profileUrl: url,
+          contactName: (c as { name?: string }).name || null,
+          companyName: (c as { company_name?: string }).company_name || null,
+        };
+      });
+  }, [isBulk, contacts, selection.selectedIds]);
+
+  const withLinkedInCount = bulkLiTargets.filter((t) => !!t.profileUrl).length;
 
   const SortIcon = ({ field }: { field: string }) => {
     if (state.sortField !== field || !state.sortDir) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
@@ -142,6 +162,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           deepSearchLoading={actions.deepSearchLoading}
           onLinkedIn={() => actions.handleLinkedInLookup(Array.from(selection.selectedIds), linkedInLookup.lookupBatch)}
           linkedInLoading={actions.linkedInLookupLoading || linkedInLookup.progress.status === "running"}
+          onLinkedInDM={() => setBulkLiOpen(true)}
+          withLinkedIn={withLinkedInCount}
           onCampaign={actions.handleBulkCampaign}
           onGoogleLogo={() => {
             const ids = Array.from(selection.selectedIds);
@@ -152,6 +174,12 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           onDeduplicate={handleDeduplicate}
           onWcaMatch={handleWcaMatch}
         />
+      )}
+
+      {bulkLiOpen && (
+        <Suspense fallback={null}>
+          <BulkLinkedInDialog open={bulkLiOpen} onOpenChange={setBulkLiOpen} targets={bulkLiTargets} />
+        </Suspense>
       )}
 
       {linkedInLookup.progress.status === "running" && (
