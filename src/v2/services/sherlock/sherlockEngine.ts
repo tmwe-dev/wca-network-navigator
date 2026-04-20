@@ -236,7 +236,7 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
   const results: SherlockStepResult[] = [];
   const consolidated: Record<string, unknown> = {};
 
-  // ── DISCOVERY: se il playbook richiede websiteUrl ma manca, prova a scoprirlo via Google.
+  // ── PRE-RUN DISCOVERY 1: websiteUrl via Google se manca.
   const playbookNeedsWebsite = playbook.steps.some((s) => (s.required_vars ?? []).includes("websiteUrl"));
   if (playbookNeedsWebsite && !liveVars.websiteUrl && liveVars.companyName) {
     const discovered = await discoverWebsiteViaGoogle({
@@ -247,9 +247,26 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
     if (discovered) {
       liveVars.websiteUrl = discovered;
       consolidated.website_discovered = discovered;
-      // Persisti sul partner se vuoto, così le indagini future sono complete.
       if (partnerId) {
         updatePartnerWebsiteIfMissing(partnerId, discovered).catch(() => null);
+      }
+    }
+  }
+
+  // ── PRE-RUN DISCOVERY 2: linkedinCompanySlug via Google se manca e il playbook lo richiede.
+  const playbookNeedsLinkedin = playbook.steps.some((s) =>
+    (s.required_vars ?? []).includes("linkedinCompanySlug"),
+  );
+  if (playbookNeedsLinkedin && !liveVars.linkedinCompanySlug && liveVars.companyName) {
+    const liDiscovered = await discoverLinkedinSlugViaGoogle({
+      companyName: liveVars.companyName,
+      signal,
+    });
+    if (liDiscovered) {
+      liveVars.linkedinCompanySlug = liDiscovered.slug;
+      consolidated.linkedin_company_url_discovered = liDiscovered.url;
+      if (partnerId) {
+        updatePartnerLinkedinIfMissing(partnerId, liDiscovered.url).catch(() => null);
       }
     }
   }
@@ -310,8 +327,22 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       markdown = cached.markdown;
       cacheHit = true;
     } else {
-      // 5. scrape via extension
+      // 5. scrape via extension — passa per il rate limiter (LinkedIn 10s globale, generic 1s/host)
       const settleMs = step.settle_ms ?? 2500;
+      const waitMs = estimateWaitMs(channel, url);
+      if (waitMs > 500) {
+        const throttling: SherlockStepResult = {
+          ...running,
+          error: `⏱ Throttle ${channel} — attendo ${(waitMs / 1000).toFixed(1)}s per evitare ban`,
+        };
+        results[results.length - 1] = throttling;
+        onProgress({ step, result: throttling, totalSteps: playbook.steps.length, currentIndex: i, consolidated });
+      }
+      try {
+        await throttle(channel, url, signal);
+      } catch {
+        if (signal.aborted) break;
+      }
       const res = await extFs.readUrl(url, { settleMs, signal, skipCache: true });
       if (signal.aborted) break;
       if (!res.ok) {
