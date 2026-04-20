@@ -75,7 +75,7 @@ export function BCAQuickActions({ card }: { card: BusinessCardWithPartner }) {
   const handleEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!card.email) return;
-    navigate("/email-composer", {
+    navigate("/v2/email-composer", {
       state: {
         prefilledRecipient: {
           email: card.email,

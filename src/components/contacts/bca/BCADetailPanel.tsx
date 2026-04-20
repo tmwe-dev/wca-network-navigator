@@ -91,7 +91,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
 
   const handleWorkspace = useCallback(() => {
     if (!card.email) { toast({ title: "Email mancante", variant: "destructive" }); return; }
-    navigate("/email-composer", { state: { prefilledRecipient: { email: card.email, name: card.contact_name || undefined, company: card.company_name || undefined, partnerId: card.matched_partner_id || undefined } } });
+    navigate("/v2/email-composer", { state: { prefilledRecipient: { email: card.email, name: card.contact_name || undefined, company: card.company_name || undefined, partnerId: card.matched_partner_id || undefined } } });
   }, [card, navigate]);
 
   return (

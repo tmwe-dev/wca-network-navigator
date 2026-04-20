@@ -401,7 +401,7 @@ export function PartnerListPanel({
                 }
               }}
               onCampaign={() => {
-                navigate("/email-composer", {
+                navigate("/v2/email-composer", {
                   state: { partnerIds: Array.from(selectedIds) },
                 });
               }}

@@ -371,7 +371,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
         {prospect.email && (
           <div className="flex items-center justify-between text-xs py-1">
             <span className={th.dim}>Email</span>
-            <button onClick={() => navigate("/email-composer", { state: { prefilledRecipient: { email: prospect.email, company: prospect.company_name } } })} className={`font-medium hover:underline ${th.body} cursor-pointer`}>{prospect.email}</button>
+            <button onClick={() => navigate("/v2/email-composer", { state: { prefilledRecipient: { email: prospect.email, company: prospect.company_name } } })} className={`font-medium hover:underline ${th.body} cursor-pointer`}>{prospect.email}</button>
           </div>
         )}
         <Field label="PEC" value={prospect.pec} href={prospect.pec ? `mailto:${prospect.pec}` : undefined} />
@@ -404,7 +404,7 @@ function ProspectDetail({ prospect, onBack, isDark }: { prospect: Prospect; onBa
                 </div>
               </div>
               <div className="flex items-center gap-3 text-xs ml-6 mt-1 flex-wrap">
-                {c.email && <button onClick={(e) => { e.stopPropagation(); navigate("/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.name, company: prospect.company_name } } }); }} className={`hover:underline ${th.body} cursor-pointer`}>{c.email}</button>}
+                {c.email && <button onClick={(e) => { e.stopPropagation(); navigate("/v2/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.name, company: prospect.company_name } } }); }} className={`hover:underline ${th.body} cursor-pointer`}>{c.email}</button>}
                 {c.phone && <a href={`tel:${c.phone}`} className={`hover:underline ${th.body}`}>{c.phone}</a>}
                 {c.linkedin_url && <a href={c.linkedin_url} target="_blank" rel="noopener" className={`hover:underline ${th.body}`}>LinkedIn</a>}
               </div>

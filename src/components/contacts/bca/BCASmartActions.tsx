@@ -60,7 +60,7 @@ export function BCASmartActions({ card }: Props) {
       toast({ title: "Email mancante", variant: "destructive" });
       return;
     }
-    navigate("/email-composer", {
+    navigate("/v2/email-composer", {
       state: {
         prefilledRecipient: {
           email: card.email,
