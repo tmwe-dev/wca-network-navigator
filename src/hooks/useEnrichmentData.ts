@@ -138,16 +138,21 @@ export function useEnrichmentData() {
 
   // ── Data queries ──
 
-  const { data: partners = [] } = useQuery({
+  const { data: partners = [], refetch: refetchPartners } = useQuery({
     queryKey: queryKeys.partners.enrichment(),
     queryFn: async () => {
-      const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url");
-      return data.map((p): EnrichedRow => ({
-        id: p.id, name: p.company_name,
-        domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
-        source: "wca", hasLogo: !!p.logo_url, hasLinkedin: false,
-        email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
-      }));
+      const data = await loadAllRows<PartnerRow>("partners", "id, company_name, email, website, country_code, logo_url, enrichment_data");
+      return data.map((p): EnrichedRow => {
+        const ed = (p.enrichment_data || {}) as Record<string, unknown>;
+        const liUrl = (ed.linkedin_url as string) || null;
+        return {
+          id: p.id, name: p.company_name,
+          domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
+          source: "wca", hasLogo: !!p.logo_url, hasLinkedin: !!liUrl,
+          linkedinUrl: liUrl || undefined,
+          email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
+        };
+      });
     },
     staleTime: 60_000,
   });
