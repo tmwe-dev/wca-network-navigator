@@ -23,6 +23,63 @@ class FireScrapeError extends Error {
 }
 
 // ============================================================
+// BACKGROUND TAB SINGLETON — riusa 1 solo tab nascosto
+// per le navigate Deep Search (no tab visibili, no proliferazione).
+// ============================================================
+const BackgroundTab = {
+  tabId: null,
+  windowId: null,
+  busy: false,
+
+  async _ensure() {
+    // Se già esiste e vivo, riusa
+    if (this.tabId !== null) {
+      try {
+        const t = await chrome.tabs.get(this.tabId);
+        if (t && t.id) return this.tabId;
+      } catch { /* tab chiuso, ricreiamo */ }
+    }
+    // Crea finestra minimizzata fuori schermo (no focus stealing)
+    try {
+      const win = await chrome.windows.create({
+        url: 'about:blank',
+        focused: false,
+        state: 'minimized',
+        type: 'normal',
+        width: 1024,
+        height: 768,
+        left: -2000,
+        top: -2000,
+      });
+      this.windowId = win.id;
+      this.tabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
+    } catch (err) {
+      // Fallback: tab inattivo nella finestra corrente
+      const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
+      this.tabId = tab.id;
+      this.windowId = tab.windowId;
+    }
+    return this.tabId;
+  },
+
+  async navigate(url) {
+    const tabId = await this._ensure();
+    await chrome.tabs.update(tabId, { url, active: false });
+    await waitForTabLoad(tabId);
+    await sleep(800);
+    return tabId;
+  },
+
+  async close() {
+    if (this.tabId !== null) {
+      try { await chrome.tabs.remove(this.tabId); } catch {}
+    }
+    this.tabId = null;
+    this.windowId = null;
+  },
+};
+
+// ============================================================
 // RELAY CONFIG (Claude Bridge)
 // ============================================================
 const RELAY = {
@@ -847,10 +904,20 @@ async function handleExtract(msg) {
 // 7. AGENT — Azioni singole + sequenze
 // ============================================================
 async function handleAgentAction(msg) {
+  const step = msg.step || {};
+  // Fast path: navigate in background (riusa singleton tab nascosto)
+  if (step.action === 'navigate' && (step.background === true || step.reuseTab === true)) {
+    if (!step.url) throw new FireScrapeError('URL mancante', 'NO_URL');
+    const tabId = await BackgroundTab.navigate(step.url);
+    const result = { ok: true, action: 'navigate', url: step.url, tabId, background: true };
+    relayLog({ type: 'agent-action', step, result });
+    return result;
+  }
+  // Default: usa tab attivo
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new FireScrapeError('Nessun tab attivo', 'NO_TAB');
-  const result = await Agent.executeAction(tab.id, msg.step);
-  relayLog({ type: 'agent-action', step: msg.step, result });
+  const result = await Agent.executeAction(tab.id, step);
+  relayLog({ type: 'agent-action', step, result });
   return result;
 }
 
