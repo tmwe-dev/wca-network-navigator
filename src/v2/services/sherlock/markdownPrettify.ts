@@ -8,22 +8,36 @@
 
 const NOISE_PATTERNS: RegExp[] = [
   // Google Maps UI
-  /^\s*(Visualizza foto|View photos|Salva|Save|Condividi|Share|Invia al telefono|Send to phone)\s*$/im,
-  /^\s*(Suggerisci (?:nuovi orari|una modifica|un'?\s*modifica)|Suggest an edit|Suggest new hours)\s*$/im,
-  /^\s*(Cronologia di Maps|Maps history|Aggiungi un'?\s*etichetta|Add a label)\s*$/im,
-  /^\s*(Orari di punta|Popular times|Confronta gli orari di punta)\s*$/im,
-  /^\s*(Indicazioni stradali|Directions|Avvia indicazioni|Start)\s*$/im,
-  /^\s*(Aggiungi (?:foto|nota|orari)|Add (?:photo|note|hours))\s*$/im,
-  /^\s*(Rivendica questa attività|Claim this business|Possiedi questa attività)\s*$/im,
-  /^\s*(Recensioni|Reviews|Scrivi una recensione|Write a review)\s*$/im,
-  /^\s*(Mappa|Map)\s*$/im,
+  /^\s*(Visualizza foto|View photos|Salva|Save|Condividi|Share|Invia al telefono|Send to phone)\s*$/gim,
+  /^\s*(Suggerisci (?:nuovi orari|una modifica|un'?\s*modifica)|Suggest an edit|Suggest new hours)\s*$/gim,
+  /^\s*(Cronologia di Maps|Maps history|Aggiungi un'?\s*etichetta|Add a label)\s*$/gim,
+  /^\s*(Orari di punta|Popular times|Confronta gli orari di punta)\s*$/gim,
+  /^\s*(Indicazioni stradali|Directions|Avvia indicazioni|Start)\s*$/gim,
+  /^\s*(Aggiungi (?:foto|nota|orari)|Add (?:photo|note|hours))\s*$/gim,
+  /^\s*(Rivendica questa attività|Claim this business|Possiedi questa attività)\s*$/gim,
+  /^\s*(Recensioni|Reviews|Scrivi una recensione|Write a review)\s*$/gim,
+  /^\s*(Mappa|Map)\s*$/gim,
   // Cookie banner & footer
-  /^\s*(Accetta tutto|Accept all|Rifiuta tutto|Reject all|Personalizza|Customize)\s*$/im,
-  /^\s*(Privacy|Termini|Terms|Cookie|Cookies)(\s+(?:Policy|policy))?\s*$/im,
+  /^\s*(Accetta tutto|Accept all|Rifiuta tutto|Reject all|Personalizza|Customize)\s*$/gim,
+  /^\s*(Privacy|Termini|Terms|Cookie|Cookies)(\s+(?:Policy|policy))?\s*$/gim,
+  // Google Search SERP noise
+  /^\s*Web results\s*$/gim,
+  /^\s*Source:\s*https?:\/\/.*$/gim,
+  /^\s*Missing:\s*[^|\n]*\|\s*Show results with:.*$/gim,
+  /\.\.\.\s*Read more/gi,
+  /^\s*Read more\s*$/gim,
+  /^\s*See more results\s*$/gim,
+  /^\s*People also ask\s*$/gim,
+  /^\s*Related searches\s*$/gim,
+  /^\s*Images? for\s+.*$/gim,
+  /^\s*Videos? for\s+.*$/gim,
+  // Reaction/like footers ripetuti ("Facebook · WCAworld5 reactions · 3 months ago")
+  /^\s*(?:Facebook|Instagram|LinkedIn|Twitter|X)\s*·\s*[^·\n]+·\s*\d+\s*(?:reactions?|likes?|comments?|followers?)[^\n]*$/gim,
   // Generic boilerplate
-  /^\s*\[Learn more\]\(https?:\/\/[^)]+\)\s*$/im,
-  /^\s*Source:\s*https?:\/\/.*$/im,
-  /^\s*Skip to (main content|navigation)\s*$/im,
+  /^\s*\[Learn more\]\(https?:\/\/[^)]+\)\s*$/gim,
+  /^\s*Skip to (main content|navigation)\s*$/gim,
+  // "Show more"/"Show less" toggles
+  /^\s*(Show more|Show less|Mostra altro|Mostra meno)\s*$/gim,
 ];
 
 const HOURS_TABLE_RE =

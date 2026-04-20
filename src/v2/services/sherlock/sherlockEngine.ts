@@ -106,11 +106,38 @@ async function callExtractAI(args: {
   if (args.signal.aborted) throw new Error("Aborted");
   if (error) throw new Error(error.message ?? "AI extract failed");
   const d = (data ?? {}) as Record<string, unknown>;
+
+  // Unifica fields + other_findings in un singolo oggetto findings, mantenendo
+  // _summary e _confidence come metadati per la UI (FindingsView li gestisce).
+  const fields = (d.fields as Record<string, unknown>) ?? {};
+  const findings: Record<string, unknown> = {};
+  // 1) target fields (solo non-null/non-vuoti)
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== null && v !== undefined && v !== "") findings[k] = v;
+  }
+  // 2) other_findings → key/value flat
+  const otherRaw = d.other_findings;
+  if (Array.isArray(otherRaw)) {
+    for (const item of otherRaw) {
+      if (!item || typeof item !== "object") continue;
+      const k = (item as { key?: unknown }).key;
+      const v = (item as { value?: unknown }).value;
+      if (typeof k === "string" && k && v !== null && v !== undefined && v !== "") {
+        // Evita collisioni con fields già presenti
+        const safeKey = findings[k] === undefined ? k : `${k}_extra`;
+        findings[safeKey] = v;
+      }
+    }
+  }
+  // 3) summary AI come metadato (FindingsView lo mostra come callout)
+  const summary = typeof d.summary === "string" ? d.summary : "";
+  if (summary) findings._summary = summary;
+
   return {
-    findings: (d.fields as Record<string, unknown>) ?? {},
+    findings,
     confidence: typeof d.confidence === "number" ? d.confidence : 0,
     suggestedNextUrl: typeof d.suggested_next_url === "string" ? d.suggested_next_url : null,
-    summary: typeof d.summary === "string" ? d.summary : "",
+    summary,
   };
 }
 
