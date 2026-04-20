@@ -430,6 +430,22 @@ function SourceRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+function SourceCheckbox({
+  label, checked, onChange,
+}: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-1.5 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 transition-colors">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-3 h-3 accent-primary cursor-pointer"
+      />
+      <span className={`text-[10px] ${checked ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+    </label>
+  );
+}
+
 function Empty({ msg }: { msg: string }) {
   return <div className="text-[11px] text-muted-foreground py-4 text-center">{msg}</div>;
 }
