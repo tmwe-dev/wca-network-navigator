@@ -122,6 +122,8 @@ export function SenderProfileTab() {
           );
         })}
       </div>
+
+      <RegenerateBanner visible={savedAt > 0} message="Mittente aggiornato" onDismiss={() => setSavedAt(0)} />
     </div>
   );
 }
