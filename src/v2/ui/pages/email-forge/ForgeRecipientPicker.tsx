@@ -45,32 +45,38 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
   const debounced = useDebounced(search, 250);
 
+  // Limite dinamico: con filtro paese o ricerca → 1000 (rispetta cap Supabase di default)
+  // Senza filtri → 100 (lista iniziale leggera)
+  const partnerLimit = country || debounced.length >= 2 ? 1000 : 100;
+  const contactLimit = country || debounced.length >= 2 ? 1000 : 100;
+  const bcaLimit = debounced.length >= 2 ? 1000 : 100;
+
   const partnersQuery = useQuery({
-    queryKey: ["forge-picker", "partners", debounced, country],
+    queryKey: ["forge-picker", "partners", debounced, country, partnerLimit],
     enabled: tab === "partner",
     queryFn: async () => {
       let q = supabase
         .from("partners")
-        .select("id, company_name, country_code, city, email")
+        .select("id, company_name, country_code, city, email", { count: "exact" })
         .eq("is_active", true)
-        .order("company_name")
-        .limit(60);
+        .order("company_name", { ascending: true })
+        .limit(partnerLimit);
       if (debounced.length >= 2) q = q.ilike("company_name", `%${debounced}%`);
       if (country) q = q.eq("country_code", country);
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
   const contactsQuery = useQuery({
-    queryKey: ["forge-picker", "contacts", debounced, country],
+    queryKey: ["forge-picker", "contacts", debounced, country, contactLimit],
     enabled: tab === "contact",
     queryFn: async () => {
       let q = supabase
         .from("imported_contacts")
-        .select("id, name, company_name, email, country, position")
-        .order("name")
-        .limit(60);
+        .select("id, name, company_name, email, country, position", { count: "exact" })
+        .order("name", { ascending: true })
+        .limit(contactLimit);
       if (debounced.length >= 2) {
         q = q.or(`name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
       }
@@ -78,25 +84,25 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
         const cn = WCA_COUNTRIES_MAP[country]?.name;
         if (cn) q = q.ilike("country", `%${cn}%`);
       }
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
   const bcaQuery = useQuery({
-    queryKey: ["forge-picker", "bca", debounced, country],
+    queryKey: ["forge-picker", "bca", debounced, country, bcaLimit],
     enabled: tab === "bca",
     queryFn: async () => {
       let q = supabase
         .from("business_cards")
-        .select("id, contact_name, company_name, email, location, matched_partner_id")
-        .order("created_at", { ascending: false })
-        .limit(60);
+        .select("id, contact_name, company_name, email, location, matched_partner_id", { count: "exact" })
+        .order("company_name", { ascending: true })
+        .limit(bcaLimit);
       if (debounced.length >= 2) {
         q = q.or(`contact_name.ilike.%${debounced}%,company_name.ilike.%${debounced}%,email.ilike.%${debounced}%`);
       }
-      const { data } = await q;
-      return data ?? [];
+      const { data, count } = await q;
+      return { rows: data ?? [], total: count ?? (data?.length ?? 0) };
     },
   });
 
@@ -156,8 +162,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="partner" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {partnersQuery.isLoading && <LoadingRow />}
-          {partnersQuery.data?.length === 0 && <EmptyRow />}
-          {partnersQuery.data?.map((p) => (
+          {partnersQuery.data && partnersQuery.data.rows.length === 0 && <EmptyRow />}
+          {partnersQuery.data && partnersQuery.data.rows.length > 0 && (
+            <CountBar shown={partnersQuery.data.rows.length} total={partnersQuery.data.total} />
+          )}
+          {partnersQuery.data?.rows.map((p) => (
             <ResultRow
               key={p.id}
               title={p.company_name || "(senza nome)"}
@@ -181,8 +190,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="contact" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {contactsQuery.isLoading && <LoadingRow />}
-          {contactsQuery.data?.length === 0 && <EmptyRow />}
-          {contactsQuery.data?.map((c) => (
+          {contactsQuery.data && contactsQuery.data.rows.length === 0 && <EmptyRow />}
+          {contactsQuery.data && contactsQuery.data.rows.length > 0 && (
+            <CountBar shown={contactsQuery.data.rows.length} total={contactsQuery.data.total} />
+          )}
+          {contactsQuery.data?.rows.map((c) => (
             <ResultRow
               key={c.id}
               title={c.name || c.company_name || "(senza nome)"}
@@ -205,8 +217,11 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
 
         <TabsContent value="bca" className="mt-2 max-h-[260px] overflow-auto space-y-1">
           {bcaQuery.isLoading && <LoadingRow />}
-          {bcaQuery.data?.length === 0 && <EmptyRow />}
-          {bcaQuery.data?.map((c) => (
+          {bcaQuery.data && bcaQuery.data.rows.length === 0 && <EmptyRow />}
+          {bcaQuery.data && bcaQuery.data.rows.length > 0 && (
+            <CountBar shown={bcaQuery.data.rows.length} total={bcaQuery.data.total} />
+          )}
+          {bcaQuery.data?.rows.map((c) => (
             <ResultRow
               key={c.id}
               title={c.contact_name || c.company_name || "(senza nome)"}
@@ -276,6 +291,17 @@ function EmptyRow() {
   return (
     <div className="text-center py-4 text-[10px] text-muted-foreground">
       Nessun risultato — affina la ricerca.
+    </div>
+  );
+}
+
+function CountBar({ shown, total }: { shown: number; total: number }) {
+  const truncated = shown < total;
+  return (
+    <div className={`text-[9px] px-1.5 py-1 rounded ${truncated ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+      {truncated
+        ? `Mostrati ${shown} di ${total} — affina la ricerca per vedere gli altri.`
+        : `${total} risultati`}
     </div>
   );
 }
