@@ -75,7 +75,7 @@ export default function OracleContextPanel({ summary, hasRecipient }: Props) {
           <SettingsIcon className="w-3 h-3" />
           Cosa sa Oracolo
           {summary?.coherence_warning && (
-            <span className="ml-1 px-1 py-0.5 rounded bg-amber-500/15 text-amber-600 text-[9px]">⚠ Incoerenza</span>
+            <span className="ml-1 px-1 py-0.5 rounded bg-warning/15 text-warning text-[9px]">⚠ Incoerenza</span>
           )}
         </span>
         <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
@@ -127,14 +127,14 @@ function Row({ icon, label, children, tone = "muted" }: { icon: React.ReactNode;
     <div className="flex items-start gap-1.5">
       <span className={cn(
         "shrink-0 mt-[1px]",
-        tone === "ok" && "text-emerald-600",
-        tone === "warn" && "text-amber-600",
+        tone === "ok" && "text-success",
+        tone === "warn" && "text-warning",
         tone === "muted" && "text-muted-foreground",
       )}>{icon}</span>
       <span className="text-muted-foreground/70 shrink-0">{label}:</span>
       <span className={cn(
         "text-foreground/80",
-        tone === "warn" && "text-amber-700",
+        tone === "warn" && "text-warning",
       )}>{children}</span>
     </div>
   );
