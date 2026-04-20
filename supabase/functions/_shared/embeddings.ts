@@ -8,9 +8,11 @@
  * per KB freight forwarding multilingua).
  */
 
-const EMBEDDINGS_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
+// Lovable AI Gateway non supporta più embedding models. Usiamo OpenAI direct.
+const LOVABLE_EMBEDDINGS_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
+const OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings";
 
-export const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+export const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 export const EMBEDDING_DIM = 1536;
 
 export interface EmbedOptions {
@@ -45,17 +47,24 @@ export async function embedOne(text: string, opts: EmbedOptions = {}): Promise<n
  */
 export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const apiKey = opts.apiKey || Deno.env.get("LOVABLE_API_KEY");
+  // Preferisci OPENAI_API_KEY (supporta embedding); LOVABLE_API_KEY come fallback legacy.
+  const openaiKey = opts.apiKey || Deno.env.get("OPENAI_API_KEY");
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = openaiKey || lovableKey;
   if (!apiKey) {
-    throw new EmbeddingError("no_api_key", "LOVABLE_API_KEY not configured");
+    throw new EmbeddingError("no_api_key", "Neither OPENAI_API_KEY nor LOVABLE_API_KEY configured");
   }
-  const model = opts.model || DEFAULT_EMBEDDING_MODEL;
+  const useOpenAI = !!openaiKey;
+  const url = useOpenAI ? OPENAI_EMBEDDINGS_URL : LOVABLE_EMBEDDINGS_URL;
+  // Su Lovable Gateway il modello richiede prefisso "openai/", su OpenAI native no.
+  const baseModel = (opts.model || DEFAULT_EMBEDDING_MODEL).replace(/^openai\//, "");
+  const model = useOpenAI ? baseModel : `openai/${baseModel}`;
   const timeoutMs = opts.timeoutMs ?? 30000;
 
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
   try {
-    const resp = await fetch(EMBEDDINGS_URL, {
+    const resp = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
