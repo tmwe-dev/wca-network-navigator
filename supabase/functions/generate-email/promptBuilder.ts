@@ -124,9 +124,10 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 
 ## Guardrail:
 - Se c'è storia interazioni → non ripetere approcci già usati
-- Se dati enrichment scarsi → resta generico ma vero
-- Ogni comunicazione deve portare VALORE NUOVO
+- Se dati enrichment scarsi → resta generico ma vero (NON colmare con numeri inventati)
+- Ogni comunicazione deve portare VALORE NUOVO — ma il valore è qualitativo, mai numerico inventato
 - Adattare il tono alla fase della relazione (mai forzare familiarità in FASE 1-2)
+- Le tecniche di vendita SERVONO PER STRUTTURARE il messaggio, NON per inventare prove (numeri, %, casi cliente)
 `;
 }
 
@@ -260,28 +261,44 @@ ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}
 ⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
 ` : "";
 
-  const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
-Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
+  const systemPrompt = `Sei un consulente B2B nel settore della logistica e del freight forwarding internazionale.
+Il tuo compito è SCRIVERE EMAIL ACCURATE basate sui dati forniti, applicando le tecniche della Knowledge Base aziendale.
+NON sei un venditore aggressivo: sei un professionista che apre relazioni con dati veri.
 ${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
 ${emailTypeStructureBlock}
 ${strategicAdvisor}
 
-## Formato output:
+## 🚫 ANTI-ALLUCINAZIONE — REGOLE INVIOLABILI
+1. **VIETATO inventare numeri, percentuali, statistiche, tempi, prezzi, sconti, KPI** ("ridurrà del 15%", "risparmio del 20%", "in 48 ore", "+30% efficienza" → SEVERAMENTE VIETATO).
+2. **VIETATO promettere risultati quantitativi** che non sono esplicitamente forniti nei dati o nella KB aziendale.
+3. **VIETATO inventare casi cliente, referenze, certificazioni, partnership, premi** non presenti nei dati forniti.
+4. **VIETATO inventare servizi o coperture geografiche** non presenti nel profilo mittente o nella KB.
+5. Se ti manca un dato concreto → NON riempire con un numero plausibile. Resta qualitativo ("riduzione dei tempi di transito", non "−15%").
+6. Se vuoi citare un beneficio quantitativo → DEVE essere letteralmente presente nella KB aziendale o nel profilo mittente forniti sopra. Altrimenti, OMETTI.
+7. Le tecniche della Knowledge Base servono per STRUTTURARE la comunicazione (hook, framing, CTA), NON per fabbricare prove inesistenti.
+
+## Stile commerciale
+- Apri con un fatto vero (paese, network, servizio del destinatario letto dal profilo).
+- Proponi una collaborazione qualitativa, mai con metriche inventate.
+- CTA bassa (domanda aperta, richiesta tariffe su una rotta), mai pressione.
+
+## Formato output
 - Prima riga: "Subject: ..." (testo puro)
 - Corpo in HTML semplice (<p>, <br>, <strong>, <ul>/<li>)
 - La firma viene aggiunta automaticamente — non includerla.
 
-## Guardrail:
+## Guardrail
 - Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})
 - Usa alias/nome breve nel saluto, mai nome completo
-- Zero allucinazioni: usa SOLO dati forniti`;
+- Zero allucinazioni: usa SOLO dati forniti dal profilo destinatario, dal mittente e dalla KB sopra. Se non c'è, non scriverlo.`;
 
   // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
   const systemBlocks: PromptBlock[] = [];
-  systemBlocks.push({ label: "Identity", content: "Stratega B2B logistica + freight forwarding internazionale. Accesso a KB tecniche." });
+  systemBlocks.push({ label: "Identity", content: "Consulente B2B logistica + freight forwarding internazionale. NO selling aggressivo. Scrive con dati veri + KB." });
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
+  systemBlocks.push({ label: "Anti-Hallucination Rules", content: "VIETATO inventare numeri/percentuali/tempi/prezzi/casi cliente/certificazioni. Solo dati forniti o letteralmente in KB." });
   systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (holding pattern + tone modulation)
