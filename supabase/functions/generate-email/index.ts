@@ -98,7 +98,7 @@ serve(async (req) => {
     }
 
     // ── Build prompts ──
-    const { systemPrompt, userPrompt } = buildEmailPrompts({
+    const { systemPrompt, userPrompt, blocks, systemBlocks } = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
       email_type_prompt, email_type_structure,
@@ -107,11 +107,13 @@ serve(async (req) => {
 
     // ── AI call ──
     const model = getModel(quality);
+    const aiStart = Date.now();
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 45000, maxRetries: 1, context: "generate-email:" + userId.substring(0, 8),
     });
+    const aiLatencyMs = Date.now() - aiStart;
 
     // ── Credits ──
     if (result.usage) {
