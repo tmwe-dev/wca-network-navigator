@@ -117,6 +117,45 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
     },
   });
 
+  // Track previous running state per rilevare la fine di una run e mostrare riepilogo persistente
+  const prevRunning = React.useRef(ds.running);
+  const [savedSummary, setSavedSummary] = React.useState<{
+    when: string;
+    quality: string;
+    socialLinks: number;
+    contactProfiles: number;
+    rating: number;
+    errors: number;
+  } | null>(null);
+
+  React.useEffect(() => {
+    if (prevRunning.current && !ds.running && ds.results.length > 0) {
+      // Run appena terminata → calcola riepilogo + refresh enrichment + toast esteso
+      const totals = ds.results.reduce(
+        (acc, r) => ({
+          socialLinks: acc.socialLinks + (r.socialLinksFound || 0),
+          contactProfiles: acc.contactProfiles + (r.contactProfilesFound || 0),
+          rating: Math.max(acc.rating, r.rating || 0),
+          errors: acc.errors + (r.error ? 1 : 0),
+        }),
+        { socialLinks: 0, contactProfiles: 0, rating: 0, errors: 0 },
+      );
+      setSavedSummary({
+        when: new Date().toLocaleString("it-IT"),
+        quality: lab.quality,
+        ...totals,
+      });
+      // Refetch enrichment per mostrare i dati appena salvati
+      enrichmentQuery.refetch();
+      // Toast esteso con il dettaglio
+      toast.success(
+        `Deep Search ${lab.quality.toUpperCase()} salvata · ${totals.socialLinks} link · ${totals.contactProfiles} profili · rating ${totals.rating}`,
+        { duration: 6000 },
+      );
+    }
+    prevRunning.current = ds.running;
+  }, [ds.running, ds.results, lab.quality, enrichmentQuery]);
+
   if (!recipient) {
     return <Empty msg="Seleziona un destinatario reale a sinistra per ispezionare la sua deep search." />;
   }
@@ -127,6 +166,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       toast.error("ID non disponibile per questa modalità");
       return;
     }
+    setSavedSummary(null); // reset card precedente prima di un nuovo run
     ds.start([targetId], true, mode);
   };
 
@@ -302,6 +342,32 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* CARD RIEPILOGO POST-RUN — mostra esplicitamente cosa è stato salvato in DB */}
+      {savedSummary && (
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2.5">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-200">
+                ✅ Salvato in database — Deep Search {savedSummary.quality.toUpperCase()}
+              </div>
+              <div className="text-[10px] text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
+                {savedSummary.when}
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono text-emerald-900 dark:text-emerald-200">
+            <SourceRow label="partner_social_links" value={`+${savedSummary.socialLinks}`} />
+            <SourceRow label="contact_profiles" value={`+${savedSummary.contactProfiles}`} />
+            <SourceRow label="rating ricalcolato" value={savedSummary.rating > 0 ? `${savedSummary.rating}/100` : "—"} />
+            <SourceRow label="enrichment_data.deep_search_at" value="aggiornato" />
+            {savedSummary.errors > 0 && (
+              <SourceRow label="errori" value={String(savedSummary.errors)} />
+            )}
+          </div>
         </div>
       )}
 

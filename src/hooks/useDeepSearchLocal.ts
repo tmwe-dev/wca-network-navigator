@@ -41,8 +41,22 @@ export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
 
   const googleSearch = useCallback(async (query: string, limit = 5): Promise<GoogleSearchResult[]> => {
+    // Preferenza 1: endpoint nativo "google-search" dell'estensione (gira in background, no tab visibile)
+    try {
+      const nativeRes = await fs.googleSearch(query, limit, false);
+      if (nativeRes?.success && Array.isArray(nativeRes.data)) {
+        return nativeRes.data.map((r) => ({
+          url: r.url || "",
+          title: r.title || "",
+          snippet: r.description || "",
+        }));
+      }
+    } catch { /* fallback al metodo navigate+extract */ }
+
+    // Fallback: navigate + extract. Richiediamo background:true così l'estensione,
+    // se aggiornata, riusa lo stesso tab nascosto invece di aprirne uno nuovo per query.
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${limit}&hl=en`;
-    const navResult = await fs.agentAction({ action: "navigate", url: searchUrl });
+    const navResult = await fs.agentAction({ action: "navigate", url: searchUrl, background: true, reuseTab: true });
     if (!navResult.success) return [];
     await delay(2000);
     const extractResult = await fs.extract({
@@ -62,7 +76,8 @@ export function useDeepSearchLocal() {
   }, [fs]);
 
   const scrapeUrl = useCallback(async (url: string) => {
-    const navResult = await fs.agentAction({ action: "navigate", url });
+    // background:true + reuseTab:true → estensione (se aggiornata) usa lo stesso tab nascosto
+    const navResult = await fs.agentAction({ action: "navigate", url, background: true, reuseTab: true });
     if (!navResult.success) return null;
     await delay(2000);
     const result = await fs.scrape(true);

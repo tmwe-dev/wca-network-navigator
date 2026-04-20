@@ -3,9 +3,10 @@
  * corrente. Tutta la modifica avviene dalla linguetta laterale (FiltersDrawer).
  */
 import * as React from "react";
-import { Sparkles, User, Mail, BookOpen, Target, Globe } from "lucide-react";
-import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { Sparkles, User, Mail, BookOpen, Target, Globe, Zap, ThumbsUp, Trophy } from "lucide-react";
+import { useForgeLab, forgeLabStore } from "@/v2/hooks/useForgeLabStore";
 import { getCountryFlag } from "@/lib/countries";
+import { getDeepSearchMeta, type DeepSearchQuality } from "@/lib/deepSearchPresets";
 
 export function ForgeSummaryPanel() {
   const lab = useForgeLab();
@@ -26,15 +27,26 @@ export function ForgeSummaryPanel() {
 
         {/* Stile */}
         <Section icon={BookOpen} label="Stile">
-          <div className="space-y-0.5 text-[11px]">
+          <div className="space-y-1.5 text-[11px]">
             <div><span className="text-muted-foreground">Tono:</span> <span className="text-primary">{lab.tone}</span></div>
-            <div><span className="text-muted-foreground">Quality:</span> <span className="text-primary">{lab.quality}</span></div>
             <div>
               <span className="text-muted-foreground">Knowledge Base:</span>{" "}
               <span className={lab.useKB ? "text-primary" : "text-muted-foreground"}>
                 {lab.useKB ? "ON" : "OFF"}
               </span>
             </div>
+          </div>
+        </Section>
+
+        {/* Quality Deep Search — bottoni cliccabili sincronizzati col tab Deep Search */}
+        <Section icon={Sparkles} label="Profondità Deep Search">
+          <div className="grid grid-cols-3 gap-1">
+            <SidebarQualityButton icon={Zap} label="Fast" q="fast" active={lab.quality === "fast"} />
+            <SidebarQualityButton icon={ThumbsUp} label="Standard" q="standard" active={lab.quality === "standard"} />
+            <SidebarQualityButton icon={Trophy} label="Premium" q="premium" active={lab.quality === "premium"} />
+          </div>
+          <div className="text-[9px] text-muted-foreground mt-1 leading-tight">
+            {getDeepSearchMeta(lab.quality).description}
           </div>
         </Section>
 
@@ -94,5 +106,24 @@ function Section({ icon: Icon, label, children }: { icon: React.ElementType; lab
       </div>
       <div className="pl-4">{children}</div>
     </section>
+  );
+}
+
+function SidebarQualityButton({
+  icon: Icon, label, q, active,
+}: { icon: React.ComponentType<{ className?: string }>; label: string; q: DeepSearchQuality; active: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={() => forgeLabStore.set({ quality: q })}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded border px-1 py-1 transition-colors ${
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border/40 bg-card hover:bg-muted text-muted-foreground"
+      }`}
+    >
+      <Icon className="w-3 h-3" />
+      <span className="text-[9px] font-medium">{label}</span>
+    </button>
   );
 }
