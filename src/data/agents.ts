@@ -20,11 +20,14 @@ const QUERY_KEY = ["agents"] as const;
 
 // ── Reads ──
 
-export async function findAgents(userId: string): Promise<Agent[]> {
+/**
+ * Restituisce TUTTI gli agenti del sistema (visibilità globale, no isolamento per user).
+ * Il parametro userId è mantenuto per retrocompatibilità ma ignorato.
+ */
+export async function findAgents(_userId?: string): Promise<Agent[]> {
   const { data, error } = await supabase
     .from("agents")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Agent[];
