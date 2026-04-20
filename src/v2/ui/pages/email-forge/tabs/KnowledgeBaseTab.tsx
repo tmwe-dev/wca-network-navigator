@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Plus, Pencil, BookOpen } from "lucide-react";
+import { RegenerateBanner } from "../RegenerateBanner";
 
 interface Props {
   categories: string[] | null;
@@ -19,6 +20,7 @@ export function KnowledgeBaseTab({ categories }: Props) {
   const { entries, loading, savingId, update, toggleActive, insert } = useForgeKb(categories);
   const [editing, setEditing] = React.useState<ForgeKbEntry | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const [savedAt, setSavedAt] = React.useState(0);
 
   return (
     <div className="space-y-2 text-xs">
@@ -60,7 +62,11 @@ export function KnowledgeBaseTab({ categories }: Props) {
                 <div className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{e.content}</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Switch checked={e.is_active} onCheckedChange={(v) => toggleActive(e.id, v)} disabled={savingId === e.id} />
+                <Switch
+                  checked={e.is_active}
+                  onCheckedChange={async (v) => { await toggleActive(e.id, v); setSavedAt(Date.now()); }}
+                  disabled={savingId === e.id}
+                />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditing(e)}>
                   <Pencil className="w-3 h-3" />
                 </Button>
@@ -75,7 +81,7 @@ export function KnowledgeBaseTab({ categories }: Props) {
           entry={editing}
           saving={savingId === editing.id}
           onClose={() => setEditing(null)}
-          onSave={async (patch) => { await update(editing.id, patch); setEditing(null); }}
+          onSave={async (patch) => { await update(editing.id, patch); setEditing(null); setSavedAt(Date.now()); }}
         />
       )}
 
@@ -83,9 +89,11 @@ export function KnowledgeBaseTab({ categories }: Props) {
         <CreateEntryDialog
           defaultCategory={categories?.[0] ?? "vendita"}
           onClose={() => setCreating(false)}
-          onCreate={async (input) => { const r = await insert(input); if (r) setCreating(false); }}
+          onCreate={async (input) => { const r = await insert(input); if (r) { setCreating(false); setSavedAt(Date.now()); } }}
         />
       )}
+
+      <RegenerateBanner visible={savedAt > 0} message="KB aggiornata" onDismiss={() => setSavedAt(0)} />
     </div>
   );
 }

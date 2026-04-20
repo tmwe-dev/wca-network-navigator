@@ -10,10 +10,32 @@ import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
 import {
   toWhatsAppNumber, extractSeniority, getLastName, extractDomainKeyword,
-  delay, aiCall, calculateRating, type GoogleSearchResult,
+  delay, aiCall, calculateRating, cleanPersonName, cleanCompanyName, cascadeBus,
+  type GoogleSearchResult,
 } from "./useDeepSearchHelpers";
 
 const _log = createLogger("useDeepSearchLocal");
+
+/** Config opzionale iniettabile a livello modulo dal Lab Forge. */
+export interface DeepSearchRuntimeConfig {
+  scrapeWebsite?: boolean;
+  linkedinContacts?: boolean;
+  linkedinCompany?: boolean;
+  whatsapp?: boolean;
+  maxQueriesPerContact?: number;
+  priorityDomain?: string;
+}
+let runtimeConfig: DeepSearchRuntimeConfig = {};
+export function setDeepSearchRuntimeConfig(c: DeepSearchRuntimeConfig): void {
+  runtimeConfig = { ...c };
+}
+function cfg<K extends keyof DeepSearchRuntimeConfig>(
+  key: K,
+  fallback: NonNullable<DeepSearchRuntimeConfig[K]>,
+): NonNullable<DeepSearchRuntimeConfig[K]> {
+  const v = runtimeConfig[key];
+  return (v === undefined ? fallback : v) as NonNullable<DeepSearchRuntimeConfig[K]>;
+}
 
 export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
@@ -55,29 +77,40 @@ export function useDeepSearchLocal() {
   ) => {
     let socialLinksFound = 0;
     const contactProfiles: Record<string, Record<string, string>> = {};
+    const enableLinkedIn = cfg("linkedinContacts", true);
+    const enableWhatsApp = cfg("whatsapp", true);
+    const maxQ = Math.max(1, Math.min(5, cfg("maxQueriesPerContact", 5)));
+    const priorityDomain = (runtimeConfig.priorityDomain || "").trim();
+    const cleanCompany = cleanCompanyName(companyName);
 
     for (const contact of contacts) {
       if (!contact.name || contact.name.length < 3) continue;
-      if (!existingSet.has(`${contact.id}_linkedin`)) {
-        const domainKw = extractDomainKeyword(contact.email);
-        const lastName = getLastName(contact.name);
+      const cleanName = cleanPersonName(contact.name);
+
+      if (enableLinkedIn && !existingSet.has(`${contact.id}_linkedin`)) {
+        const domainKw = priorityDomain || extractDomainKeyword(contact.email) || "";
+        const lastName = getLastName(cleanName);
         const cascadeQueries = [
-          `"${contact.name}" "${companyName}" site:linkedin.com/in`,
-          ...(domainKw ? [`"${contact.name}" "${domainKw}" site:linkedin.com/in`] : []),
-          `"${contact.name}" site:linkedin.com/in`,
+          `"${cleanName}" "${cleanCompany}" site:linkedin.com/in`,
+          ...(domainKw ? [`"${cleanName}" "${domainKw}" site:linkedin.com/in`] : []),
+          `"${cleanName}" site:linkedin.com/in`,
           ...(domainKw ? [`"${lastName}" "${domainKw}" site:linkedin.com/in`] : []),
-          `${contact.name} LinkedIn`,
-        ];
+          `${cleanName} ${cleanCompany} LinkedIn`,
+        ].slice(0, maxQ);
+
         let results: GoogleSearchResult[] = [];
-        for (const q of cascadeQueries) {
+        for (let qi = 0; qi < cascadeQueries.length; qi++) {
+          const q = cascadeQueries[qi];
+          cascadeBus.emit({ type: "query-start", subjectId: contact.id, query: q, index: qi, total: cascadeQueries.length });
           results = (await googleSearch(q, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+          cascadeBus.emit({ type: "query-result", subjectId: contact.id, query: q, index: qi, total: cascadeQueries.length, results: results.length });
           if (results.length > 0) break;
           await delay(500);
         }
         if (results.length > 0) {
           const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
           const answer = await aiCall(
-            `Find the PERSONAL LinkedIn profile of "${contact.name}" at "${companyName}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
+            `Find the PERSONAL LinkedIn profile of "${cleanName}" at "${cleanCompany}" in ${location}.${contact.title ? ` Title: "${contact.title}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
           );
           if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
             const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
@@ -86,13 +119,18 @@ export function useDeepSearchLocal() {
               if (!error) socialLinksFound++;
               const sr = extractSeniority(results[0]?.title);
               if (sr) contactProfiles[contact.id] = { name: contact.name, title: contact.title || "", ...sr };
+              cascadeBus.emit({ type: "subject-done", subjectId: contact.id, matched: true });
             }
+          } else {
+            cascadeBus.emit({ type: "subject-done", subjectId: contact.id, matched: false });
           }
+        } else {
+          cascadeBus.emit({ type: "subject-done", subjectId: contact.id, matched: false });
         }
         await delay(800);
       }
       const waNumber = contact.mobile || contact.direct_phone;
-      if (waNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
+      if (enableWhatsApp && waNumber && !existingSet.has(`${contact.id}_whatsapp`)) {
         const cleaned = toWhatsAppNumber(waNumber);
         if (cleaned.length >= 8) {
           const { error } = await insertPartnerSocialLink({ partner_id: partnerId, contact_id: contact.id, platform: "whatsapp", url: `https://wa.me/${cleaned}` });
@@ -104,10 +142,14 @@ export function useDeepSearchLocal() {
   }, [googleSearch]);
 
   const searchCompanyLinkedIn = useCallback(async (companyName: string, partnerId: string, existingSet: Set<string>) => {
+    if (!cfg("linkedinCompany", true)) return 0;
     if (existingSet.has("company_linkedin")) return 0;
-    const q = `"${companyName}" site:linkedin.com/company`;
+    const cleanCo = cleanCompanyName(companyName);
+    const q = `"${cleanCo}" site:linkedin.com/company`;
+    cascadeBus.emit({ type: "query-start", subjectId: `company:${partnerId}`, query: q, index: 0, total: 1 });
     const res = await googleSearch(q, 3);
     const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
+    cascadeBus.emit({ type: "query-result", subjectId: `company:${partnerId}`, query: q, index: 0, total: 1, results: res.length });
     if (match) {
       const { error } = await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: match.url.replace(/\/$/, "") });
       if (!error) { await delay(500); return 1; }
@@ -117,6 +159,7 @@ export function useDeepSearchLocal() {
   }, [googleSearch]);
 
   const scrapeWebsite = useCallback(async (website: string | null, partnerId: string, contacts?: Array<{ email?: string | null }>) => {
+    if (!cfg("scrapeWebsite", true)) return { logoFound: false, websiteQualityScore: 0 };
     let logoFound = false;
     let websiteQualityScore = 0;
     if (website) {
@@ -198,26 +241,32 @@ export function useDeepSearchLocal() {
     const contactName = s("name");
     const contactEmail = s("email") || null;
     const contactPosition = s("position");
-    if (contactName && contactName.length >= 3) {
-      const domainKw = extractDomainKeyword(contactEmail);
-      const lastName = getLastName(contactName);
+    if (cfg("linkedinContacts", true) && contactName && contactName.length >= 3) {
+      const cleanName = cleanPersonName(contactName);
+      const cleanCo = cleanCompanyName(companyName);
+      const domainKw = (runtimeConfig.priorityDomain || "").trim() || extractDomainKeyword(contactEmail) || "";
+      const lastName = getLastName(cleanName);
+      const maxQ = Math.max(1, Math.min(5, cfg("maxQueriesPerContact", 5)));
       const cascadeQueries = [
-        `"${contactName}" "${companyName}" site:linkedin.com/in`,
-        ...(domainKw ? [`"${contactName}" "${domainKw}" site:linkedin.com/in`] : []),
-        `"${contactName}" site:linkedin.com/in`,
+        `"${cleanName}" "${cleanCo}" site:linkedin.com/in`,
+        ...(domainKw ? [`"${cleanName}" "${domainKw}" site:linkedin.com/in`] : []),
+        `"${cleanName}" site:linkedin.com/in`,
         ...(domainKw ? [`"${lastName}" "${domainKw}" site:linkedin.com/in`] : []),
-        `${contactName} LinkedIn`,
-      ];
+        `${cleanName} ${cleanCo} LinkedIn`,
+      ].slice(0, maxQ);
       let results: GoogleSearchResult[] = [];
-      for (const q of cascadeQueries) {
+      for (let qi = 0; qi < cascadeQueries.length; qi++) {
+        const q = cascadeQueries[qi];
+        cascadeBus.emit({ type: "query-start", subjectId: contactId, query: q, index: qi, total: cascadeQueries.length });
         results = (await googleSearch(q, 5)).filter((r) => r.url?.includes("linkedin.com/in/"));
+        cascadeBus.emit({ type: "query-result", subjectId: contactId, query: q, index: qi, total: cascadeQueries.length, results: results.length });
         if (results.length > 0) break;
         await delay(500);
       }
       if (results.length > 0) {
         const domainHint = domainKw ? ` Email domain: "${domainKw}".` : "";
         const answer = await aiCall(
-          `Find the PERSONAL LinkedIn profile of "${contactName}" at "${companyName}" in ${location}.${contactPosition ? ` Title: "${contactPosition}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
+          `Find the PERSONAL LinkedIn profile of "${cleanName}" at "${cleanCo}" in ${location}.${contactPosition ? ` Title: "${contactPosition}"` : ""}${domainHint}\nResults:\n${results.map((r, i) => `${i + 1}. ${r.url} - ${r.title}`).join("\n")}\nIf one matches, respond with ONLY the URL. If none, respond "NONE".`
         );
         if (answer && answer !== "NONE" && answer.includes("linkedin.com/in/")) {
           const m = answer.match(/(https?:\/\/[^\s"<>]+linkedin\.com\/in\/[^\s"<>]+)/);
@@ -228,14 +277,19 @@ export function useDeepSearchLocal() {
             if (partnerId) {
               await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: m[1].replace(/\/$/, "") });
             }
+            cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: true });
           }
+        } else {
+          cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: false });
         }
+      } else {
+        cascadeBus.emit({ type: "subject-done", subjectId: contactId, matched: false });
       }
       await delay(800);
     }
 
     const waNumber = s("mobile") || s("phone") || null;
-    if (waNumber) {
+    if (cfg("whatsapp", true) && waNumber) {
       const cleaned = toWhatsAppNumber(waNumber);
       if (cleaned.length >= 8) {
         socialLinksFound++;
@@ -244,9 +298,12 @@ export function useDeepSearchLocal() {
     }
 
     let companyProfileFound = false;
-    if (companyName !== "Unknown") {
-      const q = `"${companyName}" site:linkedin.com/company`;
+    if (cfg("linkedinCompany", true) && companyName !== "Unknown") {
+      const cleanCo = cleanCompanyName(companyName);
+      const q = `"${cleanCo}" site:linkedin.com/company`;
+      cascadeBus.emit({ type: "query-start", subjectId: `company:${contactId}`, query: q, index: 0, total: 1 });
       const res = await googleSearch(q, 3);
+      cascadeBus.emit({ type: "query-result", subjectId: `company:${contactId}`, query: q, index: 0, total: 1, results: res.length });
       const match = res.find((r) => r.url?.includes("linkedin.com/company/"));
       if (match) {
         companyProfileFound = true; socialLinksFound++;
@@ -262,7 +319,7 @@ export function useDeepSearchLocal() {
     }
     let logoFound = false;
     let websiteQualityScore = 0;
-    if (websiteUrl) {
+    if (cfg("scrapeWebsite", true) && websiteUrl) {
       const scraped = await scrapeUrl(websiteUrl);
       if (scraped) {
         try { const domain = new URL(websiteUrl).hostname; if (`https://www.google.com/s2/favicons?domain=${domain}&sz=128`) logoFound = true; } catch { /* best-effort */ }

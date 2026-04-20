@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { RegenerateBanner } from "../RegenerateBanner";
 
 const AI_KEYS = [
   { key: "ai_contact_name", label: "Nome contatto", textarea: false },
@@ -44,6 +45,7 @@ export function SenderProfileTab() {
 
   const [draft, setDraft] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState<string | null>(null);
+  const [savedAt, setSavedAt] = React.useState(0);
   React.useEffect(() => { if (settingsQuery.data) setDraft({ ...settingsQuery.data }); }, [settingsQuery.data]);
 
   const handleSave = async (key: string) => {
@@ -53,6 +55,7 @@ export function SenderProfileTab() {
       await upsertAppSetting(userId, key, draft[key] ?? "");
       toast.success("Profilo aggiornato");
       qc.invalidateQueries({ queryKey: ["forge-sender-settings", userId] });
+      setSavedAt(Date.now());
     } catch (e) {
       toast.error("Salvataggio fallito", { description: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -119,6 +122,8 @@ export function SenderProfileTab() {
           );
         })}
       </div>
+
+      <RegenerateBanner visible={savedAt > 0} message="Mittente aggiornato" onDismiss={() => setSavedAt(0)} />
     </div>
   );
 }

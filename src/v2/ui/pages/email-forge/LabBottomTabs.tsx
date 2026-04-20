@@ -4,13 +4,14 @@
 import * as React from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Search, BookOpen, User, Scroll, History } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, BookOpen, User, Scroll, History, Wand2 } from "lucide-react";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
 import { DeepSearchTab } from "./tabs/DeepSearchTab";
 import { KnowledgeBaseTab } from "./tabs/KnowledgeBaseTab";
 import { SenderProfileTab } from "./tabs/SenderProfileTab";
 import { DoctrineTab } from "./tabs/DoctrineTab";
 import { HistoryTab } from "./tabs/HistoryTab";
+import { PromptsTab } from "./tabs/PromptsTab";
 
 interface Props {
   recipient: ForgeRecipient | null;
@@ -20,7 +21,7 @@ interface Props {
 
 export function LabBottomTabs({ recipient, emailKbCategories, onRefreshGeneration }: Props) {
   const [open, setOpen] = React.useState(true);
-  const [tab, setTab] = React.useState<"deep" | "kb" | "sender" | "doctrine" | "history">("deep");
+  const [tab, setTab] = React.useState<"deep" | "kb" | "sender" | "doctrine" | "prompts" | "history">("deep");
 
   return (
     <div className="border-t border-border bg-card/40 shrink-0">
@@ -40,6 +41,7 @@ export function LabBottomTabs({ recipient, emailKbCategories, onRefreshGeneratio
             <TabsTrigger value="kb" className="text-[10px] h-6 px-2"><BookOpen className="w-3 h-3 mr-1" />KB email</TabsTrigger>
             <TabsTrigger value="sender" className="text-[10px] h-6 px-2"><User className="w-3 h-3 mr-1" />Mittente</TabsTrigger>
             <TabsTrigger value="doctrine" className="text-[10px] h-6 px-2"><Scroll className="w-3 h-3 mr-1" />Dottrina</TabsTrigger>
+            <TabsTrigger value="prompts" className="text-[10px] h-6 px-2"><Wand2 className="w-3 h-3 mr-1" />Prompt</TabsTrigger>
             <TabsTrigger value="history" className="text-[10px] h-6 px-2"><History className="w-3 h-3 mr-1" />Storico</TabsTrigger>
           </TabsList>
 
@@ -54,6 +56,9 @@ export function LabBottomTabs({ recipient, emailKbCategories, onRefreshGeneratio
           </TabsContent>
           <TabsContent value="doctrine" className="mt-2 max-h-[280px] overflow-auto">
             <DoctrineTab />
+          </TabsContent>
+          <TabsContent value="prompts" className="mt-2 max-h-[280px] overflow-auto">
+            <PromptsTab />
           </TabsContent>
           <TabsContent value="history" className="mt-2 max-h-[280px] overflow-auto">
             <HistoryTab recipient={recipient} />
