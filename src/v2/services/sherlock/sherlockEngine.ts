@@ -170,6 +170,7 @@ async function discoverWebsiteViaGoogle(args: {
     const cached = await checkCache(url);
     let markdown = cached?.markdown ?? "";
     if (!markdown) {
+      await throttle("generic", url, signal);
       const res = await extFs.readUrl(url, { settleMs: 2000, signal, skipCache: true });
       if (signal.aborted || !res.ok) return null;
       markdown = extractMarkdown(res.data);
@@ -178,6 +179,51 @@ async function discoverWebsiteViaGoogle(args: {
       }
     }
     return pickFirstNonAggregatorUrl(markdown);
+  } catch {
+    return null;
+  }
+}
+
+/** Estrae lo slug (`my-company`) da un URL LinkedIn company. */
+export function extractLinkedinCompanySlug(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const m = String(input).match(/linkedin\.com\/company\/([^/?#\s]+)/i);
+  return m ? decodeURIComponent(m[1]).trim() : null;
+}
+
+/** Cerca un link LinkedIn company in un markdown grezzo. */
+function findLinkedinCompanyUrl(markdown: string): string | null {
+  if (!markdown) return null;
+  const re = /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/company\/[^\s)<>"'\]]+/i;
+  const m = markdown.match(re);
+  if (!m) return null;
+  return m[0].replace(/[)\].,;:!?]+$/, "");
+}
+
+async function discoverLinkedinSlugViaGoogle(args: {
+  companyName: string;
+  signal: AbortSignal;
+}): Promise<{ slug: string; url: string } | null> {
+  const { companyName, signal } = args;
+  if (!companyName) return null;
+  const q = encodeURIComponent(`${companyName} site:linkedin.com/company`);
+  const url = `https://www.google.com/search?q=${q}`;
+  try {
+    const cached = await checkCache(url);
+    let markdown = cached?.markdown ?? "";
+    if (!markdown) {
+      await throttle("generic", url, signal);
+      const res = await extFs.readUrl(url, { settleMs: 2000, signal, skipCache: true });
+      if (signal.aborted || !res.ok) return null;
+      markdown = extractMarkdown(res.data);
+      if (markdown) {
+        await persistScrape({ url, markdown, level: 0, partnerId: null, contactId: null });
+      }
+    }
+    const liUrl = findLinkedinCompanyUrl(markdown);
+    if (!liUrl) return null;
+    const slug = extractLinkedinCompanySlug(liUrl);
+    return slug ? { slug, url: liUrl } : null;
   } catch {
     return null;
   }
