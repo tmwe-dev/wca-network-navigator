@@ -154,6 +154,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     isCockpit, isWorkspace, isInUscita, isCircuito, isAttivita,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
     isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer, isCampaigns,
+    isInreach,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
   };
