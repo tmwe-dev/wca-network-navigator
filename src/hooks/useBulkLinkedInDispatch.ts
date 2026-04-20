@@ -1,20 +1,23 @@
 /**
- * useBulkLinkedInDispatch — accoda invii LinkedIn massivi rispettando il rate limit (3/ora).
+ * useBulkLinkedInDispatch — accoda invii LinkedIn massivi rispettando timing configurabile.
  *
- * Ogni messaggio viene programmato con `scheduled_for` distanziato di ≥21 minuti
- * (3600s / 3 + buffer) per restare sotto il limite del check_channel_rate_limit DB.
- * Gli invii avvengono comunque tramite l'estensione browser, che leggerà la coda
- * solo quando `scheduled_for` è passato.
+ * Lo `scheduled_for` di ogni messaggio è calcolato tramite `buildSchedule` (lib/multichannelTiming):
+ *  - delay random tra min/max secondi (default 45-180s, allineato pattern WhatsApp ma più conservativo)
+ *  - finestra oraria operativa (default 09-19), spostamento automatico al giorno successivo se fuori
+ *
+ * I parametri sono letti da `app_settings`:
+ *  - linkedin_send_start_hour / linkedin_send_end_hour
+ *  - linkedin_min_delay_seconds / linkedin_max_delay_seconds
  */
 import { useState, useCallback } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { buildSchedule, parseTimingFromSettings, estimateBatchDuration, type ChannelTimingConfig } from "@/lib/multichannelTiming";
 
 const log = createLogger("useBulkLinkedInDispatch");
-
-const SPACING_MINUTES = 21; // 3/ora con buffer
 
 export interface BulkLinkedInTarget {
   contactId?: string;
@@ -27,6 +30,10 @@ export interface BulkLinkedInTarget {
 export function useBulkLinkedInDispatch() {
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, queued: 0, failed: 0 });
+  const { data: settings } = useAppSettings();
+  const timing: ChannelTimingConfig = parseTimingFromSettings(settings, "linkedin");
+
+  const previewSchedule = (count: number) => estimateBatchDuration(count, timing);
 
   const dispatch = useCallback(async (targets: BulkLinkedInTarget[], messageTemplate: string) => {
     const eligible = targets
@@ -49,21 +56,20 @@ export function useBulkLinkedInDispatch() {
     setSending(true);
     setProgress({ current: 0, total: eligible.length, queued: 0, failed: 0 });
 
+    const slots = buildSchedule(eligible.length, timing);
     let queued = 0;
     let failed = 0;
-    const startTime = Date.now() + 60_000; // primo invio fra 1 min
 
     for (let i = 0; i < eligible.length; i++) {
       const t = eligible[i];
       setProgress(p => ({ ...p, current: i + 1 }));
 
-      // Personalizzazione minima placeholders
       const personalized = messageTemplate
         .replace(/\{\{name\}\}/gi, t.contactName || "")
         .replace(/\{\{company\}\}/gi, t.companyName || "")
         .slice(0, 300);
 
-      const scheduledFor = new Date(startTime + i * SPACING_MINUTES * 60_000).toISOString();
+      const scheduledFor = slots[i].toISOString();
 
       try {
         const res = await invokeEdge("send-linkedin", {
@@ -90,14 +96,14 @@ export function useBulkLinkedInDispatch() {
 
     setSending(false);
 
-    const lastSlot = new Date(startTime + (eligible.length - 1) * SPACING_MINUTES * 60_000);
+    const lastSlot = slots[slots.length - 1];
     toast({
       title: `${queued} messaggi LinkedIn programmati`,
-      description: `Distribuiti su ~${Math.ceil(eligible.length * SPACING_MINUTES / 60)}h. Ultimo invio: ${lastSlot.toLocaleString("it-IT")}.${failed > 0 ? ` ${failed} falliti.` : ""}`,
+      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}`,
     });
 
     return { queued, failed };
-  }, []);
+  }, [timing]);
 
-  return { dispatch, sending, progress, spacingMinutes: SPACING_MINUTES };
+  return { dispatch, sending, progress, timing, previewSchedule };
 }

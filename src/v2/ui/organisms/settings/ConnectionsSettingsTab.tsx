@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../../atoms/Button";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { toast } from "sonner";
+import { MultichannelTimingPanel } from "./MultichannelTimingPanel";
 
 export function ConnectionsSettingsTab(): React.ReactElement {
   const { data: settings } = useSettingsV2();
@@ -71,6 +72,10 @@ export function ConnectionsSettingsTab(): React.ReactElement {
           />
         </div>
         <Button onClick={handleSaveLinkedIn} isLoading={updateSetting.isPending}>Salva LinkedIn</Button>
+      </div>
+
+      <div className="border-t pt-6">
+        <MultichannelTimingPanel />
       </div>
     </div>
   );
