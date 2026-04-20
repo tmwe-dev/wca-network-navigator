@@ -70,6 +70,7 @@ interface CapturedPage {
   error?: string;
   startedAt: number;
   durationMs?: number;
+  persisted?: boolean;
 }
 
 interface Props {
