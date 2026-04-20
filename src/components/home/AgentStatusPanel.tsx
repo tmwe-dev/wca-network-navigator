@@ -180,7 +180,7 @@ export function AgentStatusPanel({ agents: initialAgents, breakdowns }: Props) {
 
             {/* Navigate to agent */}
             <button
-              onClick={() => navigate(`/agent-chat?agent=${selected.id}`)}
+              onClick={() => navigate(`/v2/agents?agent=${selected.id}`)}
               className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors mt-1"
             >
               Vai all'agente <ChevronRight className="h-3 w-3" />

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Volume2, Loader2, Wrench, Circle, Mic, MicOff, Phone, BookOpen, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ interface Message {
 
 export default function AgentChatHub() {
   const { agents, isLoading, createAgent } = useAgents();
+  const [searchParams] = useSearchParams();
+  const requestedAgentId = searchParams.get("agent");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -39,9 +42,18 @@ export default function AgentChatHub() {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
 
+  // Pre-seleziona l'agente richiesto via ?agent= se presente, altrimenti il primo della lista.
   useEffect(() => {
-    if (!activeId && agents.length > 0) setActiveId(agents[0].id);
-  }, [agents, activeId]);
+    if (agents.length === 0) return;
+    if (requestedAgentId) {
+      const found = agents.find((a) => a.id === requestedAgentId);
+      if (found) {
+        setActiveId(found.id);
+        return;
+      }
+    }
+    if (!activeId) setActiveId(agents[0].id);
+  }, [agents, activeId, requestedAgentId]);
 
   // Auto-seed: se l'utente non ha ancora agenti, crea il roster base
   // (Luca director, Marco outreach, Sara sales, Robin support).
