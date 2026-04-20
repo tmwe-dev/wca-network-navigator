@@ -41,6 +41,7 @@ export function LabBottomTabs({ recipient, emailKbCategories, onRefreshGeneratio
             <TabsTrigger value="kb" className="text-[10px] h-6 px-2"><BookOpen className="w-3 h-3 mr-1" />KB email</TabsTrigger>
             <TabsTrigger value="sender" className="text-[10px] h-6 px-2"><User className="w-3 h-3 mr-1" />Mittente</TabsTrigger>
             <TabsTrigger value="doctrine" className="text-[10px] h-6 px-2"><Scroll className="w-3 h-3 mr-1" />Dottrina</TabsTrigger>
+            <TabsTrigger value="prompts" className="text-[10px] h-6 px-2"><Wand2 className="w-3 h-3 mr-1" />Prompt</TabsTrigger>
             <TabsTrigger value="history" className="text-[10px] h-6 px-2"><History className="w-3 h-3 mr-1" />Storico</TabsTrigger>
           </TabsList>
 
@@ -55,6 +56,9 @@ export function LabBottomTabs({ recipient, emailKbCategories, onRefreshGeneratio
           </TabsContent>
           <TabsContent value="doctrine" className="mt-2 max-h-[280px] overflow-auto">
             <DoctrineTab />
+          </TabsContent>
+          <TabsContent value="prompts" className="mt-2 max-h-[280px] overflow-auto">
+            <PromptsTab />
           </TabsContent>
           <TabsContent value="history" className="mt-2 max-h-[280px] overflow-auto">
             <HistoryTab recipient={recipient} />
