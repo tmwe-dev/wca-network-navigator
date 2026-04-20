@@ -328,7 +328,7 @@ async function loadActivePlaybook(
 export async function assembleContextBlocks(
   supabase: SupabaseClient, userId: string, partner: PartnerData, contact: ContactData | null,
   contactEmail: string | null, sourceType: string, quality: Quality, standalone: boolean,
-  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null },
+  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null; deep_search?: boolean; authHeader?: string },
 ): Promise<ContextBlocks> {
   const isPartnerSource = (sourceType === "partner" && partner.id) && (!standalone || opts.partner_id);
 
@@ -473,16 +473,56 @@ export async function assembleContextBlocks(
     }
   }
 
-  // ── Cached Enrichment Data ──
+  // ── Cached Enrichment Data + optional live Deep Search ──
   let cachedEnrichmentContext = "";
+  let deepSearchStatus: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed" = "missing";
+  let deepSearchAgeDays: number | null = null;
   if (effectivePartnerId) {
     const { data: partnerEd } = await supabase.from("partners").select("enrichment_data").eq("id", effectivePartnerId).single();
-    if (partnerEd?.enrichment_data) {
-      const ed = partnerEd.enrichment_data as Record<string, unknown>;
-      if (ed.website_summary) cachedEnrichmentContext += `\nINFORMAZIONI DAL SITO AZIENDALE:\n${String(ed.website_summary).slice(0, 600)}\n`;
-      if (ed.linkedin_summary) cachedEnrichmentContext += `\nPROFILO LINKEDIN:\n${String(ed.linkedin_summary).slice(0, 500)}\n`;
-      if (ed.deep_search_summary) cachedEnrichmentContext += `\nDEEP SEARCH:\n${String(ed.deep_search_summary).slice(0, 400)}\n`;
+    let ed = (partnerEd?.enrichment_data || {}) as Record<string, unknown>;
+
+    // Compute cache age
+    const enrichedAt = ed.deep_search_at || ed.website_scraped_at;
+    if (enrichedAt) {
+      const ageMs = Date.now() - new Date(String(enrichedAt)).getTime();
+      deepSearchAgeDays = Math.floor(ageMs / 86400000);
+      deepSearchStatus = deepSearchAgeDays > 30 ? "stale" : "cached";
     }
+
+    // Live trigger: deep_search=true + cache stale/missing + partner_id reale
+    const shouldRefresh = opts.deep_search === true && (deepSearchStatus === "stale" || deepSearchStatus === "missing");
+    if (shouldRefresh && opts.authHeader) {
+      try {
+        const enrichUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`;
+        const enrichRes = await fetch(enrichUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: opts.authHeader },
+          body: JSON.stringify({ partnerId: effectivePartnerId }),
+          signal: AbortSignal.timeout(20000),
+        });
+        if (enrichRes.ok) {
+          // Reload enrichment_data after enrichment completes
+          const { data: refreshed } = await supabase.from("partners").select("enrichment_data").eq("id", effectivePartnerId).single();
+          ed = (refreshed?.enrichment_data || ed) as Record<string, unknown>;
+          deepSearchStatus = "fresh";
+          deepSearchAgeDays = 0;
+        } else {
+          deepSearchStatus = "failed";
+          console.warn(`[generate-email] enrich-partner-website returned ${enrichRes.status}`);
+        }
+      } catch (e) {
+        deepSearchStatus = "failed";
+        console.warn(`[generate-email] deep search live failed:`, e instanceof Error ? e.message : e);
+      }
+    } else if (opts.deep_search === true && deepSearchStatus === "cached") {
+      // Already fresh
+    } else if (opts.deep_search !== true) {
+      deepSearchStatus = enrichedAt ? "skipped" : "missing";
+    }
+
+    if (ed.website_summary) cachedEnrichmentContext += `\nINFORMAZIONI DAL SITO AZIENDALE:\n${String(ed.website_summary).slice(0, 600)}\n`;
+    if (ed.linkedin_summary) cachedEnrichmentContext += `\nPROFILO LINKEDIN:\n${String(ed.linkedin_summary).slice(0, 500)}\n`;
+    if (ed.deep_search_summary) cachedEnrichmentContext += `\nDEEP SEARCH:\n${String(ed.deep_search_summary).slice(0, 400)}\n`;
   }
 
   // ── Documents ──
