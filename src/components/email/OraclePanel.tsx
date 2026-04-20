@@ -42,6 +42,12 @@ interface OraclePanelProps {
   generating: boolean;
   improving: boolean;
   hasBody: boolean;
+  /** Single recipient partner_id for Deep Search trigger (null if multi/no real partner) */
+  recipientPartnerId?: string | null;
+  /** Number of recipients (used to enable/disable Deep Search) */
+  recipientCount?: number;
+  /** Latest _context_summary returned by generate-email or improve-email */
+  contextSummary?: OracleContextSummary | null;
 }
 
 /** Abbreviated chip labels for default types */
@@ -54,12 +60,11 @@ const CHIP_LABELS: Record<string, string> = {
   network_espresso: "Express",
 };
 
-export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onInsertImage, generating, improving, hasBody }: OraclePanelProps) {
+export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onInsertImage, generating, improving, hasBody, recipientPartnerId = null, recipientCount = 0, contextSummary = null }: OraclePanelProps) {
   const navigate = useAppNavigate();
   const [selectedType, setSelectedType] = useState<EmailType | null>(null);
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);
-  const [deepSearch, setDeepSearch] = useState(false);
   const [showNewType, setShowNewType] = useState(false);
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("📧");
@@ -69,6 +74,15 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
   const [customGoal, setCustomGoal] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
   const [showImages, setShowImages] = useState(false);
+
+  // Manual on-demand Deep Search (replaces the old toggle)
+  const deepSearch = useDeepSearchTrigger(recipientPartnerId);
+
+  // Coherence detector between selected type and free-form description
+  const coherence = useMemo(
+    () => checkOracleCoherence(selectedType?.id ?? null, customGoal),
+    [selectedType?.id, customGoal],
+  );
 
   // Voice dictation
   const onVoiceText = useCallback((text: string) => {
@@ -88,7 +102,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
-  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch, customGoal: customGoal.trim() };
+  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh" || deepSearch.status === "cached", customGoal: customGoal.trim() };
 
   const handleAddType = () => {
     if (!newName.trim() || !newPrompt.trim()) return;
