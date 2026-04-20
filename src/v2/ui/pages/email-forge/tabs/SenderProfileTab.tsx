@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { RegenerateBanner } from "../RegenerateBanner";
 
 const AI_KEYS = [
   { key: "ai_contact_name", label: "Nome contatto", textarea: false },
