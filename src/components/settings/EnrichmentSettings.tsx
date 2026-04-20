@@ -41,6 +41,7 @@ export default function EnrichmentSettings() {
           onBulkLogoSearch={d.handleBulkLogoSearch}
           onDeepSearch={d.openDeepSearchDialog}
           getSelectedRows={d.getSelectedRows}
+          onJobComplete={() => { d.refetchPartners(); d.refetchContacts(); }}
         />
       )}
 

@@ -86,17 +86,17 @@ export function BulkActionBar({ selectedCount, onLinkedInBatch, onBulkLogoSearch
             </div>
             <div className="flex items-center gap-3 text-muted-foreground">
               <span className="flex items-center gap-0.5"><Linkedin className="w-2.5 h-2.5 text-primary" /> {progress.slugFound}</span>
-              <span className="flex items-center gap-0.5"><Image className="w-2.5 h-2.5 text-amber-500" /> {progress.logoFound}</span>
+              <span className="flex items-center gap-0.5"><Image className="w-2.5 h-2.5 text-muted-foreground" /> {progress.logoFound}</span>
               <span>🌐 {progress.siteScraped}</span>
               {progress.errors > 0 && <span className="text-destructive">⚠ {progress.errors}</span>}
             </div>
           </div>
           <Progress value={progress.total > 0 ? (progress.done / progress.total) * 100 : 0} className="h-1" />
           {progress.status === "paused" && (
-            <div className="text-[10px] text-amber-600">In pausa. Premi "Arricchimento Base" per riprendere.</div>
+            <div className="text-[10px] text-muted-foreground">In pausa. Premi "Arricchimento Base" per riprendere.</div>
           )}
           {progress.status === "done" && (
-            <div className="text-[10px] text-emerald-600 font-medium">✅ Completato</div>
+            <div className="text-[10px] text-primary font-medium">✅ Completato</div>
           )}
         </div>
       )}
