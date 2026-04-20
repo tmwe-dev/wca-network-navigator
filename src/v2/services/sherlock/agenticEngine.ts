@@ -89,13 +89,18 @@ function normalizeUrl(raw: string): string | null {
   }
 }
 
-function isAggregator(url: string): boolean {
+function safeHost(url: string): string {
   try {
-    const host = new URL(url).hostname.toLowerCase();
-    return AGGREGATOR_DOMAINS.some((d) => host.includes(d));
+    return new URL(url).hostname.toLowerCase();
   } catch {
-    return true;
+    return "";
   }
+}
+
+function isAggregator(url: string): boolean {
+  const host = safeHost(url);
+  if (!host) return true;
+  return AGGREGATOR_DOMAINS.some((d) => host.includes(d));
 }
 
 /** Estrae link http(s) da un markdown, deduplica, normalizza. Esclude aggregatori. */
