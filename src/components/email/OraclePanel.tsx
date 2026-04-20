@@ -12,6 +12,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Handshake, RefreshCw, ClipboardList, Briefcase, Globe, Plane, GraduationCap, Smile, Target,
 };
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
+import { checkOracleCoherence, getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
