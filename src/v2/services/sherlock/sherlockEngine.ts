@@ -16,8 +16,12 @@
 import { fs as extFs } from "@/v2/io/extensions/bridge";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
-import { updatePartnerWebsiteIfMissing } from "@/data/sherlockPlaybooks";
+import {
+  updatePartnerWebsiteIfMissing,
+  updatePartnerLinkedinIfMissing,
+} from "@/data/sherlockPlaybooks";
 import { renderUrlTemplate, checkRequiredVars } from "./sherlockTemplates";
+import { throttle, estimateWaitMs } from "./rateLimiter";
 import type {
   SherlockPlaybook,
   SherlockStep,
