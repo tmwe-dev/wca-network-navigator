@@ -23,6 +23,7 @@ export interface ForgeDebug {
   ai_latency_ms: number | null;
   tokens_in: number | null;
   tokens_out: number | null;
+  prompt_overridden?: boolean;
 }
 
 export interface ForgeResult {
@@ -51,6 +52,9 @@ export interface ForgeRunParams {
   email_type_prompt?: string | null;
   email_type_structure?: string | null;
   email_type_kb_categories?: string[];
+  /** Prompt-Lab: override completi che bypassano l'assembler */
+  system_prompt_override?: string;
+  user_prompt_override?: string;
 }
 
 export function useEmailForge() {
@@ -82,6 +86,8 @@ export function useEmailForge() {
           email_type_structure: params.email_type_structure,
           email_type_kb_categories: params.email_type_kb_categories,
           _debug_return_prompt: true,
+          _system_prompt_override: params.system_prompt_override,
+          _user_prompt_override: params.user_prompt_override,
         },
         context: "useEmailForge.run",
       });
