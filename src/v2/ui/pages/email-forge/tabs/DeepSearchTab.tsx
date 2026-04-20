@@ -3,11 +3,12 @@
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Download, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 
@@ -18,6 +19,7 @@ interface Props {
 
 export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
   const ds = useDeepSearch();
+  const navigate = useNavigate();
 
   const enrichmentQuery = useQuery({
     queryKey: ["forge-enrichment", recipient?.source, recipient?.recordId],
@@ -28,7 +30,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         const id = recipient.partnerId!;
         const { data } = await supabase
           .from("partners")
-          .select("id, enrichment_data, raw_profile_html")
+          .select("id, enrichment_data, raw_profile_html, raw_profile_markdown, ai_parsed_at")
           .eq("id", id)
           .maybeSingle();
         return { kind: "partner" as const, data };
