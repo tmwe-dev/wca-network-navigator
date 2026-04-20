@@ -13,6 +13,7 @@ import { EmailToolbar } from "@/components/email/EmailToolbar";
 import { EmailRecipientFields } from "@/components/email/EmailRecipientFields";
 import { EmailAIPanel } from "@/components/email/EmailAIPanel";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
+import { RecipientSnapshotHeader } from "@/components/email/RecipientSnapshotHeader";
 
 export default function EmailComposer() {
   const c = useEmailComposerState();
@@ -41,6 +42,20 @@ export default function EmailComposer() {
                 onManualCompanyNameChange={(v) => c.dispatch({ type: "SET_MANUAL_COMPANY_NAME", payload: v })}
                 onConfirmUnknownEmail={c.confirmUnknownEmail}
               />
+
+              {/* Recipient snapshot — shows context Oracolo will use */}
+              {(() => {
+                const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
+                const hasRealId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
+                return (
+                  <RecipientSnapshotHeader
+                    partnerId={hasRealId ? single!.partnerId : null}
+                    recipientCount={c.recipientsWithEmail.length}
+                    fallbackCompany={single?.companyAlias || single?.companyName}
+                    fallbackCountry={single?.countryName}
+                  />
+                );
+              })()}
 
               {/* Subject */}
               <div className="flex items-center gap-2 mb-3">
@@ -119,20 +134,29 @@ export default function EmailComposer() {
           </div>
 
           {/* RIGHT: Oracle + AI dialogs */}
-          <EmailAIPanel
-            aiGenerating={ai.aiGenerating}
-            aiImproving={ai.aiImproving}
-            hasBody={!!email.htmlBody.trim()}
-            learningDialogOpen={ai.learningDialogOpen}
-            editAnalysis={ai.editAnalysis}
-            onGenerate={c.handleAIGenerate}
-            onImprove={c.handleAIImprove}
-            onLoadTemplate={c.handleLoadTemplate}
-            onInsertImage={c.handleInsertImage}
-            onCloseLearningDialog={c.closeLearningDialog}
-            onSendAndSave={c.handleSendAndSave}
-            onSendWithoutSaving={() => { c.closeLearningDialog(); c.executeEnqueue(); }}
-          />
+          {(() => {
+            const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
+            const hasRealPartnerId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
+            return (
+              <EmailAIPanel
+                aiGenerating={ai.aiGenerating}
+                aiImproving={ai.aiImproving}
+                hasBody={!!email.htmlBody.trim()}
+                learningDialogOpen={ai.learningDialogOpen}
+                editAnalysis={ai.editAnalysis}
+                onGenerate={c.handleAIGenerate}
+                onImprove={c.handleAIImprove}
+                onLoadTemplate={c.handleLoadTemplate}
+                onInsertImage={c.handleInsertImage}
+                onCloseLearningDialog={c.closeLearningDialog}
+                onSendAndSave={c.handleSendAndSave}
+                onSendWithoutSaving={() => { c.closeLearningDialog(); c.executeEnqueue(); }}
+                recipientPartnerId={hasRealPartnerId ? single!.partnerId : null}
+                recipientCount={c.recipientsWithEmail.length}
+                contextSummary={c.lastContextSummary}
+              />
+            );
+          })()}
         </div>
       </div>
 
