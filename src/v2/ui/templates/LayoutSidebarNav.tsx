@@ -13,7 +13,7 @@ import {
   FlaskConical, Book, BarChart3, Earth, Search,
   ArrowUpDown, Cpu, Cog, Upload, Send, Command,
   Wifi, WifiOff, Sun, Moon, BrainCircuit, ShieldCheck, Gamepad2,
-  MessageSquare, Brain,
+  MessageSquare, Brain, Rocket, BookOpen,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 
@@ -49,6 +49,7 @@ const navGroupsDef: readonly NavGroup[] = [
     items: [
       { labelKey: "nav.outreach", path: "/v2/outreach", icon: <Mail className="h-4 w-4" /> },
       { labelKey: "nav.inreach", path: "/v2/inreach", icon: <ArrowDownLeft className="h-4 w-4" /> },
+      { labelKey: "nav.agenda", path: "/v2/outreach/agenda", icon: <Calendar className="h-4 w-4" /> },
       { labelKey: "nav.campaigns", path: "/v2/campaigns", icon: <Megaphone className="h-4 w-4" /> },
       { labelKey: "nav.approvals", path: "/v2/sorting", icon: <ArrowUpDown className="h-4 w-4" /> },
       { labelKey: "nav.ai_arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
@@ -65,6 +66,7 @@ const navGroupsDef: readonly NavGroup[] = [
     titleKey: "nav.group_ai_operations",
     items: [
       { labelKey: "nav.agents", path: "/v2/agents", icon: <Bot className="h-4 w-4" /> },
+      { labelKey: "nav.missions", path: "/v2/agents/missions", icon: <Rocket className="h-4 w-4" /> },
       { labelKey: "nav.ai_staff", path: "/v2/ai-staff", icon: <UserCog className="h-4 w-4" /> },
       { labelKey: "nav.ai_control", path: "/v2/ai-control", icon: <ShieldCheck className="h-4 w-4" /> },
     ],
@@ -73,6 +75,7 @@ const navGroupsDef: readonly NavGroup[] = [
     titleKey: "nav.group_system",
     items: [
       { labelKey: "nav.settings", path: "/v2/settings", icon: <Settings className="h-4 w-4" /> },
+      { labelKey: "nav.guide", path: "/v2/guida", icon: <BookOpen className="h-4 w-4" /> },
     ],
   },
 ];
