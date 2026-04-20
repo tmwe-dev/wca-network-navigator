@@ -107,8 +107,9 @@ Deno.serve(async (req) => {
         mission_id: mission_id || null,
         outreach_queue_id: outreach_queue_id || null,
         status: "pending",
+        scheduled_for: scheduledForIso,
       })
-      .select("id")
+      .select("id, scheduled_for")
       .single();
 
     if (insertErr) {
@@ -118,12 +119,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[send-linkedin] Queued ${queued.id} for ${recipient}`);
+    console.log(`[send-linkedin] Queued ${queued.id} for ${recipient}${scheduledForIso ? ` scheduled ${scheduledForIso}` : ""}`);
 
     return new Response(JSON.stringify({
       success: true,
       dispatch_id: queued.id,
-      message: "Messaggio LinkedIn in coda. L'estensione lo invierà a breve.",
+      scheduled_for: queued.scheduled_for,
+      message: scheduledForIso
+        ? `Messaggio LinkedIn programmato per ${new Date(scheduledForIso).toLocaleString("it-IT")}.`
+        : "Messaggio LinkedIn in coda. L'estensione lo invierà a breve.",
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
