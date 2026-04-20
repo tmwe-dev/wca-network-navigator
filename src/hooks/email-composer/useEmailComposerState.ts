@@ -2,7 +2,7 @@
  * useEmailComposerState — All state + async logic for EmailComposer.
  * Types, reducer, and utils extracted to sibling files.
  */
-import { useReducer, useCallback, useEffect, useMemo } from "react";
+import { useReducer, useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -50,10 +50,13 @@ export function useEmailComposerState() {
     return groups;
   }, [templates]);
 
-  // ── Prefill from navigation state ──
+  // ── Prefill from navigation state (one-shot) ──
+  const prefillAppliedRef = useRef(false);
   useEffect(() => {
+    if (prefillAppliedRef.current) return;
     const s = location.state as EmailComposerLocationState | null;
-    if (!s) return;
+    if (!s || (!s.prefilledRecipient && !s.prefilledSubject && !s.prefilledBody)) return;
+    prefillAppliedRef.current = true;
     if (s.prefilledRecipient) {
       const r = s.prefilledRecipient;
       addRecipient({
@@ -69,8 +72,9 @@ export function useEmailComposerState() {
       const escaped = s.prefilledBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       dispatch({ type: "SET_HTML_BODY", payload: `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>` });
     }
-    navigate(location.pathname, { replace: true, state: {} });
-  }, []);
+    // Clear navigation state after a tick so React commits the recipient first
+    setTimeout(() => navigate(location.pathname, { replace: true, state: {} }), 0);
+  }, [location.state, addRecipient, navigate, location.pathname]);
 
   // ── DB Lookup ──
   const lookupEmailInDB = useCallback(async (emailAddr: string) => {
