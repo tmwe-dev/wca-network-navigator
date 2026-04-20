@@ -201,6 +201,10 @@ export function useEmailComposerState() {
         recipient_name: singleRecipient ? (singleRecipient.contactAlias || singleRecipient.contactName || "") : "",
         recipient_company: singleRecipient ? (singleRecipient.companyAlias || singleRecipient.companyName || "") : "",
         oracle_type: config.emailType?.id || null, oracle_tone: config.tone, use_kb: config.useKB, deep_search: config.deepSearch,
+        // Fix 1: pass structured email_type metadata so backend can drive KB + structure block
+        email_type_prompt: config.emailType?.prompt || null,
+        email_type_structure: config.emailType?.structure || null,
+        email_type_kb_categories: config.emailType?.kb_categories || null,
       }, context: "EmailComposer.generate_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
@@ -226,6 +230,8 @@ export function useEmailComposerState() {
         oracle_tone: config.tone, use_kb: config.useKB,
         email_type_id: config.emailType?.id || null,
         email_type_prompt: config.emailType?.prompt || null,
+        email_type_structure: config.emailType?.structure || null,
+        email_type_kb_categories: config.emailType?.kb_categories || null,
         // Permanent business goal — improve è SEMPRE context-aware:
         // promuovere servizi/piattaforma + costruire relazioni di amicizia e supporto
         custom_goal: [

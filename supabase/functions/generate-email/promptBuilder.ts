@@ -51,6 +51,9 @@ export interface EmailPromptContext {
   oracle_type?: string;
   oracle_tone?: string;
   use_kb?: boolean;
+  // Fix 1+2: structured email-type metadata propagated from Composer
+  email_type_prompt?: string | null;
+  email_type_structure?: string | null;
   networks: NetworkRow[];
   services: ServiceRow[];
   socialLinks: SocialLinkRow[];
@@ -144,6 +147,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: stri
     conversationIntelligenceContext,
     salesKBSlice, salesKBSections, _signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
+    email_type_prompt, email_type_structure,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
     playbookBlock,
   } = ctx;
@@ -197,7 +201,10 @@ ${recipientName ? `- Nome persona: ${recipientName}` : `- Nome persona: non disp
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
 ` : `NOTA: Nessun contatto selezionato.`;
 
-  const emailCategory = oracle_type || "primo_contatto";
+  // Fix 3 (Gap C): no hardcoded fallback — derive from touchCount/commercialState if oracle_type is missing
+  const tcFallback = touchCount ?? 0;
+  const inferredCategory = tcFallback === 0 ? "primo_contatto" : "follow_up";
+  const emailCategory = oracle_type || inferredCategory;
   const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
 
   const strategicAdvisor = buildStrategicAdvisor({
@@ -232,9 +239,17 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
   const detected = getLanguageHint(partner.country_code);
   const effectiveLanguage = language || detected.language;
 
+  // Fix 2 (Gap B): explicit "EMAIL TYPE STRUCTURE" block in system prompt — parallel to Playbook
+  const emailTypeStructureBlock = (email_type_prompt || email_type_structure) ? `
+# TIPO EMAIL "${emailCategory}" — STRUTTURA E ISTRUZIONI OBBLIGATORIE
+${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}\n` : ""}${email_type_structure ? `\n## Struttura tattica richiesta:\n${email_type_structure}\n` : ""}
+⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
+` : "";
+
   const systemPrompt = `Sei un esperto stratega di vendita B2B nel settore della logistica e del freight forwarding internazionale.
 Hai accesso a una Knowledge Base di tecniche — seleziona autonomamente quelle più adatte al contesto.
 ${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
+${emailTypeStructureBlock}
 ${strategicAdvisor}
 
 ## Formato output:

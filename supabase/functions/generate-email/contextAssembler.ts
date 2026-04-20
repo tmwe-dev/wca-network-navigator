@@ -16,14 +16,48 @@ interface BusinessCardRow { contact_name: string | null; event_name: string | nu
 
 // ── KB fetcher ──
 
+/**
+ * Always-on KB categories. Loaded from `system_doctrine` table when available
+ * (rows with category in this prefix list), with safe fallback to the codebase
+ * defaults if the table is empty / unreachable.
+ *
+ * Fix 5 (Gap E): rimuove l'hardcoding diretto delle 6 categorie always-on.
+ */
+const FALLBACK_ALWAYS_ON_CATEGORIES = [
+  "regole_sistema",
+  "filosofia",
+  "struttura_email",
+  "hook",
+  "cold_outreach",
+  "dati_partner",
+] as const;
+
+async function loadAlwaysOnCategories(supabase: SupabaseClient): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from("system_doctrine")
+      .select("category")
+      .eq("is_active", true)
+      .eq("always_on", true)
+      .limit(50);
+    const cats = (data ?? [])
+      .map((r: { category: string | null }) => r.category)
+      .filter((c): c is string => !!c);
+    if (cats.length) return [...new Set(cats)];
+  } catch {
+    // Table may not exist or be readable — fall back silently
+  }
+  return [...FALLBACK_ALWAYS_ON_CATEGORIES];
+}
+
 export async function fetchKbEntriesStrategic(
   supabase: SupabaseClient, quality: Quality, userId: string,
   context: { emailCategory?: string; hasInteractionHistory?: boolean; isFollowUp?: boolean; kb_categories?: string[] },
 ): Promise<{ text: string; sections_used: string[] }> {
   const limit = quality === "fast" ? 8 : quality === "standard" ? 18 : 40;
-  const categories: string[] = ["regole_sistema", "filosofia"];
+  const alwaysOn = await loadAlwaysOnCategories(supabase);
+  const categories: string[] = [...alwaysOn];
   if (context.kb_categories?.length) categories.push(...context.kb_categories);
-  categories.push("struttura_email", "hook", "cold_outreach", "dati_partner");
   if (context.isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
   if (quality !== "fast") categories.push("negoziazione", "tono", "frasi_modello");
   if (quality === "premium") categories.push("arsenale", "persuasione", "chiusura", "errori");
@@ -331,7 +365,7 @@ async function loadActivePlaybook(
 export async function assembleContextBlocks(
   supabase: SupabaseClient, userId: string, partner: PartnerData, contact: ContactData | null,
   contactEmail: string | null, sourceType: string, quality: Quality, standalone: boolean,
-  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null; deep_search?: boolean; authHeader?: string },
+  opts: { oracle_type?: string; use_kb?: boolean; document_ids?: string[]; partner_id?: string; activityPartnerId?: string | null; deep_search?: boolean; authHeader?: string; email_type_kb_categories?: string[] | null },
 ): Promise<ContextBlocks> {
   const isPartnerSource = (sourceType === "partner" && partner.id) && (!standalone || opts.partner_id);
 
@@ -379,7 +413,8 @@ export async function assembleContextBlocks(
   // ── Edit Patterns ──
   let editPatternsContext = "";
   {
-    const emailCategory = opts.oracle_type || "primo_contatto";
+    // Fix 3 (Gap C): inferenza category sicura — qui non abbiamo ancora touchCount, usiamo solo oracle_type esplicito
+    const emailCategory = opts.oracle_type || null;
     const countryFilter = partner.country_code || null;
     let epQuery = supabase.from("ai_edit_patterns")
       .select("email_type, country_code, hook_original, hook_final, cta_original, cta_final, tone_delta, formality_shift, length_delta_percent")
@@ -543,10 +578,17 @@ export async function assembleContextBlocks(
   const conversationIntelligenceContext = buildConversationBlock(convIntel);
 
   // ── Sales KB ──
-  const emailCategory = opts.oracle_type || "primo_contatto";
+  // Fix 3 (Gap C): nessun fallback hardcoded — se oracle_type manca, deriva da touchCount/commercialState
+  const tcForCategory = touchCount ?? 0;
+  const inferredCategory = tcForCategory === 0 ? "primo_contatto" : "follow_up";
+  const emailCategory = opts.oracle_type || inferredCategory;
+  const isFollowUp = emailCategory === "follow_up" || historyContext.includes("[") || tcForCategory > 0;
   const kbResult = await fetchKbEntriesStrategic(supabase, quality, userId, {
-    emailCategory, hasInteractionHistory: !!historyContext,
-    isFollowUp: emailCategory === "follow_up" || historyContext.includes("["),
+    emailCategory,
+    hasInteractionHistory: !!historyContext,
+    isFollowUp,
+    // Fix 1 (Gap A): propagate KB categories defined by the selected EmailType
+    kb_categories: opts.email_type_kb_categories ?? undefined,
   });
   if (!kbResult.text && settings.ai_sales_knowledge_base) {
     console.warn("[generate-email] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");

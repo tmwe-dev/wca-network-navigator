@@ -134,6 +134,33 @@ serve(async (req) => {
     const history = await loadHistoryStats(supabase, partner_id || null);
     const isFollowUp = email_type_id === "follow_up" || history.touchCount > 0;
 
+    // ── Fix 4 (Gap F): allinea _context_summary con generate-email — warmth/commercial_state/playbook ──
+    let warmthScore: number | null = null;
+    let commercialState: string | null = null;
+    let lastOutcome: string | null = null;
+    let playbookActive = false;
+    if (partner_id) {
+      try {
+        const { analyzeRelationshipHistory } = await import("../_shared/sameLocationGuard.ts");
+        const { metrics } = await analyzeRelationshipHistory(supabase, partner_id, userId);
+        const m = metrics as Record<string, unknown>;
+        warmthScore = typeof m.warmth_score === "number" ? m.warmth_score : null;
+        commercialState = (m.commercial_state as string | undefined) ?? (partner?.lead_status as string | null) ?? null;
+        lastOutcome = (m.last_outcome as string | undefined) ?? null;
+      } catch (e) {
+        console.warn("[improve-email] relationship analysis failed:", e instanceof Error ? e.message : e);
+      }
+      // Active playbook flag (lightweight check)
+      const { data: state } = await supabase
+        .from("partner_workflow_state")
+        .select("workflow_id")
+        .eq("user_id", userId)
+        .eq("partner_id", partner_id)
+        .eq("status", "active")
+        .maybeSingle();
+      playbookActive = !!state?.workflow_id;
+    }
+
     // ── KB strategica (filtrata per tipo) ──
     const kbResult = use_kb !== false
       ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp)
@@ -281,9 +308,14 @@ ${html_body}`;
         touch_count: history.touchCount,
         days_since_last_contact: history.daysSince,
         last_channel: history.lastChannel,
+        last_outcome: lastOutcome,
+        warmth_score: warmthScore,
+        commercial_state: commercialState,
+        playbook_active: playbookActive,
         coherence_warning: !!coherenceWarning,
         partner_loaded: !!partner,
         contact_loaded: !!contact,
+        oracle_type: email_type_id ?? null,
       },
     }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
