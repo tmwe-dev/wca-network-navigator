@@ -47,7 +47,7 @@ serve(async (req) => {
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt } = await req.json();
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -98,7 +98,7 @@ serve(async (req) => {
     }
 
     // ── Build prompts ──
-    const { systemPrompt, userPrompt } = buildEmailPrompts({
+    const { systemPrompt, userPrompt, blocks, systemBlocks } = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
       email_type_prompt, email_type_structure,
@@ -107,11 +107,13 @@ serve(async (req) => {
 
     // ── AI call ──
     const model = getModel(quality);
+    const aiStart = Date.now();
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 45000, maxRetries: 1, context: "generate-email:" + userId.substring(0, 8),
     });
+    const aiLatencyMs = Date.now() - aiStart;
 
     // ── Credits ──
     if (result.usage) {
@@ -158,6 +160,19 @@ serve(async (req) => {
         sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
         oracle_type: oracle_type ?? null,
       },
+      ...(_debug_return_prompt ? {
+        _debug: {
+          systemPrompt,
+          userPrompt,
+          systemBlocks,
+          blocks,
+          model,
+          quality,
+          ai_latency_ms: aiLatencyMs,
+          tokens_in: result.usage?.promptTokens ?? null,
+          tokens_out: result.usage?.completionTokens ?? null,
+        },
+      } : {}),
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e: unknown) {
     logEdgeError("generate-email", e);

@@ -138,7 +138,21 @@ export function getModel(quality: Quality): string {
 
 // ── Main builder ──
 
-export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: string; userPrompt: string } {
+export interface PromptBlock {
+  label: string;
+  content: string;
+}
+
+export interface BuiltPrompts {
+  systemPrompt: string;
+  userPrompt: string;
+  /** Forge debug: labeled blocks composing the user prompt (in order) */
+  blocks: PromptBlock[];
+  /** Forge debug: labeled blocks composing the system prompt */
+  systemBlocks: PromptBlock[];
+}
+
+export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
   const {
     partner, contact, contactEmail, quality, settings, networks, services, socialLinks,
     historyContext, relationshipBlock, branchBlock, interlocutorBlock,
@@ -262,6 +276,14 @@ ${strategicAdvisor}
 - Usa alias/nome breve nel saluto, mai nome completo
 - Zero allucinazioni: usa SOLO dati forniti`;
 
+  // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
+  const systemBlocks: PromptBlock[] = [];
+  systemBlocks.push({ label: "Identity", content: "Stratega B2B logistica + freight forwarding internazionale. Accesso a KB tecniche." });
+  if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
+  if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
+  systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
+  systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
+
   // Commercial state context (holding pattern + tone modulation)
   let commercialBlock = "";
   if (commercialState !== undefined || touchCount !== undefined) {
@@ -286,24 +308,7 @@ ISTRUZIONI TONO: ${toneInstruction}
 `;
   }
 
-  const userPrompt = `${senderContext}
-
-${partnerContext}
-
-${contactContext}
-${interlocutorBlock}
-${relationshipBlock}
-${historyContext}
-${branchBlock}
-${metInPersonContext}
-${cachedEnrichmentContext}
-${documentsContext}
-${stylePreferencesContext}
-${editPatternsContext}
-${responseInsightsContext}
-${conversationIntelligenceContext}
-${commercialBlock}
-GOAL DELLA COMUNICAZIONE:
+  const goalBlock = `GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
 
 PROPOSTA DI BASE:
@@ -311,5 +316,26 @@ ${base_proposal || "Proposta generica di collaborazione nel settore freight forw
 
 Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
-  return { systemPrompt, userPrompt };
+  // Forge debug: assemble user prompt as labeled blocks (in order)
+  const blocks: PromptBlock[] = [];
+  blocks.push({ label: "Mittente", content: senderContext });
+  blocks.push({ label: "Partner", content: partnerContext });
+  blocks.push({ label: "Contatto", content: contactContext });
+  if (interlocutorBlock) blocks.push({ label: "Interlocutor", content: interlocutorBlock });
+  if (relationshipBlock) blocks.push({ label: "Relationship", content: relationshipBlock });
+  if (historyContext) blocks.push({ label: "History", content: historyContext });
+  if (branchBlock) blocks.push({ label: "Branch", content: branchBlock });
+  if (metInPersonContext) blocks.push({ label: "MetInPerson", content: metInPersonContext });
+  if (cachedEnrichmentContext) blocks.push({ label: "CachedEnrichment", content: cachedEnrichmentContext });
+  if (documentsContext) blocks.push({ label: "Documents", content: documentsContext });
+  if (stylePreferencesContext) blocks.push({ label: "StylePrefs", content: stylePreferencesContext });
+  if (editPatternsContext) blocks.push({ label: "EditPatterns", content: editPatternsContext });
+  if (responseInsightsContext) blocks.push({ label: "ResponseInsights", content: responseInsightsContext });
+  if (conversationIntelligenceContext) blocks.push({ label: "ConvIntel", content: conversationIntelligenceContext });
+  if (commercialBlock) blocks.push({ label: "CommercialBlock", content: commercialBlock });
+  blocks.push({ label: "Goal + BaseProposal", content: goalBlock });
+
+  const userPrompt = blocks.map((b) => b.content).join("\n");
+
+  return { systemPrompt, userPrompt, blocks, systemBlocks };
 }

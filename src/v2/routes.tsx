@@ -62,6 +62,7 @@ const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default:
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
+const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
@@ -190,6 +191,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
+          <Route path="ai-staff/email-forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="kb-supervisor" element={<Navigate to="/v2/ai-staff/kb-supervisor" replace />} />
