@@ -32,7 +32,7 @@ interface CapturedPage {
   id: string;
   pipelineKey: PipelineKey | "manual";
   url: string;
-  status: "running" | "done" | "error";
+  status: "pending" | "running" | "done" | "error";
   markdown: string;
   error?: string;
   startedAt: number;
@@ -109,43 +109,62 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
       return;
     }
 
-    // Pre-crea le card delle pagine così l'utente vede subito la lista completa
-    const idByIdx = plan.urls.map((url, i) => `${key}-${i}-${Date.now()}`);
+    // Pre-crea le card delle pagine come "pending" — si accenderanno una alla volta
+    const idByIdx = plan.urls.map((_url, i) => `${key}-${i}-${Date.now()}`);
     const initial: CapturedPage[] = plan.urls.map((url, i) => ({
       id: idByIdx[i],
       pipelineKey: key,
       url,
-      status: i === 0 ? "running" : "running",
+      status: "pending",
       markdown: "",
-      startedAt: Date.now(),
+      startedAt: 0,
     }));
     setPages((prev) => [...prev, ...initial]);
     setSelectedId((s) => s ?? idByIdx[0]);
 
-    await fs.runUrls(
-      plan.urls,
-      (i, total, url, result) => {
-        const id = idByIdx[i];
-        setPages((prev) => prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                status: result.ok ? "done" : "error",
-                markdown: result.ok ? extractMarkdown(result.data) : "",
-                error: !result.ok ? result.error : undefined,
-                durationMs: Date.now() - p.startedAt,
-              }
-            : p,
-        ));
-        setSelectedId((s) => (s === idByIdx[0] && result.ok ? id : s));
-      },
-      { signal: controller.signal, settleMs: plan.settleMs },
-    );
+    // Eseguiamo URL per URL così possiamo marcare "running" → "done/error" puntualmente
+    for (let i = 0; i < plan.urls.length; i++) {
+      if (controller.signal.aborted) break;
+      const id = idByIdx[i];
+      const startedAt = Date.now();
+      // Mark as running NOW (prima del navigate)
+      setPages((prev) => prev.map((p) => p.id === id ? { ...p, status: "running", startedAt } : p));
+      setSelectedId(id);
 
-    // Marca eventuali pagine ancora "running" (caso aborto a metà) come errore
+      const res = await fs.readUrl(plan.urls[i], {
+        settleMs: plan.settleMs,
+        signal: controller.signal,
+        skipCache: true,
+      });
+
+      setPages((prev) => prev.map((p) => p.id === id
+        ? {
+            ...p,
+            status: res.ok ? "done" : "error",
+            markdown: res.ok ? extractMarkdown(res.data) : "",
+            error: !res.ok ? res.error : undefined,
+            durationMs: Date.now() - startedAt,
+          }
+        : p,
+      ));
+
+      if (!res.ok && !controller.signal.aborted) {
+        // Errore non da abort: interrompiamo la pipeline e marchiamo i rimanenti come saltati
+        setPages((prev) => prev.map((p, idx) => {
+          const myIdx = idByIdx.indexOf(p.id);
+          if (myIdx > i && p.status === "pending") {
+            return { ...p, status: "error", error: "Saltato (errore precedente)" };
+          }
+          return p;
+        }));
+        break;
+      }
+    }
+
+    // Marca eventuali pagine "pending" o "running" rimaste (caso abort) come errore
     setPages((prev) => prev.map((p) =>
-      p.status === "running" && idByIdx.includes(p.id)
-        ? { ...p, status: "error", error: "Non eseguito (interrotto)", durationMs: Date.now() - p.startedAt }
+      idByIdx.includes(p.id) && (p.status === "pending" || p.status === "running")
+        ? { ...p, status: "error", error: "Interrotto", durationMs: p.startedAt ? Date.now() - p.startedAt : 0 }
         : p,
     ));
 
@@ -446,6 +465,7 @@ function StatusIcon({ status, small }: { status: CapturedPage["status"]; small?:
   const cls = small ? "w-3 h-3 mt-0.5" : "w-3.5 h-3.5";
   if (status === "running") return <Loader2 className={`${cls} animate-spin text-primary shrink-0`} />;
   if (status === "done") return <CheckCircle2 className={`${cls} text-emerald-500 shrink-0`} />;
+  if (status === "pending") return <div className={`${cls} rounded-full border border-muted-foreground/40 shrink-0`} />;
   return <AlertCircle className={`${cls} text-destructive shrink-0`} />;
 }
 
