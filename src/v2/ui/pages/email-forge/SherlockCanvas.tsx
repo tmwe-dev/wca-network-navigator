@@ -236,12 +236,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       <div className="text-xs text-destructive">{selected.error}</div>
                     </div>
                   ) : selected.markdown ? (
-                    <ScrollArea className="h-full">
-                      <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
-                        prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
-                        <LazyMarkdown>{selected.markdown}</LazyMarkdown>
-                      </article>
-                    </ScrollArea>
+                    <MarkdownPane markdown={selected.markdown} />
                   ) : (
                     <div className="text-xs text-muted-foreground p-6 text-center">Nessun contenuto.</div>
                   )}
@@ -249,20 +244,11 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
 
                 <TabsContent value="findings" className="flex-1 min-h-0 mt-0">
                   <ScrollArea className="h-full">
-                    <div className="px-6 py-4 space-y-3">
-                      {selected.suggested_next_url && (
-                        <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-                          <div className="text-[10px] font-semibold uppercase text-primary mb-1">
-                            💡 AI suggerisce prossima ricerca
-                          </div>
-                          <code className="text-[11px] font-mono text-foreground break-all">
-                            {selected.suggested_next_url}
-                          </code>
-                        </div>
-                      )}
-                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground/90">
-                        {JSON.stringify(selected.findings, null, 2)}
-                      </pre>
+                    <div className="px-6 py-4">
+                      <FindingsView
+                        findings={selected.findings}
+                        suggestedNextUrl={selected.suggested_next_url}
+                      />
                     </div>
                   </ScrollArea>
                 </TabsContent>
