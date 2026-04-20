@@ -21,6 +21,7 @@ export interface UnifiedRecord {
   position: string | null;
   website: string | null;
   leadStatus: string;
+  emailStatus: "valid" | "bounced" | "invalid";
   note: string | null;
   enrichmentData: Record<string, unknown> | null;
   deepSearchAt: string | null;
@@ -61,6 +62,7 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           country: p.country_name, city: p.city, address: p.address,
           position: (primary?.title as string) || null,
           website: p.website, leadStatus: p.lead_status,
+          emailStatus: ((p as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
           note: p.profile_description,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
           deepSearchAt: p.enriched_at, createdAt: p.created_at || "",
@@ -86,7 +88,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           email: c.email, phone: c.phone, mobile: c.mobile,
           country: c.country, city: c.city, address: c.address,
           position: c.position, website: (ed.company_website as string) || null,
-          leadStatus: c.lead_status, note: c.note,
+          leadStatus: c.lead_status,
+          emailStatus: ((c as Record<string, unknown>).email_status as "valid" | "bounced" | "invalid") || "valid",
+          note: c.note,
           enrichmentData: (c.enrichment_data as Record<string, unknown>) ?? null,
           deepSearchAt: c.deep_search_at as string | null, createdAt: c.created_at,
           lastInteractionAt: c.last_interaction_at as string | null, interactionCount: c.interaction_count as number,
@@ -112,7 +116,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           email: (p.email || pc?.email as string || null) as string | null, phone: (pc?.phone as string || null) as string | null, mobile: null,
           country: "Italia", city: (p.sede_legale || null) as string | null, address: null,
           position: (pc?.role as string || null) as string | null, website: (p.website || null) as string | null,
-          leadStatus: String(p.lead_status || "new"), note: null,
+          leadStatus: String(p.lead_status || "new"),
+          emailStatus: "valid",
+          note: null,
           enrichmentData: (p.enrichment_data as Record<string, unknown>) ?? null,
           deepSearchAt: null, createdAt: String(p.created_at),
           lastInteractionAt: (p.last_interaction_at || null) as string | null,
@@ -135,7 +141,9 @@ export function useContactRecord(sourceType: RecordSourceType | null, sourceId: 
           email: bc.email, phone: bc.phone, mobile: bc.mobile,
           country: bc.location, city: null, address: null,
           position: bc.position, website: null,
-          leadStatus: bc.match_status || "pending", note: bc.notes,
+          leadStatus: bc.match_status || "pending",
+          emailStatus: "valid",
+          note: bc.notes,
           enrichmentData: (bc.raw_data as Record<string, unknown>) ?? null,
           deepSearchAt: null, createdAt: bc.created_at,
           lastInteractionAt: null, interactionCount: 0,
