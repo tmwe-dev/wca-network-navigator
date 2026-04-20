@@ -10,10 +10,32 @@ import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
 import {
   toWhatsAppNumber, extractSeniority, getLastName, extractDomainKeyword,
-  delay, aiCall, calculateRating, type GoogleSearchResult,
+  delay, aiCall, calculateRating, cleanPersonName, cleanCompanyName, cascadeBus,
+  type GoogleSearchResult,
 } from "./useDeepSearchHelpers";
 
 const _log = createLogger("useDeepSearchLocal");
+
+/** Config opzionale iniettabile a livello modulo dal Lab Forge. */
+export interface DeepSearchRuntimeConfig {
+  scrapeWebsite?: boolean;
+  linkedinContacts?: boolean;
+  linkedinCompany?: boolean;
+  whatsapp?: boolean;
+  maxQueriesPerContact?: number;
+  priorityDomain?: string;
+}
+let runtimeConfig: DeepSearchRuntimeConfig = {};
+export function setDeepSearchRuntimeConfig(c: DeepSearchRuntimeConfig): void {
+  runtimeConfig = { ...c };
+}
+function cfg<K extends keyof DeepSearchRuntimeConfig>(
+  key: K,
+  fallback: NonNullable<DeepSearchRuntimeConfig[K]>,
+): NonNullable<DeepSearchRuntimeConfig[K]> {
+  const v = runtimeConfig[key];
+  return (v === undefined ? fallback : v) as NonNullable<DeepSearchRuntimeConfig[K]>;
+}
 
 export function useDeepSearchLocal() {
   const fs = useFireScrapeExtensionBridge();
