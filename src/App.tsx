@@ -129,6 +129,9 @@ const App = () => (
                   <Route path="/agenda" element={<LegacyRedirect to="/v2/outreach/agenda" />} />
                   <Route path="/campaigns" element={<LegacyRedirect to="/v2/campaigns" />} />
                   <Route path="/settings" element={<LegacyRedirect to="/v2/settings" />} />
+                  <Route path="/ai-staff" element={<LegacyRedirect to="/v2/ai-staff" />} />
+                  <Route path="/ai-staff/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
+                  <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
