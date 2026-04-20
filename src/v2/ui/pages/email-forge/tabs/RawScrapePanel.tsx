@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, FileText, Copy, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { untypedFrom } from "@/integrations/supabase/untyped";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 interface ScrapeEntry {
   id: string;
