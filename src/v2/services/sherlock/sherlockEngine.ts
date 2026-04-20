@@ -126,12 +126,83 @@ export interface SherlockRunResult {
   durationMs: number;
 }
 
+const AGGREGATOR_DOMAINS = [
+  "google.", "linkedin.com", "facebook.com", "instagram.com", "twitter.com", "x.com",
+  "youtube.com", "wikipedia.org", "wikiwand.com", "yelp.com", "tripadvisor.",
+  "pagine", "europages.", "kompass.", "yellowpages.", "bing.com", "duckduckgo.",
+  "amazon.", "ebay.", "indeed.", "glassdoor.",
+];
+
+function pickFirstNonAggregatorUrl(markdown: string): string | null {
+  if (!markdown) return null;
+  // Match http(s) URLs; tolerate trailing punctuation
+  const re = /https?:\/\/[^\s)<>"'\]]+/gi;
+  const matches = markdown.match(re) ?? [];
+  for (const raw of matches) {
+    const cleaned = raw.replace(/[)\].,;:!?]+$/, "");
+    try {
+      const u = new URL(cleaned);
+      const host = u.hostname.toLowerCase();
+      if (AGGREGATOR_DOMAINS.some((d) => host.includes(d))) continue;
+      // Esci sul primo dominio "candidato sito ufficiale"
+      return `${u.protocol}//${u.hostname}`;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function discoverWebsiteViaGoogle(args: {
+  companyName: string;
+  city: string;
+  signal: AbortSignal;
+}): Promise<string | null> {
+  const { companyName, city, signal } = args;
+  if (!companyName) return null;
+  const q = encodeURIComponent(`${companyName} ${city} sito ufficiale`.trim());
+  const url = `https://www.google.com/search?q=${q}`;
+  try {
+    const cached = await checkCache(url);
+    let markdown = cached?.markdown ?? "";
+    if (!markdown) {
+      const res = await extFs.readUrl(url, { settleMs: 2000, signal, skipCache: true });
+      if (signal.aborted || !res.ok) return null;
+      markdown = extractMarkdown(res.data);
+      if (markdown) {
+        await persistScrape({ url, markdown, level: 0, partnerId: null, contactId: null });
+      }
+    }
+    return pickFirstNonAggregatorUrl(markdown);
+  } catch {
+    return null;
+  }
+}
+
 export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRunResult> {
   const { playbook, signal, onProgress, partnerId, contactId } = opts;
   const startTs = Date.now();
   const liveVars: Record<string, string> = { ...opts.vars };
   const results: SherlockStepResult[] = [];
   const consolidated: Record<string, unknown> = {};
+
+  // ── DISCOVERY: se il playbook richiede websiteUrl ma manca, prova a scoprirlo via Google.
+  const playbookNeedsWebsite = playbook.steps.some((s) => (s.required_vars ?? []).includes("websiteUrl"));
+  if (playbookNeedsWebsite && !liveVars.websiteUrl && liveVars.companyName) {
+    const discovered = await discoverWebsiteViaGoogle({
+      companyName: liveVars.companyName,
+      city: liveVars.city ?? "",
+      signal,
+    });
+    if (discovered) {
+      liveVars.websiteUrl = discovered;
+      consolidated.website_discovered = discovered;
+      // Persisti sul partner se vuoto, così le indagini future sono complete.
+      if (partnerId) {
+        updatePartnerWebsiteIfMissing(partnerId, discovered).catch(() => null);
+      }
+    }
+  }
 
   for (let i = 0; i < playbook.steps.length; i++) {
     if (signal.aborted) break;
