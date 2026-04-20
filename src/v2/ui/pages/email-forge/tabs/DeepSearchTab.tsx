@@ -17,6 +17,7 @@ import { getDeepSearchMeta, getDeepSearchSources } from "@/lib/deepSearchPresets
 import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Circle, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
+import { RawScrapePanel } from "./RawScrapePanel";
 
 interface Props {
   recipient: ForgeRecipient | null;
@@ -392,8 +393,16 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
         </div>
       )}
 
+      {/* MARKDOWN GREZZI — quello che FireScrape ha letto e salvato */}
+      <RawScrapePanel
+        partnerId={recipient.partnerId ?? null}
+        contactId={recipient.contactId ?? null}
+        enrichmentData={(enrichmentJson ?? null) as Record<string, unknown> | null}
+        rawProfileMarkdown={enrichment?.raw_profile_markdown ?? null}
+      />
+
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Enrichment grezzo</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Enrichment grezzo (JSON)</div>
         <pre className="text-[10px] bg-muted/40 p-2 rounded border border-border/40 max-h-[180px] overflow-auto font-mono">
           {enrichmentJson ? JSON.stringify(enrichmentJson, null, 2) : "(nessun dato)"}
         </pre>
