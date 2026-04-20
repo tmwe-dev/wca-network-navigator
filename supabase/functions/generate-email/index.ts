@@ -47,7 +47,7 @@ serve(async (req) => {
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company } = await req.json();
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -89,7 +89,7 @@ serve(async (req) => {
     // ── Assemble context ──
     let ctx;
     try {
-      ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id });
+      ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id, deep_search, authHeader });
     } catch (e: Record<string, unknown>) {
       if (e.code === "duplicate_branch") {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
@@ -140,6 +140,23 @@ serve(async (req) => {
       contact_name: contact?.contact_alias || contact?.name || null,
       contact_email: contactEmail, has_contact: !!contact,
       used_partner_email: !contact?.email && !!partner!.email, quality, model,
+      _context_summary: {
+        kb_sections: ctx.salesKBSections || [],
+        history_present: !!ctx.historyContext,
+        touch_count: ctx.touchCount ?? 0,
+        days_since_last_contact: ctx.daysSinceLastContact ?? null,
+        warmth_score: ctx.warmthScore ?? null,
+        commercial_state: ctx.commercialState ?? null,
+        last_channel: ctx.lastChannel ?? null,
+        last_outcome: ctx.lastOutcome ?? null,
+        deep_search_status: ctx.deepSearchStatus ?? "missing",
+        deep_search_age_days: ctx.deepSearchAgeDays ?? null,
+        playbook_active: ctx.playbookActive ?? false,
+        met_in_person: !!ctx.metInPersonContext,
+        documents_count: (document_ids?.length ?? 0),
+        sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
+        oracle_type: oracle_type ?? null,
+      },
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e: unknown) {
     logEdgeError("generate-email", e);
