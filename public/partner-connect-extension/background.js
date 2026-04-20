@@ -893,7 +893,7 @@ async function handleExtract(msg) {
   }
 
   const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId },
     func: (schema) => {
       const extracted = {};
       for (const [key, selector] of Object.entries(schema)) {
@@ -920,7 +920,9 @@ async function handleExtract(msg) {
     },
     args: [msg.schema]
   });
-  return { data: results?.[0]?.result, url: tab.url };
+  let finalUrl = '';
+  try { const t = await chrome.tabs.get(tabId); finalUrl = t.url || ''; } catch {}
+  return { data: results?.[0]?.result, url: finalUrl };
 }
 
 // ============================================================
