@@ -231,19 +231,25 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
     setSelectedId(id);
 
     const res = await fs.readUrl(manualUrl, { settleMs: 2500, signal: controller.signal, skipCache: true });
+    const md = res.ok ? extractMarkdown(res.data) : "";
+    let persisted = false;
+    if (res.ok && md) {
+      persisted = await persistScrape({ url: manualUrl, markdown: md, pipelineKey: "manual", recipient });
+    }
     setPages((prev) => prev.map((p) => p.id === id
       ? {
           ...p,
           status: res.ok ? "done" : "error",
-          markdown: res.ok ? extractMarkdown(res.data) : "",
+          markdown: md,
           error: !res.ok ? res.error : undefined,
           durationMs: Date.now() - p.startedAt,
+          persisted,
         }
       : p,
     ));
     abortRef.current = null;
     setRunning(null);
-    if (res.ok) toast.success("Pagina letta");
+    if (res.ok) toast.success(persisted ? "Pagina letta e salvata" : "Pagina letta");
     else if (!controller.signal.aborted) toast.error(res.error);
   };
 
