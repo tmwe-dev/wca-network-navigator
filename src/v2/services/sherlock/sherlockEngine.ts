@@ -16,8 +16,12 @@
 import { fs as extFs } from "@/v2/io/extensions/bridge";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
-import { updatePartnerWebsiteIfMissing } from "@/data/sherlockPlaybooks";
+import {
+  updatePartnerWebsiteIfMissing,
+  updatePartnerLinkedinIfMissing,
+} from "@/data/sherlockPlaybooks";
 import { renderUrlTemplate, checkRequiredVars } from "./sherlockTemplates";
+import { throttle, estimateWaitMs } from "./rateLimiter";
 import type {
   SherlockPlaybook,
   SherlockStep,
@@ -166,6 +170,7 @@ async function discoverWebsiteViaGoogle(args: {
     const cached = await checkCache(url);
     let markdown = cached?.markdown ?? "";
     if (!markdown) {
+      await throttle("generic", url, signal);
       const res = await extFs.readUrl(url, { settleMs: 2000, signal, skipCache: true });
       if (signal.aborted || !res.ok) return null;
       markdown = extractMarkdown(res.data);
@@ -179,6 +184,51 @@ async function discoverWebsiteViaGoogle(args: {
   }
 }
 
+/** Estrae lo slug (`my-company`) da un URL LinkedIn company. */
+export function extractLinkedinCompanySlug(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const m = String(input).match(/linkedin\.com\/company\/([^/?#\s]+)/i);
+  return m ? decodeURIComponent(m[1]).trim() : null;
+}
+
+/** Cerca un link LinkedIn company in un markdown grezzo. */
+function findLinkedinCompanyUrl(markdown: string): string | null {
+  if (!markdown) return null;
+  const re = /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/company\/[^\s)<>"'\]]+/i;
+  const m = markdown.match(re);
+  if (!m) return null;
+  return m[0].replace(/[)\].,;:!?]+$/, "");
+}
+
+async function discoverLinkedinSlugViaGoogle(args: {
+  companyName: string;
+  signal: AbortSignal;
+}): Promise<{ slug: string; url: string } | null> {
+  const { companyName, signal } = args;
+  if (!companyName) return null;
+  const q = encodeURIComponent(`${companyName} site:linkedin.com/company`);
+  const url = `https://www.google.com/search?q=${q}`;
+  try {
+    const cached = await checkCache(url);
+    let markdown = cached?.markdown ?? "";
+    if (!markdown) {
+      await throttle("generic", url, signal);
+      const res = await extFs.readUrl(url, { settleMs: 2000, signal, skipCache: true });
+      if (signal.aborted || !res.ok) return null;
+      markdown = extractMarkdown(res.data);
+      if (markdown) {
+        await persistScrape({ url, markdown, level: 0, partnerId: null, contactId: null });
+      }
+    }
+    const liUrl = findLinkedinCompanyUrl(markdown);
+    if (!liUrl) return null;
+    const slug = extractLinkedinCompanySlug(liUrl);
+    return slug ? { slug, url: liUrl } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRunResult> {
   const { playbook, signal, onProgress, partnerId, contactId } = opts;
   const startTs = Date.now();
@@ -186,7 +236,7 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
   const results: SherlockStepResult[] = [];
   const consolidated: Record<string, unknown> = {};
 
-  // ── DISCOVERY: se il playbook richiede websiteUrl ma manca, prova a scoprirlo via Google.
+  // ── PRE-RUN DISCOVERY 1: websiteUrl via Google se manca.
   const playbookNeedsWebsite = playbook.steps.some((s) => (s.required_vars ?? []).includes("websiteUrl"));
   if (playbookNeedsWebsite && !liveVars.websiteUrl && liveVars.companyName) {
     const discovered = await discoverWebsiteViaGoogle({
@@ -197,9 +247,26 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
     if (discovered) {
       liveVars.websiteUrl = discovered;
       consolidated.website_discovered = discovered;
-      // Persisti sul partner se vuoto, così le indagini future sono complete.
       if (partnerId) {
         updatePartnerWebsiteIfMissing(partnerId, discovered).catch(() => null);
+      }
+    }
+  }
+
+  // ── PRE-RUN DISCOVERY 2: linkedinCompanySlug via Google se manca e il playbook lo richiede.
+  const playbookNeedsLinkedin = playbook.steps.some((s) =>
+    (s.required_vars ?? []).includes("linkedinCompanySlug"),
+  );
+  if (playbookNeedsLinkedin && !liveVars.linkedinCompanySlug && liveVars.companyName) {
+    const liDiscovered = await discoverLinkedinSlugViaGoogle({
+      companyName: liveVars.companyName,
+      signal,
+    });
+    if (liDiscovered) {
+      liveVars.linkedinCompanySlug = liDiscovered.slug;
+      consolidated.linkedin_company_url_discovered = liDiscovered.url;
+      if (partnerId) {
+        updatePartnerLinkedinIfMissing(partnerId, liDiscovered.url).catch(() => null);
       }
     }
   }
@@ -260,8 +327,22 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       markdown = cached.markdown;
       cacheHit = true;
     } else {
-      // 5. scrape via extension
+      // 5. scrape via extension — passa per il rate limiter (LinkedIn 10s globale, generic 1s/host)
       const settleMs = step.settle_ms ?? 2500;
+      const waitMs = estimateWaitMs(channel, url);
+      if (waitMs > 500) {
+        const throttling: SherlockStepResult = {
+          ...running,
+          error: `⏱ Throttle ${channel} — attendo ${(waitMs / 1000).toFixed(1)}s per evitare ban`,
+        };
+        results[results.length - 1] = throttling;
+        onProgress({ step, result: throttling, totalSteps: playbook.steps.length, currentIndex: i, consolidated });
+      }
+      try {
+        await throttle(channel, url, signal);
+      } catch {
+        if (signal.aborted) break;
+      }
       const res = await extFs.readUrl(url, { settleMs, signal, skipCache: true });
       if (signal.aborted) break;
       if (!res.ok) {
@@ -330,6 +411,20 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       // Heuristica: se URL contiene "linkedin.com/in/" → decision maker
       if (/linkedin\.com\/in\//i.test(suggestedNextUrl)) {
         liveVars.decisionMakerLinkedinUrl = suggestedNextUrl;
+      }
+    }
+
+    // 8b. Runtime discovery LinkedIn company: cerca un link nel markdown del sito
+    //     se lo slug non è ancora popolato. Persisti su partner.
+    if (!liveVars.linkedinCompanySlug && markdown) {
+      const liUrl = findLinkedinCompanyUrl(markdown);
+      const slug = extractLinkedinCompanySlug(liUrl);
+      if (slug && liUrl) {
+        liveVars.linkedinCompanySlug = slug;
+        consolidated.linkedin_company_url_discovered = liUrl;
+        if (partnerId) {
+          updatePartnerLinkedinIfMissing(partnerId, liUrl).catch(() => null);
+        }
       }
     }
 

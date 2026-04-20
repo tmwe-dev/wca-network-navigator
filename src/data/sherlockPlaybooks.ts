@@ -153,3 +153,30 @@ export async function updatePartnerWebsiteIfMissing(
     return false;
   }
 }
+
+/**
+ * Persiste l'URL LinkedIn aziendale scoperto durante una indagine,
+ * solo se il campo è ancora vuoto.
+ */
+export async function updatePartnerLinkedinIfMissing(
+  partnerId: string,
+  linkedinUrl: string,
+): Promise<boolean> {
+  if (!partnerId || !linkedinUrl) return false;
+  try {
+    const { data: current } = await untypedFrom("partners")
+      .select("linkedin_url")
+      .eq("id", partnerId)
+      .maybeSingle();
+    const existing = (current as { linkedin_url?: string | null } | null)?.linkedin_url;
+    if (existing && existing.trim().length > 0) return false;
+    const { error } = await untypedFrom("partners")
+      .update({ linkedin_url: linkedinUrl } as Record<string, unknown>)
+      .eq("id", partnerId);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.warn("[sherlock] updatePartnerLinkedinIfMissing failed", e);
+    return false;
+  }
+}

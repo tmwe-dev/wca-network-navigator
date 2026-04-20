@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
 import { useSherlock } from "@/v2/hooks/useSherlock";
+import { prettifyScrapedMarkdown } from "@/v2/services/sherlock/markdownPrettify";
+import { extractLinkedinCompanySlug } from "@/v2/services/sherlock/sherlockEngine";
+import { FindingsView } from "./sherlock/FindingsView";
 import type { SherlockLevel, SherlockStepResult } from "@/v2/services/sherlock/sherlockTypes";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";
 
@@ -44,12 +47,13 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
   const vars = React.useMemo<Record<string, string>>(() => {
     const r = recipient;
     const website = manualWebsite.trim();
+    const liSlug = extractLinkedinCompanySlug(r?.linkedinUrl) ?? "";
     return {
       companyName: r?.companyName ?? "",
       city: r?.city ?? r?.countryName ?? r?.countryCode ?? "",
       websiteUrl: website,
       query: r ? `${r.companyName ?? ""} ${r.countryName ?? ""}`.trim() : "",
-      linkedinCompanySlug: "",
+      linkedinCompanySlug: liSlug,
     };
   }, [recipient, manualWebsite]);
 
@@ -232,12 +236,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                       <div className="text-xs text-destructive">{selected.error}</div>
                     </div>
                   ) : selected.markdown ? (
-                    <ScrollArea className="h-full">
-                      <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
-                        prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
-                        <LazyMarkdown>{selected.markdown}</LazyMarkdown>
-                      </article>
-                    </ScrollArea>
+                    <MarkdownPane markdown={selected.markdown} />
                   ) : (
                     <div className="text-xs text-muted-foreground p-6 text-center">Nessun contenuto.</div>
                   )}
@@ -245,20 +244,11 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
 
                 <TabsContent value="findings" className="flex-1 min-h-0 mt-0">
                   <ScrollArea className="h-full">
-                    <div className="px-6 py-4 space-y-3">
-                      {selected.suggested_next_url && (
-                        <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-                          <div className="text-[10px] font-semibold uppercase text-primary mb-1">
-                            💡 AI suggerisce prossima ricerca
-                          </div>
-                          <code className="text-[11px] font-mono text-foreground break-all">
-                            {selected.suggested_next_url}
-                          </code>
-                        </div>
-                      )}
-                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words bg-muted/30 rounded-md p-3 text-foreground/90">
-                        {JSON.stringify(selected.findings, null, 2)}
-                      </pre>
+                    <div className="px-6 py-4">
+                      <FindingsView
+                        findings={selected.findings}
+                        suggestedNextUrl={selected.suggested_next_url}
+                      />
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -331,4 +321,37 @@ function StatusIcon({ status, small }: { status: SherlockStepResult["status"]; s
   if (status === "skipped") return <SkipForward className={`${cls} text-muted-foreground shrink-0`} />;
   if (status === "pending") return <div className={`${cls} rounded-full border border-muted-foreground/40 shrink-0`} />;
   return <AlertCircle className={`${cls} text-destructive shrink-0`} />;
+}
+
+function MarkdownPane({ markdown }: { markdown: string }) {
+  const [showRaw, setShowRaw] = React.useState(false);
+  const pretty = React.useMemo(() => prettifyScrapedMarkdown(markdown), [markdown]);
+  const content = showRaw ? markdown : pretty;
+  const reduction = markdown.length > 0 ? Math.round((1 - pretty.length / markdown.length) * 100) : 0;
+  return (
+    <div className="h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/40 shrink-0">
+        <div className="text-[10px] text-muted-foreground">
+          {showRaw
+            ? `Markdown grezzo · ${markdown.length.toLocaleString()} caratteri`
+            : `Markdown pulito · ${pretty.length.toLocaleString()} caratteri${reduction > 0 ? ` (−${reduction}% rumore)` : ""}`}
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 text-[10px] gap-1"
+          onClick={() => setShowRaw((v) => !v)}
+        >
+          <Code2 className="w-3 h-3" />
+          {showRaw ? "Versione pulita" : "Mostra raw"}
+        </Button>
+      </div>
+      <ScrollArea className="flex-1">
+        <article className="prose prose-sm dark:prose-invert max-w-3xl mx-auto px-6 py-5
+          prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
+          <LazyMarkdown>{content}</LazyMarkdown>
+        </article>
+      </ScrollArea>
+    </div>
+  );
 }
