@@ -8,6 +8,8 @@ import { useChannelMessages, useMarkAsRead, useContinuousSync, type ChannelMessa
 import { useEmailCount } from "@/hooks/useEmailCount";
 import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { extractSenderBrand } from "./email/emailUtils";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
