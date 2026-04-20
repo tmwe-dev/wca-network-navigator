@@ -138,7 +138,21 @@ export function getModel(quality: Quality): string {
 
 // ── Main builder ──
 
-export function buildEmailPrompts(ctx: EmailPromptContext): { systemPrompt: string; userPrompt: string } {
+export interface PromptBlock {
+  label: string;
+  content: string;
+}
+
+export interface BuiltPrompts {
+  systemPrompt: string;
+  userPrompt: string;
+  /** Forge debug: labeled blocks composing the user prompt (in order) */
+  blocks: PromptBlock[];
+  /** Forge debug: labeled blocks composing the system prompt */
+  systemBlocks: PromptBlock[];
+}
+
+export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
   const {
     partner, contact, contactEmail, quality, settings, networks, services, socialLinks,
     historyContext, relationshipBlock, branchBlock, interlocutorBlock,
