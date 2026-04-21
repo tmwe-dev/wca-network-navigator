@@ -79,6 +79,19 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ── Check global pause ──
+    const { data: pauseSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .maybeSingle();
+
+    if (pauseSetting?.value === "true") {
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Auth & BYOK check ──
     const userId = await getUserId(req, supabase);
     const byok = userId ? await isByok(userId, supabase) : false;
@@ -283,9 +296,15 @@ Estrai queste informazioni (metti null se non trovate):
 
     enrichment.source_url = url;
 
+    // Extract logo_url and website from enrichment for top-level columns
+    const logoUrl = enrichment.logo_url && typeof enrichment.logo_url === "string" ? enrichment.logo_url : null;
+    const websiteValue = enrichment.website && typeof enrichment.website === "string" ? enrichment.website : null;
+
     const { error: updateError } = await supabase.from("partners").update({
       enrichment_data: enrichment,
       enriched_at: new Date().toISOString(),
+      ...(logoUrl && { logo_url: logoUrl }),
+      ...(websiteValue && { website: websiteValue }),
     }).eq("id", partnerId);
 
     if (updateError) {

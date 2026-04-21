@@ -156,6 +156,10 @@ export interface OutreachContextBlocks {
   // ── Fix (email_address_rules propagation) ──
   addressCustomPrompt?: string;
   addressCategory?: string;
+  // ── Oracle enrichment metadata ──
+  enrichmentAgeDays?: number | null;
+  sherlockLevel?: number;
+  lastDeepSearchScore?: number;
 }
 
 /**
@@ -529,6 +533,42 @@ export async function assembleOutreachContext(
   // Fix 3.3: Honest channel declaration
   const channelDeclaration = buildChannelDeclaration(channel);
 
+  // ── Oracle enrichment metadata ──
+  let enrichmentAgeDays: number | null = null;
+  let sherlockLevel: number = 0;
+  let lastDeepSearchScore: number = 0;
+  if (partnerId && quality !== "fast") {
+    try {
+      const unified = await readUnifiedEnrichment(partnerId, supabase);
+      enrichmentAgeDays = unified.freshness.deep_age_days ?? unified.freshness.base_age_days;
+      sherlockLevel = (unified.sherlock?.level as number | undefined) ?? 0;
+      if (unified.has_any && enrichmentAgeDays !== null && enrichmentAgeDays > 30) {
+        contextParts.push(`\nATTENZIONE: dati arricchimento obsoleti (${enrichmentAgeDays} giorni). Usare con cautela — considera di aggiornare con Deep Search.\n`);
+      }
+
+      // Calculate deep search score
+      const { calculateDeepSearchScore, formatScoreForPrompt } = await import("../_shared/deepSearchScore.ts");
+      const interactionCountResult = await supabase
+        .from("interactions")
+        .select("id", { count: "exact", head: true })
+        .eq("partner_id", partnerId);
+      const kbCountResult = await supabase
+        .from("kb_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .contains("tags", [`partner_${partnerId}`]);
+      const dsScore = calculateDeepSearchScore({
+        enrichment: unified,
+        interactionCount: interactionCountResult.count ?? 0,
+        kbEntryCount: kbCountResult.count ?? 0,
+        hasActiveConversation: !!historyText,
+      });
+      lastDeepSearchScore = dsScore.score;
+    } catch (e) {
+      console.warn("[generate-outreach] Oracle metadata assembly failed:", e instanceof Error ? e.message : String(e));
+    }
+  }
+
   return {
     intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     historyText, interactionHistoryCount, conversationIntelligenceContext,
@@ -539,5 +579,6 @@ export async function assembleOutreachContext(
     playbookBlock: playbook.block, playbookActive: playbook.active,
     channelDeclaration,
     addressCustomPrompt, addressCategory,
+    enrichmentAgeDays, sherlockLevel, lastDeepSearchScore,
   };
 }

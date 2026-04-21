@@ -261,6 +261,40 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                           {sherlock.summary}
                         </div>
                       )}
+
+                      {/* Oracle Escalation CTA */}
+                      {selected && selected.confidence !== null && selected.confidence < 0.8 && sherlock.running === null && (
+                        <div className="rounded-md border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400">
+                              Confidenza: {Math.round(selected.confidence * 100)}%
+                            </Badge>
+                          </div>
+                          {sherlock.currentLevel && sherlock.currentLevel < 3 && (
+                            <div className="space-y-2">
+                              <p className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+                                La ricerca attuale ha bassa confidenza. Approfondisci per risultati più affidabili.
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => sherlock.start((sherlock.currentLevel ?? 1) + 1 as SherlockLevel)}
+                                disabled={!!sherlock.running}
+                                className="h-8 text-xs gap-1 w-full"
+                              >
+                                <Search className="w-3.5 h-3.5" />
+                                Approfondisci al Livello {(sherlock.currentLevel ?? 1) + 1}
+                              </Button>
+                            </div>
+                          )}
+                          {sherlock.currentLevel === 3 && (
+                            <p className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+                              Massimo livello raggiunto — questa è la ricerca più profonda disponibile.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Findings consolidati ({Object.keys(sherlock.consolidated).length})
                       </div>

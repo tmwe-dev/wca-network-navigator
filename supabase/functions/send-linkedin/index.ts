@@ -6,6 +6,8 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 
 Deno.serve(async (req) => {
   const preflight = corsPreflight(req);
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, scheduled_for } = body;
+    const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, scheduled_for, journalist_reviewed } = body;
 
     if (!recipient || !message_text) {
       return new Response(JSON.stringify({ error: "recipient and message_text required" }), {
@@ -94,6 +96,72 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── LOVABLE-80: Journalist Review Gate ─────────────────────────────
+    // Skip review if already reviewed upstream (e.g., from generate-linkedin or agent-execute)
+    let finalMessage = message_text;
+    if (!journalist_reviewed) {
+      // Fetch partner & contact data for journalist review context
+      const [partnerData, contactData] = await Promise.all([
+        partner_id
+          ? supabase
+              .from("partners")
+              .select("company_name, country, lead_status")
+              .eq("id", partner_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        contact_id
+          ? supabase
+              .from("imported_contacts")
+              .select("name, role")
+              .eq("id", contact_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // Build journalist review input
+      const reviewInput: JournalistReviewInput = {
+        final_draft: message_text,
+        resolved_brief: {},
+        channel: "linkedin",
+        commercial_state: {
+          lead_status: partnerData.data?.lead_status || "unknown",
+        },
+        partner: {
+          id: partner_id || null,
+          company_name: partnerData.data?.company_name || undefined,
+          country: partnerData.data?.country || undefined,
+        },
+        contact: contactData.data
+          ? {
+              name: contactData.data.name || undefined,
+              role: contactData.data.role || undefined,
+            }
+          : undefined,
+      };
+
+      const reviewResult = await journalistReview(supabase, user.id, reviewInput);
+
+      // Block send if journalist review verdict is "block"
+      if (reviewResult.verdict === "block") {
+        console.warn(`[send-linkedin] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "JOURNALIST_BLOCK",
+            reason: reviewResult.reasoning_summary,
+            warnings: reviewResult.warnings,
+            retriable: false,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // If edits were made (pass_with_edits), use edited version
+      if (reviewResult.verdict === "pass_with_edits") {
+        finalMessage = reviewResult.edited_text;
+      }
+    }
+
     // Queue for extension dispatch
     const { data: queued, error: insertErr } = await supabase
       .from("extension_dispatch_queue")
@@ -103,7 +171,7 @@ Deno.serve(async (req) => {
         contact_id: contact_id || null,
         partner_id: partner_id || null,
         recipient,
-        message_text,
+        message_text: finalMessage,
         mission_id: mission_id || null,
         outreach_queue_id: outreach_queue_id || null,
         status: "pending",

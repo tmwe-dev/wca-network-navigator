@@ -5,6 +5,8 @@ import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { loadSendingConfig, validateSendingWindow, validateSmtpConfig } from "../_shared/emailSendingConfig.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,6 +33,10 @@ interface SendEmailBody {
    * recorded so the caller can decide whether to retry.
    */
   idempotency_key?: string;
+  /**
+   * If true, skip journalist review (content was already reviewed upstream)
+   */
+  journalist_reviewed?: boolean;
 }
 
 interface SmtpSendOptions {
@@ -68,7 +74,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: SendEmailBody = await req.json();
-    const { to, subject, html, from, partner_id, contact_id, agent_id, reply_to, operator_id, idempotency_key } = body;
+    const { to, subject, html, from, partner_id, contact_id, agent_id, reply_to, operator_id, idempotency_key, journalist_reviewed } = body;
 
     if (!to || !subject || !html) {
       return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
@@ -293,6 +299,71 @@ Deno.serve(async (req) => {
     if (!resolvedReplyTo) {
       const commercialReply = s["commercial_reply_to_email"];
       if (commercialReply) resolvedReplyTo = commercialReply;
+    }
+
+    // ── LOVABLE-80: Journalist Review Gate ─────────────────────────────
+    // Skip review if already reviewed upstream (e.g., from generate-email or agent-execute)
+    if (!journalist_reviewed) {
+      // Fetch partner & contact data for journalist review context
+      const [partnerData, contactData] = await Promise.all([
+        partner_id
+          ? supabase
+              .from("partners")
+              .select("company_name, country")
+              .eq("id", partner_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        contact_id
+          ? supabase
+              .from("imported_contacts")
+              .select("name, role")
+              .eq("id", contact_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // Build journalist review input
+      const reviewInput: JournalistReviewInput = {
+        final_draft: html,
+        resolved_brief: {},
+        channel: "email",
+        commercial_state: {
+          lead_status: "unknown",
+        },
+        partner: {
+          id: partner_id || null,
+          company_name: partnerData.data?.company_name || undefined,
+          country: partnerData.data?.country || undefined,
+        },
+        contact: contactData.data
+          ? {
+              name: contactData.data.name || undefined,
+              role: contactData.data.role || undefined,
+            }
+          : undefined,
+      };
+
+      const reviewResult = await journalistReview(supabase, userIdEarly, reviewInput);
+
+      // Block send if journalist review verdict is "block"
+      if (reviewResult.verdict === "block") {
+        console.warn(`[send-email] BLOCKED by journalist review: ${reviewResult.reasoning_summary}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "JOURNALIST_BLOCK",
+            reason: reviewResult.reasoning_summary,
+            warnings: reviewResult.warnings,
+            retriable: false,
+          }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+
+      // If edits were made (pass_with_edits), use edited version
+      if (reviewResult.verdict === "pass_with_edits") {
+        finalHtml = reviewResult.edited_text;
+      }
     }
 
     const sendOptions: SmtpSendOptions = {

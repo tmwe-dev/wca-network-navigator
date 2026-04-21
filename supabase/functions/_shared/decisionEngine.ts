@@ -86,6 +86,17 @@ export function decideNextActions(
           due_in_days: 0,
           reasoning: "Partner nuovo con dati insufficienti — arricchimento prima del contatto",
           priority: 3,
+          context: { suggested_level: 1 },
+        });
+      } else if (s.enrichmentScore < 25) {
+        // Oracle auto-escalation: deep search level 3 for very low scores
+        actions.push({
+          action: "deep_search",
+          autonomy: resolveAutonomy("execute", ctx),
+          due_in_days: 0,
+          reasoning: "Score arricchimento critico (< 25) — escalazione a Sherlock Level 3",
+          priority: 2,
+          context: { suggested_level: 3, escalation_reason: "critical_data_gap" },
         });
       }
       actions.push({
@@ -101,6 +112,18 @@ export function decideNextActions(
 
     // ═══ FIRST_TOUCH_SENT — aspettando risposta primo contatto ═══
     case "first_touch_sent":
+      // Oracle escalation for low enrichment during first touch sequence
+      if (s.enrichmentScore < 40 && s.daysSinceLastOutbound >= 5) {
+        actions.push({
+          action: "deep_search",
+          autonomy: resolveAutonomy("suggest", ctx),
+          due_in_days: 0,
+          reasoning: `Sequenza primo contatto in corso ma dati insufficienti (${Math.round(s.enrichmentScore)}%) — escalazione Level 2 per contesto migliore`,
+          priority: 3,
+          context: { suggested_level: 2, escalation_reason: "low_enrichment_during_sequence" },
+        });
+      }
+
       if (s.daysSinceLastOutbound >= 3 && s.daysSinceLastOutbound < 7) {
         actions.push({
           action: "send_linkedin",
@@ -135,6 +158,29 @@ export function decideNextActions(
 
     // ═══ HOLDING — silenzio prolungato ═══
     case "holding":
+      // Oracle escalation for holding with low enrichment
+      if (s.enrichmentScore < 40 && s.daysSinceLastOutbound >= 15) {
+        actions.push({
+          action: "deep_search",
+          autonomy: resolveAutonomy("suggest", ctx),
+          due_in_days: 0,
+          reasoning: `In holding con dati insufficienti (${Math.round(s.enrichmentScore)}%) — escalazione Level 2 per nuovo angolo`,
+          priority: 3,
+          context: { suggested_level: 2, escalation_reason: "enrichment_refresh_during_holding" },
+        });
+      }
+      if (s.enrichmentScore < 25) {
+        // Critical enrichment gap
+        actions.push({
+          action: "deep_search",
+          autonomy: resolveAutonomy("suggest", ctx),
+          due_in_days: 0,
+          reasoning: `Holding con score critico (< 25) — escalazione Level 3 per massimo contesto`,
+          priority: 2,
+          context: { suggested_level: 3, escalation_reason: "critical_enrichment_gap_holding" },
+        });
+      }
+
       if (s.daysSinceLastOutbound >= 30 && s.touchCount < 6) {
         actions.push({
           action: "send_email",

@@ -354,6 +354,10 @@ export interface ContextBlocks {
   // ── Deep Search status (per _context_summary) ──
   deepSearchStatus?: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed";
   deepSearchAgeDays?: number | null;
+  // ── Oracle enrichment metadata ──
+  enrichmentAgeDays?: number | null;
+  sherlockLevel?: number;
+  lastDeepSearchScore?: number;
 }
 
 /**
@@ -572,6 +576,11 @@ export async function assembleContextBlocks(
       deepSearchStatus = (deepSearchAgeDays != null && deepSearchAgeDays > 30) ? "stale" : "cached";
       const block = formatEnrichmentForPrompt(unified, quality);
       if (block) cachedEnrichmentContext = `\n${block}\n`;
+
+      // Add stale data warning if enrichment is outdated
+      if (deepSearchAgeDays !== null && deepSearchAgeDays > 30) {
+        cachedEnrichmentContext += `\nATTENZIONE: dati arricchimento obsoleti (${deepSearchAgeDays} giorni). Usare con cautela — considera di aggiornare con Deep Search.\n`;
+      }
     } else {
       deepSearchStatus = "missing";
     }
@@ -688,5 +697,9 @@ export async function assembleContextBlocks(
     playbookBlock: playbook.block, playbookActive: playbook.active,
     addressCustomPrompt, addressCategory,
     deepSearchStatus, deepSearchAgeDays,
+    // Oracle enrichment metadata for agent context
+    enrichmentAgeDays: deepSearchAgeDays,
+    sherlockLevel: (unified?.sherlock?.level as number | undefined) ?? 0,
+    lastDeepSearchScore: dsScore.score,
   };
 }

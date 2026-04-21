@@ -50,6 +50,7 @@ export interface UnifiedEnrichment {
     last_run_at: string | null;
     findings: unknown | null;
   };
+  logo_url: string | null;
   has_any: boolean;
   freshness: {
     base_age_days: number | null;
@@ -154,6 +155,7 @@ export async function readUnifiedEnrichment(
       last_run_at: sherlockRow?.created_at ?? null,
       findings: sherlockRow?.findings ?? null,
     },
+    logo_url: baseLogoUrl,
     has_any,
     freshness: {
       base_age_days: daysSince(baseEnrichedAt),

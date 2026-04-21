@@ -193,6 +193,52 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {/* Enrichment — top priority */}
       <EnrichmentCard partner={partner as never} />
 
+      {/* Oracle Status Badge */}
+      {_enrichment && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+          <div className="text-xs font-semibold uppercase text-foreground/80">Oracle — Stato Arricchimento</div>
+          <div className="space-y-1.5">
+            {_enrichment.last_enrichment_at ? (
+              (() => {
+                const lastEnrichDate = new Date(_enrichment.last_enrichment_at);
+                const daysSince = Math.floor((Date.now() - lastEnrichDate.getTime()) / 86400000);
+                const isStale = daysSince > 30;
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs text-foreground/70">
+                        Aggiornato {daysSince}gg fa ({lastEnrichDate.toLocaleDateString("it-IT")})
+                      </span>
+                      {isStale && (
+                        <Badge variant="destructive" className="text-[9px] ml-auto">Dati obsoleti — aggiorna</Badge>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              <Badge variant="outline" className="text-[9px] w-full justify-center">Non arricchito</Badge>
+            )}
+            {_enrichment.sherlock_level && (
+              <div className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs text-foreground/70">
+                  Sherlock Livello {_enrichment.sherlock_level}
+                </span>
+              </div>
+            )}
+            {_enrichment.deep_search_score !== null && _enrichment.deep_search_score !== undefined && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-[9px]">
+                  Score: {Math.round(Number(_enrichment.deep_search_score))}%
+                </Badge>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Contacts */}
       {contacts.length > 0 && (
         <div className="space-y-2">
