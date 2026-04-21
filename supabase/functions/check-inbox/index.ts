@@ -484,7 +484,7 @@ Deno.serve(async (req) => {
         console.log(`[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentRecords.length}, raw=${rawBytes.length}B`);
 
         /* ─── Phase 5: Match sender ─── */
-        const match = await matchSender(supabase, fromAddr);
+        const match = await matchSender(supabase, fromAddr, userId);
 
         /* ─── Phase 5b: Resolve operator_id ─── */
         const { data: opRow } = await supabase

@@ -17,28 +17,66 @@ export interface SenderMatch {
   name: string;
 }
 
-export async function matchSender(supabase: SupabaseClient, email: string): Promise<SenderMatch> {
+export async function matchSender(
+  supabase: SupabaseClient,
+  email: string,
+  userId?: string,
+): Promise<SenderMatch> {
   if (!email || email === "@" || !email.includes("@"))
     return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto" };
 
   const emailLower = email.toLowerCase();
   const domain = emailLower.split("@")[1];
 
+  // ── LOVABLE-61: Single RPC call replaces 6 sequential queries ──
+  if (userId) {
+    try {
+      const { data, error } = await supabase.rpc("match_email_sender", {
+        p_user_id: userId,
+        p_email: emailLower,
+        p_domain: domain ?? "",
+      });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const r = data[0] as {
+          source_type: string;
+          source_id: string | null;
+          partner_id: string | null;
+          display_name: string | null;
+          company_name: string | null;
+        };
+        // Normalize source_type to legacy value (strip _domain suffix)
+        const normalizedType = r.source_type.replace(/_domain$/, "");
+        return {
+          source_type: normalizedType,
+          source_id: r.source_id,
+          partner_id: r.partner_id,
+          name: r.display_name || r.company_name || email,
+        };
+      }
+      if (error) {
+        console.warn(`[matchSender] RPC error, falling back to legacy queries:`, error.message);
+      }
+    } catch (e) {
+      console.warn(`[matchSender] RPC threw, fallback:`, e);
+    }
+  }
+
+  // Legacy fallback (used if RPC unavailable or userId missing)
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (partner) return { source_type: "partner", source_id: partner.id, partner_id: partner.id, name: partner.company_name };
+  if (partner) return { source_type: "partner", source_id: partner.id as string, partner_id: partner.id as string, name: partner.company_name as string };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (pc) return { source_type: "partner_contact", source_id: pc.id, partner_id: pc.partner_id, name: pc.name };
+  if (pc) return { source_type: "partner_contact", source_id: pc.id as string, partner_id: pc.partner_id as string, name: pc.name as string };
   const { data: ic } = await supabase.from("imported_contacts").select("id, company_name, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (ic) return { source_type: "imported_contact", source_id: ic.id, partner_id: null, name: ic.name || ic.company_name };
+  if (ic) return { source_type: "imported_contact", source_id: ic.id as string, partner_id: null, name: (ic.name || ic.company_name) as string };
   const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (prospect) return { source_type: "prospect", source_id: prospect.id, partner_id: null, name: prospect.company_name };
+  if (prospect) return { source_type: "prospect", source_id: prospect.id as string, partner_id: null, name: prospect.company_name as string };
 
   if (domain) {
     const domainPattern = `%@${domain}`;
     const { data: dp } = await supabase.from("partners").select("id, company_name").ilike("email", domainPattern).limit(1).maybeSingle();
-    if (dp) return { source_type: "partner", source_id: dp.id, partner_id: dp.id, name: dp.company_name };
+    if (dp) return { source_type: "partner", source_id: dp.id as string, partner_id: dp.id as string, name: dp.company_name as string };
     const { data: dpc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", domainPattern).limit(1).maybeSingle();
-    if (dpc) return { source_type: "partner_contact", source_id: dpc.id, partner_id: dpc.partner_id, name: dpc.name };
+    if (dpc) return { source_type: "partner_contact", source_id: dpc.id as string, partner_id: dpc.partner_id as string, name: dpc.name as string };
   }
   return { source_type: "unknown", source_id: null, partner_id: null, name: email };
 }
