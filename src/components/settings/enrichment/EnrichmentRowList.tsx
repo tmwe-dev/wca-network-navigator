@@ -169,8 +169,14 @@ export function EnrichmentRowList({
                         ) : (
                           <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
                         )}
-                        {isLiveDone && liveState.status === "done" && liveState.site && (
-                          <Globe className="w-3.5 h-3.5 text-primary" />
+                        {(row.hasWebsiteExcerpt || (isLiveDone && liveState.status === "done" && liveState.site)) && (
+                          <Globe className={cn(
+                            "w-3.5 h-3.5 text-primary",
+                            isLiveDone && liveState.status === "done" && liveState.site && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
+                          )} />
+                        )}
+                        {isLiveDone && (
+                          <span className="text-[10px]" title="Arricchita ora">✨</span>
                         )}
                       </>
                     )}
