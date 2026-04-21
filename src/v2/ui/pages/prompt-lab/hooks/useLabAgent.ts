@@ -239,10 +239,13 @@ Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nu
     }): Promise<string> => {
       const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal } = params;
       const sourceDesc = describeSource(block.source);
-      const rubric = resolveRubric(block.source, {
-        forceVoice: isVoiceBlock({ tabLabel, source: block.source, label: block.label }),
-      });
+      const isVoice = isVoiceBlock({ tabLabel, source: block.source, label: block.label });
+      const rubric = resolveRubric(block.source, { forceVoice: isVoice });
       const rubricSection = rubricToPromptSection(rubric);
+      const voiceFewShot = isVoice ? await loadVoiceTemplatesFewShot() : "";
+      const voiceSection = isVoice
+        ? `\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
+        : "";
 
       const userPrompt = `=== SYSTEM MISSION ===
 ${systemMission}
@@ -252,7 +255,7 @@ ${doctrineFull}
 
 === MAPPA COMPLETA DEL SISTEMA AI (tutti i prompt configurati e dove vengono eseguiti) ===
 ${systemMap}
-
+${voiceSection}
 ${rubricSection}
 
 === BLOCCO DA MIGLIORARE ===
