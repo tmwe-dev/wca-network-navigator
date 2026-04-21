@@ -157,6 +157,9 @@ export function PromptLabPage() {
                   onChange={(v) => setActiveTabId(v as PromptLabTabId)}
                 />
                 <div className="flex-1 p-4 min-w-0 min-h-0 flex flex-col overflow-hidden">
+                  <div className="mb-3 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex-shrink-0">
+                    <span className="font-medium text-foreground">Dove si attiva:</span> {activeTab.activation}
+                  </div>
                   {activeTabId === "system_prompt" && <SystemPromptTab />}
                   {activeTabId === "kb_doctrine" && <KBDoctrineTab />}
                   {activeTabId === "operative" && <OperativePromptsTab />}
