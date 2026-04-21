@@ -263,6 +263,19 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
   const emailCategory = oracle_type || inferredCategory;
   const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
 
+  // LOVABLE-77: estrai data points dai blocchi caricati per guidare l'AI
+  const ce = cachedEnrichmentContext || "";
+  const dataPoints = {
+    hasWebsite: /INFORMAZIONI SITO AZIENDALE/i.test(ce),
+    hasLinkedin: /PROFILO LINKEDIN/i.test(ce),
+    contactProfilesCount: (ce.match(/CONTATTI CHIAVE/i) ? (ce.match(/^- /gm) || []).length : 0),
+    hasSherlock: /INDAGINE SHERLOCK/i.test(ce),
+    bcaCount: metInPersonContext ? (metInPersonContext.match(/Evento:/gi) || []).length : 0,
+    historyCount: prevActCount,
+    hasReputation: /REPUTAZIONE ONLINE/i.test(ce),
+    hasProfileDescription: !!partner.profile_description,
+  };
+
   const strategicAdvisor = buildStrategicAdvisor({
     emailCategory,
     hasHistory: !!historyContext,
@@ -270,6 +283,7 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
     hasEnrichmentData: !!cachedEnrichmentContext,
     commercialState,
     touchCount,
+    dataPoints,
   });
 
   const senderContext = `
