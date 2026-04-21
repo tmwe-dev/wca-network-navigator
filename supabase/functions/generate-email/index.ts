@@ -168,6 +168,9 @@ serve(async (req) => {
         sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
         oracle_type: oracle_type ?? null,
       },
+      // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
+      // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
+      enrichment_missing: ctx.deepSearchStatus === "missing",
       ...(_debug_return_prompt ? {
         _debug: {
           systemPrompt,

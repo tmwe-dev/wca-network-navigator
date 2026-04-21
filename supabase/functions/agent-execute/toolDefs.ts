@@ -277,7 +277,7 @@ export const ALL_TOOLS: Record<string, unknown> = {
     type: "function",
     function: {
       name: "deep_search_partner",
-      description: "Deep Search a partner (logo, social, web info).",
+      description: "Legge i dati di arricchimento già disponibili per un partner (Base + Deep Search + Sherlock). NON esegue nuove ricerche — restituisce snapshot read-only e suggerisce all'utente di eseguire arricchimento da Email Forge o Settings → Arricchimento.",
       parameters: { type: "object", properties: { partner_id: { type: "string" }, company_name: { type: "string" }, force: { type: "boolean" } } },
     },
   },
@@ -285,7 +285,7 @@ export const ALL_TOOLS: Record<string, unknown> = {
     type: "function",
     function: {
       name: "deep_search_contact",
-      description: "Deep Search a contact (LinkedIn, social).",
+      description: "LEGACY — Deep Search lato edge è deprecata. Restituisce snapshot read-only del contatto, l'esecuzione effettiva avviene client-side via Partner Connect.",
       parameters: { type: "object", properties: { contact_id: { type: "string" }, contact_name: { type: "string" } } },
     },
   },
@@ -293,7 +293,7 @@ export const ALL_TOOLS: Record<string, unknown> = {
     type: "function",
     function: {
       name: "enrich_partner_website",
-      description: "Scrape and analyze a partner's website.",
+      description: "LEGACY — Arricchimento base del sito web del partner. Preferire il Deep Search client-side (useDeepSearchLocal) o l'arricchimento da Settings → Arricchimento.",
       parameters: { type: "object", properties: { partner_id: { type: "string" }, company_name: { type: "string" } } },
     },
   },
