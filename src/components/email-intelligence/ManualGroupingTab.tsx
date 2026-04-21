@@ -7,6 +7,7 @@ import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RefreshCw, Loader2, Plus, Search, ArrowUpDown, Filter, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
 import { SenderEmailsDialog } from "./management/SenderEmailsDialog";
+import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { EmailSenderGroup, SenderAnalysis, SortOption } from "@/types/email-management";
@@ -42,6 +44,7 @@ export default function ManualGroupingTab() {
   const [activeDrag, setActiveDrag] = useState<SenderAnalysis | null>(null);
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
   const [emailPreviewSender, setEmailPreviewSender] = useState<SenderAnalysis | null>(null);
+  const [selectedSenders, setSelectedSenders] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!activeDrag) return;
@@ -374,8 +377,72 @@ export default function ManualGroupingTab() {
     }
 
     setSenders((prev) => prev.filter((s) => s.email !== sender.email));
+    setSelectedSenders((prev) => {
+      const updated = new Set(prev);
+      updated.delete(sender.email);
+      return updated;
+    });
     qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
     toast.success(`${sender.companyName} → ${groupName}`);
+  };
+
+  const handleToggleSenderSelection = (email: string) => {
+    setSelectedSenders((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(email)) {
+        updated.delete(email);
+      } else {
+        updated.add(email);
+      }
+      return updated;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSenders.size === sortedSenders.length && selectedSenders.size > 0) {
+      // Deselect all
+      setSelectedSenders(new Set());
+    } else {
+      // Select all visible
+      setSelectedSenders(new Set(sortedSenders.map((s) => s.email)));
+    }
+  };
+
+  const handleBulkAssignGroup = async (senders: SenderAnalysis[], groupName: string, groupId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const group = groups.find((g) => g.id === groupId);
+
+    for (const sender of senders) {
+      if (sender.ruleId) {
+        await supabase.from("email_address_rules")
+          .update({ group_id: groupId, group_name: groupName, group_color: group?.colore, group_icon: group?.icon })
+          .eq("id", sender.ruleId);
+      } else {
+        await supabase.from("email_address_rules").insert({
+          email_address: sender.email, user_id: user.id,
+          group_id: groupId, group_name: groupName,
+          group_color: group?.colore, group_icon: group?.icon,
+          domain: sender.domain, company_name: sender.companyName,
+          email_count: sender.emailCount, is_active: true,
+        });
+      }
+
+      // Log decision for learning
+      await supabase.from("ai_decision_log").insert({
+        user_id: user.id,
+        decision_type: "email_group_assignment",
+        input_context: { email_address: sender.email, email_count: sender.emailCount, domain: sender.domain },
+        decision_output: { group_name: groupName, group_id: groupId },
+        confidence: 1.0,
+      });
+    }
+
+    setSenders((prev) => prev.filter((s) => !selectedSenders.has(s.email)));
+    setSelectedSenders(new Set());
+    qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
+    toast.success(`${senders.length} mittenti → ${groupName}`);
   };
 
   // Filter & sort
@@ -500,10 +567,20 @@ export default function ManualGroupingTab() {
       <div className="flex flex-1 gap-4 min-h-0 overflow-hidden">
         {/* Sender list — LEFT PANEL with internal scroll */}
         <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0">
+          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
               Non classificati ({sortedSenders.length})
+              {selectedSenders.size > 0 && (
+                <span className="ml-2 font-semibold text-primary">{selectedSenders.size} selezionati</span>
+              )}
             </span>
+            {sortedSenders.length > 0 && (
+              <Checkbox
+                checked={selectedSenders.size === sortedSenders.length && sortedSenders.length > 0}
+                onCheckedChange={handleSelectAll}
+                className="h-4 w-4"
+              />
+            )}
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-2 space-y-2">
@@ -517,11 +594,26 @@ export default function ManualGroupingTab() {
                     onDragStart={handleDragStart} onDragEnd={handleDragEnd}
                     onViewEmails={(s) => setEmailPreviewSender(s)}
                     groups={groups}
-                    onAssignGroup={assignToGroup} />
+                    onAssignGroup={assignToGroup}
+                    isSelected={selectedSenders.has(sender.email)}
+                    onToggleSelect={handleToggleSenderSelection} />
                 ))
               )}
             </div>
           </div>
+          {selectedSenders.size > 0 && (
+            <MultiSelectBulkBar
+              selectedSenders={Array.from(selectedSenders)
+                .map((email) => sortedSenders.find((s) => s.email === email))
+                .filter((s): s is SenderAnalysis => s !== undefined)}
+              groups={groups}
+              onComplete={() => {
+                setSelectedSenders(new Set());
+                loadData();
+              }}
+              onAssignGroup={handleBulkAssignGroup}
+            />
+          )}
         </div>
 
         {/* Groups panel — RIGHT PANEL with internal scroll */}
