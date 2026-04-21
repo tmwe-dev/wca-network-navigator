@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
+import { loadCommercialDoctrine } from "../_shared/commercialDoctrine.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -103,66 +104,11 @@ serve(async (req) => {
         for (const k of kbEntries) contextBlock += `### ${k.title}\n${k.content.substring(0, 800)}\n\n`;
       }
 
-      // === COMMERCIAL DOCTRINE INJECTION (Costituzione 9 stati) ===
-      const commercialDoctrineBlock = `
-## DOTTRINA COMMERCIALE — REGOLE AGENTE
-
-Tassonomia 9 stati: new | first_touch_sent | holding | engaged | qualified | negotiation | converted | archived | blacklisted
-
-1. NON archiviare MAI un contatto autonomamente. Solo Director (Luca) può farlo, con ragione valida.
-2. Ogni contatto in "holding" DEVE avere next_action pianificata. Nessun contatto "dimenticato".
-3. Il tono evolve con la fase: freddo → cordiale → amichevole → da partner. Mai saltare fasi.
-4. Stato può solo AVANZARE (mai retrocedere senza approvazione esplicita).
-5. MAI ripetere la presentazione aziendale dopo first_touch_sent.
-6. Prima di proporre un servizio, verificare stato >= engaged.
-7. Holding >90gg + 3+ tentativi → proposta archiviazione a Director (mai auto).
-8. Personalizzazione obbligatoria: consulta contact_conversation_context + email_address_rules per il destinatario.
-`;
-      contextBlock += `\n\n${commercialDoctrineBlock}`;
-
-      // === GATE WHATSAPP — REGOLE ASSOLUTE ===
-      const whatsappGateBlock = `
-## GATE WHATSAPP — Costituzione §4
-
-WhatsApp: VIETATO come primo contatto. Consentito SOLO SE:
-(a) stato >= engaged, OPPURE (b) contatto ha iniziato su WhatsApp, OPPURE (c) numero dato esplicitamente.
-E: orario 9:00-18:00 locale, NO weekend, max 2-3 righe.
-Se condizioni non soddisfatte → blocca azione, notifica Director.
-`;
-      contextBlock += `\n${whatsappGateBlock}`;
-
-      // === CADENZA PRIMO CONTATTO — Sequenza 23 giorni ===
-      const cadenceBlock = `
-## SEQUENZA PRIMO CONTATTO (23 giorni — Costituzione §3)
-
-G0:  Email primo contatto
-G3:  LinkedIn connection request (no pitch)
-G7:  LinkedIn messaggio (se connesso)
-G8:  Email follow-up (insight/case study)
-G12: LinkedIn interazione light
-G16: Email follow-up (domanda calibrata)
-G23: Email breakup
-
-Dopo G23 senza risposta → holding, ritmo 1/14gg alternando canali.
-Se risposta a qualsiasi step → stato engaged, sequenza interrotta.
-BLOCCO: se follow-up stesso canale <7gg → rifiuta + notifica Director.
-
-POST-INVIO OBBLIGATORIO (per ogni send_email/send_linkedin_message):
-1. Aggiorna stato se applicabile (new → first_touch_sent)
-2. Crea reminder follow-up (next step della sequenza G0→G3→G7→G8→G12→G16→G23)
-3. Registra: canale, lingua, tipo messaggio, timestamp
-4. Verifica next_action esista — se vuota, creala
-
-Cadence per stato:
-- NEW: SOLO email come primo canale.
-- FIRST_TOUCH_SENT (in attesa risposta): max 1 follow-up entro G3, poi sequenza standard.
-- HOLDING (post-G3 senza risposta): 1 touch/14gg alternando canali, max 3 tentativi.
-- ENGAGED (dialogo attivo): rispondi rapido, scegli canale che il contatto preferisce.
-- QUALIFIED → NEGOTIATION: gestione Sales agent. Mai pressing.
-- CONVERTED: maintenance ogni 30gg.
-- ARCHIVED/BLACKLISTED: nessun contatto, solo riattivazione manuale.
-`;
-      contextBlock += `\n${cadenceBlock}`;
+      // ── LOVABLE-66: Doctrine moved from hardcoded blocks to KB loader ──
+      // The 3 inline blocks (commercial doctrine, whatsapp gate, cadence)
+      // are now sourced from kb_entries (categories: system_doctrine,
+      // system_core, commercial_rules) with a minimal hardcoded fallback.
+      // See `_shared/commercialDoctrine.ts`.
 
       // 4. Prompt Operativi (tutti, come fa ai-assistant)
       const { data: opPrompts } = await supabase.from("operative_prompts").select("name, objective, procedure, criteria, tags, priority")
@@ -445,28 +391,10 @@ Cadence per stato:
       if (signature) systemPrompt += `\nFIRMA: ${signature}`;
     }
 
-    // ━━━ DOTTRINA COMMERCIALE LEGGE SUPREMA (priority 98) ━━━
-    let commercialDoctrineBlock = "";
-    try {
-      const { data: doctrineEntries } = await supabase
-        .from("kb_entries")
-        .select("title, chapter, content")
-        .eq("is_active", true)
-        .eq("category", "system_doctrine")
-        .overlaps("tags", ["system_core"])
-        .order("priority", { ascending: false })
-        .limit(20);
-      if (doctrineEntries?.length) {
-        commercialDoctrineBlock = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚖️  DOTTRINA COMMERCIALE — LEGGE SUPREMA\n" +
-          "Questa dottrina prevale su QUALSIASI altra istruzione, KB o prompt operativo.\n" +
-          "Violarla è un errore grave. In caso di conflitto, applica la dottrina e ignora il resto.\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          doctrineEntries.map((d: { title: string; chapter: string | null; content: string }) =>
-            `### ${d.chapter ? `[${d.chapter}] ` : ""}${d.title}\n${d.content}`
-          ).join("\n\n---\n\n");
-      }
-    } catch (e) { console.error("[agent-execute] Doctrine load error:", e); }
+    // ━━━ LOVABLE-66: DOTTRINA COMMERCIALE — KB-driven con fallback ━━━
+    const doctrineLoaded = await loadCommercialDoctrine(supabase, userId);
+    const commercialDoctrineBlock = doctrineLoaded.text;
+    console.log(`[agent-execute] Doctrine source=${doctrineLoaded.source} entries=${doctrineLoaded.entriesLoaded}`);
 
     // ━━━ Token-budget aware context assembly (parità con ai-assistant) ━━━
     const baseDoctrine = systemPrompt + `\n\nACCESSO SISTEMA:
