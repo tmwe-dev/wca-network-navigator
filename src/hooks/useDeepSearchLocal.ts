@@ -8,6 +8,7 @@ import { updateContactEnrichment } from "@/data/contacts";
 import { findPartnerContacts, findPartnerSocialLinks, insertPartnerSocialLink } from "@/data/partnerRelations";
 import { useFireScrapeExtensionBridge } from "./useFireScrapeExtensionBridge";
 import { createLogger } from "@/lib/log";
+import { toast } from "sonner";
 import {
   toWhatsAppNumber, extractSeniority, getLastName, extractDomainKeyword,
   delay, aiCall, calculateRating, cleanPersonName, cleanCompanyName, cascadeBus,
