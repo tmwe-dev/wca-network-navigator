@@ -44,6 +44,55 @@ interface ImproveOptions {
   nearbyBlocks?: ReadonlyArray<Block>;
   /** Obiettivo dichiarato dall'utente per questa specifica iterazione. */
   goal?: string;
+  /** Briefing strutturato dalla checklist guidata (override su goal libero). */
+  briefing?: BriefingPayload;
+}
+
+/**
+ * Payload della checklist guidata pre-generazione.
+ * Raccoglie obiettivo + contesto + target + vincoli per ancorare il modello
+ * a contenuti coerenti con lo scopo dichiarato (no derive generaliste).
+ */
+export interface BriefingPayload {
+  /** Obiettivo concreto del blocco (cosa deve ottenere quando eseguito). */
+  goal: string;
+  /** Quando/dove viene attivato nel runtime. */
+  contextOfUse: string;
+  /** Canale target: voice_agent | email | whatsapp | linkedin | internal_ai | kb_governance | multi_channel. */
+  targetChannel: string;
+  /** Audience: cold_lead | warm_lead | holding_pattern | existing_partner | internal_team | system_actor. */
+  audience: string;
+  /** Lingua output: it | en | auto. */
+  language: string;
+  /** Tipo CTA: none | meeting | reply | info | qualify | close. */
+  ctaType: string;
+  /** Cosa il blocco DEVE includere. */
+  mustHave: string;
+  /** Cosa il blocco non deve mai includere. */
+  mustNotHave: string;
+  /** Vincoli extra (lunghezza, tono, formato). */
+  extraConstraints: string;
+}
+
+/** Serializza il briefing in una sezione prompt prioritaria. */
+function briefingToPromptSection(b: BriefingPayload | undefined): string {
+  if (!b || !b.goal.trim()) return "";
+  const lines: string[] = [
+    "=== ⚡ BRIEFING OPERATIVO (PRIORITÀ MASSIMA — vincola tutto l'output) ===",
+    `OBIETTIVO: ${b.goal.trim()}`,
+  ];
+  if (b.contextOfUse.trim()) lines.push(`CONTESTO D'USO: ${b.contextOfUse.trim()}`);
+  if (b.targetChannel) lines.push(`CANALE TARGET: ${b.targetChannel}`);
+  if (b.audience) lines.push(`AUDIENCE: ${b.audience}`);
+  if (b.language && b.language !== "auto") lines.push(`LINGUA OUTPUT: ${b.language}`);
+  if (b.ctaType && b.ctaType !== "none") lines.push(`CTA RICHIESTA: ${b.ctaType}`);
+  if (b.ctaType === "none") lines.push(`CTA: nessuna (blocco informativo)`);
+  if (b.mustHave.trim()) lines.push(`DEVI INCLUDERE: ${b.mustHave.trim()}`);
+  if (b.mustNotHave.trim()) lines.push(`NON DEVI MAI: ${b.mustNotHave.trim()}`);
+  if (b.extraConstraints.trim()) lines.push(`VINCOLI EXTRA: ${b.extraConstraints.trim()}`);
+  lines.push("Se l'output non rispetta TUTTI questi punti, è invalido. Adatta la rubrica e la struttura a questo briefing.");
+  lines.push("=== FINE BRIEFING ===");
+  return lines.join("\n");
 }
 
 function describeSource(src: BlockSource): string {
