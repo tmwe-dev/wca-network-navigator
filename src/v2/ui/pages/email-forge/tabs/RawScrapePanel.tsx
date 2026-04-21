@@ -174,7 +174,7 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80 flex items-center gap-1">
         <FileText className="w-3 h-3" />
         Markdown grezzi · {allEntries.length}
       </div>

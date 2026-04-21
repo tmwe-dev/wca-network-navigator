@@ -72,12 +72,12 @@ export function ForgeOraclePanel({ initial, onRun, isLoading, onRecipientChange,
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         <section className="space-y-2">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Destinatario</div>
+          <div className="text-xs uppercase tracking-wide text-foreground/80">Destinatario</div>
           <ForgeRecipientPicker value={config.recipient} onChange={handleRecipient} />
         </section>
 
         <section className="space-y-2 pt-2 border-t border-border/30">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Tipo email</div>
+          <div className="text-xs uppercase tracking-wide text-foreground/80">Tipo email</div>
           <div className="grid grid-cols-2 gap-1">
             {DEFAULT_EMAIL_TYPES.map((t) => (
               <button

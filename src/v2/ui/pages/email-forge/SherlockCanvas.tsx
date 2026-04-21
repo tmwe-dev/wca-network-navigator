@@ -166,7 +166,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
         <div className="flex-1 flex min-h-0">
           {/* LEFT — Timeline step */}
           <aside className="w-[340px] border-r border-border bg-muted/20 flex flex-col min-h-0">
-            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 shrink-0 flex items-center justify-between">
+            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/80 border-b border-border/60 shrink-0 flex items-center justify-between">
               <span>Timeline · {sherlock.stepResults.length} step</span>
               {sherlock.running && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
             </div>

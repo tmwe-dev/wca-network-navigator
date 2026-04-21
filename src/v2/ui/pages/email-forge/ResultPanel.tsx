@@ -19,7 +19,7 @@ interface Props {
 export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient }: Props) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground gap-2">
+      <div className="flex items-center justify-center h-full text-sm text-foreground/80 gap-2">
         <Mail className="w-4 h-4 animate-pulse" />
         Generazione email…
       </div>
@@ -42,7 +42,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
 
   if (!result) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-sm text-muted-foreground p-6">
+      <div className="flex flex-col items-center justify-center h-full text-center text-sm text-foreground/80 p-6">
         <Mail className="w-10 h-10 mb-3 opacity-40" />
         <p className="font-medium">Nessun risultato ancora</p>
         <p className="text-xs mt-1 max-w-xs">
@@ -67,14 +67,14 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Subject</div>
+          <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">Subject</div>
           <div className="text-sm font-medium border border-border/60 rounded px-2 py-1.5 bg-card">
             {result.subject || "(vuoto)"}
           </div>
         </div>
 
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Body</div>
+          <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">Body</div>
           <Tabs defaultValue="preview" className="w-full">
             <TabsList className="h-7">
               <TabsTrigger value="preview" className="text-xs h-6 px-2">Preview</TabsTrigger>
@@ -146,7 +146,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
         </div>
 
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">
             Cosa sa Oracolo
           </div>
           <OracleContextPanel

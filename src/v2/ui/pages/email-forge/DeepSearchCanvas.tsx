@@ -310,7 +310,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
           <aside className="w-[340px] border-r border-border bg-muted/20 flex flex-col min-h-0">
             {/* Pipeline buttons */}
             <div className="p-3 space-y-2 border-b border-border/60 shrink-0">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
                 Pipeline rapide
               </div>
               <div className="grid grid-cols-1 gap-1.5">
@@ -342,7 +342,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
 
               {/* Manual URL */}
               <div className="pt-2 border-t border-border/60 space-y-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
                   URL manuale
                 </div>
                 <div className="flex gap-1">
@@ -365,7 +365,7 @@ export function DeepSearchCanvas({ open, onOpenChange, recipient }: Props) {
 
             {/* Live feed pagine */}
             <div className="flex-1 min-h-0 flex flex-col">
-              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 shrink-0 flex items-center justify-between">
+              <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/80 border-b border-border/60 shrink-0 flex items-center justify-between">
                 <span>Pagine lette · {pages.length}</span>
                 {running && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
               </div>

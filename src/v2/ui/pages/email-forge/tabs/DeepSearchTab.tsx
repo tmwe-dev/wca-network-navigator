@@ -205,7 +205,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       {/* QUALITY PRESET PANEL — auto-determina le fonti */}
       <div className="rounded-md border border-border/60 bg-muted/30 p-2 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Profondità Deep Search</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">Profondità Deep Search</div>
           <span className="text-[11px] text-foreground/70 font-mono">~{meta.estimatedSecondsPerRecord}s/record</span>
         </div>
 
@@ -313,7 +313,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       {/* CASCADE TIMELINE */}
       {(ds.running || timeline.length > 0) && (
         <div className="rounded border border-border/60 p-2 bg-muted/20 space-y-1">
-          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+          <div className="text-xs font-medium uppercase tracking-wide text-foreground/80 flex items-center gap-1">
             <Loader2 className={`w-2.5 h-2.5 ${ds.running ? "animate-spin" : ""}`} />
             Cascade query · {timeline.length}
           </div>
@@ -355,7 +355,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
       {ds.results.length > 0 && (
         <div className="rounded border border-border/60 p-2 bg-muted/30 space-y-1">
-          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Risultati ultima esecuzione</div>
+          <div className="text-xs font-medium uppercase tracking-wide text-foreground/80">Risultati ultima esecuzione</div>
           {ds.results.map((r) => (
             <div key={r.partnerId} className="text-[11px] flex items-center justify-between">
               <span className="truncate">{r.companyName}</span>
@@ -402,7 +402,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       />
 
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Enrichment grezzo (JSON)</div>
+        <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">Enrichment grezzo (JSON)</div>
         <pre className="text-[10px] bg-muted/40 p-2 rounded border border-border/60 max-h-[180px] overflow-auto font-mono">
           {enrichmentJson ? JSON.stringify(enrichmentJson, null, 2) : "(nessun dato)"}
         </pre>

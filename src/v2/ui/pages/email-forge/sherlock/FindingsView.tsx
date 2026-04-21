@@ -131,7 +131,7 @@ export function FindingsView({ findings, suggestedNextUrl, onInvestigateUrl }: P
             >
               <div className="text-muted-foreground mt-0.5 shrink-0">{iconFor(k)}</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80 mb-0.5">
                   {humanizeKey(k)}
                 </div>
                 <div className="text-xs break-words">{renderValue(v)}</div>

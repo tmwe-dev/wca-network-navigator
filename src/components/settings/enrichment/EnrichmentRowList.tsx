@@ -105,7 +105,7 @@ export function EnrichmentRowList({
         className="h-[calc(100vh-370px)] min-h-[250px] border border-t-0 border-border rounded-b-lg overflow-auto"
       >
         {rows.length === 0 ? (
-          <div className="text-center py-10 text-sm text-muted-foreground">Nessun risultato trovato</div>
+          <div className="text-center py-10 text-sm text-foreground/80">Nessun risultato trovato</div>
         ) : (
           <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualItem) => {

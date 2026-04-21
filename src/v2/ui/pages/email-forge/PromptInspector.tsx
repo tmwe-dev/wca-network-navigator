@@ -170,7 +170,7 @@ export function PromptInspector({ systemPrompt, userPrompt, systemBlocks, blocks
 
   if (isLoading && !systemBlocks?.length && !blocks?.length) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground gap-2">
+      <div className="flex items-center justify-center h-full text-sm text-foreground/80 gap-2">
         <Sparkles className="w-4 h-4 animate-pulse" />
         Costruzione prompt in corso…
       </div>
@@ -179,7 +179,7 @@ export function PromptInspector({ systemPrompt, userPrompt, systemBlocks, blocks
 
   if (!systemBlocks?.length && !blocks?.length) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-sm text-muted-foreground p-6">
+      <div className="flex flex-col items-center justify-center h-full text-center text-sm text-foreground/80 p-6">
         <FileText className="w-10 h-10 mb-3 opacity-40" />
         <p className="font-medium">Nessun prompt ancora generato</p>
         <p className="text-xs mt-1 max-w-xs">
