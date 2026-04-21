@@ -7,6 +7,7 @@ import { aiChat } from "../_shared/aiGateway.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
 import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
+import { calculateDeepSearchScore, formatScoreForPrompt, type DeepSearchScoreResult } from "../_shared/deepSearchScore.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -529,6 +530,30 @@ export async function assembleContextBlocks(
     }
     if (opts.deep_search !== true && deepSearchStatus === "cached") {
       deepSearchStatus = "skipped";
+    }
+
+    // LOVABLE-88: calcola Deep Search Score e aggiungilo al contesto
+    const interactionCountResult = await supabase
+      .from("interactions")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_id", effectivePartnerId);
+    const kbCountResult = await supabase
+      .from("kb_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .contains("tags", [`partner_${effectivePartnerId}`]);
+    const dsScore = calculateDeepSearchScore({
+      enrichment: unified,
+      interactionCount: interactionCountResult.count ?? 0,
+      kbEntryCount: kbCountResult.count ?? 0,
+      hasActiveConversation: !!historyContext,
+    });
+    const dsScoreBlock = formatScoreForPrompt(dsScore);
+    if (dsScoreBlock) {
+      cachedEnrichmentContext += `\n${dsScoreBlock}\n`;
+    }
+    if (dsScore.auto_enrich_suggested) {
+      console.warn(`[generate-email] Deep Search Score ${dsScore.score}/100 per partner ${effectivePartnerId} — arricchimento consigliato`);
     }
   }
 

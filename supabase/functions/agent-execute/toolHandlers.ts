@@ -1,6 +1,7 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
 import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
+import { getPartnerDeepSearchScore, formatScoreForPrompt } from "../_shared/deepSearchScore.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { buildEmailContract, validateEmailContract } from "../_shared/emailContract.ts";
@@ -637,6 +638,15 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       } else {
         suggestion = `${p?.company_name ?? "Partner"} ha solo il base. Apri Email Forge e attiva "Deep Search aggiuntiva" — cercherà solo i dati mancanti.`;
       }
+      // LOVABLE-88: calcola e restituisci lo score di qualità
+      let scoreResult = null;
+      let scoreFormatted = "";
+      try {
+        scoreResult = await getPartnerDeepSearchScore(supabase, pid, userId);
+        scoreFormatted = formatScoreForPrompt(scoreResult);
+      } catch (scoreErr) {
+        console.warn("[deep_search_partner] score calc failed:", scoreErr);
+      }
       return {
         success: true,
         partner_id: pid,
@@ -645,6 +655,11 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         has_deep_search: hasDeep,
         deep_search_at: ed.deep_search_at ?? null,
         base_enriched_at: ed.base_enriched_at ?? null,
+        quality_score: scoreResult?.score ?? null,
+        quality_level: scoreResult?.level ?? null,
+        auto_enrich_suggested: scoreResult?.auto_enrich_suggested ?? false,
+        missing_areas: scoreResult?.missing_areas ?? [],
+        score_details: scoreFormatted,
         suggestion,
       };
     }
