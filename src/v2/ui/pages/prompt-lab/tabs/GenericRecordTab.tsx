@@ -59,14 +59,16 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
   }
 
   return (
-    <SplitBlockEditor
-      blocks={state.blocks}
-      onChange={state.updateContent}
-      onAccept={state.acceptImproved}
-      onDiscard={state.discardImproved}
-      onImprove={onImprove}
-      onSave={onSave}
-      saving={saving}
-    />
+    <div className="h-full min-h-0">
+      <SplitBlockEditor
+        blocks={state.blocks}
+        onChange={state.updateContent}
+        onAccept={state.acceptImproved}
+        onDiscard={state.discardImproved}
+        onImprove={onImprove}
+        onSave={onSave}
+        saving={saving}
+      />
+    </div>
   );
 }

@@ -73,20 +73,22 @@ function EmailTypesSection() {
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
+    <div className="flex flex-col h-full min-h-0 gap-2">
+      <div className="flex justify-end flex-shrink-0">
         <Button size="sm" onClick={saveAll} disabled={saving === "__all__"}>
           {saving === "__all__" ? "Salvo..." : "Salva tutti i tipi"}
         </Button>
       </div>
-      <SplitBlockEditor
-        blocks={state.blocks}
-        onChange={state.updateContent}
-        onAccept={state.acceptImproved}
-        onDiscard={state.discardImproved}
-        onImprove={onImprove}
-        saving={saving}
-      />
+      <div className="flex-1 min-h-0">
+        <SplitBlockEditor
+          blocks={state.blocks}
+          onChange={state.updateContent}
+          onAccept={state.acceptImproved}
+          onDiscard={state.discardImproved}
+          onImprove={onImprove}
+          saving={saving}
+        />
+      </div>
     </div>
   );
 }
@@ -137,15 +139,17 @@ function GlobalPromptsSection() {
   if (state.blocks.length === 0)
     return <div className="p-4 text-sm text-muted-foreground">Nessun prompt globale configurato.</div>;
   return (
-    <SplitBlockEditor
-      blocks={state.blocks}
-      onChange={state.updateContent}
-      onAccept={state.acceptImproved}
-      onDiscard={state.discardImproved}
-      onImprove={onImprove}
-      onSave={onSave}
-      saving={saving}
-    />
+    <div className="h-full min-h-0">
+      <SplitBlockEditor
+        blocks={state.blocks}
+        onChange={state.updateContent}
+        onAccept={state.acceptImproved}
+        onDiscard={state.discardImproved}
+        onImprove={onImprove}
+        onSave={onSave}
+        saving={saving}
+      />
+    </div>
   );
 }
 
@@ -204,29 +208,31 @@ function AddressRulesSection() {
   if (state.blocks.length === 0)
     return <div className="p-4 text-sm text-muted-foreground">Nessuna regola indirizzo configurata.</div>;
   return (
-    <SplitBlockEditor
-      blocks={state.blocks}
-      onChange={state.updateContent}
-      onAccept={state.acceptImproved}
-      onDiscard={state.discardImproved}
-      onImprove={onImprove}
-      onSave={onSave}
-      saving={saving}
-    />
+    <div className="h-full min-h-0">
+      <SplitBlockEditor
+        blocks={state.blocks}
+        onChange={state.updateContent}
+        onAccept={state.acceptImproved}
+        onDiscard={state.discardImproved}
+        onImprove={onImprove}
+        onSave={onSave}
+        saving={saving}
+      />
+    </div>
   );
 }
 
 export function EmailPromptsTab() {
   return (
-    <Tabs defaultValue="types" className="w-full">
-      <TabsList>
+    <Tabs defaultValue="types" className="w-full flex flex-col h-full min-h-0">
+      <TabsList className="flex-shrink-0 self-start">
         <TabsTrigger value="types">Tipi</TabsTrigger>
         <TabsTrigger value="global">Global Prompts</TabsTrigger>
         <TabsTrigger value="rules">Address Rules</TabsTrigger>
       </TabsList>
-      <TabsContent value="types" className="mt-3"><EmailTypesSection /></TabsContent>
-      <TabsContent value="global" className="mt-3"><GlobalPromptsSection /></TabsContent>
-      <TabsContent value="rules" className="mt-3"><AddressRulesSection /></TabsContent>
+      <TabsContent value="types" className="mt-2 flex-1 min-h-0 data-[state=active]:flex"><EmailTypesSection /></TabsContent>
+      <TabsContent value="global" className="mt-2 flex-1 min-h-0 data-[state=active]:flex"><GlobalPromptsSection /></TabsContent>
+      <TabsContent value="rules" className="mt-2 flex-1 min-h-0 data-[state=active]:flex"><AddressRulesSection /></TabsContent>
     </Tabs>
   );
 }
