@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { aiChat } from "../_shared/aiGateway.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
+import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
