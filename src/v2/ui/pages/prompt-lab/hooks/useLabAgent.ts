@@ -248,11 +248,13 @@ export function useLabAgent() {
   }, []);
 
   const improveBlock = useCallback(
-    async ({ block, instruction, tabLabel, tabActivation, nearbyBlocks, goal }: ImproveOptions): Promise<string> => {
+    async ({ block, instruction, tabLabel, tabActivation, nearbyBlocks, goal, briefing }: ImproveOptions): Promise<string> => {
       const guidance = instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
       const sourceDesc = describeSource(block.source);
       const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
-      const isVoice = isVoiceBlock({
+      // Briefing.targetChannel = 'voice_agent' forza il riconoscimento voce.
+      const briefingForcesVoice = briefing?.targetChannel === "voice_agent";
+      const isVoice = briefingForcesVoice || isVoiceBlock({
         tabLabel,
         source: block.source,
         label: block.label,
@@ -267,12 +269,17 @@ export function useLabAgent() {
       const voiceSection = isVoice
         ? `\n${VOICE_ENFORCEMENT_RULES}\n\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
         : "";
+      const briefingSection = briefingToPromptSection(briefing);
+      const briefingHeader = briefingSection ? `\n${briefingSection}\n` : "";
+      // Fallback: se manca briefing strutturato ma c'è goal libero, usa goal.
+      const effectiveGoal = briefing?.goal?.trim() || goal?.trim() || "";
 
       const userPrompt = `Tab: ${tabLabel ?? "n/d"}
 Dove si attiva (runtime): ${tabActivation ?? "n/d"}
 Sorgente DB: ${sourceDesc}
 Blocco da migliorare: ${block.label} (${block.id})
-${goal?.trim() ? `\nOBIETTIVO dichiarato dall'operatore: ${goal.trim()}\n` : ""}
+${!briefing && effectiveGoal ? `\nOBIETTIVO dichiarato dall'operatore: ${effectiveGoal}\n` : ""}
+${briefingHeader}
 Istruzione operativa: ${guidance}
 
 --- BLOCCHI VICINI nello stesso tab (NON contraddirli) ---
@@ -289,7 +296,7 @@ ${rubricSection}
 ${block.content}
 --- FINE TESTO ---
 
-Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta la RUBRICA sopra (must-have, must-not, lunghezza, struttura).`;
+Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta IN ORDINE: (1) BRIEFING OPERATIVO se presente, (2) RUBRICA, (3) regole voce se applicabili.`;
 
       const first = await callAgent(userPrompt, {
         block_id: block.id,
@@ -297,7 +304,8 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta la RU
         block_source: block.source,
         tab: tabLabel,
         tab_activation: tabActivation,
-        goal: goal ?? null,
+        goal: effectiveGoal || null,
+        briefing: briefing ?? null,
         nearby_block_ids: (nearbyBlocks ?? []).map((b) => b.id),
       });
 
