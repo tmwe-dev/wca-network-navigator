@@ -9,6 +9,7 @@ import { Button } from "../atoms/Button";
 import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
+import { AIAutomationToggle } from "@/components/header/AIAutomationToggle";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
@@ -105,6 +106,7 @@ export function LayoutHeader({
         <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2" />
       </div>
       <div className="flex items-center gap-0.5">
+        <AIAutomationToggle />
         <button
           onClick={cycleLang}
           disabled={updateSetting.isPending}
