@@ -7,6 +7,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { DeepSearchResult, DeepSearchCurrent } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearchLocal } from "./useDeepSearchLocal";
 import { createLogger } from "@/lib/log";
+import { invalidateEnrichmentCaches } from "@/lib/enrichmentCacheInvalidation";
 
 const log = createLogger("useDeepSearchRunner");
 
@@ -220,6 +221,8 @@ export function useDeepSearchRunner(): DeepSearchState {
           queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
         } else {
           queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
+          // Settings → Arricchimento + OraclePanel snapshot real-time
+          invalidateEnrichmentCaches(queryClient, id);
         }
       }
 
@@ -237,6 +240,8 @@ export function useDeepSearchRunner(): DeepSearchState {
       } else {
         queryClient.invalidateQueries({ queryKey: queryKeys.partners.all });
         queryClient.invalidateQueries({ queryKey: queryKeys.countryStats });
+        // Refresh complessivo dopo batch deep search
+        invalidateEnrichmentCaches(queryClient, null);
       }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Errore Deep Search", { id: "deep-search-global" });

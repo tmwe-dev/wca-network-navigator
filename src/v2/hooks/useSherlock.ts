@@ -2,7 +2,7 @@
  * useSherlock — hook React per orchestrare un'indagine Sherlock con UI feedback.
  */
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,6 +13,7 @@ import {
   sherlockKeys,
 } from "@/data/sherlockPlaybooks";
 import { runAgenticSherlock } from "@/v2/services/sherlock/agenticEngine";
+import { invalidateEnrichmentCaches } from "@/lib/enrichmentCacheInvalidation";
 import type {
   SherlockLevel,
   SherlockStepResult,
@@ -33,6 +34,7 @@ export function useSherlock(args: UseSherlockArgs) {
   const [summary, setSummary] = React.useState<string>("");
   const [investigationId, setInvestigationId] = React.useState<string | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  const queryClient = useQueryClient();
 
   const playbooksQuery = useQuery({
     queryKey: sherlockKeys.playbooks,
@@ -50,8 +52,9 @@ export function useSherlock(args: UseSherlockArgs) {
         completed_at: new Date().toISOString(),
       }).catch(() => null);
     }
+    invalidateEnrichmentCaches(queryClient, args.partnerId);
     toast.info("Indagine interrotta");
-  }, [investigationId]);
+  }, [investigationId, queryClient, args.partnerId]);
 
   const reset = React.useCallback(() => {
     if (running) return;
@@ -135,6 +138,7 @@ export function useSherlock(args: UseSherlockArgs) {
         }
 
         if (!controller.signal.aborted) {
+          invalidateEnrichmentCaches(queryClient, args.partnerId);
           toast.success(`Indagine completata`);
         }
       } catch (e) {
@@ -147,12 +151,13 @@ export function useSherlock(args: UseSherlockArgs) {
             completed_at: new Date().toISOString(),
           }).catch(() => null);
         }
+        invalidateEnrichmentCaches(queryClient, args.partnerId);
       } finally {
         abortRef.current = null;
         setRunning(null);
       }
     },
-    [args.partnerId, args.contactId, args.targetLabel, args.vars, running],
+    [args.partnerId, args.contactId, args.targetLabel, args.vars, running, queryClient],
   );
 
   return {
