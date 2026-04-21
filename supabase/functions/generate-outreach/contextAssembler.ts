@@ -381,7 +381,7 @@ export async function assembleOutreachContext(
     const { readUnifiedEnrichment, formatEnrichmentForPrompt } = await import("../_shared/enrichmentAdapter.ts");
     const unified = await readUnifiedEnrichment(partnerId, supabase);
     if (unified.has_any) {
-      const block = formatEnrichmentForPrompt(unified);
+      const block = formatEnrichmentForPrompt(unified, quality);
       if (block) {
         contextParts.push(`[ENRICHMENT UNIFICATO]\n${block}`);
         websiteSource = "cached";
