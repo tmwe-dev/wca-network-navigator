@@ -9,6 +9,9 @@ import { Mail, AlertCircle, AlertTriangle, XCircle, CheckCircle2 } from "lucide-
 import OracleContextPanel from "@/components/email/OracleContextPanel";
 import type { ForgeResult } from "@/v2/hooks/useEmailForge";
 import { cn } from "@/lib/utils";
+import { ContextSummary, type PostGenerationContext } from "./components/ContextSummary";
+import { usePreContext } from "./hooks/usePreContext";
+import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
 
 interface Props {
   result: ForgeResult | null;
@@ -19,6 +22,31 @@ interface Props {
 }
 
 export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
+  const lab = useForgeLab();
+  const preContext = usePreContext(lab.recipient, {
+    typeResolution: result?.type_resolution ?? null,
+    kbCategories: lab.emailType?.kb_categories,
+    language: "italiano",
+    tone: lab.tone,
+  });
+  const postContext: PostGenerationContext | undefined = result
+    ? {
+        kb_sections_used: lab.emailType?.kb_categories ?? [],
+        enrichment_used: [],
+        memories_used: 0,
+        history_used: !!result._context_summary,
+        playbook_used: false,
+        journalist: result.journalist_review
+          ? {
+              role: result.journalist_review.journalist.label,
+              verdict: result.journalist_review.verdict,
+              score: result.journalist_review.quality_score,
+            }
+          : undefined,
+        warnings: result.contract_warnings ?? [],
+      }
+    : undefined;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-foreground/80 gap-2">
@@ -98,6 +126,17 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
             hasRecipient={hasRecipient}
           />
         </div>
+
+        {preContext && (
+          <details className="group">
+            <summary className="cursor-pointer text-xs uppercase tracking-wide text-foreground/80 mb-1 hover:text-foreground transition-colors">
+              Contesto usato dall'AI ▾
+            </summary>
+            <div className="mt-2">
+              <ContextSummary preContext={preContext} postContext={postContext} mode="expanded" />
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
@@ -111,9 +150,9 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
     block: "BLOCCATO",
   };
   const verdictClass: Record<string, string> = {
-    pass: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
-    pass_with_edits: "bg-blue-500/10 text-blue-500 border-blue-500/30",
-    warn: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+    pass: "bg-success/10 text-success border-success/30",
+    pass_with_edits: "bg-primary/10 text-primary border-primary/30",
+    warn: "bg-warning/10 text-warning border-warning/30",
     block: "bg-destructive/10 text-destructive border-destructive/30",
   };
   const VerdictIcon = review.verdict === "block" ? XCircle : review.verdict === "warn" ? AlertTriangle : CheckCircle2;
@@ -134,7 +173,7 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
       {(review.verdict === "warn" || review.verdict === "block") && review.warnings.length > 0 && (
         <div className={cn(
           "p-2 rounded border text-[11px] space-y-1",
-          review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5"
+          review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5"
         )}>
           {review.warnings.map((w, i) => (
             <div key={i} className="text-foreground/80">
@@ -152,7 +191,7 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
               <div key={i} className="space-y-0.5">
                 <span className="font-mono opacity-40">[{e.type}]</span>
                 <div className="line-through text-destructive/70">{e.original_fragment}</div>
-                <div className="text-emerald-500">{e.edited_fragment}</div>
+                <div className="text-success">{e.edited_fragment}</div>
                 <div className="italic text-foreground/50">{e.reason}</div>
               </div>
             ))}
