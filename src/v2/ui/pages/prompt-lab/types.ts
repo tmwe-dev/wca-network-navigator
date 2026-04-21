@@ -43,17 +43,18 @@ export interface PromptLabTabDef {
   id: PromptLabTabId;
   label: string;
   description: string;
+  activation: string;
 }
 
 export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
-  { id: "system_prompt", label: "System Prompt", description: "Blocchi del prompt globale di sistema" },
-  { id: "kb_doctrine", label: "KB Doctrine", description: "Voci di knowledge base dottrinali" },
-  { id: "operative", label: "Operative", description: "Prompt operativi strutturati" },
-  { id: "email", label: "Email", description: "Tipi, prompt globali e regole indirizzo" },
-  { id: "voice", label: "Voice / 11Labs", description: "Persona vs prompt vocale ElevenLabs" },
-  { id: "playbooks", label: "Playbooks", description: "Playbook commerciali e workflow" },
-  { id: "personas", label: "Agent Personas", description: "Personalità agenti (tono, stile, vocabolario)" },
-  { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI" },
+  { id: "system_prompt", label: "System Prompt", description: "Blocchi del prompt globale di sistema", activation: "Attivo nel Command Center, AI Assistant, missioni agenti e generazioni operative quando viene assemblato il contesto base dell'AI." },
+  { id: "kb_doctrine", label: "KB Doctrine", description: "Voci di knowledge base dottrinali", activation: "Attiva in tutti gli agenti tramite assembler KB: doctrine, system_doctrine, sales_doctrine e procedures diventano regole di governo prima delle azioni." },
+  { id: "operative", label: "Operative", description: "Prompt operativi strutturati", activation: "Attivi nei flussi esecutivi: Email Composer, Cockpit, Outreach, Assistenti e missioni che richiamano procedure con objective/procedure/criteria." },
+  { id: "email", label: "Email", description: "Tipi, prompt globali e regole indirizzo", activation: "Attivo in Email Intelligence, Email Forge, composizione email, classificazione messaggi e regole specifiche per mittente/destinatario." },
+  { id: "voice", label: "Voice / 11Labs", description: "Persona vs prompt vocale ElevenLabs", activation: "Attivo sugli agenti vocali ElevenLabs collegati: modifica il comportamento parlato, il tono, i limiti e la struttura della conversazione voice." },
+  { id: "playbooks", label: "Playbooks", description: "Playbook commerciali e workflow", activation: "Attivi quando l'AI deve scegliere una strategia commerciale, una sequenza o un workflow in base alle condizioni di trigger del playbook." },
+  { id: "personas", label: "Agent Personas", description: "Personalità agenti (tono, stile, vocabolario)", activation: "Attive sugli agenti associati: definiscono tono, stile, vocabolario e firma usati nelle risposte, email e prompt voice derivati." },
+  { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI", activation: "Attivo come contesto aziendale trasversale in prompt email, assistenti, agenti commerciali e generazioni che richiedono identità, obiettivi e stile WCA." },
 ] as const;
 
 /** Macroarea raggruppante (Livello 1 navigazione Prompt Lab). */
