@@ -87,9 +87,11 @@ export interface EmailPromptContext {
 // ── Helpers ──
 
 function getProfileTruncation(quality: Quality): { description: number; rawProfile: number } {
+  // LOVABLE-77: alzati i limiti — Standard ora 800/2500, Premium 1500/5000.
+  // Razionale: Gemini 3 Flash supporta 1M token; meglio dare contesto ricco che tagliare.
   if (quality === "fast") return { description: 200, rawProfile: 0 };
-  if (quality === "standard") return { description: 500, rawProfile: 1000 };
-  return { description: 1000, rawProfile: 3000 };
+  if (quality === "standard") return { description: 800, rawProfile: 2500 };
+  return { description: 1500, rawProfile: 5000 };
 }
 
 export function buildStrategicAdvisor(context: {
