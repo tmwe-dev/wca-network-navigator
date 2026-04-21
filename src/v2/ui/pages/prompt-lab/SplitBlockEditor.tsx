@@ -68,7 +68,7 @@ export function SplitBlockEditor({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar carousel: prev / titolo+contatore / next */}
-      <div className="flex items-center justify-between gap-2 pb-2 border-b mb-3 flex-shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-1.5 border-b mb-2 flex-shrink-0">
         <Button
           size="sm"
           variant="outline"
@@ -102,7 +102,7 @@ export function SplitBlockEditor({
 
       {/* Indicatori (puntini) — solo se pochi blocchi */}
       {blocks.length > 1 && blocks.length <= 20 && (
-        <div className="flex items-center justify-center gap-1 pb-2 flex-shrink-0 flex-wrap">
+        <div className="flex items-center justify-center gap-1 pb-1.5 flex-shrink-0 flex-wrap">
           {blocks.map((b, i) => (
             <button
               key={b.id}
@@ -119,9 +119,9 @@ export function SplitBlockEditor({
       )}
 
       {/* Pannello blocco corrente — split sinistra/destra a piena altezza */}
-      <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
+      <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
         {/* LEFT: editable */}
-        <div className="flex flex-col min-h-0 space-y-1.5">
+        <div className="flex flex-col min-h-0 gap-1">
           <div className="flex items-center justify-between gap-2 flex-shrink-0">
             <label className="text-xs font-medium text-muted-foreground">Originale</label>
             <div className="flex items-center gap-1">
@@ -154,7 +154,7 @@ export function SplitBlockEditor({
           <Textarea
             value={block.content}
             onChange={(e) => onChange(block.id, e.target.value)}
-            className="font-mono text-xs flex-1 min-h-0 resize-none"
+            className="font-mono text-[13px] leading-relaxed flex-1 min-h-0 resize-none p-3"
           />
         </div>
 
@@ -167,10 +167,10 @@ export function SplitBlockEditor({
               : "bg-muted/30 border-dashed",
           )}
         >
-          <label className="text-xs font-medium text-green-700 dark:text-green-400 flex-shrink-0">
+          <label className="text-xs font-medium text-green-700 dark:text-green-400 flex-shrink-0 mb-1">
             Versione migliorata
           </label>
-          <div className="font-mono text-xs whitespace-pre-wrap mt-1 pr-16 flex-1 min-h-0 overflow-auto">
+          <div className="font-mono text-[13px] leading-relaxed whitespace-pre-wrap pr-16 flex-1 min-h-0 overflow-auto">
             {block.improved ?? (
               <span className="text-muted-foreground italic">
                 Nessun miglioramento — usa la chat o il pulsante Migliora

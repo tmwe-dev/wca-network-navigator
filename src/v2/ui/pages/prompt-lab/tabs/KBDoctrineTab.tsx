@@ -67,14 +67,16 @@ export function KBDoctrineTab() {
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento KB...</div>;
 
   return (
-    <SplitBlockEditor
-      blocks={state.blocks}
-      onChange={state.updateContent}
-      onAccept={state.acceptImproved}
-      onDiscard={state.discardImproved}
-      onImprove={onImprove}
-      onSave={onSave}
-      saving={saving}
-    />
+    <div className="h-full min-h-0">
+      <SplitBlockEditor
+        blocks={state.blocks}
+        onChange={state.updateContent}
+        onAccept={state.acceptImproved}
+        onDiscard={state.discardImproved}
+        onImprove={onImprove}
+        onSave={onSave}
+        saving={saving}
+      />
+    </div>
   );
 }
