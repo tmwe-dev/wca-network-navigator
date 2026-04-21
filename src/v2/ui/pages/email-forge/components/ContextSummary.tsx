@@ -56,10 +56,10 @@ function Pill({ icon: Icon, label, status }: {
   return (
     <div className={cn(
       "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border",
-      status === "active" && "bg-success/10 text-success border-success/30",
+      status === "active" && "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
       status === "empty" && "bg-card/40 text-foreground/40 border-border/40",
-      status === "warning" && "bg-warning/10 text-warning border-warning/30",
-      status === "error" && "bg-destructive/10 text-destructive border-destructive/30",
+      status === "warning" && "bg-amber-500/10 text-amber-300 border-amber-500/30",
+      status === "error" && "bg-red-500/10 text-red-300 border-red-500/30",
     )}>
       <Icon className="h-2.5 w-2.5" />
       {label}
@@ -152,15 +152,15 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
 
       {pre.type_resolution && pre.type_resolution.conflicts.length > 0 && (
         <div className="space-y-1 pt-2 border-t border-border/40">
-          <div className="text-[10px] font-semibold text-warning flex items-center gap-1">
+          <div className="text-[10px] font-semibold text-amber-300 flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" /> Detector tipo email
           </div>
           {pre.type_resolution.conflicts.map((c, i) => (
             <div key={i} className={cn(
               "text-[10px] px-2 py-1 rounded border",
-              c.severity === "blocking" && "bg-destructive/10 border-destructive/30 text-destructive",
-              c.severity === "warning" && "bg-warning/10 border-warning/30 text-warning",
-              c.severity === "info" && "bg-primary/10 border-primary/30 text-primary",
+              c.severity === "blocking" && "bg-red-500/10 border-red-500/30 text-red-200",
+              c.severity === "warning" && "bg-amber-500/10 border-amber-500/30 text-amber-200",
+              c.severity === "info" && "bg-blue-500/10 border-blue-500/30 text-blue-200",
             )}>
               <div><span className="font-mono opacity-60">[{c.type}]</span> {c.description}</div>
               <div className="opacity-70 italic mt-0.5">→ {c.suggestion}</div>
@@ -171,17 +171,17 @@ function ExpandedSummary({ pre, post }: { pre: PreGenerationContext; post?: Post
 
       {post && post.warnings.length > 0 && (
         <div className="space-y-1 pt-2 border-t border-border/40">
-          <div className="text-[10px] font-semibold text-warning flex items-center gap-1">
+          <div className="text-[10px] font-semibold text-amber-300 flex items-center gap-1">
             <CircleAlert className="h-3 w-3" /> Avvisi contratto
           </div>
           {post.warnings.map((w, i) => (
-            <div key={i} className="text-[10px] text-warning/80">⚠ {w}</div>
+            <div key={i} className="text-[10px] text-amber-200/80">⚠ {w}</div>
           ))}
         </div>
       )}
 
       {post && post.warnings.length === 0 && pre.type_resolution?.proceed && (
-        <div className="pt-1 text-[10px] text-success/70 flex items-center gap-1">
+        <div className="pt-1 text-[10px] text-emerald-400/70 flex items-center gap-1">
           <CircleCheck className="h-3 w-3" /> Contesto coerente, nessuna segnalazione
         </div>
       )}

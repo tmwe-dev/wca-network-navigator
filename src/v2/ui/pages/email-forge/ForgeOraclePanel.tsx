@@ -17,8 +17,6 @@ import { ForgeRecipientPicker, type ForgeRecipient } from "./ForgeRecipientPicke
 import { cn } from "@/lib/utils";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
 import { EnrichmentStatusInline } from "./EnrichmentStatusInline";
-import { ContextSummary } from "./components/ContextSummary";
-import { usePreContext } from "./hooks/usePreContext";
 
 export interface ForgeConfig {
   recipient: ForgeRecipient | null;
@@ -41,11 +39,6 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
   const lab = useForgeLab();
   const [showAllTypes, setShowAllTypes] = React.useState(false);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
-  const preContext = usePreContext(lab.recipient, {
-    kbCategories: lab.emailType?.kb_categories,
-    language: "italiano",
-    tone: lab.tone,
-  });
 
   const visibleTypes = showAllTypes ? DEFAULT_EMAIL_TYPES : DEFAULT_EMAIL_TYPES.slice(0, PRIMARY_TYPES_COUNT);
   const hasMoreTypes = DEFAULT_EMAIL_TYPES.length > PRIMARY_TYPES_COUNT;
@@ -81,11 +74,6 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
           <ForgeRecipientPicker value={lab.recipient} onChange={handleRecipient} />
           {lab.recipient?.partnerId && (
             <EnrichmentStatusInline partnerId={lab.recipient.partnerId} />
-          )}
-          {preContext && (
-            <div className="pt-1">
-              <ContextSummary preContext={preContext} mode="compact" />
-            </div>
           )}
         </section>
 
