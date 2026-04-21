@@ -87,19 +87,34 @@ export interface EmailPromptContext {
 // ── Helpers ──
 
 function getProfileTruncation(quality: Quality): { description: number; rawProfile: number } {
+  // LOVABLE-77: alzati i limiti — Standard ora 800/2500, Premium 1500/5000.
+  // Razionale: Gemini 3 Flash supporta 1M token; meglio dare contesto ricco che tagliare.
   if (quality === "fast") return { description: 200, rawProfile: 0 };
-  if (quality === "standard") return { description: 500, rawProfile: 1000 };
-  return { description: 1000, rawProfile: 3000 };
+  if (quality === "standard") return { description: 800, rawProfile: 2500 };
+  return { description: 1500, rawProfile: 5000 };
 }
 
-export function buildStrategicAdvisor(context: {
+export interface StrategicAdvisorContext {
   emailCategory?: string;
   hasHistory?: boolean;
   followUpCount?: number;
   hasEnrichmentData?: boolean;
   commercialState?: string;
   touchCount?: number;
-}): string {
+  // LOVABLE-77: data points disponibili (aiutano l'AI a scegliere su cosa ancorare il messaggio)
+  dataPoints?: {
+    hasWebsite?: boolean;
+    hasLinkedin?: boolean;
+    contactProfilesCount?: number;
+    hasSherlock?: boolean;
+    bcaCount?: number;
+    historyCount?: number;
+    hasReputation?: boolean;
+    hasProfileDescription?: boolean;
+  };
+}
+
+export function buildStrategicAdvisor(context: StrategicAdvisorContext): string {
   const phaseContext = context.commercialState
     ? `\n- Fase commerciale: ${context.commercialState} (touch #${context.touchCount || 0})`
     : "";
@@ -109,6 +124,32 @@ export function buildStrategicAdvisor(context: {
     : tc <= 3
       ? "\n- FOLLOW-UP INIZIALE: tono cordiale, riferirsi a scambi precedenti, aggiungere valore"
       : "\n- RELAZIONE ATTIVA: tono da collega, personalizzazione alta, NON ripetere presentazione";
+
+  // LOVABLE-77: blocco "Data points disponibili" — guida l'AI a scegliere ancore concrete
+  const dp = context.dataPoints || {};
+  const availableAnchors: string[] = [];
+  if (dp.hasProfileDescription) availableAnchors.push("profilo partner (servizi/network/città)");
+  if (dp.hasWebsite) availableAnchors.push("sito web (analizzato)");
+  if (dp.hasLinkedin) availableAnchors.push("LinkedIn azienda");
+  if ((dp.contactProfilesCount ?? 0) > 0) availableAnchors.push(`${dp.contactProfilesCount} decision maker da Deep Search`);
+  if (dp.hasSherlock) availableAnchors.push("indagine Sherlock");
+  if ((dp.bcaCount ?? 0) > 0) availableAnchors.push(`${dp.bcaCount} incontro/i di persona`);
+  if ((dp.historyCount ?? 0) > 0) availableAnchors.push(`${dp.historyCount} touch precedenti`);
+  if (dp.hasReputation) availableAnchors.push("reputazione online");
+
+  const totalAnchors = availableAnchors.length;
+  const dataPointsBlock = totalAnchors > 0
+    ? `
+## DATA POINTS DISPONIBILI PER QUESTO PARTNER (${totalAnchors})
+${availableAnchors.map((a) => `- ✓ ${a}`).join("\n")}
+
+→ USA ALMENO ${Math.min(2, totalAnchors)} di questi data points come ancore concrete nel messaggio.
+→ Cita un servizio specifico letto dal sito, un nome di decision maker da Sherlock, un evento BCA, un servizio di profilo. NON restare generico.
+`
+    : `
+## DATA POINTS DISPONIBILI: NESSUNO
+⚠️ Non hai dati specifici su questo partner. Aggiungi tag [GENERIC] nel subject e procedi con presentazione standard onesta.
+`;
 
   return `
 # STRATEGIC ADVISOR — Contesto per Decisione Autonoma
@@ -121,7 +162,7 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 - Storia interazioni disponibile: ${context.hasHistory ? "SÌ" : "NO"}
 - Tentativo follow-up: ${context.followUpCount ? `#${context.followUpCount}` : "N/A"}
 - Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}${phaseContext}${toneGuide}
-
+${dataPointsBlock}
 ## Guardrail:
 - Se c'è storia interazioni → non ripetere approcci già usati
 - Se dati enrichment scarsi → resta generico ma vero (NON colmare con numeri inventati)
@@ -222,6 +263,19 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
   const emailCategory = oracle_type || inferredCategory;
   const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
 
+  // LOVABLE-77: estrai data points dai blocchi caricati per guidare l'AI
+  const ce = cachedEnrichmentContext || "";
+  const dataPoints = {
+    hasWebsite: /INFORMAZIONI SITO AZIENDALE/i.test(ce),
+    hasLinkedin: /PROFILO LINKEDIN/i.test(ce),
+    contactProfilesCount: (ce.match(/CONTATTI CHIAVE/i) ? (ce.match(/^- /gm) || []).length : 0),
+    hasSherlock: /INDAGINE SHERLOCK/i.test(ce),
+    bcaCount: metInPersonContext ? (metInPersonContext.match(/Evento:/gi) || []).length : 0,
+    historyCount: prevActCount,
+    hasReputation: /REPUTAZIONE ONLINE/i.test(ce),
+    hasProfileDescription: !!partner.profile_description,
+  };
+
   const strategicAdvisor = buildStrategicAdvisor({
     emailCategory,
     hasHistory: !!historyContext,
@@ -229,6 +283,7 @@ ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || 
     hasEnrichmentData: !!cachedEnrichmentContext,
     commercialState,
     touchCount,
+    dataPoints,
   });
 
   const senderContext = `
@@ -268,14 +323,23 @@ ${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priori
 ${emailTypeStructureBlock}
 ${strategicAdvisor}
 
-## 🚫 ANTI-ALLUCINAZIONE — REGOLE INVIOLABILI
-1. **VIETATO inventare numeri, percentuali, statistiche, tempi, prezzi, sconti, KPI** ("ridurrà del 15%", "risparmio del 20%", "in 48 ore", "+30% efficienza" → SEVERAMENTE VIETATO).
-2. **VIETATO promettere risultati quantitativi** che non sono esplicitamente forniti nei dati o nella KB aziendale.
-3. **VIETATO inventare casi cliente, referenze, certificazioni, partnership, premi** non presenti nei dati forniti.
-4. **VIETATO inventare servizi o coperture geografiche** non presenti nel profilo mittente o nella KB.
-5. Se ti manca un dato concreto → NON riempire con un numero plausibile. Resta qualitativo ("riduzione dei tempi di transito", non "−15%").
-6. Se vuoi citare un beneficio quantitativo → DEVE essere letteralmente presente nella KB aziendale o nel profilo mittente forniti sopra. Altrimenti, OMETTI.
-7. Le tecniche della Knowledge Base servono per STRUTTURARE la comunicazione (hook, framing, CTA), NON per fabbricare prove inesistenti.
+## 📋 REGOLE DATI (bilanciate — LOVABLE-77)
+1. PUOI e DEVI citare fatti specifici letteralmente presenti in: profilo partner, blocco CachedEnrichment, Sherlock summary, MetInPerson/BCA, KB aziendale, documenti, storia interazioni.
+2. VIETATO inventare dati NON presenti: numeri %, KPI, casi cliente, certificazioni, premi, partnership che non compaiono letteralmente nei blocchi sopra.
+3. Se un dato è qualitativo nei blocchi, mantienilo qualitativo. Se è quantitativo, citalo letterale.
+4. Se non hai dati specifici → resta qualitativo, MAI fabbricare numeri.
+5. Le tecniche della Knowledge Base servono per STRUTTURARE la comunicazione (hook, framing, CTA), NON per fabbricare prove inesistenti.
+
+## 🎯 PERSONALIZZAZIONE OBBLIGATORIA
+Il messaggio DEVE contenere almeno UN fatto specifico estratto dai blocchi:
+- CachedEnrichment (sito, contatti chiave, reputazione)
+- Sherlock summary (decision maker, segnali di mercato)
+- MetInPerson (eventi, luoghi)
+- History (interazioni precedenti)
+- Profilo partner (servizi, network, città specifica)
+
+Se non riesci a trovare nemmeno UN fatto specifico → DEVI aggiungere il tag [GENERIC] all'inizio del subject e procedere con presentazione standard onesta.
+VIETATO produrre email senza ancorarla ad almeno un fatto del partner.
 
 ## Stile commerciale
 - Apri con un fatto vero (paese, network, servizio del destinatario letto dal profilo).
@@ -298,7 +362,7 @@ ${strategicAdvisor}
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
-  systemBlocks.push({ label: "Anti-Hallucination Rules", content: "VIETATO inventare numeri/percentuali/tempi/prezzi/casi cliente/certificazioni. Solo dati forniti o letteralmente in KB." });
+  systemBlocks.push({ label: "Regole dati + Personalizzazione obbligatoria", content: "Bilanciato (LOVABLE-77): cita fatti specifici dai blocchi, vietato inventare numeri/casi/certificazioni. Almeno 1 ancora concreta o tag [GENERIC] nel subject." });
   systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (holding pattern + tone modulation)

@@ -168,7 +168,8 @@ serve(async (req) => {
       try {
         const unified = await readUnifiedEnrichment(partner_id, supabase);
         if (unified.has_any) {
-          const block = formatEnrichmentForPrompt(unified);
+          // LOVABLE-77: improve-email usa "standard" (default), allineato con generate-email
+          const block = formatEnrichmentForPrompt(unified, "standard");
           if (block) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${block}\n`;
         }
       } catch (e) {

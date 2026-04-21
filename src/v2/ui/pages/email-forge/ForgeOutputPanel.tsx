@@ -42,6 +42,16 @@ export function ForgeOutputPanel({
   const [aiTab, setAiTab] = React.useState<"kb" | "sender" | "doctrine" | "prompts" | "history">("kb");
   const [sherlockOpen, setSherlockOpen] = React.useState(false);
 
+  // LOVABLE-77: badge "data points iniettati" — sintesi visiva dei blocchi user prompt
+  // che effettivamente hanno contenuto (= ancore disponibili all'AI).
+  const dataPointsBadge = React.useMemo(() => {
+    if (!blocks?.length) return null;
+    const tracked = ["CachedEnrichment", "MetInPerson", "History", "Relationship", "Branch", "Documents", "ConvIntel", "EditPatterns", "ResponseInsights", "StylePrefs", "CommercialBlock"];
+    const present = blocks.filter((b) => tracked.includes(b.label) && b.content?.trim().length > 0);
+    return { used: present.length, labels: present.map((b) => b.label) };
+  }, [blocks]);
+  const isGeneric = result?.subject?.startsWith("[GENERIC]") ?? false;
+
   return (
     <div className="flex flex-col h-full">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex flex-col h-full">
@@ -60,6 +70,29 @@ export function ForgeOutputPanel({
         </div>
 
         <TabsContent value="result" className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+          {result && dataPointsBadge && (
+            <div className="px-3 pt-2 shrink-0">
+              <div className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md border ${
+                isGeneric
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
+                  : dataPointsBadge.used >= 2
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                    : "bg-card border-border/60 text-foreground/70"
+              }`}>
+                <Brain className="w-3.5 h-3.5 shrink-0" />
+                {isGeneric ? (
+                  <span><strong>[GENERIC]</strong> — l'AI non ha trovato dati specifici, ha usato presentazione standard. Arricchisci il partner per output più mirato.</span>
+                ) : (
+                  <span>
+                    <strong>{dataPointsBadge.used}</strong> data point{dataPointsBadge.used === 1 ? "" : "s"} iniettat{dataPointsBadge.used === 1 ? "o" : "i"}
+                    {dataPointsBadge.labels.length > 0 && (
+                      <span className="text-foreground/60"> · {dataPointsBadge.labels.join(" · ")}</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <ResultPanel
             result={result}
             isLoading={isLoading}
