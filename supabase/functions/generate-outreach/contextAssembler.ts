@@ -377,18 +377,22 @@ export async function assembleOutreachContext(
   // Website/LinkedIn cache
   let websiteSource: "cached" | "not_available" = "not_available";
   if (partnerId && quality !== "fast") {
-    const { data: partnerFull } = await supabase.from("partners").select("website, enrichment_data").eq("id", partnerId).single();
-    if (partnerFull?.website) {
-      const ed = (partnerFull.enrichment_data || {}) as Record<string, unknown>;
-      if (ed.website_summary) { websiteSource = "cached"; contextParts.push(`[SITO AZIENDALE (cached)]\n${String(ed.website_summary).slice(0, 600)}`); intelligence.data_found.website = true; }
-    }
-  }
-  if (partnerId && quality === "premium") {
-    const { data: liLinks } = await supabase.from("partner_social_links").select("url").eq("partner_id", partnerId).eq("platform", "linkedin").limit(1);
-    if (liLinks?.[0]?.url) {
-      const { data: partnerEd } = await supabase.from("partners").select("enrichment_data").eq("id", partnerId).single();
-      const ed = (partnerEd?.enrichment_data || {}) as Record<string, unknown>;
-      if (ed.linkedin_summary) { linkedinSource = "cached"; contextParts.push(`[LINKEDIN (cached)]\n${String(ed.linkedin_summary).slice(0, 500)}`); intelligence.data_found.linkedin = true; }
+    // LOVABLE-72: lettura unificata (Base + Deep Local + Legacy + Sherlock)
+    const { readUnifiedEnrichment, formatEnrichmentForPrompt } = await import("../_shared/enrichmentAdapter.ts");
+    const unified = await readUnifiedEnrichment(partnerId, supabase);
+    if (unified.has_any) {
+      const block = formatEnrichmentForPrompt(unified);
+      if (block) {
+        contextParts.push(`[ENRICHMENT UNIFICATO]\n${block}`);
+        websiteSource = "cached";
+        if (unified.legacy.linkedin_summary || unified.base.linkedin_url) {
+          linkedinSource = "cached";
+          intelligence.data_found.linkedin = true;
+        }
+        if (unified.base.website_excerpt || unified.legacy.website_summary) {
+          intelligence.data_found.website = true;
+        }
+      }
     }
   }
 
