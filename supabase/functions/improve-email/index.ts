@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 
 interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
 
@@ -161,6 +162,20 @@ serve(async (req) => {
       playbookActive = !!state?.workflow_id;
     }
 
+    // ── LOVABLE-72: Enrichment unificato (Base + Deep Local + Legacy + Sherlock) ──
+    let enrichmentContext = "";
+    if (partner_id) {
+      try {
+        const unified = await readUnifiedEnrichment(partner_id, supabase);
+        if (unified.has_any) {
+          const block = formatEnrichmentForPrompt(unified);
+          if (block) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${block}\n`;
+        }
+      } catch (e) {
+        console.warn("[improve-email] enrichment read failed:", e instanceof Error ? e.message : e);
+      }
+    }
+
     // ── KB strategica (filtrata per tipo) ──
     const kbResult = use_kb !== false
       ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp)
@@ -226,6 +241,7 @@ ${JSON.stringify(decision, null, 2)}
 
 ${recipientBlock}${coherenceWarning}
 
+${enrichmentContext}
 ${custom_goal ? `OBIETTIVO DICHIARATO DALL'UTENTE:\n${custom_goal}\nDai PRIORITÀ a questo obiettivo nel migliorare il messaggio.\n` : ""}
 
 ## Come migliorare:
