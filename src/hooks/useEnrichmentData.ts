@@ -161,6 +161,8 @@ export function useEnrichmentData() {
           hasWebsiteExcerpt: !!ed.website_excerpt,
           linkedinUrl: liUrl || undefined,
           email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
+          logoUrl: p.logo_url || undefined,
+          websiteExcerpt: (ed.website_excerpt as EnrichedRow["websiteExcerpt"]) || undefined,
         };
       });
     },
