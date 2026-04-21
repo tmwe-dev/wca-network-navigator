@@ -9,6 +9,9 @@ import { Mail, AlertCircle, AlertTriangle, XCircle, CheckCircle2 } from "lucide-
 import OracleContextPanel from "@/components/email/OracleContextPanel";
 import type { ForgeResult } from "@/v2/hooks/useEmailForge";
 import { cn } from "@/lib/utils";
+import { ContextSummary, type PostGenerationContext } from "./components/ContextSummary";
+import { usePreContext } from "./hooks/usePreContext";
+import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
 
 interface Props {
   result: ForgeResult | null;
@@ -19,6 +22,31 @@ interface Props {
 }
 
 export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
+  const lab = useForgeLab();
+  const preContext = usePreContext(lab.recipient, {
+    typeResolution: result?.type_resolution ?? null,
+    kbCategories: lab.emailType?.kb_categories,
+    language: "italiano",
+    tone: lab.tone,
+  });
+  const postContext: PostGenerationContext | undefined = result
+    ? {
+        kb_sections_used: lab.emailType?.kb_categories ?? [],
+        enrichment_used: [],
+        memories_used: 0,
+        history_used: !!result._context_summary,
+        playbook_used: false,
+        journalist: result.journalist_review
+          ? {
+              role: result.journalist_review.journalist.label,
+              verdict: result.journalist_review.verdict,
+              score: result.journalist_review.quality_score,
+            }
+          : undefined,
+        warnings: result.contract_warnings ?? [],
+      }
+    : undefined;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-foreground/80 gap-2">
@@ -98,6 +126,17 @@ export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
             hasRecipient={hasRecipient}
           />
         </div>
+
+        {preContext && (
+          <details className="group">
+            <summary className="cursor-pointer text-xs uppercase tracking-wide text-foreground/80 mb-1 hover:text-foreground transition-colors">
+              Contesto usato dall'AI ▾
+            </summary>
+            <div className="mt-2">
+              <ContextSummary preContext={preContext} postContext={postContext} mode="expanded" />
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
