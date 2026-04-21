@@ -493,6 +493,28 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         const cgate = await checkCadenceGate(supabase, userId, partnerId, "whatsapp");
         if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
       }
+      // ── GIORNALISTA AI: review pre-invio WhatsApp ──
+      try {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        if (optimus.enabled && args.message) {
+          const review = await journalistReview(supabase, userId, {
+            final_draft: String(args.message),
+            resolved_brief: {},
+            channel: "whatsapp",
+            commercial_state: { lead_status: leadStatus || "new" },
+            partner: { id: partnerId, company_name: null },
+          }, { mode: optimus.mode, strictness: optimus.strictness });
+          if (review.verdict === "block") {
+            console.warn("[send_whatsapp] BLOCKED by journalist:", JSON.stringify(review.warnings));
+            return { error: "Journalist Review ha bloccato questo messaggio.", blocked_by: "journalist_review", warnings: review.warnings };
+          }
+          if (review.verdict === "pass_with_edits" && review.edited_text) {
+            args.message = review.edited_text;
+          }
+        }
+      } catch (jerr) {
+        console.error("[send_whatsapp] journalistReview failed:", jerr);
+      }
       // Bridge invio: registra come pending da bridge estensione
       await supabase.from("activities").insert({
         user_id: userId,
