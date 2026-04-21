@@ -1,160 +1,98 @@
 
 
-# Completamento LOVABLE-71 — Tab restanti, Voice, Page shell, Routing
+# LOVABLE-76A: Fix contrasto testo dark mode
 
-Continuo da dove eravamo: la base architetturale di Prompt Lab è pronta (DAL, types, hook, SplitBlockEditor, LabAgentChat, UploadButton, ExportButton, 3 tab + GenericRecordTab). Mancano i 4 tab generici, il tab Voice speciale, la page shell e il wiring rotta+nav.
+## Obiettivo
+Risolvere il problema globale di leggibilità in dark mode: testo `text-muted-foreground` su `bg-muted` ha contrasto ~3.7:1 (sotto WCAG AA 4.5:1).
 
----
+## Modifiche
 
-## File da creare
+### 1. Token CSS globali — `src/index.css`
 
-```text
-src/v2/ui/pages/prompt-lab/tabs/
-  ├─ OperativePromptsTab.tsx       ← usa GenericRecordTab + DAL operativePrompts
-  ├─ EmailPromptsTab.tsx           ← sub-tabs: Tipi, Global Prompts, Address Rules
-  ├─ PlaybooksTab.tsx              ← usa GenericRecordTab + DAL commercialPlaybooks
-  ├─ AgentPersonasTab.tsx          ← usa GenericRecordTab + DAL agentPersonas
-  └─ VoiceElevenLabsTab.tsx        ← layout 3 colonne + coherence checker
+Nel blocco `.dark`:
+- `--muted-foreground: 215 20% 65%` → `215 20% 75%` (luminosità +10%)
+- `--muted: 216 34% 14%` → `216 28% 17%` (background leggermente più chiaro)
 
-src/v2/ui/pages/prompt-lab/hooks/
-  └─ useVoiceCoherenceCheck.ts     ← confronta persona vs voice prompt
+Impatto: contrasto sale da ~3.7:1 a ~4.8:1 ✓ WCAG AA. Migliora **tutta l'app** automaticamente, non solo Email Forge.
 
-src/v2/ui/pages/PromptLabPage.tsx  ← shell con Tabs + ResizablePanelGroup verticale (chat in basso)
-```
+### 2. Eliminare testo ultra-piccolo — file Email Forge + Enrichment
 
-## File da modificare
+Cartelle target:
+- `src/v2/ui/pages/email-forge/**`
+- `src/components/settings/enrichment/**`
+- `src/components/email/OraclePanel.tsx` e `EnrichmentStatusBadges` (LOVABLE-73)
+- `src/components/settings/enrichment/EnrichmentExtraInfo.tsx` (LOVABLE-75)
 
-- `src/v2/routes.tsx` — aggiunge rotta `/v2/prompt-lab` con lazy load + ErrorBoundary
-- `src/v2/ui/templates/navConfig.tsx` — aggiunge voce "Prompt Lab" nella sezione Settings/Staff
+Sostituzioni:
+- `text-[9px] text-muted-foreground` → `text-[11px] text-foreground/70`
+- `text-[10px] text-muted-foreground` → `text-xs text-foreground/70`
 
-**Nessuna migrazione DB. Nessuna nuova edge function.**
+Regola: niente testo sotto 11px in dark mode.
 
----
+### 3. Gerarchia opacità su sfondi scuri
 
-## Dettaglio per file
+Sostituire `text-muted-foreground` quando si trova dentro `bg-muted`/`bg-card`/`bg-background` secondo il ruolo:
+- **Label** (intestazione sezione, nome campo): `text-foreground/80`
+- **Valore secondario** (descrizione, hint): `text-foreground/70` o `text-foreground/60`
+- **Disabilitato**: `text-foreground/40`
 
-### Tab generici (Operative, Playbooks, Personas)
+File principali da rivedere:
+- `ForgeSummaryPanel.tsx` (sezioni Section, badge sorgente, sottotitoli)
+- `ResultPanel.tsx`
+- `PromptInspector.tsx`
+- `LabBottomTabs.tsx` e tab figli (`DeepSearchTab`, ecc.)
+- `EnrichmentRowList.tsx` (nome partner, dominio, email count)
+- `EnrichmentToolbar.tsx`, `BulkActionBar.tsx`, `SourceTabBar.tsx`
 
-Usano `GenericRecordTab` già pronto. Per ogni record carico più blocchi (uno per campo). Esempio Playbooks:
+### 4. Bordi più visibili
 
-```
-loader = async () => {
-  const list = await findCommercialPlaybooks(userId);
-  return list.flatMap(p => [
-    { id: `${p.id}::prompt_template`, label: `${p.name} — Prompt`, content: p.prompt_template ?? "", source: { kind: "playbook", id: p.id, field: "prompt_template" }, dirty: false },
-    { id: `${p.id}::description`, label: `${p.name} — Descrizione`, content: p.description ?? "", source: { kind: "playbook", id: p.id, field: "description" }, dirty: false },
-    { id: `${p.id}::trigger_conditions`, label: `${p.name} — Trigger (JSON)`, content: JSON.stringify(p.trigger_conditions ?? {}, null, 2), source: { kind: "playbook", id: p.id, field: "trigger_conditions" }, dirty: false },
-  ]);
-};
+In tutti i file Email Forge + Enrichment:
+- `border-border/40` → `border-border/60`
 
-saver = async (block) => {
-  if (block.source.kind !== "playbook") throw new Error("Source mismatch");
-  const patch = block.source.field === "trigger_conditions"
-    ? { trigger_conditions: JSON.parse(block.content) }
-    : { [block.source.field]: block.content };
-  await updateCommercialPlaybook(block.source.id, patch);
-  return { table: "commercial_playbooks", id: block.source.id };
-};
-```
+### 5. Snapshot badges (LOVABLE-73/75)
 
-Stesso pattern per Operative (campi `objective`, `procedure`, `criteria`) e Personas (campi `custom_tone_prompt`, `signature_template`, `style_rules`, `vocabulary_do`, `vocabulary_dont`).
+Allineare anche `EnrichmentStatusBadges` (in `OraclePanel.tsx`) e `EnrichmentExtraInfo.tsx` allo stesso standard: niente `text-[10px] text-muted-foreground`.
 
-### EmailPromptsTab (sub-tabs interni)
+## File toccati (stima ~15-20)
 
-Tre sotto-Tabs shadcn:
-- **Tipi**: blocchi da `app_settings.email_oracle_types` (JSON) + `defaultEmailTypes.ts` come fallback. Save → `upsertAppSetting`.
-- **Global**: blocchi da `findEmailPromptsByScope(userId, "global")`, save via `updateEmailPrompt`.
-- **Address Rules**: blocchi da `findEmailAddressRules(userId)`, due campi per riga (`custom_prompt`, `notes`), save via `updateEmailAddressRule`.
+**Modificati**:
+- `src/index.css` (2 token .dark)
+- `src/v2/ui/pages/email-forge/ForgeSummaryPanel.tsx`
+- `src/v2/ui/pages/email-forge/ResultPanel.tsx`
+- `src/v2/ui/pages/email-forge/PromptInspector.tsx`
+- `src/v2/ui/pages/email-forge/LabBottomTabs.tsx`
+- `src/v2/ui/pages/email-forge/EmailForgePage.tsx` (header subtitle)
+- altri tab figli sotto `src/v2/ui/pages/email-forge/` (Deep Search, KB, ecc.)
+- `src/components/settings/enrichment/EnrichmentRowList.tsx`
+- `src/components/settings/enrichment/EnrichmentToolbar.tsx`
+- `src/components/settings/enrichment/BulkActionBar.tsx`
+- `src/components/settings/enrichment/SourceTabBar.tsx`
+- `src/components/settings/enrichment/EnrichmentExtraInfo.tsx`
+- `src/components/email/OraclePanel.tsx` (snippet `EnrichmentStatusBadges`)
 
-### VoiceElevenLabsTab (layout 3 colonne)
+**Nessun nuovo file. Nessuna migration DB. Nessun tocco a logica/edge functions.**
 
-```text
-┌─────────────────┬──────────────┬────────────────────┐
-│ PROMPT INTERNO  │ ALLINEAMENTO │ PROMPT ELEVENLABS  │
-│ (agent_personas)│ Coerenza     │ (agents.system_pr.)│
-│ tone, language, │ ✅/⚠️/❌      │ readonly + accept  │
-│ style_rules,    │ tono/lingua/ │ button "Sync →"    │
-│ vocabulary,     │ vocab        │ rigenera dx da sx  │
-│ examples        │              │                    │
-└─────────────────┴──────────────┴────────────────────┘
-```
+## Constraints rispettati
 
-- **Sx**: select agente (dropdown) → carica persona da `findAgentPersonas` filtrata per `agent_id`. Mostra campi modificabili.
-- **Centro**: `useVoiceCoherenceCheck` esegue heuristic locale (lingua = match exact su `language`; tono = keywords nel prompt; vocab = presenza dei termini do/dont). Restituisce 3 indicatori colorati.
-- **Dx**: legge `agents.system_prompt` dell'agente selezionato (DAL `findAgents` esistente). Bottone "Sync →" chiama Lab Agent con prompt: "Genera prompt ElevenLabs naturale e conversazionale (no markdown, no bullet) coerente con questa persona: {personaJson}". Risultato in colonna dx con accept → `updateAgent` (DAL esistente, oppure `supabase.from('agents').update({system_prompt})`).
+- ✅ Token semantici design system (no colori hardcoded HEX)
+- ✅ Nessuna modifica a edge functions critiche (`check-inbox`, ecc.)
+- ✅ No DB changes
+- ✅ Type safety invariata (solo classi CSS)
+- ✅ Cambio token globale `.dark` migliora l'intera app, non solo aree target
 
-### PromptLabPage.tsx (shell)
+## Verifica post-applicazione
 
-```tsx
-<ResizablePanelGroup direction="vertical">
-  <ResizablePanel defaultSize={75} minSize={40}>
-    <div className="flex flex-col h-full">
-      <header className="border-b px-4 py-2 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">Prompt Lab</h1>
-          <p className="text-xs text-muted-foreground">{activeTab.description}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <UploadButton onBlocksUploaded={...} />
-          <ExportButton getSnapshot={...} />
-        </div>
-      </header>
-      <Tabs value={activeTabId} onValueChange={setActiveTabId} className="flex-1 flex flex-col">
-        <TabsList className="rounded-none border-b">
-          {PROMPT_LAB_TABS.map(t => <TabsTrigger key={t.id} value={t.id}>{t.label}</TabsTrigger>)}
-        </TabsList>
-        <div className="flex-1 overflow-auto p-4">
-          {activeTabId === "system_prompt" && <SystemPromptTab />}
-          {activeTabId === "kb_doctrine" && <KBDoctrineTab />}
-          {activeTabId === "operative" && <OperativePromptsTab />}
-          {activeTabId === "email" && <EmailPromptsTab />}
-          {activeTabId === "voice" && <VoiceElevenLabsTab />}
-          {activeTabId === "playbooks" && <PlaybooksTab />}
-          {activeTabId === "personas" && <AgentPersonasTab />}
-          {activeTabId === "ai_profile" && <AIProfileTab />}
-        </div>
-      </Tabs>
-    </div>
-  </ResizablePanel>
-  <ResizableHandle />
-  <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
-    <LabAgentChat ... />
-  </ResizablePanel>
-</ResizablePanelGroup>
-```
+1. Aprire Email Forge in dark mode → ogni label leggibile senza sforzo
+2. Settings → Arricchimento → nome partner, dominio e email count chiaramente leggibili
+3. Snapshot badges (✓ Base / ○ Deep) — testo non più sbiadito
+4. Bordi delle card visibili senza essere invadenti
+5. Nessun testo < 11px ovunque in dark mode
+6. Verificare che il cambio di `--muted` non rovini altre pagine (Cockpit, NetworkPage) — il delta è minimo (14%→17%) quindi sicuro
 
-`UploadButton`/`ExportButton` ricevono callback che operano sul tab attivo. Il chat ha `onSend` che usa `useLabAgent.sendChatMessage` con context dei blocchi del tab attivo. Quando il chat ritorna `{ targetBlockId, improvedText }`, popola `improved` del blocco corrispondente.
+## Cosa otterrai
 
-### Routing
-
-`src/v2/routes.tsx`:
-```ts
-const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then(m => ({ default: m.PromptLabPage })));
-// ...
-{ path: "prompt-lab", element: <ErrorBoundary><Suspense fallback={<Loader />}><PromptLabPage /></Suspense></ErrorBoundary> }
-```
-
-`src/v2/ui/templates/navConfig.tsx`: aggiungo voce nella sezione "Staff" o "Settings" con label "Prompt Lab" e icona `FlaskConical` da lucide-react, route `/v2/prompt-lab`.
-
----
-
-## Considerazioni tecniche
-
-- **Type safety**: tutto tipizzato, niente `any`. JSON parse di `trigger_conditions` con try/catch e toast errore se invalido.
-- **Layer rules**: tutti i tab usano DAL esistenti (creati nel batch precedente). Nessun `supabase.from()` diretto in UI tranne per tabelle non ancora coperte da DAL (`agents` per voice, ma esiste già `src/data/agents.ts`).
-- **RLS**: `agent_personas` è user-scoped (esiste policy); `commercial_playbooks` user-scoped; `email_address_rules` user-scoped.
-- **Audit**: ogni save chiama `logSupervisorAudit` (già pronto).
-- **Performance**: tab caricati solo quando attivi (render condizionale). Nessuna query KB pesante in background.
-- **Memoria**: rispetta vincoli "DAL access only", "no any", "soft-delete globale" (gli update non distruggono record).
-
----
-
-## Cosa otterrai dopo questo step
-
-1. Pagina `/v2/prompt-lab` accessibile dalla sidebar V2.
-2. 8 tab funzionanti con split editor sinistra/destra.
-3. Voice tab con coherence checker e sync persona → ElevenLabs.
-4. Lab Agent in basso che migliora blocchi su comando naturale.
-5. Upload/Export/Save/Accept tutti operativi.
-6. Audit log su ogni modifica salvata.
+- Lettura senza sforzo in dark mode su Email Forge, Settings, Deep Search, Prompt Lab
+- Standard di accessibilità WCAG AA rispettato globalmente
+- Gerarchia visiva chiara: label vs valore vs hint distinguibili a colpo d'occhio
+- Effetto positivo a cascata su tutte le altre pagine che usavano `text-muted-foreground`
 
