@@ -2,6 +2,8 @@ import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./s
 import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getPartnerDeepSearchScore, formatScoreForPrompt } from "../_shared/deepSearchScore.ts";
+import { evaluatePartner } from "../_shared/decisionEngine.ts";
+import { processAllDecisionActions, undoAction, getApprovalDashboard } from "../_shared/approvalFlow.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { buildEmailContract, validateEmailContract } from "../_shared/emailContract.ts";
@@ -38,6 +40,7 @@ const SIDE_EFFECT_TOOLS = new Set<string>([
   "update_partner",
   "create_task",
   "schedule_followup",
+  "execute_decision",
 ]);
 
 async function isApprovalRequired(userId: string): Promise<boolean> {
@@ -1319,6 +1322,64 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         .eq("user_id", userId);
       if (error) return { error: error.message };
       return { success: true, message: `Azione ${actionId} rifiutata.` };
+    }
+
+    // ═══ DECISION ENGINE + APPROVAL FLOW (LOVABLE-89/90) ═══
+    case "evaluate_partner": {
+      const partnerId = await resolvePartnerId(args, userId);
+      if (!partnerId) return { error: "Partner non trovato" };
+      const { state, actions } = await evaluatePartner(supabase, partnerId, userId);
+      return {
+        partner_id: partnerId,
+        lead_status: state.leadStatus,
+        touch_count: state.touchCount,
+        days_since_last_outbound: state.daysSinceLastOutbound,
+        days_since_last_inbound: state.daysSinceLastInbound,
+        enrichment_score: state.enrichmentScore,
+        has_active_reminder: state.hasActiveReminder,
+        recommended_actions: actions.map(a => ({
+          action: a.action,
+          autonomy: a.autonomy,
+          channel: a.channel,
+          due_in_days: a.due_in_days,
+          journalist_role: a.journalist_role,
+          priority: a.priority,
+          reasoning: a.reasoning,
+        })),
+      };
+    }
+
+    case "execute_decision": {
+      const partnerId = await resolvePartnerId(args, userId);
+      if (!partnerId) return { error: "Partner non trovato" };
+      const autonomyOverride = args.autonomy as string | undefined;
+      const { state, actions } = await evaluatePartner(
+        supabase, partnerId, userId,
+        autonomyOverride as import("../_shared/decisionEngine.ts").AutonomyLevel | undefined,
+      );
+      const results = await processAllDecisionActions(supabase, userId, partnerId, actions);
+      return {
+        partner_id: partnerId,
+        lead_status: state.leadStatus,
+        actions_processed: results.length,
+        results: results.map(r => ({
+          status: r.status,
+          action_id: r.action_id,
+          message: r.message,
+          undo_until: r.undo_until,
+        })),
+      };
+    }
+
+    case "undo_ai_action": {
+      const actionId = String(args.action_id);
+      const result = await undoAction(supabase, actionId, userId);
+      return result;
+    }
+
+    case "get_approval_dashboard": {
+      const dashboard = await getApprovalDashboard(supabase, userId);
+      return dashboard;
     }
 
     default:
