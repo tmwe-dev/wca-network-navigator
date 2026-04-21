@@ -3,6 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
+import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 
 interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
 
@@ -325,11 +328,55 @@ ${html_body}`;
 
     improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
+    // ── GIORNALISTA AI — Caporedattore Finale ──
+    let journalistResult: JournalistReviewOutput | null = null;
+    try {
+      const optimus = await loadOptimusSettings(supabase, userId);
+      if (optimus.enabled && improvedBody) {
+        journalistResult = await journalistReview(supabase, userId, {
+          final_draft: improvedBody,
+          resolved_brief: {
+            email_type: email_type_id ?? undefined,
+            objective: custom_goal ?? undefined,
+            playbook_active: playbookActive ? "yes" : undefined,
+          },
+          channel: "email",
+          commercial_state: {
+            lead_status: (commercialState as string) || partner?.lead_status || "new",
+            touch_count: history.touchCount,
+            last_outcome: lastOutcome ?? undefined,
+            days_since_last_inbound: history.daysSince ?? undefined,
+            has_active_conversation: history.touchCount > 0,
+          },
+          partner: {
+            id: partner_id ?? null,
+            company_name: partner?.company_alias || partner?.company_name,
+            country: partner?.country_name,
+          },
+          contact: contact ? { name: contact.contact_alias || contact.name, role: contact.title } : undefined,
+          kb_summary: kbResult.sections.join(", ") || undefined,
+        }, { mode: optimus.mode, strictness: optimus.strictness });
+        if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
+          improvedBody = journalistResult.edited_text;
+        }
+      }
+    } catch (jerr) {
+      console.error("[improve-email] journalistReview failed:", jerr);
+    }
+
     return new Response(JSON.stringify({
       subject: improvedSubject,
       body: improvedBody,
       readiness,
       decision,
+      journalist_review: journalistResult ? {
+        journalist: journalistResult.journalist,
+        verdict: journalistResult.verdict,
+        warnings: journalistResult.warnings,
+        edits: journalistResult.edits,
+        quality_score: journalistResult.quality_score,
+        reasoning: journalistResult.reasoning_summary,
+      } : null,
       _context_summary: {
         kb_sections: kbResult.sections,
         touch_count: history.touchCount,
