@@ -166,35 +166,46 @@ export async function readUnifiedEnrichment(
 /**
  * Compone un blocco testuale leggibile dall'AI a partire dallo snapshot unificato.
  * Ordina per priorità informativa e tronca i campi lunghi per non saturare il prompt.
+ * LOVABLE-77: aumentati i limiti per "Standard" (era 800/600/500/5 contatti) per dare
+ * all'AI dati concreti su cui ancorare la personalizzazione.
  */
-export function formatEnrichmentForPrompt(e: UnifiedEnrichment): string {
+export function formatEnrichmentForPrompt(
+  e: UnifiedEnrichment,
+  quality: "fast" | "standard" | "premium" = "standard",
+): string {
+  const limits = quality === "premium"
+    ? { site: 2500, linkedin: 1500, sherlock: 3000, reputation: 1200, legacy: 1500, contacts: 15 }
+    : quality === "fast"
+      ? { site: 600, linkedin: 400, sherlock: 600, reputation: 300, legacy: 400, contacts: 5 }
+      : { site: 1500, linkedin: 800, sherlock: 1500, reputation: 700, legacy: 800, contacts: 8 };
+
   const blocks: string[] = [];
 
   // 1. Sito (preferenza: website_excerpt strutturato; fallback legacy summary)
   const siteDesc = e.base.website_excerpt?.description || e.legacy.website_summary;
   if (siteDesc) {
-    let block = `INFORMAZIONI SITO AZIENDALE:\n${String(siteDesc).slice(0, 800)}`;
+    let block = `INFORMAZIONI SITO AZIENDALE:\n${String(siteDesc).slice(0, limits.site)}`;
     const emails = e.base.website_excerpt?.emails;
     const phones = e.base.website_excerpt?.phones;
     if (Array.isArray(emails) && emails.length) {
-      block += `\nEmail trovate: ${emails.slice(0, 5).join(", ")}`;
+      block += `\nEmail trovate: ${emails.slice(0, 8).join(", ")}`;
     }
     if (Array.isArray(phones) && phones.length) {
-      block += `\nTelefoni: ${phones.slice(0, 5).join(", ")}`;
+      block += `\nTelefoni: ${phones.slice(0, 8).join(", ")}`;
     }
     blocks.push(block);
   }
 
   // 2. LinkedIn (legacy summary ha priorità su URL nudo)
   const linkedinInfo = e.legacy.linkedin_summary
-    ? String(e.legacy.linkedin_summary).slice(0, 600)
+    ? String(e.legacy.linkedin_summary).slice(0, limits.linkedin)
     : (e.base.linkedin_url ? `LinkedIn azienda: ${e.base.linkedin_url}` : null);
   if (linkedinInfo) blocks.push(`PROFILO LINKEDIN:\n${linkedinInfo}`);
 
-  // 3. Contatti chiave (max 5)
+  // 3. Contatti chiave
   if (e.deep.contact_profiles?.length) {
     const profiles = e.deep.contact_profiles
-      .slice(0, 5)
+      .slice(0, limits.contacts)
       .map((c) => {
         const name = c.name ?? "?";
         const role = c.role ?? "?";
@@ -202,7 +213,7 @@ export function formatEnrichmentForPrompt(e: UnifiedEnrichment): string {
         return `- ${name} (${role})${li}`;
       })
       .join("\n");
-    blocks.push(`CONTATTI CHIAVE:\n${profiles}`);
+    blocks.push(`CONTATTI CHIAVE (decision maker da Deep Search):\n${profiles}`);
   }
 
   // 4. Reputazione
@@ -210,7 +221,7 @@ export function formatEnrichmentForPrompt(e: UnifiedEnrichment): string {
     const rep = typeof e.deep.reputation === "string"
       ? e.deep.reputation
       : JSON.stringify(e.deep.reputation);
-    blocks.push(`REPUTAZIONE ONLINE:\n${rep.slice(0, 500)}`);
+    blocks.push(`REPUTAZIONE ONLINE:\n${rep.slice(0, limits.reputation)}`);
   }
 
   // 5. Quality score
@@ -220,12 +231,12 @@ export function formatEnrichmentForPrompt(e: UnifiedEnrichment): string {
 
   // 6. Sherlock summary
   if (e.sherlock.summary) {
-    blocks.push(`INDAGINE SHERLOCK:\n${String(e.sherlock.summary).slice(0, 800)}`);
+    blocks.push(`INDAGINE SHERLOCK (riassunto investigativo):\n${String(e.sherlock.summary).slice(0, limits.sherlock)}`);
   }
 
   // 7. Legacy deep search summary (solo se non c'è nulla di meglio)
   if (!siteDesc && !e.deep.contact_profiles?.length && e.legacy.deep_search_summary) {
-    blocks.push(`RICERCA APPROFONDITA (legacy):\n${String(e.legacy.deep_search_summary).slice(0, 600)}`);
+    blocks.push(`RICERCA APPROFONDITA (legacy):\n${String(e.legacy.deep_search_summary).slice(0, limits.legacy)}`);
   }
 
   return blocks.join("\n\n");
