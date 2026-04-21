@@ -23,6 +23,13 @@ export interface EnrichedRow {
   country?: string;
   realId?: string;
   emailCount?: number;
+  logoUrl?: string;
+  websiteExcerpt?: {
+    description?: string;
+    emails?: readonly string[];
+    phones?: readonly string[];
+    scraped_at?: string;
+  };
 }
 
 export type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
