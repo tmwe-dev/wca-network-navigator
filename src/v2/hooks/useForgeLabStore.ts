@@ -44,7 +44,9 @@ const initial: ForgeLabState = {
   useKB: true,
   customGoal: "",
   baseProposal: "",
-  quality: "standard",
+  // LOVABLE-77: Email Forge è strumento di analisi → default "premium" (max contesto, max qualità).
+  // L'utente può sempre downgradare a Standard/Fast dal pannello configurazione.
+  quality: "premium",
   runCounter: 0,
   deepSearchConfig: presetToForgeConfig("standard"),
 };
