@@ -517,51 +517,19 @@ export async function assembleContextBlocks(
   let deepSearchStatus: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed" = "missing";
   let deepSearchAgeDays: number | null = null;
   if (effectivePartnerId) {
-    const { data: partnerEd } = await supabase.from("partners").select("enrichment_data").eq("id", effectivePartnerId).single();
-    let ed = (partnerEd?.enrichment_data || {}) as Record<string, unknown>;
-
-    // Compute cache age
-    const enrichedAt = ed.deep_search_at || ed.website_scraped_at;
-    if (enrichedAt) {
-      const ageMs = Date.now() - new Date(String(enrichedAt)).getTime();
-      deepSearchAgeDays = Math.floor(ageMs / 86400000);
-      deepSearchStatus = deepSearchAgeDays > 30 ? "stale" : "cached";
+    // LOVABLE-72: usa adapter unificato (Base + Deep Local + Legacy + Sherlock)
+    const unified = await readUnifiedEnrichment(effectivePartnerId, supabase);
+    deepSearchAgeDays = unified.freshness.deep_age_days ?? unified.freshness.base_age_days;
+    if (unified.has_any) {
+      deepSearchStatus = (deepSearchAgeDays != null && deepSearchAgeDays > 30) ? "stale" : "cached";
+      const block = formatEnrichmentForPrompt(unified);
+      if (block) cachedEnrichmentContext = `\n${block}\n`;
+    } else {
+      deepSearchStatus = "missing";
     }
-
-    // Live trigger: deep_search=true + cache stale/missing + partner_id reale
-    const shouldRefresh = opts.deep_search === true && (deepSearchStatus === "stale" || deepSearchStatus === "missing");
-    if (shouldRefresh && opts.authHeader) {
-      try {
-        const enrichUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`;
-        const enrichRes = await fetch(enrichUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: opts.authHeader },
-          body: JSON.stringify({ partnerId: effectivePartnerId }),
-          signal: AbortSignal.timeout(20000),
-        });
-        if (enrichRes.ok) {
-          // Reload enrichment_data after enrichment completes
-          const { data: refreshed } = await supabase.from("partners").select("enrichment_data").eq("id", effectivePartnerId).single();
-          ed = (refreshed?.enrichment_data || ed) as Record<string, unknown>;
-          deepSearchStatus = "fresh";
-          deepSearchAgeDays = 0;
-        } else {
-          deepSearchStatus = "failed";
-          console.warn(`[generate-email] enrich-partner-website returned ${enrichRes.status}`);
-        }
-      } catch (e) {
-        deepSearchStatus = "failed";
-        console.warn(`[generate-email] deep search live failed:`, e instanceof Error ? e.message : e);
-      }
-    } else if (opts.deep_search === true && deepSearchStatus === "cached") {
-      // Already fresh
-    } else if (opts.deep_search !== true) {
-      deepSearchStatus = enrichedAt ? "skipped" : "missing";
+    if (opts.deep_search !== true && deepSearchStatus === "cached") {
+      deepSearchStatus = "skipped";
     }
-
-    if (ed.website_summary) cachedEnrichmentContext += `\nINFORMAZIONI DAL SITO AZIENDALE:\n${String(ed.website_summary).slice(0, 600)}\n`;
-    if (ed.linkedin_summary) cachedEnrichmentContext += `\nPROFILO LINKEDIN:\n${String(ed.linkedin_summary).slice(0, 500)}\n`;
-    if (ed.deep_search_summary) cachedEnrichmentContext += `\nDEEP SEARCH:\n${String(ed.deep_search_summary).slice(0, 400)}\n`;
   }
 
   // ── Documents ──
