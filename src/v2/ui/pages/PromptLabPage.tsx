@@ -95,9 +95,13 @@ export function PromptLabPage() {
 
   const handleChatSend = useCallback(
     async (text: string) => {
-      await lab.sendChatMessage(text, { tabLabel: activeTab.label, blocks: [] });
+      await lab.sendChatMessage(text, {
+        tabLabel: activeTab.label,
+        tabActivation: activeTab.activation,
+        blocks: [],
+      });
     },
-    [lab, activeTab.label],
+    [lab, activeTab.label, activeTab.activation],
   );
 
   const handleUpload = useCallback((blocks: Block[]) => {
