@@ -1564,6 +1564,36 @@ export type Database = {
         }
         Relationships: []
       }
+      blacklist: {
+        Row: {
+          created_at: string
+          domain: string | null
+          email: string | null
+          id: string
+          reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blacklist_entries: {
         Row: {
           blacklist_no: number | null
