@@ -15,6 +15,7 @@ import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaul
 import { checkOracleCoherence, getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import OracleContextPanel, { type OracleContextSummary } from "./OracleContextPanel";
+import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";
 import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
@@ -74,6 +75,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
   const [customGoal, setCustomGoal] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
   const [showImages, setShowImages] = useState(false);
+  const [brief, setBrief] = useState<EmailBrief>(EMPTY_BRIEF);
 
   // Manual on-demand Deep Search (replaces the old toggle)
   const deepSearch = useDeepSearchTrigger(recipientPartnerId);
@@ -102,7 +104,15 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
-  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh", customGoal: customGoal.trim() };
+  // Merge structured brief into customGoal so the existing OracleConfig API stays unchanged.
+  const mergedGoal = useMemo(() => {
+    const base = customGoal.trim();
+    const briefBlock = briefToText(brief);
+    if (!briefBlock) return base;
+    return base ? `${base}\n\n${briefBlock}` : briefBlock;
+  }, [customGoal, brief]);
+
+  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh", customGoal: mergedGoal };
 
   const handleAddType = () => {
     if (!newName.trim() || !newPrompt.trim()) return;
@@ -193,6 +203,9 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
             </div>
           </div>
         )}
+
+        {/* === BRIEF STRUTTURATO — opzionale, chiuso di default === */}
+        <BriefAccordion brief={brief} onChange={setBrief} />
 
         {/* === TIPO EMAIL — CHIP ROW === */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
