@@ -24,6 +24,12 @@ interface SendEmailBody {
   operator_id?: string;
   in_reply_to?: string;
   references?: string;
+  /**
+   * Idempotency key — if provided, a successful send with the same key
+   * + recipient is returned cached (no double-send) and a failed one is
+   * recorded so the caller can decide whether to retry.
+   */
+  idempotency_key?: string;
 }
 
 interface SmtpSendOptions {
