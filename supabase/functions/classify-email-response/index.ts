@@ -133,7 +133,7 @@ function parseClassificationResponse(raw: string | null): ClassificationResult {
 
   const parsed = JSON.parse(cleaned);
 
-  const VALID_CATEGORIES = ["interested", "not_interested", "request_info", "meeting_request", "complaint", "follow_up", "auto_reply", "spam", "uncategorized"];
+  const VALID_CATEGORIES = ["interested", "not_interested", "request_info", "question", "meeting_request", "complaint", "follow_up", "auto_reply", "unsubscribe", "bounce", "spam", "uncategorized"];
   const VALID_URGENCY = ["critical", "high", "normal", "low"];
   const VALID_SENTIMENT = ["positive", "negative", "neutral", "mixed"];
 
@@ -165,6 +165,26 @@ function computeDominantSentiment(exchanges: ConversationExchange[]): string {
     if (c > max) { max = c; dominant = s; }
   }
   return dominant;
+}
+
+function getNextStatus(currentStatus: string, classification: { category: string; confidence: number }): string | null {
+  const cat = classification.category;
+  if (["interested", "meeting_request", "question", "request_info"].includes(cat)) {
+    switch (currentStatus) {
+      case "new": return "first_touch_sent";
+      case "first_touch_sent": return "engaged";
+      case "holding": return "engaged";
+      case "engaged": return cat === "meeting_request" ? "qualified" : "engaged";
+      case "qualified": return cat === "meeting_request" ? "negotiation" : "qualified";
+      default: return null;
+    }
+  }
+  if (cat === "not_interested" && classification.confidence >= 0.80) {
+    return ["new", "first_touch_sent", "holding", "engaged"].includes(currentStatus) ? "archived" : null;
+  }
+  if (cat === "unsubscribe") return "blacklisted";
+  if (cat === "bounce") return "archived";
+  return null;
 }
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
