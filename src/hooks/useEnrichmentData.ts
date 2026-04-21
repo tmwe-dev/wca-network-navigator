@@ -170,6 +170,9 @@ export function useEnrichmentData() {
       return data.map((p): EnrichedRow => {
         const ed = (p.enrichment_data || {}) as Record<string, unknown>;
         const liUrl = (ed.linkedin_url as string) || null;
+        const cp = ed.contact_profiles;
+        const cpHas = Array.isArray(cp) ? cp.length > 0 : !!(cp && typeof cp === "object" && Object.keys(cp).length);
+        const hasDeep = cpHas || !!ed.reputation || !!ed.contact_mentions || !!ed.google_maps;
         return {
           id: p.id, name: p.company_name,
           domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
@@ -179,6 +182,8 @@ export function useEnrichmentData() {
           email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
           logoUrl: p.logo_url || undefined,
           websiteExcerpt: (ed.website_excerpt as EnrichedRow["websiteExcerpt"]) || undefined,
+          hasDeepSearch: hasDeep,
+          deepSearchAt: typeof ed.deep_search_at === "string" ? ed.deep_search_at : null,
         };
       });
     },
