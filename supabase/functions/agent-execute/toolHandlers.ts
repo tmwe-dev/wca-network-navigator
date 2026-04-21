@@ -1,5 +1,6 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
 import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
+import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { buildEmailContract, validateEmailContract } from "../_shared/emailContract.ts";
@@ -487,19 +488,23 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (!response.ok) return { error: data.error || "Errore invio" };
       if (partnerId) await supabase.from("interactions").insert({ partner_id: partnerId, interaction_type: "email", subject: String(args.subject), notes: `Inviata a ${args.to_email}` });
 
-      // ── POST-SEND HOOK (OBBLIGATORIO Costituzione §5) ──
+      // ── POST-SEND PIPELINE UNIFICATA (LOVABLE-85) ──
       const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
-      const hookResult = await runPostSendHook(supabase, {
+      const pipelineResult = await runPostSendPipeline(supabase, {
         userId,
         partnerId,
         contactId: args.contact_id ? String(args.contact_id) : null,
         channel: "email",
+        subject: String(args.subject || ""),
+        body: String(args.html_body || ""),
+        to: String(args.to_email),
         sequenceDay: seqDay,
-        preview: String(args.subject || ""),
+        agentId: ctx?.agentId,
+        source: "agent",
       });
-      console.log(`[send_email] post-send hook:`, JSON.stringify(hookResult));
+      console.log(`[send_email] postSendPipeline:`, JSON.stringify(pipelineResult));
 
-      return { success: true, message: `Email inviata a ${args.to_email}.`, post_send: hookResult };
+      return { success: true, message: `Email inviata a ${args.to_email}.`, post_send: pipelineResult };
     }
 
     case "send_whatsapp": {
@@ -564,12 +569,17 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         description: String(args.message || "").substring(0, 500),
         status: "pending",
       });
-      const hook = await runPostSendHook(supabase, {
+      const pipeWa = await runPostSendPipeline(supabase, {
         userId, partnerId,
         contactId: args.contact_id ? String(args.contact_id) : null,
-        channel: "whatsapp", sequenceDay: 0,
+        channel: "whatsapp",
+        to: String(args.phone || args.to || ""),
+        subject: String(args.message || "").substring(0, 80),
+        body: String(args.message || ""),
+        source: "agent",
+        agentId: ctx?.agentId,
       });
-      return { success: true, queued_to_bridge: true, post_send: hook };
+      return { success: true, queued_to_bridge: true, post_send: pipeWa };
     }
 
     case "send_linkedin_message":
@@ -590,12 +600,18 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         status: "pending",
       });
       const seqDay = typeof args.sequence_day === "number" ? args.sequence_day : 0;
-      const hook = await runPostSendHook(supabase, {
+      const pipeLi = await runPostSendPipeline(supabase, {
         userId, partnerId,
         contactId: args.contact_id ? String(args.contact_id) : null,
-        channel: "linkedin", sequenceDay: seqDay,
+        channel: "linkedin",
+        to: String(args.profile_url || args.to || ""),
+        subject: String(args.message || "").substring(0, 80),
+        body: String(args.message || ""),
+        sequenceDay: seqDay,
+        source: "agent",
+        agentId: ctx?.agentId,
       });
-      return { success: true, queued_to_bridge: true, post_send: hook };
+      return { success: true, queued_to_bridge: true, post_send: pipeLi };
     }
 
     case "deep_search_partner": {

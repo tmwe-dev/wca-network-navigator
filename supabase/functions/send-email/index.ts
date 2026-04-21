@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
 import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
+import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
+import { loadSendingConfig, validateSendingWindow, validateSmtpConfig } from "../_shared/emailSendingConfig.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
@@ -352,21 +354,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log side effects ONLY after confirmed SMTP success
-    if (partner_id) {
-      const userId = userIdEarly;
-      await logEmailSideEffects({
-        supabase,
-        partner_id,
-        user_id: userId,
-        subject,
-        to,
-        html,
-        agent_id,
-        message_id_external: messageIdExternal,
-        thread_id: threadId,
-      });
-    }
+    // Log side effects ONLY after confirmed SMTP success — via pipeline unificata
+    const pipelineResult = await runPostSendPipeline(supabase, {
+      userId: userIdEarly,
+      partnerId: partner_id || null,
+      contactId: contact_id || null,
+      channel: "email",
+      subject,
+      body: html,
+      to,
+      agentId: agent_id,
+      source: agent_id ? "agent" : "email_forge",
+      messageIdExternal,
+      threadId,
+    });
+    console.log("[send-email] postSendPipeline:", JSON.stringify(pipelineResult));
 
     // Persist idempotency success record
     if (idempotency_key) {

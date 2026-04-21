@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
+import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 
@@ -195,22 +196,22 @@ Deno.serve(async (req) => {
           sent_at: smtpSentAt,
         }).eq("id", item.id);
 
-        // ── Post-send: unified side effects ──
-        if (item.partner_id) {
-          await logEmailSideEffects({
-            supabase,
-            partner_id: item.partner_id,
-            user_id: userId,
-            subject: item.subject,
-            to: item.recipient_email,
-            html: item.html_body,
-            source_meta: {
-              company_name: item.recipient_name || (item as Record<string, unknown>).company_name || "",
-              email: item.recipient_email,
-              country: (item as Record<string, unknown>).country_name || "",
-            },
-          });
-        }
+        // ── Post-send: pipeline unificata (LOVABLE-85) ──
+        await runPostSendPipeline(supabase, {
+          userId,
+          partnerId: item.partner_id || null,
+          contactId: null,
+          channel: "email",
+          subject: item.subject,
+          body: item.html_body,
+          to: item.recipient_email,
+          source: "batch",
+          meta: {
+            company_name: item.recipient_name || (item as Record<string, unknown>).company_name || "",
+            email: item.recipient_email,
+            country: (item as Record<string, unknown>).country_name || "",
+          },
+        });
 
         sentCount++;
 
