@@ -3158,9 +3158,11 @@ export type Database = {
           created_at: string
           draft_id: string | null
           error_message: string | null
+          failed_at: string | null
           html_body: string
           id: string
           idempotency_key: string
+          message_id: string | null
           open_count: number | null
           opened_at: string | null
           operator_id: string | null
@@ -3179,9 +3181,11 @@ export type Database = {
           created_at?: string
           draft_id?: string | null
           error_message?: string | null
+          failed_at?: string | null
           html_body: string
           id?: string
           idempotency_key?: string
+          message_id?: string | null
           open_count?: number | null
           opened_at?: string | null
           operator_id?: string | null
@@ -3200,9 +3204,11 @@ export type Database = {
           created_at?: string
           draft_id?: string | null
           error_message?: string | null
+          failed_at?: string | null
           html_body?: string
           id?: string
           idempotency_key?: string
+          message_id?: string | null
           open_count?: number | null
           opened_at?: string | null
           operator_id?: string | null
@@ -7110,6 +7116,17 @@ export type Database = {
         Returns: {
           matched_count: number
           total_processed: number
+        }[]
+      }
+      match_email_sender: {
+        Args: { p_domain: string; p_email: string; p_user_id: string }
+        Returns: {
+          company_name: string
+          display_name: string
+          email_confidence: number
+          partner_id: string
+          source_id: string
+          source_type: string
         }[]
       }
       match_kb_entries: {
