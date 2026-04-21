@@ -2,6 +2,8 @@ import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./s
 import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
+import { buildEmailContract, validateEmailContract } from "../_shared/emailContract.ts";
+import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 
 // ── Local interfaces for typed row shapes ──
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
@@ -401,6 +403,42 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         const gate = await checkCadenceGate(supabase, userId, partnerId, "email");
         if (!gate.allowed) {
           return { error: `BLOCCATO: ${gate.reason}`, blocked_by: "cadence_gate" };
+        }
+      }
+
+      // ── LOVABLE-81/82: Contratto + detector tipo prima dell'invio ──
+      if (partnerId) {
+        try {
+          const { contract } = await buildEmailContract(supabase, userId, {
+            engine: "agent-execute",
+            operation: "generate",
+            partnerId,
+            contactId: args.contact_id ? String(args.contact_id) : null,
+            emailType: String(args.email_type || "follow_up"),
+            emailDescription: String(args.subject || ""),
+            fallbackContactEmail: args.to_email ? String(args.to_email) : undefined,
+          });
+          const validation = validateEmailContract(contract);
+          if (!validation.valid) {
+            return {
+              error: `Contratto email non valido: ${validation.errors.join("; ")}`,
+              blocked_by: "email_contract",
+              warnings: validation.warnings,
+            };
+          }
+          const resolved = detectEmailType(contract);
+          if (!resolved.proceed) {
+            return {
+              error: `Tipo "${resolved.original_type}" non coerente con stato/history. ${resolved.conflicts
+                .filter((c) => c.severity === "blocking")
+                .map((c) => c.suggestion)
+                .join(". ")}`,
+              blocked_by: "type_detector",
+              type_resolution: resolved,
+            };
+          }
+        } catch (cerr) {
+          console.warn("[send_email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
         }
       }
 
