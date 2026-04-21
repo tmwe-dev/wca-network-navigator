@@ -30,6 +30,9 @@ export interface EnrichedRow {
     phones?: readonly string[];
     scraped_at?: string;
   };
+  /** LOVABLE-77B: presenza di Deep Search arricchito (contact_profiles, reputation, mentions). */
+  hasDeepSearch?: boolean;
+  deepSearchAt?: string | null;
 }
 
 export type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";

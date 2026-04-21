@@ -207,6 +207,11 @@ export function EnrichmentRowList({
                               <Linkedin className="w-3 h-3" /> ✓
                             </span>
                           )}
+                          {row.hasDeepSearch && (
+                            <span className="text-primary shrink-0 inline-flex items-center gap-0.5 px-1 rounded bg-primary/10 text-[10px] font-semibold uppercase tracking-wide">
+                              <Brain className="w-2.5 h-2.5" /> Deep
+                            </span>
+                          )}
                           <span className="shrink-0 text-foreground/50">· {sourceLabel(row.source)}</span>
                         </div>
                       </div>
@@ -259,9 +264,15 @@ export function EnrichmentRowList({
                         {/* COL 2 — Deep Search status */}
                         <div>
                           <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Deep Search</p>
-                          {ed?.scraped_at ? (
+                          {row.hasDeepSearch && row.deepSearchAt ? (
+                            <div className="space-y-1 text-foreground/70">
+                              <p>Eseguito: <span className="text-foreground">{formatDate(row.deepSearchAt)}</span></p>
+                              <p className="text-primary text-[11px]">✓ Contatti / Reputazione / Mentions</p>
+                            </div>
+                          ) : ed?.scraped_at ? (
                             <div className="space-y-1 text-foreground/70">
                               <p>Scraping: <span className="text-foreground">{formatDate(ed.scraped_at)}</span></p>
+                              <p className="text-foreground/50 italic text-[11px]">Solo Base — manca Deep Search</p>
                             </div>
                           ) : (
                             <p className="text-foreground/50 italic">Mai eseguito</p>
