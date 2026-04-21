@@ -56,6 +56,23 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
   { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI" },
 ] as const;
 
+/** Macroarea raggruppante (Livello 1 navigazione Prompt Lab). */
+export type PromptLabGroupId = "core_ai" | "communication" | "strategy";
+
+export interface PromptLabGroupDef {
+  id: PromptLabGroupId;
+  label: string;
+  /** lucide-react icon name (mapped in component) */
+  icon: "Brain" | "MessageSquare" | "Target";
+  tabs: ReadonlyArray<PromptLabTabId>;
+}
+
+export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
+  { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile"] },
+  { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
+  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas"] },
+] as const;
+
 /** Default System Prompt blocks (mirrors supabase/functions/ai-assistant) */
 export const DEFAULT_SYSTEM_PROMPT_BLOCKS: ReadonlyArray<{ id: string; label: string; content: string }> = [
   {
