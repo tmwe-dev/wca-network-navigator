@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard } from "lucide-react";
+import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard, Linkedin } from "lucide-react";
 
 const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
@@ -14,8 +14,9 @@ const SupervisorFeedPanel = lazy(() => import("@/components/ai-control/Superviso
 const OptimusAgentPanel = lazy(() => import("@/components/ai-control/OptimusAgentPanel").then(m => ({ default: m.OptimusAgentPanel })));
 const GlobalAIAutomationPause = lazy(() => import("@/components/ai-control/GlobalAIAutomationPause").then(m => ({ default: m.GlobalAIAutomationPause })));
 const CostDashboardWidget = lazy(() => import("@/components/ai-control/CostDashboardWidget").then(m => ({ default: m.CostDashboardWidget })));
+const LinkedInLimitsPanel = lazy(() => import("@/components/ai-control/LinkedInLimitsPanel").then(m => ({ default: m.LinkedInLimitsPanel })));
 
-type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs";
+type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs" | "linkedin-limits";
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -62,6 +63,9 @@ export function AIControlCenterPage(): React.ReactElement {
         <Button variant={subView === "costs" ? "default" : "outline"} size="sm" onClick={() => setSubView("costs")}>
           <CreditCard className="mr-2 h-4 w-4" /> API Costs
         </Button>
+        <Button variant={subView === "linkedin-limits" ? "default" : "outline"} size="sm" onClick={() => setSubView("linkedin-limits")}>
+          <Linkedin className="mr-2 h-4 w-4" /> LinkedIn Limits
+        </Button>
       </div>
 
       {/* Content */}
@@ -75,6 +79,7 @@ export function AIControlCenterPage(): React.ReactElement {
           {subView === "optimus" && <OptimusAgentPanel />}
           {subView === "controls" && <GlobalAIAutomationPause />}
           {subView === "costs" && <CostDashboardWidget />}
+          {subView === "linkedin-limits" && <LinkedInLimitsPanel />}
         </Suspense>
       </div>
     </div>

@@ -14,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadLinkedInSettings } from "../_shared/linkedinSettings.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 
 Deno.serve(async (req) => {
@@ -43,7 +44,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── HARD DAILY LIMIT: Check if user has already sent 50+ LinkedIn messages today ──
+    // ── Load LinkedIn settings from app_settings table ──
+    const liSettings = await loadLinkedInSettings(supabase);
+
+    // ── HARD DAILY LIMIT: Check if user has already sent LinkedIn messages today ──
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
     const todayStart = today.toISOString();
@@ -64,13 +68,13 @@ Deno.serve(async (req) => {
     }
 
     const dailyCount = todayMessages?.length || 0;
-    if (dailyCount >= 50) {
-      console.warn(`[send-linkedin] DAILY LIMIT exceeded for user ${user.id}: ${dailyCount}/50`);
+    if (dailyCount >= liSettings.dailyLimit) {
+      console.warn(`[send-linkedin] DAILY LIMIT exceeded for user ${user.id}: ${dailyCount}/${liSettings.dailyLimit}`);
       return new Response(JSON.stringify({
         error: "daily_limit_exceeded",
-        message: "Limite giornaliero LinkedIn raggiunto (50/giorno)",
+        message: `Limite giornaliero LinkedIn raggiunto (${liSettings.dailyLimit}/giorno)`,
         daily_count: dailyCount,
-        daily_limit: 50,
+        daily_limit: liSettings.dailyLimit,
       }), {
         status: 429,
         headers: {
@@ -116,20 +120,18 @@ Deno.serve(async (req) => {
       scheduledForIso = d.toISOString();
     }
 
-    // ── NIGHT PAUSE ENFORCEMENT: Clamp to operational window 9:00-19:00 CET ──
-    // If the scheduled time is outside the window, move it to 09:00 next day
-    const OPERATING_START_HOUR = 9;
-    const OPERATING_END_HOUR = 19;
+    // ── NIGHT PAUSE ENFORCEMENT: Clamp to operational window configured in settings ──
+    // If the scheduled time is outside the window, move it to start hour next day
     const clampedTime = new Date(scheduledForIso || new Date());
     const hour = clampedTime.getHours(); // UTC hours, approximation (TODO: proper TZ conversion if needed)
 
-    if (hour < OPERATING_START_HOUR) {
-      // Before 9 AM: move to 9 AM same day
-      clampedTime.setHours(OPERATING_START_HOUR, 0, 0, 0);
-    } else if (hour >= OPERATING_END_HOUR) {
-      // 7 PM or later: move to 9 AM next day
+    if (hour < liSettings.sendStartHour) {
+      // Before configured start hour: move to start hour same day
+      clampedTime.setHours(liSettings.sendStartHour, 0, 0, 0);
+    } else if (hour >= liSettings.sendEndHour) {
+      // At or after configured end hour: move to start hour next day
       clampedTime.setDate(clampedTime.getDate() + 1);
-      clampedTime.setHours(OPERATING_START_HOUR, 0, 0, 0);
+      clampedTime.setHours(liSettings.sendStartHour, 0, 0, 0);
     }
 
     if (scheduledForIso && clampedTime.getTime() !== new Date(scheduledForIso).getTime()) {

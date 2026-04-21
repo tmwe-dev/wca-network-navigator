@@ -53,16 +53,16 @@ export function useBulkLinkedInDispatch() {
       return { queued: 0, failed: 0 };
     }
 
-    // ── HARD CAP: Limit to 50 messages maximum (daily limit) ──
-    const HARD_CAP = 50;
-    const toDispatch = eligible.slice(0, HARD_CAP);
-    const capped = eligible.length > HARD_CAP;
+    // ── HARD CAP: Limit to configured bulk maximum ──
+    const bulkMax = Math.max(1, parseInt(settings?.linkedin_bulk_max || "50", 10));
+    const toDispatch = eligible.slice(0, bulkMax);
+    const capped = eligible.length > bulkMax;
 
     if (capped) {
-      log.warn("bulk dispatch capped at 50", { requested: eligible.length });
+      log.warn(`bulk dispatch capped at ${bulkMax}`, { requested: eligible.length });
       toast({
         title: "Limite giornaliero LinkedIn",
-        description: `Sono stati richiesti ${eligible.length} messaggi, ma il limite è 50/giorno. Verranno programmati i primi 50.`,
+        description: `Sono stati richiesti ${eligible.length} messaggi, ma il limite è ${bulkMax}/giorno. Verranno programmati i primi ${bulkMax}.`,
         variant: "destructive",
       });
     }
@@ -113,7 +113,7 @@ export function useBulkLinkedInDispatch() {
     const lastSlot = slots[slots.length - 1];
     toast({
       title: `${queued} messaggi LinkedIn programmati`,
-      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}${capped ? " CAPPED@50" : ""}`,
+      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}${capped ? ` CAPPED@${bulkMax}` : ""}`,
     });
 
     return { queued, failed };
