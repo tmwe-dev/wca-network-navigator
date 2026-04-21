@@ -362,7 +362,7 @@ VIETATO produrre email senza ancorarla ad almeno un fatto del partner.
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
-  systemBlocks.push({ label: "Anti-Hallucination Rules", content: "VIETATO inventare numeri/percentuali/tempi/prezzi/casi cliente/certificazioni. Solo dati forniti o letteralmente in KB." });
+  systemBlocks.push({ label: "Regole dati + Personalizzazione obbligatoria", content: "Bilanciato (LOVABLE-77): cita fatti specifici dai blocchi, vietato inventare numeri/casi/certificazioni. Almeno 1 ancora concreta o tag [GENERIC] nel subject." });
   systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (holding pattern + tone modulation)
