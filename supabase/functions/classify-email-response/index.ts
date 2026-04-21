@@ -361,7 +361,7 @@ serve(async (req) => {
         contact_id: input.contact_id || null,
         last_exchanges: updatedExchanges,
         conversation_summary: updatedSummary?.substring(0, 2000) ?? null,
-        interaction_count: (convCtx?.interaction_count ?? 0) + 1,
+        interaction_count: Number((convCtx as Record<string, unknown> | null)?.interaction_count ?? 0) + 1,
         last_interaction_at: new Date().toISOString(),
         dominant_sentiment: dominantSentiment,
         response_rate: responseRate,
@@ -547,7 +547,7 @@ serve(async (req) => {
             recentClassifications?.flatMap((c: { keywords?: string[] }) => c.keywords || []) || []
           )].slice(0, 10);
 
-          const dominantSentiment = (recentClassifications as Record<string, unknown>)?.[0]?.sentiment || "neutral";
+          const dominantSentiment = recentClassifications?.[0]?.sentiment || "neutral";
 
           await supabase.from("kb_entries").insert({
             user_id: input.user_id,
