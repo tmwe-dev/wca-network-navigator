@@ -522,7 +522,7 @@ export async function assembleContextBlocks(
     deepSearchAgeDays = unified.freshness.deep_age_days ?? unified.freshness.base_age_days;
     if (unified.has_any) {
       deepSearchStatus = (deepSearchAgeDays != null && deepSearchAgeDays > 30) ? "stale" : "cached";
-      const block = formatEnrichmentForPrompt(unified);
+      const block = formatEnrichmentForPrompt(unified, quality);
       if (block) cachedEnrichmentContext = `\n${block}\n`;
     } else {
       deepSearchStatus = "missing";
