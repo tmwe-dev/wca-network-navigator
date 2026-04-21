@@ -18,7 +18,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const stats = { kb_entries: 0, memories: 0, operative_prompts: 0, users: 0, size_bytes: 0 };
+    const stats = { kb_entries: 0, memories: 0, operative_prompts: 0, app_settings: 0, agent_personas: 0, users: 0, size_bytes: 0 };
     const timestamp = new Date().toISOString().split("T")[0];
 
     // Get all users with profiles
@@ -59,6 +59,22 @@ serve(async (req) => {
         .eq("is_active", true);
       backup.operative_prompts = prompts || [];
       stats.operative_prompts += (prompts || []).length;
+
+      // Export app settings (profilo AI, tone, prompt email, ecc.)
+      const { data: settings } = await supabase
+        .from("app_settings")
+        .select("*")
+        .eq("user_id", userId);
+      backup.app_settings = settings || [];
+      stats.app_settings += (settings || []).length;
+
+      // Export agent personas (voce/stile per agente)
+      const { data: personas } = await supabase
+        .from("agent_personas")
+        .select("*")
+        .eq("user_id", userId);
+      backup.agent_personas = personas || [];
+      stats.agent_personas += (personas || []).length;
 
       // Serialize and upload
       const content = JSON.stringify(backup, null, 2);

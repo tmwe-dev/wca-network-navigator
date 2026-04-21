@@ -72,6 +72,26 @@ type MemoryRow = {
   created_at: string;
 };
 
+type AppSettingRow = {
+  id: string;
+  key: string;
+  value: string | null;
+  updated_at: string;
+};
+
+type AgentPersonaRow = {
+  id: string;
+  agent_id: string;
+  tone: string | null;
+  custom_tone_prompt: string | null;
+  language: string | null;
+  style_rules: string[] | null;
+  vocabulary_do: string[] | null;
+  vocabulary_dont: string[] | null;
+  example_messages: unknown;
+  signature_template: string | null;
+};
+
 const safeFilename = (s: string) =>
   s.replace(/[^a-z0-9-_]+/gi, "_").replace(/_+/g, "_").slice(0, 80);
 
@@ -218,6 +238,8 @@ Generato: ${new Date().toISOString()}
 | \`knowledge_base/\` | Tutte le voci di KB attive | ${stats.kb} |
 | \`operative_prompts/\` | Prompt operativi strutturati dal DB | ${stats.prompts} |
 | \`memories/\` | Memorie AI consolidate (L2/L3) | ${stats.memories} |
+| \`app_settings/\` | Impostazioni applicazione (profilo AI, tone, prompt email) | ${stats.settings} |
+| \`agent_personas/\` | Persona di voce/stile per ogni agente | ${stats.personas} |
 | \`logic/\` | Logica statica: scope, template, procedure | 4 file |
 | \`raw/\` | JSON tecnico completo (per ripristino) | 1 file |
 
@@ -242,7 +264,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
     const t0 = performance.now();
     try {
       // Parallel fetch from DB
-      const [agentsRes, kbRes, opRes, memRes] = await Promise.all([
+      const [agentsRes, kbRes, opRes, memRes, settingsRes, personasRes] = await Promise.all([
         supabase
           .from("agents")
           .select("id,name,role,avatar_emoji,is_active,system_prompt,knowledge_base,assigned_tools,created_at")
@@ -267,12 +289,23 @@ export function AIExportPanel({ userId }: { userId: string }) {
           .gte("level", 2)
           .order("importance", { ascending: false })
           .limit(500),
+        supabase
+          .from("app_settings")
+          .select("id,key,value,updated_at")
+          .eq("user_id", userId)
+          .order("key"),
+        supabase
+          .from("agent_personas")
+          .select("id,agent_id,tone,custom_tone_prompt,language,style_rules,vocabulary_do,vocabulary_dont,example_messages,signature_template")
+          .eq("user_id", userId),
       ]);
 
       const agents = (agentsRes.data ?? []) as AgentRow[];
       const kb = (kbRes.data ?? []) as KbRow[];
       const prompts = (opRes.data ?? []) as OperativePromptRow[];
       const memories = (memRes.data ?? []) as MemoryRow[];
+      const settings = (settingsRes.data ?? []) as AppSettingRow[];
+      const personas = (personasRes.data ?? []) as AgentPersonaRow[];
 
       const zip = new JSZip();
 
@@ -293,6 +326,33 @@ export function AIExportPanel({ userId }: { userId: string }) {
       const promptsFolder = zip.folder("operative_prompts")!;
       for (const p of prompts) {
         promptsFolder.file(`${safeFilename(p.name)}.md`, mdOperativePrompt(p));
+      }
+
+      // App settings (raggruppati in 1 file)
+      if (settings.length > 0) {
+        const settingsFolder = zip.folder("app_settings")!;
+        let body = `# App Settings\n\n`;
+        for (const s of settings) {
+          body += `## ${s.key}\n\n\`\`\`\n${s.value ?? ""}\n\`\`\`\n\n_aggiornato: ${s.updated_at}_\n\n---\n\n`;
+        }
+        settingsFolder.file("settings.md", body);
+      }
+
+      // Agent personas (1 file per persona)
+      if (personas.length > 0) {
+        const personasFolder = zip.folder("agent_personas")!;
+        for (const p of personas) {
+          const agent = agents.find((a) => a.id === p.agent_id);
+          const name = agent?.name ?? p.agent_id;
+          let body = `# Persona: ${name}\n\n`;
+          body += `- **Tono**: ${p.tone ?? "—"}\n- **Lingua**: ${p.language ?? "—"}\n\n`;
+          if (p.custom_tone_prompt) body += `## Tone Prompt\n\n${p.custom_tone_prompt}\n\n`;
+          if (p.style_rules?.length) body += `## Style Rules\n\n${p.style_rules.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_do?.length) body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_dont?.length) body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.signature_template) body += `## Signature\n\n\`\`\`\n${p.signature_template}\n\`\`\`\n\n`;
+          personasFolder.file(`${safeFilename(name)}.md`, body);
+        }
       }
 
       // Memories
@@ -329,6 +389,8 @@ export function AIExportPanel({ userId }: { userId: string }) {
             kb_entries: kb,
             operative_prompts: prompts,
             memories,
+            app_settings: settings,
+            agent_personas: personas,
           },
           null,
           2,
@@ -340,6 +402,8 @@ export function AIExportPanel({ userId }: { userId: string }) {
         kb: kb.length,
         prompts: prompts.length,
         memories: memories.length,
+        settings: settings.length,
+        personas: personas.length,
       };
       zip.file("README.md", mdReadme(stats));
 
@@ -353,7 +417,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
 
       const elapsed = Math.round(performance.now() - t0);
       toast.success(
-        `Export pronto · ${stats.agents} agenti · ${stats.kb} KB · ${stats.prompts} prompt · ${stats.memories} memorie · ${elapsed}ms`,
+        `Export pronto · ${stats.agents} agenti · ${stats.kb} KB · ${stats.prompts} prompt · ${stats.memories} memorie · ${stats.settings} settings · ${stats.personas} personas · ${elapsed}ms`,
       );
     } catch (e) {
       console.error("AIExportPanel error:", e);
