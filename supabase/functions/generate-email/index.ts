@@ -17,6 +17,8 @@ import { parseEmailResponse } from "./responseParser.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
+import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
+import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -87,6 +89,58 @@ serve(async (req) => {
     }
     if (!standalone && !contactEmail) {
       return new Response(JSON.stringify({ error: "no_email", message: "Nessun indirizzo email disponibile per questo contatto/partner", partner_name: partner!.company_name, contact_name: contact?.name || null }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+    }
+
+    // ── LOVABLE-81/82: Costruisci contratto + detector tipo (non bloccante per standalone) ──
+    let typeResolution: ResolvedEmailType | null = null;
+    const contractWarnings: string[] = [];
+    if (!standalone && partner?.id) {
+      try {
+        const { contract, build_warnings } = await buildEmailContract(supabase, userId, {
+          engine: "generate-email",
+          operation: "generate",
+          partnerId: partner.id,
+          contactId: contact?.id ?? null,
+          emailType: oracle_type || "primo_contatto",
+          emailDescription: goal || base_proposal || "",
+          objective: goal || undefined,
+          language,
+          fallbackPartnerName: partner.company_name,
+          fallbackContactEmail: contactEmail || undefined,
+        });
+        const validation = validateEmailContract(contract);
+        contractWarnings.push(...build_warnings, ...validation.warnings);
+        if (!validation.valid) {
+          // Errori bloccanti del contratto (es. blacklisted) → 422 esplicito
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "CONTRACT_INVALID",
+              errors: validation.errors,
+              warnings: validation.warnings,
+            }),
+            { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+          );
+        }
+        // Detector tipo/descrizione/history/stato
+        typeResolution = detectEmailType(contract);
+        if (!typeResolution.proceed) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "TYPE_CONFLICT",
+              type_resolution: typeResolution,
+              message: `Tipo "${typeResolution.original_type}" non coerente con stato/history. ${typeResolution.conflicts
+                .filter((c) => c.severity === "blocking")
+                .map((c) => c.suggestion)
+                .join(". ")}`,
+            }),
+            { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+          );
+        }
+      } catch (cerr) {
+        console.warn("[generate-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+      }
     }
 
     // ── Assemble context ──
@@ -221,6 +275,9 @@ serve(async (req) => {
       // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
       // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
       enrichment_missing: ctx.deepSearchStatus === "missing",
+      contract_used: true,
+      contract_warnings: contractWarnings,
+      type_resolution: typeResolution,
       ...(_debug_return_prompt ? {
         _debug: {
           systemPrompt,
