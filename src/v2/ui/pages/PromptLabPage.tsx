@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
 import { UploadButton } from "./prompt-lab/UploadButton";
 import { ExportButton } from "./prompt-lab/ExportButton";
+import { GlobalImproverDialog } from "./prompt-lab/GlobalImproverDialog";
+import { Button } from "@/components/ui/button";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
 import {
   PROMPT_LAB_TABS,
@@ -37,6 +39,7 @@ import {
   Wrench,
   Map,
   Users,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -62,6 +65,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
 export function PromptLabPage() {
   const [activeGroupId, setActiveGroupId] = useState<PromptLabGroupId>("core_ai");
   const [activeTabId, setActiveTabId] = useState<PromptLabTabId>("system_prompt");
+  const [globalImproverOpen, setGlobalImproverOpen] = useState(false);
   const lab = useLabAgent();
 
   const activeTab = useMemo(
@@ -124,6 +128,15 @@ export function PromptLabPage() {
                 <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-7 gap-1.5"
+                  onClick={() => setGlobalImproverOpen(true)}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Migliora tutto
+                </Button>
                 <UploadButton onBlocksUploaded={handleUpload} />
                 <ExportButton getSnapshot={handleExport} />
               </div>
@@ -188,6 +201,7 @@ export function PromptLabPage() {
           />
         </ResizablePanel>
       </ResizablePanelGroup>
+      <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} />
     </div>
   );
 }
