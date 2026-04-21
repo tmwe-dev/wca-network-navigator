@@ -64,6 +64,61 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === GATE HARD: Dottrina Multi-Canale WhatsApp ===
+    if (partner_id) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status")
+        .eq("id", partner_id)
+        .maybeSingle();
+
+      if (partner?.lead_status === "blacklisted") {
+        return new Response(JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner in blacklist" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const blockedStatuses = ["new", "first_touch_sent", "holding"];
+      if (partner?.lead_status && blockedStatuses.includes(partner.lead_status)) {
+        const { count } = await supabase
+          .from("channel_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("partner_id", partner_id)
+          .eq("channel", "whatsapp")
+          .eq("direction", "inbound");
+
+        if (!count) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "GATE_BLOCKED",
+            reason: `WhatsApp non consentito a fase ${partner.lead_status}. Serve almeno 'engaged'. Usa email o LinkedIn.`,
+            suggested_alternative: "email",
+          }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      const { data: lastWa } = await supabase
+        .from("channel_messages")
+        .select("created_at")
+        .eq("partner_id", partner_id)
+        .eq("channel", "whatsapp")
+        .eq("direction", "outbound")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastWa?.created_at) {
+        const daysSince = (Date.now() - new Date(lastWa.created_at).getTime()) / 86400000;
+        if (daysSince < 7) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "CADENCE_GATE",
+            reason: `Ultimo WhatsApp ${Math.round(daysSince)} giorni fa. Minimo 7 giorni tra invii WhatsApp.`,
+          }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+    }
+
     // Queue for extension dispatch
     const { data: queued, error: insertErr } = await supabase
       .from("extension_dispatch_queue")
@@ -89,6 +144,34 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[send-whatsapp] Queued ${queued.id} for ${recipient}`);
+
+    if (partner_id) {
+      await supabase.from("activities").insert({
+        user_id: user.id,
+        partner_id,
+        selected_contact_id: contact_id || null,
+        activity_type: "whatsapp_message",
+        title: `WhatsApp inviato a ${recipient}`,
+        description: message_text,
+        status: "completed",
+        priority: "medium",
+        source_type: "partner",
+        source_id: partner_id,
+        completed_at: new Date().toISOString(),
+      }).then(() => null, () => null);
+
+      const { data: p } = await supabase.from("partners").select("lead_status").eq("id", partner_id).maybeSingle();
+      const reminderDays = p?.lead_status === "negotiation" ? 2 : 5;
+      const dueDate = new Date(Date.now() + reminderDays * 86400000).toISOString().slice(0, 10);
+      await supabase.from("reminders").insert({
+        user_id: user.id,
+        partner_id,
+        title: "Check risposta WhatsApp",
+        due_date: dueDate,
+        priority: p?.lead_status === "negotiation" ? "high" : "medium",
+        status: "pending",
+      }).then(() => null, () => null);
+    }
 
     return new Response(JSON.stringify({
       success: true,

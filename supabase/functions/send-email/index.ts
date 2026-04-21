@@ -19,6 +19,7 @@ interface SendEmailBody {
   html: string;
   from?: string;
   partner_id?: string;
+  contact_id?: string;
   agent_id?: string;
   reply_to?: string;
   operator_id?: string;
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: SendEmailBody = await req.json();
-    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id, idempotency_key } = body;
+    const { to, subject, html, from, partner_id, contact_id, agent_id, reply_to, operator_id, idempotency_key } = body;
 
     if (!to || !subject || !html) {
       return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
@@ -102,6 +103,58 @@ Deno.serve(async (req) => {
             message_id: prior.message_id ?? null,
           }),
           { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // ── HARD GUARD: blacklist commerciale prima di qualsiasi invio ───────────
+    const recipientEmail = to.toLowerCase().trim();
+    const recipientDomain = recipientEmail.includes("@") ? recipientEmail.split("@")[1] : null;
+    const blacklistQuery = supabase
+      .from("blacklist")
+      .select("id, reason")
+      .eq("user_id", userIdEarly)
+      .limit(1);
+    const { data: blacklisted } = recipientDomain
+      ? await blacklistQuery.or(`email.eq.${recipientEmail},domain.eq.${recipientDomain}`).maybeSingle()
+      : await blacklistQuery.eq("email", recipientEmail).maybeSingle();
+
+    if (blacklisted) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "BLACKLISTED",
+          reason: blacklisted.reason || "Destinatario in blacklist",
+          retriable: false,
+        }),
+        { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (partner_id) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status")
+        .eq("id", partner_id)
+        .maybeSingle();
+      if (partner?.lead_status === "blacklisted") {
+        return new Response(
+          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner con lead_status = blacklisted", retriable: false }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    if (contact_id) {
+      const { data: contact } = await supabase
+        .from("imported_contacts")
+        .select("lead_status")
+        .eq("id", contact_id)
+        .maybeSingle();
+      if (contact?.lead_status === "blacklisted") {
+        return new Response(
+          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Contatto con lead_status = blacklisted", retriable: false }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }
     }

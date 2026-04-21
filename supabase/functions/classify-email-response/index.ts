@@ -105,7 +105,7 @@ function buildClassificationPrompt(
   parts.push(`\n## Required Output`);
   parts.push(`Respond with a JSON object (no markdown, no code fences):
 {
-  "category": "interested|not_interested|request_info|meeting_request|complaint|follow_up|auto_reply|spam|uncategorized",
+  "category": "interested|not_interested|request_info|question|meeting_request|complaint|follow_up|auto_reply|unsubscribe|bounce|spam|uncategorized",
   "confidence": 0.0-1.0,
   "ai_summary": "one-sentence summary of the email content and intent. If the email is NOT in Italian, provide an Italian translation summary here.",
   "keywords": ["keyword1", "keyword2"],
@@ -133,7 +133,7 @@ function parseClassificationResponse(raw: string | null): ClassificationResult {
 
   const parsed = JSON.parse(cleaned);
 
-  const VALID_CATEGORIES = ["interested", "not_interested", "request_info", "meeting_request", "complaint", "follow_up", "auto_reply", "spam", "uncategorized"];
+  const VALID_CATEGORIES = ["interested", "not_interested", "request_info", "question", "meeting_request", "complaint", "follow_up", "auto_reply", "unsubscribe", "bounce", "spam", "uncategorized"];
   const VALID_URGENCY = ["critical", "high", "normal", "low"];
   const VALID_SENTIMENT = ["positive", "negative", "neutral", "mixed"];
 
@@ -165,6 +165,26 @@ function computeDominantSentiment(exchanges: ConversationExchange[]): string {
     if (c > max) { max = c; dominant = s; }
   }
   return dominant;
+}
+
+function getNextStatus(currentStatus: string, classification: { category: string; confidence: number }): string | null {
+  const cat = classification.category;
+  if (["interested", "meeting_request", "question", "request_info"].includes(cat)) {
+    switch (currentStatus) {
+      case "new": return "first_touch_sent";
+      case "first_touch_sent": return "engaged";
+      case "holding": return "engaged";
+      case "engaged": return cat === "meeting_request" ? "qualified" : "engaged";
+      case "qualified": return cat === "meeting_request" ? "negotiation" : "qualified";
+      default: return null;
+    }
+  }
+  if (cat === "not_interested" && classification.confidence >= 0.80) {
+    return ["new", "first_touch_sent", "holding", "engaged"].includes(currentStatus) ? "archived" : null;
+  }
+  if (cat === "unsubscribe") return "blacklisted";
+  if (cat === "bounce") return "archived";
+  return null;
 }
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
@@ -330,7 +350,7 @@ serve(async (req) => {
 
     const updatedSummary = classification.ai_summary
       ? `Latest: ${classification.ai_summary}${conversationSummary ? ` | Previous: ${conversationSummary.substring(0, 300)}` : ""}`
-      : conversationSummary;
+      : (conversationSummary || "");
 
     await supabase
       .from("contact_conversation_context")
@@ -341,7 +361,7 @@ serve(async (req) => {
         contact_id: input.contact_id || null,
         last_exchanges: updatedExchanges,
         conversation_summary: updatedSummary?.substring(0, 2000) ?? null,
-        interaction_count: (convCtx?.interaction_count ?? 0) + 1,
+        interaction_count: Number((convCtx as Record<string, unknown> | null)?.interaction_count ?? 0) + 1,
         last_interaction_at: new Date().toISOString(),
         dominant_sentiment: dominantSentiment,
         response_rate: responseRate,
@@ -457,110 +477,31 @@ serve(async (req) => {
       }
     }
 
-    // ═══ AUTO-ESCALATION basata su classificazione (via guard centralizzato) ═══
-    const ESCALATION_CATEGORIES = ["interested", "meeting_request"];
-    const POSITIVE_SENTIMENTS = ["positive", "very_positive"];
-
-    if (
-      ESCALATION_CATEGORIES.includes(classification.category) &&
-      POSITIVE_SENTIMENTS.includes(classification.sentiment)
-    ) {
-      // Mappa: lo stato corrente determina la destinazione
-      const escalationMap: Record<string, string> = {
-        new: "first_touch_sent",
-        first_touch_sent: "engaged",
-        holding: "engaged",
-        engaged: classification.category === "meeting_request" ? "qualified" : "engaged",
-      };
-
-      if (input.partner_id) {
-        const { data: partner } = await supabase
-          .from("partners")
-          .select("lead_status")
-          .eq("id", input.partner_id)
-          .single();
-        if (partner) {
-          const target = escalationMap[partner.lead_status as string];
-          if (target && target !== partner.lead_status) {
-            await applyLeadStatusChange(supabase, {
-              table: "partners",
-              recordId: input.partner_id,
-              newStatus: target,
-              userId: input.user_id,
-              actor: { type: "system", name: "classify-email-response" },
-              decisionOrigin: "ai_auto",
-              trigger: `email_classified_as_${classification.category}_${classification.sentiment}`,
-              metadata: {
-                email_address: input.email_address,
-                confidence: classification.confidence,
-                category: classification.category,
-                sentiment: classification.sentiment,
-              },
-            });
-          }
-        }
-      }
-
-      if (input.contact_id) {
-        const { data: contact } = await supabase
-          .from("imported_contacts")
-          .select("lead_status")
-          .eq("id", input.contact_id)
-          .single();
-        if (contact) {
-          const target = escalationMap[contact.lead_status as string];
-          if (target && target !== contact.lead_status) {
-            await applyLeadStatusChange(supabase, {
-              table: "imported_contacts",
-              recordId: input.contact_id,
-              newStatus: target,
-              userId: input.user_id,
-              actor: { type: "system", name: "classify-email-response" },
-              decisionOrigin: "ai_auto",
-              trigger: `email_classified_as_${classification.category}_${classification.sentiment}`,
-              metadata: {
-                email_address: input.email_address,
-                confidence: classification.confidence,
-              },
-            });
-          }
-        }
-      }
-    }
-
-    // ═══ NOT_INTERESTED: NON archivia mai automaticamente ═══
-    // Costituzione commerciale: archived richiede 3+ tentativi + 90+ giorni + reason + approvazione manuale.
-    // Se l'AI rileva un "non interessato" ad alta confidenza, sposta SOLO a "holding"
-    // e logga la richiesta. L'archiviazione resta sempre manuale (Director).
-    if (classification.category === "not_interested" && classification.confidence >= 0.80) {
-      const targets: Array<{ table: "partners" | "imported_contacts"; id: string }> = [];
-      if (input.partner_id) targets.push({ table: "partners", id: input.partner_id });
-      if (input.contact_id) targets.push({ table: "imported_contacts", id: input.contact_id });
-
-      for (const t of targets) {
-        // Sposta a holding solo se attualmente in stato attivo (non già holding/archiviato/blacklist)
-        const { data: cur } = await supabase
-          .from(t.table)
-          .select("lead_status")
-          .eq("id", t.id)
-          .maybeSingle();
-        const currentStatus = (cur as { lead_status: string } | null)?.lead_status;
-        if (currentStatus && ["first_touch_sent", "engaged", "qualified"].includes(currentStatus)) {
-          await applyLeadStatusChange(supabase, {
-            table: t.table,
-            recordId: t.id,
-            newStatus: "holding",
-            userId: input.user_id,
-            actor: { type: "system", name: "classify-email-response" },
-            decisionOrigin: "ai_auto",
-            trigger: "not_interested_detected — moved to holding (archived requires manual Director approval)",
-            metadata: {
-              email_address: input.email_address,
-              confidence: classification.confidence,
-              note: "Auto-archive bloccato: regola 3+ tentativi + 90gg + reason + approvazione Director",
-            },
-          });
-        }
+    // ═══ AUTO-STATUS basato su tassonomia 9 stati (via guard centralizzato) ═══
+    for (const target of [
+      input.partner_id ? { table: "partners" as const, id: input.partner_id } : null,
+      input.contact_id ? { table: "imported_contacts" as const, id: input.contact_id } : null,
+    ].filter(Boolean) as Array<{ table: "partners" | "imported_contacts"; id: string }>) {
+      const { data: cur } = await supabase.from(target.table).select("lead_status").eq("id", target.id).maybeSingle();
+      const currentStatus = (cur as { lead_status: string } | null)?.lead_status ?? "new";
+      const nextStatus = getNextStatus(currentStatus, classification);
+      if (nextStatus && nextStatus !== currentStatus) {
+        const reason = nextStatus === "blacklisted"
+          ? "unsubscribe"
+          : nextStatus === "archived"
+            ? (classification.category === "bounce" ? "bounce" : "not_interested")
+            : undefined;
+        await applyLeadStatusChange(supabase, {
+          table: target.table,
+          recordId: target.id,
+          newStatus: nextStatus,
+          userId: input.user_id,
+          actor: { type: "system", name: "classify-email-response" },
+          decisionOrigin: "ai_auto",
+          trigger: `email_classified_as_${classification.category}`,
+          reason,
+          metadata: { email_address: input.email_address, confidence: classification.confidence, category: classification.category, sentiment: classification.sentiment },
+        });
       }
     }
 
@@ -576,7 +517,7 @@ serve(async (req) => {
 
       const patternCount = patternCheck?.length ?? 0;
 
-      if (patternCount >= 5) {
+      if (patternCount >= 5 && input.email_address?.includes("@")) {
         const domain = input.email_address.split("@")[1];
         const patternTag = `email_pattern_${domain}_${classification.category}`;
 
@@ -606,7 +547,7 @@ serve(async (req) => {
             recentClassifications?.flatMap((c: { keywords?: string[] }) => c.keywords || []) || []
           )].slice(0, 10);
 
-          const dominantSentiment = (recentClassifications as Record<string, unknown>)?.[0]?.sentiment || "neutral";
+          const dominantSentiment = recentClassifications?.[0]?.sentiment || "neutral";
 
           await supabase.from("kb_entries").insert({
             user_id: input.user_id,
@@ -629,7 +570,7 @@ serve(async (req) => {
       }
 
       // ═══ GAP 5: KB LEARNING — pattern per dominio ═══
-      const domainForKB = input.email_address.split("@")[1];
+      const domainForKB = input.email_address?.includes("@") ? input.email_address.split("@")[1] : null;
       if (domainForKB) {
         const { data: domainStats } = await supabase
           .from("email_classifications")

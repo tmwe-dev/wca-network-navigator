@@ -31,6 +31,7 @@ interface ActionRow {
   parent_action_id: string | null;
   position: number;
   metadata: Record<string, unknown> | null;
+  retry_count?: number | null;
 }
 
 Deno.serve(async (req) => {
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
       .from("mission_actions")
-      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata")
+      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata, retry_count")
       .lte("scheduled_at", new Date().toISOString())
       .not("scheduled_at", "is", null)
       .eq("status", "pending")
@@ -88,6 +89,21 @@ async function processAction(
   action: ActionRow,
   counters: { executed: () => void; pendingReview: () => void; cancelled: () => void },
 ) {
+  const maxAttempts = action.cadence_rule?.max_attempts ?? 5;
+  if ((action as ActionRow & { retry_count?: number | null }).retry_count >= maxAttempts) {
+    await supabase.from("mission_actions").update({
+      status: "expired",
+      completed_at: new Date().toISOString(),
+      last_error: `Max attempts reached (${maxAttempts})`,
+    }).eq("id", action.id);
+    counters.cancelled();
+    return;
+  }
+
+  await supabase.from("mission_actions").update({
+    retry_count: ((action as ActionRow & { retry_count?: number | null }).retry_count || 0) + 1,
+  }).eq("id", action.id);
+
   // Extract target email from metadata
   const meta = action.metadata as Record<string, unknown> | null;
   const targetEmail: string | null = (meta?.email_address as string) || (meta?.recipient_email as string) || null;
