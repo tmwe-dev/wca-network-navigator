@@ -91,10 +91,10 @@ export function SenderProfileTab() {
           const original = settingsQuery.data?.[key] ?? "";
           const dirty = value !== original;
           return (
-            <div key={key} className="rounded border border-border/40 bg-card p-2 space-y-1.5">
+            <div key={key} className="rounded border border-border/60 bg-card p-2 space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px]">{label}</Label>
-                <span className="font-mono text-[9px] text-muted-foreground">{key}</span>
+                <span className="font-mono text-[11px] text-foreground/70">{key}</span>
               </div>
               {textarea ? (
                 <Textarea
@@ -110,7 +110,7 @@ export function SenderProfileTab() {
                 />
               )}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">{value.length} char</span>
+                <span className="text-xs text-foreground/70">{value.length} char</span>
                 {dirty && (
                   <Button size="sm" onClick={() => handleSave(key)} disabled={saving === key} className="h-6 text-[10px]">
                     {saving === key ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
@@ -130,7 +130,7 @@ export function SenderProfileTab() {
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded border border-border/40 bg-card p-2">
+    <div className="rounded border border-border/60 bg-card p-2">
       <div className="flex items-center justify-between text-[10px] mb-1">
         <span className="text-muted-foreground">{label}</span>
         <span className="font-mono">{value}%</span>

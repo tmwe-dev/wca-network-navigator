@@ -50,7 +50,7 @@ export function SourceTabBar({ activeTab, counts, onTabChange }: Props) {
             {counts[tab.value]}
           </span>
           {tab.value === "email" && activeTab === "email" && (
-            <span className="text-[9px] text-muted-foreground ml-0.5">({counts.emailTotal} email)</span>
+            <span className="text-[11px] text-foreground/70 ml-0.5">({counts.emailTotal} email)</span>
           )}
         </button>
       ))}

@@ -45,7 +45,7 @@ export function HistoryTab({ recipient }: Props) {
 
   return (
     <div className="space-y-2 text-xs">
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-xs text-foreground/70">
         Ultime 10 interazioni — è ciò che l'AI vede nel blocco "History" del prompt.
       </div>
 
@@ -64,7 +64,7 @@ export function HistoryTab({ recipient }: Props) {
 
       <div className="space-y-1">
         {query.data?.map((m) => (
-          <div key={m.id} className="rounded border border-border/40 bg-card p-2">
+          <div key={m.id} className="rounded border border-border/60 bg-card p-2">
             <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
               <Badge variant="outline" className="text-[9px]">{m.channel}</Badge>
               <Badge variant={m.direction === "inbound" ? "secondary" : "outline"} className="text-[9px]">
@@ -74,7 +74,7 @@ export function HistoryTab({ recipient }: Props) {
               {m.from_address && <span className="text-muted-foreground truncate">· {m.from_address}</span>}
             </div>
             {m.subject && <div className="font-medium text-[11px] mt-1 truncate">{m.subject}</div>}
-            {m.body_text && <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>}
+            {m.body_text && <div className="text-xs text-foreground/70 line-clamp-2 mt-0.5">{m.body_text.slice(0, 200)}</div>}
           </div>
         ))}
       </div>

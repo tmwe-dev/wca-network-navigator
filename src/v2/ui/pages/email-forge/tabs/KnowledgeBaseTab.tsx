@@ -50,16 +50,16 @@ export function KnowledgeBaseTab({ categories }: Props) {
 
       <div className="space-y-1">
         {entries.map((e) => (
-          <div key={e.id} className="rounded border border-border/40 bg-card p-2">
+          <div key={e.id} className="rounded border border-border/60 bg-card p-2">
             <div className="flex items-start gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium text-xs truncate">{e.title}</span>
                   <Badge variant="outline" className="text-[9px]">{e.category}</Badge>
                   <Badge variant="outline" className="text-[9px]">P{e.priority}</Badge>
-                  <span className="text-[10px] text-muted-foreground">{e.content.length.toLocaleString()} char</span>
+                  <span className="text-xs text-foreground/70">{e.content.length.toLocaleString()} char</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{e.content}</div>
+                <div className="text-xs text-foreground/70 line-clamp-2 mt-1">{e.content}</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <Switch
