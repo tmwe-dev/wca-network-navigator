@@ -253,16 +253,55 @@ Deno.serve(async (req) => {
       sendOptions.replyTo = resolvedReplyTo;
     }
 
-    await client.send(sendOptions);
-    await client.close();
-
     // Generate synthetic Message-ID (denomailer doesn't expose server-assigned ID)
     const messageIdExternal = `<${Date.now()}.${crypto.randomUUID().slice(0, 8)}@wca-crm.app>`;
     const threadId = body.in_reply_to || body.references || messageIdExternal;
 
-    // Log side effects consistently
+    // ── LOVABLE-58: SMTP send wrapped in try/catch with retriable classification ──
+    try {
+      await client.send(sendOptions);
+      await client.close();
+    } catch (smtpErr) {
+      try { await client.close(); } catch { /* ignore */ }
+      const errMsg = extractErrorMessage(smtpErr);
+      const lower = errMsg.toLowerCase();
+      const retriable =
+        lower.includes("timeout") ||
+        lower.includes("etimedout") ||
+        lower.includes("econnreset") ||
+        lower.includes("429") ||
+        lower.includes("rate limit") ||
+        lower.includes("temporarily") ||
+        /\b4\d\d\b/.test(lower); // 4xx generic transient
+
+      // Persist failure if idempotency_key provided so caller can decide
+      if (idempotency_key) {
+        await supabase.from("email_campaign_queue").insert({
+          user_id: userIdEarly,
+          partner_id: partner_id ?? null,
+          recipient_email: to,
+          subject,
+          html_body: html,
+          status: "failed",
+          idempotency_key,
+          error_message: errMsg.slice(0, 1000),
+          failed_at: new Date().toISOString(),
+        });
+      }
+
+      console.error(`[send-email] SMTP failure (retriable=${retriable}):`, errMsg);
+      return new Response(
+        JSON.stringify({ success: false, retriable, error: errMsg }),
+        {
+          status: retriable ? 503 : 502,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Log side effects ONLY after confirmed SMTP success
     if (partner_id) {
-      const userId = claimsData.claims.sub as string;
+      const userId = userIdEarly;
       await logEmailSideEffects({
         supabase,
         partner_id,
@@ -276,8 +315,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Persist idempotency success record
+    if (idempotency_key) {
+      await supabase.from("email_campaign_queue").insert({
+        user_id: userIdEarly,
+        partner_id: partner_id ?? null,
+        recipient_email: to,
+        subject,
+        html_body: html,
+        status: "sent",
+        idempotency_key,
+        message_id: messageIdExternal,
+        sent_at: new Date().toISOString(),
+      });
+    }
+
     // Supervisor audit (fire-and-forget)
-    const userId = claimsData.claims.sub as string;
+    const userId = userIdEarly;
     logSupervisorAudit(supabase, {
       user_id: userId, actor_type: "user",
       action_category: "email_sent",
@@ -289,7 +343,7 @@ Deno.serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, message_id: messageIdExternal, retriable: false }),
       { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (e: unknown) {
