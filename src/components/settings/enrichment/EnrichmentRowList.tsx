@@ -15,6 +15,7 @@ import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
 import type { EnrichedRow, SortField, SortDir } from "@/hooks/useEnrichmentData";
 import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
+import { EnrichmentDetailPopover } from "./EnrichmentDetailPopover";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
