@@ -215,8 +215,8 @@ export function VoiceElevenLabsTab() {
               <div className="flex items-center gap-1.5 text-xs font-medium">
                 <span className={cn(
                   "h-2 w-2 rounded-full",
-                  c.status === "ok" && "bg-green-500",
-                  c.status === "warn" && "bg-amber-500",
+                  c.status === "ok" && "bg-success",
+                  c.status === "warn" && "bg-warning",
                   c.status === "fail" && "bg-destructive",
                 )} />
                 {c.field}
@@ -244,12 +244,12 @@ export function VoiceElevenLabsTab() {
             placeholder="System prompt voice agent..."
           />
           {improvedVoice && (
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-300 dark:border-green-800 rounded-md p-2 relative">
-              <label className="text-[10px] font-medium text-green-700 dark:text-green-400">Versione sincronizzata</label>
+            <div className="bg-success/10 border border-success/40 rounded-md p-2 relative">
+              <label className="text-[10px] font-medium text-success">Versione sincronizzata</label>
               <div className="text-xs whitespace-pre-wrap mt-1 max-h-[200px] overflow-auto pr-16">{improvedVoice}</div>
               <div className="absolute top-1 right-1 flex gap-1">
                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={handleAcceptVoice}>
-                  <Check className="h-3 w-3 text-green-700" /> Accetta
+                  <Check className="h-3 w-3 text-success" /> Accetta
                 </Button>
               </div>
             </div>
