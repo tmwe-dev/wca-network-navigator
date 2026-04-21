@@ -394,6 +394,14 @@ export function useEnrichmentData() {
     setSelected(new Set());
   }, []);
 
+  const refetchAll = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.partners.enrichment() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrichment.contacts() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrichment.bca() }),
+    ]);
+  }, [queryClient]);
+
   return {
     // Filter state
     sourceTab, enrichFilter, search, sortField, sortDir, selected,
@@ -406,7 +414,7 @@ export function useEnrichmentData() {
     openDeepSearchDialog, handleDeepSearchConfirm, handleLinkedInBatch, handleBulkLogoSearch,
     getSelectedRows,
     // Refetch
-    refetchPartners, refetchContacts,
+    refetchPartners, refetchContacts, refetchAll,
     // External hooks
     deepSearch,
   };

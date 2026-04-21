@@ -35,7 +35,7 @@ export default function EnrichmentSettings() {
           email: r.email,
           hasLogo: r.hasLogo,
           hasLinkedin: r.hasLinkedin,
-          hasWebsiteExcerpt: false,
+          hasWebsiteExcerpt: !!r.hasWebsiteExcerpt,
         };
       });
   }, [d]);
@@ -44,8 +44,7 @@ export default function EnrichmentSettings() {
 
   const handleStart = useCallback(async () => {
     await start();
-    d.refetchPartners();
-    d.refetchContacts();
+    await d.refetchAll();
   }, [start, d]);
 
   return (
@@ -63,6 +62,12 @@ export default function EnrichmentSettings() {
         stats={d.stats}
         onSearchChange={d.setSearch}
         onFilterChange={d.setEnrichFilter}
+        baseEnrichment={{
+          progress,
+          selectedCount: d.selectedCount,
+          onStart: handleStart,
+          onStop: stop,
+        }}
       />
 
       {d.someSelected && (
@@ -72,9 +77,6 @@ export default function EnrichmentSettings() {
           onBulkLogoSearch={d.handleBulkLogoSearch}
           onDeepSearch={d.openDeepSearchDialog}
           getSelectedRows={d.getSelectedRows}
-          progress={progress}
-          onStartBaseEnrichment={handleStart}
-          onStopBaseEnrichment={stop}
         />
       )}
 
