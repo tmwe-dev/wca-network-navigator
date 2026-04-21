@@ -264,7 +264,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
     const t0 = performance.now();
     try {
       // Parallel fetch from DB
-      const [agentsRes, kbRes, opRes, memRes] = await Promise.all([
+      const [agentsRes, kbRes, opRes, memRes, settingsRes, personasRes] = await Promise.all([
         supabase
           .from("agents")
           .select("id,name,role,avatar_emoji,is_active,system_prompt,knowledge_base,assigned_tools,created_at")
@@ -289,12 +289,23 @@ export function AIExportPanel({ userId }: { userId: string }) {
           .gte("level", 2)
           .order("importance", { ascending: false })
           .limit(500),
+        supabase
+          .from("app_settings")
+          .select("id,key,value,updated_at")
+          .eq("user_id", userId)
+          .order("key"),
+        supabase
+          .from("agent_personas")
+          .select("id,agent_id,tone,custom_tone_prompt,language,style_rules,vocabulary_do,vocabulary_dont,example_messages,signature_template")
+          .eq("user_id", userId),
       ]);
 
       const agents = (agentsRes.data ?? []) as AgentRow[];
       const kb = (kbRes.data ?? []) as KbRow[];
       const prompts = (opRes.data ?? []) as OperativePromptRow[];
       const memories = (memRes.data ?? []) as MemoryRow[];
+      const settings = (settingsRes.data ?? []) as AppSettingRow[];
+      const personas = (personasRes.data ?? []) as AgentPersonaRow[];
 
       const zip = new JSZip();
 
