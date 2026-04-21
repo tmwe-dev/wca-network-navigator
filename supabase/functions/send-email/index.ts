@@ -106,6 +106,44 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── HARD GUARD: blacklist commerciale prima di qualsiasi invio ───────────
+    const recipientEmail = to.toLowerCase().trim();
+    const recipientDomain = recipientEmail.includes("@") ? recipientEmail.split("@")[1] : null;
+    const blacklistQuery = supabase
+      .from("blacklist")
+      .select("id, reason")
+      .eq("user_id", userIdEarly)
+      .limit(1);
+    const { data: blacklisted } = recipientDomain
+      ? await blacklistQuery.or(`email.eq.${recipientEmail},domain.eq.${recipientDomain}`).maybeSingle()
+      : await blacklistQuery.eq("email", recipientEmail).maybeSingle();
+
+    if (blacklisted) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "BLACKLISTED",
+          reason: blacklisted.reason || "Destinatario in blacklist",
+          retriable: false,
+        }),
+        { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (partner_id) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status")
+        .eq("id", partner_id)
+        .maybeSingle();
+      if (partner?.lead_status === "blacklisted") {
+        return new Response(
+          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner con lead_status = blacklisted", retriable: false }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // ── HARD GUARD: blocca invio a email bounced/invalid ─────────────────
     // Controlla email_status (fatto tecnico, separato da lead_status commerciale).
     const [contactCheck, partnerCheck] = await Promise.all([
