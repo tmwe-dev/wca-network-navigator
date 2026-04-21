@@ -402,14 +402,64 @@ const RUBRIC_GENERIC: PromptRubric = {
   badExample: { text: "Vario.", why: "non porta valore" },
 };
 
-/** Helper per il chiamante: detecta se un blocco è "voce" guardando tab + source + label. */
-export function isVoiceBlock(args: { tabLabel?: string; source: BlockSource; label?: string }): boolean {
+/**
+ * Detector multi-segnale: stabilisce se un blocco è destinato a un agente vocale.
+ * Combina segnali (alta affidabilità → voce certa):
+ *   1. tab con etichetta voice/11labs/eleven
+ *   2. source = agents con elevenlabs_agent_id non null (passato come hint)
+ *   3. source = agent_persona + label che menziona voce
+ *   4. content contiene 2+ sezioni canoniche ElevenLabs (# Personality, # Tone, etc.)
+ *   5. content menziona end_call tool o ElevenLabs/TTS
+ *   6. label contiene "vocale", "voice", "elevenlabs", "11labs", "tts"
+ *
+ * Soglia: se almeno 1 segnale forte (1, 2, 4, 5) è vero → voce.
+ * Segnali deboli (3, 6) richiedono almeno 2 deboli per attivare.
+ */
+export function isVoiceBlock(args: {
+  tabLabel?: string;
+  source: BlockSource;
+  label?: string;
+  content?: string;
+  /** Hint opzionale: l'agente collegato ha un elevenlabs_agent_id. */
+  agentHasElevenLabsId?: boolean;
+}): boolean {
   const tab = (args.tabLabel ?? "").toLowerCase();
-  if (tab.includes("voice") || tab.includes("11lab") || tab.includes("eleven")) return true;
-  if (args.source.kind === "agent_persona" && args.source.field === "custom_tone_prompt") {
-    // Persona può essere voice o testo: se la label menziona voce, è voce.
-    const lbl = (args.label ?? "").toLowerCase();
-    if (lbl.includes("voice") || lbl.includes("voc") || lbl.includes("11lab")) return true;
+  const lbl = (args.label ?? "").toLowerCase();
+  const content = args.content ?? "";
+
+  // Segnale forte 1: tab esplicitamente voce.
+  if (tab.includes("voice") || tab.includes("11lab") || tab.includes("eleven") || tab.includes("vocal")) {
+    return true;
   }
-  return false;
+  // Segnale forte 2: hint esterno su agente con ElevenLabs configurato.
+  if (args.agentHasElevenLabsId === true) return true;
+  // Segnale forte 4: contenuto già con almeno 2 sezioni canoniche ElevenLabs.
+  const canonicalCount = [
+    /^#\s*Personality\b/im,
+    /^#\s*Environment\b/im,
+    /^#\s*Tone\b/im,
+    /^#\s*Goal\b/im,
+    /^#\s*Tools\b/im,
+    /^#\s*Guardrails\b/im,
+    /^#\s*Pronunciation\b/im,
+    /^#\s*When\s+to\s+end\s+the\s+call\b/im,
+  ].filter((rx) => rx.test(content)).length;
+  if (canonicalCount >= 2) return true;
+  // Segnale forte 5: contenuto cita end_call tool o ElevenLabs.
+  if (/\bend_call\b/i.test(content) || /elevenlabs/i.test(content) || /\btts\b/i.test(content)) {
+    return true;
+  }
+
+  // Segnali deboli combinati.
+  let weak = 0;
+  if (lbl.includes("voice") || lbl.includes("voc") || lbl.includes("11lab") || lbl.includes("eleven") || lbl.includes("tts") || lbl.includes("vocale")) {
+    weak++;
+  }
+  if (args.source.kind === "agent_persona" && args.source.field === "custom_tone_prompt") {
+    weak++;
+  }
+  if (args.source.kind === "agent" && lbl.includes("voice")) {
+    weak++;
+  }
+  return weak >= 2;
 }
