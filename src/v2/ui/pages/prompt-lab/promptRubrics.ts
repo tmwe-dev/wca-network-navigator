@@ -93,15 +93,82 @@ export function validateAgainstRubric(text: string, r: PromptRubric): string[] {
   if (len > r.targetLengthChars.max) {
     issues.push(`troppo lungo: ${len} char (massimo ${r.targetLengthChars.max})`);
   }
-  // Validazione voce: niente markdown bullet/heading aggressivi che rovinano TTS.
+  // Validazione voce: blocco rigido di formato per ElevenLabs.
   if (r.kindLabel.toLowerCase().includes("voice")) {
-    if (/^\s*[-*]\s/m.test(text) || /^\s*#{1,6}\s/m.test(text)) {
-      issues.push("contiene markdown bullet/heading: degrada la prosodia TTS");
-    }
+    issues.push(...validateVoiceFormat(text));
   }
   // Email: deve avere almeno una CTA implicita (verbo all'imperativo o domanda).
   if (r.kindLabel.toLowerCase().includes("email") && !/\?|risponda|conferm|fissi|prenoti|scelga|mi dica|valuti/i.test(text)) {
     issues.push("nessuna CTA riconoscibile (domanda o verbo d'azione)");
+  }
+  return issues;
+}
+
+/**
+ * Validazione stringente per blocchi voce ElevenLabs.
+ * Forza: zero markdown aggressivo, 8 sezioni canoniche presenti, sigle foneticizzate, end_call dichiarata.
+ */
+export function validateVoiceFormat(text: string): string[] {
+  const issues: string[] = [];
+  // 1) Niente bullet markdown `- ` o `* ` (degradano prosodia TTS).
+  if (/^\s*[-*]\s+\S/m.test(text)) {
+    issues.push("contiene bullet markdown ('- ' o '* '): degrada la prosodia TTS, usa frasi piene");
+  }
+  // 2) Niente heading multi-livello (## o ### o ####). Solo `# ` singolo per le sezioni canoniche.
+  if (/^\s*#{2,6}\s/m.test(text)) {
+    issues.push("contiene heading multi-livello (## o ###): usa solo '# ' singolo per le sezioni canoniche");
+  }
+  // 3) Niente tabelle markdown.
+  if (/^\s*\|.*\|.*\|/m.test(text)) {
+    issues.push("contiene tabella markdown: incompatibile con TTS, riformula in prosa");
+  }
+  // 4) Niente blocchi di codice.
+  if (/```/.test(text)) {
+    issues.push("contiene blocchi di codice ```: rimuovili, ElevenLabs non li interpreta");
+  }
+  // 5) Sezioni canoniche obbligatorie (almeno 6 delle 8 devono comparire come heading `# Nome`).
+  const requiredSections = [
+    /^#\s*Personality\b/im,
+    /^#\s*Environment\b/im,
+    /^#\s*Tone\b/im,
+    /^#\s*Goal\b/im,
+    /^#\s*Tools\b/im,
+    /^#\s*Guardrails\b/im,
+    /^#\s*Pronunciation\s*&?\s*Language\b/im,
+    /^#\s*When\s+to\s+end\s+the\s+call\b/im,
+  ];
+  const sectionLabels = [
+    "# Personality",
+    "# Environment",
+    "# Tone",
+    "# Goal",
+    "# Tools",
+    "# Guardrails",
+    "# Pronunciation & Language",
+    "# When to end the call",
+  ];
+  const missing: string[] = [];
+  requiredSections.forEach((rx, i) => {
+    if (!rx.test(text)) missing.push(sectionLabels[i]);
+  });
+  if (missing.length > 2) {
+    issues.push(`mancano sezioni canoniche obbligatorie: ${missing.join(", ")}`);
+  }
+  // 6) end_call tool deve essere menzionato esplicitamente nella sezione di chiusura.
+  if (!/end_call/i.test(text)) {
+    issues.push("non dichiara la chiamata al tool 'end_call' nella sezione '# When to end the call'");
+  }
+  // 7) Sigle interne devono essere foneticizzate (TMWE / FIndAIr).
+  if (/\bTMWE\b/.test(text) && !/Ti\s*Em\s*dabliu\s*i/i.test(text) && !/T\s*M\s*W\s*E/.test(text)) {
+    issues.push("sigla 'TMWE' presente senza pronuncia fonetica ('Ti Em dabliu i' per IT, 'T M W E' per EN)");
+  }
+  if (/FIndAIr/i.test(text) && !/Faind\s*eir/i.test(text) && !/Find\s*Air/i.test(text)) {
+    issues.push("sigla 'FIndAIr' presente senza pronuncia fonetica ('Faind eir' per IT, 'Find Air' per EN)");
+  }
+  // 8) Frasi troppo lunghe rompono il respiro TTS (>40 parole consecutive senza punteggiatura forte).
+  const longRun = text.split(/[.!?\n]/).find((s) => s.trim().split(/\s+/).length > 40);
+  if (longRun) {
+    issues.push("almeno una frase supera ~40 parole senza punto: spezza per migliorare il ritmo TTS");
   }
   return issues;
 }
