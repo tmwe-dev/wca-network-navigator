@@ -14,6 +14,9 @@ import type { Quality } from "../_shared/kbSlice.ts";
 import { loadEntityFromActivity, loadStandalonePartner, assembleContextBlocks } from "./contextAssembler.ts";
 import { buildEmailPrompts, getModel, type PartnerData, type ContactData } from "./promptBuilder.ts";
 import { parseEmailResponse } from "./responseParser.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
+import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -132,25 +135,72 @@ serve(async (req) => {
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
 
+    // ── GIORNALISTA AI — Caporedattore Finale (LOVABLE-80 v2) ──
+    let finalSubject = subject;
+    let finalBody = body;
+    let journalistResult: JournalistReviewOutput | null = null;
+    try {
+      const optimus = await loadOptimusSettings(supabase, userId);
+      if (optimus.enabled && finalBody) {
+        journalistResult = await journalistReview(supabase, userId, {
+          final_draft: finalBody,
+          resolved_brief: {
+            email_type: oracle_type ?? undefined,
+            objective: goal ?? undefined,
+            playbook_active: ctx.playbookActive ? "yes" : undefined,
+          },
+          channel: "email",
+          commercial_state: {
+            lead_status: (ctx.commercialState as string) || (partner as { lead_status?: string } | null)?.lead_status || "new",
+            touch_count: ctx.touchCount ?? 0,
+            last_outcome: ctx.lastOutcome ?? undefined,
+            days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
+            has_active_conversation: !!ctx.historyContext,
+          },
+          partner: {
+            id: partner?.id ?? null,
+            company_name: partner?.company_name,
+            country: partner?.country_name,
+          },
+          contact: contact ? { name: contact.name, role: contact.title } : undefined,
+          history_summary: ctx.historyContext || undefined,
+          kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+        }, { mode: optimus.mode, strictness: optimus.strictness });
+        if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
+          finalBody = journalistResult.edited_text;
+        }
+      }
+    } catch (jerr) {
+      console.error("[generate-email] journalistReview failed:", jerr);
+    }
+
     // Supervisor audit (fire-and-forget)
     logSupervisorAudit(supabase, {
       user_id: userId, actor_type: "ai_agent", actor_name: model,
       action_category: "email_drafted",
-      action_detail: `Bozza email generata per ${contactEmail}: ${subject}`,
-      target_type: "email", target_label: subject,
+      action_detail: `Bozza email generata per ${contactEmail}: ${finalSubject}`,
+      target_type: "email", target_label: finalSubject,
       partner_id: partner?.id || undefined, email_address: contactEmail || undefined,
       decision_origin: "ai_auto",
-      metadata: { model, quality, tokens: result.usage?.promptTokens },
+      metadata: { model, quality, tokens: result.usage?.promptTokens, journalist_verdict: journalistResult?.verdict ?? null },
     });
 
     metrics.userId = userId;
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
-      subject, body, full_content: result.content || "",
+      subject: finalSubject, body: finalBody, full_content: result.content || "",
       partner_name: partner!.company_name,
       contact_name: contact?.contact_alias || contact?.name || null,
       contact_email: contactEmail, has_contact: !!contact,
       used_partner_email: !contact?.email && !!partner!.email, quality, model,
+      journalist_review: journalistResult ? {
+        journalist: journalistResult.journalist,
+        verdict: journalistResult.verdict,
+        warnings: journalistResult.warnings,
+        edits: journalistResult.edits,
+        quality_score: journalistResult.quality_score,
+        reasoning: journalistResult.reasoning_summary,
+      } : null,
       _context_summary: {
         kb_sections: ctx.salesKBSections || [],
         history_present: !!ctx.historyContext,
