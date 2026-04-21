@@ -163,6 +163,62 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
     [callAgent],
   );
 
+  /**
+   * improveBlockGlobal — variante usata dal "Migliora tutto":
+   * riceve un systemMap già preparato (descrizione completa di TUTTI i prompt/KB del sistema)
+   * e una doctrine completa, niente vincoli di forma fissi: solo guard-rail.
+   * Massima libertà al modello, ma con contesto totale per scelte coerenti.
+   */
+  const improveBlockGlobal = useCallback(
+    async (params: {
+      block: Block;
+      tabLabel: string;
+      tabActivation?: string;
+      systemMap: string;
+      doctrineFull: string;
+      systemMission: string;
+      goal?: string;
+    }): Promise<string> => {
+      const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal } = params;
+      const sourceDesc = describeSource(block.source);
+
+      const userPrompt = `=== SYSTEM MISSION ===
+${systemMission}
+
+=== KB DOCTRINE COMPLETA (regole già scritte — NON contraddirle, completale) ===
+${doctrineFull}
+
+=== MAPPA COMPLETA DEL SISTEMA AI (tutti i prompt configurati e dove vengono eseguiti) ===
+${systemMap}
+
+=== BLOCCO DA MIGLIORARE ===
+Tab: ${tabLabel}
+Dove si attiva (runtime): ${tabActivation ?? "n/d"}
+Sorgente DB: ${sourceDesc}
+Etichetta: ${block.label}
+ID: ${block.id}
+${goal?.trim() ? `\nObiettivo dichiarato: ${goal.trim()}\n` : ""}
+--- TESTO ATTUALE ---
+${block.content}
+--- FINE TESTO ---
+
+ISTRUZIONI:
+- Riscrivi il blocco perché serva meglio l'obiettivo del sistema, in coerenza con TUTTO il resto.
+- Hai piena libertà sulla forma, NESSUN vincolo di lunghezza o struttura imposto: scegli tu cosa serve a quel blocco.
+- Guard-rail obbligatori: rispetta la dottrina commerciale a 9 stati, mai inventare dati o azioni, mai contraddire altri blocchi visibili nella mappa, mantieni l'italiano se il testo originale è in italiano.
+- Se il blocco è già ottimo, restituiscilo invariato.
+- Restituisci SOLO il testo del blocco migliorato, senza preamboli né commenti.`;
+
+      return callAgent(userPrompt, {
+        mode: "global_improve",
+        block_id: block.id,
+        block_source: block.source,
+        tab: tabLabel,
+      });
+    },
+    [callAgent],
+  );
+
   const sendChatMessage = useCallback(
     async (
       content: string,
@@ -219,6 +275,7 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
     loading,
     sendChatMessage,
     improveBlock,
+    improveBlockGlobal,
     clearMessages: () => setMessages([]),
   };
 }
