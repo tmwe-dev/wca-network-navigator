@@ -1,22 +1,18 @@
 /**
- * EnrichmentRowList — Header + virtualized scrollable row list
+ * EnrichmentRowList — Tabella semplificata (LOVABLE-76C).
+ * 6 colonne: ☐ · Azienda · Paese · Email · Stato · ⋮
+ * Click sulla riga → espande pannello dettaglio inline (Dati / Deep Search / Azioni).
  */
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Mail, SortAsc, SortDesc, MoreVertical, Linkedin, CheckCircle2, ImageOff, Brain, Image, Loader2, Globe,
+  Mail, SortAsc, SortDesc, ChevronDown, ChevronRight, Linkedin, Loader2, Globe, Brain, Image as ImageIcon, ExternalLink, Search,
 } from "lucide-react";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
-import type { EnrichedRow, SortField, SortDir } from "@/hooks/useEnrichmentData";
+import { type EnrichedRow, type SortField, type SortDir, getEnrichStatus } from "@/hooks/useEnrichmentData";
 import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
-import { EnrichmentDetailPopover } from "./EnrichmentDetailPopover";
-import { EnrichmentExtraInfo } from "./EnrichmentExtraInfo";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
@@ -47,6 +43,48 @@ const ORIGIN_BADGE_CLASS: Record<string, string> = {
 const sourceLabel = (s: string) => ({ wca: "WCA", contacts: "Contatti", email: "Email", cockpit: "Cockpit", bca: "BCA" }[s] || s);
 const getFlag = (code?: string) => code ? COUNTRY_FLAGS[code.toUpperCase()] || "" : "";
 
+// ── Status cell: 3 stati visivi chiari (Da arricchire / Parziale / Completo) ──
+function EnrichmentStatusCell({ row }: { row: EnrichedRow }) {
+  const status = getEnrichStatus(row);
+  if (status === "missing") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-medium">
+        Da arricchire
+      </span>
+    );
+  }
+  if (status === "partial") {
+    const score = [row.hasLinkedin, !!row.hasWebsiteExcerpt, row.hasLogo].filter(Boolean).length;
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium">
+        Parziale ({score}/3)
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+      Completo
+    </span>
+  );
+}
+
+function StatusLine({ label, available, value }: { label: string; available: boolean; value?: string | null }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className={cn("shrink-0 text-sm leading-none", available ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/30")}>
+        {available ? "✓" : "○"}
+      </span>
+      <span className="text-foreground/70 shrink-0">{label}</span>
+      {value && <span className="text-foreground/60 truncate">— {value}</span>}
+    </div>
+  );
+}
+
+function formatDate(s?: string | null): string {
+  if (!s) return "";
+  try { return new Date(s).toLocaleDateString("it-IT"); } catch { return ""; }
+}
+
 interface Props {
   rows: EnrichedRow[];
   selected: Set<string>;
@@ -66,34 +104,42 @@ export function EnrichmentRowList({
 }: Props) {
   const SortIcon = sortDir === "asc" ? SortAsc : SortDesc;
   const parentRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 44,
+    estimateSize: (i) => expanded.has(rows[i]?.id) ? 220 : 52,
     overscan: 15,
   });
+
+  const COL_TEMPLATE = "32px_24px_minmax(0,1fr)_120px_120px_140px_28px";
 
   return (
     <>
       {/* Header */}
-      <div className="grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-t-lg border border-border text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div
+        className="grid items-center gap-3 px-3 py-2 bg-muted/40 rounded-t-lg border border-border/60 text-xs font-medium text-foreground/70 uppercase tracking-wider"
+        style={{ gridTemplateColumns: COL_TEMPLATE.replace(/_/g, " ") }}
+      >
         <div className="flex justify-center">
           <Checkbox checked={allSelected} onCheckedChange={onToggleAll} className="h-3.5 w-3.5" />
         </div>
         <div />
-        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onToggleSort("name")}>
-          Nome {sortField === "name" && <SortIcon className="w-3 h-3" />}
-        </button>
-        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onToggleSort("domain")}>
-          Dominio {sortField === "domain" && <SortIcon className="w-3 h-3" />}
+        <button className="flex items-center gap-1 hover:text-foreground transition-colors text-left" onClick={() => onToggleSort("name")}>
+          Azienda {sortField === "name" && <SortIcon className="w-3 h-3" />}
         </button>
         <div>Paese</div>
         <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onToggleSort("emailCount")}>
-          <Mail className="w-3 h-3" /> {sortField === "emailCount" && <SortIcon className="w-3 h-3" />}
-        </button>
-        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onToggleSort("source")}>
-          Fonte {sortField === "source" && <SortIcon className="w-3 h-3" />}
+          <Mail className="w-3 h-3" /> Email {sortField === "emailCount" && <SortIcon className="w-3 h-3" />}
         </button>
         <div>Stato</div>
         <div />
@@ -102,7 +148,7 @@ export function EnrichmentRowList({
       {/* Virtualized rows */}
       <div
         ref={parentRef}
-        className="h-[calc(100vh-370px)] min-h-[250px] border border-t-0 border-border rounded-b-lg overflow-auto"
+        className="h-[calc(100vh-420px)] min-h-[300px] border border-t-0 border-border/60 rounded-b-lg overflow-auto"
       >
         {rows.length === 0 ? (
           <div className="text-center py-10 text-sm text-foreground/80">Nessun risultato trovato</div>
@@ -111,116 +157,161 @@ export function EnrichmentRowList({
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const row = rows[virtualItem.index];
               const isSelected = selected.has(row.id);
+              const isExpanded = expanded.has(row.id);
               const flag = getFlag(row.country);
               const realId = row.realId || row.id;
               const liveState = rowStates?.[realId];
               const isLive = liveState?.status === "running";
-              const isLiveDone = liveState?.status === "done";
+              const ed = row.websiteExcerpt;
+              const initial = row.name?.[0]?.toUpperCase() || "?";
+
               return (
                 <div
                   key={row.id}
                   className={cn(
-                    "absolute left-0 w-full grid grid-cols-[32px_28px_1fr_1fr_70px_50px_70px_60px_28px] items-center gap-2 px-3 py-2 transition-colors border-l-[3px] border-b border-border/50",
+                    "absolute left-0 w-full border-l-[3px] border-b border-border/60 transition-colors",
                     ORIGIN_ACCENT[row.source] || "border-l-transparent",
                     isSelected ? "bg-primary/5" : "hover:bg-accent/30",
-                    isLive && "bg-primary/10 ring-1 ring-primary/40"
+                    isLive && "bg-primary/10 ring-1 ring-primary/40",
                   )}
                   style={{ top: virtualItem.start, height: virtualItem.size }}
                 >
-                  <div className="flex justify-center">
-                    <Checkbox checked={isSelected} onCheckedChange={() => onToggleOne(row.id)} className="h-3.5 w-3.5" />
-                  </div>
-                  <CompanyLogo domain={row.domain} name={row.name} size={24} />
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-foreground truncate uppercase">{row.name}</div>
-                    {row.email && <div className="text-xs text-foreground/70 truncate">{row.email}</div>}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground truncate">
-                    {row.domain || <span className="italic text-muted-foreground/50">—</span>}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {flag && <span className="text-lg leading-none">{flag}</span>}
-                    {row.country && <span className="text-xs text-foreground/70 uppercase">{row.country}</span>}
-                  </div>
-                  <div className="text-center">
-                    {row.emailCount ? (
-                      <span className="text-[10px] font-semibold text-foreground">{row.emailCount}</span>
-                    ) : (
-                      <span className="text-xs text-foreground/70/30">—</span>
-                    )}
-                  </div>
-                  <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", ORIGIN_BADGE_CLASS[row.source])}>
-                    {sourceLabel(row.source)}
-                  </Badge>
-                  <div className="flex items-center gap-1" title={
-                    isLive ? "Arricchimento in corso..." :
-                    isLiveDone && liveState.status === "done" ? `Slug: ${liveState.slug ? "✓" : "—"} | Logo: ${liveState.logo ? "✓" : "—"} | Sito: ${liveState.site ? "✓" : "—"}` :
-                    undefined
-                  }>
-                    {isLive ? (
-                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                    ) : (
-                      <>
-                        {(row.hasLinkedin || (isLiveDone && liveState.status === "done" && liveState.slug)) ? (
-                          <EnrichmentDetailPopover row={row} kind="linkedin">
-                            <Linkedin className={cn(
-                              "w-3.5 h-3.5 text-primary",
-                              isLiveDone && liveState.status === "done" && liveState.slug && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
-                            )} />
-                          </EnrichmentDetailPopover>
-                        ) : (
-                          <Linkedin className="w-3.5 h-3.5 text-muted-foreground/20" />
-                        )}
-                        {(row.hasLogo || (isLiveDone && liveState.status === "done" && liveState.logo)) ? (
-                          <EnrichmentDetailPopover row={row} kind="logo">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                          </EnrichmentDetailPopover>
-                        ) : (
-                          <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
-                        )}
-                        {(row.hasWebsiteExcerpt || (isLiveDone && liveState.status === "done" && liveState.site)) && (
-                          <EnrichmentDetailPopover row={row} kind="site">
-                            <Globe className={cn(
-                              "w-3.5 h-3.5 text-primary",
-                              isLiveDone && liveState.status === "done" && liveState.site && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
-                            )} />
-                          </EnrichmentDetailPopover>
-                        )}
-                        {isLiveDone && (
-                          <EnrichmentDetailPopover row={row} kind="fresh">
-                            <span className="text-[10px]">✨</span>
-                          </EnrichmentDetailPopover>
-                        )}
-                        {row.realId && <EnrichmentExtraInfo partnerId={row.realId} />}
-                      </>
-                    )}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-0.5 rounded hover:bg-accent transition-colors">
-                        <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[160px]">
-                      <DropdownMenuItem className="text-xs gap-2" onClick={() => onDeepSearch([row])}>
-                        <Brain className="w-3.5 h-3.5" /> Deep Search
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs gap-2" onClick={() => {
-                        const query = encodeURIComponent(`${row.name} company logo`);
-                        window.open(`https://www.google.com/search?tbm=isch&q=${query}`, "_blank");
-                      }}>
-                        <Image className="w-3.5 h-3.5" /> Cerca Logo Google
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs gap-2">
-                        <Linkedin className="w-3.5 h-3.5" /> Cerca LinkedIn
-                      </DropdownMenuItem>
-                      {row.linkedinUrl && (
-                        <DropdownMenuItem className="text-xs gap-2" onClick={() => window.open(row.linkedinUrl, "_blank")}>
-                          <Linkedin className="w-3.5 h-3.5" /> Apri LinkedIn
-                        </DropdownMenuItem>
+                  {/* RIGA PRINCIPALE */}
+                  <div
+                    className="grid items-center gap-3 px-3 py-2 cursor-pointer min-h-[48px]"
+                    style={{ gridTemplateColumns: COL_TEMPLATE.replace(/_/g, " ") }}
+                    onClick={() => toggleExpand(row.id)}
+                  >
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={isSelected} onCheckedChange={() => onToggleOne(row.id)} className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="text-foreground/60 shrink-0">
+                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </div>
+                    {/* Azienda con logo + nome + dominio + linkedin badge */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {row.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={row.logoUrl} alt={row.name} className="w-8 h-8 rounded object-contain bg-card border border-border/60 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-foreground/60 text-sm font-bold shrink-0">
+                          {initial}
+                        </div>
                       )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{row.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-foreground/60">
+                          {row.domain && <span className="truncate">{row.domain}</span>}
+                          {row.hasLinkedin && (
+                            <span className="text-cyan-600 dark:text-cyan-400 shrink-0 flex items-center gap-0.5">
+                              <Linkedin className="w-3 h-3" /> ✓
+                            </span>
+                          )}
+                          <span className="shrink-0 text-foreground/50">· {sourceLabel(row.source)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Paese */}
+                    <div className="flex items-center gap-1.5 text-foreground/70">
+                      {flag && <span className="text-lg leading-none">{flag}</span>}
+                      {row.country && <span className="text-xs uppercase">{row.country}</span>}
+                    </div>
+                    {/* Email */}
+                    <div className="text-xs text-foreground/70 truncate">
+                      {row.emailCount ? (
+                        <span className="font-semibold text-foreground">{row.emailCount} msg</span>
+                      ) : row.email ? (
+                        <span className="truncate" title={row.email}>{row.email}</span>
+                      ) : (
+                        <span className="text-foreground/40">—</span>
+                      )}
+                    </div>
+                    {/* Stato */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {isLive ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                          <Loader2 className="w-3 h-3 animate-spin" /> In corso…
+                        </span>
+                      ) : (
+                        <EnrichmentStatusCell row={row} />
+                      )}
+                    </div>
+                    {/* Slot finale: indicatore espansione */}
+                    <div />
+                  </div>
+
+                  {/* PANNELLO ESPANSO */}
+                  {isExpanded && (
+                    <div className="px-4 py-3 bg-muted/30 border-t border-border/60">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        {/* COL 1 — Dati base */}
+                        <div>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Dati disponibili</p>
+                          <div className="space-y-1.5">
+                            <StatusLine label="LinkedIn" available={row.hasLinkedin} value={row.linkedinUrl} />
+                            <StatusLine label="Sito web" available={!!row.hasWebsiteExcerpt} value={ed?.description?.slice(0, 60)} />
+                            <StatusLine label="Logo" available={row.hasLogo} />
+                            <StatusLine label="Email estratte" available={!!ed?.emails?.length} value={ed?.emails?.slice(0, 2).join(", ")} />
+                            <StatusLine label="Telefoni" available={!!ed?.phones?.length} value={ed?.phones?.slice(0, 2).join(", ")} />
+                          </div>
+                        </div>
+
+                        {/* COL 2 — Deep Search status */}
+                        <div>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Deep Search</p>
+                          {ed?.scraped_at ? (
+                            <div className="space-y-1 text-foreground/70">
+                              <p>Scraping: <span className="text-foreground">{formatDate(ed.scraped_at)}</span></p>
+                            </div>
+                          ) : (
+                            <p className="text-foreground/50 italic">Mai eseguito</p>
+                          )}
+                        </div>
+
+                        {/* COL 3 — Azioni */}
+                        <div>
+                          <p className="font-semibold text-foreground/80 mb-2 uppercase tracking-wide text-xs">Azioni</p>
+                          <div className="flex flex-col gap-1.5 items-stretch">
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start" onClick={() => onDeepSearch([row])}>
+                              <Brain className="w-3.5 h-3.5" /> Deep Search
+                            </Button>
+                            {!row.hasLogo && (
+                              <Button
+                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() => window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${row.name} company logo`)}`, "_blank")}
+                              >
+                                <ImageIcon className="w-3.5 h-3.5" /> Cerca Logo Google
+                              </Button>
+                            )}
+                            {!row.hasLinkedin && (
+                              <Button
+                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(`${row.name} site:linkedin.com/company`)}`, "_blank")}
+                              >
+                                <Search className="w-3.5 h-3.5" /> Cerca LinkedIn
+                              </Button>
+                            )}
+                            {row.linkedinUrl && (
+                              <Button
+                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() => window.open(row.linkedinUrl, "_blank")}
+                              >
+                                <Linkedin className="w-3.5 h-3.5" /> Apri LinkedIn <ExternalLink className="w-3 h-3 ml-auto" />
+                              </Button>
+                            )}
+                            {row.domain && (
+                              <Button
+                                size="sm" variant="outline" className="h-7 text-xs gap-1.5 justify-start"
+                                onClick={() => window.open(`https://${row.domain}`, "_blank")}
+                              >
+                                <Globe className="w-3.5 h-3.5" /> Apri sito <ExternalLink className="w-3 h-3 ml-auto" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

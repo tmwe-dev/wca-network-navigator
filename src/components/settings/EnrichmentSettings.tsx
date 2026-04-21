@@ -9,6 +9,7 @@ import { SourceTabBar } from "./enrichment/SourceTabBar";
 import { EnrichmentToolbar } from "./enrichment/EnrichmentToolbar";
 import { BulkActionBar } from "./enrichment/BulkActionBar";
 import { EnrichmentRowList } from "./enrichment/EnrichmentRowList";
+import { EnrichmentStatusHeader } from "./enrichment/EnrichmentStatusHeader";
 import { DeepSearchOptionsDialog } from "./enrichment/DeepSearchOptionsDialog";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 
@@ -50,6 +51,19 @@ export default function EnrichmentSettings() {
   return (
     <PageErrorBoundary>
     <div className="flex-1 min-w-0 space-y-3">
+      <EnrichmentStatusHeader
+        totalCount={d.stats.total}
+        completeCount={d.stats.completeCount}
+        partialCount={d.stats.partialCount}
+        missingCount={d.stats.missingCount}
+        isRunning={progress.status === "running"}
+        progressDone={progress.done}
+        progressTotal={progress.total}
+        selectedCount={d.selectedCount}
+        onStart={handleStart}
+        onStop={stop}
+      />
+
       <SourceTabBar
         activeTab={d.sourceTab}
         counts={d.sourceCounts}
@@ -93,7 +107,7 @@ export default function EnrichmentSettings() {
         onDeepSearch={d.openDeepSearchDialog}
       />
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-foreground/60">
         Loghi via Clearbit/Google Favicon · LinkedIn via Partner Connect · Deep Search configurabile per record
       </p>
 

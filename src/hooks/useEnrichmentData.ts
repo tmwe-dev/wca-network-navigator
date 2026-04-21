@@ -33,9 +33,22 @@ export interface EnrichedRow {
 }
 
 export type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
-export type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain";
+export type EnrichFilter = "all" | "with-logo" | "no-logo" | "with-linkedin" | "no-linkedin" | "with-domain" | "no-domain"
+  | "status-missing" | "status-partial" | "status-complete";
 export type SortField = "name" | "domain" | "source" | "emailCount";
 export type SortDir = "asc" | "desc";
+
+/** Calcola lo score di arricchimento per una riga: 0..3 (LinkedIn + Sito + Logo). */
+export function computeEnrichmentScore(r: EnrichedRow): number {
+  return [r.hasLinkedin, !!r.hasWebsiteExcerpt, r.hasLogo].filter(Boolean).length;
+}
+export type EnrichStatus = "missing" | "partial" | "complete";
+export function getEnrichStatus(r: EnrichedRow): EnrichStatus {
+  const s = computeEnrichmentScore(r);
+  if (s === 0) return "missing";
+  if (s < 3) return "partial";
+  return "complete";
+}
 
 // ── DB row interfaces ──
 
@@ -324,6 +337,9 @@ export function useEnrichmentData() {
       case "no-linkedin": rows = rows.filter(r => !r.hasLinkedin); break;
       case "with-domain": rows = rows.filter(r => !!r.domain); break;
       case "no-domain": rows = rows.filter(r => !r.domain); break;
+      case "status-missing": rows = rows.filter(r => getEnrichStatus(r) === "missing"); break;
+      case "status-partial": rows = rows.filter(r => getEnrichStatus(r) === "partial"); break;
+      case "status-complete": rows = rows.filter(r => getEnrichStatus(r) === "complete"); break;
     }
     rows.sort((a, b) => {
       let cmp = 0;
@@ -341,6 +357,9 @@ export function useEnrichmentData() {
     withLogo: allRows.filter(r => r.hasLogo).length,
     withDomain: allRows.filter(r => r.domain).length,
     withLinkedin: allRows.filter(r => r.hasLinkedin).length,
+    completeCount: allRows.filter(r => getEnrichStatus(r) === "complete").length,
+    partialCount: allRows.filter(r => getEnrichStatus(r) === "partial").length,
+    missingCount: allRows.filter(r => getEnrichStatus(r) === "missing").length,
   }), [allRows]);
 
   const allSelected = allRows.length > 0 && allRows.every(r => selected.has(r.id));
