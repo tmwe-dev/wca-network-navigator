@@ -72,8 +72,8 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
         <section className="space-y-1.5">
           <Label className="text-xs uppercase tracking-wide text-foreground/80">Destinatario</Label>
           <ForgeRecipientPicker value={lab.recipient} onChange={handleRecipient} />
-          {lab.recipient?.partner_id && (
-            <EnrichmentStatusInline partnerId={lab.recipient.partner_id} />
+          {lab.recipient?.partnerId && (
+            <EnrichmentStatusInline partnerId={lab.recipient.partnerId} />
           )}
         </section>
 

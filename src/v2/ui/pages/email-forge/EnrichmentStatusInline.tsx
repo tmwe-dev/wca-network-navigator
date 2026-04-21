@@ -19,7 +19,7 @@ function StatusRow({
   return (
     <div className="flex items-center gap-1.5 text-xs">
       {ok ? (
-        <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+        <Check className="w-3 h-3 text-primary shrink-0" />
       ) : (
         <Circle className="w-3 h-3 text-muted-foreground shrink-0" />
       )}
@@ -71,8 +71,8 @@ export function EnrichmentStatusInline({ partnerId }: Props): React.ReactElement
       />
       {noData && (
         <div className="flex items-start gap-1.5 mt-1.5 pt-1.5 border-t border-border/40">
-          <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-amber-600/90 leading-snug">
+          <AlertTriangle className="w-3 h-3 text-destructive shrink-0 mt-0.5" />
+          <p className="text-[11px] text-destructive leading-snug">
             Nessun dato arricchimento. L'email sarà generica. Esegui Base da Settings → Arricchimento.
           </p>
         </div>

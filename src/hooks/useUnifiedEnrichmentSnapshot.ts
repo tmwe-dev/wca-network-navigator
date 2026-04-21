@@ -59,7 +59,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
       // ── Sherlock ──
       const { data: sherlock } = await supabase
         .from("sherlock_investigations")
-        .select("created_at, investigation_level")
+        .select("created_at, level")
         .eq("partner_id", partnerId)
         .eq("status", "completed")
         .order("created_at", { ascending: false })
@@ -85,7 +85,9 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null | undefine
         sherlock: {
           available: !!sherlock,
           age_days: daysSince(sherlock?.created_at ?? null),
-          level: (sherlock as { investigation_level?: string } | null)?.investigation_level ?? null,
+          level: (sherlock as { level?: string | number } | null)?.level != null
+            ? String((sherlock as { level: string | number }).level)
+            : null,
         },
       };
     },
