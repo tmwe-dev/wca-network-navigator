@@ -26,6 +26,7 @@ import { VoiceElevenLabsTab } from "./prompt-lab/tabs/VoiceElevenLabsTab";
 import { PlaybooksTab } from "./prompt-lab/tabs/PlaybooksTab";
 import { AgentPersonasTab } from "./prompt-lab/tabs/AgentPersonasTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
+import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import {
   FlaskConical,
   Brain,
@@ -40,6 +41,7 @@ import {
   Map,
   Users,
   Sparkles,
+  Newspaper,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -60,6 +62,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   operative: Wrench,
   playbooks: Map,
   personas: Users,
+  journalists: Newspaper,
 };
 
 export function PromptLabPage() {
@@ -183,6 +186,7 @@ export function PromptLabPage() {
                   {activeTabId === "playbooks" && <PlaybooksTab />}
                   {activeTabId === "personas" && <AgentPersonasTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
+                  {activeTabId === "journalists" && <JournalistsTab />}
                 </div>
               </div>
             </Tabs>
