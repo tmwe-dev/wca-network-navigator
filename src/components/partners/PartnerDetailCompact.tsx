@@ -194,13 +194,19 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       <EnrichmentCard partner={partner as never} />
 
       {/* Oracle Status Badge */}
-      {_enrichment && (
+      {_enrichment && (() => {
+        const enr = _enrichment as {
+          last_enrichment_at?: string | null;
+          sherlock_level?: number | string | null;
+          deep_search_score?: number | string | null;
+        };
+        return (
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
           <div className="text-xs font-semibold uppercase text-foreground/80">Oracle — Stato Arricchimento</div>
           <div className="space-y-1.5">
-            {_enrichment.last_enrichment_at ? (
+            {enr.last_enrichment_at ? (
               (() => {
-                const lastEnrichDate = new Date(_enrichment.last_enrichment_at);
+                const lastEnrichDate = new Date(enr.last_enrichment_at as string);
                 const daysSince = Math.floor((Date.now() - lastEnrichDate.getTime()) / 86400000);
                 const isStale = daysSince > 30;
                 return (
@@ -220,24 +226,25 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             ) : (
               <Badge variant="outline" className="text-[9px] w-full justify-center">Non arricchito</Badge>
             )}
-            {_enrichment.sherlock_level && (
+            {enr.sherlock_level != null && (
               <div className="flex items-center gap-2">
                 <Search className="w-3.5 h-3.5 text-primary" />
                 <span className="text-xs text-foreground/70">
-                  Sherlock Livello {_enrichment.sherlock_level}
+                  Sherlock Livello {String(enr.sherlock_level)}
                 </span>
               </div>
             )}
-            {_enrichment.deep_search_score !== null && _enrichment.deep_search_score !== undefined && (
+            {enr.deep_search_score !== null && enr.deep_search_score !== undefined && (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-[9px]">
-                  Score: {Math.round(Number(_enrichment.deep_search_score))}%
+                  Score: {Math.round(Number(enr.deep_search_score))}%
                 </Badge>
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Contacts */}
       {contacts.length > 0 && (

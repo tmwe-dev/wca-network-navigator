@@ -1,15 +1,11 @@
 import type { Tool } from "./types";
-import { partnerSearchTool } from "./partnerSearch";
 import { followupBatchTool } from "./followupBatch";
 import { agentReportTool } from "./agentReport";
 import { campaignStatusTool } from "./campaignStatus";
 import { composeEmailTool } from "./composeEmail";
 import { searchKbTool } from "./searchKb";
-import { contactSearchTool } from "./contactSearch";
-import { prospectSearchTool } from "./prospectSearch";
 import { dashboardSnapshotTool } from "./dashboardSnapshot";
 import { outreachQueueStatusTool } from "./outreachQueueStatus";
-import { deepSearchPartnerTool } from "./deepSearchPartner";
 import { deepSearchContactTool } from "./deepSearchContact";
 import { createContactTool } from "./createContact";
 import { updateContactTool } from "./updateContact";
@@ -28,16 +24,12 @@ const TOOLS: readonly Tool[] = [
   // Composers / special
   composeEmailTool,
   // Reads
-  contactSearchTool,
-  partnerSearchTool,
-  prospectSearchTool,
   dashboardSnapshotTool,
   outreachQueueStatusTool,
   followupBatchTool,
   agentReportTool,
   campaignStatusTool,
   searchKbTool,
-  deepSearchPartnerTool,
   deepSearchContactTool,
   analyzePartnerTool,
   // Writes (approval required)
@@ -93,3 +85,35 @@ export async function resolveTool(
 }
 
 export { TOOLS };
+
+/**
+ * Lightweight metadata for tools, used by planner to determine approval requirements.
+ * Marks write/mutation tools as requiring approval before execution.
+ */
+const WRITE_TOOL_IDS = new Set<string>([
+  "create-contact",
+  "update-contact",
+  "create-partner",
+  "update-partner-status",
+  "create-campaign",
+  "enqueue-outreach",
+  "create-agent",
+  "create-kb-entry",
+  "calculate-lead-scores",
+  "deduplicate-contacts",
+  "compose-email",
+]);
+
+export interface ToolMetadata {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly requiresApproval: boolean;
+}
+
+export const TOOL_METADATA: readonly ToolMetadata[] = TOOLS.map((t) => ({
+  id: t.id,
+  label: t.label,
+  description: t.description,
+  requiresApproval: WRITE_TOOL_IDS.has(t.id),
+}));

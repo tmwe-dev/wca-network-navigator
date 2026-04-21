@@ -29,6 +29,7 @@ export interface UseSherlockArgs {
 
 export function useSherlock(args: UseSherlockArgs) {
   const [running, setRunning] = React.useState<SherlockLevel | null>(null);
+  const [currentLevel, setCurrentLevel] = React.useState<SherlockLevel | null>(null);
   const [stepResults, setStepResults] = React.useState<SherlockStepResult[]>([]);
   const [consolidated, setConsolidated] = React.useState<Record<string, unknown>>({});
   const [summary, setSummary] = React.useState<string>("");
@@ -76,6 +77,7 @@ export function useSherlock(args: UseSherlockArgs) {
       }
 
       setRunning(level);
+      setCurrentLevel(level);
       setStepResults([]);
       setConsolidated({});
       setSummary("");
@@ -164,6 +166,7 @@ export function useSherlock(args: UseSherlockArgs) {
     playbooks: (playbooksQuery.data ?? []) as SherlockPlaybook[],
     isLoadingPlaybooks: playbooksQuery.isLoading,
     running,
+    currentLevel,
     stepResults,
     consolidated,
     summary,

@@ -30,16 +30,12 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
         if (!data?.user?.id) return;
         setUserId(data.user.id);
 
-        // Try user-scoped first, fallback to global (pre-migration schema)
-        let settings = null;
-        let error = null;
-        const { data: userScoped, error: userErr } = await supabase
+        const { data: settings, error } = await supabase
           .from('app_settings')
           .select('value')
           .eq('key', 'ai_automations_paused')
+          .eq('user_id', data.user.id)
           .maybeSingle();
-        settings = userScoped;
-        error = userErr;
 
         if (error) {
           console.error('Error loading AI pause state:', error);
@@ -67,8 +63,8 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
       const { error } = await supabase
         .from('app_settings')
         .upsert(
-          { key: 'ai_automations_paused', value: newPausedState ? 'true' : 'false' },
-          { onConflict: 'key' }
+          { user_id: userId, key: 'ai_automations_paused', value: newPausedState ? 'true' : 'false' },
+          { onConflict: 'user_id,key' }
         );
 
       if (error) {
