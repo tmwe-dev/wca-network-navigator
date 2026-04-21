@@ -1,5 +1,7 @@
 import { supabase, escapeLike, resolvePartnerId, type ExecuteContext } from "./shared.ts";
 import { runPostSendHook, checkCadenceGate, checkWhatsAppGate } from "../_shared/postSendHook.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 
 // ── Local interfaces for typed row shapes ──
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
@@ -402,6 +404,43 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
         }
       }
 
+      // ── GIORNALISTA AI: review pre-invio ──
+      try {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        if (optimus.enabled && args.html_body) {
+          let leadStatus = "new";
+          let companyName: string | null = null;
+          if (partnerId) {
+            const { data: p } = await supabase.from("partners").select("lead_status, company_name, country_name").eq("id", partnerId).maybeSingle();
+            leadStatus = (p as { lead_status?: string } | null)?.lead_status || "new";
+            companyName = (p as { company_name?: string } | null)?.company_name || null;
+          }
+          const review = await journalistReview(supabase, userId, {
+            final_draft: String(args.html_body),
+            resolved_brief: { objective: args.subject ? String(args.subject) : undefined },
+            channel: "email",
+            commercial_state: { lead_status: leadStatus },
+            partner: { id: partnerId, company_name: companyName },
+          }, { mode: optimus.mode, strictness: optimus.strictness });
+          if (review.verdict === "block") {
+            console.warn("[send_email] BLOCKED by journalist:", JSON.stringify(review.warnings));
+            return {
+              error: "Journalist Review ha bloccato questo messaggio. Correggi il brief e riprova.",
+              blocked_by: "journalist_review",
+              warnings: review.warnings,
+            };
+          }
+          if (review.verdict === "warn") {
+            console.warn("[send_email] WARN journalist:", JSON.stringify(review.warnings));
+          }
+          if (review.verdict === "pass_with_edits" && review.edited_text) {
+            args.html_body = review.edited_text;
+          }
+        }
+      } catch (jerr) {
+        console.error("[send_email] journalistReview failed:", jerr);
+      }
+
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
@@ -453,6 +492,28 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       if (partnerId) {
         const cgate = await checkCadenceGate(supabase, userId, partnerId, "whatsapp");
         if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
+      }
+      // ── GIORNALISTA AI: review pre-invio WhatsApp ──
+      try {
+        const optimus = await loadOptimusSettings(supabase, userId);
+        if (optimus.enabled && args.message) {
+          const review = await journalistReview(supabase, userId, {
+            final_draft: String(args.message),
+            resolved_brief: {},
+            channel: "whatsapp",
+            commercial_state: { lead_status: leadStatus || "new" },
+            partner: { id: partnerId, company_name: null },
+          }, { mode: optimus.mode, strictness: optimus.strictness });
+          if (review.verdict === "block") {
+            console.warn("[send_whatsapp] BLOCKED by journalist:", JSON.stringify(review.warnings));
+            return { error: "Journalist Review ha bloccato questo messaggio.", blocked_by: "journalist_review", warnings: review.warnings };
+          }
+          if (review.verdict === "pass_with_edits" && review.edited_text) {
+            args.message = review.edited_text;
+          }
+        }
+      } catch (jerr) {
+        console.error("[send_whatsapp] journalistReview failed:", jerr);
       }
       // Bridge invio: registra come pending da bridge estensione
       await supabase.from("activities").insert({

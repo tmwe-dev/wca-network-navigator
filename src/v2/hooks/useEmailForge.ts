@@ -8,6 +8,16 @@ import { isApiError } from "@/lib/api/apiError";
 import { toast } from "sonner";
 import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
 
+export type JournalistVerdict = "pass" | "pass_with_edits" | "warn" | "block";
+export interface JournalistReviewSummary {
+  journalist: { role: string; label: string; reasoning: string; auto: boolean };
+  verdict: JournalistVerdict;
+  warnings: Array<{ type: string; description: string; severity: "info" | "warning" | "blocking"; upstream_fix?: string }>;
+  edits: Array<{ type: string; original_fragment: string; edited_fragment: string; reason: string }>;
+  quality_score: number;
+  reasoning: string;
+}
+
 export interface PromptBlock {
   label: string;
   content: string;
@@ -36,6 +46,7 @@ export interface ForgeResult {
   quality: string;
   _context_summary?: OracleContextSummary;
   _debug?: ForgeDebug;
+  journalist_review?: JournalistReviewSummary | null;
 }
 
 export interface ForgeRunParams {
