@@ -7,6 +7,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { toast } from "sonner";
 import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
+import type { ResolvedEmailType } from "@/v2/ui/pages/email-forge/types/contract";
 
 export type JournalistVerdict = "pass" | "pass_with_edits" | "warn" | "block";
 export interface JournalistReviewSummary {
@@ -47,6 +48,9 @@ export interface ForgeResult {
   _context_summary?: OracleContextSummary;
   _debug?: ForgeDebug;
   journalist_review?: JournalistReviewSummary | null;
+  contract_used?: boolean;
+  contract_warnings?: string[];
+  type_resolution?: ResolvedEmailType | null;
 }
 
 export interface ForgeRunParams {
