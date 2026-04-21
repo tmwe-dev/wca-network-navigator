@@ -328,6 +328,33 @@ export function AIExportPanel({ userId }: { userId: string }) {
         promptsFolder.file(`${safeFilename(p.name)}.md`, mdOperativePrompt(p));
       }
 
+      // App settings (raggruppati in 1 file)
+      if (settings.length > 0) {
+        const settingsFolder = zip.folder("app_settings")!;
+        let body = `# App Settings\n\n`;
+        for (const s of settings) {
+          body += `## ${s.key}\n\n\`\`\`\n${s.value ?? ""}\n\`\`\`\n\n_aggiornato: ${s.updated_at}_\n\n---\n\n`;
+        }
+        settingsFolder.file("settings.md", body);
+      }
+
+      // Agent personas (1 file per persona)
+      if (personas.length > 0) {
+        const personasFolder = zip.folder("agent_personas")!;
+        for (const p of personas) {
+          const agent = agents.find((a) => a.id === p.agent_id);
+          const name = agent?.name ?? p.agent_id;
+          let body = `# Persona: ${name}\n\n`;
+          body += `- **Tono**: ${p.tone ?? "—"}\n- **Lingua**: ${p.language ?? "—"}\n\n`;
+          if (p.custom_tone_prompt) body += `## Tone Prompt\n\n${p.custom_tone_prompt}\n\n`;
+          if (p.style_rules?.length) body += `## Style Rules\n\n${p.style_rules.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_do?.length) body += `## Vocabulary DO\n\n${p.vocabulary_do.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.vocabulary_dont?.length) body += `## Vocabulary DON'T\n\n${p.vocabulary_dont.map((r) => `- ${r}`).join("\n")}\n\n`;
+          if (p.signature_template) body += `## Signature\n\n\`\`\`\n${p.signature_template}\n\`\`\`\n\n`;
+          personasFolder.file(`${safeFilename(name)}.md`, body);
+        }
+      }
+
       // Memories
       const memFolder = zip.folder("memories")!;
       const memByType = new Map<string, MemoryRow[]>();
@@ -362,6 +389,8 @@ export function AIExportPanel({ userId }: { userId: string }) {
             kb_entries: kb,
             operative_prompts: prompts,
             memories,
+            app_settings: settings,
+            agent_personas: personas,
           },
           null,
           2,
@@ -373,6 +402,8 @@ export function AIExportPanel({ userId }: { userId: string }) {
         kb: kb.length,
         prompts: prompts.length,
         memories: memories.length,
+        settings: settings.length,
+        personas: personas.length,
       };
       zip.file("README.md", mdReadme(stats));
 
@@ -386,7 +417,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
 
       const elapsed = Math.round(performance.now() - t0);
       toast.success(
-        `Export pronto · ${stats.agents} agenti · ${stats.kb} KB · ${stats.prompts} prompt · ${stats.memories} memorie · ${elapsed}ms`,
+        `Export pronto · ${stats.agents} agenti · ${stats.kb} KB · ${stats.prompts} prompt · ${stats.memories} memorie · ${stats.settings} settings · ${stats.personas} personas · ${elapsed}ms`,
       );
     } catch (e) {
       console.error("AIExportPanel error:", e);
