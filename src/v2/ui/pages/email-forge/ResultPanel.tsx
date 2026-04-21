@@ -60,7 +60,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 shrink-0 text-xs font-medium">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0 text-xs font-medium">
         <Mail className="w-3.5 h-3.5" />
         Risultato
       </div>
@@ -68,7 +68,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
       <div className="flex-1 overflow-auto p-3 space-y-3">
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Subject</div>
-          <div className="text-sm font-medium border border-border/40 rounded px-2 py-1.5 bg-card">
+          <div className="text-sm font-medium border border-border/60 rounded px-2 py-1.5 bg-card">
             {result.subject || "(vuoto)"}
           </div>
         </div>
@@ -83,7 +83,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
             </TabsList>
             <TabsContent value="preview" className="mt-2">
               <div
-                className="prose prose-sm max-w-none border border-border/40 rounded p-3 bg-card text-foreground text-sm"
+                className="prose prose-sm max-w-none border border-border/60 rounded p-3 bg-card text-foreground text-sm"
                 /* eslint-disable-next-line react/no-danger */
                 dangerouslySetInnerHTML={{ __html: result.body || "<em>(vuoto)</em>" }}
               />
@@ -101,7 +101,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
           </Tabs>
         </div>
 
-        <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground border-t border-border/30 pt-2">
+        <div className="flex flex-wrap gap-2 text-xs text-foreground/70 border-t border-border/30 pt-2">
           <span className="flex items-center gap-1">
             <Cpu className="w-3 h-3" /> {result.model}
           </span>

@@ -133,20 +133,20 @@ export function EnrichmentRowList({
                   <CompanyLogo domain={row.domain} name={row.name} size={24} />
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-foreground truncate uppercase">{row.name}</div>
-                    {row.email && <div className="text-[10px] text-muted-foreground truncate">{row.email}</div>}
+                    {row.email && <div className="text-xs text-foreground/70 truncate">{row.email}</div>}
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">
                     {row.domain || <span className="italic text-muted-foreground/50">—</span>}
                   </div>
                   <div className="flex items-center gap-1">
                     {flag && <span className="text-lg leading-none">{flag}</span>}
-                    {row.country && <span className="text-[10px] text-muted-foreground uppercase">{row.country}</span>}
+                    {row.country && <span className="text-xs text-foreground/70 uppercase">{row.country}</span>}
                   </div>
                   <div className="text-center">
                     {row.emailCount ? (
                       <span className="text-[10px] font-semibold text-foreground">{row.emailCount}</span>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground/30">—</span>
+                      <span className="text-xs text-foreground/70/30">—</span>
                     )}
                   </div>
                   <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0.5", ORIGIN_BADGE_CLASS[row.source])}>

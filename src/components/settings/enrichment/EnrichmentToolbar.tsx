@@ -93,7 +93,7 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
         </Button>
       )}
 
-      <div className="flex items-center gap-3 ml-auto text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-3 ml-auto text-xs text-foreground/70">
         {isRunning && baseEnrichment ? (
           <span className="flex items-center gap-1 text-primary font-semibold">
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -113,7 +113,7 @@ export function EnrichmentToolbar({ search, enrichFilter, stats, onSearchChange,
     {showProgressBar && baseEnrichment && (
       <div className="space-y-1">
         <Progress value={pct} className="h-1" />
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-foreground/70">
           <span className="truncate max-w-[60%]">
             {isRunning && baseEnrichment.progress.currentName ? `· ${baseEnrichment.progress.currentName}` : baseEnrichment.progress.status === "done" ? "✅ Completato" : baseEnrichment.progress.status === "paused" ? "In pausa" : ""}
           </span>

@@ -69,7 +69,7 @@ function EditableBlock({
   return (
     <AccordionItem
       value={blockKey(section, block.label, idx)}
-      className={`border rounded-md bg-card px-2 ${isDirty ? "border-primary/60" : "border-border/40"}`}
+      className={`border rounded-md bg-card px-2 ${isDirty ? "border-primary/60" : "border-border/60"}`}
     >
       <AccordionTrigger className="py-2 hover:no-underline">
         <div className="flex items-center gap-2 text-xs flex-1">
@@ -92,7 +92,7 @@ function EditableBlock({
             spellCheck={false}
           />
           <div className="flex items-center justify-between">
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-xs text-foreground/70">
               Modifica libera: il rerun userà questo testo al posto dell'originale.
             </div>
             {isDirty && (
@@ -202,7 +202,7 @@ export function PromptInspector({ systemPrompt, userPrompt, systemBlocks, blocks
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 shrink-0 gap-2">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 shrink-0 gap-2">
         <div className="text-xs font-medium flex items-center gap-2 min-w-0">
           <FileText className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">
@@ -290,7 +290,7 @@ export function PromptInspector({ systemPrompt, userPrompt, systemBlocks, blocks
           </section>
         )}
 
-        <div className="text-[10px] text-muted-foreground border-t border-border/30 pt-3 flex items-start gap-2">
+        <div className="text-xs text-foreground/70 border-t border-border/30 pt-3 flex items-start gap-2">
           <Save className="w-3 h-3 mt-0.5 shrink-0" />
           <span>
             Le modifiche restano salvate localmente nel browser. Usa <strong>Rigenera con modifiche</strong> per

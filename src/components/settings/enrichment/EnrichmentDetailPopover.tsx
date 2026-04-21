@@ -101,7 +101,7 @@ export function EnrichmentDetailPopover({ row, kind, children }: Props): React.R
                 <div className="min-w-0 flex-1">
                   <div className="text-[11px] font-medium truncate">{row.name}</div>
                   {row.domain && (
-                    <div className="text-[10px] text-muted-foreground truncate">{row.domain}</div>
+                    <div className="text-xs text-foreground/70 truncate">{row.domain}</div>
                   )}
                 </div>
               </div>
@@ -143,7 +143,7 @@ export function EnrichmentDetailPopover({ row, kind, children }: Props): React.R
                   </div>
                 )}
                 {row.websiteExcerpt.scraped_at && (
-                  <div className="text-[9px] text-muted-foreground/70 pt-1 border-t border-border">
+                  <div className="text-[11px] text-foreground/70/70 pt-1 border-t border-border">
                     Letto il {formatDate(row.websiteExcerpt.scraped_at)}
                   </div>
                 )}

@@ -65,7 +65,7 @@ export function ForgeOraclePanel({ initial, onRun, isLoading, onRecipientChange,
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 shrink-0 text-xs font-medium">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0 text-xs font-medium">
         <Sparkles className="w-3.5 h-3.5" />
         Oracolo · Configurazione
       </div>
@@ -87,7 +87,7 @@ export function ForgeOraclePanel({ initial, onRun, isLoading, onRecipientChange,
                 className={`text-[11px] rounded border px-2 py-1.5 text-left transition-colors ${
                   config.emailType?.id === t.id
                     ? "border-primary bg-primary/10 text-primary"
-                    : "border-border/40 hover:border-border bg-card"
+                    : "border-border/60 hover:border-border bg-card"
                 }`}
               >
                 {t.name}
@@ -147,7 +147,7 @@ export function ForgeOraclePanel({ initial, onRun, isLoading, onRecipientChange,
         </section>
       </div>
 
-      <div className="p-3 border-t border-border/40 shrink-0">
+      <div className="p-3 border-t border-border/60 shrink-0">
         <Button
           onClick={handleSubmit}
           disabled={isLoading}

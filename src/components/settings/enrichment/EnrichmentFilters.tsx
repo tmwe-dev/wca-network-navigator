@@ -43,7 +43,7 @@ export function EnrichmentFilters({
           placeholder="Cerca..."
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          className="pl-7 h-7 text-[11px] bg-muted/30 border-border/40"
+          className="pl-7 h-7 text-[11px] bg-muted/30 border-border/60"
         />
       </div>
 

@@ -127,7 +127,7 @@ export function ForgeRecipientPicker({ value, onChange }: Props) {
               {value.email && (
                 <div className="text-muted-foreground truncate text-[10px]">{value.email}</div>
               )}
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-1">
+              <div className="flex items-center gap-1.5 text-xs text-foreground/70 mt-1">
                 <SourceBadge source={value.source} />
                 {value.countryCode && (
                   <span>{getCountryFlag(value.countryCode)} {value.countryCode}</span>
@@ -274,14 +274,14 @@ function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; su
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left rounded border border-border/40 bg-card hover:border-primary/50 hover:bg-primary/5 px-2 py-1.5 transition-colors"
+      className="w-full text-left rounded border border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5 px-2 py-1.5 transition-colors"
     >
       <div className="flex items-start gap-1.5">
         {flag && <span className="text-sm leading-none mt-0.5">{flag}</span>}
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium truncate">{title}</div>
-          {subtitle && <div className="text-[10px] text-muted-foreground truncate">{subtitle}</div>}
-          {meta && <div className="text-[10px] text-muted-foreground/80 truncate">{meta}</div>}
+          {subtitle && <div className="text-xs text-foreground/70 truncate">{subtitle}</div>}
+          {meta && <div className="text-xs text-foreground/70/80 truncate">{meta}</div>}
         </div>
       </div>
     </button>
@@ -290,7 +290,7 @@ function ResultRow({ title, subtitle, meta, flag, onClick }: { title: string; su
 
 function LoadingRow() {
   return (
-    <div className="flex items-center justify-center py-4 text-[10px] text-muted-foreground gap-1.5">
+    <div className="flex items-center justify-center py-4 text-xs text-foreground/70 gap-1.5">
       <Loader2 className="w-3 h-3 animate-spin" /> Caricamento…
     </div>
   );
@@ -298,7 +298,7 @@ function LoadingRow() {
 
 function EmptyRow() {
   return (
-    <div className="text-center py-4 text-[10px] text-muted-foreground">
+    <div className="text-center py-4 text-xs text-foreground/70">
       Nessun risultato — affina la ricerca.
     </div>
   );
@@ -334,7 +334,7 @@ function CountryFilter({ selected, onChange }: { selected: string | null; onChan
           className={`px-1.5 py-0.5 text-[10px] rounded border ${
             selected === c
               ? "border-primary bg-primary/10 text-primary"
-              : "border-border/40 hover:border-border bg-card"
+              : "border-border/60 hover:border-border bg-card"
           }`}
         >
           {getCountryFlag(c)} {c}

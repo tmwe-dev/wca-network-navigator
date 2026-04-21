@@ -182,7 +182,7 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
         const isOpen = expanded.has(entry.id);
         const preview = entry.markdown.slice(0, 280);
         return (
-          <div key={entry.id} className="rounded border border-border/40 bg-muted/20">
+          <div key={entry.id} className="rounded border border-border/60 bg-muted/20">
             <button
               onClick={() => toggle(entry.id)}
               className="w-full flex items-start gap-2 p-2 text-left hover:bg-muted/40 transition-colors"
@@ -191,9 +191,9 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant="secondary" className="text-[9px] py-0 px-1.5 h-4 font-mono">{entry.source}</Badge>
-                  <span className="text-[9px] text-muted-foreground font-mono">{entry.markdown.length} char</span>
+                  <span className="text-[11px] text-foreground/70 font-mono">{entry.markdown.length} char</span>
                   {entry.scrapedAt && (
-                    <span className="text-[9px] text-muted-foreground">
+                    <span className="text-[11px] text-foreground/70">
                       {new Date(entry.scrapedAt).toLocaleString("it-IT")}
                     </span>
                   )}
@@ -202,12 +202,12 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
                   <div className="text-[10px] text-primary/80 truncate font-mono mt-0.5">{entry.url}</div>
                 )}
                 {!isOpen && (
-                  <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{preview}…</div>
+                  <div className="text-xs text-foreground/70 mt-1 line-clamp-2">{preview}…</div>
                 )}
               </div>
             </button>
             {isOpen && (
-              <div className="border-t border-border/40 p-2 space-y-1.5">
+              <div className="border-t border-border/60 p-2 space-y-1.5">
                 <div className="flex justify-end">
                   <Button
                     size="sm"

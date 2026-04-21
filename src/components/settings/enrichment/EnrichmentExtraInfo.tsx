@@ -53,7 +53,7 @@ export function EnrichmentExtraInfo({ partnerId }: Props): React.ReactElement | 
             )}
           </p>
         )}
-        <p className="text-[10px] text-muted-foreground italic pt-1 border-t border-border">
+        <p className="text-xs text-foreground/70 italic pt-1 border-t border-border">
           Sola lettura — Deep Search e Sherlock si eseguono da Email Forge.
         </p>
       </PopoverContent>

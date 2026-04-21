@@ -60,7 +60,7 @@ export function PromptsTab() {
 
   return (
     <div className="space-y-2 text-xs">
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-xs text-foreground/70">
         Prompt operativi (L2) caricati dall'assembler per gli agenti email. {list.length} voci.
       </div>
 
@@ -139,7 +139,7 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
   const totalChars = objective.length + procedure.length + criteria.length;
 
   return (
-    <div className="rounded border border-border/40 bg-card p-2">
+    <div className="rounded border border-border/60 bg-card p-2">
       <div className="flex items-start gap-2">
         <button
           type="button"
@@ -149,13 +149,13 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-medium text-xs truncate">{prompt.name}</span>
             <Badge variant="outline" className="text-[9px]">P{priority}</Badge>
-            <span className="text-[10px] text-muted-foreground">{totalChars} char</span>
+            <span className="text-xs text-foreground/70">{totalChars} char</span>
             {(prompt.tags ?? []).slice(0, 3).map((t) => (
               <Badge key={t} variant="outline" className="text-[9px]">{t}</Badge>
             ))}
           </div>
           {!open && objective && (
-            <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{objective}</div>
+            <div className="text-xs text-foreground/70 line-clamp-2 mt-0.5">{objective}</div>
           )}
         </button>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -170,7 +170,7 @@ function PromptRowEditor({ prompt, onSaved }: { prompt: PromptRow; onSaved: () =
           <Field label="Criteri" value={criteria} onChange={setCriteria} rows={3} />
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">Priorità</span>
+              <span className="text-xs text-foreground/70">Priorità</span>
               <Input
                 type="number"
                 min={0}

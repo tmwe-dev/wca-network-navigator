@@ -61,7 +61,7 @@ export function DeepSearchOptionsDialog({
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-xs font-medium">{m.label}</span>
-                  <span className="text-[10px] text-muted-foreground">~{m.estimatedSecondsPerRecord}s</span>
+                  <span className="text-xs text-foreground/70">~{m.estimatedSecondsPerRecord}s</span>
                 </button>
               );
             })}
@@ -77,7 +77,7 @@ export function DeepSearchOptionsDialog({
                   <Badge key={l} variant="secondary" className="text-[10px] py-0 px-1.5 h-4 font-normal">{l}</Badge>
                 ))}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-1.5 leading-tight">{meta.description}</div>
+              <div className="text-xs text-foreground/70 mt-1.5 leading-tight">{meta.description}</div>
             </div>
           </div>
 

@@ -55,7 +55,7 @@ function EnrichmentStatusBadges({ partnerId }: { partnerId: string | null }) {
   );
 
   return (
-    <div className="rounded-md border border-border/40 bg-muted/20 px-2 py-1.5 space-y-1">
+    <div className="rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 space-y-1">
       <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/80 mb-0.5">
         Dati disponibili
       </div>
@@ -449,7 +449,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           {showTemplates && (
             <div className="max-h-[200px] overflow-y-auto rounded-md border border-border/30 bg-muted/20">
               {templates.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground px-2 py-4 text-center">Nessun template</p>
+                <p className="text-xs text-foreground/70 px-2 py-4 text-center">Nessun template</p>
               ) : (
                 <div className="p-1 space-y-0.5">
                   {templates.map((t) => (
