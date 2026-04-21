@@ -36,8 +36,17 @@ export interface AssembleArgs {
 
 const EXCERPT_DEFAULT = 800;
 
+// LOVABLE-93: KB per domini email (operative/admin/support)
 /** Single source of truth: tutte le doctrine + procedure indicizzate di default */
 export const DEFAULT_KB_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
+
+/** KB categories per domain-specific classification (email routing) */
+export const DOMAIN_KB_CATEGORIES = {
+  operative: ["operative_procedures", "procedures"],
+  administrative: ["administrative_procedures", "procedures"],
+  support: ["support_procedures", "procedures"],
+  domain_routing: ["domain_routing"],
+};
 
 export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   const core = CORE_PROMPTS[args.agentId];

@@ -38,7 +38,11 @@ export type PromptLabTabId =
   | "playbooks"
   | "personas"
   | "ai_profile"
-  | "journalists";
+  | "journalists"
+  | "operative_kb"
+  | "administrative_kb"
+  | "support_kb"
+  | "domain_routing"; // LOVABLE-93: coerenza Prompt Lab multi-dominio
 
 export interface PromptLabTabDef {
   id: PromptLabTabId;
@@ -57,16 +61,21 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
   { id: "personas", label: "Agent Personas", description: "Personalità agenti (tono, stile, vocabolario)", activation: "Attive sugli agenti associati: definiscono tono, stile, vocabolario e firma usati nelle risposte, email e prompt voice derivati." },
   { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI", activation: "Attivo come contesto aziendale trasversale in prompt email, assistenti, agenti commerciali e generazioni che richiedono identità, obiettivi e stile WCA." },
   { id: "journalists", label: "Giornalisti AI", description: "Caporedattore finale (review editoriale)", activation: "Attivo come review post-generazione su generate-email, improve-email e invii agente (send_email/send_whatsapp). Auto-selezione in base al lead_status." },
+  // LOVABLE-93: coerenza Prompt Lab multi-dominio — KB domain-specific
+  { id: "operative_kb", label: "Operativo", description: "KB procedure operative per dominio", activation: "Attive nel classify-email-response quando dominio = operative: procedure preventivi, booking, tracking per agents domain-aware." },
+  { id: "administrative_kb", label: "Amministrativo", description: "KB procedure amministrative per dominio", activation: "Attive nel classify-email-response quando dominio = administrative: procedure fatture, pagamenti, autorizzazioni." },
+  { id: "support_kb", label: "Supporto", description: "KB procedure supporto per dominio", activation: "Attive nel classify-email-response quando dominio = support: procedure reclami, assistenza, escalation." },
+  { id: "domain_routing", label: "Routing Dominio", description: "Regole smistamento email per dominio", activation: "Attive nella classificazione email multi-dominio: mapping mittente/contenuto → dominio, priorità, SLA, agente specializzato." },
 ] as const;
 
 /** Macroarea raggruppante (Livello 1 navigazione Prompt Lab). */
-export type PromptLabGroupId = "core_ai" | "communication" | "strategy";
+export type PromptLabGroupId = "core_ai" | "communication" | "strategy" | "operations"; // LOVABLE-93
 
 export interface PromptLabGroupDef {
   id: PromptLabGroupId;
   label: string;
   /** lucide-react icon name (mapped in component) */
-  icon: "Brain" | "MessageSquare" | "Target";
+  icon: "Brain" | "MessageSquare" | "Target" | "Package" | "Receipt" | "LifeBuoy";
   tabs: ReadonlyArray<PromptLabTabId>;
 }
 
@@ -74,6 +83,8 @@ export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
   { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile", "journalists"] },
   { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
   { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas"] },
+  // LOVABLE-93: coerenza Prompt Lab multi-dominio
+  { id: "operations", label: "Operazioni", icon: "Package", tabs: ["operative_kb", "administrative_kb", "support_kb", "domain_routing"] },
 ] as const;
 
 /** Default System Prompt blocks (mirrors supabase/functions/ai-assistant) */

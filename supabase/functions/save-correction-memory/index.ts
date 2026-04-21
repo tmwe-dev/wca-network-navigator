@@ -36,7 +36,7 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
 
     const body = await req.json();
-    const { correction_type, original_value, corrected_value, email_address, context } = body;
+    const { correction_type, original_value, corrected_value, email_address, context, domain } = body;
 
     if (!correction_type || !context) {
       return new Response(JSON.stringify({ error: "correction_type and context required" }), {
@@ -46,11 +46,16 @@ serve(async (req) => {
     }
 
     // 1. Save L1 memory with high importance
+    // LOVABLE-93: coerenza Prompt Lab multi-dominio — track domain in tags
+    const tags = ["correzione_utente", correction_type, `da_${original_value || "unknown"}`, `a_${corrected_value || "unknown"}`];
+    if (domain) {
+      tags.push(`domain:${domain}`);
+    }
     await supabase.from("ai_memory").insert({
       user_id: userId,
       memory_type: "decision",
       content: context,
-      tags: ["correzione_utente", correction_type, `da_${original_value || "unknown"}`, `a_${corrected_value || "unknown"}`],
+      tags: tags,
       level: 1,
       importance: 5,
       confidence: 0.8,

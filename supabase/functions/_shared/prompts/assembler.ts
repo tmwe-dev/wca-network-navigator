@@ -207,12 +207,22 @@ export interface AssembleArgs {
   kbCategories?: string[];
   injectExcerpts?: string[];
   excerptCharLimit?: number;
+  domain?: string; // LOVABLE-93: domain-aware KB loading
 }
 
 const EXCERPT_DEFAULT = 800;
 
 /** Single source of truth: tutte le doctrine + procedure indicizzate di default */
 export const DEFAULT_KB_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
+
+// LOVABLE-93: coerenza Prompt Lab multi-dominio — KB per domini email
+/** KB categories per domain-specific classification (email routing) */
+export const DOMAIN_KB_CATEGORIES: Record<string, string[]> = {
+  operative: ["operative_procedures", "procedures"],
+  administrative: ["administrative_procedures", "procedures"],
+  support: ["support_procedures", "procedures"],
+  domain_routing: ["domain_routing"],
+};
 
 export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   const core = CORE_PROMPTS[args.agentId];
@@ -224,7 +234,12 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
 
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const cats = args.kbCategories ?? DEFAULT_KB_CATEGORIES;
+    // LOVABLE-93: Se dominio specificato e non è commercial, usa KB domain-aware
+    let cats = args.kbCategories;
+    if (!cats && args.domain && args.domain !== "commercial") {
+      cats = DOMAIN_KB_CATEGORIES[args.domain] || DEFAULT_KB_CATEGORIES;
+    }
+    cats = cats ?? DEFAULT_KB_CATEGORIES;
     const { data: indexRows } = await sb
       .from("kb_entries")
       .select("title, category, chapter")
@@ -261,5 +276,13 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
     const v = variables[key];
     return v === undefined || v === null ? "" : String(v);
   });
-  return kbExcerpts ? `${resolved}\n\n## Estratti procedure rilevanti\n${kbExcerpts}` : resolved;
+
+  // LOVABLE-93: Injetta nota priorità dominio se non commercial
+  let finalPrompt = resolved;
+  if (args.domain && args.domain !== "commercial") {
+    const domainNote = `\n\n## PRIORITÀ DOMINIO\nNOTA: Per email di dominio "${args.domain}", le procedure specifiche del dominio hanno priorità sulle regole commerciali generiche. La dottrina commerciale si applica SOLO al dominio "commercial".`;
+    finalPrompt = resolved + domainNote;
+  }
+
+  return kbExcerpts ? `${finalPrompt}\n\n## Estratti procedure rilevanti\n${kbExcerpts}` : finalPrompt;
 }

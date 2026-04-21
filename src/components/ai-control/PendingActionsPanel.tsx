@@ -1,6 +1,7 @@
 /**
  * PendingActionsPanel — Displays and manages ai_pending_actions
  * Including prompt refinement suggestions from agent-prompt-refiner.
+ * LOVABLE-93: edit draft prima di approvazione
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,12 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShieldCheck, CheckCircle, XCircle, Mail, Reply, Archive,
   ListTodo, Forward, Clock, ChevronDown, ChevronUp, Zap, Bot, User, Workflow,
-  Sparkles, ArrowRight,
+  Sparkles, ArrowRight, Edit3, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -49,6 +51,10 @@ export function PendingActionsPanel() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  // LOVABLE-93: draft editing state
+  const [draftEditId, setDraftEditId] = useState<string | null>(null);
+  const [editedDraftSubject, setEditedDraftSubject] = useState("");
+  const [editedDraftBody, setEditedDraftBody] = useState("");
 
   const { data: actions = [], isLoading } = useQuery({
     queryKey: queryKeys.ai.pendingActions,
@@ -68,9 +74,22 @@ export function PendingActionsPanel() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const action = actions.find(a => a.id === id);
-      const { error } = await supabase.from("ai_pending_actions").update({ status: "approved", executed_at: new Date().toISOString() }).eq("id", id);
+    mutationFn: async (params: { id: string; draftSubject?: string; draftBody?: string }) => {
+      const action = actions.find(a => a.id === params.id);
+
+      // LOVABLE-93: if draft was edited, update action_payload before approval
+      let updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
+      if (params.draftSubject !== undefined || params.draftBody !== undefined) {
+        const existingPayload = (action?.action_payload as Record<string, unknown>) || {};
+        updatePayload.action_payload = {
+          ...existingPayload,
+          ...(params.draftSubject !== undefined && { draft_subject: params.draftSubject }),
+          ...(params.draftBody !== undefined && { draft_body: params.draftBody }),
+          user_edited: true,
+        };
+      }
+
+      const { error } = await supabase.from("ai_pending_actions").update(updatePayload).eq("id", params.id);
       if (error) throw error;
       if (action?.decision_log_id) {
         await supabase.from("ai_decision_log").update({ user_review: "approved" }).eq("id", action.decision_log_id);
@@ -98,13 +117,13 @@ export function PendingActionsPanel() {
       if (action?.action_type !== "prompt_refinement") {
         try {
           const { error: execError } = await supabase.functions.invoke("pending-action-executor", {
-            body: { pending_action_id: id },
+            body: { pending_action_id: params.id },
           });
           if (execError) console.error("Execution failed:", execError);
         } catch (e) { console.warn("pending-action-executor invocation failed:", e); }
       }
     },
-    onSuccess: () => { toast.success("Azione approvata — esecuzione avviata"); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
+    onSuccess: () => { toast.success("Azione approvata — esecuzione avviata"); setDraftEditId(null); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
     onError: (err: Error) => toast.error(`Errore nell'approvazione: ${err.message}`),
   });
 
@@ -119,6 +138,32 @@ export function PendingActionsPanel() {
     },
     onSuccess: () => { toast.success("Azione rifiutata"); setRejectId(null); setRejectReason(""); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },
     onError: () => toast.error("Errore nel rifiuto"),
+  });
+
+  // LOVABLE-93: regenerate draft using generate-email function
+  const regenerateDraftMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const action = actions.find(a => a.id === id);
+      if (!action) throw new Error("Action not found");
+
+      const { data, error } = await supabase.functions.invoke("generate-email", {
+        body: {
+          pending_action_id: id,
+          contact_id: action.contact_id,
+          partner_id: action.partner_id,
+          email_address: action.email_address,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.draft_subject || data?.draft_body) {
+        // Update local draft state with regenerated content
+        setEditedDraftSubject(data.draft_subject || "");
+        setEditedDraftBody(data.draft_body || "");
+        toast.success("Draft rigenerato");
+      }
+    },
+    onError: (err: Error) => toast.error(`Errore rigenerazione: ${err.message}`),
   });
 
   const confidenceColor = (c: number) => c >= 0.85 ? "bg-emerald-500/20 text-emerald-400" : c >= 0.7 ? "bg-yellow-500/20 text-yellow-400" : "bg-red-500/20 text-red-400";
@@ -196,11 +241,63 @@ export function PendingActionsPanel() {
                     </button>
                   )}
 
-                  {/* Suggested content */}
-                  {action.suggested_content && (action.action_type === "reply" || action.action_type === "send_email") && (
-                    <div className="border border-border/30 rounded-lg p-2 text-xs text-muted-foreground bg-muted/20 max-h-24 overflow-y-auto">
-                      {action.suggested_content}
+                  {/* LOVABLE-93: Draft editor section for email-like actions */}
+                  {(action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
+                    draftEditId === action.id ? (
+                    <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
+                      <p className="text-xs font-medium text-foreground">Modifica Draft</p>
+                      {(action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Oggetto</label>
+                          <Input
+                            value={editedDraftSubject}
+                            onChange={(e) => setEditedDraftSubject(e.target.value)}
+                            placeholder="Subject"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      )}
+                      {(action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Corpo</label>
+                          <Textarea
+                            value={editedDraftBody}
+                            onChange={(e) => setEditedDraftBody(e.target.value)}
+                            placeholder="Email body"
+                            className="h-24 text-xs resize-none"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs gap-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                          onClick={() => {
+                            approveMutation.mutate({ id: action.id, draftSubject: editedDraftSubject, draftBody: editedDraftBody });
+                            setDraftEditId(null);
+                          }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />Approva Modificato
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => setDraftEditId(null)}
+                        >
+                          Annulla
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* Suggested content preview */}
+                      {action.suggested_content && (action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") && (
+                        <div className="border border-border/30 rounded-lg p-2 text-xs text-muted-foreground bg-muted/20 max-h-24 overflow-y-auto">
+                          {action.suggested_content}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Prompt refinement suggestions */}
@@ -229,8 +326,8 @@ export function PendingActionsPanel() {
                     } catch { return null; }
                   })()}
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-1">
+                  {/* LOVABLE-93: Actions — with draft editing for email-like actions */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
                     {rejectId === action.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <Input
@@ -246,12 +343,64 @@ export function PendingActionsPanel() {
                           Annulla
                         </Button>
                       </div>
-                    ) : (
+                    ) : draftEditId === action.id ? null : (
                       <>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10" onClick={() => approveMutation.mutate(action.id)}>
-                          <CheckCircle className="h-3.5 w-3.5" />Approva
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-400/10" onClick={() => setRejectId(action.id)}>
+                        {/* Show draft editing UI for email-like actions with draft fields */}
+                        {(action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
+                          ((action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined ||
+                            (action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined) && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                                onClick={() => {
+                                  const payload = action.action_payload as Record<string, unknown> | null;
+                                  setEditedDraftSubject((payload?.draft_subject as string) || "");
+                                  setEditedDraftBody((payload?.draft_body as string) || "");
+                                  setDraftEditId(action.id);
+                                }}
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />Modifica & Approva
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10"
+                                onClick={() => regenerateDraftMutation.mutate(action.id)}
+                                disabled={regenerateDraftMutation.isPending}
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />Rigenera Draft
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
+                                onClick={() => approveMutation.mutate({ id: action.id })}
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />Approva come è
+                              </Button>
+                            </>
+                          )}
+                        {/* For non-draft actions, show standard approve */}
+                        {!((action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
+                          ((action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined ||
+                            (action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined)) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
+                            onClick={() => approveMutation.mutate({ id: action.id })}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />Approva
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                          onClick={() => setRejectId(action.id)}
+                        >
                           <XCircle className="h-3.5 w-3.5" />Rifiuta
                         </Button>
                       </>

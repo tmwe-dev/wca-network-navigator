@@ -1,5 +1,5 @@
 /**
- * Bridge unificato per l'estensione Partner Connect v3.4.0.
+ * Bridge unificato per le estensioni (WhatsApp v5.10.0, LinkedIn v3.9.0).
  *
  * Contratto reale (vedi webapp-bridge.js dell'estensione):
  *   webapp → ext   →  window.postMessage({ direction, action, requestId, ...payload })

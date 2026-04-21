@@ -181,6 +181,12 @@ function buildReviewSystemPrompt(
   ].filter(Boolean).join("\n");
 
   const ctxBlock = [
+    input.is_reply ? `⚠️ CONTESTO REPLY: Questo è una RISPOSTA a un'email ricevuta.
+Email originale: "${input.original_inbound?.subject || "N/A"}"
+Sommario: ${input.original_inbound?.summary || "N/A"}
+Classificazione: ${input.original_inbound?.classification || "N/A"}
+Tono mittente: ${input.original_inbound?.sentiment || "N/A"}
+→ Valuta coerenza con il messaggio ricevuto, non trattare come cold outreach.` : "",
     input.history_summary && `HISTORY: ${input.history_summary}`,
     input.kb_summary && `KB RILEVANTE: ${input.kb_summary}`,
     input.memory_summary && `MEMORY: ${input.memory_summary}`,

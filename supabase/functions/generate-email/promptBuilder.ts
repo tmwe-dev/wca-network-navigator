@@ -82,6 +82,9 @@ export interface EmailPromptContext {
   warmthScore?: number;
   // Fix 3.2: active playbook (governs tone/content/CTA)
   playbookBlock?: string;
+  // Fix (email_address_rules propagation)
+  addressCustomPrompt?: string;
+  addressCategory?: string;
   // LOVABLE-93: Decision Engine context injected into generation
   decisionContext?: {
     action: string;
@@ -229,7 +232,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
     email_type_prompt, email_type_structure,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
-    playbookBlock,
+    playbookBlock, addressCustomPrompt, addressCategory,
   } = ctx;
 
   // Resolve names
@@ -340,7 +343,28 @@ ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}
 ⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
 ` : "";
 
-  const systemPrompt = `Sei un EDITOR GIORNALISTA esperto al servizio di WCA Network, specializzato in comunicazione B2B nel freight forwarding internazionale.
+  // ── Build address-specific priority instruction block ──
+  let addressPriorityBlock = "";
+  if (addressCustomPrompt || addressCategory) {
+    const parts: string[] = [];
+    if (addressCustomPrompt) {
+      parts.push(`⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO EMAIL:\n${addressCustomPrompt}`);
+    }
+    if (addressCategory) {
+      // Detect holding pattern signals
+      const category = addressCategory.toLowerCase();
+      const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
+                              category.includes("pausa") || category.includes("pending");
+      if (isHoldingPattern) {
+        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}\n→ HOLDING PATTERN RILEVATO: questo contatto è in fase di attesa pianificata.\n  ADATTAMENTI: tono amichevole ma non pressante, mantieni punto di contatto aperto per riattivazione futura, evita CTA aggressivi.`);
+      } else {
+        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}`);
+      }
+    }
+    addressPriorityBlock = parts.join("\n\n") + "\n\n";
+  }
+
+  const systemPrompt = `${addressPriorityBlock}Sei un EDITOR GIORNALISTA esperto al servizio di WCA Network, specializzato in comunicazione B2B nel freight forwarding internazionale.
 Non sei un venditore. Non sei un copywriter di blast. Sei l'editor che scrive UN messaggio per UN destinatario,
 dopo aver letto il dossier completo su di lui, con l'obiettivo di trasferire tre cose:
   (1) "siamo professionisti seri";
@@ -407,6 +431,8 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
 
   // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
   const systemBlocks: PromptBlock[] = [];
+  if (addressCustomPrompt) systemBlocks.push({ label: "Address Custom Prompt (Priority)", content: addressCustomPrompt });
+  if (addressCategory) systemBlocks.push({ label: "Address Category (Priority)", content: addressCategory });
   systemBlocks.push({ label: "Identity (Editor)", content: "Editor giornalista WCA Network. Scrive UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale." });
   systemBlocks.push({ label: "Filosofia WCA", content: "Membership = first-mover advantage: primi su tariffe, booking, partenze, info di mercato. Partner trasporti = guadagno reciproco + vantaggio competitivo." });
   systemBlocks.push({ label: "Missione messaggio", content: "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature." });
@@ -418,25 +444,44 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
   systemBlocks.push({ label: "Ancora obbligatoria", content: "Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione WCA onesta." });
   systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
 
-  // Commercial state context (holding pattern + tone modulation)
+  // LOVABLE-93: Commercial state context — category override for holding pattern detection
   let commercialBlock = "";
-  if (commercialState !== undefined || touchCount !== undefined) {
+  if (commercialState !== undefined || touchCount !== undefined || addressCategory) {
     const tc = touchCount || 0;
     const ws = warmthScore ?? 0;
-    const toneInstruction = tc === 0
+
+    // LOVABLE-93: category as SECONDARY signal — overrides lead_status if it says "holding"
+    let effectiveState = commercialState || "new";
+    let holdingPatternNote = "";
+    if (addressCategory) {
+      const catLower = addressCategory.toLowerCase();
+      const isAddressHolding = catLower.includes("attesa") || catLower.includes("hold") ||
+                              catLower.includes("paused") || catLower.includes("on_hold") ||
+                              catLower.includes("holding") || catLower.includes("pausa") ||
+                              catLower.includes("pending");
+      if (isAddressHolding) {
+        effectiveState = "holding";
+        holdingPatternNote = `\n⚠️ [OVERRIDE] Regola email_address_rules.category="${addressCategory}" → stato="holding" (priorità manuale utente su lead_status)`;
+      }
+    }
+
+    const toneInstruction = effectiveState === "holding"
+      ? "CIRCUITO DI ATTESA: Tono cordiale ma non insistente. Mantieni punto di contatto aperto. Suggerisci riattivazione con pretesto leggero. NON CTA aggressivi."
+      : tc === 0
       ? "PRIMO CONTATTO: Tono freddo-professionale. Breve. CTA basso impegno. NON vendere."
       : tc <= 3 && ws < 50
       ? "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione."
       : tc > 3 && ws < 50
       ? "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza."
       : "RELAZIONE CALDA: Tono da collega/amico professionale. Personalizzazione alta. Proposte concrete.";
+
     commercialBlock = `\n--- STATO COMMERCIALE ---
-- Fase: ${(commercialState || "new").toUpperCase()}
+- Fase: ${(effectiveState || "new").toUpperCase()}
 - Contatti totali inviati: ${tc}
 - Ultimo canale: ${lastChannel || "nessuno"}
 - Ultimo esito: ${lastOutcome || "n/a"}
 - Giorni dall'ultimo contatto: ${daysSinceLastContact ?? "n/a"}
-- Calore relazione: ${ws}/100
+- Calore relazione: ${ws}/100${holdingPatternNote}
 
 ISTRUZIONI TONO: ${toneInstruction}
 `;

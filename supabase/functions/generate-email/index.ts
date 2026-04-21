@@ -209,12 +209,6 @@ serve(async (req) => {
     });
     const aiLatencyMs = Date.now() - aiStart;
 
-    // ── Credits ──
-    if (result.usage) {
-      const totalCredits = Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000));
-      await supabase.rpc("deduct_credits", { p_user_id: userId, p_amount: totalCredits, p_operation: "ai_call", p_description: `generate-email (${quality}): ${result.usage.promptTokens} in + ${result.usage.completionTokens} out` });
-    }
-
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
 
@@ -225,6 +219,12 @@ serve(async (req) => {
     try {
       const optimus = await loadOptimusSettings(supabase, userId);
       if (optimus.enabled && finalBody) {
+        // LOVABLE-93: Detect reply context
+        const isReplyContext =
+          (oracle_type && (oracle_type.includes("reply") || oracle_type.includes("risposta"))) ||
+          !!ctx.historyContext ||
+          (typeResolution?.resolved_type && ["follow_up", "reply"].includes(typeResolution.resolved_type as string));
+
         journalistResult = await journalistReview(supabase, userId, {
           final_draft: finalBody,
           resolved_brief: {
@@ -239,6 +239,7 @@ serve(async (req) => {
             last_outcome: ctx.lastOutcome ?? undefined,
             days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
             has_active_conversation: !!ctx.historyContext,
+            decision_engine: decisionContext || undefined,
           },
           partner: {
             id: partner?.id ?? null,
@@ -248,6 +249,12 @@ serve(async (req) => {
           contact: contact ? { name: contact.name, role: contact.title } : undefined,
           history_summary: ctx.historyContext || undefined,
           kb_summary: (ctx.salesKBSections || []).join(", ") || undefined,
+          is_reply: isReplyContext,
+          original_inbound: isReplyContext ? {
+            subject: ctx.historyContext?.split("\n")[0],
+            summary: ctx.historyContext,
+            classification: typeResolution?.original_type,
+          } : undefined,
         }, { mode: optimus.mode, strictness: optimus.strictness });
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           finalBody = journalistResult.edited_text;
@@ -255,6 +262,19 @@ serve(async (req) => {
       }
     } catch (jerr) {
       console.error("[generate-email] journalistReview failed:", jerr);
+    }
+
+    // ── Credits (AFTER journalist review) ──
+    // Deduct credits based on journalist verdict:
+    // - If journalist blocks the email (verdict === "block"), deduct 50% credits: the AI call happened and resources were used,
+    //   but the output was not usable/publishable, so the user doesn't get full value.
+    // - Otherwise, deduct full credits: the email was approved or allowed to proceed.
+    if (result.usage) {
+      let creditsToDeduct = Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000));
+      if (journalistResult?.verdict === "block") {
+        creditsToDeduct = Math.ceil(creditsToDeduct * 0.5);
+      }
+      await supabase.rpc("deduct_credits", { p_user_id: userId, p_amount: creditsToDeduct, p_operation: "ai_call", p_description: `generate-email (${quality}): ${result.usage.promptTokens} in + ${result.usage.completionTokens} out${journalistResult?.verdict === "block" ? " [50% blocked by journalist]" : ""}` });
     }
 
     // Supervisor audit (fire-and-forget)

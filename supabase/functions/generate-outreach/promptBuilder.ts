@@ -46,6 +46,9 @@ export interface OutreachPromptContext {
   playbookBlock?: string;
   // Fix 3.3: honest channel declaration (full vs limited context)
   channelDeclaration?: string;
+  // Fix (email_address_rules propagation)
+  addressCustomPrompt?: string;
+  addressCategory?: string;
   // LOVABLE-93: Decision Engine pre-computed context block
   decisionEngineBlock?: string;
 }
@@ -63,7 +66,7 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
     settings, enrichmentSnippet, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
     conversationIntelligenceContext, salesKBSlice, salesKBSections, commercialLevers, decision, readinessTotal,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
-    playbookBlock, channelDeclaration,
+    playbookBlock, channelDeclaration, addressCustomPrompt, addressCategory,
   } = ctx;
 
   let recipientName = "";
@@ -74,6 +77,27 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
 
   const detected = getLanguageHint(country_code);
   const effectiveLanguage = language || detected.language;
+
+  // ── Build address-specific priority instruction block ──
+  let addressPriorityBlock = "";
+  if (addressCustomPrompt || addressCategory) {
+    const parts: string[] = [];
+    if (addressCustomPrompt) {
+      parts.push(`⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO EMAIL:\n${addressCustomPrompt}`);
+    }
+    if (addressCategory) {
+      // Detect holding pattern signals
+      const category = addressCategory.toLowerCase();
+      const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
+                              category.includes("pausa") || category.includes("pending");
+      if (isHoldingPattern) {
+        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}\n→ HOLDING PATTERN RILEVATO: questo contatto è in fase di attesa pianificata.\n  ADATTAMENTI: tono amichevole ma non pressante, mantieni punto di contatto aperto per riattivazione futura, evita CTA aggressivi.`);
+      } else {
+        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}`);
+      }
+    }
+    addressPriorityBlock = parts.join("\n\n") + "\n\n";
+  }
 
   const channelContext = `Canale: ${ch.toUpperCase()}`;
 
@@ -110,7 +134,7 @@ ${enrichmentSnippet}
     : `\nATTENZIONE: Nessun dato arricchito disponibile per questo destinatario. Usa SOLO le informazioni base fornite. NON inventare dettagli, presentazioni, eventi o fatti specifici.
 `;
 
-  const systemPrompt = `${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un EDITOR GIORNALISTA esperto al servizio di WCA Network (la più grande alleanza globale di freight forwarder indipendenti).
+  const systemPrompt = `${addressPriorityBlock}${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un EDITOR GIORNALISTA esperto al servizio di WCA Network (la più grande alleanza globale di freight forwarder indipendenti).
 Non sei un venditore. Scrivi UN messaggio per UN destinatario, dopo aver letto il dossier su di lui,
 per trasferire tre cose: (1) siamo professionisti seri; (2) questa comunicazione è specifica per te;
 (3) la tua azienda rispecchia i nostri standard e crediamo si possa costruire qualcosa di interessante insieme.

@@ -109,13 +109,15 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
   "email-classifier": {
     id: "email-classifier",
     coreFile: "core/email-classifier",
-    kbCategories: ["doctrine", "system_doctrine", "sales_doctrine", "procedures"],
+    // LOVABLE-93: KB per domini email (operative/admin/support)
+    kbCategories: ["doctrine", "system_doctrine", "sales_doctrine", "procedures", "domain_routing"],
     criticalProcedures: [
       "procedures/lead-qualification-v2",
       "Dottrina Uscite",
+      "Regole smistamento per dominio",
     ],
     requiredVars: [],
-    description: "Classificatore risposte inbound multicanale.",
+    description: "Classificatore risposte inbound multicanale con domain routing.",
   },
   "query-planner": {
     id: "query-planner",

@@ -14,9 +14,15 @@
  *   6. QUESTION → crea pending action per risposta, escalation se urgente
  *   7. MEETING_REQUEST → crea pending action per scheduling
  *   8. COMPLAINT → escalation immediata, alta priorità
+ *
+ * LOVABLE-93: Auto-draft generation per reply-type pending actions.
+ * Quando viene creata una pending action di tipo reply_interested, reply_to_question,
+ * handle_complaint, o send_graceful_close, viene generato automaticamente un draft
+ * tramite aiChat e salvato nel campo action_payload con draft_subject e draft_body.
  */
 
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
+import { aiChat } from "./aiGateway.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -33,7 +39,40 @@ export type ClassificationCategory =
   | "unsubscribe"
   | "bounce"
   | "spam"
-  | "uncategorized";
+  | "uncategorized"
+  // LOVABLE-93: Domain-specific categories
+  | "quote_request"
+  | "booking_request"
+  | "rate_inquiry"
+  | "shipment_tracking"
+  | "cargo_status"
+  | "documentation_request"
+  | "invoice_query"
+  | "payment_request"
+  | "payment_confirmation"
+  | "credit_note"
+  | "account_statement"
+  | "service_inquiry"
+  | "technical_issue"
+  | "feedback"
+  | "newsletter"
+  | "system_notification"
+  | "internal_communication";
+
+export type ClassificationDomain =
+  | "commercial"
+  | "operative"
+  | "administrative"
+  | "support"
+  | "internal";
+
+export interface EmailAddressRule {
+  category?: string;
+  custom_prompt?: string;
+  tone_override?: string;
+  topics_to_emphasize?: string[];
+  topics_to_avoid?: string[];
+}
 
 export interface ClassificationInput {
   userId: string;
@@ -54,6 +93,10 @@ export interface ClassificationInput {
   channel?: "email" | "whatsapp" | "linkedin";
   /** Data OOO rilevata (per auto_reply) */
   oooReturnDate?: string;
+  /** LOVABLE-93: Regole email address caricate per il sender */
+  emailAddressRule?: EmailAddressRule;
+  /** LOVABLE-93: Domain classification (commercial/operative/administrative/support/internal) */
+  domain?: ClassificationDomain;
 }
 
 export interface PostClassificationResult {
@@ -80,53 +123,186 @@ export async function runPostClassificationPipeline(
   };
 
   try {
-    switch (input.category) {
-      case "interested":
-      case "meeting_request":
-        await handleInterested(supabase, input, result);
-        break;
+    // LOVABLE-93: Carica email_address_rules per il sender
+    const { data: addressRule } = await supabase
+      .from("email_address_rules")
+      .select("category, custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid")
+      .eq("email_address", input.senderEmail)
+      .eq("user_id", input.userId)
+      .maybeSingle();
 
-      case "not_interested":
-        await handleNotInterested(supabase, input, result);
-        break;
+    // Arricchisci input con email_address_rules context se disponibile
+    const enrichedInput = {
+      ...input,
+      emailAddressRule: addressRule || undefined,
+    };
 
-      case "auto_reply":
-        await handleOutOfOffice(supabase, input, result);
-        break;
+    // LOVABLE-93: handler per dominio (operative/admin/support/internal)
+    // Check domain BEFORE category routing
+    const domain = enrichedInput.domain || "commercial";
+    if (domain !== "commercial") {
+      // Route to domain-specific handlers
+      switch (domain) {
+        case "operative":
+          await handleOperativeRequest(supabase, enrichedInput, result);
+          break;
+        case "administrative":
+          await handleAdministrativeRequest(supabase, enrichedInput, result);
+          break;
+        case "support":
+          await handleSupportRequest(supabase, enrichedInput, result);
+          break;
+        case "internal":
+          await handleInternalMessage(supabase, enrichedInput, result);
+          break;
+      }
+    } else {
+      // Commercial domain: route by category as usual
+      switch (input.category) {
+        case "interested":
+        case "meeting_request":
+          await handleInterested(supabase, enrichedInput, result);
+          break;
 
-      case "bounce":
-        await handleBounce(supabase, input, result);
-        break;
+        case "not_interested":
+          await handleNotInterested(supabase, enrichedInput, result);
+          break;
 
-      case "unsubscribe":
-        await handleUnsubscribe(supabase, input, result);
-        break;
+        case "auto_reply":
+          await handleOutOfOffice(supabase, enrichedInput, result);
+          break;
 
-      case "question":
-      case "request_info":
-        await handleQuestion(supabase, input, result);
-        break;
+        case "bounce":
+          await handleBounce(supabase, enrichedInput, result);
+          break;
 
-      case "complaint":
-        await handleComplaint(supabase, input, result);
-        break;
+        case "unsubscribe":
+          await handleUnsubscribe(supabase, enrichedInput, result);
+          break;
 
-      case "follow_up":
-        // Follow-up dal partner = segnale positivo, tratta come interested leggero
-        await handleFollowUp(supabase, input, result);
-        break;
+        case "question":
+        case "request_info":
+          await handleQuestion(supabase, enrichedInput, result);
+          break;
 
-      case "spam":
-      case "uncategorized":
-        // Nessuna azione automatica, solo log
-        result.actionsExecuted.push("skip_no_action");
-        break;
+        case "complaint":
+          await handleComplaint(supabase, enrichedInput, result);
+          break;
+
+        case "follow_up":
+          // Follow-up dal partner = segnale positivo, tratta come interested leggero
+          await handleFollowUp(supabase, enrichedInput, result);
+          break;
+
+        case "spam":
+        case "uncategorized":
+          // Nessuna azione automatica, solo log
+          result.actionsExecuted.push("skip_no_action");
+          break;
+      }
     }
   } catch (e) {
     result.errors.push(`Pipeline error: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Helper: LOVABLE-93 Auto-draft generation per reply-type pending actions
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Genera un draft di risposta utilizzando aiChat.
+ * Fire-and-forget: eventuali errori non bloccano il flusso principale.
+ */
+async function generateReplyDraft(
+  supabase: SupabaseClient,
+  pendingActionId: string,
+  input: ClassificationInput,
+  category: "reply_interested" | "reply_to_question" | "handle_complaint" | "send_graceful_close",
+): Promise<void> {
+  try {
+    // Costruisci il prompt contextuale basato sulla categoria e sul contesto disponibile
+    let tone = "professional";
+    let categoryHint = "";
+
+    switch (category) {
+      case "reply_interested":
+        tone = "warm";
+        categoryHint = "Il partner ha mostrato interesse. La risposta deve essere positiva, concreta e proporre i prossimi step.";
+        break;
+      case "reply_to_question":
+        tone = "helpful";
+        categoryHint = "Il partner ha posto una domanda. La risposta deve essere chiara, utile e basata su KB/expertise disponibile.";
+        break;
+      case "handle_complaint":
+        tone = "empathetic";
+        categoryHint = "È stato ricevuto un reclamo. La risposta deve essere empatica, riconoscere il problema e proporre una soluzione concreta.";
+        break;
+      case "send_graceful_close":
+        tone = "graceful";
+        categoryHint = "Il partner non è interessato. La risposta deve chiudere con eleganza, ringraziare e lasciare la porta aperta senza pressione.";
+        break;
+    }
+
+    // Assembla i topic hints dall'email_address_rule
+    const topicsStr = (input.emailAddressRule?.topics_to_emphasize || []).join(", ");
+
+    const systemPrompt = `Tu sei un assistente AI per la composizione di email professionali.
+Tono richiesto: ${tone}
+Contesto: ${categoryHint}
+${input.emailAddressRule?.custom_prompt ? `Istruzioni personalizzate: ${input.emailAddressRule.custom_prompt}` : ""}
+${topicsStr ? `Topic da enfatizzare: ${topicsStr}` : ""}`;
+
+    const userPrompt = `Genera un draft di risposta email basato su:
+- Riassunto dell'email originale: ${input.aiSummary || "N/A"}
+- Oggetto originale: ${input.subject || "N/A"}
+- Email mittente: ${input.senderEmail}
+
+Restituisci il draft in questo formato JSON:
+{
+  "draft_subject": "Oggetto della risposta",
+  "draft_body": "Corpo della risposta (markdown semplice, max 300 parole)"
+}`;
+
+    const result = await aiChat({
+      models: ["google/gemini-2.5-flash"],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1024,
+      context: `draft_generation_${category}`,
+    });
+
+    if (result.content) {
+      // Parse JSON from response
+      const jsonMatch = result.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const draft = JSON.parse(jsonMatch[0]);
+        if (draft.draft_subject && draft.draft_body) {
+          // Update pending action with draft
+          await supabase
+            .from("ai_pending_actions")
+            .update({
+              action_payload: (action_payload) => ({
+                ...action_payload,
+                draft_subject: draft.draft_subject,
+                draft_body: draft.draft_body,
+                draft_generated_at: new Date().toISOString(),
+              }),
+            })
+            .eq("id", pendingActionId);
+        }
+      }
+    }
+  } catch (e) {
+    // LOVABLE-93: Errori nella generazione del draft non bloccano il flusso principale
+    // (draft generation è fire-and-forget)
+    console.warn(`[LOVABLE-93] Draft generation failed for ${category}: ${e}`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -184,29 +360,64 @@ async function handleInterested(
   }
 
   // b) Crea pending action per risposta
+  // LOVABLE-93: Includi email_address_rules context nel payload per draft generation
   const actionType =
     input.category === "meeting_request" ? "schedule_meeting" : "reply_interested";
+  let pendingActionId: string | null = null;
   try {
-    await supabase.from("ai_pending_actions").insert({
-      user_id: input.userId,
-      partner_id: input.partnerId || null,
-      action_type: actionType,
-      action_payload: {
-        reply_to: input.senderEmail,
-        original_subject: input.subject,
-        ai_summary: input.aiSummary,
-        suggested_action:
-          input.category === "meeting_request"
-            ? "Proponi disponibilità per call/meeting"
-            : "Rispondi con prossimo passo concreto (Accompagnatore)",
-      },
-      status: "pending",
-      priority: input.category === "meeting_request" ? "high" : "normal",
-      reasoning: `Classificazione automatica: ${input.category} (${(input.confidence * 100).toFixed(0)}%)`,
-      created_at: now,
-    });
-    result.pendingActionCreated = true;
-    result.actionsExecuted.push(`pending_action_${actionType}`);
+    const actionPayload: Record<string, unknown> = {
+      reply_to: input.senderEmail,
+      original_subject: input.subject,
+      ai_summary: input.aiSummary,
+      suggested_action:
+        input.category === "meeting_request"
+          ? "Proponi disponibilità per call/meeting"
+          : "Rispondi con prossimo passo concreto (Accompagnatore)",
+    };
+
+    // LOVABLE-93: Aggiungi tone/topics/custom_prompt dal email_address_rule
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: actionType,
+        action_payload: actionPayload,
+        status: "pending",
+        priority: input.category === "meeting_request" ? "high" : "normal",
+        reasoning: `Classificazione automatica: ${input.category} (${(input.confidence * 100).toFixed(0)}%)`,
+        created_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      pendingActionId = insertedAction.id;
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push(`pending_action_${actionType}`);
+
+      // LOVABLE-93: Genera draft automaticamente se è una reply_interested (non per schedule_meeting)
+      if (actionType === "reply_interested") {
+        generateReplyDraft(supabase, pendingActionId, input, "reply_interested").catch((e) => {
+          console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
+        });
+      }
+    }
   } catch (e) {
     result.errors.push(`Pending action failed: ${e}`);
   }
@@ -314,20 +525,57 @@ async function handleNotInterested(
   }
 
   // Crea pending action per eventuale messaggio di chiusura elegante
-  await supabase.from("ai_pending_actions").insert({
-    user_id: input.userId,
-    partner_id: input.partnerId || null,
-    action_type: "send_graceful_close",
-    action_payload: {
-      reply_to: input.senderEmail,
-      suggested_action:
-        "Invia chiusura elegante (Chiusore): ringrazia, lascia porta aperta, nessuna pressione",
-    },
-    status: "pending",
-    priority: "low",
-  });
-  result.pendingActionCreated = true;
-  result.actionsExecuted.push("pending_graceful_close");
+  // LOVABLE-93: Includi email_address_rules context nel payload
+  const gracefulClosePayload: Record<string, unknown> = {
+    reply_to: input.senderEmail,
+    original_subject: input.subject,
+    ai_summary: input.aiSummary,
+    suggested_action:
+      "Invia chiusura elegante (Chiusore): ringrazia, lascia porta aperta, nessuna pressione",
+  };
+
+  // LOVABLE-93: Aggiungi tone/topics/custom_prompt dal email_address_rule
+  if (input.emailAddressRule) {
+    if (input.emailAddressRule.tone_override) {
+      gracefulClosePayload.tone_override = input.emailAddressRule.tone_override;
+    }
+    if (input.emailAddressRule.custom_prompt) {
+      gracefulClosePayload.custom_prompt = input.emailAddressRule.custom_prompt;
+    }
+    if (input.emailAddressRule.topics_to_emphasize?.length) {
+      gracefulClosePayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+    }
+    if (input.emailAddressRule.topics_to_avoid?.length) {
+      gracefulClosePayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+    }
+  }
+
+  try {
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: "send_graceful_close",
+        action_payload: gracefulClosePayload,
+        status: "pending",
+        priority: "low",
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push("pending_graceful_close");
+
+      // LOVABLE-93: Genera draft automaticamente per chiusura elegante
+      generateReplyDraft(supabase, insertedAction.id, input, "send_graceful_close").catch((e) => {
+        console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
+      });
+    }
+  } catch (e) {
+    result.errors.push(`Graceful close pending action failed: ${e}`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -586,25 +834,56 @@ async function handleQuestion(
   const priority = isUrgent ? "critical" : "high";
 
   // Crea pending action per risposta
+  // LOVABLE-93: Includi email_address_rules context nel payload
   try {
-    await supabase.from("ai_pending_actions").insert({
-      user_id: input.userId,
-      partner_id: input.partnerId || null,
-      action_type: "reply_to_question",
-      action_payload: {
-        reply_to: input.senderEmail,
-        original_subject: input.subject,
-        ai_summary: input.aiSummary,
-        urgency: input.urgency,
-        suggested_action: isUrgent
-          ? "Domanda urgente — risposta richiesta entro 24h"
-          : "Domanda dal partner — prepara risposta appoggiandoti a KB",
-      },
-      status: "pending",
-      priority,
-    });
-    result.pendingActionCreated = true;
-    result.actionsExecuted.push(`pending_reply_question_${priority}`);
+    const actionPayload: Record<string, unknown> = {
+      reply_to: input.senderEmail,
+      original_subject: input.subject,
+      ai_summary: input.aiSummary,
+      urgency: input.urgency,
+      suggested_action: isUrgent
+        ? "Domanda urgente — risposta richiesta entro 24h"
+        : "Domanda dal partner — prepara risposta appoggiandoti a KB",
+    };
+
+    // LOVABLE-93: Aggiungi tone/topics/custom_prompt dal email_address_rule
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: "reply_to_question",
+        action_payload: actionPayload,
+        status: "pending",
+        priority,
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push(`pending_reply_question_${priority}`);
+
+      // LOVABLE-93: Genera draft automaticamente per risposta a domanda
+      generateReplyDraft(supabase, insertedAction.id, input, "reply_to_question").catch((e) => {
+        console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
+      });
+    }
   } catch (e) {
     result.errors.push(`Question action failed: ${e}`);
   }
@@ -647,24 +926,55 @@ async function handleComplaint(
   result: PostClassificationResult,
 ) {
   // Escalation immediata: pending action critica
+  // LOVABLE-93: Includi email_address_rules context nel payload per risposta personalizzata
   try {
-    await supabase.from("ai_pending_actions").insert({
-      user_id: input.userId,
-      partner_id: input.partnerId || null,
-      action_type: "handle_complaint",
-      action_payload: {
-        sender: input.senderEmail,
-        subject: input.subject,
-        ai_summary: input.aiSummary,
-        urgency: 5,
-        suggested_action:
-          "RECLAMO RICEVUTO — richiede attenzione immediata. Risposta entro 24h. Tono: empatico, risolutivo, MAI difensivo.",
-      },
-      status: "pending",
-      priority: "critical",
-    });
-    result.pendingActionCreated = true;
-    result.actionsExecuted.push("pending_complaint_critical");
+    const actionPayload: Record<string, unknown> = {
+      sender: input.senderEmail,
+      subject: input.subject,
+      ai_summary: input.aiSummary,
+      urgency: 5,
+      suggested_action:
+        "RECLAMO RICEVUTO — richiede attenzione immediata. Risposta entro 24h. Tono: empatico, risolutivo, MAI difensivo.",
+    };
+
+    // LOVABLE-93: Aggiungi tone/topics/custom_prompt dal email_address_rule
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: "handle_complaint",
+        action_payload: actionPayload,
+        status: "pending",
+        priority: "critical",
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push("pending_complaint_critical");
+
+      // LOVABLE-93: Genera draft automaticamente per risposta a reclamo (empathetic tone)
+      generateReplyDraft(supabase, insertedAction.id, input, "handle_complaint").catch((e) => {
+        console.warn(`[LOVABLE-93] Draft generation failed: ${e}`);
+      });
+    }
   } catch (e) {
     result.errors.push(`Complaint action failed: ${e}`);
   }
@@ -738,4 +1048,548 @@ async function handleFollowUp(
       result.errors.push(`Follow-up reminder failed: ${e}`);
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LOVABLE-93: DOMAIN-SPECIFIC HANDLERS
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// OPERATIVE DOMAIN: quote_request, booking_request, rate_inquiry,
+//                   shipment_tracking, cargo_status, documentation_request
+// ═══════════════════════════════════════════════════════════════════
+async function handleOperativeRequest(
+  supabase: SupabaseClient,
+  input: ClassificationInput,
+  result: PostClassificationResult,
+) {
+  const now = new Date().toISOString();
+  const category = input.category as string;
+
+  // Update last_interaction_at su partner
+  if (input.partnerId) {
+    try {
+      await supabase
+        .from("partners")
+        .update({ last_interaction_at: now })
+        .eq("id", input.partnerId);
+    } catch (e) {
+      result.errors.push(`Failed to update partner interaction: ${e}`);
+    }
+  }
+
+  // Route by operative category
+  let actionType: string;
+  let priority: "high" | "normal";
+  let needsReminder = false;
+
+  if (["quote_request", "booking_request", "rate_inquiry"].includes(category)) {
+    actionType = "draft_quote_response";
+    priority = "high";
+    needsReminder = true;
+  } else if (["shipment_tracking", "cargo_status"].includes(category)) {
+    actionType = "provide_tracking_info";
+    priority = "normal";
+  } else if (category === "documentation_request") {
+    actionType = "send_documentation";
+    priority = "normal";
+  } else {
+    // Unknown operative category, default to generic operative action
+    actionType = "operative_action";
+    priority = "normal";
+  }
+
+  // LOVABLE-93: Check for conversion signal: if lead_status is "negotiation" or "qualified"
+  // and category is quote_request/booking_request/rate_inquiry
+  let isConversionSignal = false;
+  let currentLeadStatus: string | null = null;
+  if (input.partnerId && ["quote_request", "booking_request", "rate_inquiry"].includes(category)) {
+    try {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status")
+        .eq("id", input.partnerId)
+        .maybeSingle();
+
+      currentLeadStatus = partner?.lead_status || null;
+      // LOVABLE-93: Conversion signal when negotiation OR qualified stage receives operative request
+      if (["negotiation", "qualified"].includes(currentLeadStatus || "")) {
+        isConversionSignal = true;
+      }
+    } catch (e) {
+      result.errors.push(`Failed to check conversion signal: ${e}`);
+    }
+  }
+
+  // LOVABLE-93: Soft signal for engaged → suggest qualification
+  let isSoftSignalQualification = false;
+  if (input.partnerId && ["quote_request", "booking_request", "rate_inquiry"].includes(category)) {
+    if (currentLeadStatus === "engaged") {
+      isSoftSignalQualification = true;
+    }
+  }
+
+  // Create main pending action
+  try {
+    const actionPayload: Record<string, unknown> = {
+      reply_to: input.senderEmail,
+      original_subject: input.subject,
+      ai_summary: input.aiSummary,
+      domain: "operative",
+      category,
+      suggested_action: `Operative request: ${category}`,
+    };
+
+    // Add email_address_rules context if available
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: actionType,
+        action_payload: actionPayload,
+        status: "pending",
+        priority,
+        reasoning: `Operative domain: ${category} (confidence ${(input.confidence * 100).toFixed(0)}%)`,
+        created_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push(`operative_${actionType}`);
+    }
+  } catch (e) {
+    result.errors.push(`Operative pending action failed: ${e}`);
+  }
+
+  // LOVABLE-93: Create conversion signal action if needed
+  // Trigger: Partner in "negotiation" or "qualified" sends operative request
+  // Action: Create pending "confirm_conversion" (NOT auto-executed — requires user confirmation)
+  if (isConversionSignal && currentLeadStatus) {
+    try {
+      const { data: insertedConversionAction } = await supabase
+        .from("ai_pending_actions")
+        .insert({
+          user_id: input.userId,
+          partner_id: input.partnerId,
+          action_type: "confirm_conversion",
+          action_payload: {
+            trigger_category: category,
+            signal_type: `${currentLeadStatus}_stage_operative_request`,
+            current_lead_status: currentLeadStatus,
+            conversion_trigger_summary: input.aiSummary,
+            sender_email: input.senderEmail,
+            suggested_action: "Conferma transizione a cliente e attiva gestione operativa",
+          },
+          status: "pending",
+          priority: "high",
+          reasoning: `Il contatto in fase "${currentLeadStatus}" ha inviato una richiesta operativa (${category}). Questo suggerisce una collaborazione avviata.`,
+          created_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (insertedConversionAction?.id) {
+        result.actionsExecuted.push("operative_conversion_signal_pending");
+        console.log(
+          `[LOVABLE-93] Conversion signal detected: partner=${input.partnerId} ` +
+          `status=${currentLeadStatus} category=${category}`
+        );
+      }
+    } catch (e) {
+      result.errors.push(`Conversion signal action failed: ${e}`);
+    }
+  }
+
+  // LOVABLE-93: Create soft signal action for engaged → suggest qualification
+  // If engaged partner sends operative request, suggest qualification
+  if (isSoftSignalQualification) {
+    try {
+      await supabase.from("ai_pending_actions").insert({
+        user_id: input.userId,
+        partner_id: input.partnerId,
+        action_type: "suggest_qualification",
+        action_payload: {
+          trigger_category: category,
+          trigger_summary: input.aiSummary,
+          sender_email: input.senderEmail,
+          current_lead_status: "engaged",
+          suggested_action: "Valuta la qualificazione di questo contatto — sta mostrando segnali operativi",
+        },
+        status: "pending",
+        priority: "normal",
+        reasoning: `Il contatto in fase "engaged" ha inviato una richiesta operativa (${category}). Consigliata valutazione per qualificazione.`,
+        created_at: now,
+      });
+
+      result.actionsExecuted.push("operative_soft_signal_qualification");
+      console.log(
+        `[LOVABLE-93] Qualification signal: partner=${input.partnerId} ` +
+        `category=${category}`
+      );
+    } catch (e) {
+      result.errors.push(`Qualification suggestion failed: ${e}`);
+    }
+  }
+
+  // LOVABLE-93: Check for UPSELL signal (reverse case)
+  // If partner is "converted" (already a client) and receives operative request,
+  // this is UPSELL, not re-entry into prospect funnel
+  if (input.partnerId && currentLeadStatus === "converted") {
+    try {
+      const { data: insertedUpsellAction } = await supabase
+        .from("ai_pending_actions")
+        .insert({
+          user_id: input.userId,
+          partner_id: input.partnerId,
+          action_type: "upsell_opportunity",
+          action_payload: {
+            trigger_category: category,
+            trigger_summary: input.aiSummary,
+            sender_email: input.senderEmail,
+            current_lead_status: "converted",
+            suggested_action: "Riconoscere come opportunità di upsell/cross-sell. Cliente esistente mostra nuovo bisogno.",
+          },
+          status: "pending",
+          priority: "high",
+          reasoning: `Cliente convertito (stato "converted") ha inviato richiesta operativa (${category}). Opportunità di upsell/cross-sell.`,
+          created_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (insertedUpsellAction?.id) {
+        result.actionsExecuted.push("operative_upsell_signal");
+        console.log(
+          `[LOVABLE-93] Upsell opportunity detected: partner=${input.partnerId} ` +
+          `category=${category}`
+        );
+      }
+    } catch (e) {
+      result.errors.push(`Upsell opportunity action failed: ${e}`);
+    }
+  }
+
+  // Create T+1 reminder if needed
+  if (needsReminder && input.partnerId) {
+    try {
+      await supabase.from("activities").insert({
+        user_id: input.userId,
+        partner_id: input.partnerId,
+        source_id: input.partnerId,
+        source_type: "partner",
+        activity_type: "follow_up",
+        title: `Risposta a ${category} da ${input.senderName || input.senderEmail}`,
+        description: input.aiSummary || `Operative request: ${category}. Response required.`,
+        status: "pending",
+        priority: "high",
+        due_date: new Date(Date.now() + 86400000).toISOString(),
+        source_meta: {
+          domain: "operative",
+          category,
+          pipeline: "postClassification",
+        },
+      });
+      result.reminderCreated = true;
+      result.actionsExecuted.push("reminder_operative_T+1");
+    } catch (e) {
+      result.errors.push(`Operative reminder failed: ${e}`);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ADMINISTRATIVE DOMAIN: invoice_query, payment_request, payment_confirmation,
+//                        credit_note, account_statement
+// ═══════════════════════════════════════════════════════════════════
+async function handleAdministrativeRequest(
+  supabase: SupabaseClient,
+  input: ClassificationInput,
+  result: PostClassificationResult,
+) {
+  const now = new Date().toISOString();
+  const category = input.category as string;
+
+  // Update last_interaction_at su partner
+  if (input.partnerId) {
+    try {
+      await supabase
+        .from("partners")
+        .update({ last_interaction_at: now })
+        .eq("id", input.partnerId);
+    } catch (e) {
+      result.errors.push(`Failed to update partner interaction: ${e}`);
+    }
+  }
+
+  // Handle payment_confirmation: just log, no action
+  if (category === "payment_confirmation") {
+    result.actionsExecuted.push("admin_payment_confirmation_logged");
+    return;
+  }
+
+  // Route by administrative category
+  let actionType: string;
+  let priority: "high" | "normal";
+  let needsReminder = false;
+
+  if (["invoice_query", "payment_request"].includes(category)) {
+    actionType = "review_financial_request";
+    priority = "high";
+    needsReminder = true;
+    // NOTE: DO NOT auto-generate responses for financial requests (risky)
+  } else if (["credit_note", "account_statement"].includes(category)) {
+    actionType = "review_financial_document";
+    priority = "normal";
+  } else {
+    actionType = "admin_action";
+    priority = "normal";
+  }
+
+  // Create pending action (NO auto-draft for financial = risky)
+  try {
+    const actionPayload: Record<string, unknown> = {
+      reply_to: input.senderEmail,
+      original_subject: input.subject,
+      ai_summary: input.aiSummary,
+      domain: "administrative",
+      category,
+      suggested_action: `Administrative request: ${category}. IMPORTANT: Requires manual review. Do not auto-generate responses for financial requests.`,
+    };
+
+    // Add email_address_rules context if available
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: actionType,
+        action_payload: actionPayload,
+        status: "pending",
+        priority,
+        reasoning: `Administrative domain: ${category} (confidence ${(input.confidence * 100).toFixed(0)}%) - requires manual review`,
+        created_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push(`admin_${actionType}`);
+    }
+  } catch (e) {
+    result.errors.push(`Administrative pending action failed: ${e}`);
+  }
+
+  // Create T+1 reminder if needed (for high-priority financial requests)
+  if (needsReminder && input.partnerId) {
+    try {
+      await supabase.from("activities").insert({
+        user_id: input.userId,
+        partner_id: input.partnerId,
+        source_id: input.partnerId,
+        source_type: "partner",
+        activity_type: "follow_up",
+        title: `Revisione ${category} da ${input.senderName || input.senderEmail}`,
+        description: input.aiSummary || `Administrative request: ${category}. Manual review required.`,
+        status: "pending",
+        priority: "high",
+        due_date: new Date(Date.now() + 86400000).toISOString(),
+        source_meta: {
+          domain: "administrative",
+          category,
+          pipeline: "postClassification",
+        },
+      });
+      result.reminderCreated = true;
+      result.actionsExecuted.push("reminder_admin_T+1");
+    } catch (e) {
+      result.errors.push(`Administrative reminder failed: ${e}`);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUPPORT DOMAIN: complaint, service_inquiry, technical_issue, feedback
+// ═══════════════════════════════════════════════════════════════════
+async function handleSupportRequest(
+  supabase: SupabaseClient,
+  input: ClassificationInput,
+  result: PostClassificationResult,
+) {
+  const now = new Date().toISOString();
+  const category = input.category as string;
+
+  // Handle complaint: use existing handleComplaint logic
+  if (category === "complaint") {
+    await handleComplaint(supabase, input, result);
+    return;
+  }
+
+  // Update last_interaction_at su partner
+  if (input.partnerId) {
+    try {
+      await supabase
+        .from("partners")
+        .update({ last_interaction_at: now })
+        .eq("id", input.partnerId);
+    } catch (e) {
+      result.errors.push(`Failed to update partner interaction: ${e}`);
+    }
+  }
+
+  // Handle feedback: only create action if negative
+  if (category === "feedback") {
+    const sentiment = input.sentiment || "neutral";
+    if (sentiment === "negative") {
+      try {
+        await supabase.from("ai_pending_actions").insert({
+          user_id: input.userId,
+          partner_id: input.partnerId || null,
+          action_type: "reply_to_support",
+          action_payload: {
+            reply_to: input.senderEmail,
+            original_subject: input.subject,
+            ai_summary: input.aiSummary,
+            domain: "support",
+            category: "negative_feedback",
+            suggested_action: "Negative feedback received. Consider follow-up to understand and address concern.",
+          },
+          status: "pending",
+          priority: "normal",
+        });
+        result.pendingActionCreated = true;
+        result.actionsExecuted.push("support_negative_feedback_action");
+      } catch (e) {
+        result.errors.push(`Negative feedback action failed: ${e}`);
+      }
+    } else {
+      // Positive feedback: just log
+      result.actionsExecuted.push("support_positive_feedback_logged");
+    }
+    return;
+  }
+
+  // Route by support category
+  let actionType: string;
+  let priority: "high" | "normal" | "critical";
+
+  if (["service_inquiry", "technical_issue"].includes(category)) {
+    actionType = "reply_to_support";
+    // Determine priority based on urgency
+    priority = (input.urgency ?? 1) >= 4 ? "critical" : (category === "technical_issue" ? "high" : "normal");
+  } else {
+    actionType = "support_action";
+    priority = "normal";
+  }
+
+  // Create pending action for support requests
+  try {
+    const actionPayload: Record<string, unknown> = {
+      reply_to: input.senderEmail,
+      original_subject: input.subject,
+      ai_summary: input.aiSummary,
+      domain: "support",
+      category,
+      urgency: input.urgency,
+      suggested_action: `Support request: ${category}. Provide helpful and prompt response.`,
+    };
+
+    // Add email_address_rules context if available
+    if (input.emailAddressRule) {
+      if (input.emailAddressRule.tone_override) {
+        actionPayload.tone_override = input.emailAddressRule.tone_override;
+      }
+      if (input.emailAddressRule.custom_prompt) {
+        actionPayload.custom_prompt = input.emailAddressRule.custom_prompt;
+      }
+      if (input.emailAddressRule.topics_to_emphasize?.length) {
+        actionPayload.topics_to_emphasize = input.emailAddressRule.topics_to_emphasize;
+      }
+      if (input.emailAddressRule.topics_to_avoid?.length) {
+        actionPayload.topics_to_avoid = input.emailAddressRule.topics_to_avoid;
+      }
+    }
+
+    const { data: insertedAction } = await supabase
+      .from("ai_pending_actions")
+      .insert({
+        user_id: input.userId,
+        partner_id: input.partnerId || null,
+        action_type: actionType,
+        action_payload: actionPayload,
+        status: "pending",
+        priority,
+        reasoning: `Support domain: ${category} (confidence ${(input.confidence * 100).toFixed(0)}%, urgency ${input.urgency})`,
+        created_at: now,
+      })
+      .select("id")
+      .single();
+
+    if (insertedAction?.id) {
+      result.pendingActionCreated = true;
+      result.actionsExecuted.push(`support_${actionType}`);
+    }
+  } catch (e) {
+    result.errors.push(`Support pending action failed: ${e}`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INTERNAL DOMAIN: newsletter, system_notification, internal_communication
+// ═══════════════════════════════════════════════════════════════════
+async function handleInternalMessage(
+  supabase: SupabaseClient,
+  input: ClassificationInput,
+  result: PostClassificationResult,
+) {
+  const category = input.category as string;
+
+  // Handle newsletter and system_notification: auto-archive
+  if (["newsletter", "system_notification"].includes(category)) {
+    // Auto-archive: no user action needed, just log
+    result.actionsExecuted.push(`internal_${category}_auto_archived`);
+    return;
+  }
+
+  // Handle internal_communication: just log, no action
+  if (category === "internal_communication") {
+    result.actionsExecuted.push("internal_communication_logged");
+    return;
+  }
+
+  // Unknown internal category, log it
+  result.actionsExecuted.push("internal_message_logged");
 }

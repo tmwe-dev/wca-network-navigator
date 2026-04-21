@@ -8,6 +8,7 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
 import { loadCommercialDoctrine } from "../_shared/commercialDoctrine.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -555,6 +556,20 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
             : `Transizione fallita per partner ${partnerId}`,
         }).eq("id", task_id);
 
+        // LOVABLE-93: formato audit unificato via logSupervisorAudit
+        await logSupervisorAudit(supabase, {
+          user_id: userId,
+          actor_type: "ai_agent",
+          actor_id: agent_id,
+          actor_name: agent.name,
+          action_category: applied ? "state_transition_applied" : "state_transition_failed",
+          action_detail: `Partner ${partnerId}: ${fromState} → ${toState} (trigger: ${trigger})`,
+          target_type: "partner",
+          target_id: partnerId,
+          decision_origin: "ai_auto",
+          metadata: { task_id, from_state: fromState, to_state: toState },
+        });
+
         endMetrics(metrics, applied ? 200 : 500);
         return new Response(JSON.stringify({
           success: applied,
@@ -626,6 +641,20 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
         execution_log: [...currentLog, { ts: new Date().toISOString(), result: resultSummary.slice(0, 2000) }] as unknown as Record<string, unknown>,
         completed_at: new Date().toISOString(),
       }).eq("id", task_id);
+
+      // LOVABLE-93: formato audit unificato via logSupervisorAudit
+      await logSupervisorAudit(supabase, {
+        user_id: userId,
+        actor_type: "ai_agent",
+        actor_id: agent_id,
+        actor_name: agent.name,
+        action_category: taskStatus === "completed" ? "task_executed" : "task_failed",
+        action_detail: `${task.task_type}: ${resultSummary.slice(0, 300)}`,
+        target_type: "agent_task",
+        target_id: task_id,
+        decision_origin: "ai_auto",
+        metadata: { task_type: task.task_type, result: resultSummary.slice(0, 500) },
+      });
 
       // Update agent stats atomically via RPC
       await supabase.rpc("increment_agent_stat", {

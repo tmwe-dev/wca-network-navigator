@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLogAction } from "@/hooks/useLogAction";
 import { PartnerRating } from "@/components/partners/PartnerRating";
 import {
   getCountryFlag, getYearsMember, formatServiceCategory,
@@ -36,7 +37,6 @@ import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared/ServiceIcons";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
-import { insertActivity } from "@/data/activities";
 import { queryKeys } from "@/lib/queryKeys";
 
 interface ServiceItem { service_category: string }
@@ -54,6 +54,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const th = t(isDark);
   const navigate = useAppNavigate();
   const queryClient = useQueryClient();
+  const logAction = useLogAction();
   const [deepSearching, setDeepSearching] = useState(false);
   const [waSending, setWaSending] = useState<string | null>(null);
   const { sendWhatsApp, isAvailable: waAvailable } = useWhatsAppExtensionBridge();
@@ -110,20 +111,16 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       const result = await sendWhatsApp(cleanPhone, "");
       if (result?.success) {
         toast.success(`Chat WhatsApp aperta con ${contact.name}`);
-        // Create activity for holding pattern
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await insertActivity({
-            activity_type: "whatsapp_message" as "whatsapp_message",
-            title: `WhatsApp a ${contact.name} (${partner.company_name})`,
-            source_type: "partner",
-            source_id: partner.id,
-            partner_id: partner.id,
-            selected_contact_id: contact.id,
-            status: "completed" as "completed",
-            user_id: user.id,
-          });
-        }
+        // Log activity through unified pipeline
+        logAction.mutate({
+          channel: "whatsapp",
+          sourceType: "partner",
+          sourceId: partner.id,
+          to: contact.mobile || contact.direct_phone || "",
+          partnerId: partner.id,
+          contactId: contact.id,
+          title: `WhatsApp a ${contact.name} (${partner.company_name})`,
+        });
       } else {
         toast.error(`Contatto non trovato su WhatsApp: ${result?.error || "Errore sconosciuto"}`);
       }
@@ -132,7 +129,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
     } finally {
       setWaSending(null);
     }
-  }, [partner, waAvailable, sendWhatsApp]);
+  }, [partner, waAvailable, sendWhatsApp, logAction]);
    const _transportServices = services.filter((s: { service_category: string }) => TRANSPORT_SERVICES.includes(s.service_category));
    const _specialtyServices = services.filter((s: { service_category: string }) => !TRANSPORT_SERVICES.includes(s.service_category));
 

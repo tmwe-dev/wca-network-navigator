@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
+import { InboundNotificationsProvider } from "@/components/providers/InboundNotificationsProvider";
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
@@ -96,11 +97,12 @@ const App = () => (
   <GlobalErrorBoundary>
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <ContactDrawerProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+        <InboundNotificationsProvider>
+          <ContactDrawerProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <ViteChunkRecovery />
               <BackgroundSyncIndicator />
               <ConnectionBanner />
@@ -139,7 +141,8 @@ const App = () => (
             </BrowserRouter>
             <ContactRecordDrawer />
           </TooltipProvider>
-        </ContactDrawerProvider>
+          </ContactDrawerProvider>
+        </InboundNotificationsProvider>
       </QueryClientProvider>
     </AuthProvider>
   </GlobalErrorBoundary>

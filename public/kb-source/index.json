@@ -23,6 +23,19 @@
     { "path": "workflow/create-mission.md", "slug": "wf-create-mission", "title": "Workflow: Creare una Missione", "tags": ["crm", "kb", "workflow", "mission"], "category": "workflow" },
     { "path": "workflow/deep-search.md", "slug": "wf-deep-search", "title": "Workflow: Deep Search", "tags": ["crm", "kb", "workflow", "search"], "category": "workflow" },
     { "path": "workflow/import-contacts.md", "slug": "wf-import-contacts", "title": "Workflow: Importare Contatti", "tags": ["crm", "kb", "workflow", "import"], "category": "workflow" },
-    { "path": "workflow/send-email.md", "slug": "wf-send-email", "title": "Workflow: Inviare una Email", "tags": ["crm", "kb", "workflow", "email"], "category": "workflow" }
+    { "path": "workflow/send-email.md", "slug": "wf-send-email", "title": "Workflow: Inviare una Email", "tags": ["crm", "kb", "workflow", "email"], "category": "workflow" },
+    { "path": "operative/quote-response.md", "slug": "op-quote-response", "title": "Risposta a richiesta preventivo", "tags": ["operative", "procedures", "email", "quote"], "category": "operative_procedures", "priority": 8 },
+    { "path": "operative/booking-management.md", "slug": "op-booking-management", "title": "Gestione booking e prenotazioni", "tags": ["operative", "procedures", "email", "booking"], "category": "operative_procedures", "priority": 9 },
+    { "path": "operative/tracking-updates.md", "slug": "op-tracking-updates", "title": "Tracking e stato spedizioni", "tags": ["operative", "procedures", "email", "tracking"], "category": "operative_procedures", "priority": 10 },
+    { "path": "operative/rate-inquiries.md", "slug": "op-rate-inquiries", "title": "Richieste tariffarie", "tags": ["operative", "procedures", "email", "tariffs"], "category": "operative_procedures", "priority": 7 },
+    { "path": "administrative/invoice-requests.md", "slug": "adm-invoice-requests", "title": "Gestione richieste fattura", "tags": ["administrative", "procedures", "email", "invoices"], "category": "administrative_procedures", "priority": 9 },
+    { "path": "administrative/payment-reminders.md", "slug": "adm-payment-reminders", "title": "Solleciti pagamento ricevuti", "tags": ["administrative", "procedures", "email", "payment"], "category": "administrative_procedures", "priority": 8 },
+    { "path": "administrative/credit-notes.md", "slug": "adm-credit-notes", "title": "Note di credito e rettifiche", "tags": ["administrative", "procedures", "email", "refunds"], "category": "administrative_procedures", "priority": 7 },
+    { "path": "support/complaint-management.md", "slug": "sup-complaint-management", "title": "Gestione reclami", "tags": ["support", "procedures", "email", "complaints"], "category": "support_procedures", "priority": 10 },
+    { "path": "support/technical-support.md", "slug": "sup-technical-support", "title": "Richieste assistenza tecnica", "tags": ["support", "procedures", "email", "technical"], "category": "support_procedures", "priority": 9 },
+    { "path": "support/customer-feedback.md", "slug": "sup-customer-feedback", "title": "Feedback clienti", "tags": ["support", "procedures", "email", "feedback"], "category": "support_procedures", "priority": 6 },
+    { "path": "domain-routing/conversion-signals.md", "slug": "dr-conversion-signals", "title": "Segnali di conversione prospect→client", "tags": ["domain_routing", "procedures", "routing", "conversion"], "category": "domain_routing", "priority": 9 },
+    { "path": "domain-routing/domain-routing-rules.md", "slug": "dr-domain-routing-rules", "title": "Regole smistamento per dominio", "tags": ["domain_routing", "procedures", "routing", "classification"], "category": "domain_routing", "priority": 10 },
+    { "path": "domain-routing/existing-clients-upsell.md", "slug": "dr-existing-clients-upsell", "title": "Gestione clienti convertiti (upsell)", "tags": ["domain_routing", "procedures", "routing", "upsell"], "category": "domain_routing", "priority": 8 }
   ]
 }

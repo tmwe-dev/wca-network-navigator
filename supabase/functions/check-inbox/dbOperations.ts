@@ -160,6 +160,24 @@ export async function saveMessageToDb(
       ? params.match.partner_id
       : null;
 
+  // LOVABLE-93: auto-categorizzazione inbox per sender group
+  // Lookup sender in email_address_rules to assign category
+  let messageCategory: string | null = null;
+  try {
+    const { data: rule } = await supabase
+      .from("email_address_rules")
+      .select("category, group_id")
+      .eq("user_id", params.userId)
+      .eq("email_address", params.fromAddr)
+      .maybeSingle();
+
+    if (rule && rule.category) {
+      messageCategory = rule.category;
+    }
+  } catch (e) {
+    console.warn(`[saveMessageToDb] Failed to lookup sender category for ${params.fromAddr}:`, e);
+  }
+
   const msgData: Record<string, unknown> = {
     user_id: params.userId,
     operator_id: params.operatorId,
@@ -190,6 +208,7 @@ export async function saveMessageToDb(
     internal_date: params.internalDate || emailDate,
     parse_status: parseStatus,
     parse_warnings: params.parseWarnings.length > 0 ? params.parseWarnings : null,
+    category: messageCategory,
   };
 
   const { data: savedMsg, error: saveErr } = await supabase
@@ -231,6 +250,42 @@ export async function saveMessageToDb(
   await supabase.from("email_sync_state")
     .update({ last_uid: params.uid, last_sync_at: new Date().toISOString() })
     .eq("user_id", params.userId);
+
+  // LOVABLE-93: Create email_address_rules entry for unknown senders
+  // If sender not yet in email_address_rules, create a stub for AI suggestion
+  if (params.fromAddr && params.fromAddr !== "sconosciuto@unknown") {
+    try {
+      const { data: existingRule } = await supabase
+        .from("email_address_rules")
+        .select("id")
+        .eq("user_id", params.userId)
+        .eq("email_address", params.fromAddr)
+        .maybeSingle();
+
+      if (!existingRule) {
+        // Create new rule with basic info (display_name from senderName)
+        // Leave category and group_id null so it gets picked up for AI suggestion
+        const { error: ruleErr } = await supabase
+          .from("email_address_rules")
+          .insert({
+            user_id: params.userId,
+            email_address: params.fromAddr,
+            display_name: params.senderName || params.match.name || null,
+            category: null,
+            group_id: null,
+            notes: "Auto-created from inbound email",
+          });
+
+        if (ruleErr) {
+          console.warn(`[saveMessageToDb] Failed to create email_address_rules entry for ${params.fromAddr}:`, ruleErr.message);
+        } else {
+          console.log(`[saveMessageToDb] Created email_address_rules stub for ${params.fromAddr} (awaiting AI suggestion)`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[saveMessageToDb] Exception while creating email_address_rules for ${params.fromAddr}:`, e);
+    }
+  }
 
   // Auto-escalation (tassonomia 9 stati: new → first_touch_sent al primo inbound match)
   if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {

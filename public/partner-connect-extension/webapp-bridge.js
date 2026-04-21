@@ -101,54 +101,10 @@
     }
   }
 
-  // ── WhatsApp relay (from-webapp-wa → background.js → wa-content.js on WhatsApp tab) ──
-  function relayWhatsApp(data) {
-    if (!isExtensionAlive()) {
-      alive = false;
-      failResponse("from-extension-wa", data, "Extension context invalidated — ricarica la pagina");
-      post({ direction: "from-extension-wa", action: "extensionDead" });
-      return;
-    }
-
-    // Ping handled locally — just check extension is alive
-    if (data.action === "ping") {
-      alive = true;
-      post({
-        direction: "from-extension-wa",
-        action: "ping",
-        requestId: data.requestId,
-        response: { success: true, version: "3.4.0" },
-      });
-      post({ direction: "from-extension-wa", action: "contentScriptReady" });
-      return;
-    }
-
-    try {
-      // Relay to background.js which will forward to WhatsApp tab
-      chrome.runtime.sendMessage(
-        { type: "wa-relay", waAction: data.action, requestId: data.requestId, payload: data },
-        function (response) {
-          if (chrome.runtime.lastError) {
-            alive = false;
-            failResponse("from-extension-wa", data, "Extension context invalidated");
-            post({ direction: "from-extension-wa", action: "extensionDead" });
-            return;
-          }
-          alive = true;
-          post({
-            direction: "from-extension-wa",
-            action: data.action,
-            requestId: data.requestId,
-            response: response || { success: false, error: "No response from WhatsApp tab" },
-          });
-        }
-      );
-    } catch (err) {
-      alive = false;
-      failResponse("from-extension-wa", data, "Extension context invalidated");
-      post({ direction: "from-extension-wa", action: "extensionDead" });
-    }
-  }
+  // ── WhatsApp relay — DISABLED ──
+  // Partner Connect should NOT respond to from-webapp-wa messages.
+  // The dedicated WhatsApp extension (v5.10.0) owns that channel.
+  // This function is left stubbed for reference only.
 
   // ── LinkedIn relay (from-webapp → background.js) ──
   function relayLinkedIn(data) {
@@ -209,12 +165,10 @@
     if (nowAlive && !alive) {
       alive = true;
       post({ direction: "from-extension-fs", action: "contentScriptReady" });
-      post({ direction: "from-extension-wa", action: "contentScriptReady" });
       post({ direction: "from-extension", action: "contentScriptReady" });
     } else if (!nowAlive && alive) {
       alive = false;
       post({ direction: "from-extension-fs", action: "extensionDead" });
-      post({ direction: "from-extension-wa", action: "extensionDead" });
       post({ direction: "from-extension", action: "extensionDead" });
     }
   }, HEARTBEAT_MS);
@@ -226,13 +180,11 @@
     if (!data || !data.direction) return;
 
     if (data.direction === "from-webapp-fs") relayFireScrape(data);
-    else if (data.direction === "from-webapp-wa") relayWhatsApp(data);
     else if (data.direction === "from-webapp") relayLinkedIn(data);
   });
 
-  // Announce all bridges
+  // Announce bridges (FS + LinkedIn only; WhatsApp is handled by dedicated extension)
   post({ direction: "from-extension-fs", action: "contentScriptReady" });
-  post({ direction: "from-extension-wa", action: "contentScriptReady" });
   post({ direction: "from-extension", action: "contentScriptReady" });
-  console.log("[Bridge] Unified webapp bridge loaded — v3.4.0 (FS + WA + LI)");
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.1 (FS + LI)");
 })();

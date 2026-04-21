@@ -25,6 +25,7 @@ interface ClassifyRequest {
 }
 
 interface ClassificationResult {
+  domain: string; // LOVABLE-93: classificazione dominio (commercial/operative/admin/support/internal)
   category: string;
   confidence: number;
   ai_summary: string;
@@ -64,8 +65,32 @@ function buildClassificationPrompt(
   conversationSummary: string | null,
   rules: Record<string, unknown> | null,
   promptInstructions: string | null,
+  relationalContext?: { lead_status?: string; touchCount?: number; daysSinceLastContact?: number } | null,
 ): string {
   const parts: string[] = [];
+
+  // ── PRIORITY: custom_prompt injection (BEFORE conversation history) ──
+  if (rules && rules.custom_prompt && typeof rules.custom_prompt === "string") {
+    parts.push(`## ⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO\n${rules.custom_prompt}`);
+  }
+
+  // LOVABLE-93: Domain type hint from email_address_rules
+  if (rules && rules.domain_type && typeof rules.domain_type === "string") {
+    parts.push(`## DOMINIO PREDEFINITO\nQuesto indirizzo è stato manualmente categorizzato come: "${rules.domain_type}"\nUsare questa informazione come segnale primario di classificazione.`);
+  }
+
+  // LOVABLE-93: contesto relazionale per classificazione
+  if (relationalContext) {
+    const relCtx: string[] = ["## STATO RELAZIONALE"];
+    relCtx.push(`Fase: ${relationalContext.lead_status || "sconosciuto"}`);
+    if (relationalContext.touchCount !== undefined) {
+      relCtx.push(`Touch totali: ${relationalContext.touchCount}`);
+    }
+    if (relationalContext.daysSinceLastContact !== undefined) {
+      relCtx.push(`Giorni dall'ultimo contatto: ${relationalContext.daysSinceLastContact}`);
+    }
+    parts.push(relCtx.join("\n"));
+  }
 
   // Context block
   if (conversationCtx?.length) {
@@ -102,11 +127,23 @@ function buildClassificationPrompt(
   parts.push(`Subject: ${req.subject}`);
   parts.push(`Body:\n${req.body.substring(0, 4000)}`);
 
+  // LOVABLE-93: Domain detection hints and rules
+  parts.push(`\n## DOMAIN DETECTION RULES (Livello 1)
+Classify email domain FIRST before category classification:
+- "operative": richieste preventivo, booking, tracking spedizioni, documentazione, tariffe, stato merce, ordini
+- "administrative": fatture, pagamenti, solleciti, note di credito, estratti conto, verifiche contabili, ricevute
+- "support": reclami, richieste assistenza, problemi tecnici, feedback servizio, errori sistema
+- "internal": newsletter, notifiche sistema, comunicazioni interne, auto-reply di sistema, digest automati
+- "commercial": tutto ciò che riguarda prospect, lead, partnership, collaborazione nuova, follow-up commerciali
+
+If email_address has manual domain_type set (from email_address_rules), RESPECT that as primary signal.`);
+
   // Output format
   parts.push(`\n## Required Output`);
   parts.push(`Respond with a JSON object (no markdown, no code fences):
 {
-  "category": "interested|not_interested|request_info|question|meeting_request|complaint|follow_up|auto_reply|unsubscribe|bounce|spam|uncategorized",
+  "domain": "commercial|operative|administrative|support|internal",
+  "category": "interested|not_interested|request_info|question|meeting_request|complaint|follow_up|auto_reply|unsubscribe|bounce|spam|uncategorized|quote_request|booking_request|shipment_tracking|documentation_request|rate_inquiry|cargo_status|invoice_query|payment_request|payment_confirmation|credit_note|account_statement|service_inquiry|technical_issue|feedback|newsletter|system_notification|internal_communication",
   "confidence": 0.0-1.0,
   "ai_summary": "one-sentence summary of the email content and intent. If the email is NOT in Italian, provide an Italian translation summary here.",
   "keywords": ["keyword1", "keyword2"],
@@ -134,11 +171,24 @@ function parseClassificationResponse(raw: string | null): ClassificationResult {
 
   const parsed = JSON.parse(cleaned);
 
-  const VALID_CATEGORIES = ["interested", "not_interested", "request_info", "question", "meeting_request", "complaint", "follow_up", "auto_reply", "unsubscribe", "bounce", "spam", "uncategorized"];
+  // LOVABLE-93: Add domain validation
+  const VALID_DOMAINS = ["commercial", "operative", "administrative", "support", "internal"];
+  const VALID_CATEGORIES = [
+    "interested", "not_interested", "request_info", "question", "meeting_request", "complaint", "follow_up", "auto_reply", "unsubscribe", "bounce", "spam", "uncategorized",
+    // operative categories
+    "quote_request", "booking_request", "shipment_tracking", "documentation_request", "rate_inquiry", "cargo_status",
+    // administrative categories
+    "invoice_query", "payment_request", "payment_confirmation", "credit_note", "account_statement",
+    // support categories
+    "service_inquiry", "technical_issue", "feedback",
+    // internal categories
+    "newsletter", "system_notification", "internal_communication",
+  ];
   const VALID_URGENCY = ["critical", "high", "normal", "low"];
   const VALID_SENTIMENT = ["positive", "negative", "neutral", "mixed"];
 
   return {
+    domain: VALID_DOMAINS.includes(parsed.domain) ? parsed.domain : "commercial",
     category: VALID_CATEGORIES.includes(parsed.category) ? parsed.category : "uncategorized",
     confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
     ai_summary: String(parsed.ai_summary || "").substring(0, 1000),
@@ -227,19 +277,25 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // 2. Load context in parallel
-    const [convCtxRes, rulesRes] = await Promise.all([
+    const [convCtxRes, rulesRes, allClassificationsRes] = await Promise.all([
       supabase
         .from("contact_conversation_context")
-        .select("last_exchanges, conversation_summary, dominant_sentiment")
+        .select("last_exchanges, conversation_summary, dominant_sentiment, last_interaction_at")
         .eq("user_id", input.user_id)
         .eq("email_address", input.email_address)
         .maybeSingle(),
       supabase
         .from("email_address_rules")
-        .select("*, email_prompts:prompt_id(instructions)")
+        .select("*, email_prompts:prompt_id(instructions), partner_id, domain_type")
         .eq("user_id", input.user_id)
         .eq("email_address", input.email_address)
         .maybeSingle(),
+      // LOVABLE-93: fetch all classifications for this sender to compute touch count
+      supabase
+        .from("email_classifications")
+        .select("id, classified_at")
+        .eq("user_id", input.user_id)
+        .eq("email_address", input.email_address),
     ]);
 
     const convCtx = convCtxRes.data;
@@ -254,6 +310,35 @@ serve(async (req) => {
         ? ((rules as Record<string, unknown>).email_prompts as Record<string, string>)?.instructions ?? null
         : null;
 
+    // LOVABLE-93: Compute relational context (lead_status + commercial metrics)
+    let relationalContext: { lead_status?: string; touchCount?: number; daysSinceLastContact?: number } | null = null;
+    const partnerId = input.partner_id || (rules as Record<string, unknown> | null)?.partner_id;
+    if (partnerId) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("lead_status")
+        .eq("id", partnerId)
+        .maybeSingle();
+
+      if (partner) {
+        const touchCount = allClassificationsRes.data?.length ?? 0;
+        let daysSinceLastContact: number | undefined = undefined;
+
+        const lastInteractionAt = convCtx?.last_interaction_at;
+        if (lastInteractionAt) {
+          const lastDate = new Date(lastInteractionAt);
+          const today = new Date();
+          daysSinceLastContact = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        relationalContext = {
+          lead_status: (partner as Record<string, unknown>).lead_status as string,
+          touchCount,
+          daysSinceLastContact,
+        };
+      }
+    }
+
     // 3. Build prompt
     const userPrompt = buildClassificationPrompt(
       input,
@@ -261,6 +346,7 @@ serve(async (req) => {
       conversationSummary,
       rules as Record<string, unknown> | null,
       promptInstructions,
+      relationalContext,
     );
 
     const systemPrompt = await assemblePrompt({
@@ -288,6 +374,7 @@ serve(async (req) => {
     const classification = parseClassificationResponse(aiResult.content);
 
     // 6. Insert classification
+    // LOVABLE-93: Store domain classification alongside category
     const { data: classRow, error: classErr } = await supabase
       .from("email_classifications")
       .insert({
@@ -298,6 +385,7 @@ serve(async (req) => {
         subject: input.subject,
         body_preview: input.body.substring(0, 500),
         direction: input.direction,
+        domain: classification.domain, // LOVABLE-93: domain level classification (Livello 1)
         category: classification.category,
         confidence: classification.confidence,
         ai_summary: classification.ai_summary,
@@ -371,6 +459,7 @@ serve(async (req) => {
       }, { onConflict: "user_id,email_address" });
 
     // 8. Log AI decision
+    // LOVABLE-93: Add domain to decision output
     const { data: decisionRow } = await supabase
       .from("ai_decision_log")
       .insert({
@@ -388,6 +477,7 @@ serve(async (req) => {
         },
         ai_reasoning: classification.reasoning,
         decision_output: {
+          domain: classification.domain, // LOVABLE-93: domain classification (Livello 1)
           category: classification.category,
           confidence: classification.confidence,
           urgency: classification.urgency,
@@ -616,24 +706,75 @@ serve(async (req) => {
     }
 
     // Supervisor audit (fire-and-forget)
+    // LOVABLE-93: Include domain in audit metadata
     logSupervisorAudit(supabase, {
       user_id: input.user_id, actor_type: "ai_agent", actor_name: aiResult.modelUsed,
       action_category: "email_classified",
-      action_detail: `Email da ${input.email_address} classificata: ${classification.category} (${Math.round(classification.confidence * 100)}%)`,
+      action_detail: `Email da ${input.email_address} classificata: ${classification.domain}/${classification.category} (${Math.round(classification.confidence * 100)}%)`,
       target_type: "email",
       partner_id: input.partner_id || undefined, email_address: input.email_address,
       decision_origin: actionTaken === "auto_executed" ? "ai_auto" : "manual",
       ai_decision_log_id: decisionLogId || undefined,
-      metadata: { category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+      metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
     });
 
+    // ═══ LOVABLE-93: Auto-suggest group for unknown senders on classification ═══
+    // If the sender doesn't have a group yet, use classification + confidence to suggest one
+    try {
+      const { data: addressRule } = await supabase
+        .from("email_address_rules")
+        .select("id, group_id, ai_suggested_group, ai_suggestion_confidence")
+        .eq("user_id", input.user_id)
+        .eq("email_address", input.email_address)
+        .maybeSingle();
+
+      // If sender has no assigned group and no pending suggestion, OR if new classification has higher confidence
+      if (addressRule) {
+        const hasGroup = !!addressRule.group_id;
+        const currentSuggestionConfidence = addressRule.ai_suggestion_confidence || 0;
+        const shouldUpdate = !hasGroup && classification.confidence > currentSuggestionConfidence;
+
+        if (shouldUpdate) {
+          // Update with AI classification as suggested group (use category as hint)
+          // This will be picked up by the suggestion engine
+          await supabase
+            .from("email_address_rules")
+            .update({
+              ai_suggested_group: `auto_${classification.category}`,
+              ai_suggestion_confidence: classification.confidence,
+            })
+            .eq("id", addressRule.id);
+
+          console.log(
+            `[classify-email-response] Updated AI suggestion for ${input.email_address}: ` +
+            `category=${classification.category}, confidence=${classification.confidence}`
+          );
+        }
+      }
+    } catch (aiSuggestErr) {
+      console.warn("[classify-email-response] AI suggestion update error (non-blocking):", aiSuggestErr);
+    }
+
     // ═══ LOVABLE-86: Pipeline post-classificazione ═══
+    // LOVABLE-93: rilevamento transizione prospect→client
+    // Dopo la classificazione, il pipeline verifica segnali di conversione:
+    // - Trigger: Email inbound da partner con lead_status "negotiation" o "qualified"
+    // - Condition: domain="operative" AND category IN ("quote_request", "booking_request", "rate_inquiry")
+    // - Action: Crea pending action "confirm_conversion" (NOT auto-executed — requires user confirmation)
+    // - Rationale: Se contatto in negoziazione invia richiesta operativa, è segnale di collaborazione avviata
+    //
+    // SOFT SIGNAL: engaged → qualified
+    // - Se partner in "engaged" riceve operativa, suggerire qualificazione
+    //
+    // REVERSE CASE (UPSELL):
+    // - Se partner "converted" riceve operative request, è UPSELL non re-entry funnel
     let postClassResult = null;
     try {
       postClassResult = await runPostClassificationPipeline(supabase, {
         userId: input.user_id,
         partnerId: input.partner_id || null,
         contactId: input.contact_id || null,
+        domain: classification.domain, // LOVABLE-93: route by domain
         category: classification.category,
         confidence: classification.confidence,
         senderEmail: input.email_address || "",

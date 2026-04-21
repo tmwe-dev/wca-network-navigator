@@ -17,6 +17,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 interface PendingAction {
   id: string;
@@ -85,7 +86,29 @@ Deno.serve(async (req) => {
     }
 
     const typedAction = action as unknown as PendingAction;
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", typedAction.user_id)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[pending-action-executor] AI automations paused for user ${typedAction.user_id}`);
+      endMetrics(metrics, false, 200);
+      return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), { status: 200, headers });
+    }
+
     const payload = typedAction.action_payload ?? typedAction.context ?? {};
+
+    // LOVABLE-93: Refresh context data for reply-type actions before execution
+    const replyActionTypes = ["send_email", "send_proposal", "reply_interested", "reply_to_question", "handle_complaint", "send_graceful_close"];
+    if (replyActionTypes.includes(typedAction.action_type)) {
+      const refreshedPayload = await refreshActionContext(supabase, typedAction, payload);
+      Object.assign(payload, refreshedPayload);
+    }
 
     let result: ExecutionResult;
 
@@ -103,13 +126,16 @@ Deno.serve(async (req) => {
       execution_log: result,
     }).eq("id", pending_action_id);
 
-    // Audit log
-    await supabase.from("supervisor_audit_log").insert({
+    // LOVABLE-93: formato audit unificato via logSupervisorAudit
+    await logSupervisorAudit(supabase, {
       user_id: typedAction.user_id,
       actor_type: "system",
       actor_name: "pending-action-executor",
       action_category: result.success ? "action_executed" : "action_failed",
       action_detail: `${typedAction.action_type}: ${result.detail}`,
+      target_id: pending_action_id,
+      target_type: "pending_action",
+      decision_origin: "system_trigger",
       metadata: { pending_action_id, action_type: typedAction.action_type, result },
     });
 
@@ -123,6 +149,48 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });
+
+async function refreshActionContext(
+  supabase: ReturnType<typeof createClient>,
+  action: PendingAction,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const refreshed: Record<string, unknown> = {};
+
+  // Reload email_address_rules if reply_to or email_address is available
+  const emailAddress = (payload.reply_to ?? payload.email_address) as string | undefined;
+  if (emailAddress) {
+    const { data: freshRule } = await supabase
+      .from("email_address_rules")
+      .select("custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid, category")
+      .eq("email_address", emailAddress)
+      .eq("user_id", action.user_id)
+      .maybeSingle();
+
+    if (freshRule) {
+      refreshed._fresh_rule = freshRule;
+    }
+  }
+
+  // Reload partner lead_status if partner_id is available
+  const partnerId = action.partner_id ?? (payload.partner_id as string | undefined);
+  if (partnerId) {
+    const { data: partner } = await supabase
+      .from("partners")
+      .select("lead_status")
+      .eq("id", partnerId)
+      .maybeSingle();
+
+    if (partner) {
+      refreshed._fresh_lead_status = partner.lead_status;
+    }
+  }
+
+  // Add timestamp of refresh
+  refreshed._refreshed_at = new Date().toISOString();
+
+  return refreshed;
+}
 
 async function executeAction(
   supabase: ReturnType<typeof createClient>,

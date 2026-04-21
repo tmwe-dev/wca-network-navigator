@@ -233,9 +233,53 @@ export async function loadConversationContext(
   };
 }
 
+// ── Fix: Extract custom_prompt and category from email_address_rules ──
+
+export function buildPriorityAddressPromptBlock(rules: Record<string, unknown> | null): string {
+  if (!rules) return "";
+
+  const parts: string[] = [];
+
+  // custom_prompt is HIGHEST priority
+  if (rules.custom_prompt && typeof rules.custom_prompt === "string") {
+    parts.push(`ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO:\n${rules.custom_prompt}`);
+  }
+
+  // LOVABLE-93: category as decision signal — holding pattern detection + priority modulation
+  if (rules.category && typeof rules.category === "string") {
+    const category = rules.category.toLowerCase();
+
+    // Detect holding pattern signals
+    const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
+                            category.includes("paused") || category.includes("on_hold") ||
+                            category.includes("holding") || category.includes("pausa") ||
+                            category.includes("pending");
+
+    // Detect priority signals
+    const isPriority = category.includes("priority") || category.includes("urgente") ||
+                      category.includes("vip") || category.includes("prioritario");
+
+    if (isHoldingPattern) {
+      parts.push(`⚠️ CONTATTO IN CIRCUITO DI ATTESA (da email_address_rules):\nQuesto indirizzo è marcato come "${rules.category}".\nAdatta il tono: cordiale ma non insistente. Non proporre azioni immediate.\nSuggerisci di riprendere il contatto con un pretesto leggero (novità, evento, articolo).`);
+    } else if (isPriority) {
+      parts.push(`🔴 CONTATTO PRIORITARIO (da email_address_rules):\nQuesto indirizzo è marcato come "${rules.category}".\nDedicare maggiore attenzione alla personalizzazione. Tono diretto e propositivo.`);
+    } else {
+      parts.push(`CATEGORIA CONTATTO: ${rules.category}`);
+    }
+  }
+
+  return parts.length > 0 ? `\n${parts.join("\n\n")}\n` : "";
+}
+
 export function buildConversationBlock(intel: ConversationIntelligence): string {
   const parts: string[] = [];
   const { convCtx, rules, classifications } = intel;
+
+  // ── PRIORITY: custom_prompt and category injection (before conversation history) ──
+  if (rules) {
+    const priorityBlock = buildPriorityAddressPromptBlock(rules);
+    if (priorityBlock) parts.push(priorityBlock);
+  }
 
   if (convCtx) {
     const exchanges = Array.isArray(convCtx.last_exchanges) ? convCtx.last_exchanges as Array<Record<string, unknown>> : [];
@@ -304,6 +348,9 @@ export interface ContextBlocks {
   // ── Fix 3.2: active playbook (governs tone/content/CTA) ──
   playbookBlock?: string;
   playbookActive?: boolean;
+  // ── Fix (email_address_rules propagation) ──
+  addressCustomPrompt?: string;
+  addressCategory?: string;
   // ── Deep Search status (per _context_summary) ──
   deepSearchStatus?: "fresh" | "cached" | "stale" | "missing" | "skipped" | "failed";
   deepSearchAgeDays?: number | null;
@@ -555,6 +602,18 @@ export async function assembleContextBlocks(
     if (dsScore.auto_enrich_suggested) {
       console.warn(`[generate-email] Deep Search Score ${dsScore.score}/100 per partner ${effectivePartnerId} — arricchimento consigliato`);
     }
+
+    // LOVABLE-93: Inject Partner Quality Score per calibrare il tono dell'outreach
+    try {
+      const { loadAndCalculateQuality, formatQualityForPrompt } = await import("../_shared/partnerQualityScore.ts");
+      const quality = await loadAndCalculateQuality(supabase, effectivePartnerId);
+      const qualityBlock = formatQualityForPrompt(quality);
+      if (qualityBlock) {
+        cachedEnrichmentContext += `\n${qualityBlock}\n`;
+      }
+    } catch (e) {
+      console.warn("[generate-email] Partner Quality Score calculation failed:", e instanceof Error ? e.message : String(e));
+    }
   }
 
   // ── Documents ──
@@ -570,6 +629,19 @@ export async function assembleContextBlocks(
   // ── Conversation Intelligence ──
   const convIntel = await loadConversationContext(supabase, userId, contactEmail, effectivePartnerId ?? null);
   const conversationIntelligenceContext = buildConversationBlock(convIntel);
+
+  // ── Extract custom_prompt and category from email_address_rules ──
+  let addressCustomPrompt: string | undefined;
+  let addressCategory: string | undefined;
+  if (convIntel.rules) {
+    const rules = convIntel.rules as Record<string, unknown>;
+    if (rules.custom_prompt && typeof rules.custom_prompt === "string") {
+      addressCustomPrompt = rules.custom_prompt;
+    }
+    if (rules.category && typeof rules.category === "string") {
+      addressCategory = rules.category;
+    }
+  }
 
   // ── Sales KB ──
   // Fix 3 (Gap C): nessun fallback hardcoded — se oracle_type manca, deriva da touchCount/commercialState
@@ -614,6 +686,7 @@ export async function assembleContextBlocks(
     signatureBlock, networks, services, socialLinks, settings,
     commercialState, touchCount, daysSinceLastContact, warmthScore, lastChannel, lastOutcome,
     playbookBlock: playbook.block, playbookActive: playbook.active,
+    addressCustomPrompt, addressCategory,
     deepSearchStatus, deepSearchAgeDays,
   };
 }

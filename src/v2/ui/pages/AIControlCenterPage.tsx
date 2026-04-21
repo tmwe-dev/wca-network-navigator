@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot } from "lucide-react";
+import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard } from "lucide-react";
 
 const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
@@ -12,8 +12,10 @@ const LearningDashboard = lazy(() => import("@/components/ai-control/LearningDas
 const AIGeneratedActivitiesPanel = lazy(() => import("@/components/ai-control/AIGeneratedActivitiesPanel").then(m => ({ default: m.AIGeneratedActivitiesPanel })));
 const SupervisorFeedPanel = lazy(() => import("@/components/ai-control/SupervisorFeedPanel").then(m => ({ default: m.SupervisorFeedPanel })));
 const OptimusAgentPanel = lazy(() => import("@/components/ai-control/OptimusAgentPanel").then(m => ({ default: m.OptimusAgentPanel })));
+const GlobalAIAutomationPause = lazy(() => import("@/components/ai-control/GlobalAIAutomationPause").then(m => ({ default: m.GlobalAIAutomationPause })));
+const CostDashboardWidget = lazy(() => import("@/components/ai-control/CostDashboardWidget").then(m => ({ default: m.CostDashboardWidget })));
 
-type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus";
+type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs";
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -54,6 +56,12 @@ export function AIControlCenterPage(): React.ReactElement {
         <Button variant={subView === "optimus" ? "default" : "outline"} size="sm" onClick={() => setSubView("optimus")}>
           <Bot className="mr-2 h-4 w-4" /> Optimus Agent
         </Button>
+        <Button variant={subView === "controls" ? "default" : "outline"} size="sm" onClick={() => setSubView("controls")}>
+          <Pause className="mr-2 h-4 w-4" /> Pause Control
+        </Button>
+        <Button variant={subView === "costs" ? "default" : "outline"} size="sm" onClick={() => setSubView("costs")}>
+          <CreditCard className="mr-2 h-4 w-4" /> API Costs
+        </Button>
       </div>
 
       {/* Content */}
@@ -65,6 +73,8 @@ export function AIControlCenterPage(): React.ReactElement {
           {subView === "ai-activities" && <AIGeneratedActivitiesPanel />}
           {subView === "supervisor" && <SupervisorFeedPanel />}
           {subView === "optimus" && <OptimusAgentPanel />}
+          {subView === "controls" && <GlobalAIAutomationPause />}
+          {subView === "costs" && <CostDashboardWidget />}
         </Suspense>
       </div>
     </div>

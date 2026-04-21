@@ -5,7 +5,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
-import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,6 +63,19 @@ Deno.serve(async (req) => {
 
     for (const action of actions as ActionRow[]) {
       try {
+        // LOVABLE-93: global pause check
+        const { data: pauseSettings } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "ai_automations_paused")
+          .eq("user_id", action.user_id)
+          .maybeSingle();
+
+        if (pauseSettings?.value === "true") {
+          console.log(`[cadence-engine] AI automations paused for user ${action.user_id}, skipping action ${action.id}`);
+          continue;
+        }
+
         await processAction(supabase, action, { executed: () => executed++, pendingReview: () => pendingReview++, cancelled: () => cancelled++ });
       } catch (e) {
         console.error(`[cadence-engine] Error processing action ${action.id}:`, extractErrorMessage(e));
@@ -293,16 +305,8 @@ async function processAction(
       executed_at: executionStatus === "executed" ? new Date().toISOString() : null,
     });
 
-    // Supervisor audit
-    logSupervisorAudit(supabase, {
-      user_id: action.user_id, actor_type: "cron", actor_name: "cadence-engine",
-      action_category: "cadence_executed",
-      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: ${executionStatus}`,
-      target_type: "mission", target_id: action.id,
-      partner_id: partnerId || undefined, email_address: targetEmail || undefined,
-      decision_origin: "ai_auto",
-      metadata: { trigger_condition: trigger, cadence_step: action.cadence_rule?.current_step, execution_status: executionStatus },
-    });
+    // LOVABLE-93: audit gestito da postSendPipeline dentro send-email
+    // (non dobbiamo loggare qui — avrebbe causato duplicati)
 
     counters.executed();
   } else {
@@ -354,16 +358,8 @@ async function processAction(
       status: "pending",
     });
 
-    // Supervisor audit
-    logSupervisorAudit(supabase, {
-      user_id: action.user_id, actor_type: "cron", actor_name: "cadence-engine",
-      action_category: "cadence_scheduled",
-      action_detail: `Cadence ${action.action_type} per ${targetEmail || "unknown"}: in attesa approvazione`,
-      target_type: "mission", target_id: action.id,
-      partner_id: partnerId || undefined, email_address: targetEmail || undefined,
-      decision_origin: "system_cron",
-      metadata: { trigger_condition: trigger },
-    });
+    // LOVABLE-93: audit gestito da postSendPipeline quando l'azione sarà approvata/eseguita
+    // (non dobbiamo loggare qui per azioni in pending — il log avverrà al momento dell'effettivo invio)
 
     counters.pendingReview();
   }

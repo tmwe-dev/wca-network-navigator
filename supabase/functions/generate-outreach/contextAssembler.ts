@@ -37,13 +37,13 @@ export async function fetchKbEntriesForOutreach(
 
 export async function loadConversationContextOutreach(
   supabase: SupabaseClient, userId: string, emailAddress: string | null,
-): Promise<string> {
-  if (!emailAddress) return "";
+): Promise<{ text: string; customPrompt?: string; category?: string }> {
+  if (!emailAddress) return { text: "" };
 
   const [ctxRes, rulesRes, classRes] = await Promise.all([
     supabase.from("contact_conversation_context").select("conversation_summary, last_exchanges, response_rate, avg_response_time_hours, dominant_sentiment")
       .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
-    supabase.from("email_address_rules").select("tone_override, topics_to_emphasize, topics_to_avoid, email_prompts(instructions)")
+    supabase.from("email_address_rules").select("tone_override, topics_to_emphasize, topics_to_avoid, custom_prompt, category, email_prompts(instructions)")
       .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
     supabase.from("email_classifications")
       .select("category, confidence, ai_summary, sentiment")
@@ -55,6 +55,39 @@ export async function loadConversationContextOutreach(
   const ctx = ctxRes.data;
   const rules = rulesRes.data;
   const classes = classRes.data ?? [];
+
+  // ── PRIORITY: custom_prompt and category injection ──
+  // LOVABLE-93: category as decision signal — holding pattern detection + priority modulation
+  let customPrompt: string | undefined;
+  let category: string | undefined;
+  if (rules) {
+    if ((rules as Record<string, unknown>).custom_prompt && typeof (rules as Record<string, unknown>).custom_prompt === "string") {
+      customPrompt = (rules as Record<string, unknown>).custom_prompt as string;
+      parts.push(`ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO:\n${customPrompt}`);
+    }
+    if ((rules as Record<string, unknown>).category && typeof (rules as Record<string, unknown>).category === "string") {
+      category = (rules as Record<string, unknown>).category as string;
+      const isCat = category.toLowerCase();
+
+      // Detect holding pattern signals
+      const isHoldingPattern = isCat.includes("attesa") || isCat.includes("hold") ||
+                              isCat.includes("paused") || isCat.includes("on_hold") ||
+                              isCat.includes("holding") || isCat.includes("pausa") ||
+                              isCat.includes("pending");
+
+      // Detect priority signals
+      const isPriority = isCat.includes("priority") || isCat.includes("urgente") ||
+                        isCat.includes("vip") || isCat.includes("prioritario");
+
+      if (isHoldingPattern) {
+        parts.push(`⚠️ CONTATTO IN CIRCUITO DI ATTESA (da email_address_rules):\nQuesto indirizzo è marcato come "${category}".\nAdatta il tono: cordiale ma non insistente. Non proporre azioni immediate.\nSuggerisci di riprendere il contatto con un pretesto leggero (novità, evento, articolo).`);
+      } else if (isPriority) {
+        parts.push(`🔴 CONTATTO PRIORITARIO (da email_address_rules):\nQuesto indirizzo è marcato come "${category}".\nDedicare maggiore attenzione alla personalizzazione. Tono diretto e propositivo.`);
+      } else {
+        parts.push(`CATEGORIA CONTATTO: ${category}`);
+      }
+    }
+  }
 
   if (ctx) {
     if (ctx.conversation_summary) parts.push(`CONVERSATION HISTORY: ${ctx.conversation_summary}`);
@@ -78,7 +111,8 @@ export async function loadConversationContextOutreach(
     parts.push(`RECENT CLASSIFICATIONS:\n${classes.map((c: Record<string, unknown>) => `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || ""}`).join("\n")}`);
   }
 
-  return parts.length ? `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n` : "";
+  const text = parts.length ? `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n` : "";
+  return { text, customPrompt, category };
 }
 
 // ── Intelligence assembly ──
@@ -119,6 +153,9 @@ export interface OutreachContextBlocks {
   playbookActive: boolean;
   // ── Fix 3.3: honest channel declaration ──
   channelDeclaration: string;
+  // ── Fix (email_address_rules propagation) ──
+  addressCustomPrompt?: string;
+  addressCategory?: string;
 }
 
 /**
@@ -242,6 +279,18 @@ export async function assembleOutreachContext(
             intelligence.data_found.enrichment = true;
             if (unified.sherlock.summary) intelligence.data_found.sherlock = true;
             if (unified.deep.contact_profiles?.length) intelligence.data_found.contact_profiles = true;
+          }
+
+          // LOVABLE-93: Add Partner Quality Score to calibrate outreach tone
+          try {
+            const { loadAndCalculateQuality, formatQualityForPrompt } = await import("../_shared/partnerQualityScore.ts");
+            const qualityScore = await loadAndCalculateQuality(supabase, partner.id);
+            const qualityBlock = formatQualityForPrompt(qualityScore);
+            if (qualityBlock) {
+              contextParts.push(`[QUALITÀ PARTNER]\n${qualityBlock}`);
+            }
+          } catch (e) {
+            console.warn("[generate-outreach] quality score failed:", e instanceof Error ? e.message : String(e));
           }
         }
       } catch (e) {
@@ -408,6 +457,18 @@ export async function assembleOutreachContext(
         if (unified.base.website_excerpt || unified.legacy.website_summary) {
           intelligence.data_found.website = true;
         }
+
+        // LOVABLE-93: Add Partner Quality Score to calibrate outreach tone
+        try {
+          const { loadAndCalculateQuality, formatQualityForPrompt } = await import("../_shared/partnerQualityScore.ts");
+          const qualityScore = await loadAndCalculateQuality(supabase, partnerId);
+          const qualityBlock = formatQualityForPrompt(qualityScore);
+          if (qualityBlock) {
+            contextParts.push(`[QUALITÀ PARTNER]\n${qualityBlock}`);
+          }
+        } catch (e) {
+          console.warn("[generate-outreach] quality score failed:", e instanceof Error ? e.message : String(e));
+        }
       }
     }
   }
@@ -429,9 +490,12 @@ export async function assembleOutreachContext(
   }
 
   // ── Conversation Intelligence ──
-  const conversationIntelligenceContext = await loadConversationContextOutreach(
+  const convResult = await loadConversationContextOutreach(
     supabase, userId, params.contact_email || null,
   );
+  const conversationIntelligenceContext = convResult.text;
+  const addressCustomPrompt = convResult.customPrompt;
+  const addressCategory = convResult.category;
 
   // Commercial state for prompt context
   let commercialState = "new";
@@ -474,5 +538,6 @@ export async function assembleOutreachContext(
     relationshipStage, relationshipMetrics,
     playbookBlock: playbook.block, playbookActive: playbook.active,
     channelDeclaration,
+    addressCustomPrompt, addressCategory,
   };
 }

@@ -23,6 +23,11 @@ interface RuleRow {
   auto_execute: boolean | null;
   is_active: boolean | null;
   priority: number | null;
+  // LOVABLE-93: Includi tone/topics/custom_prompt per azioni AI future
+  custom_prompt?: string | null;
+  tone_override?: string | null;
+  topics_to_emphasize?: string[] | null;
+  topics_to_avoid?: string[] | null;
 }
 
 interface MsgRow {
@@ -203,9 +208,10 @@ Deno.serve(async (req) => {
     }
 
     // Carica regole attive per operator
+    // LOVABLE-93: Includi custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid per draft generation
     const { data: rulesData, error: rulesErr } = await supabase
       .from("email_address_rules")
-      .select("id, operator_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, auto_execute, is_active, priority")
+      .select("id, operator_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, auto_execute, is_active, priority, custom_prompt, tone_override, topics_to_emphasize, topics_to_avoid")
       .eq("operator_id", operatorId)
       .eq("is_active", true)
       .eq("auto_execute", true);
@@ -258,6 +264,10 @@ Deno.serve(async (req) => {
         try {
           const action = rule.auto_action!;
           const params = (rule.auto_action_params ?? {}) as Record<string, unknown>;
+
+          // LOVABLE-93: Quando si aggiungono azioni AI (draft, response, etc.),
+          // passare rule.custom_prompt, rule.tone_override, rule.topics_to_emphasize, rule.topics_to_avoid
+          // al contesto della generazione per personalizzare il tono e i temi della risposta.
 
           if (action === "mark_read") {
             if (msg.imap_uid && imap) {

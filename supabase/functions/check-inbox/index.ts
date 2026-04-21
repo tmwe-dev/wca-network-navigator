@@ -61,6 +61,22 @@ Deno.serve(async (req) => {
       userId = claimsData.claims.sub as string;
     }
 
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[check-inbox] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
+        headers: dynCors,
+        status: 200,
+      });
+    }
+
     // ── IMAP config ──
     const imapHost = Deno.env.get("IMAP_HOST") || "";
     const imapUser = Deno.env.get("IMAP_USER") || "";
@@ -619,6 +635,47 @@ Deno.serve(async (req) => {
       }
     } catch (rulesErr: unknown) {
       console.warn("[check-inbox] apply-email-rules error (non-blocking):", extractErrorMessage(rulesErr));
+    }
+
+    // ── LOVABLE-93: auto-classificazione inbound dopo sync ──
+    // Fire-and-forget: classify inbound emails (max 10 per sync to avoid overwhelming AI)
+    try {
+      const toClassify = messages
+        .filter(m => (m.raw_payload as Record<string, unknown>)?.direction === "inbound")
+        .slice(0, 10); // Rate limiting: max 10 classifications per sync cycle
+
+      if (toClassify.length > 0) {
+        // Fire each classification request asynchronously without awaiting
+        for (const msg of toClassify) {
+          const payload = msg.raw_payload as Record<string, unknown>;
+          const classifyPayload = {
+            user_id: userId,
+            email_address: msg.from_address as string,
+            subject: msg.subject as string,
+            body: (msg.body_text as string) || (msg.body_html as string) || "",
+            direction: "inbound",
+            partner_id: (msg.partner_id as string) || undefined,
+            contact_id: (payload?.contact_id as string) || undefined,
+            source_activity_id: (payload?.source_activity_id as string) || undefined,
+            sender_name: (payload?.sender_name as string) || undefined,
+          };
+
+          // Fire-and-forget: don't await, let it run in background
+          fetch(`${supabaseUrl}/functions/v1/classify-email-response`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify(classifyPayload),
+          }).catch(err => {
+            console.warn(`[check-inbox] Failed to fire classify request for msg ${msg.id}:`, extractErrorMessage(err));
+          });
+        }
+        console.log(`[check-inbox] Fired ${toClassify.length} classification requests (fire-and-forget)`);
+      }
+    } catch (classErr: unknown) {
+      console.warn("[check-inbox] classify-email-response fire error (non-blocking):", extractErrorMessage(classErr));
     }
 
     const matched = messages.filter(m => m.source_type !== "unknown").length;

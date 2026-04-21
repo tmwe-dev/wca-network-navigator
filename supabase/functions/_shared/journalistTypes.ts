@@ -88,6 +88,15 @@ export interface JournalistReviewInput {
   enrichment_summary?: string;
   /** Vincoli passati dal sistema */
   constraints?: string[];
+  /** LOVABLE-93: Contesto reply per journalist */
+  is_reply?: boolean;
+  original_inbound?: {
+    subject?: string;
+    summary?: string;
+    sender?: string;
+    classification?: string;
+    sentiment?: string;
+  };
 }
 
 export interface JournalistWarning {

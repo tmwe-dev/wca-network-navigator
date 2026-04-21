@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Send, Search, ExternalLink, Linkedin, CheckCircle2 } from "lucide-react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
+import { useLogAction } from "@/hooks/useLogAction";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
@@ -35,6 +36,7 @@ export default function LinkedInDMDialog({
   const lastSavedUrlRef = useRef<string | null>(null);
   const { isAvailable, sendDirectMessage } = useLinkedInExtensionBridge();
   const lookup = useLinkedInLookup();
+  const logAction = useLogAction();
 
   useEffect(() => {
     setUrl(profileUrl || "");
@@ -105,6 +107,23 @@ export default function LinkedInDMDialog({
       const res = await sendDirectMessage(normalized!, message.trim());
       if (res.success) {
         toast({ title: "Messaggio LinkedIn inviato!" });
+        // Determine sourceType and sourceId based on available props
+        const sourceType = partnerId ? "partner" : "imported_contact";
+        const sourceId = partnerId || contactId || crypto.randomUUID();
+
+        logAction.mutate({
+          channel: "linkedin",
+          sourceType: sourceType as "partner" | "imported_contact",
+          sourceId,
+          to: normalized!,
+          partnerId,
+          contactId,
+          title: `${companyName || "—"} — ${contactName || "contatto"}`,
+          subject: `LinkedIn DM a ${contactName || "contatto"}`,
+          body: message.trim(),
+          source: "manual",
+        });
+
         setMessage("");
         onOpenChange(false);
       } else {

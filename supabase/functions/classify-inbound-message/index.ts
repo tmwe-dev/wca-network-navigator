@@ -3,17 +3,45 @@
  * Invoked by pg_net from on_inbound_message trigger.
  *
  * Replaces reply-classifier with multi-channel support and richer output schema.
+ * LOVABLE-93: classificazione unificata multi-canale → postClassificationPipeline
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { runPostClassificationPipeline } from "../_shared/postClassificationPipeline.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
 const URGENCIES = ["critical", "high", "normal", "low"] as const;
 
 type ClassificationValue = typeof CLASSIFICATIONS[number];
+
+// LOVABLE-93: Mapping da classificazione inbound a categoria postClassificationPipeline
+function mapInboundToEmailCategory(
+  inboundClassification: ClassificationValue,
+): "interested" | "not_interested" | "request_info" | "question" | "meeting_request" | "complaint" | "follow_up" | "auto_reply" | "unsubscribe" | "bounce" | "spam" | "uncategorized" {
+  const mapping: Record<ClassificationValue, string> = {
+    positive: "interested",
+    negative: "not_interested",
+    neutral: "follow_up",
+    needs_human: "question",
+    spam: "spam",
+  };
+  return (mapping[inboundClassification] || "uncategorized") as any;
+}
+
+// LOVABLE-93: Converti urgency string a numero (1-5 scala per postClassificationPipeline)
+function mapUrgencyToNumber(urgencyStr: string | undefined): number | undefined {
+  if (!urgencyStr) return undefined;
+  const urgencyMap: Record<string, number> = {
+    critical: 5,
+    high: 4,
+    normal: 2,
+    low: 1,
+  };
+  return urgencyMap[urgencyStr] ?? 2;
+}
 
 interface RequestBody {
   message_id: string;
@@ -211,6 +239,30 @@ ${(body_text || "").substring(0, 3000)}`;
       }).eq("id", activity_id);
     }
 
+    // ── LOVABLE-93: Post-classification pipeline (unified for all channels) ──
+    let postClassResult = null;
+    if (body.user_id) {
+      try {
+        const mappedCategory = mapInboundToEmailCategory(result.classification);
+        const mappedUrgency = mapUrgencyToNumber(result.urgency);
+        postClassResult = await runPostClassificationPipeline(supabase, {
+          userId: body.user_id,
+          partnerId: partner_id || null,
+          category: mappedCategory,
+          confidence: result.confidence,
+          senderEmail: from_address,
+          subject: subject || undefined,
+          aiSummary: result.intent || undefined,
+          urgency: mappedUrgency,
+          sentiment: result.sentiment || undefined,
+          channel: (channel as "email" | "whatsapp" | "linkedin") || "email",
+        });
+        console.log(`[classify-inbound] postClassification:`, JSON.stringify(postClassResult));
+      } catch (pcErr) {
+        console.warn("[classify-inbound] postClassification error (non-blocking):", pcErr);
+      }
+    }
+
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
@@ -219,6 +271,7 @@ ${(body_text || "").substring(0, 3000)}`;
       sentiment: result.sentiment,
       urgency: result.urgency,
       channel,
+      post_classification: postClassResult,
     }), { status: 200, headers });
 
   } catch (error: unknown) {

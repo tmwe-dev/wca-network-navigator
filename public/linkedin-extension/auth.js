@@ -24,7 +24,15 @@ var Auth = globalThis.Auth || (function () {
 
       // VIA BRIDGE: niente fetch diretto a Supabase (CORS blocca chrome-extension://)
       if (typeof AiBridge === "undefined" || !AiBridge.liCookieRequest) {
-        return Config.errorResponse(Config.ERROR.NO_CONFIG, "Bridge webapp non disponibile");
+        // Fallback: store cookie locally for later sync when Cockpit opens
+        try {
+          await chrome.storage.local.set({ "li_at_pending": liAt, "li_at_timestamp": Date.now() });
+          console.log("[LI Auth] Cookie stored locally for later sync (webapp bridge unavailable)");
+          return Config.successResponse({ saved: true, stored_locally: true });
+        } catch (storageErr) {
+          console.error("[LI Auth] Local storage fallback failed:", (storageErr && storageErr.message) || storageErr);
+          return Config.errorResponse(Config.ERROR.NO_CONFIG, "Bridge webapp non disponibile e fallback storage fallito");
+        }
       }
       const bridgeResp = await AiBridge.liCookieRequest({ cookie: liAt });
       if (!bridgeResp || bridgeResp.success === false) {

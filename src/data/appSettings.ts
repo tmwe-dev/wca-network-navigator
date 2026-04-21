@@ -41,3 +41,18 @@ export async function insertAppSetting(setting: { key: string; value: string; us
   const { error } = await supabase.from("app_settings").insert(setting);
   if (error) throw error;
 }
+
+// LOVABLE-93: global pause
+export async function getAiAutomationsPaused(userId: string): Promise<boolean> {
+  const value = await getAppSetting("ai_automations_paused", userId);
+  return value === "true";
+}
+
+export async function setAiAutomationsPaused(userId: string, paused: boolean, reason?: string): Promise<void> {
+  const value = paused ? "true" : "false";
+  await upsertAppSetting(userId, "ai_automations_paused", value);
+  if (paused && reason) {
+    await upsertAppSetting(userId, "ai_automations_paused_reason", reason);
+    await upsertAppSetting(userId, "ai_automations_paused_at", new Date().toISOString());
+  }
+}

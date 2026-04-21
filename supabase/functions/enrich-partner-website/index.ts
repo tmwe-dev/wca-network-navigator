@@ -297,6 +297,14 @@ Estrai queste informazioni (metti null se non trovate):
 
     console.log(`Enrichment saved for ${partner.company_name}`);
 
+    // LOVABLE-93: Auto-calculate quality score after enrichment
+    try {
+      const { triggerQualityScoreRecalculation } = await import("../_shared/enrichmentAdapter.ts");
+      await triggerQualityScoreRecalculation(supabase, partnerId);
+    } catch (e) {
+      console.warn("[enrich-partner-website] quality score calculation failed:", e instanceof Error ? e.message : String(e));
+    }
+
     return new Response(
       JSON.stringify({ success: true, enrichment }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }

@@ -37,11 +37,16 @@ var AiBridge = globalThis.AiBridge || (function () {
   }
 
   async function sendRequest(direction, responseDirection, payload) {
-    const tab = await findWebappTab();
+    let tab = await findWebappTab();
+    if (!tab) {
+      // Retry once after 2 seconds if no tab found initially
+      await new Promise(r => setTimeout(r, 2000));
+      tab = await findWebappTab();
+    }
     if (!tab) {
       return {
         success: false,
-        error: "Apri il Cockpit (lovable.app) per autorizzare le chiamate AI",
+        error: "Assicurati che il Cockpit (lovable.app) sia aperto in un tab e ricaricato di recente.",
         code: "NO_WEBAPP_TAB",
       };
     }

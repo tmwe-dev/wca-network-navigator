@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface PromptLabSignal {
   id: string;
-  type: "error_pattern" | "low_acceptance" | "doctrine_violation" | "performance_drop" | "user_feedback";
+  type: "error_pattern" | "low_acceptance" | "doctrine_violation" | "performance_drop" | "user_feedback" | "domain_misclassification"; // LOVABLE-93
   severity: "info" | "warning" | "critical";
   title: string;
   description: string;
@@ -165,6 +165,51 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
         status: "new",
         created_at: now.toISOString(),
       });
+    }
+  } catch { /* skip */ }
+
+  // LOVABLE-93: coerenza Prompt Lab multi-dominio — detect domain misclassification patterns
+  try {
+    const { data: corrections } = await supabase
+      .from("ai_memory" as never)
+      .select("tags" as never)
+      .gte("created_at" as never, sevenDaysAgo as never)
+      .eq("user_id" as never, userId as never)
+      .contains("tags" as never, ["correzione_utente"] as never)
+      .limit(50);
+
+    if (corrections && (corrections as unknown[]).length >= 3) {
+      const rows = corrections as unknown as Array<Record<string, unknown>>;
+      // Raggruppa per domain tag
+      const domainChanges = new Map<string, number>();
+      for (const row of rows) {
+        const tags = (row.tags as string[] | undefined) || [];
+        const domainTag = tags.find((t) => t.startsWith("domain:"));
+        if (domainTag) {
+          const domain = domainTag.replace("domain:", "");
+          // Conta se c'è una correzione nel dominio
+          const hasDomainCorrection = tags.some((t) => /da_.*(operative|administrative|support)/i.test(t) || /a_.*(operative|administrative|support)/i.test(t));
+          if (hasDomainCorrection) {
+            domainChanges.set(domain, (domainChanges.get(domain) ?? 0) + 1);
+          }
+        }
+      }
+      for (const [domain, count] of domainChanges) {
+        if (count >= 2) {
+          signals.push({
+            id: `domain-misclass-${domain}-${Date.now()}`,
+            type: "domain_misclassification",
+            severity: count >= 5 ? "warning" : "info",
+            title: `Frequenti reclassificazioni dominio: ${domain}`,
+            description: `Nel dominio "${domain}" sono state corrette ${count} classificazioni negli ultimi 7 giorni. Il sistema non sta classificando correttamente email per questo dominio.`,
+            affected_blocks: ["domain_routing", "email-classifier"],
+            evidence: { domain, correctionCount: count, period: "7d" },
+            suggested_action: `Migliora il prompt email-classifier e la KB domain_routing per il dominio "${domain}". Considera di aggiungere esempi di email caratteristiche.`,
+            status: "new",
+            created_at: now.toISOString(),
+          });
+        }
+      }
     }
   } catch { /* skip */ }
 
