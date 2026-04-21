@@ -345,10 +345,12 @@ Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nu
       doctrineFull: string;
       systemMission: string;
       goal?: string;
+      briefing?: BriefingPayload;
     }): Promise<string> => {
-      const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal } = params;
+      const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal, briefing } = params;
       const sourceDesc = describeSource(block.source);
-      const isVoice = isVoiceBlock({
+      const briefingForcesVoice = briefing?.targetChannel === "voice_agent";
+      const isVoice = briefingForcesVoice || isVoiceBlock({
         tabLabel,
         source: block.source,
         label: block.label,
@@ -360,6 +362,9 @@ Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nu
       const voiceSection = isVoice
         ? `\n${VOICE_ENFORCEMENT_RULES}\n\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
         : "";
+      const briefingSection = briefingToPromptSection(briefing);
+      const briefingHeader = briefingSection ? `\n${briefingSection}\n` : "";
+      const effectiveGoal = briefing?.goal?.trim() || goal?.trim() || "";
 
       const userPrompt = `=== SYSTEM MISSION ===
 ${systemMission}
@@ -371,6 +376,7 @@ ${doctrineFull}
 ${systemMap}
 ${voiceSection}
 ${rubricSection}
+${briefingHeader}
 
 === BLOCCO DA MIGLIORARE ===
 Tab: ${tabLabel}
@@ -378,13 +384,14 @@ Dove si attiva (runtime): ${tabActivation ?? "n/d"}
 Sorgente DB: ${sourceDesc}
 Etichetta: ${block.label}
 ID: ${block.id}
-${goal?.trim() ? `\nObiettivo dichiarato: ${goal.trim()}\n` : ""}
+${!briefing && effectiveGoal ? `\nObiettivo dichiarato: ${effectiveGoal}\n` : ""}
 --- TESTO ATTUALE ---
 ${block.content}
 --- FINE TESTO ---
 
 ISTRUZIONI:
-- Riscrivi il blocco perché serva meglio l'obiettivo del sistema, in coerenza con TUTTO il resto.
+- Priorità ASSOLUTA al BRIEFING OPERATIVO se presente, poi RUBRICA, poi mission di sistema.
+- Riscrivi il blocco perché serva meglio l'obiettivo dichiarato nel briefing, in coerenza con TUTTO il resto.
 - Rispetta la RUBRICA sopra: must-have, must-not, lunghezza, struttura.
 - Guard-rail obbligatori: dottrina commerciale 9 stati, mai inventare dati o azioni, mai contraddire altri blocchi visibili nella mappa, mantieni l'italiano se il testo originale è in italiano.
 - Se il blocco è già ottimo, restituiscilo invariato.
