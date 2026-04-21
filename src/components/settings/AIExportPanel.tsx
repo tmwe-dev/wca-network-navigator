@@ -238,6 +238,8 @@ Generato: ${new Date().toISOString()}
 | \`knowledge_base/\` | Tutte le voci di KB attive | ${stats.kb} |
 | \`operative_prompts/\` | Prompt operativi strutturati dal DB | ${stats.prompts} |
 | \`memories/\` | Memorie AI consolidate (L2/L3) | ${stats.memories} |
+| \`app_settings/\` | Impostazioni applicazione (profilo AI, tone, prompt email) | ${stats.settings} |
+| \`agent_personas/\` | Persona di voce/stile per ogni agente | ${stats.personas} |
 | \`logic/\` | Logica statica: scope, template, procedure | 4 file |
 | \`raw/\` | JSON tecnico completo (per ripristino) | 1 file |
 
