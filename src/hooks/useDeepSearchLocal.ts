@@ -224,15 +224,48 @@ export function useDeepSearchLocal() {
     const existingSet = new Set((existingLinksData ?? []).map((l) => `${l.contact_id || "company"}_${l.platform}`));
     const location = `${partner.city || ""} ${partner.country_name || ""}`.trim();
 
-    const { socialLinksFound: contactLinks, contactProfiles } = await searchLinkedInForContacts(contacts, partner.company_name as string, location, partnerId, existingSet);
-    const companyLinks = await searchCompanyLinkedIn(partner.company_name as string, partnerId, existingSet);
-    const { logoFound, websiteQualityScore } = await scrapeWebsite(partner.website as string | null, partnerId, contacts);
+    // === LOVABLE-74: Deep Search Incrementale ===
+    // Calcola cosa è già presente per evitare ricerche duplicate.
+    const existingED = (partner.enrichment_data as Record<string, unknown>) || {};
+    const websiteExcerpt = existingED.website_excerpt as { description?: string } | undefined;
+    const contactProfilesExisting = existingED.contact_profiles as Record<string, unknown> | unknown[] | undefined;
+    const hasContactProfiles = Array.isArray(contactProfilesExisting)
+      ? contactProfilesExisting.length > 0
+      : !!(contactProfilesExisting && Object.keys(contactProfilesExisting).length > 0);
+    const missing = {
+      needCompanyLinkedIn: !existingED.linkedin_url && !existingED.linkedin_summary && !existingSet.has("company_linkedin"),
+      needContacts: !hasContactProfiles,
+      needWebsite: !websiteExcerpt?.description && !existingED.website_summary && !existingED.website_quality_score,
+      needReputation: !existingED.reputation,
+      needGoogleMaps: !existingED.google_maps,
+      needGoogleGeneral: !existingED.contact_mentions,
+    };
+    const totalMissing = Object.values(missing).filter(Boolean).length;
+    const totalSkipped = Object.values(missing).filter((v) => !v).length;
+    if (totalMissing === 0) {
+      toast.info("Tutti i dati Deep Search già disponibili — nessuna nuova ricerca.");
+      return { success: true, socialLinksFound: 0, logoFound: false, contactProfilesFound: 0, companyProfileFound: false, rating: 0, rateLimited: false, companyName: partner.company_name as string };
+    }
+    if (totalSkipped > 0) {
+      toast.info(`Deep Search incrementale: ${totalMissing} ricerche da fare, ${totalSkipped} già disponibili (skip).`);
+    }
+
+    // Contatti LinkedIn: il sub-hook usa già existingSet per saltare contatti già social-linkati.
+    const { socialLinksFound: contactLinks, contactProfiles } = missing.needContacts
+      ? await searchLinkedInForContacts(contacts, partner.company_name as string, location, partnerId, existingSet)
+      : { socialLinksFound: 0, contactProfiles: {} as Record<string, Record<string, string>> };
+    const companyLinks = missing.needCompanyLinkedIn
+      ? await searchCompanyLinkedIn(partner.company_name as string, partnerId, existingSet)
+      : 0;
+    const { logoFound, websiteQualityScore } = missing.needWebsite
+      ? await scrapeWebsite(partner.website as string | null, partnerId, contacts)
+      : { logoFound: false, websiteQualityScore: 0 };
 
     // ============ NUOVE FONTI V2 (eseguite solo se abilitate) ============
     const extras: Record<string, unknown> = {};
 
     // 1) Google generale per ogni contatto (max 3 contatti per evitare rate limit)
-    if (cfg("googleGeneral", false) && contacts.length > 0) {
+    if (missing.needGoogleGeneral && cfg("googleGeneral", false) && contacts.length > 0) {
       const mentionsByContact: Record<string, unknown[]> = {};
       for (const c of contacts.slice(0, 3)) {
         if (!c.name) continue;
@@ -244,31 +277,49 @@ export function useDeepSearchLocal() {
     }
 
     // 2) Google Maps / Place
-    if (cfg("googleMaps", false)) {
+    if (missing.needGoogleMaps && cfg("googleMaps", false)) {
       const gm = await scrapeGoogleMaps(fs, partner.company_name as string, (partner.city as string) || "", (partner.country_name as string) || "");
       if (gm) extras.google_maps = gm;
     }
 
     // 3) Sito multi-pagina (about/team/contacts)
-    if (cfg("websiteMultiPage", false) && partner.website) {
+    if (missing.needWebsite && cfg("websiteMultiPage", false) && partner.website) {
       const wmp = await scrapeWebsiteSubpages(fs, partner.website as string);
       if (wmp.pagesScraped.length > 0) extras.website_multipage = wmp;
     }
 
     // 4) Reputation (Trustpilot + Wikipedia + News)
-    if (cfg("reputation", false)) {
+    if (missing.needReputation && cfg("reputation", false)) {
       const rep = await scrapeReputation(fs, partner.company_name as string, partner.website as string | null, googleSearch);
       // Salva solo se almeno una fonte ha prodotto risultati
       if (rep.trustpilot || rep.wikipedia || rep.news.length > 0) extras.reputation = rep;
     }
 
-    const existing = (partner.enrichment_data as Record<string, unknown>) || {};
-    const updated = {
-      ...existing,
+    // === Merge profondo: preserva tutti i campi esistenti, aggiungi solo i nuovi ===
+    const newFields: Record<string, unknown> = {
       ...(Object.keys(contactProfiles).length > 0 ? { contact_profiles: contactProfiles } : {}),
       ...(websiteQualityScore > 0 ? { website_quality_score: websiteQualityScore } : {}),
       ...extras,
-      deep_search_at: new Date().toISOString(), deep_search_engine: "partner-connect-v3.4",
+    };
+    const fieldsAdded = Object.keys(newFields);
+    const fieldsSkipped = Object.entries(missing).filter(([, needed]) => !needed).map(([k]) => k);
+    const previousRuns = Array.isArray(existingED.deep_search_runs)
+      ? (existingED.deep_search_runs as unknown[])
+      : [];
+    const updated = {
+      ...existingED,
+      ...newFields,
+      deep_search_at: new Date().toISOString(),
+      deep_search_engine: "partner-connect-v3.4-incremental",
+      deep_search_runs: [
+        ...previousRuns,
+        {
+          at: new Date().toISOString(),
+          engine: "partner-connect-v3.4-incremental",
+          fields_added: fieldsAdded,
+          fields_skipped: fieldsSkipped,
+        },
+      ],
     };
     await updatePartner(partnerId, { enrichment_data: updated as unknown as Record<string, string> });
 
