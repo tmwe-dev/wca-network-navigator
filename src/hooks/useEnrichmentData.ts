@@ -2,7 +2,7 @@
  * useEnrichmentData — All state + data queries for EnrichmentSettings
  */
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { extractDomainFromEmail, isPersonalEmail } from "@/components/ui/CompanyLogo";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
@@ -17,6 +17,7 @@ export interface EnrichedRow {
   source: string;
   hasLogo: boolean;
   hasLinkedin: boolean;
+  hasWebsiteExcerpt?: boolean;
   linkedinUrl?: string;
   email?: string;
   country?: string;
@@ -120,6 +121,7 @@ async function loadAllRows<T>(
 export function useEnrichmentData() {
   const linkedInLookup = useLinkedInLookup();
   const deepSearch = useDeepSearch();
+  const queryClient = useQueryClient();
 
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [enrichFilter, setEnrichFilter] = useState<EnrichFilter>("all");
@@ -149,6 +151,7 @@ export function useEnrichmentData() {
           id: p.id, name: p.company_name,
           domain: p.website?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || extractDomainFromEmail(p.email || ""),
           source: "wca", hasLogo: !!p.logo_url, hasLinkedin: !!liUrl,
+          hasWebsiteExcerpt: !!ed.website_excerpt,
           linkedinUrl: liUrl || undefined,
           email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
         };
