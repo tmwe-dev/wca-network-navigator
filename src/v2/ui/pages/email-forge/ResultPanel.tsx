@@ -150,9 +150,9 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
     block: "BLOCCATO",
   };
   const verdictClass: Record<string, string> = {
-    pass: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
-    pass_with_edits: "bg-blue-500/10 text-blue-500 border-blue-500/30",
-    warn: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+    pass: "bg-success/10 text-success border-success/30",
+    pass_with_edits: "bg-primary/10 text-primary border-primary/30",
+    warn: "bg-warning/10 text-warning border-warning/30",
     block: "bg-destructive/10 text-destructive border-destructive/30",
   };
   const VerdictIcon = review.verdict === "block" ? XCircle : review.verdict === "warn" ? AlertTriangle : CheckCircle2;
@@ -173,7 +173,7 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
       {(review.verdict === "warn" || review.verdict === "block") && review.warnings.length > 0 && (
         <div className={cn(
           "p-2 rounded border text-[11px] space-y-1",
-          review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5"
+          review.verdict === "block" ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5"
         )}>
           {review.warnings.map((w, i) => (
             <div key={i} className="text-foreground/80">
@@ -191,7 +191,7 @@ function JournalistBadge({ review }: { review: NonNullable<ForgeResult["journali
               <div key={i} className="space-y-0.5">
                 <span className="font-mono opacity-40">[{e.type}]</span>
                 <div className="line-through text-destructive/70">{e.original_fragment}</div>
-                <div className="text-emerald-500">{e.edited_fragment}</div>
+                <div className="text-success">{e.edited_fragment}</div>
                 <div className="italic text-foreground/50">{e.reason}</div>
               </div>
             ))}
