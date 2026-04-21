@@ -1,77 +1,54 @@
 
 
-## Verifica fatta sul DB
+## Problema riscontrato
 
-Ho interrogato il database reale e ho trovato i numeri **veri**:
+1. **Pulsante "Arricchimento Base" sparito visivamente** → in realtà è nella `BulkActionBar` che compare SOLO con righe selezionate. Tu hai selezionato e poi deselezionato → barra sparita.
+2. **Niente feedback in tempo reale visibile sulle righe** → il sistema c'è (`rowStates` + spinner + glow LinkedIn), ma:
+   - Funziona solo finché la riga è "running"/"done" nella sessione corrente
+   - Dopo il refetch, le icone tornano a leggere `hasLogo`/`hasLinkedin` dal DB con cache 60s → percezione di "non è successo nulla"
+   - Non c'è invalidazione automatica al termine del job
 
-| Sorgente | Vero count | Mostrato in Settings | Stato |
-|---|---|---|---|
-| Partners WCA | **12.286** | 1.000 | ❌ cap |
-| Contatti importati | **11.414** | 1.000 | ❌ cap |
-| BCA | 383 | 383 | ✅ ok |
-| Email senders | 7.468 msg | ? | ❌ cap |
-| **Partner con LinkedIn slug** | **0** | — | mai compilato! |
-| Logo partner | 1.310 / 12.286 | — | 89% mancante |
+## Soluzione
 
-**Causa del bug "1000"**: il loader `loadAllRows` in `useEnrichmentData.ts` chiama `range(0, 1999)` ma Supabase applica un hard cap implicito di 1000 quando non passi esplicitamente `limit`. Risultato: prende 1000, vede `data.length < batchSize`, esce, conteggi sbagliati.
+### 1. Pulsante "Arricchimento Base" sempre visibile (toolbar fissa)
+Spostare il pulsante "Arricchimento Base" + barra di progresso dalla `BulkActionBar` (condizionale) a una **toolbar fissa** sempre visibile sopra la lista, accanto a Search + Filter.
 
-**Da quali tabelle prende oggi**: `partners`, `imported_contacts`, `business_cards`, `channel_messages` (per email senders), `cockpit_queue`. Tutte corrette ma cappate.
+- Se **0 selezionati** → pulsante azzurro "Arricchimento Base" disabilitato con tooltip "Seleziona almeno una riga"
+- Se **N selezionati** → pulsante azzurro attivo, etichetta "Arricchimento Base (N)"
+- Se **job in corso** → pulsante diventa "Stop" rosso + barra di progresso live sotto
 
----
+Le altre azioni bulk (LinkedIn Batch, Logo Google, Deep Search, Esporta) restano nella `BulkActionBar` condizionale come oggi.
 
-## Piano in 2 fasi (faccio tutto, niente più conferme)
+### 2. Feedback live visibile e persistente sulle righe
 
-### Fase A — FIX contatori reali e loader (15 min)
+**a) Invalidazione cache al completamento job**
+In `EnrichmentSettings.tsx`, dopo `start()` aggiungere refetch anche di `bcaItems` + `queryClient.invalidateQueries({ queryKey: queryKeys.partners.enrichment() })` così che le icone "vere" si aggiornino dal DB.
 
-1. **`useEnrichmentData.ts`**: sostituire `loadAllRows` con paginazione esplicita `.limit(1000)` per pagina e ciclo finché `data.length === 1000`. Aggiungere parametro deleted_at IS NULL su tutte le tabelle business.
-2. **`SourceTabBar`**: i count mostrati saranno quelli reali (12.286 / 11.414 / 383 / N email).
-3. **Test**: dopo il fix, il tab "Tutti" deve mostrare ~31.000 righe totali (12286 + 11414 + 383 + email senders unici).
+**b) Riga arricchita in questa sessione resta evidenziata**
+Mantenere `rowStates` anche dopo il refetch, mostrando un piccolo badge ✨ "Arricchita ora" sulla riga per ~5 minuti dopo la fine del job (visibile finché l'utente non ricarica la pagina).
 
-### Fase B — Nuovo job "Arricchimento Base" (zero costo, background)
+**c) Icone della riga: priorità a stato live**
+Nella riga, le icone Linkedin/Logo/Site devono leggere PRIMA `liveState` (se presente) e POI `row.hasX`. Già implementato per LinkedIn/Logo, da estendere per **Site** (oggi visibile solo se `liveState.site === true`, ma dovrebbe restare visibile come "🌐 sito letto" anche dopo refetch leggendo da `enrichment_data.website_excerpt`).
 
-Implementazione di un **pre-fill batch** che NON tocca LinkedIn né AI, solo Google search pubblica + scraping pubblico. Esegue per ogni record selezionato (o "tutti i mancanti"):
+**d) Counter in alto**
+Aggiungere accanto agli stat (`totali · domain · linkedin · logo`) un counter live durante il job: `⚡ Arricchendo: X/Y` che sostituisce gli stat fissi durante l'esecuzione.
 
-| Step | Cosa fa | Costo | Salva su |
-|---|---|---|---|
-| 1. Slug LinkedIn azienda | Google `site:linkedin.com/company "Azienda"` | 0 | `partners.enrichment_data.linkedin_url` |
-| 2. Slug LinkedIn persona (solo contatti) | Google `site:linkedin.com/in "Nome" "Azienda"` | 0 | `imported_contacts.enrichment_data.linkedin_url` |
-| 3. Logo azienda | Clearbit `logo.clearbit.com/{domain}` con fallback Google Favicon | 0 | `partners.logo_url` |
-| 4. Mini-scrape sito (homepage + /about + /contact) | fetch HTML pubblico, regex per email/telefono/descrizione | 0 | `partners.enrichment_data.website_excerpt` |
+### 3. Dettagli tecnici (per il dev)
 
-**Vincoli operativi**:
-- Throttle Google: 1 req/sec globale (riusa `rateLimiter.ts` esistente)
-- Throttle siti: 1 req/sec per dominio
-- Concorrenza: 3 worker paralleli (perché ogni worker gira su domini diversi)
-- Resume: salva l'ID dell'ultimo record processato in `localStorage`, ripartenza automatica
-- Idempotente: skip dei record già arricchiti (campo già pieno)
-- **Zero LinkedIn hits** (solo Google), zero AI calls
-- Sherlock/Deep Search restano on-demand e separati
+**File da toccare:**
+- `src/components/settings/EnrichmentSettings.tsx` — passare `progress`/`start`/`stop` anche fuori dalla `BulkActionBar` condizionale; aggiungere `queryClient.invalidateQueries` dopo `handleStart`
+- `src/components/settings/enrichment/EnrichmentToolbar.tsx` — accettare props opzionali `baseEnrichment: { progress, onStart, onStop, selectedCount }` e renderizzare il pulsante azzurro fisso + barra progresso compatta
+- `src/components/settings/enrichment/BulkActionBar.tsx` — rimuovere il pulsante "Arricchimento Base" e la barra di progresso (ora nella toolbar)
+- `src/components/settings/enrichment/EnrichmentRowList.tsx` — estendere `rowStates` per mostrare icona 🌐 anche dopo refetch leggendo `row.hasWebsiteExcerpt` (nuovo campo da aggiungere a `EnrichedRow`)
+- `src/hooks/useEnrichmentData.ts` — aggiungere `hasWebsiteExcerpt: !!ed.website_excerpt` ai partners; esporre `refetchAll()` che fa anche `invalidateQueries`
 
-**UI nella pagina Arricchimento**:
-- Nuovo pulsante "🚀 Arricchimento Base (background)" in `EnrichmentBatchActions.tsx`
-- Barra progresso con: progresso/totale, slug trovati, loghi trovati, siti letti, errori
-- Pulsante Stop, indicatori per riga (✓ slug ✓ logo ✓ sito)
-- Lavora **anche in background** (l'utente può navigare via, riparte alla riapertura)
+**Comportamento atteso post-fix:**
+1. Apro Arricchimento → vedo subito pulsante azzurro "Arricchimento Base" in toolbar (disabilitato finché 0 selezionati)
+2. Seleziono 10 righe → pulsante diventa attivo "Arricchimento Base (10)"
+3. Click → pulsante diventa "Stop" rosso, barra progresso compare sotto, righe iniziano ad evidenziarsi una alla volta con spinner blu
+4. Riga completata → spinner sparisce, icone LinkedIn/Logo/🌐 si accendono e RESTANO accese (sia per liveState sia per dato DB refetched)
+5. Job finito → toast "Completato", barra sparisce, badge ✨ resta sulle righe arricchite per evidenziarle visivamente
+6. Anche se cambio tab e torno, le icone restano corrette (DB invalidato + refetched)
 
-**File toccati**:
-- `src/hooks/useEnrichmentData.ts` (fix loader + count exact)
-- `src/v2/services/enrichment/baseEnrichment.ts` (nuovo) — engine
-- `src/hooks/useBaseEnrichment.ts` (nuovo) — orchestrazione UI + persistenza progresso
-- `src/components/settings/enrichment/BulkActionBar.tsx` — aggiungo pulsante
-- `src/components/settings/enrichment/EnrichmentRowList.tsx` — indicatori per riga
-- `src/data/partners.ts` + `src/data/contacts.ts` — funzione `updateEnrichmentBase()`
-
-**Cosa NON faccio (esplicito)**:
-- Niente nuove tabelle DB, riuso colonne esistenti (`enrichment_data` JSONB già presente)
-- Niente edge function nuove, tutto client-side (così sfrutto il bridge browser per i fetch e il throttle è autoritativo)
-- Niente modifiche a Sherlock/Deep Search, restano separati
-- Niente login LinkedIn
-
----
-
-## Risultato atteso
-
-1. Contatori in pagina = 12.286 partner + 11.414 contatti + 383 BCA (numeri reali, non cap).
-2. Pulsante "Arricchimento Base" che gira in background e in pochi giorni avrà popolato `linkedin_url`, `logo_url` e `website_excerpt` su quasi tutti i 12.286 partner senza spendere un solo token AI e senza un solo hit a LinkedIn.
-3. Quando poi si lancia Sherlock su un partner, troverà già LinkedIn e info sito → spesso non servirà nemmeno fare deep search.
+Pronto a procedere con l'implementazione end-to-end appena confermi.
 
