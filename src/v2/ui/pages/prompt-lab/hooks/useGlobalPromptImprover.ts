@@ -1,5 +1,8 @@
 /**
- * useGlobalPromptImprover — orchestrator del "Migliora tutto".
+ * useGlobalPromptImprover — orchestrator del "Migliora tutto" con persistenza.
+ *
+ * LOVABLE-91: ogni run viene persistito su DB incrementalmente.
+ * Se il browser crasha, l'utente può riprendere dal punto in cui era.
  *
  * Raccoglie TUTTI i blocchi modificabili dal Prompt Lab (system prompt, KB doctrine,
  * operative prompts, email prompts, address rules, playbooks, agent personas),
@@ -9,7 +12,7 @@
  * Niente hard-coded constraints sulla forma: solo guard-rail in `improveBlockGlobal`.
  * Salvataggio è una fase separata (review prima di scrivere su DB).
  */
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useLabAgent } from "./useLabAgent";
 import { PROMPT_LAB_TABS, type Block, type BlockSource } from "../types";
 import { findKbEntries, upsertKbEntry } from "@/data/kbEntries";
@@ -22,6 +25,16 @@ import { findAgentPersonas, updateAgentPersona } from "@/data/agentPersonas";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import { DEFAULT_SYSTEM_PROMPT_BLOCKS } from "../types";
 import { DEFAULT_EMAIL_TYPES } from "@/data/defaultEmailTypes";
+import {
+  createRun,
+  updateRun,
+  appendProposal,
+  markProposalSaved,
+  findActiveRun,
+  cancelRun,
+  type GlobalRun,
+  type GlobalRunProposal,
+} from "@/data/promptLabGlobalRuns";
 
 const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
@@ -45,13 +58,24 @@ export interface GlobalImproverState {
   proposals: GlobalProposal[];
   progress: { current: number; total: number };
   error?: string;
+  /** Run ID per persistenza */
+  runId?: string;
+  /** True se esiste un run ripresabile */
+  hasResumableRun: boolean;
+  /** Dettagli run ripresabile */
+  resumableRun?: GlobalRun;
+  /** Contatore salvataggi DB */
+  dbSaveCount: number;
 }
 
 const TYPES_KEY = "email_oracle_types";
 const SYSTEM_PROMPT_KEY = "system_prompt_blocks";
 const DOCTRINE_CATEGORIES = ["system_doctrine", "system_core", "memory_protocol", "learning_protocol", "workflow_gate", "doctrine", "sales_doctrine"];
 
-/** Stringa "tab label" per ogni tipo di sorgente, per mappare ad attivazioni nel runtime. */
+/** Throttle: salva su DB al massimo ogni 2s (tranne ultimo e errori) */
+const DB_THROTTLE_MS = 2000;
+
+/** Stringa "tab label" per ogni tipo di sorgente. */
 function tabLabelFor(src: BlockSource): string {
   switch (src.kind) {
     case "app_setting": return src.key === SYSTEM_PROMPT_KEY ? "System Prompt" : "Email";
@@ -70,7 +94,7 @@ function activationFor(tabLabel: string): string | undefined {
   return PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation;
 }
 
-/** Costruisce una mappa testuale compatta di tutti i blocchi (per dare contesto al modello). */
+/** Costruisce una mappa testuale compatta di tutti i blocchi. */
 function buildSystemMap(all: ReadonlyArray<{ tabLabel: string; block: Block }>): string {
   const groups = new Map<string, Block[]>();
   for (const { tabLabel, block } of all) {
@@ -90,7 +114,7 @@ function buildSystemMap(all: ReadonlyArray<{ tabLabel: string; block: Block }>):
   return lines.join("\n");
 }
 
-/** Carica TUTTA la KB doctrine come riferimento, senza tagliare. */
+/** Carica TUTTA la KB doctrine come riferimento. */
 async function loadFullDoctrine(): Promise<string> {
   try {
     const all = await findKbEntries();
@@ -106,11 +130,11 @@ async function loadFullDoctrine(): Promise<string> {
   }
 }
 
-/** Collector: carica tutti i blocchi modificabili (eccetto agent.system_prompt che vive su agents). */
+/** Collector: carica tutti i blocchi modificabili. */
 async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: string; block: Block }>> {
   const out: Array<{ tabLabel: string; block: Block }> = [];
 
-  // 1) System prompt blocks (app_settings)
+  // 1) System prompt blocks
   try {
     const raw = await getAppSetting(SYSTEM_PROMPT_KEY, userId);
     let stored: Array<{ id: string; label?: string; content?: string }> = [];
@@ -148,7 +172,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 3) Operative prompts (5 campi per record)
+  // 3) Operative prompts
   try {
     const ops = await findOperativePromptsFull(userId);
     const fields = ["objective", "procedure", "criteria", "context", "examples"] as const;
@@ -170,7 +194,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 4) Email types (app_settings)
+  // 4) Email types
   try {
     const raw = await getAppSetting(TYPES_KEY, userId);
     let stored: Array<{ id: string; name?: string; prompt?: string }> = [];
@@ -194,7 +218,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 5) Email prompts (scope=global)
+  // 5) Email prompts
   try {
     const list = await findEmailPromptsByScope(userId, "global");
     for (const p of list) {
@@ -212,7 +236,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 6) Email address rules (custom_prompt + notes)
+  // 6) Email address rules
   try {
     const rules = await findEmailAddressRules(userId);
     for (const r of rules) {
@@ -243,7 +267,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 7) Playbooks (prompt_template + description)
+  // 7) Playbooks
   try {
     const pbs = await findCommercialPlaybooks(userId);
     for (const p of pbs) {
@@ -274,7 +298,7 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
     }
   } catch { /* skip */ }
 
-  // 8) Agent personas (custom_tone_prompt + signature_template; arrays esclusi: poco testo)
+  // 8) Agent personas
   try {
     const personas = await findAgentPersonas(userId);
     for (const p of personas) {
@@ -308,6 +332,21 @@ async function collectAllBlocks(userId: string): Promise<Array<{ tabLabel: strin
   return out;
 }
 
+/** Converte GlobalProposal[] a GlobalRunProposal[] per DB. */
+function toRunProposals(proposals: GlobalProposal[]): GlobalRunProposal[] {
+  return proposals.map((p) => ({
+    block_id: p.block.id,
+    tab_label: p.tabLabel,
+    tab_activation: p.tabActivation,
+    source: p.block.source as unknown as Record<string, unknown>,
+    label: p.block.label,
+    before: p.before,
+    after: p.after,
+    status: p.status,
+    error: p.error,
+  }));
+}
+
 /** Salva un singolo blocco scrivendo nel posto giusto. Ritorna {table, id} per audit. */
 async function saveProposal(userId: string, p: GlobalProposal): Promise<{ table: string; id: string }> {
   const { block } = p;
@@ -316,7 +355,6 @@ async function saveProposal(userId: string, p: GlobalProposal): Promise<{ table:
 
   switch (src.kind) {
     case "app_setting": {
-      // System prompt blocks
       if (src.key === SYSTEM_PROMPT_KEY) {
         const raw = await getAppSetting(SYSTEM_PROMPT_KEY, userId);
         let stored: Array<{ id: string; label: string; content: string }> = [];
@@ -328,7 +366,6 @@ async function saveProposal(userId: string, p: GlobalProposal): Promise<{ table:
         await upsertAppSetting(userId, SYSTEM_PROMPT_KEY, JSON.stringify(stored));
         return { table: "app_settings", id: SYSTEM_PROMPT_KEY };
       }
-      // Email types
       if (src.key === TYPES_KEY) {
         const raw = await getAppSetting(TYPES_KEY, userId);
         let stored: Array<{ id: string; name: string; prompt: string }> = [];
@@ -361,7 +398,6 @@ async function saveProposal(userId: string, p: GlobalProposal): Promise<{ table:
     }
     case "playbook": {
       if (src.field === "trigger_conditions") {
-        // non miglioriamo JSON in global; skip safe
         throw new Error("trigger_conditions non gestito da global improver");
       }
       await updateCommercialPlaybook(src.id, { [src.field]: after });
@@ -383,16 +419,158 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
     phase: "idle",
     proposals: [],
     progress: { current: 0, total: 0 },
+    hasResumableRun: false,
+    dbSaveCount: 0,
   });
+  const lastDbSave = useRef(0);
+
+  // ── Check per run ripresabile all'avvio ──
+  useEffect(() => {
+    if (!userId) return;
+    findActiveRun(userId).then((run) => {
+      if (run) {
+        setState((s) => ({
+          ...s,
+          hasResumableRun: true,
+          resumableRun: run,
+        }));
+      }
+    }).catch(() => { /* ignore */ });
+  }, [userId]);
 
   const reset = useCallback(() => {
-    setState({ loading: false, phase: "idle", proposals: [], progress: { current: 0, total: 0 } });
+    setState({
+      loading: false,
+      phase: "idle",
+      proposals: [],
+      progress: { current: 0, total: 0 },
+      hasResumableRun: false,
+      dbSaveCount: 0,
+    });
   }, []);
 
-  /** Step 1+2: raccoglie e migliora tutti i blocchi (uno alla volta, sequenziale per evitare rate limit). */
+  /** Riprende un run dal DB. */
+  const resumeRun = useCallback(async () => {
+    if (!state.resumableRun) return;
+    const run = state.resumableRun;
+
+    // Ricostruisci proposals da DB → Block (servono i blocchi originali per il salvataggio)
+    const collected = await collectAllBlocks(userId);
+    const proposals: GlobalProposal[] = run.proposals.map((rp) => {
+      const found = collected.find((c) => c.block.id === rp.block_id);
+      const block: Block = found?.block ?? {
+        id: rp.block_id,
+        label: rp.label,
+        content: rp.before,
+        source: rp.source as unknown as BlockSource,
+        dirty: false,
+      };
+      return {
+        block,
+        tabLabel: rp.tab_label,
+        tabActivation: rp.tab_activation,
+        before: rp.before,
+        after: rp.after,
+        status: rp.status as GlobalProposal["status"],
+        error: rp.error,
+      };
+    });
+
+    // Se in review → mostra direttamente le proposte
+    if (run.status === "review") {
+      setState({
+        loading: false,
+        phase: "review",
+        proposals,
+        progress: { current: run.progress_total, total: run.progress_total },
+        runId: run.id,
+        hasResumableRun: false,
+        dbSaveCount: run.progress_current,
+      });
+      return;
+    }
+
+    // Se in improving → riprendi dal punto in cui era
+    const startFrom = run.progress_current;
+    setState({
+      loading: true,
+      phase: "improving",
+      proposals,
+      progress: { current: startFrom, total: run.progress_total },
+      runId: run.id,
+      hasResumableRun: false,
+      dbSaveCount: startFrom,
+    });
+
+    const systemMap = run.system_map;
+    const doctrineFull = run.doctrine_full;
+
+    for (let i = startFrom; i < proposals.length; i++) {
+      const p = proposals[i];
+      if (p.status !== "pending") continue; // già processato
+
+      setState((s) => ({
+        ...s,
+        progress: { ...s.progress, current: i },
+        proposals: s.proposals.map((x, idx) => (idx === i ? { ...x, status: "improving" } : x)),
+      }));
+
+      try {
+        const improved = await lab.improveBlockGlobal({
+          block: p.block,
+          tabLabel: p.tabLabel,
+          tabActivation: p.tabActivation,
+          systemMap,
+          doctrineFull,
+          systemMission: SYSTEM_MISSION,
+          goal: run.goal || undefined,
+        });
+        const isSame = improved.trim() === p.before.trim();
+        const newStatus = isSame ? "skipped" as const : "ready" as const;
+
+        setState((s) => ({
+          ...s,
+          proposals: s.proposals.map((x, idx) =>
+            idx === i ? { ...x, after: improved, status: newStatus } : x,
+          ),
+        }));
+
+        // Persist to DB
+        await appendProposal(run.id, i, { after: improved, status: newStatus }, i + 1);
+        setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        setState((s) => ({
+          ...s,
+          proposals: s.proposals.map((x, idx) =>
+            idx === i ? { ...x, status: "error", error: errMsg } : x,
+          ),
+        }));
+        await appendProposal(run.id, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
+      }
+    }
+
+    await updateRun(run.id, { status: "review", progress_current: proposals.length });
+    setState((s) => ({
+      ...s,
+      loading: false,
+      phase: "review",
+      progress: { current: proposals.length, total: proposals.length },
+    }));
+  }, [state.resumableRun, userId, lab]);
+
+  /** Cancella un run ripresabile. */
+  const dismissResumable = useCallback(async () => {
+    if (state.resumableRun) {
+      await cancelRun(state.resumableRun.id).catch(() => {});
+    }
+    setState((s) => ({ ...s, hasResumableRun: false, resumableRun: undefined }));
+  }, [state.resumableRun]);
+
+  /** Step 1+2: raccoglie e migliora tutti i blocchi con persistenza incrementale. */
   const startImprovement = useCallback(async () => {
     if (!userId) return;
-    setState((s) => ({ ...s, loading: true, phase: "collecting", proposals: [], progress: { current: 0, total: 0 }, error: undefined }));
+    setState((s) => ({ ...s, loading: true, phase: "collecting", proposals: [], progress: { current: 0, total: 0 }, error: undefined, dbSaveCount: 0 }));
 
     let collected: Array<{ tabLabel: string; block: Block }> = [];
     let doctrineFull = "";
@@ -412,14 +590,26 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
       tabLabel,
       tabActivation: activationFor(tabLabel),
       before: block.content,
-      status: "pending",
+      status: "pending" as const,
     }));
+
+    // ── Crea run DB ──
+    let runId: string | undefined;
+    try {
+      const run = await createRun(userId, goal, toRunProposals(initial), systemMap, doctrineFull, SYSTEM_MISSION);
+      runId = run.id;
+    } catch (e) {
+      console.warn("[GlobalImprover] DB create failed, continuing without persistence:", e);
+    }
 
     setState({
       loading: true,
       phase: "improving",
       proposals: initial,
       progress: { current: 0, total: initial.length },
+      runId,
+      hasResumableRun: false,
+      dbSaveCount: 0,
     });
 
     for (let i = 0; i < initial.length; i++) {
@@ -441,24 +631,43 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
           goal: goal.trim() || undefined,
         });
         const isSame = improved.trim() === p.before.trim();
+        const newStatus = isSame ? "skipped" as const : "ready" as const;
+
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i
-              ? { ...x, after: improved, status: isSame ? "skipped" : "ready" }
-              : x,
+            idx === i ? { ...x, after: improved, status: newStatus } : x,
           ),
         }));
+
+        // ── Persist incrementale (throttled, flush su ultimo/errore) ──
+        if (runId) {
+          const now = Date.now();
+          const isLast = i === initial.length - 1;
+          if (isLast || now - lastDbSave.current >= DB_THROTTLE_MS) {
+            lastDbSave.current = now;
+            await appendProposal(runId, i, { after: improved, status: newStatus }, i + 1).catch(() => {});
+            setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
+          }
+        }
       } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i
-              ? { ...x, status: "error", error: e instanceof Error ? e.message : String(e) }
-              : x,
+            idx === i ? { ...x, status: "error", error: errMsg } : x,
           ),
         }));
+        // Flush errore immediatamente
+        if (runId) {
+          await appendProposal(runId, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
+        }
       }
+    }
+
+    // ── Marca run come "review" ──
+    if (runId) {
+      await updateRun(runId, { status: "review", progress_current: initial.length }).catch(() => {});
     }
 
     setState((s) => ({
@@ -488,6 +697,10 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
           ...s,
           proposals: s.proposals.map((x) => (x.block.id === p.block.id ? { ...x, status: "saved" } : x)),
         }));
+        // Marca come saved nel run DB
+        if (state.runId) {
+          await markProposalSaved(state.runId, p.block.id).catch(() => {});
+        }
       } catch (e) {
         setState((s) => ({
           ...s,
@@ -498,8 +711,13 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
       }
     }
 
-    setState((s) => ({ ...s, loading: false, phase: "done" }));
-  }, [state.proposals, userId]);
+    // Marca run come "done"
+    if (state.runId) {
+      await updateRun(state.runId, { status: "done", completed_at: new Date().toISOString() }).catch(() => {});
+    }
 
-  return { state, startImprovement, saveAccepted, reset };
+    setState((s) => ({ ...s, loading: false, phase: "done" }));
+  }, [state.proposals, state.runId, userId]);
+
+  return { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable };
 }

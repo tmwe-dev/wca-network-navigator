@@ -494,6 +494,12 @@ export const queryKeys = {
     agentCapabilities: ["v2", "agent-capabilities"] as const,
   },
 
+  // ── Prompt Lab ────────────────────────────────────────
+  promptLabGlobalRuns: {
+    active: (userId: string) => ["prompt-lab-global-runs", "active", userId] as const,
+    history: (userId: string, limit?: number) => ["prompt-lab-global-runs", "history", userId, limit] as const,
+  },
+
   // ── Misc / Uncategorized ──────────────────────────────
   responseRateCard: ["response-rate-card"] as const,
   activeSchedules: ["active-schedules"] as const,

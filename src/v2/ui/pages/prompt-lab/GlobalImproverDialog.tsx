@@ -2,7 +2,7 @@
  * GlobalImproverDialog — UI per il "Migliora tutto" globale del Prompt Lab.
  * Flusso: 1) input obiettivo → 2) avvio (collect+improve) → 3) review proposte → 4) save selezionati.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [goal, setGoal] = useState("");
-  const { state, startImprovement, saveAccepted, reset } = useGlobalPromptImprover(userId, goal);
+  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
 
   const readyProposals = useMemo(
@@ -60,7 +60,7 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
   }
 
   function handleClose(nextOpen: boolean) {
-    if (!nextOpen && state.loading) return; // non chiudere durante improving/saving
+    // LOVABLE-91: ora il run è persistito su DB, si può chiudere durante improving
     if (!nextOpen) {
       reset();
       setAccepted(new Set());
@@ -68,6 +68,16 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
     }
     onOpenChange(nextOpen);
   }
+
+  // Avviso informativo se l'utente chiude il browser durante improving
+  useEffect(() => {
+    if (!state.loading) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [state.loading]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -85,6 +95,30 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {state.phase === "idle" && (
             <div className="p-5 space-y-3">
+              {state.hasResumableRun && state.resumableRun && (
+                <div className="rounded border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
+                    <div className="text-xs min-w-0">
+                      <p className="font-medium">Analisi precedente interrotta</p>
+                      <p className="text-muted-foreground truncate">
+                        {state.resumableRun.progress_current}/{state.resumableRun.progress_total} completati
+                        {state.resumableRun.goal ? ` — "${state.resumableRun.goal}"` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={dismissResumable}>
+                      <X className="h-3 w-3" />
+                      Scarta
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs gap-1" onClick={resumeRun}>
+                      <RotateCcw className="h-3 w-3" />
+                      Riprendi
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-medium text-muted-foreground">
                   Obiettivo del miglioramento (opzionale)
@@ -135,6 +169,12 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                   <p className="text-[11px] text-muted-foreground text-center mt-1">
                     {state.proposals[state.progress.current]?.block.label ?? ""}
                   </p>
+                  {state.dbSaveCount > 0 && (
+                    <p className="text-[10px] text-muted-foreground text-center mt-1.5 flex items-center justify-center gap-1">
+                      <Save className="h-3 w-3" />
+                      Salvato {state.dbSaveCount}/{state.progress.total} proposte — puoi chiudere senza perdere progressi
+                    </p>
+                  )}
                 </div>
               )}
             </div>
