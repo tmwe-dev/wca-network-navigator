@@ -23,6 +23,13 @@ export interface EnrichedRow {
   country?: string;
   realId?: string;
   emailCount?: number;
+  logoUrl?: string;
+  websiteExcerpt?: {
+    description?: string;
+    emails?: readonly string[];
+    phones?: readonly string[];
+    scraped_at?: string;
+  };
 }
 
 export type SourceTab = "all" | "wca" | "contacts" | "email" | "cockpit" | "bca";
@@ -154,6 +161,8 @@ export function useEnrichmentData() {
           hasWebsiteExcerpt: !!ed.website_excerpt,
           linkedinUrl: liUrl || undefined,
           email: p.email || undefined, country: p.country_code || undefined, realId: p.id,
+          logoUrl: p.logo_url || undefined,
+          websiteExcerpt: (ed.website_excerpt as EnrichedRow["websiteExcerpt"]) || undefined,
         };
       });
     },
