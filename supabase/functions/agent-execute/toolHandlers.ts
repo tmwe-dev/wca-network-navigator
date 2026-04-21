@@ -503,30 +503,63 @@ export async function executeTool(name: string, args: Record<string, unknown>, u
       let pid = args.partner_id as string;
       if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
       if (!pid) return { error: "Partner non trovato" };
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-partner`, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
-        body: JSON.stringify({ partner_id: pid, force: !!args.force }),
-      });
-      const data = await response.json();
-      return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
+      // LOVABLE-75: read-only — niente più chiamate edge live, leggi cosa c'è già.
+      const { data: p } = await supabase
+        .from("partners")
+        .select("company_name, enrichment_data")
+        .eq("id", pid)
+        .maybeSingle();
+      const ed = (p?.enrichment_data as Record<string, unknown>) || {};
+      const websiteExcerpt = ed.website_excerpt as { description?: string } | undefined;
+      const contactProfiles = ed.contact_profiles;
+      const hasBase = !!(ed.linkedin_url || ed.logo_url || websiteExcerpt?.description);
+      const hasDeep = !!(contactProfiles || ed.reputation || ed.google_maps || ed.website_quality_score);
+      let suggestion: string;
+      if (hasBase && hasDeep) {
+        suggestion = `${p?.company_name ?? "Partner"} ha già dati Base + Deep Search completi. L'AI li vede automaticamente in Email Forge.`;
+      } else if (!hasBase) {
+        suggestion = `${p?.company_name ?? "Partner"} non ha l'arricchimento base. Esegui da Settings → Arricchimento (gratis, usa Google).`;
+      } else {
+        suggestion = `${p?.company_name ?? "Partner"} ha solo il base. Apri Email Forge e attiva "Deep Search aggiuntiva" — cercherà solo i dati mancanti.`;
+      }
+      return {
+        success: true,
+        partner_id: pid,
+        company_name: p?.company_name ?? null,
+        has_base: hasBase,
+        has_deep_search: hasDeep,
+        deep_search_at: ed.deep_search_at ?? null,
+        base_enriched_at: ed.base_enriched_at ?? null,
+        suggestion,
+      };
     }
 
     case "deep_search_contact": {
       let cid = args.contact_id as string;
       if (!cid && args.contact_name) { const { data } = await supabase.from("imported_contacts").select("id").ilike("name", `%${escapeLike(args.contact_name as string)}%`).limit(1).single(); if (data) cid = data.id; }
       if (!cid) return { error: "Contatto non trovato" };
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
-        body: JSON.stringify({ contact_id: cid }),
-      });
-      const data = await response.json();
-      return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
+      // LOVABLE-75: la edge deep-search-contact è deprecata. Leggi snapshot.
+      const { data: c } = await supabase
+        .from("imported_contacts")
+        .select("id, name, email, deep_search_at, wca_partner_id")
+        .eq("id", cid)
+        .maybeSingle();
+      return {
+        success: true,
+        contact_id: cid,
+        name: c?.name ?? null,
+        deep_search_at: c?.deep_search_at ?? null,
+        suggestion: c?.deep_search_at
+          ? `${c?.name ?? "Contatto"} ha già un Deep Search registrato. Apri il record per consultarlo.`
+          : `${c?.name ?? "Contatto"} non ha Deep Search. Esegui da Partner Connect (extension) — la funzione edge è deprecata.`,
+      };
     }
 
     case "enrich_partner_website": {
       let pid = args.partner_id as string;
       if (!pid && args.company_name) { const r = await resolvePartnerId(args); if (r) pid = r.id; }
       if (!pid) return { error: "Partner non trovato" };
+      console.warn("[LEGACY] agent-execute → enrich_partner_website: preferire Deep Search client-side.");
       const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/enrich-partner-website`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({ partner_id: pid }),

@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
+// LOVABLE-75 — LEGACY
+// Questa funzione è mantenuta solo per useAcquisitionPipeline.
+// Tutti gli altri chiamanti devono usare il Deep Search client-side (useDeepSearchLocal)
+// o leggere i dati esistenti via readUnifiedEnrichment (vedi _shared/enrichmentAdapter.ts).
+// Generate-email / improve-email / generate-outreach / Command tools NON devono più invocarla.
 
 // ── Credit helpers ──
 async function getUserId(req: Request, supabase: Record<string, unknown>): Promise<string | null> {
@@ -48,6 +53,7 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
+  console.warn("[LEGACY] enrich-partner-website called — caller should migrate to client-side deep search (useDeepSearchLocal) or readUnifiedEnrichment.");
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
