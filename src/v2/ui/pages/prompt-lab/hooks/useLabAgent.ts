@@ -97,6 +97,34 @@ async function loadDoctrineSnippet(maxEntries = 5): Promise<string> {
   }
 }
 
+/**
+ * Carica i template di prompt vocali ElevenLabs (Aurora/Bruce/Robin) dalla KB
+ * come few-shot reference quando si migliora un blocco voce.
+ * I template sono in kb_entries con category='prompt_template' e tag 'voice_template'.
+ */
+async function loadVoiceTemplatesFewShot(): Promise<string> {
+  try {
+    const all = await findKbEntries();
+    const templates = all
+      .filter(
+        (e) =>
+          e.category === "prompt_template" &&
+          Array.isArray(e.tags) &&
+          e.tags.includes("voice_template"),
+      )
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    if (templates.length === 0) return "(nessun template voce disponibile in KB)";
+    return templates
+      .map(
+        (t) =>
+          `### ESEMPIO ${t.title}\n${(t.content ?? "").trim()}\n--- FINE ESEMPIO ---`,
+      )
+      .join("\n\n");
+  } catch {
+    return "(impossibile caricare i template voce)";
+  }
+}
+
 export function useLabAgent() {
   const [messages, setMessages] = useState<LabChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,11 +156,16 @@ export function useLabAgent() {
       const guidance = instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
       const sourceDesc = describeSource(block.source);
       const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
-      const doctrineSnippet = await loadDoctrineSnippet();
-      const rubric = resolveRubric(block.source, {
-        forceVoice: isVoiceBlock({ tabLabel, source: block.source, label: block.label }),
-      });
+      const isVoice = isVoiceBlock({ tabLabel, source: block.source, label: block.label });
+      const [doctrineSnippet, voiceFewShot] = await Promise.all([
+        loadDoctrineSnippet(),
+        isVoice ? loadVoiceTemplatesFewShot() : Promise.resolve(""),
+      ]);
+      const rubric = resolveRubric(block.source, { forceVoice: isVoice });
       const rubricSection = rubricToPromptSection(rubric);
+      const voiceSection = isVoice
+        ? `\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
+        : "";
 
       const userPrompt = `Tab: ${tabLabel ?? "n/d"}
 Dove si attiva (runtime): ${tabActivation ?? "n/d"}
@@ -148,7 +181,7 @@ ${nearbySummary}
 --- KB DOCTRINE rilevante (regole già scritte, rispettale) ---
 ${doctrineSnippet}
 --- FINE KB DOCTRINE ---
-
+${voiceSection}
 ${rubricSection}
 
 --- TESTO ATTUALE DEL BLOCCO ---
