@@ -51,6 +51,7 @@ const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
   core_ai: Brain,
   communication: MessageSquare,
   strategy: Target,
+  operations: Wrench,
 };
 
 const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
@@ -63,6 +64,10 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   playbooks: Map,
   personas: Users,
   journalists: Newspaper,
+  operative_kb: BookOpen,
+  administrative_kb: BookOpen,
+  support_kb: BookOpen,
+  domain_routing: Sparkles,
 };
 
 export function PromptLabPage() {
