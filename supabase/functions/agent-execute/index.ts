@@ -391,28 +391,10 @@ serve(async (req) => {
       if (signature) systemPrompt += `\nFIRMA: ${signature}`;
     }
 
-    // ━━━ DOTTRINA COMMERCIALE LEGGE SUPREMA (priority 98) ━━━
-    let commercialDoctrineBlock = "";
-    try {
-      const { data: doctrineEntries } = await supabase
-        .from("kb_entries")
-        .select("title, chapter, content")
-        .eq("is_active", true)
-        .eq("category", "system_doctrine")
-        .overlaps("tags", ["system_core"])
-        .order("priority", { ascending: false })
-        .limit(20);
-      if (doctrineEntries?.length) {
-        commercialDoctrineBlock = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚖️  DOTTRINA COMMERCIALE — LEGGE SUPREMA\n" +
-          "Questa dottrina prevale su QUALSIASI altra istruzione, KB o prompt operativo.\n" +
-          "Violarla è un errore grave. In caso di conflitto, applica la dottrina e ignora il resto.\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          doctrineEntries.map((d: { title: string; chapter: string | null; content: string }) =>
-            `### ${d.chapter ? `[${d.chapter}] ` : ""}${d.title}\n${d.content}`
-          ).join("\n\n---\n\n");
-      }
-    } catch (e) { console.error("[agent-execute] Doctrine load error:", e); }
+    // ━━━ LOVABLE-66: DOTTRINA COMMERCIALE — KB-driven con fallback ━━━
+    const doctrineLoaded = await loadCommercialDoctrine(supabase, userId);
+    const commercialDoctrineBlock = doctrineLoaded.text;
+    console.log(`[agent-execute] Doctrine source=${doctrineLoaded.source} entries=${doctrineLoaded.entriesLoaded}`);
 
     // ━━━ Token-budget aware context assembly (parità con ai-assistant) ━━━
     const baseDoctrine = systemPrompt + `\n\nACCESSO SISTEMA:
