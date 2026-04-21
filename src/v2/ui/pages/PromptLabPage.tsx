@@ -111,17 +111,15 @@ export function PromptLabPage() {
   return (
     <div className="h-[calc(100vh-3.5rem)] w-full">
       <ResizablePanelGroup direction="vertical">
-        <ResizablePanel defaultSize={75} minSize={40}>
+        <ResizablePanel defaultSize={82} minSize={40}>
           <div className="flex h-full flex-col">
-            <header className="border-b px-4 py-2 flex items-center justify-between bg-background">
-              <div className="flex items-center gap-2">
-                <FlaskConical className="h-4 w-4 text-primary" />
-                <div>
-                  <h1 className="text-sm font-semibold leading-tight">Prompt Lab</h1>
-                  <p className="text-[10px] text-muted-foreground">{activeTab.description}</p>
-                </div>
+            <header className="border-b px-3 py-1.5 flex items-center justify-between bg-background flex-shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <FlaskConical className="h-4 w-4 text-primary flex-shrink-0" />
+                <h1 className="text-sm font-semibold leading-none">Prompt Lab</h1>
+                <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <UploadButton onBlocksUploaded={handleUpload} />
                 <ExportButton getSnapshot={handleExport} />
               </div>
@@ -156,8 +154,8 @@ export function PromptLabPage() {
                   value={activeTabId}
                   onChange={(v) => setActiveTabId(v as PromptLabTabId)}
                 />
-                <div className="flex-1 p-4 min-w-0 min-h-0 flex flex-col overflow-hidden">
-                  <div className="mb-3 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex-shrink-0">
+                <div className="flex-1 px-3 pt-2 pb-3 min-w-0 min-h-0 flex flex-col overflow-hidden">
+                  <div className="mb-2 rounded border bg-muted/30 px-2.5 py-1 text-[11px] leading-tight text-muted-foreground flex-shrink-0">
                     <span className="font-medium text-foreground">Dove si attiva:</span> {activeTab.activation}
                   </div>
                   {activeTabId === "system_prompt" && <SystemPromptTab />}
@@ -176,7 +174,7 @@ export function PromptLabPage() {
 
         <ResizableHandle withHandle />
 
-        <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+        <ResizablePanel defaultSize={18} minSize={8} maxSize={50}>
           <LabAgentChat
             messages={lab.messages}
             loading={lab.loading}
