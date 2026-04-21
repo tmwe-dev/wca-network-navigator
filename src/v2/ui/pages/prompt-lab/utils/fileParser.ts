@@ -66,8 +66,9 @@ async function parsePdf(file: File): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer();
 
-    // Try dynamic import of pdfjs-dist
-    const pdfjsLib = await import("pdfjs-dist");
+    // Try dynamic import of pdfjs-dist (optional dep — may not be installed)
+    const pdfjsModule = "pdfjs-dist";
+    const pdfjsLib = await import(/* @vite-ignore */ pdfjsModule);
     pdfjsLib.GlobalWorkerOptions.workerSrc = "";
 
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -96,7 +97,8 @@ async function parsePdf(file: File): Promise<string> {
 async function parseDocx(file: File): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const mammoth = await import("mammoth");
+    const mammothModule = "mammoth";
+    const mammoth = await import(/* @vite-ignore */ mammothModule);
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
   } catch {
