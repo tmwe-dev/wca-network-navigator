@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import type { EnrichedRow, SortField, SortDir } from "@/hooks/useEnrichmentData";
 import type { RowEnrichmentState } from "@/hooks/useBaseEnrichment";
 import { EnrichmentDetailPopover } from "./EnrichmentDetailPopover";
+import { EnrichmentExtraInfo } from "./EnrichmentExtraInfo";
 
 const COUNTRY_FLAGS: Record<string, string> = {
   AE: "🇦🇪", AR: "🇦🇷", AT: "🇦🇹", AU: "🇦🇺", BE: "🇧🇪", BG: "🇧🇬", BR: "🇧🇷",
@@ -190,6 +191,7 @@ export function EnrichmentRowList({
                             <span className="text-[10px]">✨</span>
                           </EnrichmentDetailPopover>
                         )}
+                        {row.realId && <EnrichmentExtraInfo partnerId={row.realId} />}
                       </>
                     )}
                   </div>
