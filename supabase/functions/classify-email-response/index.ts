@@ -6,6 +6,7 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
+import { runPostClassificationPipeline } from "../_shared/postClassificationPipeline.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
@@ -626,6 +627,28 @@ serve(async (req) => {
       metadata: { category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
     });
 
+    // ═══ LOVABLE-86: Pipeline post-classificazione ═══
+    let postClassResult = null;
+    try {
+      postClassResult = await runPostClassificationPipeline(supabase, {
+        userId: input.user_id,
+        partnerId: input.partner_id || null,
+        contactId: input.contact_id || null,
+        category: classification.category,
+        confidence: classification.confidence,
+        senderEmail: input.email_address || "",
+        senderName: input.sender_name || undefined,
+        subject: input.subject || undefined,
+        aiSummary: classification.ai_summary || undefined,
+        urgency: classification.urgency || undefined,
+        sentiment: classification.sentiment || undefined,
+        channel: "email",
+      });
+      console.log(`[classify-email-response] postClassification:`, JSON.stringify(postClassResult));
+    } catch (pcErr) {
+      console.warn("[classify-email-response] postClassification error (non-blocking):", pcErr);
+    }
+
     console.log(`[classify-email-response] Done: category=${classification.category} confidence=${classification.confidence} action=${actionTaken}`);
 
     metrics.userId = input.user_id;
@@ -636,6 +659,7 @@ serve(async (req) => {
       category: classification.category,
       confidence: classification.confidence,
       action_taken: actionTaken,
+      post_classification: postClassResult,
     }), { headers });
 
   } catch (e: unknown) {
