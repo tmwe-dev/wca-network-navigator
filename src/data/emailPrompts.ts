@@ -32,6 +32,6 @@ export async function findEmailPromptsByScope(userId: string, scope: string): Pr
 }
 
 export async function updateEmailPrompt(id: string, patch: Partial<EmailPromptFull>): Promise<void> {
-  const { error } = await supabase.from("email_prompts").update(patch).eq("id", id);
+  const { error } = await supabase.from("email_prompts").update(patch as never).eq("id", id);
   if (error) throw error;
 }

@@ -34,6 +34,6 @@ export async function findOperativePromptsFull(userId: string): Promise<Operativ
 }
 
 export async function updateOperativePrompt(id: string, patch: Partial<OperativePromptFull>): Promise<void> {
-  const { error } = await supabase.from("operative_prompts").update(patch).eq("id", id);
+  const { error } = await supabase.from("operative_prompts").update(patch as never).eq("id", id);
   if (error) throw error;
 }

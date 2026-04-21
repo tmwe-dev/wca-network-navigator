@@ -31,6 +31,6 @@ export async function findCommercialPlaybooks(userId: string): Promise<Commercia
 }
 
 export async function updateCommercialPlaybook(id: string, patch: Partial<CommercialPlaybook>): Promise<void> {
-  const { error } = await supabase.from("commercial_playbooks").update(patch).eq("id", id);
+  const { error } = await supabase.from("commercial_playbooks").update(patch as never).eq("id", id);
   if (error) throw error;
 }

@@ -27,6 +27,6 @@ export async function findAgentPersonas(userId: string): Promise<AgentPersona[]>
 }
 
 export async function updateAgentPersona(id: string, patch: Partial<AgentPersona>): Promise<void> {
-  const { error } = await supabase.from("agent_personas").update(patch).eq("id", id);
+  const { error } = await supabase.from("agent_personas").update(patch as never).eq("id", id);
   if (error) throw error;
 }
