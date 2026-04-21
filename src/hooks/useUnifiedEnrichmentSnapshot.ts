@@ -68,7 +68,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null) {
 
       const { data: sherlock } = await supabase
         .from("sherlock_investigations")
-        .select("created_at, investigation_level")
+        .select("created_at, level")
         .eq("partner_id", partnerId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -88,7 +88,7 @@ export function useUnifiedEnrichmentSnapshot(partnerId: string | null) {
         sherlock: {
           available: !!sherlock,
           age_days: daysSince(sherlock?.created_at ?? null),
-          level: sherlock?.investigation_level ?? null,
+          level: sherlock?.level != null ? String(sherlock.level) : null,
         },
         legacy: {
           available: !!(ed.website_summary || ed.linkedin_summary || ed.deep_search_summary),
