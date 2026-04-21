@@ -106,10 +106,14 @@ const WRITE_TOOL_IDS = new Set<string>([
 
 export interface ToolMetadata {
   readonly id: string;
+  readonly label: string;
+  readonly description: string;
   readonly requiresApproval: boolean;
 }
 
 export const TOOL_METADATA: readonly ToolMetadata[] = TOOLS.map((t) => ({
   id: t.id,
+  label: t.label,
+  description: t.description,
   requiresApproval: WRITE_TOOL_IDS.has(t.id),
 }));
