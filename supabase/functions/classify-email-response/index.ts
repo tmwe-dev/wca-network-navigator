@@ -105,7 +105,7 @@ function buildClassificationPrompt(
   parts.push(`\n## Required Output`);
   parts.push(`Respond with a JSON object (no markdown, no code fences):
 {
-  "category": "interested|not_interested|request_info|meeting_request|complaint|follow_up|auto_reply|spam|uncategorized",
+  "category": "interested|not_interested|request_info|question|meeting_request|complaint|follow_up|auto_reply|unsubscribe|bounce|spam|uncategorized",
   "confidence": 0.0-1.0,
   "ai_summary": "one-sentence summary of the email content and intent. If the email is NOT in Italian, provide an Italian translation summary here.",
   "keywords": ["keyword1", "keyword2"],
@@ -517,9 +517,8 @@ serve(async (req) => {
 
       const patternCount = patternCheck?.length ?? 0;
 
-      if (patternCount >= 5) {
-        const domain = input.email_address?.includes("@") ? input.email_address.split("@")[1] : null;
-        if (!domain) throw new Error("skip_kb_learning_malformed_email");
+      if (patternCount >= 5 && input.email_address?.includes("@")) {
+        const domain = input.email_address.split("@")[1];
         const patternTag = `email_pattern_${domain}_${classification.category}`;
 
         const { data: existingKB } = await supabase

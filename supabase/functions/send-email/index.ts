@@ -19,6 +19,7 @@ interface SendEmailBody {
   html: string;
   from?: string;
   partner_id?: string;
+  contact_id?: string;
   agent_id?: string;
   reply_to?: string;
   operator_id?: string;
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: SendEmailBody = await req.json();
-    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id, idempotency_key } = body;
+    const { to, subject, html, from, partner_id, contact_id, agent_id, reply_to, operator_id, idempotency_key } = body;
 
     if (!to || !subject || !html) {
       return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
@@ -139,6 +140,20 @@ Deno.serve(async (req) => {
       if (partner?.lead_status === "blacklisted") {
         return new Response(
           JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Partner con lead_status = blacklisted", retriable: false }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    if (contact_id) {
+      const { data: contact } = await supabase
+        .from("imported_contacts")
+        .select("lead_status")
+        .eq("id", contact_id)
+        .maybeSingle();
+      if (contact?.lead_status === "blacklisted") {
+        return new Response(
+          JSON.stringify({ success: false, error: "BLACKLISTED", reason: "Contatto con lead_status = blacklisted", retriable: false }),
           { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
         );
       }

@@ -31,6 +31,7 @@ interface ActionRow {
   parent_action_id: string | null;
   position: number;
   metadata: Record<string, unknown> | null;
+  retry_count?: number | null;
 }
 
 Deno.serve(async (req) => {
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     // 1. Fetch due actions
     const { data: actions, error: fetchErr } = await supabase
       .from("mission_actions")
-      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata")
+      .select("id, mission_id, user_id, action_type, status, scheduled_at, cadence_rule, trigger_condition, parent_action_id, position, metadata, retry_count")
       .lte("scheduled_at", new Date().toISOString())
       .not("scheduled_at", "is", null)
       .eq("status", "pending")
