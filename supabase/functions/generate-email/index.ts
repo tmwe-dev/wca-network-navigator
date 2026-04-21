@@ -275,6 +275,9 @@ serve(async (req) => {
       // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
       // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.
       enrichment_missing: ctx.deepSearchStatus === "missing",
+      contract_used: true,
+      contract_warnings: contractWarnings,
+      type_resolution: typeResolution,
       ...(_debug_return_prompt ? {
         _debug: {
           systemPrompt,
