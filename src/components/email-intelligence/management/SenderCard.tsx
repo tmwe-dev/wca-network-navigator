@@ -1,12 +1,15 @@
 /**
- * SenderCard — Draggable sender card with domain favicon, country flag, email preview
+ * SenderCard — Draggable sender card with domain favicon, country flag, email preview, and group assignment dropdown
  */
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { GripVertical, Mail } from 'lucide-react';
+import { GripVertical, Mail, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
-import type { SenderAnalysis } from '@/types/email-management';
+import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
+import { toast } from 'sonner';
 
 interface SenderCardProps {
   sender: SenderAnalysis;
@@ -14,11 +17,15 @@ interface SenderCardProps {
   onDragEnd?: (clientX: number, clientY: number) => void;
   onDoubleClick?: (sender: SenderAnalysis) => void;
   onViewEmails?: (sender: SenderAnalysis) => void;
+  groups?: EmailSenderGroup[];
+  onAssignGroup?: (sender: SenderAnalysis, groupName: string, groupId: string) => Promise<void>;
 }
 
-export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onViewEmails }: SenderCardProps) {
+export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onViewEmails, groups = [], onAssignGroup }: SenderCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const [isAssigning, setIsAssigning] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const flag = getFlagFromDomain(sender.domain);
@@ -34,6 +41,22 @@ export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onVi
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
     setIsDragging(false);
     onDragEnd?.(e.clientX, e.clientY);
+  };
+
+  const handleGroupSelection = async () => {
+    if (!selectedGroupId || !onAssignGroup) return;
+    const group = groups.find(g => g.id === selectedGroupId);
+    if (!group) return;
+
+    setIsAssigning(true);
+    try {
+      await onAssignGroup(sender, group.nome_gruppo, group.id);
+      setSelectedGroupId("");
+    } catch (err) {
+      toast.error("Errore assegnazione");
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   return (
@@ -57,7 +80,7 @@ export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onVi
           isDragging && "cursor-grabbing"
         )}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-3 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
@@ -106,6 +129,37 @@ export function SenderCard({ sender, onDragStart, onDragEnd, onDoubleClick, onVi
               </button>
             )}
           </div>
+
+          {/* Group assignment dropdown */}
+          {groups && groups.length > 0 && onAssignGroup && (
+            <div className="flex items-center gap-1.5">
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Assegna gruppo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      <span className="mr-2">{group.icon || '📁'}</span>
+                      {group.nome_gruppo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedGroupId && (
+                <Button
+                  size="icon"
+                  variant="default"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={(e) => { e.stopPropagation(); handleGroupSelection(); }}
+                  disabled={isAssigning}
+                  title="Conferma assegnazione"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

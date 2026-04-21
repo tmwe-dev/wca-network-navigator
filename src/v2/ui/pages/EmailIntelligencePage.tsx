@@ -73,8 +73,8 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex flex-col h-full p-4 md:p-6 space-y-4">
-      <div className="flex items-center gap-3">
+    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-4 md:p-6 gap-4">
+      <div className="flex items-center gap-3 flex-shrink-0">
         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
           <BrainCircuit className="h-5 w-5 text-primary" />
         </div>
@@ -84,8 +84,8 @@ export function EmailIntelligencePage(): React.ReactElement {
         </div>
       </div>
 
-      <Tabs defaultValue="manual" className="flex-1 flex flex-col">
-        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto">
+      <Tabs defaultValue="manual" className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto flex-shrink-0">
           <TabsTrigger value="manual" className="gap-1.5 text-xs">
             <HandMetal className="h-3.5 w-3.5" />
             Gestione Manuale

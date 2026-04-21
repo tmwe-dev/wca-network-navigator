@@ -2,7 +2,7 @@
  * ManualGroupingTab — Drag-and-drop sender classification (refactored from SenderManagementTab)
  * Tab 1 of Email Intelligence flow
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -411,6 +411,48 @@ export default function ManualGroupingTab() {
     );
   }
 
+  // Group sorting for right panel
+  const [groupSortOption, setGroupSortOption] = useState<"alpha" | "count">("alpha");
+  const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
+
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
+
+  // Letters that have at least one group
+  const availableLetters = useMemo(() => {
+    const letters = new Set<string>();
+    groups.forEach((g) => {
+      const first = g.nome_gruppo.charAt(0).toUpperCase();
+      if (/[A-Z]/.test(first)) letters.add(first);
+      else letters.add("#");
+    });
+    return letters;
+  }, [groups]);
+
+  const sortedGroups = useMemo(() => {
+    let filtered = [...groups];
+
+    // Apply letter filter
+    if (activeLetterFilter) {
+      if (activeLetterFilter === "#") {
+        filtered = filtered.filter((g) => !/^[A-Z]/i.test(g.nome_gruppo));
+      } else {
+        filtered = filtered.filter((g) =>
+          g.nome_gruppo.charAt(0).toUpperCase() === activeLetterFilter
+        );
+      }
+    }
+
+    if (groupSortOption === "alpha") {
+      return filtered.sort((a, b) => a.nome_gruppo.localeCompare(b.nome_gruppo));
+    } else {
+      return filtered.sort((a, b) => {
+        const countA = (a as any).assigned_count || 0;
+        const countB = (b as any).assigned_count || 0;
+        return countB - countA;
+      });
+    }
+  }, [groups, groupSortOption, activeLetterFilter]);
+
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Toolbar */}
@@ -454,16 +496,16 @@ export default function ManualGroupingTab() {
         </Button>
       </div>
 
-      {/* Main layout */}
+      {/* Main layout — fixed height, no page scroll */}
       <div className="flex flex-1 gap-4 min-h-0 overflow-hidden">
-        {/* Sender list */}
+        {/* Sender list — LEFT PANEL with internal scroll */}
         <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b bg-muted/30">
+          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0">
             <span className="text-xs font-medium text-muted-foreground">
               Non classificati ({sortedSenders.length})
             </span>
           </div>
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-2 space-y-2">
               {sortedSenders.length === 0 ? (
                 <p className="text-center py-8 text-sm text-muted-foreground">
@@ -473,21 +515,66 @@ export default function ManualGroupingTab() {
                  sortedSenders.map((sender) => (
                   <SenderCard key={sender.email} sender={sender}
                     onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                    onViewEmails={(s) => setEmailPreviewSender(s)} />
+                    onViewEmails={(s) => setEmailPreviewSender(s)}
+                    groups={groups}
+                    onAssignGroup={assignToGroup} />
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
-        {/* Groups grid */}
+        {/* Groups panel — RIGHT PANEL with internal scroll */}
         <div className="flex-1 min-w-0 flex flex-col border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b bg-muted/30">
-            <span className="text-xs font-medium text-muted-foreground">Gruppi ({groups.length})</span>
+          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Gruppi ({sortedGroups.length}{activeLetterFilter ? `/${groups.length}` : ""})
+            </span>
+            <Select value={groupSortOption} onValueChange={(v) => setGroupSortOption(v as "alpha" | "count")}>
+              <SelectTrigger className="w-[140px] h-8">
+                <ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">A → Z</SelectItem>
+                <SelectItem value="count">Per contatti</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <ScrollArea className="flex-1">
-            <div className="p-4 flex flex-wrap gap-4">
-              {groups.map((group) => (
+          {/* Alphabet filter bar */}
+          <div className="flex items-center gap-0 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
+            <button
+              onClick={() => setActiveLetterFilter(null)}
+              className={`px-1.5 py-0.5 text-[10px] font-semibold rounded transition-colors ${
+                activeLetterFilter === null
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              ALL
+            </button>
+            {ALPHABET.map((letter) => {
+              const hasGroups = availableLetters.has(letter);
+              return (
+                <button
+                  key={letter}
+                  onClick={() => hasGroups && setActiveLetterFilter(letter === activeLetterFilter ? null : letter)}
+                  disabled={!hasGroups}
+                  className={`w-5 h-5 flex items-center justify-center text-[10px] font-semibold rounded transition-colors ${
+                    activeLetterFilter === letter
+                      ? "bg-primary text-primary-foreground"
+                      : hasGroups
+                        ? "text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer"
+                        : "text-muted-foreground/30 cursor-default"
+                  }`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="p-4 flex flex-wrap gap-4 content-start">
+              {sortedGroups.map((group) => (
                 <GroupDropZone key={group.id} group={group} onRefresh={loadData}
                   isHovered={hoveredGroupId === group.id} />
               ))}
@@ -495,7 +582,7 @@ export default function ManualGroupingTab() {
                 <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
