@@ -14,7 +14,8 @@ import { setDeepSearchRuntimeConfig } from "@/hooks/useDeepSearchLocal";
 import { cascadeBus, type CascadeEvent } from "@/hooks/useDeepSearchHelpers";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
 import { getDeepSearchMeta, getDeepSearchSources } from "@/lib/deepSearchPresets";
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Circle, Zap, ThumbsUp, Trophy, Info } from "lucide-react";
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Loader2, Circle, Zap, ThumbsUp, Trophy, Info, ChevronsUpDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import type { ForgeRecipient } from "../ForgeRecipientPicker";
 import { RawScrapePanel } from "./RawScrapePanel";
@@ -228,36 +229,43 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
           </div>
         </div>
 
-        {/* CHECKLIST GRANULARE — l'utente può attivare/disattivare singole fonti */}
-        <div className="space-y-1 pt-1.5 border-t border-border/30">
-          <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Fonti attive (granulare)
-          </div>
-          <div className="grid grid-cols-1 gap-0.5">
-            <SourceCheckbox label="🌐 Sito web (homepage)"     checked={dsConfig.scrapeWebsite}    onChange={(v) => updateConfig({ scrapeWebsite: v })} />
-            <SourceCheckbox label="📄 Sito multi-pagina (about/team/contatti)" checked={dsConfig.websiteMultiPage} onChange={(v) => updateConfig({ websiteMultiPage: v })} />
-            <SourceCheckbox label="👤 LinkedIn contatti (URL)"  checked={dsConfig.linkedinContacts} onChange={(v) => updateConfig({ linkedinContacts: v })} />
-            <SourceCheckbox label="🏢 LinkedIn azienda (URL)"   checked={dsConfig.linkedinCompany}  onChange={(v) => updateConfig({ linkedinCompany: v })} />
-            <SourceCheckbox label="📱 WhatsApp (wa.me link)"    checked={dsConfig.whatsapp}         onChange={(v) => updateConfig({ whatsapp: v })} />
-            <SourceCheckbox label="🔍 Google generale (menzioni)" checked={dsConfig.googleGeneral} onChange={(v) => updateConfig({ googleGeneral: v })} />
-            <SourceCheckbox label="📍 Google Maps / Place"      checked={dsConfig.googleMaps}       onChange={(v) => updateConfig({ googleMaps: v })} />
-            <SourceCheckbox label="⭐ Reputation (Trustpilot + Wikipedia + News)" checked={dsConfig.reputation} onChange={(v) => updateConfig({ reputation: v })} />
-          </div>
-        </div>
+        {/* AVANZATO — collapsibile, chiuso di default */}
+        <Collapsible>
+          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-foreground/70 hover:text-foreground pt-1.5 border-t border-border/60 w-full">
+            <ChevronsUpDown className="w-3 h-3" />
+            Personalizza fonti (avanzato)
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 mt-2">
+            <div className="space-y-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                Fonti attive (granulare)
+              </div>
+              <div className="grid grid-cols-1 gap-0.5">
+                <SourceCheckbox label="🌐 Sito web (homepage)"     checked={dsConfig.scrapeWebsite}    onChange={(v) => updateConfig({ scrapeWebsite: v })} />
+                <SourceCheckbox label="📄 Sito multi-pagina (about/team/contatti)" checked={dsConfig.websiteMultiPage} onChange={(v) => updateConfig({ websiteMultiPage: v })} />
+                <SourceCheckbox label="👤 LinkedIn contatti (URL)"  checked={dsConfig.linkedinContacts} onChange={(v) => updateConfig({ linkedinContacts: v })} />
+                <SourceCheckbox label="🏢 LinkedIn azienda (URL)"   checked={dsConfig.linkedinCompany}  onChange={(v) => updateConfig({ linkedinCompany: v })} />
+                <SourceCheckbox label="📱 WhatsApp (wa.me link)"    checked={dsConfig.whatsapp}         onChange={(v) => updateConfig({ whatsapp: v })} />
+                <SourceCheckbox label="🔍 Google generale (menzioni)" checked={dsConfig.googleGeneral} onChange={(v) => updateConfig({ googleGeneral: v })} />
+                <SourceCheckbox label="📍 Google Maps / Place"      checked={dsConfig.googleMaps}       onChange={(v) => updateConfig({ googleMaps: v })} />
+                <SourceCheckbox label="⭐ Reputation (Trustpilot + Wikipedia + News)" checked={dsConfig.reputation} onChange={(v) => updateConfig({ reputation: v })} />
+              </div>
+            </div>
 
-        {/* Override avanzato: solo dominio prioritario, nessun toggle. */}
-        <div className="space-y-0.5 pt-1.5 border-t border-border/30">
-          <Label className="text-xs text-foreground/70 flex items-center justify-between">
-            <span>Dominio prioritario (override avanzato)</span>
-            <span className="font-mono text-muted-foreground/60">max {sources.maxQueriesPerContact} query</span>
-          </Label>
-          <Input
-            value={dsConfig.priorityDomain}
-            onChange={(e) => updateConfig({ priorityDomain: e.target.value })}
-            placeholder="es. transmgmt — opzionale"
-            className="h-6 text-[10px]"
-          />
-        </div>
+            <div className="space-y-0.5 pt-1.5 border-t border-border/30">
+              <Label className="text-xs text-foreground/70 flex items-center justify-between">
+                <span>Dominio prioritario</span>
+                <span className="font-mono text-foreground/60">max {sources.maxQueriesPerContact} query</span>
+              </Label>
+              <Input
+                value={dsConfig.priorityDomain}
+                onChange={(e) => updateConfig({ priorityDomain: e.target.value })}
+                placeholder="es. transmgmt — opzionale"
+                className="h-7 text-xs"
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* PROFILE STATUS */}

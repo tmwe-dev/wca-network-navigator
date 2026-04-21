@@ -1,10 +1,11 @@
 /**
  * ResultPanel — right panel of Email Forge.
- * Shows subject, body (HTML preview + plain), metrics footer, and reuses OracleContextPanel.
+ * SEMPLIFICATO: subject + body (Preview/Codice) + OracleContextPanel.
+ * Le metriche (model/quality/latency/tokens) sono nel footer di pagina, non più qui.
  */
 import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Clock, Cpu, Coins, AlertCircle } from "lucide-react";
+import { Mail, AlertCircle } from "lucide-react";
 import OracleContextPanel from "@/components/email/OracleContextPanel";
 import type { ForgeResult } from "@/v2/hooks/useEmailForge";
 
@@ -16,7 +17,7 @@ interface Props {
   hasRecipient: boolean;
 }
 
-export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient }: Props) {
+export function ResultPanel({ result, isLoading, error, hasRecipient }: Props) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-foreground/80 gap-2">
@@ -46,25 +47,14 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
         <Mail className="w-10 h-10 mb-3 opacity-40" />
         <p className="font-medium">Nessun risultato ancora</p>
         <p className="text-xs mt-1 max-w-xs">
-          L'email generata e le metriche compariranno qui.
+          Configura il destinatario e clicca <strong>Genera Email</strong> a sinistra.
         </p>
       </div>
     );
   }
 
-  const dbg = result._debug;
-  const tokensIn = dbg?.tokens_in ?? null;
-  const tokensOut = dbg?.tokens_out ?? null;
-  const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
-  const credits = totalTokens > 0 ? Math.max(1, Math.ceil(((tokensIn ?? 0) + (tokensOut ?? 0) * 2) / 1000)) : null;
-
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0 text-xs font-medium">
-        <Mail className="w-3.5 h-3.5" />
-        Risultato
-      </div>
-
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-auto p-3 space-y-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-foreground/80 mb-1">Subject</div>
@@ -78,8 +68,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
           <Tabs defaultValue="preview" className="w-full">
             <TabsList className="h-7">
               <TabsTrigger value="preview" className="text-xs h-6 px-2">Preview</TabsTrigger>
-              <TabsTrigger value="html" className="text-xs h-6 px-2">HTML</TabsTrigger>
-              <TabsTrigger value="raw" className="text-xs h-6 px-2">Raw</TabsTrigger>
+              <TabsTrigger value="html" className="text-xs h-6 px-2">Codice</TabsTrigger>
             </TabsList>
             <TabsContent value="preview" className="mt-2">
               <div
@@ -93,56 +82,7 @@ export function ResultPanel({ result, isLoading, error, elapsedMs, hasRecipient 
                 {result.body || "(vuoto)"}
               </pre>
             </TabsContent>
-            <TabsContent value="raw" className="mt-2">
-              <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed bg-muted/40 p-2 rounded font-mono text-foreground/90 max-h-96 overflow-auto">
-                {result.full_content || "(vuoto)"}
-              </pre>
-            </TabsContent>
           </Tabs>
-        </div>
-
-        <div className="flex flex-wrap gap-2 text-xs text-foreground/70 border-t border-border/30 pt-2">
-          <span className="flex items-center gap-1">
-            <Cpu className="w-3 h-3" /> {result.model}
-          </span>
-          <span>·</span>
-          <span>quality: {result.quality}</span>
-          {dbg?.ai_latency_ms != null && (
-            <>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" /> AI {dbg.ai_latency_ms}ms
-              </span>
-            </>
-          )}
-          {elapsedMs != null && (
-            <>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Totale {elapsedMs}ms
-              </span>
-            </>
-          )}
-          {tokensIn != null && (
-            <>
-              <span>·</span>
-              <span>{tokensIn} in</span>
-            </>
-          )}
-          {tokensOut != null && (
-            <>
-              <span>·</span>
-              <span>{tokensOut} out</span>
-            </>
-          )}
-          {credits != null && (
-            <>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <Coins className="w-3 h-3" /> {credits} crediti
-              </span>
-            </>
-          )}
         </div>
 
         <div>

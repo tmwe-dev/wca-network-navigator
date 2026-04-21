@@ -1,19 +1,16 @@
 /**
- * EmailForgePage — Prompt LAB + Calibrazione AI.
- * Configurazione (destinatario / tipo / tono / KB / goal) è nella SIDEBAR
- * (linguetta laterale), come nelle altre pagine. Questa pagina mostra
- * solo: riepilogo destinatario · prompt · risultato · pannello "Cosa legge l'AI".
+ * EmailForgePage — Lab AI semplificato (LOVABLE-76B).
+ * Layout 2 pannelli: ForgeOraclePanel (configurazione) | ForgeOutputPanel (Risultato/Prompt/AI).
+ * Footer 1 riga con metriche tecniche. Drawer globale resta accessibile per scope avanzati.
  */
 import * as React from "react";
-import { Wand2, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Wand2, SlidersHorizontal, Cpu, Clock, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useEmailForge } from "@/v2/hooks/useEmailForge";
 import { useForgeLab, forgeLabStore } from "@/v2/hooks/useForgeLabStore";
-import { ForgeSummaryPanel } from "./email-forge/ForgeSummaryPanel";
-import { PromptInspector } from "./email-forge/PromptInspector";
-import { ResultPanel } from "./email-forge/ResultPanel";
-import { LabBottomTabs } from "./email-forge/LabBottomTabs";
+import { ForgeOraclePanel, type ForgeConfig } from "./email-forge/ForgeOraclePanel";
+import { ForgeOutputPanel } from "./email-forge/ForgeOutputPanel";
 
 export function EmailForgePage(): React.ReactElement {
   const forge = useEmailForge();
@@ -51,7 +48,8 @@ export function EmailForgePage(): React.ReactElement {
     }
   }, [lab.runCounter, forge, buildBaseParams]);
 
-  const handleRun = React.useCallback(() => {
+  // CTA del pannello sinistro: usa la config corrente (già sincronizzata con lo store)
+  const handleRun = React.useCallback((_config?: ForgeConfig) => {
     forge.run(buildBaseParams());
   }, [forge, buildBaseParams]);
 
@@ -65,6 +63,12 @@ export function EmailForgePage(): React.ReactElement {
 
   const dbg = forge.result?._debug;
   const hasRecipient = !!forge.result?.partner_name || !!lab.recipient;
+  const tokensIn = dbg?.tokens_in ?? null;
+  const tokensOut = dbg?.tokens_out ?? null;
+  const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
+  const credits = totalTokens > 0
+    ? Math.max(1, Math.ceil(((tokensIn ?? 0) + (tokensOut ?? 0) * 2) / 1000))
+    : null;
 
   return (
     <div data-testid="page-email-forge" className="h-full flex flex-col bg-background">
@@ -73,63 +77,79 @@ export function EmailForgePage(): React.ReactElement {
           <Wand2 className="w-4 h-4 text-primary" />
           <div>
             <h1 className="text-sm font-semibold">Email Forge — Lab AI</h1>
-            <p className="text-[11px] text-muted-foreground">
-              Apri la <span className="font-medium">linguetta filtri</span> a sinistra per scegliere destinatario, tipo email e KB.
+            <p className="text-xs text-foreground/70">
+              Seleziona destinatario, scegli il tipo email e clicca Genera.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={openDrawer} className="h-8 text-xs gap-1.5">
-            <SlidersHorizontal className="w-3.5 h-3.5" /> Configura
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleRun}
-            disabled={forge.isLoading}
-            className="h-8 text-xs gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {forge.isLoading ? "Generazione…" : "Genera + Ispeziona"}
+            <SlidersHorizontal className="w-3.5 h-3.5" /> Filtri globali
           </Button>
         </div>
       </header>
 
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={22} minSize={18} maxSize={32}>
-            <ForgeSummaryPanel />
+          <ResizablePanel defaultSize={35} minSize={28} maxSize={45}>
+            <ForgeOraclePanel onRun={handleRun} isLoading={forge.isLoading} />
           </ResizablePanel>
           <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={48} minSize={28}>
-            <PromptInspector
-              systemPrompt={dbg?.systemPrompt}
-              userPrompt={dbg?.userPrompt}
-              systemBlocks={dbg?.systemBlocks}
-              blocks={dbg?.blocks}
-              isLoading={forge.isLoading}
-              onRerun={handleRerunWithOverrides}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={30} minSize={20}>
-            <ResultPanel
+          <ResizablePanel defaultSize={65} minSize={45}>
+            <ForgeOutputPanel
               result={forge.result}
               isLoading={forge.isLoading}
               error={forge.error}
               elapsedMs={forge.elapsedMs}
               hasRecipient={hasRecipient}
+              recipient={lab.recipient}
+              emailKbCategories={lab.emailType?.kb_categories ?? null}
+              systemPrompt={dbg?.systemPrompt}
+              userPrompt={dbg?.userPrompt}
+              systemBlocks={dbg?.systemBlocks}
+              blocks={dbg?.blocks}
+              onRerunPrompt={handleRerunWithOverrides}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
 
-      <LabBottomTabs
-        recipient={lab.recipient}
-        emailKbCategories={lab.emailType?.kb_categories ?? null}
-        onRefreshGeneration={handleRun}
-      />
+      {/* FOOTER metriche compatto */}
+      <footer className="border-t border-border/60 px-3 py-1.5 text-xs text-foreground/60 flex items-center gap-3 shrink-0 bg-card/30">
+        {forge.result ? (
+          <>
+            <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {forge.result.model}</span>
+            <span>·</span>
+            <span>{forge.result.quality}</span>
+            {dbg?.ai_latency_ms != null && (
+              <>
+                <span>·</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {dbg.ai_latency_ms}ms</span>
+              </>
+            )}
+            {forge.elapsedMs != null && (
+              <>
+                <span>·</span>
+                <span>totale {forge.elapsedMs}ms</span>
+              </>
+            )}
+            {totalTokens > 0 && (
+              <>
+                <span>·</span>
+                <span>{totalTokens} tok ({tokensIn ?? 0}↓ / {tokensOut ?? 0}↑)</span>
+              </>
+            )}
+            {credits != null && (
+              <>
+                <span>·</span>
+                <span className="flex items-center gap-1"><Coins className="w-3 h-3" /> {credits} crediti</span>
+              </>
+            )}
+          </>
+        ) : (
+          <span className="text-foreground/50">Nessuna generazione ancora</span>
+        )}
+      </footer>
     </div>
   );
 }
