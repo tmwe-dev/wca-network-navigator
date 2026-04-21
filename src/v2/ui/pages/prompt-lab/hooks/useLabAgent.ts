@@ -3,7 +3,8 @@
  */
 import { useCallback, useState } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
-import type { Block } from "../types";
+import type { Block, BlockSource } from "../types";
+import { findKbEntries } from "@/data/kbEntries";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -15,6 +16,8 @@ REGOLE:
 - Playbook: max 600 chars, TRIGGER/STRATEGIA/AZIONI/VINCOLI
 
 QUANDO MIGLIORI: elimina ridondanze, sostituisci frasi vaghe con istruzioni precise, aggiungi vincoli (cosa NON fare), verifica coerenza con dottrina commerciale (9 stati).
+
+CONTESTO RUNTIME: ogni richiesta include "Dove si attiva" (in quali pagine/edge function viene eseguito il blocco), "Sorgente" (tabella/campo DB), "Blocchi vicini" (altri blocchi dello stesso tab — NON contraddirli) e "KB doctrine rilevante" (regole già scritte in KB — rispettale, non duplicarle). Se l'operatore ha dichiarato un OBIETTIVO, ottimizza esplicitamente per quello.
 
 IMPORTANTE: rispondi SOLO con il testo migliorato del blocco richiesto, senza intro né commenti. Mantieni la struttura originale a meno che non sia esplicitamente sbagliata.`;
 
@@ -34,6 +37,63 @@ interface ImproveOptions {
   block: Block;
   instruction?: string;
   tabLabel?: string;
+  /** Stringa "Dove si attiva" del tab (PROMPT_LAB_TABS[].activation). */
+  tabActivation?: string;
+  /** Altri blocchi dello stesso tab (per evitare contraddizioni). */
+  nearbyBlocks?: ReadonlyArray<Block>;
+  /** Obiettivo dichiarato dall'utente per questa specifica iterazione. */
+  goal?: string;
+}
+
+function describeSource(src: BlockSource): string {
+  switch (src.kind) {
+    case "app_setting":
+      return `app_settings.value (key="${src.key}") — letto a runtime dall'assembler globale del system prompt.`;
+    case "kb_entry":
+      return `kb_entries (id=${src.id ?? "n/d"}) — caricato dall'assembler KB in tutti gli agenti come regola di governo.`;
+    case "operative_prompt":
+      return `operative_prompts.${src.field} (id=${src.id}) — usato in Email Composer/Cockpit/Outreach come step strutturato.`;
+    case "email_prompt":
+      return `email_prompts.${src.field} (id=${src.id}) — usato dalla edge function di composizione email per il tipo specifico.`;
+    case "email_address_rule":
+      return `email_address_rules.${src.field} (id=${src.id}) — applicato quando il mittente/destinatario corrisponde alla regola.`;
+    case "playbook":
+      return `commercial_playbooks.${src.field} (id=${src.id}) — caricato quando le trigger_conditions matchano il contesto del lead.`;
+    case "agent_persona":
+      return `agent_personas.${src.field} (id=${src.id}) — applicato a tutte le generazioni dell'agente collegato (testo + voce).`;
+    case "agent":
+      return `agents.${src.field} (id=${src.id}) — system prompt specifico dell'agente, prevale sul globale per quell'agente.`;
+    case "ephemeral":
+      return "blocco effimero (non persistito).";
+    default:
+      return "sorgente sconosciuta.";
+  }
+}
+
+function summarizeNearby(nearby: ReadonlyArray<Block>, currentId: string): string {
+  const others = nearby.filter((b) => b.id !== currentId);
+  if (others.length === 0) return "(nessun altro blocco nel tab)";
+  return others
+    .slice(0, 8)
+    .map((b) => `• ${b.label}: ${b.content.slice(0, 180).replace(/\s+/g, " ").trim()}${b.content.length > 180 ? "…" : ""}`)
+    .join("\n");
+}
+
+/** Carica fino a N voci KB doctrine/system_doctrine come riferimento. */
+async function loadDoctrineSnippet(maxEntries = 5): Promise<string> {
+  try {
+    const all = await findKbEntries();
+    const doctrine = all
+      .filter((e) => ["doctrine", "system_doctrine", "sales_doctrine"].includes(e.category))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
+      .slice(0, maxEntries);
+    if (doctrine.length === 0) return "(nessuna voce doctrine disponibile)";
+    return doctrine
+      .map((d) => `• [${d.category}] ${d.title}: ${(d.content ?? "").slice(0, 220).replace(/\s+/g, " ").trim()}${(d.content ?? "").length > 220 ? "…" : ""}`)
+      .join("\n");
+  } catch {
+    return "(impossibile caricare KB doctrine)";
+  }
 }
 
 export function useLabAgent() {
@@ -63,24 +123,41 @@ export function useLabAgent() {
   }, []);
 
   const improveBlock = useCallback(
-    async ({ block, instruction, tabLabel }: ImproveOptions): Promise<string> => {
+    async ({ block, instruction, tabLabel, tabActivation, nearbyBlocks, goal }: ImproveOptions): Promise<string> => {
       const guidance = instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
+      const sourceDesc = describeSource(block.source);
+      const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
+      const doctrineSnippet = await loadDoctrineSnippet();
+
       const userPrompt = `Tab: ${tabLabel ?? "n/d"}
-Blocco: ${block.label} (${block.id})
+Dove si attiva (runtime): ${tabActivation ?? "n/d"}
+Sorgente DB: ${sourceDesc}
+Blocco da migliorare: ${block.label} (${block.id})
+${goal?.trim() ? `\nOBIETTIVO dichiarato dall'operatore: ${goal.trim()}\n` : ""}
+Istruzione operativa: ${guidance}
 
-Istruzione: ${guidance}
+--- BLOCCHI VICINI nello stesso tab (NON contraddirli) ---
+${nearbySummary}
+--- FINE BLOCCHI VICINI ---
 
---- TESTO ATTUALE ---
+--- KB DOCTRINE rilevante (regole già scritte, rispettale) ---
+${doctrineSnippet}
+--- FINE KB DOCTRINE ---
+
+--- TESTO ATTUALE DEL BLOCCO ---
 ${block.content}
 --- FINE TESTO ---
 
-Restituisci SOLO il testo migliorato.`;
+Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
 
       return callAgent(userPrompt, {
         block_id: block.id,
         block_label: block.label,
         block_source: block.source,
         tab: tabLabel,
+        tab_activation: tabActivation,
+        goal: goal ?? null,
+        nearby_block_ids: (nearbyBlocks ?? []).map((b) => b.id),
       });
     },
     [callAgent],
@@ -89,7 +166,7 @@ Restituisci SOLO il testo migliorato.`;
   const sendChatMessage = useCallback(
     async (
       content: string,
-      ctx: { tabLabel: string; blocks: ReadonlyArray<Block> },
+      ctx: { tabLabel: string; blocks: ReadonlyArray<Block>; tabActivation?: string },
     ): Promise<{ targetBlockId?: string; improvedText?: string; chat: string }> => {
       appendMessage({ role: "user", content });
       setLoading(true);
@@ -107,6 +184,9 @@ Restituisci SOLO il testo migliorato.`;
             block: target,
             instruction: content,
             tabLabel: ctx.tabLabel,
+            tabActivation: ctx.tabActivation,
+            nearbyBlocks: ctx.blocks,
+            goal: content,
           });
           appendMessage({
             role: "assistant",
@@ -118,6 +198,7 @@ Restituisci SOLO il testo migliorato.`;
         // Fallback: chat libera
         const reply = await callAgent(content, {
           tab: ctx.tabLabel,
+          tab_activation: ctx.tabActivation,
           blocks: ctx.blocks.map((b) => ({ id: b.id, label: b.label })),
         });
         appendMessage({ role: "assistant", content: reply });
