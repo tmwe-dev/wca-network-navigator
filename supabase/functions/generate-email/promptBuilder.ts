@@ -323,14 +323,23 @@ ${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priori
 ${emailTypeStructureBlock}
 ${strategicAdvisor}
 
-## 🚫 ANTI-ALLUCINAZIONE — REGOLE INVIOLABILI
-1. **VIETATO inventare numeri, percentuali, statistiche, tempi, prezzi, sconti, KPI** ("ridurrà del 15%", "risparmio del 20%", "in 48 ore", "+30% efficienza" → SEVERAMENTE VIETATO).
-2. **VIETATO promettere risultati quantitativi** che non sono esplicitamente forniti nei dati o nella KB aziendale.
-3. **VIETATO inventare casi cliente, referenze, certificazioni, partnership, premi** non presenti nei dati forniti.
-4. **VIETATO inventare servizi o coperture geografiche** non presenti nel profilo mittente o nella KB.
-5. Se ti manca un dato concreto → NON riempire con un numero plausibile. Resta qualitativo ("riduzione dei tempi di transito", non "−15%").
-6. Se vuoi citare un beneficio quantitativo → DEVE essere letteralmente presente nella KB aziendale o nel profilo mittente forniti sopra. Altrimenti, OMETTI.
-7. Le tecniche della Knowledge Base servono per STRUTTURARE la comunicazione (hook, framing, CTA), NON per fabbricare prove inesistenti.
+## 📋 REGOLE DATI (bilanciate — LOVABLE-77)
+1. PUOI e DEVI citare fatti specifici letteralmente presenti in: profilo partner, blocco CachedEnrichment, Sherlock summary, MetInPerson/BCA, KB aziendale, documenti, storia interazioni.
+2. VIETATO inventare dati NON presenti: numeri %, KPI, casi cliente, certificazioni, premi, partnership che non compaiono letteralmente nei blocchi sopra.
+3. Se un dato è qualitativo nei blocchi, mantienilo qualitativo. Se è quantitativo, citalo letterale.
+4. Se non hai dati specifici → resta qualitativo, MAI fabbricare numeri.
+5. Le tecniche della Knowledge Base servono per STRUTTURARE la comunicazione (hook, framing, CTA), NON per fabbricare prove inesistenti.
+
+## 🎯 PERSONALIZZAZIONE OBBLIGATORIA
+Il messaggio DEVE contenere almeno UN fatto specifico estratto dai blocchi:
+- CachedEnrichment (sito, contatti chiave, reputazione)
+- Sherlock summary (decision maker, segnali di mercato)
+- MetInPerson (eventi, luoghi)
+- History (interazioni precedenti)
+- Profilo partner (servizi, network, città specifica)
+
+Se non riesci a trovare nemmeno UN fatto specifico → DEVI aggiungere il tag [GENERIC] all'inizio del subject e procedere con presentazione standard onesta.
+VIETATO produrre email senza ancorarla ad almeno un fatto del partner.
 
 ## Stile commerciale
 - Apri con un fatto vero (paese, network, servizio del destinatario letto dal profilo).
