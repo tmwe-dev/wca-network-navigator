@@ -185,7 +185,7 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                       <div
                         key={p.block.id}
                         className={`rounded border p-3 ${
-                          isSaved ? "bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800" :
+                          isSaved ? "bg-success/10 border-success/40" :
                           isError ? "bg-destructive/10 border-destructive/40" :
                           isSkipped ? "bg-muted/20 opacity-60" :
                           "bg-background"
@@ -203,7 +203,7 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">{p.tabLabel}</Badge>
                               <span className="text-xs font-medium">{p.block.label}</span>
-                              {isSaved && <Badge variant="default" className="bg-green-600 text-[10px]">Salvato</Badge>}
+                              {isSaved && <Badge variant="default" className="bg-success text-success-foreground text-[10px]">Salvato</Badge>}
                               {isError && <Badge variant="destructive" className="text-[10px]">Errore</Badge>}
                               {isSkipped && <Badge variant="secondary" className="text-[10px]">Già ottimo</Badge>}
                             </div>
@@ -224,8 +224,8 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                               <pre className="text-[11px] font-mono bg-muted/40 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{p.before || "(vuoto)"}</pre>
                             </div>
                             <div>
-                              <p className="text-[10px] font-medium text-green-700 dark:text-green-400 mb-1">Dopo</p>
-                              <pre className="text-[11px] font-mono bg-green-50 dark:bg-green-950/30 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{p.after}</pre>
+                              <p className="text-[10px] font-medium text-success mb-1">Dopo</p>
+                              <pre className="text-[11px] font-mono bg-success/10 rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{p.after}</pre>
                             </div>
                           </div>
                         )}
