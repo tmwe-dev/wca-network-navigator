@@ -16,6 +16,7 @@ import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaul
 import { ForgeRecipientPicker, type ForgeRecipient } from "./ForgeRecipientPicker";
 import { cn } from "@/lib/utils";
 import { forgeLabStore, useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { EnrichmentStatusInline } from "./EnrichmentStatusInline";
 
 export interface ForgeConfig {
   recipient: ForgeRecipient | null;
@@ -71,6 +72,9 @@ export function ForgeOraclePanel({ onRun, isLoading }: Props): React.ReactElemen
         <section className="space-y-1.5">
           <Label className="text-xs uppercase tracking-wide text-foreground/80">Destinatario</Label>
           <ForgeRecipientPicker value={lab.recipient} onChange={handleRecipient} />
+          {lab.recipient?.partner_id && (
+            <EnrichmentStatusInline partnerId={lab.recipient.partner_id} />
+          )}
         </section>
 
         {/* TIPO EMAIL */}
