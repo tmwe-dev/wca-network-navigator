@@ -123,6 +123,40 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ── LOVABLE-81/82: Contratto + detector tipo (non bloccante; improve può funzionare anche su draft puri) ──
+    let typeResolutionImprove: ResolvedEmailType | null = null;
+    const contractWarningsImprove: string[] = [];
+    if (partner_id) {
+      try {
+        const { contract, build_warnings } = await buildEmailContract(supabase, userId, {
+          engine: "improve-email",
+          operation: "improve",
+          partnerId: partner_id,
+          contactId: contact_id ?? null,
+          emailType: email_type_id || "generico",
+          emailDescription: custom_goal || "",
+          objective: custom_goal || undefined,
+          existingDraft: { subject: subject, body: html_body, instructions: custom_goal },
+        });
+        const validation = validateEmailContract(contract);
+        contractWarningsImprove.push(...build_warnings, ...validation.warnings);
+        if (!validation.valid) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "CONTRACT_INVALID",
+              errors: validation.errors,
+              warnings: validation.warnings,
+            }),
+            { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
+          );
+        }
+        typeResolutionImprove = detectEmailType(contract);
+      } catch (cerr) {
+        console.warn("[improve-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+      }
+    }
+
     // ── Settings ──
     const { data: settingsRows } = await supabase
       .from("app_settings")
@@ -393,6 +427,9 @@ ${html_body}`;
         contact_loaded: !!contact,
         oracle_type: email_type_id ?? null,
       },
+      contract_used: true,
+      contract_warnings: contractWarningsImprove,
+      type_resolution: typeResolutionImprove,
     }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
