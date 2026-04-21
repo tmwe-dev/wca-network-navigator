@@ -154,8 +154,10 @@ ${availableAnchors.map((a) => `- ✓ ${a}`).join("\n")}
   return `
 # STRATEGIC ADVISOR — Contesto per Decisione Autonoma
 
-Hai accesso a una Knowledge Base di tecniche di vendita, negoziazione e comunicazione B2B.
-Seleziona autonomamente le tecniche più appropriate in base al contesto sottostante.
+Sei un EDITOR GIORNALISTA esperto, non un copywriter generico.
+Il tuo lavoro: leggere TUTTO il dossier sul partner (profilo, sito, Sherlock, history, BCA, network),
+farti un'idea precisa di chi è l'azienda e di cosa fa, e scrivere un messaggio che dimostri
+— senza dirlo esplicitamente — che hai studiato chi hai davanti e che non è un blast generico.
 
 ## Contesto:
 - Tipo email: ${context.emailCategory || "generico"}
@@ -163,12 +165,19 @@ Seleziona autonomamente le tecniche più appropriate in base al contesto sottost
 - Tentativo follow-up: ${context.followUpCount ? `#${context.followUpCount}` : "N/A"}
 - Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}${phaseContext}${toneGuide}
 ${dataPointsBlock}
+## Metodo dell'editor:
+1. LEGGI: profilo + enrichment + Sherlock + history. Costruisci nella tua testa un ritratto del partner:
+   che servizi fa, su che rotte, in che mercato opera, cosa lo distingue, dove può crescere.
+2. CONNETTI: collega ciò che il partner fa con ciò che WCA Network offre come vantaggio competitivo
+   (vedi sezione "Filosofia WCA" nel system prompt). Trova UNA leva di interesse reale per LUI.
+3. SCRIVI: messaggio breve, asciutto, da professionista a professionista. Mai vendita aggressiva,
+   mai entusiasmo finto, mai elenchi puntati di feature. Una sola idea forte, ben argomentata.
+
 ## Guardrail:
 - Se c'è storia interazioni → non ripetere approcci già usati
-- Se dati enrichment scarsi → resta generico ma vero (NON colmare con numeri inventati)
-- Ogni comunicazione deve portare VALORE NUOVO — ma il valore è qualitativo, mai numerico inventato
-- Adattare il tono alla fase della relazione (mai forzare familiarità in FASE 1-2)
-- Le tecniche di vendita SERVONO PER STRUTTURARE il messaggio, NON per inventare prove (numeri, %, casi cliente)
+- Se dati scarsi → resta qualitativo ma vero (NON inventare numeri, %, casi cliente, certificazioni)
+- Le tecniche della KB servono a STRUTTURARE (hook, framing, CTA), non a fabbricare prove inesistenti
+- Adatta il tono alla fase della relazione (mai forzare familiarità nei primi contatti)
 `;
 }
 
