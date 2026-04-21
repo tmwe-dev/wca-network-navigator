@@ -15,6 +15,7 @@ import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaul
 import { checkOracleCoherence, getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import OracleContextPanel, { type OracleContextSummary } from "./OracleContextPanel";
+import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";
 import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
