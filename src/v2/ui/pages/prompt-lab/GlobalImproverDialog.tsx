@@ -1,8 +1,11 @@
 /**
  * GlobalImproverDialog — UI per il "Migliora tutto" globale del Prompt Lab.
- * Flusso: 1) input obiettivo → 2) avvio (collect+improve) → 3) review proposte → 4) save selezionati.
+ * LOVABLE-92: aggiunto upload file (PDF/DOCX/TXT), campo materiale di riferimento,
+ * system manifest e profilo azienda iniettati nel contesto agent.
+ *
+ * Flusso: 1) input obiettivo + materiale + file → 2) avvio (collect+improve) → 3) review proposte → 4) save selezionati.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,10 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2 } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
+import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileParser";
+import { usePromptLabSignals } from "./hooks/usePromptLabSignals";
+import { SignalsBanner } from "./SignalsBanner";
 
 interface GlobalImproverDialogProps {
   open: boolean;
@@ -24,8 +30,31 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [goal, setGoal] = useState("");
-  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal);
+  const [referenceMaterial, setReferenceMaterial] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal, referenceMaterial, uploadedFiles);
+  const signals = usePromptLabSignals(userId);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      try {
+        const parsed = await parseUploadedFile(file);
+        setUploadedFiles((prev) => [...prev, parsed]);
+        toast.success(`Caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
+      }
+    }
+    e.target.value = "";
+  }, []);
+
+  const removeFile = useCallback((idx: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
 
   const readyProposals = useMemo(
     () => state.proposals.filter((p) => p.status === "ready"),
@@ -65,6 +94,8 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
       reset();
       setAccepted(new Set());
       setGoal("");
+      setReferenceMaterial("");
+      setUploadedFiles([]);
     }
     onOpenChange(nextOpen);
   }
@@ -95,6 +126,15 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {state.phase === "idle" && (
             <div className="p-5 space-y-3">
+              {/* LOVABLE-92: Segnalazioni dal feedback loop */}
+              <SignalsBanner
+                state={signals.state}
+                onAnalyze={signals.analyze}
+                onDismiss={signals.dismiss}
+                onAcknowledge={signals.acknowledge}
+                onCopySuggestion={(text) => setReferenceMaterial((prev) => prev ? `${prev}\n\n${text}` : text)}
+              />
+
               {state.hasResumableRun && state.resumableRun && (
                 <div className="rounded border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -130,13 +170,69 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                   className="mt-1 text-sm min-h-[80px]"
                 />
               </div>
+              {/* LOVABLE-92: Materiale di riferimento */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Materiale di riferimento (opzionale)
+                </label>
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  Incolla qui nuove procedure, servizi, documentazione tecnica, regole — il Lab Agent li userà come contesto per migliorare prompt e KB.
+                </p>
+                <Textarea
+                  value={referenceMaterial}
+                  onChange={(e) => setReferenceMaterial(e.target.value)}
+                  placeholder="Es: nuova procedura di onboarding partner, descrizione servizio FIndAIr Express, regole compliance GDPR aggiornate..."
+                  className="mt-1 text-sm min-h-[60px] font-mono text-xs"
+                />
+              </div>
+
+              {/* LOVABLE-92: Upload file */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Documenti allegati (opzionale)
+                  </label>
+                  <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-3 w-3" />
+                    Carica file
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPT_STRING}
+                    multiple
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-1.5">
+                  PDF, DOCX, TXT, MD, JSON, CSV — il contenuto viene estratto e iniettato nel contesto dell'analisi.
+                </p>
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {uploadedFiles.map((f, idx) => (
+                      <div key={`${f.name}-${idx}`} className="flex items-center justify-between rounded border bg-muted/20 px-2 py-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-[11px] truncate">{f.name}</span>
+                          <span className="text-[10px] text-muted-foreground flex-shrink-0">({f.sizeKb}KB)</span>
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => removeFile(idx)}>
+                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="rounded border bg-muted/30 p-3 text-xs space-y-1.5">
                 <p className="font-medium">Cosa farà il Lab Agent:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
-                  <li>Carica TUTTI i blocchi modificabili dal sistema (system prompt, KB doctrine, operative, email, playbook, persona)</li>
+                  <li>Carica TUTTI i blocchi modificabili + architettura sistema (tool, edge function, side-effect) + profilo azienda</li>
                   <li>Costruisce una mappa testuale del runtime (dove ogni blocco viene eseguito)</li>
-                  <li>Inietta la dottrina KB completa come riferimento di coerenza</li>
-                  <li>Per ogni blocco genera una versione migliorata, libera nella forma ma vincolata dai guard-rail (9 stati lead, no invenzioni, no contraddizioni)</li>
+                  <li>Inietta la dottrina KB completa + materiale di riferimento + documenti allegati</li>
+                  <li>Per ogni blocco genera una versione migliorata, coerente con tutto il contesto disponibile</li>
                   <li>Ti mostra le proposte: tu approvi blocco per blocco prima del salvataggio</li>
                 </ul>
               </div>

@@ -35,6 +35,8 @@ import {
   type GlobalRun,
   type GlobalRunProposal,
 } from "@/data/promptLabGlobalRuns";
+import { buildSystemManifest, buildCompanyProfile } from "../utils/systemManifest";
+import type { ParsedFile } from "../utils/fileParser";
 
 const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
@@ -412,7 +414,12 @@ async function saveProposal(userId: string, p: GlobalProposal): Promise<{ table:
   }
 }
 
-export function useGlobalPromptImprover(userId: string, goal: string) {
+export function useGlobalPromptImprover(
+  userId: string,
+  goal: string,
+  referenceMaterial: string = "",
+  uploadedFiles: ParsedFile[] = [],
+) {
   const lab = useLabAgent();
   const [state, setState] = useState<GlobalImproverState>({
     loading: false,
@@ -567,6 +574,43 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
     setState((s) => ({ ...s, hasResumableRun: false, resumableRun: undefined }));
   }, [state.resumableRun]);
 
+  /** Costruisce il contesto extra (materiale di riferimento + file + manifest + profilo). */
+  async function buildExtraContext(): Promise<string> {
+    const parts: string[] = [];
+
+    // System manifest (architettura, tool, side-effect)
+    parts.push(buildSystemManifest());
+
+    // Profilo azienda da app_settings
+    try {
+      const profileKeys = [
+        "ai_company_name", "ai_company_alias", "ai_contact_name", "ai_contact_role",
+        "ai_sector", "ai_tone", "ai_language", "ai_business_goals", "ai_behavior_rules", "ai_style_instructions",
+      ];
+      const settings: Record<string, string> = {};
+      for (const key of profileKeys) {
+        const val = await getAppSetting(key, userId);
+        if (val) settings[key] = val;
+      }
+      if (Object.keys(settings).length > 0) {
+        parts.push(buildCompanyProfile(settings));
+      }
+    } catch { /* skip profile if unavailable */ }
+
+    // Materiale di riferimento (testo libero)
+    if (referenceMaterial.trim()) {
+      parts.push(`\n=== MATERIALE DI RIFERIMENTO (fornito dall'operatore — usa per arricchire/modificare prompt e KB) ===\n${referenceMaterial.trim()}\n=== FINE MATERIALE ===`);
+    }
+
+    // File uploadati
+    if (uploadedFiles.length > 0) {
+      const fileTexts = uploadedFiles.map((f) => `--- FILE: ${f.name} (${f.sizeKb}KB) ---\n${f.content}\n--- FINE FILE ---`);
+      parts.push(`\n=== DOCUMENTI ALLEGATI (${uploadedFiles.length} file — usa come contesto per miglioramenti) ===\n${fileTexts.join("\n\n")}\n=== FINE DOCUMENTI ===`);
+    }
+
+    return parts.join("\n");
+  }
+
   /** Step 1+2: raccoglie e migliora tutti i blocchi con persistenza incrementale. */
   const startImprovement = useCallback(async () => {
     if (!userId) return;
@@ -575,15 +619,20 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
     let collected: Array<{ tabLabel: string; block: Block }> = [];
     let doctrineFull = "";
     let systemMap = "";
+    let extraContext = "";
 
     try {
       collected = await collectAllBlocks(userId);
       doctrineFull = await loadFullDoctrine();
       systemMap = buildSystemMap(collected);
+      extraContext = await buildExtraContext();
     } catch (e) {
       setState((s) => ({ ...s, loading: false, phase: "idle", error: e instanceof Error ? e.message : String(e) }));
       return;
     }
+
+    // Arricchisci la doctrine con il contesto extra
+    const fullContext = doctrineFull + extraContext;
 
     const initial: GlobalProposal[] = collected.map(({ tabLabel, block }) => ({
       block,
@@ -596,7 +645,7 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
     // ── Crea run DB ──
     let runId: string | undefined;
     try {
-      const run = await createRun(userId, goal, toRunProposals(initial), systemMap, doctrineFull, SYSTEM_MISSION);
+      const run = await createRun(userId, goal, toRunProposals(initial), systemMap, fullContext, SYSTEM_MISSION);
       runId = run.id;
     } catch (e) {
       console.warn("[GlobalImprover] DB create failed, continuing without persistence:", e);
@@ -626,7 +675,7 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
           tabLabel: p.tabLabel,
           tabActivation: p.tabActivation,
           systemMap,
-          doctrineFull,
+          doctrineFull: fullContext,
           systemMission: SYSTEM_MISSION,
           goal: goal.trim() || undefined,
         });
@@ -676,7 +725,7 @@ export function useGlobalPromptImprover(userId: string, goal: string) {
       phase: "review",
       progress: { current: initial.length, total: initial.length },
     }));
-  }, [lab, userId, goal]);
+  }, [lab, userId, goal, referenceMaterial, uploadedFiles]);
 
   /** Step 3: salva tutti i blocchi marcati "ready" + accettati (saveOnlyIds) sul DB. */
   const saveAccepted = useCallback(async (acceptedIds: ReadonlySet<string>) => {
