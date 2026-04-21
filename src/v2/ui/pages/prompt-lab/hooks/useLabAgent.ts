@@ -80,6 +80,53 @@ function summarizeNearby(nearby: ReadonlyArray<Block>, currentId: string): strin
     .join("\n");
 }
 
+/** Regole hard-coded che il modello DEVE rispettare per ogni blocco voce ElevenLabs. */
+const VOICE_ENFORCEMENT_RULES = `=== REGOLE OBBLIGATORIE PER PROMPT VOCALE ELEVENLABS ===
+Questo blocco verrà installato in un agente vocale ElevenLabs (TTS/ASR real-time).
+Devi produrre un prompt che rispetti TUTTE le regole seguenti, senza eccezioni:
+
+1. STRUTTURA — usa ESATTAMENTE queste 8 sezioni nell'ordine, con heading singolo "# Nome":
+   # Personality
+   # Environment
+   # Tone
+   # Goal
+   # Tools
+   # Guardrails
+   # Pronunciation & Language
+   # When to end the call
+
+2. FORMATTAZIONE PROIBITA (degrada la prosodia TTS):
+   - NIENTE bullet markdown ('- ' o '* '): scrivi in prose con frasi piene separate da punto.
+   - NIENTE heading multi-livello (## o ###): solo "# " singolo per le 8 sezioni canoniche.
+   - NIENTE tabelle markdown ('| ... |').
+   - NIENTE blocchi di codice (\`\`\`).
+   - NIENTE emoji nei testi parlati.
+
+3. RITMO TTS:
+   - Frasi MAX ~30-35 parole. Spezza con punti per dare respiro al sintetizzatore.
+   - Volume e ritmo dichiarati come costanti nella sezione # Tone.
+
+4. PRONUNCIA SIGLE (sezione # Pronunciation & Language):
+   - "TMWE" → specifica "Ti Em dabliu i" (IT) e "T M W E" (EN).
+   - "FIndAIr" → specifica "Faind eir" (IT) e "Find Air" (EN).
+   - Numeri: cifra per cifra (es. 123 → "uno due tre").
+   - Se compaiono altre sigle aziendali, foneticizzale.
+
+5. END_CALL OBBLIGATORIO:
+   - La sezione "# When to end the call" DEVE menzionare esplicitamente la chiamata al tool 'end_call'
+     con i trigger linguistici tipici (es. "grazie arrivederci", "basta così", "non mi interessa").
+   - Formula consigliata: "ALWAYS call end_call tool when ...".
+
+6. TOOL:
+   - Elenca i tool disponibili in # Tools come testo descrittivo, non come lista markdown.
+   - Specifica priorità d'uso (interno prima, esterno fallback).
+
+7. LINGUA:
+   - Se l'originale è italiano, mantieni italiano. Default IT salvo richiesta esplicita.
+
+VIOLARE ANCHE UNA DI QUESTE REGOLE invalida l'output e forza un retry.
+=== FINE REGOLE OBBLIGATORIE ===`;
+
 /** Carica fino a N voci KB doctrine/system_doctrine come riferimento. */
 async function loadDoctrineSnippet(maxEntries = 5): Promise<string> {
   try {
@@ -156,7 +203,12 @@ export function useLabAgent() {
       const guidance = instruction?.trim() ?? "Migliora questo blocco mantenendo il senso ma rendendolo più chiaro, conciso e operativo.";
       const sourceDesc = describeSource(block.source);
       const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
-      const isVoice = isVoiceBlock({ tabLabel, source: block.source, label: block.label });
+      const isVoice = isVoiceBlock({
+        tabLabel,
+        source: block.source,
+        label: block.label,
+        content: block.content,
+      });
       const [doctrineSnippet, voiceFewShot] = await Promise.all([
         loadDoctrineSnippet(),
         isVoice ? loadVoiceTemplatesFewShot() : Promise.resolve(""),
@@ -164,7 +216,7 @@ export function useLabAgent() {
       const rubric = resolveRubric(block.source, { forceVoice: isVoice });
       const rubricSection = rubricToPromptSection(rubric);
       const voiceSection = isVoice
-        ? `\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
+        ? `\n${VOICE_ENFORCEMENT_RULES}\n\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
         : "";
 
       const userPrompt = `Tab: ${tabLabel ?? "n/d"}
@@ -239,12 +291,17 @@ Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nu
     }): Promise<string> => {
       const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal } = params;
       const sourceDesc = describeSource(block.source);
-      const isVoice = isVoiceBlock({ tabLabel, source: block.source, label: block.label });
+      const isVoice = isVoiceBlock({
+        tabLabel,
+        source: block.source,
+        label: block.label,
+        content: block.content,
+      });
       const rubric = resolveRubric(block.source, { forceVoice: isVoice });
       const rubricSection = rubricToPromptSection(rubric);
       const voiceFewShot = isVoice ? await loadVoiceTemplatesFewShot() : "";
       const voiceSection = isVoice
-        ? `\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
+        ? `\n${VOICE_ENFORCEMENT_RULES}\n\n=== TEMPLATE VOCE DI RIFERIMENTO (few-shot — segui struttura, tono, sezioni canoniche) ===\n${voiceFewShot}\n=== FINE TEMPLATE VOCE ===\n`
         : "";
 
       const userPrompt = `=== SYSTEM MISSION ===

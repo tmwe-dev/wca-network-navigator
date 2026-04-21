@@ -93,15 +93,82 @@ export function validateAgainstRubric(text: string, r: PromptRubric): string[] {
   if (len > r.targetLengthChars.max) {
     issues.push(`troppo lungo: ${len} char (massimo ${r.targetLengthChars.max})`);
   }
-  // Validazione voce: niente markdown bullet/heading aggressivi che rovinano TTS.
+  // Validazione voce: blocco rigido di formato per ElevenLabs.
   if (r.kindLabel.toLowerCase().includes("voice")) {
-    if (/^\s*[-*]\s/m.test(text) || /^\s*#{1,6}\s/m.test(text)) {
-      issues.push("contiene markdown bullet/heading: degrada la prosodia TTS");
-    }
+    issues.push(...validateVoiceFormat(text));
   }
   // Email: deve avere almeno una CTA implicita (verbo all'imperativo o domanda).
   if (r.kindLabel.toLowerCase().includes("email") && !/\?|risponda|conferm|fissi|prenoti|scelga|mi dica|valuti/i.test(text)) {
     issues.push("nessuna CTA riconoscibile (domanda o verbo d'azione)");
+  }
+  return issues;
+}
+
+/**
+ * Validazione stringente per blocchi voce ElevenLabs.
+ * Forza: zero markdown aggressivo, 8 sezioni canoniche presenti, sigle foneticizzate, end_call dichiarata.
+ */
+export function validateVoiceFormat(text: string): string[] {
+  const issues: string[] = [];
+  // 1) Niente bullet markdown `- ` o `* ` (degradano prosodia TTS).
+  if (/^\s*[-*]\s+\S/m.test(text)) {
+    issues.push("contiene bullet markdown ('- ' o '* '): degrada la prosodia TTS, usa frasi piene");
+  }
+  // 2) Niente heading multi-livello (## o ### o ####). Solo `# ` singolo per le sezioni canoniche.
+  if (/^\s*#{2,6}\s/m.test(text)) {
+    issues.push("contiene heading multi-livello (## o ###): usa solo '# ' singolo per le sezioni canoniche");
+  }
+  // 3) Niente tabelle markdown.
+  if (/^\s*\|.*\|.*\|/m.test(text)) {
+    issues.push("contiene tabella markdown: incompatibile con TTS, riformula in prosa");
+  }
+  // 4) Niente blocchi di codice.
+  if (/```/.test(text)) {
+    issues.push("contiene blocchi di codice ```: rimuovili, ElevenLabs non li interpreta");
+  }
+  // 5) Sezioni canoniche obbligatorie (almeno 6 delle 8 devono comparire come heading `# Nome`).
+  const requiredSections = [
+    /^#\s*Personality\b/im,
+    /^#\s*Environment\b/im,
+    /^#\s*Tone\b/im,
+    /^#\s*Goal\b/im,
+    /^#\s*Tools\b/im,
+    /^#\s*Guardrails\b/im,
+    /^#\s*Pronunciation\s*&?\s*Language\b/im,
+    /^#\s*When\s+to\s+end\s+the\s+call\b/im,
+  ];
+  const sectionLabels = [
+    "# Personality",
+    "# Environment",
+    "# Tone",
+    "# Goal",
+    "# Tools",
+    "# Guardrails",
+    "# Pronunciation & Language",
+    "# When to end the call",
+  ];
+  const missing: string[] = [];
+  requiredSections.forEach((rx, i) => {
+    if (!rx.test(text)) missing.push(sectionLabels[i]);
+  });
+  if (missing.length > 2) {
+    issues.push(`mancano sezioni canoniche obbligatorie: ${missing.join(", ")}`);
+  }
+  // 6) end_call tool deve essere menzionato esplicitamente nella sezione di chiusura.
+  if (!/end_call/i.test(text)) {
+    issues.push("non dichiara la chiamata al tool 'end_call' nella sezione '# When to end the call'");
+  }
+  // 7) Sigle interne devono essere foneticizzate (TMWE / FIndAIr).
+  if (/\bTMWE\b/.test(text) && !/Ti\s*Em\s*dabliu\s*i/i.test(text) && !/T\s*M\s*W\s*E/.test(text)) {
+    issues.push("sigla 'TMWE' presente senza pronuncia fonetica ('Ti Em dabliu i' per IT, 'T M W E' per EN)");
+  }
+  if (/FIndAIr/i.test(text) && !/Faind\s*eir/i.test(text) && !/Find\s*Air/i.test(text)) {
+    issues.push("sigla 'FIndAIr' presente senza pronuncia fonetica ('Faind eir' per IT, 'Find Air' per EN)");
+  }
+  // 8) Frasi troppo lunghe rompono il respiro TTS (>40 parole consecutive senza punteggiatura forte).
+  const longRun = text.split(/[.!?\n]/).find((s) => s.trim().split(/\s+/).length > 40);
+  if (longRun) {
+    issues.push("almeno una frase supera ~40 parole senza punto: spezza per migliorare il ritmo TTS");
   }
   return issues;
 }
@@ -335,14 +402,64 @@ const RUBRIC_GENERIC: PromptRubric = {
   badExample: { text: "Vario.", why: "non porta valore" },
 };
 
-/** Helper per il chiamante: detecta se un blocco è "voce" guardando tab + source + label. */
-export function isVoiceBlock(args: { tabLabel?: string; source: BlockSource; label?: string }): boolean {
+/**
+ * Detector multi-segnale: stabilisce se un blocco è destinato a un agente vocale.
+ * Combina segnali (alta affidabilità → voce certa):
+ *   1. tab con etichetta voice/11labs/eleven
+ *   2. source = agents con elevenlabs_agent_id non null (passato come hint)
+ *   3. source = agent_persona + label che menziona voce
+ *   4. content contiene 2+ sezioni canoniche ElevenLabs (# Personality, # Tone, etc.)
+ *   5. content menziona end_call tool o ElevenLabs/TTS
+ *   6. label contiene "vocale", "voice", "elevenlabs", "11labs", "tts"
+ *
+ * Soglia: se almeno 1 segnale forte (1, 2, 4, 5) è vero → voce.
+ * Segnali deboli (3, 6) richiedono almeno 2 deboli per attivare.
+ */
+export function isVoiceBlock(args: {
+  tabLabel?: string;
+  source: BlockSource;
+  label?: string;
+  content?: string;
+  /** Hint opzionale: l'agente collegato ha un elevenlabs_agent_id. */
+  agentHasElevenLabsId?: boolean;
+}): boolean {
   const tab = (args.tabLabel ?? "").toLowerCase();
-  if (tab.includes("voice") || tab.includes("11lab") || tab.includes("eleven")) return true;
-  if (args.source.kind === "agent_persona" && args.source.field === "custom_tone_prompt") {
-    // Persona può essere voice o testo: se la label menziona voce, è voce.
-    const lbl = (args.label ?? "").toLowerCase();
-    if (lbl.includes("voice") || lbl.includes("voc") || lbl.includes("11lab")) return true;
+  const lbl = (args.label ?? "").toLowerCase();
+  const content = args.content ?? "";
+
+  // Segnale forte 1: tab esplicitamente voce.
+  if (tab.includes("voice") || tab.includes("11lab") || tab.includes("eleven") || tab.includes("vocal")) {
+    return true;
   }
-  return false;
+  // Segnale forte 2: hint esterno su agente con ElevenLabs configurato.
+  if (args.agentHasElevenLabsId === true) return true;
+  // Segnale forte 4: contenuto già con almeno 2 sezioni canoniche ElevenLabs.
+  const canonicalCount = [
+    /^#\s*Personality\b/im,
+    /^#\s*Environment\b/im,
+    /^#\s*Tone\b/im,
+    /^#\s*Goal\b/im,
+    /^#\s*Tools\b/im,
+    /^#\s*Guardrails\b/im,
+    /^#\s*Pronunciation\b/im,
+    /^#\s*When\s+to\s+end\s+the\s+call\b/im,
+  ].filter((rx) => rx.test(content)).length;
+  if (canonicalCount >= 2) return true;
+  // Segnale forte 5: contenuto cita end_call tool o ElevenLabs.
+  if (/\bend_call\b/i.test(content) || /elevenlabs/i.test(content) || /\btts\b/i.test(content)) {
+    return true;
+  }
+
+  // Segnali deboli combinati.
+  let weak = 0;
+  if (lbl.includes("voice") || lbl.includes("voc") || lbl.includes("11lab") || lbl.includes("eleven") || lbl.includes("tts") || lbl.includes("vocale")) {
+    weak++;
+  }
+  if (args.source.kind === "agent_persona" && args.source.field === "custom_tone_prompt") {
+    weak++;
+  }
+  if (args.source.kind === "agent" && lbl.includes("voice")) {
+    weak++;
+  }
+  return weak >= 2;
 }
