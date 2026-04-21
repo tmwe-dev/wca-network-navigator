@@ -89,7 +89,10 @@ export function PendingActionsPanel() {
         };
       }
 
-      const { error } = await supabase.from("ai_pending_actions").update(updatePayload).eq("id", params.id);
+      const { error } = await supabase
+        .from("ai_pending_actions")
+        .update(updatePayload as never)
+        .eq("id", params.id);
       if (error) throw error;
       if (action?.decision_log_id) {
         await supabase.from("ai_decision_log").update({ user_review: "approved" }).eq("id", action.decision_log_id);
