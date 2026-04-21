@@ -17,6 +17,7 @@ import EmailTypeDetailDialog from "./EmailTypeDetailDialog";
 import OracleContextPanel, { type OracleContextSummary } from "./OracleContextPanel";
 import BriefAccordion, { EMPTY_BRIEF, briefToText, type EmailBrief } from "./BriefAccordion";
 import { useDeepSearchTrigger } from "@/hooks/email-composer/useDeepSearchTrigger";
+import { useUnifiedEnrichmentSnapshot } from "@/hooks/useUnifiedEnrichmentSnapshot";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { ImageGalleryTab } from "./ImageGalleryTab";
