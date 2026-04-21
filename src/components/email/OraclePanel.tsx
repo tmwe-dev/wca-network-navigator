@@ -204,6 +204,9 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
           </div>
         )}
 
+        {/* === BRIEF STRUTTURATO — opzionale, chiuso di default === */}
+        <BriefAccordion brief={brief} onChange={setBrief} />
+
         {/* === TIPO EMAIL — CHIP ROW === */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
           {allTypes.map((t) => {
