@@ -243,7 +243,8 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Contacts */}
       {contacts.length > 0 && (
