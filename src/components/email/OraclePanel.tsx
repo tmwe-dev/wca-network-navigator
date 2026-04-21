@@ -75,6 +75,7 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
   const [customGoal, setCustomGoal] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
   const [showImages, setShowImages] = useState(false);
+  const [brief, setBrief] = useState<EmailBrief>(EMPTY_BRIEF);
 
   // Manual on-demand Deep Search (replaces the old toggle)
   const deepSearch = useDeepSearchTrigger(recipientPartnerId);
@@ -103,7 +104,15 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
-  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh", customGoal: customGoal.trim() };
+  // Merge structured brief into customGoal so the existing OracleConfig API stays unchanged.
+  const mergedGoal = useMemo(() => {
+    const base = customGoal.trim();
+    const briefBlock = briefToText(brief);
+    if (!briefBlock) return base;
+    return base ? `${base}\n\n${briefBlock}` : briefBlock;
+  }, [customGoal, brief]);
+
+  const config: OracleConfig = { emailType: selectedType, tone, useKB, deepSearch: deepSearch.status === "fresh", customGoal: mergedGoal };
 
   const handleAddType = () => {
     if (!newName.trim() || !newPrompt.trim()) return;
