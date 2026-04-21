@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
 import type { DraftState } from "@/pages/Cockpit";
 
@@ -14,7 +14,7 @@ const log = createLogger("useSendWhatsApp");
 export function useSendWhatsApp(draft: DraftState) {
   const [sending, setSending] = useState(false);
   const waBridge = useWhatsAppExtensionBridge();
-  const trackActivity = useTrackActivity();
+  const logAction = useLogAction();
 
   const handleSendWhatsApp = async () => {
     const phone = draft.contactPhone?.replace(/[^0-9+]/g, "").replace(/^\+/, "");
@@ -42,12 +42,15 @@ export function useSendWhatsApp(draft: DraftState) {
       const res = await waBridge.sendWhatsApp(phone, plainText);
       if (res.success) {
         toast({ title: "✅ WhatsApp inviato!", description: `A: ${phone}` });
-        trackActivity.mutate({
-          activityType: "whatsapp_message",
-          title: `${draft.companyName || "—"} — ${draft.contactName || phone}`,
-          sourceId: draft.contactId || crypto.randomUUID(),
+        logAction.mutate({
+          channel: "whatsapp",
           sourceType: "imported_contact",
-          description: `Messaggio WhatsApp inviato a ${draft.contactName || phone}`,
+          sourceId: draft.contactId || crypto.randomUUID(),
+          to: phone,
+          title: `${draft.companyName || "—"} — ${draft.contactName || phone}`,
+          subject: `WhatsApp a ${draft.contactName || phone}`,
+          body: plainText,
+          source: "manual",
         });
       } else {
         toast({ title: "Errore WhatsApp", description: res.error, variant: "destructive" });

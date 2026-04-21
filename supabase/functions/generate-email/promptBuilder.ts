@@ -82,6 +82,21 @@ export interface EmailPromptContext {
   warmthScore?: number;
   // Fix 3.2: active playbook (governs tone/content/CTA)
   playbookBlock?: string;
+  // LOVABLE-93: Decision Engine context injected into generation
+  decisionContext?: {
+    action: string;
+    autonomy: string;
+    channel?: string;
+    journalist_role?: string;
+    reasoning: string;
+    priority: number;
+    state: {
+      leadStatus: string;
+      touchCount: number;
+      daysSinceLastOutbound: number;
+      enrichmentScore: number;
+    };
+  };
 }
 
 // ── Helpers ──
@@ -452,6 +467,24 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
   if (responseInsightsContext) blocks.push({ label: "ResponseInsights", content: responseInsightsContext });
   if (conversationIntelligenceContext) blocks.push({ label: "ConvIntel", content: conversationIntelligenceContext });
   if (commercialBlock) blocks.push({ label: "CommercialBlock", content: commercialBlock });
+
+  // LOVABLE-93: Decision Engine context — informa l'AI della raccomandazione del motore
+  if (ctx.decisionContext && ctx.decisionContext.action !== "no_action") {
+    const dc = ctx.decisionContext;
+    const journalistHint = dc.journalist_role
+      ? `\n- Giornalista suggerito: ${dc.journalist_role} (adatta tono e strategia a questo ruolo)`
+      : "";
+    const decisionBlock = `
+DECISION ENGINE (raccomandazione automatica del sistema):
+- Azione raccomandata: ${dc.action} (priorità: ${dc.priority}/5)
+- Motivo: ${dc.reasoning}
+- Stato: lead_status="${dc.state.leadStatus}", ${dc.state.touchCount} contatti precedenti, ${dc.state.daysSinceLastOutbound} giorni dall'ultimo invio
+- Livello arricchimento: ${dc.state.enrichmentScore}/100${journalistHint}
+
+⚠️ Tieni conto di queste informazioni per calibrare tono, urgenza e contenuto dell'email.`;
+    blocks.push({ label: "DecisionEngine", content: decisionBlock });
+  }
+
   blocks.push({ label: "Goal + BaseProposal", content: goalBlock });
 
   const userPrompt = blocks.map((b) => b.content).join("\n");

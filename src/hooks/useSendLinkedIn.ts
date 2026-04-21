@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
 import type { DraftState } from "@/pages/Cockpit";
 
@@ -17,7 +17,7 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
   const [liDmOpen, setLiDmOpen] = useState(false);
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
-  const trackActivity = useTrackActivity();
+  const logAction = useLogAction();
 
   const findLinkedInProfile = async (): Promise<string> => {
     let profileUrl = draft.contactLinkedinUrl || "";
@@ -81,12 +81,15 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
-          trackActivity.mutate({
-            activityType: "linkedin_message",
-            title: `${draft.companyName || "—"} — ${draft.contactName || "contatto"}`,
-            sourceId: draft.contactId || crypto.randomUUID(),
+          logAction.mutate({
+            channel: "linkedin",
             sourceType: "imported_contact",
-            description: `Messaggio LinkedIn inviato a ${draft.contactName || profileUrl}`,
+            sourceId: draft.contactId || crypto.randomUUID(),
+            to: profileUrl,
+            title: `${draft.companyName || "—"} — ${draft.contactName || "contatto"}`,
+            subject: `LinkedIn DM a ${draft.contactName || "contatto"}`,
+            body: plainText,
+            source: "manual",
           });
         } else {
           navigator.clipboard.writeText(plainText);
@@ -137,12 +140,15 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
       const res = await liBridge.sendConnectionRequest(url, draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300));
       if (res.success) {
         toast({ title: "✅ Richiesta di collegamento inviata!" });
-        trackActivity.mutate({
-          activityType: "linkedin_message",
-          title: `LinkedIn Connect — ${draft.contactName || "contatto"}`,
-          sourceId: draft.contactId || crypto.randomUUID(),
+        logAction.mutate({
+          channel: "linkedin",
           sourceType: "imported_contact",
-          description: `Richiesta collegamento LinkedIn inviata`,
+          sourceId: draft.contactId || crypto.randomUUID(),
+          to: url,
+          title: `LinkedIn Connect — ${draft.contactName || "contatto"}`,
+          subject: `Richiesta collegamento LinkedIn`,
+          source: "manual",
+          meta: { type: "connection_request" },
         });
       } else {
         toast({ title: "Errore connessione", description: res.error, variant: "destructive" });

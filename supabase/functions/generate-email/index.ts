@@ -154,11 +154,40 @@ serve(async (req) => {
       throw e;
     }
 
+    // ── LOVABLE-93: Decision Engine — evaluate before generation ──
+    let decisionContext: Record<string, unknown> | undefined;
+    if (!standalone && partner?.id) {
+      try {
+        const { evaluatePartner } = await import("../_shared/decisionEngine.ts");
+        const { state: pState, actions } = await evaluatePartner(supabase, partner.id, userId);
+        const topAction = actions[0];
+        if (topAction && topAction.action !== "no_action") {
+          decisionContext = {
+            action: topAction.action,
+            autonomy: topAction.autonomy,
+            channel: topAction.channel,
+            journalist_role: topAction.journalist_role,
+            reasoning: topAction.reasoning,
+            priority: topAction.priority,
+            state: {
+              leadStatus: pState.leadStatus,
+              touchCount: pState.touchCount,
+              daysSinceLastOutbound: pState.daysSinceLastOutbound,
+              enrichmentScore: pState.enrichmentScore,
+            },
+          };
+        }
+      } catch (decErr) {
+        console.warn("[generate-email] Decision Engine evaluation failed (non-blocking):", decErr);
+      }
+    }
+
     // ── Build prompts ──
     const built = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
       email_type_prompt, email_type_structure,
+      decisionContext: decisionContext as never,
       ...ctx,
     });
     // Prompt-Lab overrides: replace system/user prompt entirely if provided

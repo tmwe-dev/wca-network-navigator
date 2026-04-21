@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import ContactPicker from "@/components/workspace/ContactPicker";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+// LOVABLE-93: useTrackActivity rimosso — send-email edge esegue postSendPipeline
 
 const LinkedInIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={cn("w-4 h-4 fill-current", className)}>
@@ -59,7 +59,7 @@ export default function EmailCanvas({
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [sending, setSending] = useState(false);
-  const trackActivity = useTrackActivity();
+  // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
   const partnerId = activity?.partner_id || null;
   const sourceType = activity?.source_type || "partner";
   const _hasContact = !!activity?.selected_contact_id || sourceType !== "partner";
@@ -119,16 +119,7 @@ export default function EmailCanvas({
       const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
       if (data?.error) throw new Error(String(data.error));
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
-      // Track activity
-      trackActivity.mutate({
-        activityType: "send_email",
-        title: `${displayEmail.partnerName || "—"} — ${displayEmail.contactName || displayEmail.contactEmail}`,
-        sourceId: activity?.partner_id || activity?.source_id || crypto.randomUUID(),
-        sourceType: (activity?.source_type === "contact" || activity?.source_type === "prospect") ? "imported_contact" : "partner",
-        partnerId: activity?.partner_id || undefined,
-        emailSubject: displaySubject,
-        description: `Email inviata a ${displayEmail.contactEmail}`,
-      });
+      // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
     } catch (err: unknown) {
       toast({ title: "Errore invio", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally { setSending(false); }

@@ -7,10 +7,9 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { useLogAction, type LogActionChannel } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
 import { toast } from "@/hooks/use-toast";
-import type { ActivityType } from "@/types/tracking";
 import { findPendingOutreachItems, updateOutreachItem, getOutreachItemField } from "@/data/outreachQueue";
 
 const log = createLogger("useOutreachQueue");
@@ -38,11 +37,7 @@ const CHANNEL_DELAYS: Record<string, number> = {
   sms: 3000,
 };
 
-function channelToActivityType(channel: string): ActivityType {
-  if (channel === "email") return "send_email";
-  if (channel === "whatsapp") return "whatsapp_message";
-  return "linkedin_message";
-}
+// LOVABLE-93: channelToActivityType rimosso, ora usa LogActionChannel direttamente
 
 export function useOutreachQueue() {
   const [pendingCount, setPendingCount] = useState(0);
@@ -52,7 +47,7 @@ export function useOutreachQueue() {
   const pausedRef = useRef(false);
   const wa = useWhatsAppExtensionBridge();
   const li = useLinkedInExtensionBridge();
-  const trackActivity = useTrackActivity();
+  const logAction = useLogAction();
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
@@ -70,15 +65,20 @@ export function useOutreachQueue() {
   };
 
   const trackQueueItem = useCallback((item: QueueItem, channel: string) => {
-    trackActivity.mutate({
-      activityType: channelToActivityType(channel),
-      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
-      sourceId: item.created_by || crypto.randomUUID(),
+    // LOVABLE-93: Per email, la pipeline è già eseguita da send-email edge.
+    // Per whatsapp/linkedin, usiamo log-action edge function.
+    if (channel === "email") return; // pipeline già copre tutto
+    logAction.mutate({
+      channel: channel as LogActionChannel,
       sourceType: "imported_contact",
-      emailSubject: item.subject || undefined,
-      description: `Messaggio ${channel} inviato dalla coda automatica`,
+      sourceId: item.created_by || crypto.randomUUID(),
+      to: item.recipient_email || item.recipient_phone || item.recipient_linkedin_url || "",
+      title: `${item.recipient_name || item.recipient_email || item.recipient_phone || "contatto"} — Queue auto`,
+      subject: item.subject || undefined,
+      body: item.body,
+      source: "batch",
     });
-  }, [trackActivity]);
+  }, [logAction]);
 
   const processItem = useCallback(async (item: QueueItem): Promise<boolean> => {
     await updateStatus(item.id, "processing");

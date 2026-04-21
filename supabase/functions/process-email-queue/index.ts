@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
-import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 

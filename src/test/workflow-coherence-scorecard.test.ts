@@ -68,25 +68,26 @@ describe("UI vs DB consistency", () => {
 
 // ── Test 2: Direct send vs queued send consistency ──
 describe("Direct send vs queued send consistency", () => {
-  it("both paths call logEmailSideEffects with same parameters", () => {
-    // Structural test: both send-email and process-email-queue import logEmailSideEffects
-    const sendEmailImports = "import { logEmailSideEffects } from '../_shared/logEmailSideEffects.ts'";
-    const processQueueImports = "import { logEmailSideEffects } from '../_shared/logEmailSideEffects.ts'";
+  it("both paths call runPostSendPipeline with same interface", () => {
+    // LOVABLE-93: both send-email and process-email-queue use the unified postSendPipeline
+    const sendEmailImports = "import { runPostSendPipeline } from '../_shared/postSendPipeline.ts'";
+    const processQueueImports = "import { runPostSendPipeline } from '../_shared/postSendPipeline.ts'";
 
-    expect(sendEmailImports).toContain("logEmailSideEffects");
-    expect(processQueueImports).toContain("logEmailSideEffects");
+    expect(sendEmailImports).toContain("runPostSendPipeline");
+    expect(processQueueImports).toContain("runPostSendPipeline");
   });
 
-  it("logEmailSideEffects creates interaction + activity + partner update", () => {
-    // Verify the 4 side effects in logEmailSideEffects.ts
+  it("postSendPipeline creates interaction + activity + partner update + audit log", () => {
+    // LOVABLE-93: 5+ side effects in postSendPipeline.ts
     const sideEffects = [
-      "insert interaction",
+      "insert interaction / contact_interaction",
       "insert activity with status=completed",
-      "update partner lead_status new→contacted",
+      "update lead_status new→first_touch_sent (partner/contact/business_card)",
       "increment partner interaction_count",
+      "write supervisor_audit_log",
     ];
 
-    expect(sideEffects).toHaveLength(4);
+    expect(sideEffects.length).toBeGreaterThanOrEqual(5);
   });
 
   it("activity status is always 'completed' after successful send", () => {

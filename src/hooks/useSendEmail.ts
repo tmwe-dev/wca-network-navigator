@@ -6,7 +6,6 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
 import { createLogger } from "@/lib/log";
 import type { DraftState } from "@/pages/Cockpit";
 
@@ -14,7 +13,8 @@ const log = createLogger("useSendEmail");
 
 export function useSendEmail(draft: DraftState) {
   const [sending, setSending] = useState(false);
-  const trackActivity = useTrackActivity();
+  // LOVABLE-93: Non serve useTrackActivity/useLogAction qui.
+  // La send-email edge function esegue postSendPipeline internamente.
 
   const handleSend = async () => {
     if (draft.channel !== "email" || !draft.contactEmail) {
@@ -33,14 +33,8 @@ export function useSendEmail(draft: DraftState) {
       });
       if (data?.error) throw new Error(data.error);
       toast({ title: "Email inviata!", description: `A: ${draft.contactEmail}` });
-      trackActivity.mutate({
-        activityType: "send_email",
-        title: `${draft.companyName || "—"} — ${draft.contactName || draft.contactEmail}`,
-        sourceId: draft.contactId || crypto.randomUUID(),
-        sourceType: "imported_contact",
-        emailSubject: draft.subject,
-        description: `Email inviata a ${draft.contactEmail}`,
-      });
+      // LOVABLE-93: Tracking è gestito da postSendPipeline dentro send-email edge function.
+      // Non duplicare con useTrackActivity/useLogAction.
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error("email send failed", { error: msg, to: draft.contactEmail });

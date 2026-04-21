@@ -1,31 +1,42 @@
 /**
- * postSendPipeline.ts — Pipeline unificata post-invio (LOVABLE-85).
+ * postSendPipeline.ts — Pipeline unificata post-invio (LOVABLE-85 + LOVABLE-93).
  *
  * TUTTI i punti di invio (send-email, process-email-queue, agent-execute,
- * cadence-engine, pending-action-executor) DEVONO passare per questa pipeline.
+ * cadence-engine, pending-action-executor, log-action edge) DEVONO passare
+ * per questa pipeline. Supporta TUTTI i canali e TUTTI i source_type.
  *
  * Esegue in ordine:
- *   a. Log activity (tipo, canale, partner, contact, timestamp)
+ *   a. Log activity (tipo, canale, partner/contact/business_card, timestamp)
  *   b. Update lead_status (new→first_touch_sent, o nessun cambio se già avanzato)
- *   c. Crea reminder follow-up con timing per canale
- *   d. Calcola next_action dalla sequenza
- *   e. Crea ai_pending_action per prossimo step
+ *      — Supporta: partners, imported_contacts, business_cards
+ *   c. Crea interaction / contact_interaction in base al source_type
+ *   d. Crea reminder follow-up con timing per canale (solo partner)
+ *   e. Calcola next_action dalla sequenza
  *   f. Incrementa touch_count sul partner
+ *   g. Scrive supervisor_audit_log per OGNI invio (LOVABLE-93)
  *
  * Idempotenza: check su (partner_id, channel, created_at within 60s) per evitare duplicati.
  */
 
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
+import { logSupervisorAudit } from "./supervisorAudit.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
 
-export type SendChannel = "email" | "whatsapp" | "linkedin";
+export type SendChannel = "email" | "whatsapp" | "linkedin" | "sms";
+export type SourceType = "partner" | "imported_contact" | "business_card";
 
 export interface PostSendPipelineInput {
   userId: string;
   partnerId?: string | null;
   contactId?: string | null;
+  /** LOVABLE-93: source_type esplicito. Default: "partner" (retrocompatibilità) */
+  sourceType?: SourceType;
+  /** ID della sorgente (partner_id, contact_id, o business_card_id). Se assente usa partnerId || contactId */
+  sourceId?: string | null;
+  /** ID business_card (solo se sourceType = "business_card") */
+  businessCardId?: string | null;
   channel: SendChannel;
   /** Subject per email, preview per WA/LinkedIn */
   subject?: string;
@@ -41,10 +52,14 @@ export interface PostSendPipelineInput {
   source: "email_forge" | "agent" | "cadence" | "batch" | "pending_action" | "manual";
   /** Metadata aggiuntivi */
   meta?: Record<string, unknown>;
-  /** Message ID esterno (SMTP) */
+  /** Message ID esterno (SMTP, wamid, etc.) */
   messageIdExternal?: string;
   /** Thread ID per raggruppamento */
   threadId?: string;
+  /** LOVABLE-93: decision_origin per supervisor audit */
+  decisionOrigin?: "manual" | "ai_auto" | "ai_approved" | "system_trigger";
+  /** LOVABLE-93: actor_type per supervisor audit */
+  actorType?: "user" | "ai_agent" | "system" | "cron";
 }
 
 export interface PostSendPipelineResult {
@@ -53,6 +68,10 @@ export interface PostSendPipelineResult {
   reminderCreated: boolean;
   nextActionEnsured: boolean;
   touchCountIncremented: boolean;
+  /** LOVABLE-93: supervisor audit logged */
+  auditLogged: boolean;
+  /** LOVABLE-93: contact interaction logged (imported_contact) */
+  contactInteractionLogged: boolean;
   /** True se la pipeline ha rilevato un duplicato e ha saltato l'esecuzione */
   skippedAsDuplicate: boolean;
 }
@@ -107,10 +126,18 @@ export async function runPostSendPipeline(
     reminderCreated: false,
     nextActionEnsured: false,
     touchCountIncremented: false,
+    auditLogged: false,
+    contactInteractionLogged: false,
     skippedAsDuplicate: false,
   };
 
   const now = new Date().toISOString();
+
+  // LOVABLE-93: Resolve source type (retrocompatibile: default = partner se partnerId presente)
+  const resolvedSourceType: SourceType = input.sourceType
+    || (input.partnerId ? "partner" : input.contactId ? "imported_contact" : "partner");
+  const resolvedSourceId = input.sourceId
+    || input.partnerId || input.contactId || input.businessCardId || crypto.randomUUID();
 
   // === IDEMPOTENCY CHECK ===
   if (input.partnerId) {
@@ -139,8 +166,8 @@ export async function runPostSendPipeline(
     const { error } = await supabase.from("activities").insert({
       user_id: input.userId,
       partner_id: input.partnerId ?? null,
-      source_id: input.partnerId || input.contactId || crypto.randomUUID(),
-      source_type: input.partnerId ? "partner" : "imported_contact",
+      source_id: resolvedSourceId,
+      source_type: resolvedSourceType,
       activity_type: activityType,
       title: buildActivityTitle(input),
       description: `${channelLabel(input.channel)} inviato a ${input.to}`,
@@ -167,8 +194,8 @@ export async function runPostSendPipeline(
     console.warn("[postSendPipeline] activity insert failed:", e);
   }
 
-  // === b. UPDATE LEAD STATUS ===
-  if (input.partnerId) {
+  // === b. UPDATE LEAD STATUS (tutti i source_type) ===
+  if (resolvedSourceType === "partner" && input.partnerId) {
     try {
       const { data: partner } = await supabase
         .from("partners")
@@ -207,7 +234,65 @@ export async function runPostSendPipeline(
         }
       }
     } catch (e) {
-      console.warn("[postSendPipeline] status update failed:", e);
+      console.warn("[postSendPipeline] partner status update failed:", e);
+    }
+  } else if (resolvedSourceType === "imported_contact" && (input.contactId || input.sourceId)) {
+    // LOVABLE-93: imported_contact lead_status escalation
+    const cid = input.contactId || input.sourceId!;
+    try {
+      const { data: contact } = await supabase
+        .from("imported_contacts")
+        .select("lead_status")
+        .eq("id", cid)
+        .maybeSingle();
+
+      if (contact) {
+        const currentStatus = contact.lead_status || "new";
+        if (currentStatus === "new" || !contact.lead_status) {
+          const res = await applyLeadStatusChange(supabase, {
+            table: "imported_contacts",
+            recordId: cid,
+            newStatus: "first_touch_sent",
+            userId: input.userId,
+            actor: { type: "system", name: "postSendPipeline" },
+            decisionOrigin: "system_trigger",
+            trigger: `Primo messaggio inviato (${input.channel}) via ${input.source}`,
+            contactIdForAudit: cid,
+            metadata: { channel: input.channel, source: input.source },
+          });
+          if (res.applied) result.statusUpdated = true;
+        } else {
+          await supabase
+            .from("imported_contacts")
+            .update({ last_interaction_at: now })
+            .eq("id", cid);
+        }
+      }
+    } catch (e) {
+      console.warn("[postSendPipeline] contact status update failed:", e);
+    }
+  } else if (resolvedSourceType === "business_card" && (input.businessCardId || input.sourceId)) {
+    // LOVABLE-93: business_card lead_status escalation
+    const bcid = input.businessCardId || input.sourceId!;
+    try {
+      const { data: bc } = await supabase
+        .from("business_cards")
+        .select("lead_status")
+        .eq("id", bcid)
+        .maybeSingle();
+
+      if (bc) {
+        const currentStatus = bc.lead_status || "new";
+        if (currentStatus === "new" || !bc.lead_status) {
+          await supabase
+            .from("business_cards")
+            .update({ lead_status: "first_touch_sent" })
+            .eq("id", bcid);
+          result.statusUpdated = true;
+        }
+      }
+    } catch (e) {
+      console.warn("[postSendPipeline] business_card status update failed:", e);
     }
   }
 
@@ -328,7 +413,7 @@ export async function runPostSendPipeline(
   }
 
   // === LOG INTERACTION (per retrocompatibilità con interactions table) ===
-  if (input.partnerId) {
+  if (resolvedSourceType === "partner" && input.partnerId) {
     try {
       await supabase.from("interactions").insert({
         partner_id: input.partnerId,
@@ -341,6 +426,50 @@ export async function runPostSendPipeline(
     } catch {
       // Silenzioso: interactions è una tabella legacy
     }
+  } else if (resolvedSourceType === "imported_contact" && (input.contactId || input.sourceId)) {
+    // LOVABLE-93: contact_interaction per imported_contact
+    const cid = input.contactId || input.sourceId!;
+    try {
+      const { error } = await supabase.from("contact_interactions").insert({
+        contact_id: cid,
+        interaction_type: input.channel === "email" ? "email" : "other",
+        title: input.subject || buildActivityTitle(input),
+        description: input.body || null,
+        created_by: input.userId,
+      });
+      if (!error) result.contactInteractionLogged = true;
+    } catch (e) {
+      console.warn("[postSendPipeline] contact_interaction insert failed:", e);
+    }
+  }
+
+  // === g. SUPERVISOR AUDIT LOG (LOVABLE-93 — tutti i canali) ===
+  try {
+    await logSupervisorAudit(supabase, {
+      user_id: input.userId,
+      actor_type: input.actorType || (input.agentId ? "ai_agent" : "user"),
+      actor_id: input.agentId,
+      action_category: `send_${input.channel}`,
+      action_detail: `${channelLabel(input.channel)} inviato a ${input.to}${input.subject ? `: ${input.subject}` : ""}`,
+      target_type: resolvedSourceType,
+      target_id: resolvedSourceId,
+      target_label: input.to,
+      partner_id: input.partnerId || (resolvedSourceType === "partner" ? resolvedSourceId : undefined),
+      contact_id: input.contactId || (resolvedSourceType === "imported_contact" ? resolvedSourceId : undefined),
+      email_address: input.channel === "email" ? input.to : undefined,
+      decision_origin: input.decisionOrigin || "manual",
+      metadata: {
+        channel: input.channel,
+        source: input.source,
+        sequence_day: input.sequenceDay ?? 0,
+        message_id_external: input.messageIdExternal,
+        thread_id: input.threadId,
+        ...(input.meta || {}),
+      },
+    });
+    result.auditLogged = true;
+  } catch (e) {
+    console.warn("[postSendPipeline] supervisor audit failed:", e);
   }
 
   return result;
@@ -356,6 +485,8 @@ function channelToActivityType(channel: SendChannel): string {
       return "whatsapp_message";
     case "linkedin":
       return "linkedin_message";
+    case "sms":
+      return "sms_message";
   }
 }
 
@@ -367,6 +498,8 @@ function channelLabel(channel: SendChannel): string {
       return "WhatsApp";
     case "linkedin":
       return "LinkedIn";
+    case "sms":
+      return "SMS";
   }
 }
 

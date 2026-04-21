@@ -192,6 +192,28 @@ serve(async (req) => {
     if (readiness.kb < 30) readinessWarnings.push("Knowledge Base vuota o insufficiente: aggiungi entries in KB per risultati migliori");
     if (readiness.scenario < 40) readinessWarnings.push("Scenario generico: specifica tipo email, goal e proposta per email più mirate");
 
+    // ── LOVABLE-93: Decision Engine — evaluate before generation ──
+    let decisionEngineBlock = "";
+    if (ctx.partnerId) {
+      try {
+        const { evaluatePartner } = await import("../_shared/decisionEngine.ts");
+        const { state: pState, actions } = await evaluatePartner(supabase, ctx.partnerId, userId);
+        const topAction = actions[0];
+        if (topAction && topAction.action !== "no_action") {
+          const journalistHint = topAction.journalist_role
+            ? `\n- Giornalista suggerito: ${topAction.journalist_role}`
+            : "";
+          decisionEngineBlock = `
+DECISION ENGINE (raccomandazione automatica):
+- Azione: ${topAction.action} (priorità: ${topAction.priority}/5, autonomia: ${topAction.autonomy})
+- Motivo: ${topAction.reasoning}
+- Stato: ${pState.touchCount} touch, ${pState.daysSinceLastOutbound}gg dall'ultimo invio${journalistHint}`;
+        }
+      } catch (decErr) {
+        console.warn("[generate-outreach] Decision Engine failed (non-blocking):", decErr);
+      }
+    }
+
     // ── Build prompts ──
     let recipientName = "";
     if (contact_name && isLikelyPersonName(contact_name)) recipientName = contact_name;
@@ -213,6 +235,8 @@ serve(async (req) => {
       // Fix 3.2 + 3.3
       playbookBlock: ctx.playbookBlock,
       channelDeclaration: ctx.channelDeclaration,
+      // LOVABLE-93: Decision Engine context
+      decisionEngineBlock,
     });
 
     // ── AI call ──

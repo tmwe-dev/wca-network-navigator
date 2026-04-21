@@ -17,6 +17,13 @@ type _InteractionInsert = Database["public"]["Tables"]["interactions"]["Insert"]
 const log = createLogger("useTrackActivity");
 
 /**
+ * @deprecated LOVABLE-93: Questo hook è stato sostituito da useLogAction + log-action edge function.
+ * Per email: nessun tracking client-side necessario (send-email edge esegue postSendPipeline).
+ * Per WhatsApp/LinkedIn: usare useLogAction che chiama log-action edge → postSendPipeline.
+ * Mantenuto temporaneamente per retrocompatibilità dei test.
+ */
+
+/**
  * Returns true only if the current status allows escalation to "first_touch_sent".
  * Never downgrades advanced states (holding, engaged, qualified, negotiation, converted, archived, blacklisted).
  */

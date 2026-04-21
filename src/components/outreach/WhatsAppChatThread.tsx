@@ -16,7 +16,7 @@ import { createLogger } from "@/lib/log";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sendWhatsApp as sendWhatsAppUnified } from "@/lib/inbox/sendMessage";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { useLogAction } from "@/hooks/useLogAction";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { ChatThread } from "./whatsappTypes";
 import { extractPhoneFromThread, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from "./whatsappTypes";
@@ -38,7 +38,7 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const trackActivity = useTrackActivity();
+  const logAction = useLogAction();
 
   useEffect(() => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -122,12 +122,15 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
         return;
       }
       toast.success("Inviato ✓");
-      trackActivity.mutate({
-        activityType: "whatsapp_message",
-        title: `WhatsApp reply — ${thread.contact}`,
-        sourceId: crypto.randomUUID(),
+      logAction.mutate({
+        channel: "whatsapp",
         sourceType: "imported_contact",
-        description: `Risposta WhatsApp a ${thread.contact}`,
+        sourceId: crypto.randomUUID(),
+        to: extractPhoneFromThread(thread) || thread.contact,
+        title: `WhatsApp reply — ${thread.contact}`,
+        subject: `Risposta WhatsApp a ${thread.contact}`,
+        body: text,
+        source: "manual",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

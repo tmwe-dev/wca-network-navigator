@@ -1,12 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { sanitizeHtml, escapeHtml } from "../_shared/htmlSanitizer.ts";
-import { logEmailSideEffects } from "../_shared/logEmailSideEffects.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { loadSendingConfig, validateSendingWindow, validateSmtpConfig } from "../_shared/emailSendingConfig.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -355,10 +353,12 @@ Deno.serve(async (req) => {
     }
 
     // Log side effects ONLY after confirmed SMTP success — via pipeline unificata
+    // LOVABLE-93: sourceType esplicito per multi-source support
     const pipelineResult = await runPostSendPipeline(supabase, {
       userId: userIdEarly,
       partnerId: partner_id || null,
       contactId: contact_id || null,
+      sourceType: contact_id && !partner_id ? "imported_contact" : "partner",
       channel: "email",
       subject,
       body: html,
@@ -385,17 +385,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Supervisor audit (fire-and-forget)
-    const userId = userIdEarly;
-    logSupervisorAudit(supabase, {
-      user_id: userId, actor_type: "user",
-      action_category: "email_sent",
-      action_detail: `Email inviata a ${body.to}: ${subject}`,
-      target_type: "email", target_label: subject,
-      partner_id: partner_id || undefined, email_address: body.to,
-      decision_origin: "manual",
-      metadata: { subject, recipient: body.to },
-    });
+    // LOVABLE-93: supervisor audit è ora integrato in postSendPipeline
 
     return new Response(
       JSON.stringify({ success: true, message_id: messageIdExternal, retriable: false }),

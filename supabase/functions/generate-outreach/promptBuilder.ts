@@ -46,6 +46,8 @@ export interface OutreachPromptContext {
   playbookBlock?: string;
   // Fix 3.3: honest channel declaration (full vs limited context)
   channelDeclaration?: string;
+  // LOVABLE-93: Decision Engine pre-computed context block
+  decisionEngineBlock?: string;
 }
 
 export function getModel(quality: Quality): string {
@@ -213,7 +215,7 @@ ${commercialBlock}
 GOAL: ${goal || "Proposta di collaborazione nel freight forwarding"}
 
 PROPOSTA: ${base_proposal || "Collaborazione logistica internazionale"}
-${commercialLevers ? `\nLEVE COMMERCIALI CONFIGURATE:\n${commercialLevers}\n` : ""}
+${commercialLevers ? `\nLEVE COMMERCIALI CONFIGURATE:\n${commercialLevers}\n` : ""}${ctx.decisionEngineBlock ? `\n${ctx.decisionEngineBlock}\n` : ""}
 Genera il messaggio completo per il canale ${ch.toUpperCase()}. Applica le tecniche dalla Knowledge Base.`;
 
   return { systemPrompt, userPrompt };

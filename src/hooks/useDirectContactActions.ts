@@ -1,19 +1,19 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
-import { useTrackActivity } from "@/hooks/useTrackActivity";
+import { useLogAction } from "@/hooks/useLogAction";
 import { toast } from "sonner";
 
 /**
  * Shared hook for direct contact communication actions (email composer, WhatsApp bridge).
- * Uses trackActivity for full tracking: activities, contact_interactions, lead_status escalation.
+ * LOVABLE-93: Uses logAction (server-side pipeline) for full tracking.
  * Used across Network, BCA, Contacts, Prospects, and Drawer.
  */
 export function useDirectContactActions() {
   const navigate = useNavigate();
   const { sendWhatsApp, isAvailable: waAvailable, isAuthenticated: waAuthenticated } = useWhatsAppExtensionBridge();
   const [waSending, setWaSending] = useState<string | null>(null);
-  const trackActivity = useTrackActivity();
+  const logAction = useLogAction();
 
   const handleSendEmail = useCallback(
     (opts: {
@@ -67,13 +67,19 @@ export function useDirectContactActions() {
         const result = await sendWhatsApp(cleanPhone, "");
         if (result?.success) {
           toast.success(`Chat WhatsApp aperta con ${opts.contactName || cleanPhone}`);
-          // Use trackActivity for full tracking (activities + contact_interactions + lead_status)
-          trackActivity.mutate({
-            activityType: "whatsapp_message",
-            title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
+          // LOVABLE-93: logAction chiama log-action edge → postSendPipeline server-side
+          const resolvedSourceType = opts.sourceType === "contact" ? "imported_contact" as const
+            : opts.sourceType === "prospect" ? "imported_contact" as const
+            : (opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card";
+          logAction.mutate({
+            channel: "whatsapp",
+            sourceType: resolvedSourceType,
             sourceId: opts.sourceId || opts.contactId || opts.partnerId || crypto.randomUUID(),
-            sourceType: opts.sourceType === "contact" ? "imported_contact" : opts.sourceType === "prospect" ? "imported_contact" : (opts.sourceType || "partner") as "partner" | "imported_contact" | "business_card",
-            description: "Messaggio WhatsApp inviato",
+            to: cleanPhone,
+            title: `WhatsApp a ${opts.contactName || cleanPhone}${opts.companyName ? ` (${opts.companyName})` : ""}`,
+            partnerId: opts.partnerId,
+            contactId: opts.contactId,
+            source: "manual",
           });
           opts.onSuccess?.();
           return true;
@@ -88,7 +94,7 @@ export function useDirectContactActions() {
         setWaSending(null);
       }
     },
-    [waAvailable, waAuthenticated, sendWhatsApp, trackActivity]
+    [waAvailable, waAuthenticated, sendWhatsApp, logAction]
   );
 
   return { handleSendEmail, handleSendWhatsApp, waSending, waAvailable };
