@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ArrowDownLeft, Calendar, Earth,
   ArrowUpDown, Gamepad2, MessageSquare,
   BrainCircuit, ShieldCheck, BarChart3, Rocket,
-  UserCog, BookOpen, Wand2,
+  UserCog, BookOpen, Wand2, FlaskConical,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -61,6 +61,7 @@ export const navGroupsDef: readonly NavGroupDef[] = [
     items: [
       { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
       { labelKey: "Email Forge", path: "/v2/ai-staff/email-forge", icon: <Wand2 className="h-4 w-4" /> },
+      { labelKey: "Prompt Lab", path: "/v2/prompt-lab", icon: <FlaskConical className="h-4 w-4" />, badge: "NEW" },
       { labelKey: "nav.research", path: "/v2/research", icon: <BarChart3 className="h-4 w-4" /> },
     ],
   },

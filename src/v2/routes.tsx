@@ -67,6 +67,7 @@ const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then
 const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
+const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage })));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
 const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
@@ -192,6 +193,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="ai-staff/email-forge" element={guardedPage(EmailForgePage, "EmailForge")} />
+          <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
+          <Route path="prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="kb-supervisor" element={<Navigate to="/v2/ai-staff/kb-supervisor" replace />} />
