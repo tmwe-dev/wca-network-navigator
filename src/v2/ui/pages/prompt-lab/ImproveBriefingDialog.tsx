@@ -112,7 +112,7 @@ export function ImproveBriefingDialog({
   }, [open, detectedKind, block?.id]);
 
   const update = <K extends keyof BriefingPayload>(k: K, v: BriefingPayload[K]) =>
-    setData((d) => ({ ...d, [k]: v }));
+    setData((d: BriefingPayload) => ({ ...d, [k]: v }));
 
   const canConfirm = data.goal.trim().length >= 10 && data.targetChannel.length > 0;
 
