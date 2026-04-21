@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Block, BlockSource } from "../types";
 import { findKbEntries } from "@/data/kbEntries";
+import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -128,6 +129,10 @@ export function useLabAgent() {
       const sourceDesc = describeSource(block.source);
       const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
       const doctrineSnippet = await loadDoctrineSnippet();
+      const rubric = resolveRubric(block.source, {
+        forceVoice: isVoiceBlock({ tabLabel, source: block.source, label: block.label }),
+      });
+      const rubricSection = rubricToPromptSection(rubric);
 
       const userPrompt = `Tab: ${tabLabel ?? "n/d"}
 Dove si attiva (runtime): ${tabActivation ?? "n/d"}
@@ -144,13 +149,15 @@ ${nearbySummary}
 ${doctrineSnippet}
 --- FINE KB DOCTRINE ---
 
+${rubricSection}
+
 --- TESTO ATTUALE DEL BLOCCO ---
 ${block.content}
 --- FINE TESTO ---
 
-Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
+Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta la RUBRICA sopra (must-have, must-not, lunghezza, struttura).`;
 
-      return callAgent(userPrompt, {
+      const first = await callAgent(userPrompt, {
         block_id: block.id,
         block_label: block.label,
         block_source: block.source,
@@ -159,6 +166,24 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
         goal: goal ?? null,
         nearby_block_ids: (nearbyBlocks ?? []).map((b) => b.id),
       });
+
+      // Validazione + 1 retry se viola la rubrica
+      const issues = validateAgainstRubric(first, rubric);
+      if (issues.length === 0) return first;
+
+      const retryPrompt = `${userPrompt}
+
+--- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
+${issues.map((i) => `✗ ${i}`).join("\n")}
+--- FINE VIOLAZIONI ---
+
+Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nuovo testo.`;
+      const second = await callAgent(retryPrompt, {
+        block_id: block.id,
+        retry: true,
+        violations: issues,
+      });
+      return second || first;
     },
     [callAgent],
   );
@@ -181,6 +206,10 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti.`;
     }): Promise<string> => {
       const { block, tabLabel, tabActivation, systemMap, doctrineFull, systemMission, goal } = params;
       const sourceDesc = describeSource(block.source);
+      const rubric = resolveRubric(block.source, {
+        forceVoice: isVoiceBlock({ tabLabel, source: block.source, label: block.label }),
+      });
+      const rubricSection = rubricToPromptSection(rubric);
 
       const userPrompt = `=== SYSTEM MISSION ===
 ${systemMission}
@@ -190,6 +219,8 @@ ${doctrineFull}
 
 === MAPPA COMPLETA DEL SISTEMA AI (tutti i prompt configurati e dove vengono eseguiti) ===
 ${systemMap}
+
+${rubricSection}
 
 === BLOCCO DA MIGLIORARE ===
 Tab: ${tabLabel}
@@ -204,17 +235,34 @@ ${block.content}
 
 ISTRUZIONI:
 - Riscrivi il blocco perché serva meglio l'obiettivo del sistema, in coerenza con TUTTO il resto.
-- Hai piena libertà sulla forma, NESSUN vincolo di lunghezza o struttura imposto: scegli tu cosa serve a quel blocco.
-- Guard-rail obbligatori: rispetta la dottrina commerciale a 9 stati, mai inventare dati o azioni, mai contraddire altri blocchi visibili nella mappa, mantieni l'italiano se il testo originale è in italiano.
+- Rispetta la RUBRICA sopra: must-have, must-not, lunghezza, struttura.
+- Guard-rail obbligatori: dottrina commerciale 9 stati, mai inventare dati o azioni, mai contraddire altri blocchi visibili nella mappa, mantieni l'italiano se il testo originale è in italiano.
 - Se il blocco è già ottimo, restituiscilo invariato.
 - Restituisci SOLO il testo del blocco migliorato, senza preamboli né commenti.`;
 
-      return callAgent(userPrompt, {
+      const first = await callAgent(userPrompt, {
         mode: "global_improve",
         block_id: block.id,
         block_source: block.source,
         tab: tabLabel,
       });
+
+      const issues = validateAgainstRubric(first, rubric);
+      if (issues.length === 0) return first;
+
+      const retryPrompt = `${userPrompt}
+
+--- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
+${issues.map((i) => `✗ ${i}`).join("\n")}
+--- FINE VIOLAZIONI ---
+
+Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
+      const second = await callAgent(retryPrompt, {
+        mode: "global_improve_retry",
+        block_id: block.id,
+        violations: issues,
+      });
+      return second || first;
     },
     [callAgent],
   );
