@@ -160,24 +160,35 @@ export function EnrichmentRowList({
                       <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
                     ) : (
                       <>
-                        <Linkedin className={cn(
-                          "w-3.5 h-3.5",
-                          (row.hasLinkedin || (isLiveDone && liveState.status === "done" && liveState.slug)) ? "text-primary" : "text-muted-foreground/20",
-                          isLiveDone && liveState.status === "done" && liveState.slug && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
-                        )} />
+                        {(row.hasLinkedin || (isLiveDone && liveState.status === "done" && liveState.slug)) ? (
+                          <EnrichmentDetailPopover row={row} kind="linkedin">
+                            <Linkedin className={cn(
+                              "w-3.5 h-3.5 text-primary",
+                              isLiveDone && liveState.status === "done" && liveState.slug && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
+                            )} />
+                          </EnrichmentDetailPopover>
+                        ) : (
+                          <Linkedin className="w-3.5 h-3.5 text-muted-foreground/20" />
+                        )}
                         {(row.hasLogo || (isLiveDone && liveState.status === "done" && liveState.logo)) ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <EnrichmentDetailPopover row={row} kind="logo">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          </EnrichmentDetailPopover>
                         ) : (
                           <ImageOff className="w-3.5 h-3.5 text-muted-foreground/20" />
                         )}
                         {(row.hasWebsiteExcerpt || (isLiveDone && liveState.status === "done" && liveState.site)) && (
-                          <Globe className={cn(
-                            "w-3.5 h-3.5 text-primary",
-                            isLiveDone && liveState.status === "done" && liveState.site && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
-                          )} />
+                          <EnrichmentDetailPopover row={row} kind="site">
+                            <Globe className={cn(
+                              "w-3.5 h-3.5 text-primary",
+                              isLiveDone && liveState.status === "done" && liveState.site && "drop-shadow-[0_0_4px_hsl(var(--primary))]"
+                            )} />
+                          </EnrichmentDetailPopover>
                         )}
                         {isLiveDone && (
-                          <span className="text-[10px]" title="Arricchita ora">✨</span>
+                          <EnrichmentDetailPopover row={row} kind="fresh">
+                            <span className="text-[10px]">✨</span>
+                          </EnrichmentDetailPopover>
                         )}
                       </>
                     )}
