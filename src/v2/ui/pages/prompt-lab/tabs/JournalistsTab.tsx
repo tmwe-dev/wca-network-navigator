@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type Role = "rompighiaccio" | "risvegliatore" | "chiusore" | "accompagnatore";
-type Field = "prompt" | "tone" | "rules" | "donts" | "kb_sources";
+type Field = "prompt_full" | "prompt_voice" | "prompt_writing" | "tone" | "rules" | "donts" | "kb_sources" | "must_know";
 
 const JOURNALISTS: Array<{ role: Role; label: string; icon: LucideIcon; color: string; desc: string; states: string[] }> = [
   { role: "rompighiaccio", label: "Rompighiaccio", icon: Zap, color: "text-blue-500 bg-blue-500/10", desc: "Primo contatto. Apertura dialogo.", states: ["new", "first_touch_sent"] },
@@ -25,9 +25,12 @@ const JOURNALISTS: Array<{ role: Role; label: string; icon: LucideIcon; color: s
 ];
 
 const FIELD_LABELS: Record<Field, string> = {
-  prompt: "Prompt",
+  prompt_full: "Prompt Completo (agenti/LLM)",
+  prompt_voice: "Prompt Voce (ElevenLabs TTS)",
+  prompt_writing: "Prompt Scrittura (email/LinkedIn/WA)",
   tone: "Tono",
   rules: "Regole",
+  must_know: "Conoscenze minime obbligatorie",
   donts: "Cose da NON dire",
   kb_sources: "Fonti KB",
 };
@@ -100,9 +103,12 @@ function JournalistCard({ journalist: j, data, onSave }: {
 }) {
   const Icon = j.icon;
   const [local, setLocal] = useState<Record<Field, string>>(() => ({
-    prompt: data[`journalist_${j.role}_prompt`] || "",
+    prompt_full: data[`journalist_${j.role}_prompt_full`] || "",
+    prompt_voice: data[`journalist_${j.role}_prompt_voice`] || "",
+    prompt_writing: data[`journalist_${j.role}_prompt_writing`] || "",
     tone: data[`journalist_${j.role}_tone`] || "",
     rules: data[`journalist_${j.role}_rules`] || "",
+    must_know: data[`journalist_${j.role}_must_know`] || "",
     donts: data[`journalist_${j.role}_donts`] || "",
     kb_sources: data[`journalist_${j.role}_kb_sources`] || "",
   }));
@@ -127,16 +133,20 @@ function JournalistCard({ journalist: j, data, onSave }: {
       <details>
         <summary className="cursor-pointer text-xs text-primary/70">Configura (lascia vuoto per usare default)</summary>
         <div className="mt-2 space-y-2">
-          {(Object.keys(FIELD_LABELS) as Field[]).map((field) => (
-            <div key={field} className="space-y-1">
-              <Label className="text-[10px] uppercase tracking-wide">{FIELD_LABELS[field]}</Label>
-              {field === "tone" || field === "kb_sources" ? (
-                <Input value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className="h-7 text-xs" placeholder="(default)" />
-              ) : (
-                <Textarea value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className="text-xs min-h-[60px]" placeholder="(default)" />
-              )}
-            </div>
-          ))}
+          {(Object.keys(FIELD_LABELS) as Field[]).map((field) => {
+            const isShort = field === "tone" || field === "kb_sources";
+            const isLong = field === "prompt_full" || field === "prompt_voice" || field === "prompt_writing";
+            return (
+              <div key={field} className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wide">{FIELD_LABELS[field]}</Label>
+                {isShort ? (
+                  <Input value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className="h-7 text-xs" placeholder="(default)" />
+                ) : (
+                  <Textarea value={local[field]} onChange={(e) => setLocal({ ...local, [field]: e.target.value })} onBlur={blur(field)} className={cn("text-xs", isLong ? "min-h-[100px]" : "min-h-[60px]")} placeholder="(default)" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </details>
     </div>

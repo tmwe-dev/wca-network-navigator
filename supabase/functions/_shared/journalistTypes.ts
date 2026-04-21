@@ -18,11 +18,30 @@ export type ReviewChannel = "email" | "whatsapp" | "linkedin" | "voice_script";
 export interface JournalistConfig {
   role: JournalistRole;
   label: string;
+  /** Prompt completo per agenti generici / ChatGPT / Claude */
+  prompt_full: string;
+  /** Prompt per output vocale (ElevenLabs TTS): frasi brevi, ritmo parlato, zero tecnicismi */
+  prompt_voice: string;
+  /** Prompt per scrittura (email/LinkedIn/WA): appoggiato a KB, focus deliverable */
+  prompt_writing: string;
+  /** @deprecated — alias di prompt_full per retrocompatibilità */
   prompt: string;
   tone: string;
   rules: string;
   kb_sources: string;
   donts: string;
+  /** Conoscenze minime obbligatorie per questo giornalista */
+  must_know: string;
+}
+
+export interface CompanyProfile {
+  company_name: string;
+  site: string;
+  offering: string;
+  audience: string;
+  competitive_difference: string;
+  values: string;
+  proof: string;
 }
 
 export interface JournalistSelection {

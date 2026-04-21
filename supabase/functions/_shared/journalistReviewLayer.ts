@@ -15,9 +15,12 @@ import type {
 import {
   selectJournalist,
   loadJournalistConfig,
+  loadCompanyProfile,
   validateOverride,
+  selectPromptVariant,
   JOURNALIST_LABELS,
 } from "./journalistSelector.ts";
+import type { CompanyProfile } from "./journalistTypes.ts";
 import { aiChat } from "./aiGateway.ts";
 
 export interface JournalistReviewOptions {
@@ -94,13 +97,16 @@ export async function journalistReview(
     };
   }
 
-  // === Step 2: carica config ===
-  const config = await loadJournalistConfig(supabase, userId, journalist.role);
+  // === Step 2: carica config + profilo aziendale ===
+  const [config, companyProfile] = await Promise.all([
+    loadJournalistConfig(supabase, userId, journalist.role),
+    loadCompanyProfile(supabase, userId),
+  ]);
   const mode: ReviewMode = options?.mode || "review_and_correct";
   const strictness = Math.max(1, Math.min(10, options?.strictness ?? 7));
 
   // === Step 3: prompt + LLM ===
-  const systemPrompt = buildReviewSystemPrompt(config, input, mode, strictness);
+  const systemPrompt = buildReviewSystemPrompt(config, input, mode, strictness, companyProfile);
   const userPrompt = buildReviewUserPrompt(input);
   const model = options?.model || "google/gemini-2.5-flash";
 
@@ -157,6 +163,7 @@ function buildReviewSystemPrompt(
   input: JournalistReviewInput,
   mode: ReviewMode,
   strictness: number,
+  companyProfile?: CompanyProfile,
 ): string {
   const channelRules: Record<string, string> = {
     email: "Formato email professionale. Lunghezza appropriata. Firma coerente.",
@@ -209,10 +216,19 @@ SE TROVI UNA CONTRADDIZIONE FORTE (es. tipo="primo contatto" ma history=2 email)
 - Spiega in warnings[]
 - Suggerisci correzione A MONTE in upstream_fix
 
+## PROFILO AZIENDALE
+${companyProfile ? `AZIENDA: ${companyProfile.company_name}
+${companyProfile.offering ? `OFFERTA: ${companyProfile.offering}` : ""}
+${companyProfile.audience ? `AUDIENCE: ${companyProfile.audience}` : ""}
+${companyProfile.competitive_difference ? `DIFFERENZA COMPETITIVA: ${companyProfile.competitive_difference}` : ""}
+${companyProfile.values ? `VALORI: ${companyProfile.values}` : ""}
+${companyProfile.proof ? `PROVE/REFERENZE: ${companyProfile.proof}` : ""}` : "Profilo aziendale non configurato."}
+
 ## GIORNALISTA ATTIVO: ${config.label}
-PROMPT: ${config.prompt}
+PROMPT (variante ${input.channel}): ${selectPromptVariant(config, input.channel)}
 TONO: ${config.tone}
 REGOLE: ${config.rules}
+CONOSCENZE MINIME: ${config.must_know}
 COSE DA NON DIRE: ${config.donts}
 FONTI KB: ${config.kb_sources}
 
