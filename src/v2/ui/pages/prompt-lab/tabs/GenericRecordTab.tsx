@@ -2,13 +2,15 @@
  * GenericRecordTab — tab generico per Operative, Email, Playbooks, Personas.
  * Riceve un loader (ritorna Block[]) e un saver (onSave per id).
  */
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { SplitBlockEditor } from "../SplitBlockEditor";
 import { usePromptLabBlocks } from "../hooks/usePromptLabBlocks";
 import { useLabAgent } from "../hooks/useLabAgent";
-import type { Block } from "../types";
+import { type Block, PROMPT_LAB_TABS } from "../types";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Target } from "lucide-react";
 
 interface GenericRecordTabProps {
   tabLabel: string;
@@ -20,8 +22,14 @@ interface GenericRecordTabProps {
 
 export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emptyMessage }: GenericRecordTabProps) {
   const [saving, setSaving] = useState<string | null>(null);
+  const [goal, setGoal] = useState("");
   const lab = useLabAgent();
   const state = usePromptLabBlocks(loader, loaderDeps);
+
+  const tabActivation = useMemo(
+    () => PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation,
+    [tabLabel],
+  );
 
   const onSave = useCallback(async (id: string) => {
     const block = state.blocks.find((b) => b.id === id);
@@ -44,14 +52,20 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
     if (!block) return;
     setSaving(id);
     try {
-      const improved = await lab.improveBlock({ block, tabLabel });
+      const improved = await lab.improveBlock({
+        block,
+        tabLabel,
+        tabActivation,
+        nearbyBlocks: state.blocks,
+        goal: goal.trim() || undefined,
+      });
       state.setImproved(id, improved);
     } catch (e) {
       toast.error(String(e));
     } finally {
       setSaving(null);
     }
-  }, [lab, state, tabLabel]);
+  }, [lab, state, tabLabel, tabActivation, goal]);
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
   if (state.blocks.length === 0) {
@@ -59,16 +73,27 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
   }
 
   return (
-    <div className="h-full min-h-0">
-      <SplitBlockEditor
-        blocks={state.blocks}
-        onChange={state.updateContent}
-        onAccept={state.acceptImproved}
-        onDiscard={state.discardImproved}
-        onImprove={onImprove}
-        onSave={onSave}
-        saving={saving}
-      />
+    <div className="flex flex-col h-full min-h-0 gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Target className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+        <Input
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          placeholder='Obiettivo opzionale per il "Migliora" (es: "più risposte da lead in holding")'
+          className="h-7 text-xs"
+        />
+      </div>
+      <div className="flex-1 min-h-0">
+        <SplitBlockEditor
+          blocks={state.blocks}
+          onChange={state.updateContent}
+          onAccept={state.acceptImproved}
+          onDiscard={state.discardImproved}
+          onImprove={onImprove}
+          onSave={onSave}
+          saving={saving}
+        />
+      </div>
     </div>
   );
 }
