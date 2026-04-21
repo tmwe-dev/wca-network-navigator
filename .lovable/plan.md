@@ -1,89 +1,95 @@
 
 
-# Ristrutturazione Prompt Lab — Navigazione a 3 livelli
+# LOVABLE-80 v2 — Giornalisti AI: Caporedattore Finale
 
-## Problema attuale
-8 tab top-level affiancati su una sola riga (System Prompt, KB Doctrine, Operative, Email, Voice, Playbooks, Personas, AI Profile) + sotto-tab nascosti dentro Email (3) e Voice (layout a 3 colonne). L'utente non capisce cosa va dove e deve scorrere orizzontalmente.
+## Cosa costruiamo
 
-## Nuova architettura — 3 livelli gerarchici
+Uno **strato editoriale finale** che rivede ogni testo prodotto dall'AI (email, WhatsApp, LinkedIn, voce) prima che esca. Funziona come un caporedattore: legge tutto il contesto (brief, stato, history, KB), corregge stile/tono/ritmo, segnala incoerenze, blocca contenuti pericolosi — **ma non tocca mai la strategia commerciale**.
 
-### Livello 1 — Tabs orizzontali in alto (3 macroaree)
-Riducono il rumore raggruppando per dominio funzionale:
+I 4 giornalisti si auto-selezionano in base allo stato del lead:
+- **Rompighiaccio** → `new`, `first_touch_sent`
+- **Risvegliatore** → `holding`, `archived`
+- **Chiusore** → `qualified`, `negotiation`
+- **Accompagnatore** → `converted`
+- **engaged** → contestuale (risposta recente → Accompagnatore, silenzio → Risvegliatore)
+- **blacklisted** → blocco totale
 
-| Tab | Cosa contiene | Icona |
-|---|---|---|
-| **Core AI** | System Prompt · KB Doctrine · AI Profile | `Brain` |
-| **Comunicazione** | Email · Voice / 11Labs · Operative | `MessageSquare` |
-| **Strategia** | Playbooks · Agent Personas | `Target` |
-
-### Livello 2 — Menu verticale a sinistra (sotto-aree della macroarea)
-Riusa il componente esistente `VerticalTabNav` (già usato in altre parti del progetto). Mostra le voci della macroarea attiva con icona + label, larghezza 160px.
-
-Esempio per **Core AI**:
-```
-┌─────────────────┐
-│ ◉ System Prompt │  ← attivo
-│ ○ KB Doctrine   │
-│ ○ AI Profile    │
-└─────────────────┘
-```
-
-### Livello 3 — Tab orizzontali interni (solo dove servono)
-Restano dentro le pagine che hanno già viste multiple:
-- **Email** → Tipi · Global Prompts · Address Rules (già esiste)
-- **Voice** → Persona · Coerenza · Voice Prompt (già a 3 colonne, OK così)
-- Le altre (System Prompt, KB Doctrine, ecc.) NON hanno sotto-tab → vista diretta
-
-## Layout finale
+## Architettura
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 🧪 Prompt Lab          [Upload] [Export]                        │
-├─────────────────────────────────────────────────────────────────┤
-│  [Core AI]  [Comunicazione]  [Strategia]   ← Livello 1         │
-├──────────┬──────────────────────────────────────────────────────┤
-│ ◉ System │  ┌──────────────────────────────────────────────┐   │
-│   Prompt │  │ Tipi | Global | Rules   ← Livello 3 (se c'è) │   │
-│ ○ KB     │  ├──────────────────────────────────────────────┤   │
-│   Doctrine│ │                                              │   │
-│ ○ AI     │  │   Contenuto del tab attivo                   │   │
-│   Profile│  │                                              │   │
-│   ↑      │  │                                              │   │
-│ Livello 2│  │                                              │   │
-└──────────┴──┴──────────────────────────────────────────────┴───┤
-│ Lab Agent Chat (resizable, bottom panel)                        │
-└─────────────────────────────────────────────────────────────────┘
+Oracolo (decide brief/stato/canale)
+   ↓
+Genera (prima bozza)
+   ↓
+Migliora (polish AI esistente)
+   ↓
+GIORNALISTA (review + correzione editoriale + safety)
+   ↓
+Output finale (UI / invio / TTS)
 ```
 
-## File da modificare
-- `src/v2/ui/pages/PromptLabPage.tsx` — sostituire layout tabs piatti con struttura a 3 livelli
-- `src/v2/ui/pages/prompt-lab/types.ts` — aggiungere `PROMPT_LAB_GROUPS` (raggruppamento macroarea → tab interni)
+Verdetti possibili: `pass` | `pass_with_edits` | `warn` | `block`
 
-## File NON toccati
-- Tutti i tab interni (`SystemPromptTab`, `EmailPromptsTab`, `VoiceElevenLabsTab`, ecc.) — restano invariati
-- `LabAgentChat`, `UploadButton`, `ExportButton`, `SplitBlockEditor` — invariati
-- `VerticalTabNav` (riusato)
+## Fasi di implementazione
 
-## Modifiche tecniche
-1. In `types.ts`: definire `PROMPT_LAB_GROUPS: Array<{ id, label, icon, tabs: PromptLabTabId[] }>` con i 3 raggruppamenti.
-2. In `PromptLabPage.tsx`:
-   - Stato `[activeGroupId, activeTabId]` invece del solo `activeTabId`
-   - Top: `<Tabs>` orizzontali per i 3 gruppi
-   - Layout interno: `flex` con `<VerticalTabNav>` a sinistra (160px) e contenuto a destra
-   - Quando si cambia gruppo, attiva automaticamente il primo tab del gruppo
-   - Mantiene `ResizablePanelGroup` verticale con LabAgentChat in basso
+### Fase 1 — Backend shared (tipi + selettore + review layer)
+Tre nuovi file in `supabase/functions/_shared/`:
+- `journalistTypes.ts` — interfacce `JournalistReviewInput/Output`, `JournalistConfig`, `JournalistWarning`, `JournalistEdit`, ruoli, verdetti
+- `journalistSelector.ts` — `selectJournalist()` (mapping stato→ruolo + logica contestuale per `engaged`), `validateOverride()`, `loadJournalistConfig()` (carica da `app_settings` con fallback ai default), `getDefaultConfig()` con i 4 prompt/tono/regole/donts/KB sources
+- `journalistReviewLayer.ts` — `journalistReview()` orchestrator: select → load config → build prompt (system+user) → invoke LLM → parse JSON → return output. Fallback safe: se LLM fallisce, draft originale passa con `quality_score: -1`
 
-## Verifica end-to-end
-1. Aprire `/v2/prompt-lab` → 3 tab in alto chiari (Core AI / Comunicazione / Strategia)
-2. Click su "Comunicazione" → menu sinistro mostra Email/Voice/Operative
-3. Click su "Email" → vista carica con i suoi 3 sub-tab orizzontali (Tipi/Global/Rules)
-4. Click su "Voice" → vista a 3 colonne resta intatta
-5. Cambio gruppo → primo tab del nuovo gruppo viene auto-selezionato
-6. Lab Agent Chat in basso continua a funzionare con il context del tab attivo
+### Fase 2 — Integrazione nei 3 entry-point AI
+Aggancio post-generazione (prima del `return`):
+- `supabase/functions/generate-email/index.ts` → channel `"email"`
+- `supabase/functions/improve-email/index.ts` → channel `"email"`
+- `supabase/functions/agent-execute/toolHandlers.ts` → handler `send_email` (channel `"email"`) e `send_whatsapp` (channel `"whatsapp"`); su `verdict === "block"` NON inviare e ritornare errore strutturato all'agente; su `warn` inviare ma loggare
 
-## Cosa otterrai
-- Da **8 tab piatti + sotto-tab nascosti** a **3 macroaree → menu laterale → vista**
-- Navigazione prevedibile: l'utente sa sempre dove sta (gruppo > sezione > sub-vista)
-- Spazio orizzontale liberato (niente più scroll dei tab top)
-- Stesso pattern visivo già usato altrove nel progetto (VerticalTabNav)
+Tutti leggono `app_settings.journalist_optimus_enabled/_mode/_strictness` per attivazione e parametri.
+
+### Fase 3 — UI risultato (badge + dettagli + banner)
+In `src/v2/ui/pages/email-forge/ResultPanel.tsx` (e dove serve):
+- **Badge compatto**: verdetto colorato (OK/CORRETTO/ATTENZIONE/BLOCCATO) + nome giornalista + quality score + reasoning breve + counter warnings
+- **Popover dettagli espandibile**: lista warnings (con `upstream_fix` evidenziato) e edits (diff originale→corretto + reason)
+- **Banner sopra il testo**: giallo per `warn`, rosso per `block`, con istruzione di correggere a monte
+- Tipi TS aggiornati in `src/v2/hooks/useEmailForge.ts` (`ForgeResult.journalist_review`)
+
+### Fase 4 — Configurazione nel Prompt Lab
+Nuovo tab dedicato `JournalistsTab.tsx` in `src/v2/ui/pages/prompt-lab/tabs/`:
+- Header con toggle Optimus on/off, dropdown modalità (`review_and_correct` / `review_only` / `silent_audit`), slider rigore 1-10
+- Box informativo "FA / NON FA" per chiarire i confini
+- 4 card giornalisti (Rompighiaccio/Risvegliatore/Chiusore/Accompagnatore) con: icona, descrizione, badge stati associati, dettagli espandibili con 5 campi editabili (`prompt`, `tone`, `rules`, `donts`, `kb_sources`) salvati in `app_settings` con chiavi `journalist_<role>_<field>`
+- Callout viola per la logica contestuale di `engaged`
+- Registrazione del tab in `PromptLabPage.tsx`
+
+### Fase 5 — Memoria progetto
+Salvataggio memoria `mem://agents/journalist-review-layer` con: filosofia one-way, mapping stati→giornalisti, regole inviolabili (mai cambiare strategia/stato/canale/playbook), verdetti, modalità Optimus.
+
+## Dettagli tecnici chiave
+
+- **One-way strict**: il giornalista può modificare SOLO la forma del testo. Mai cambia stato, canale, playbook, brief. Su contraddizioni strutturali emette `warn` con `upstream_fix`, non risolve silenziosamente.
+- **Safety editoriale**: blocca urgenza finta, adulazione, promesse non verificabili nella KB, salti di fase relazionale.
+- **Voice channel** (`voice_script`): regole specifiche → frasi brevi, ritmo parlato, una domanda alla volta, zero tecnicismi, pensato per TTS ElevenLabs.
+- **Fallback resiliente**: errore LLM o parse JSON → draft originale passa intatto con `quality_score: -1`. Mai blocca per problema tecnico.
+- **Override manuale** permesso ma se molto incoerente (es. Rompighiaccio su `converted`) genera warning visibile.
+- **Settings persistite** in `app_settings` per utente, con fallback ai default codificati. Nessuna nuova tabella richiesta.
+- **LLM invoke** via edge function `ai-assistant` esistente (mode conversational, scope chat) — nessuna nuova chiave API.
+- **Audit**: i warning bloccanti vengono loggati (in agent-execute) per supervisione.
+
+## File toccati
+
+**Nuovi (4):**
+- `supabase/functions/_shared/journalistTypes.ts`
+- `supabase/functions/_shared/journalistSelector.ts`
+- `supabase/functions/_shared/journalistReviewLayer.ts`
+- `src/v2/ui/pages/prompt-lab/tabs/JournalistsTab.tsx`
+
+**Modificati (~6):**
+- `supabase/functions/generate-email/index.ts`
+- `supabase/functions/improve-email/index.ts`
+- `supabase/functions/agent-execute/toolHandlers.ts`
+- `src/v2/hooks/useEmailForge.ts` (tipi)
+- `src/v2/ui/pages/email-forge/ResultPanel.tsx` (badge + banner)
+- `src/v2/ui/pages/PromptLabPage.tsx` (registrazione tab)
+
+**Memoria:** `mem://agents/journalist-review-layer` + aggiornamento `mem://index.md`
 
