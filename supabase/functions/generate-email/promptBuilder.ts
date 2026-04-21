@@ -392,12 +392,16 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
 
   // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
   const systemBlocks: PromptBlock[] = [];
-  systemBlocks.push({ label: "Identity", content: "Consulente B2B logistica + freight forwarding internazionale. NO selling aggressivo. Scrive con dati veri + KB." });
+  systemBlocks.push({ label: "Identity (Editor)", content: "Editor giornalista WCA Network. Scrive UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale." });
+  systemBlocks.push({ label: "Filosofia WCA", content: "Membership = first-mover advantage: primi su tariffe, booking, partenze, info di mercato. Partner trasporti = guadagno reciproco + vantaggio competitivo." });
+  systemBlocks.push({ label: "Missione messaggio", content: "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature." });
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
-  systemBlocks.push({ label: "Regole dati + Personalizzazione obbligatoria", content: "Bilanciato (LOVABLE-77): cita fatti specifici dai blocchi, vietato inventare numeri/casi/certificazioni. Almeno 1 ancora concreta o tag [GENERIC] nel subject." });
-  systemBlocks.push({ label: "Output format + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel})\nSubject prima riga, body HTML semplice, firma auto.` });
+  systemBlocks.push({ label: "Regole dati", content: "Usa tutti i dati dei blocchi per ritratto + leva. Vietato inventare numeri/casi/certificazioni. Qualitativo se mancano dati." });
+  systemBlocks.push({ label: "Stile Editor", content: "Pro-a-pro, asciutto. Apertura osservazione concreta. UNA idea forte. CTA leggera. 80-150 parole. No bullet di feature, no entusiasmo finto." });
+  systemBlocks.push({ label: "Ancora obbligatoria", content: "Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione WCA onesta." });
+  systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (holding pattern + tone modulation)
   let commercialBlock = "";
