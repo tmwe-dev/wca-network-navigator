@@ -1,95 +1,51 @@
 
 
-# LOVABLE-80 v2 — Giornalisti AI: Caporedattore Finale
+# Fix `AIAutomationToggle` — pull GitHub rotto, da allineare allo schema reale
 
-## Cosa costruiamo
+## Problema
 
-Uno **strato editoriale finale** che rivede ogni testo prodotto dall'AI (email, WhatsApp, LinkedIn, voce) prima che esca. Funziona come un caporedattore: legge tutto il contesto (brief, stato, history, KB), corregge stile/tono/ritmo, segnala incoerenze, blocca contenuti pericolosi — **ma non tocca mai la strategia commerciale**.
+Il nuovo componente `src/components/header/AIAutomationToggle.tsx` (montato in `LayoutHeader.tsx`) è stato scritto contro uno schema `app_settings` obsoleto. Lo schema reale dal 2026-04-10 richiede:
+- `user_id NOT NULL` (RLS: `auth.uid() = user_id`)
+- Unique constraint composito `(user_id, key)`
 
-I 4 giornalisti si auto-selezionano in base allo stato del lead:
-- **Rompighiaccio** → `new`, `first_touch_sent`
-- **Risvegliatore** → `holding`, `archived`
-- **Chiusore** → `qualified`, `negotiation`
-- **Accompagnatore** → `converted`
-- **engaged** → contestuale (risposta recente → Accompagnatore, silenzio → Risvegliatore)
-- **blacklisted** → blocco totale
+Bug nel file:
+1. SELECT senza `.eq('user_id', userId)` → legge righe di altri utenti o nulla per via RLS
+2. UPSERT senza `user_id` nel payload → viola NOT NULL e RLS
+3. `onConflict: 'key'` invece di `'user_id,key'` → vincolo non corrispondente
+4. Duplicato funzionale di `GlobalAIAutomationPause` (stessa chiave `ai_automations_paused`, stesso scopo)
 
-## Architettura
+L'enorme lista "Check ..." nel build error sono solo i file edge function elencati per controllo statico — non sono errori reali, solo l'unico file rotto è `AIAutomationToggle.tsx`.
 
-```text
-Oracolo (decide brief/stato/canale)
-   ↓
-Genera (prima bozza)
-   ↓
-Migliora (polish AI esistente)
-   ↓
-GIORNALISTA (review + correzione editoriale + safety)
-   ↓
-Output finale (UI / invio / TTS)
-```
+## Cosa correggo
 
-Verdetti possibili: `pass` | `pass_with_edits` | `warn` | `block`
+**File:** `src/components/header/AIAutomationToggle.tsx`
 
-## Fasi di implementazione
+Tre fix chirurgici, mantengo design e UX identici (badge compatto verde/rosso in header):
 
-### Fase 1 — Backend shared (tipi + selettore + review layer)
-Tre nuovi file in `supabase/functions/_shared/`:
-- `journalistTypes.ts` — interfacce `JournalistReviewInput/Output`, `JournalistConfig`, `JournalistWarning`, `JournalistEdit`, ruoli, verdetti
-- `journalistSelector.ts` — `selectJournalist()` (mapping stato→ruolo + logica contestuale per `engaged`), `validateOverride()`, `loadJournalistConfig()` (carica da `app_settings` con fallback ai default), `getDefaultConfig()` con i 4 prompt/tono/regole/donts/KB sources
-- `journalistReviewLayer.ts` — `journalistReview()` orchestrator: select → load config → build prompt (system+user) → invoke LLM → parse JSON → return output. Fallback safe: se LLM fallisce, draft originale passa con `quality_score: -1`
+1. SELECT con `.eq('user_id', data.user.id)` per leggere solo la riga dell'utente corrente.
+2. UPSERT con `user_id: userId` nel payload e `onConflict: 'user_id,key'`.
+3. Non tocco il design né LayoutHeader.
 
-### Fase 2 — Integrazione nei 3 entry-point AI
-Aggancio post-generazione (prima del `return`):
-- `supabase/functions/generate-email/index.ts` → channel `"email"`
-- `supabase/functions/improve-email/index.ts` → channel `"email"`
-- `supabase/functions/agent-execute/toolHandlers.ts` → handler `send_email` (channel `"email"`) e `send_whatsapp` (channel `"whatsapp"`); su `verdict === "block"` NON inviare e ritornare errore strutturato all'agente; su `warn` inviare ma loggare
+Risultato: il toggle in header funziona correttamente, condivide lo stato con `GlobalAIAutomationPause` (entrambi leggono/scrivono la stessa chiave per lo stesso user_id, quindi sono sincronizzati automaticamente).
 
-Tutti leggono `app_settings.journalist_optimus_enabled/_mode/_strictness` per attivazione e parametri.
+## Cosa NON tocco
 
-### Fase 3 — UI risultato (badge + dettagli + banner)
-In `src/v2/ui/pages/email-forge/ResultPanel.tsx` (e dove serve):
-- **Badge compatto**: verdetto colorato (OK/CORRETTO/ATTENZIONE/BLOCCATO) + nome giornalista + quality score + reasoning breve + counter warnings
-- **Popover dettagli espandibile**: lista warnings (con `upstream_fix` evidenziato) e edits (diff originale→corretto + reason)
-- **Banner sopra il testo**: giallo per `warn`, rosso per `block`, con istruzione di correggere a monte
-- Tipi TS aggiornati in `src/v2/hooks/useEmailForge.ts` (`ForgeResult.journalist_review`)
+- `GlobalAIAutomationPause.tsx` (già corretto)
+- `LayoutHeader.tsx` (montaggio del toggle è ok)
+- Tabella `app_settings` (schema già corretto, no migration)
+- Edge functions (la lista nel build error è rumore, non errori veri)
+- Nessuna modifica al conflitto Partner Connect / WhatsApp — quello resta separato (ricordo che hai già rifiutato due volte quel piano, qui non lo ritocco)
 
-### Fase 4 — Configurazione nel Prompt Lab
-Nuovo tab dedicato `JournalistsTab.tsx` in `src/v2/ui/pages/prompt-lab/tabs/`:
-- Header con toggle Optimus on/off, dropdown modalità (`review_and_correct` / `review_only` / `silent_audit`), slider rigore 1-10
-- Box informativo "FA / NON FA" per chiarire i confini
-- 4 card giornalisti (Rompighiaccio/Risvegliatore/Chiusore/Accompagnatore) con: icona, descrizione, badge stati associati, dettagli espandibili con 5 campi editabili (`prompt`, `tone`, `rules`, `donts`, `kb_sources`) salvati in `app_settings` con chiavi `journalist_<role>_<field>`
-- Callout viola per la logica contestuale di `engaged`
-- Registrazione del tab in `PromptLabPage.tsx`
+## Verifica
 
-### Fase 5 — Memoria progetto
-Salvataggio memoria `mem://agents/journalist-review-layer` con: filosofia one-way, mapping stati→giornalisti, regole inviolabili (mai cambiare strategia/stato/canale/playbook), verdetti, modalità Optimus.
+1. Header mostra `AI on` (verde) o `AI off` (rosso) coerente con lo stato reale del DB per il tuo utente.
+2. Click sul toggle aggiorna DB senza errori RLS / NOT NULL / conflict.
+3. Aprire `/v2/ai-control` mostra lo stesso stato (i due componenti sono sincronizzati sulla stessa chiave).
+4. Build error si svuota.
 
-## Dettagli tecnici chiave
+## File modificati
 
-- **One-way strict**: il giornalista può modificare SOLO la forma del testo. Mai cambia stato, canale, playbook, brief. Su contraddizioni strutturali emette `warn` con `upstream_fix`, non risolve silenziosamente.
-- **Safety editoriale**: blocca urgenza finta, adulazione, promesse non verificabili nella KB, salti di fase relazionale.
-- **Voice channel** (`voice_script`): regole specifiche → frasi brevi, ritmo parlato, una domanda alla volta, zero tecnicismi, pensato per TTS ElevenLabs.
-- **Fallback resiliente**: errore LLM o parse JSON → draft originale passa intatto con `quality_score: -1`. Mai blocca per problema tecnico.
-- **Override manuale** permesso ma se molto incoerente (es. Rompighiaccio su `converted`) genera warning visibile.
-- **Settings persistite** in `app_settings` per utente, con fallback ai default codificati. Nessuna nuova tabella richiesta.
-- **LLM invoke** via edge function `ai-assistant` esistente (mode conversational, scope chat) — nessuna nuova chiave API.
-- **Audit**: i warning bloccanti vengono loggati (in agent-execute) per supervisione.
+- `src/components/header/AIAutomationToggle.tsx` (3 piccoli fix in select/upsert)
 
-## File toccati
-
-**Nuovi (4):**
-- `supabase/functions/_shared/journalistTypes.ts`
-- `supabase/functions/_shared/journalistSelector.ts`
-- `supabase/functions/_shared/journalistReviewLayer.ts`
-- `src/v2/ui/pages/prompt-lab/tabs/JournalistsTab.tsx`
-
-**Modificati (~6):**
-- `supabase/functions/generate-email/index.ts`
-- `supabase/functions/improve-email/index.ts`
-- `supabase/functions/agent-execute/toolHandlers.ts`
-- `src/v2/hooks/useEmailForge.ts` (tipi)
-- `src/v2/ui/pages/email-forge/ResultPanel.tsx` (badge + banner)
-- `src/v2/ui/pages/PromptLabPage.tsx` (registrazione tab)
-
-**Memoria:** `mem://agents/journalist-review-layer` + aggiornamento `mem://index.md`
+Nessun DB, nessuna edge function, nessuna migration.
 
