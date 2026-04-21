@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { Channel } from "./promptBuilder.ts";
+import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -228,9 +229,24 @@ export async function assembleOutreachContext(
         const ed = partner.enrichment_data as Record<string, unknown>;
         if (ed.trade_lanes) parts.push(`Trade Lanes: ${JSON.stringify(ed.trade_lanes).slice(0, 300)}`);
         if (ed.specializations) parts.push(`Specializzazioni: ${JSON.stringify(ed.specializations).slice(0, 200)}`);
-        if (ed.deep_search_summary) parts.push(`Deep Search: ${String(ed.deep_search_summary).slice(0, 400)}`);
       }
       if (parts.length) contextParts.push(`[PARTNER DB]\n${parts.join("\n")}`);
+
+      // LOVABLE-77B: enrichment unificato (Base + Deep Local + Sherlock + Legacy)
+      try {
+        const unified = await readUnifiedEnrichment(partner.id, supabase);
+        if (unified.has_any) {
+          const enrichmentBlock = formatEnrichmentForPrompt(unified, quality);
+          if (enrichmentBlock) {
+            contextParts.push(`[ARRICCHIMENTO PARTNER]\n${enrichmentBlock}`);
+            intelligence.data_found.enrichment = true;
+            if (unified.sherlock.summary) intelligence.data_found.sherlock = true;
+            if (unified.deep.contact_profiles?.length) intelligence.data_found.contact_profiles = true;
+          }
+        }
+      } catch (e) {
+        console.warn("[generate-outreach] enrichment read failed:", e instanceof Error ? e.message : e);
+      }
     } else {
       intelligence.data_found.partner = false;
     }
