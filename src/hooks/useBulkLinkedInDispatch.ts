@@ -53,15 +53,29 @@ export function useBulkLinkedInDispatch() {
       return { queued: 0, failed: 0 };
     }
 
-    setSending(true);
-    setProgress({ current: 0, total: eligible.length, queued: 0, failed: 0 });
+    // ── HARD CAP: Limit to 50 messages maximum (daily limit) ──
+    const HARD_CAP = 50;
+    const toDispatch = eligible.slice(0, HARD_CAP);
+    const capped = eligible.length > HARD_CAP;
 
-    const slots = buildSchedule(eligible.length, timing);
+    if (capped) {
+      log.warn("bulk dispatch capped at 50", { requested: eligible.length });
+      toast({
+        title: "Limite giornaliero LinkedIn",
+        description: `Sono stati richiesti ${eligible.length} messaggi, ma il limite è 50/giorno. Verranno programmati i primi 50.`,
+        variant: "destructive",
+      });
+    }
+
+    setSending(true);
+    setProgress({ current: 0, total: toDispatch.length, queued: 0, failed: 0 });
+
+    const slots = buildSchedule(toDispatch.length, timing);
     let queued = 0;
     let failed = 0;
 
-    for (let i = 0; i < eligible.length; i++) {
-      const t = eligible[i];
+    for (let i = 0; i < toDispatch.length; i++) {
+      const t = toDispatch[i];
       setProgress(p => ({ ...p, current: i + 1 }));
 
       const personalized = messageTemplate
@@ -99,7 +113,7 @@ export function useBulkLinkedInDispatch() {
     const lastSlot = slots[slots.length - 1];
     toast({
       title: `${queued} messaggi LinkedIn programmati`,
-      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}`,
+      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}${capped ? " CAPPED@50" : ""}`,
     });
 
     return { queued, failed };

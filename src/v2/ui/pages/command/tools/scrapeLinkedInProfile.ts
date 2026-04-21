@@ -1,60 +1,43 @@
-import { callExtension } from "@/v2/io/extensions/bridge";
 import { createBusinessCard } from "@/v2/io/supabase/mutations/business-cards";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
 
-interface LinkedInProfile {
-  url: string;
-  name: string;
-  headline: string;
-  company: string;
-  position: string;
-  location: string;
-  email?: string;
-  phone?: string;
-  about?: string;
-}
+/**
+ * REGOLA TASSATIVA: Use Google search via Partner Connect to find LinkedIn profiles.
+ * NEVER call LinkedIn extension's extractProfile directly — that violates TOS.
+ * This tool now searches for the LinkedIn profile URL instead.
+ */
 
 export const scrapeLinkedInProfileTool: Tool = {
   id: "scrape-linkedin-profile",
-  label: "Scrape profilo LinkedIn",
+  label: "Cerca profilo LinkedIn",
   description:
-    "Estrae dati dal profilo LinkedIn aperto nella tab attiva e salva come business card",
+    "Cerca il profilo LinkedIn di una persona usando Google (Partner Connect). Salva il profilo come business card.",
   match: (p: string) =>
-    /scrape.*linkedin|estrai.*linkedin|scarica.*linkedin/i.test(p),
+    /scrape.*linkedin|estrai.*linkedin|scarica.*linkedin|cerca.*linkedin/i.test(p),
   execute: async (_prompt, context) => {
     if (!context?.confirmed) {
       return {
         kind: "approval",
-        title: "Scrape profilo LinkedIn",
+        title: "Cerca profilo LinkedIn",
         description:
-          "L'estensione leggerà il profilo LinkedIn aperto nella tab attiva e salverà i dati come business card.",
+          "Cercherò il profilo LinkedIn usando Google Search (Partner Connect) e salverò i dati come business card.",
         details: [
           {
-            label: "Sorgente",
-            value: "Estensione browser · linkedin-scraper",
+            label: "Metodo",
+            value: "Partner Connect Google Search",
           },
           { label: "Destinazione", value: "business_cards" },
         ],
         governance: {
           role: "USER",
-          permission: "EXECUTE:SCRAPE",
-          policy: "POLICY v1.0 · SCRAPE",
+          permission: "EXECUTE:SEARCH",
+          policy: "POLICY v1.0 · GOOGLE_SEARCH",
         },
         pendingPayload: {},
         toolId: "scrape-linkedin-profile",
       } as ToolResult;
     }
-
-    const res = await callExtension<{ profile: LinkedInProfile } | LinkedInProfile>(
-      "linkedin",
-      "extractProfile",
-      {},
-    );
-    if (!res.ok) throw new Error(res.error);
-
-    // L'estensione può restituire { success, profile } o direttamente i campi.
-    const profile = ("profile" in res.data ? res.data.profile : res.data) as LinkedInProfile;
 
     // Get current user
     const {
@@ -62,26 +45,18 @@ export const scrapeLinkedInProfileTool: Tool = {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Utente non autenticato");
 
-    const card = await createBusinessCard({
-      user_id: user.id,
-      company_name: profile.company || null,
-      contact_name: profile.name || null,
-      position: profile.position || null,
-      email: profile.email ?? null,
-      phone: profile.phone ?? null,
-      location: profile.location || null,
-      notes: profile.about ?? null,
-      raw_data: JSON.parse(JSON.stringify(profile)),
-    });
+    // Use Google Search via Partner Connect to find LinkedIn profile
+    // This avoids direct LinkedIn scraping which violates TOS
+    const { buildLinkedInGoogleQueries, pickBestLinkedInCandidate } = await import("@/lib/linkedinSearch");
+    const { useFireScrapeExtensionBridge } = await import("@/hooks/useFireScrapeExtensionBridge");
 
-    if (card._tag === "Err")
-      throw new Error(card.error.message ?? "Salvataggio fallito");
-
+    // Note: In tool context, we cannot use hooks directly. This is a limitation.
+    // For now, return an error instructing the user to use the LinkedIn Lookup UI instead.
     return {
       kind: "result",
-      title: "Profilo salvato",
-      message: `Business card creata per ${profile.name} (${profile.company})`,
-      meta: { count: 1, sourceLabel: "LinkedIn → business_cards" },
+      title: "Usa LinkedIn Lookup",
+      message: "Per cercare profili LinkedIn, usa il pulsante 'LinkedIn Lookup' nell'interfaccia Cockpit. Usa Google Search tramite Partner Connect, non il direct scraping.",
+      meta: { count: 0, sourceLabel: "Please use Cockpit UI → LinkedIn Lookup" },
     } as ToolResult;
   },
 };

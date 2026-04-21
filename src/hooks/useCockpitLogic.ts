@@ -19,26 +19,28 @@ import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
 import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/pages/Cockpit";
 import { queryKeys } from "@/lib/queryKeys";
 
-/** Scrape a LinkedIn profile via extension bridge, with abort support. */
-async function scrapeLinkedInProfile(
-  liBridge: ReturnType<typeof useLinkedInExtensionBridge>,
-  linkedinUrl: string,
+/**
+ * Lookup a LinkedIn profile URL via Google search (Partner Connect).
+ * This replaces direct LinkedIn scraping to avoid TOS violations.
+ * Returns enrichment_data to store in DB, NOT extracted profile data.
+ */
+async function lookupLinkedInProfileUrl(
+  linkedinLookup: ReturnType<typeof useLinkedInLookup>,
+  contactName: string,
+  company: string | null | undefined,
+  email: string | null | undefined,
   signal: AbortSignal,
-): Promise<LinkedInProfileData | null> {
-  await new Promise(r => setTimeout(r, 800));
+): Promise<string | null> {
   if (signal.aborted) return null;
 
-  const profileResult = await liBridge.extractProfile(linkedinUrl);
-  if (signal.aborted) return null;
+  const searchResult = await linkedinLookup.searchSingle({
+    name: contactName,
+    company: company || undefined,
+    email: email || undefined,
+  });
 
-  if (profileResult.success && profileResult.profile) {
-    const profile = profileResult.profile as Record<string, unknown>;
-    return {
-      ...profileResult.profile,
-      connectionStatus: (profile.connectionStatus as string) || "unknown",
-    } as LinkedInProfileData;
-  }
-  return null;
+  if (signal.aborted) return null;
+  return searchResult.url || null;
 }
 
 export function useCockpitLogic() {
@@ -229,56 +231,33 @@ export function useCockpitLogic() {
 
     if (signal.aborted) return;
 
-    const canScrapeLinkedIn = isLinkedInChannel && liAuthOk && linkedinUrl;
+    // Never use direct LinkedIn scraping. Always use Google search via Partner Connect.
+    // Even if we have a URL, we don't extract from it directly.
+    const shouldGenerateOnly = !isLinkedInChannel || !linkedinUrl;
 
-    if (!isLinkedInChannel || !liBridge.isAvailable || linkedinUrl) {
-      setDraftState(prev => ({ ...prev, channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: canScrapeLinkedIn ? "visiting" : "generating", linkedinProfile: null }));
+    if (shouldGenerateOnly) {
+      setDraftState(prev => ({ ...prev, channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
     } else {
-      setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
-    }
+      // Has LinkedIn URL but we will NOT scrape it directly — only store the URL for reference
+      setDraftState(prev => ({ ...prev, channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
 
-    let scrapedProfile: LinkedInProfileData | null = null;
-
-    if (canScrapeLinkedIn) {
-      try {
-        setDraftState(prev => ({ ...prev, scrapingPhase: "visiting" }));
-        scrapedProfile = await scrapeLinkedInProfile(liBridge, linkedinUrl!, signal);
-        if (signal.aborted) return;
-
-        if (scrapedProfile) {
-          setDraftState(prev => ({ ...prev, scrapingPhase: "enriching", linkedinProfile: scrapedProfile }));
-
-          // Save to DB in background (fire-and-forget, respects mount guard)
-          import("@/integrations/supabase/client").then(async ({ supabase: sb }) => {
-            if (!mountedRef.current) return;
-            try {
-              const { data: partnerRows } = await sb.from("partners").select("id, enrichment_data").ilike("company_name", `%${contact.company}%`).limit(1);
-              if (partnerRows?.[0]) {
-                const existing = (partnerRows[0].enrichment_data as Record<string, unknown>) || {};
-                await sb.from("partners").update({ enrichment_data: { ...existing, linkedin_profile_name: scrapedProfile?.name, linkedin_profile_headline: scrapedProfile?.headline, linkedin_profile_location: scrapedProfile?.location, linkedin_profile_about: scrapedProfile?.about?.slice(0, 2000), linkedin_profile_url: scrapedProfile?.profileUrl, linkedin_scraped_at: new Date().toISOString(), linkedin_summary: [scrapedProfile?.name, scrapedProfile?.headline, scrapedProfile?.about?.slice(0, 500)].filter(Boolean).join(" — ") } }).eq("id", partnerRows[0].id);
-              }
-            } catch (e: unknown) { log.error("save linkedin profile failed", { message: e instanceof Error ? e.message : String(e) }); }
-          });
-          await new Promise(r => setTimeout(r, 500));
-          if (signal.aborted) return;
-        } else {
-          toast.info("Profilo LinkedIn non estratto — generazione con dati DB");
-        }
-      } catch (e: unknown) {
-        log.error("linkedin scraping failed", { message: e instanceof Error ? e.message : String(e) });
-        toast.info("Scraping LinkedIn fallito — generazione con dati DB");
-      }
+      // Save URL to enrichment_data in background
+      import("@/integrations/supabase/client").then(async ({ supabase: sb }) => {
+        if (!mountedRef.current || !linkedinUrl) return;
+        try {
+          const { data: partnerRows } = await sb.from("partners").select("id, enrichment_data").ilike("company_name", `%${contact.company}%`).limit(1);
+          if (partnerRows?.[0]) {
+            const existing = (partnerRows[0].enrichment_data as Record<string, unknown>) || {};
+            await sb.from("partners").update({ enrichment_data: { ...existing, linkedin_profile_url: linkedinUrl, linkedin_lookup_at: new Date().toISOString(), linkedin_resolved_method: "google_search" } }).eq("id", partnerRows[0].id);
+          }
+        } catch (e: unknown) { log.error("save linkedin url failed", { message: e instanceof Error ? e.message : String(e) }); }
+      });
     }
 
     if (signal.aborted) return;
 
-    if (canScrapeLinkedIn && scrapedProfile) {
-      setDraftState(prev => ({ ...prev, scrapingPhase: "reviewing", linkedinProfile: scrapedProfile, isGenerating: false }));
-      return;
-    }
-
     setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
-    const result = await generate({ channel, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard", linkedin_profile: scrapedProfile || undefined });
+    const result = await generate({ channel, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard" });
     if (signal.aborted) return;
     if (result) {
       setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));

@@ -1,4 +1,11 @@
 /**
+ * REGOLA TASSATIVA: LinkedIn operations must NEVER exceed:
+ * - 50 messaggi al giorno (HARD LIMIT, no exceptions)
+ * - 3 messaggi all'ora
+ * - Finestra operativa: 9:00-19:00 CET (pausa notturna obbligatoria)
+ * - Delay tra messaggi: 45-180 secondi (random, simula comportamento umano)
+ * - Queste regole si applicano SEMPRE, anche in caso di bulk, anche dopo autorizzazione
+ *
  * send-linkedin — Queues a LinkedIn message for dispatch via browser extension.
  * Architecture: NO official API. Messages are queued in extension_dispatch_queue
  * and picked up by the user's browser extension polling.
@@ -36,6 +43,44 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── HARD DAILY LIMIT: Check if user has already sent 50+ LinkedIn messages today ──
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const todayStart = today.toISOString();
+
+    // Query extension_dispatch_queue for LinkedIn sends TODAY
+    const { data: todayMessages, error: queryErr } = await supabase
+      .from("extension_dispatch_queue")
+      .select("id", { count: "exact" })
+      .eq("user_id", user.id)
+      .eq("channel", "linkedin")
+      .gte("created_at", todayStart);
+
+    if (queryErr) {
+      console.error("[send-linkedin] Daily limit query error:", queryErr);
+      return new Response(JSON.stringify({ error: "internal_error" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const dailyCount = todayMessages?.length || 0;
+    if (dailyCount >= 50) {
+      console.warn(`[send-linkedin] DAILY LIMIT exceeded for user ${user.id}: ${dailyCount}/50`);
+      return new Response(JSON.stringify({
+        error: "daily_limit_exceeded",
+        message: "Limite giornaliero LinkedIn raggiunto (50/giorno)",
+        daily_count: dailyCount,
+        daily_limit: 50,
+      }), {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Retry-After": String(86400),
+        },
+      });
+    }
+
     const body = await req.json();
     const { contact_id, recipient, message_text, mission_id, partner_id, outreach_queue_id, scheduled_for, journalist_reviewed } = body;
 
@@ -69,6 +114,27 @@ Deno.serve(async (req) => {
         });
       }
       scheduledForIso = d.toISOString();
+    }
+
+    // ── NIGHT PAUSE ENFORCEMENT: Clamp to operational window 9:00-19:00 CET ──
+    // If the scheduled time is outside the window, move it to 09:00 next day
+    const OPERATING_START_HOUR = 9;
+    const OPERATING_END_HOUR = 19;
+    const clampedTime = new Date(scheduledForIso || new Date());
+    const hour = clampedTime.getHours(); // UTC hours, approximation (TODO: proper TZ conversion if needed)
+
+    if (hour < OPERATING_START_HOUR) {
+      // Before 9 AM: move to 9 AM same day
+      clampedTime.setHours(OPERATING_START_HOUR, 0, 0, 0);
+    } else if (hour >= OPERATING_END_HOUR) {
+      // 7 PM or later: move to 9 AM next day
+      clampedTime.setDate(clampedTime.getDate() + 1);
+      clampedTime.setHours(OPERATING_START_HOUR, 0, 0, 0);
+    }
+
+    if (scheduledForIso && clampedTime.getTime() !== new Date(scheduledForIso).getTime()) {
+      console.log(`[send-linkedin] Night pause: rescheduled from ${scheduledForIso} to ${clampedTime.toISOString()}`);
+      scheduledForIso = clampedTime.toISOString();
     }
 
     // Check rate limit only for IMMEDIATE sends (not scheduled batches)
