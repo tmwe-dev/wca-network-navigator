@@ -72,6 +72,26 @@ type MemoryRow = {
   created_at: string;
 };
 
+type AppSettingRow = {
+  id: string;
+  key: string;
+  value: string | null;
+  updated_at: string;
+};
+
+type AgentPersonaRow = {
+  id: string;
+  agent_id: string;
+  tone: string | null;
+  custom_tone_prompt: string | null;
+  language: string | null;
+  style_rules: string[] | null;
+  vocabulary_do: string[] | null;
+  vocabulary_dont: string[] | null;
+  example_messages: unknown;
+  signature_template: string | null;
+};
+
 const safeFilename = (s: string) =>
   s.replace(/[^a-z0-9-_]+/gi, "_").replace(/_+/g, "_").slice(0, 80);
 
