@@ -156,7 +156,7 @@ export function PromptLabPage() {
                   value={activeTabId}
                   onChange={(v) => setActiveTabId(v as PromptLabTabId)}
                 />
-                <div className="flex-1 overflow-auto p-4 min-w-0">
+                <div className="flex-1 p-4 min-w-0 min-h-0 flex flex-col overflow-hidden">
                   {activeTabId === "system_prompt" && <SystemPromptTab />}
                   {activeTabId === "kb_doctrine" && <KBDoctrineTab />}
                   {activeTabId === "operative" && <OperativePromptsTab />}
