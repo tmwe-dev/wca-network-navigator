@@ -86,35 +86,6 @@ export function GenericRecordTab({ tabLabel, loader, saver, loaderDeps = [], emp
     [lab, state, tabLabel, tabActivation, pendingBlockId],
   );
 
-  // Variante "Migliora rapido" con ultimo briefing usato (skip dialog).
-  const onQuickImprove = useCallback(
-    async (id: string) => {
-      if (!lastBriefing) {
-        // Nessun briefing pregresso → apri dialog
-        onImprove(id);
-        return;
-      }
-      const block = state.blocks.find((b) => b.id === id);
-      if (!block) return;
-      setSaving(id);
-      try {
-        const improved = await lab.improveBlock({
-          block,
-          tabLabel,
-          tabActivation,
-          nearbyBlocks: state.blocks,
-          briefing: lastBriefing,
-        });
-        state.setImproved(id, improved);
-      } catch (e) {
-        toast.error(String(e));
-      } finally {
-        setSaving(null);
-      }
-    },
-    [lab, state, tabLabel, tabActivation, lastBriefing, onImprove],
-  );
-
   const pendingBlock = pendingBlockId ? state.blocks.find((b) => b.id === pendingBlockId) ?? null : null;
   const detectedKind = pendingBlock
     ? isVoiceBlock({
