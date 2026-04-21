@@ -335,6 +335,8 @@ export default function OraclePanel({ onGenerate, onImprove, onLoadTemplate, onI
         )}
 
         {/* === CONFIG RAPIDA — UNA RIGA === */}
+        <EnrichmentStatusBadges partnerId={recipientPartnerId} />
+
         <div className="flex items-center gap-2 px-1 py-1">
           {/* Tone icon → Select */}
           <div title={"Tono: " + (currentToneOption?.label || "Professionale")}>
