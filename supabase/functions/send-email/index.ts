@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: SendEmailBody = await req.json();
-    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id } = body;
+    const { to, subject, html, from, partner_id, agent_id, reply_to, operator_id, idempotency_key } = body;
 
     if (!to || !subject || !html) {
       return edgeError("VALIDATION_ERROR", "Missing required fields: to, subject, html");
@@ -76,6 +76,34 @@ Deno.serve(async (req) => {
     // Validate email format
     if (!EMAIL_REGEX.test(to)) {
       return edgeError("VALIDATION_ERROR", "Invalid recipient email format", to);
+    }
+
+    const userIdEarly = claimsData.claims.sub as string;
+
+    // ── LOVABLE-58: Idempotency check ─────────────────────────────────
+    // Se la stessa idempotency_key + recipient è già stata "sent",
+    // restituisce il risultato cached evitando il doppio invio.
+    if (idempotency_key) {
+      const { data: prior } = await supabase
+        .from("email_campaign_queue")
+        .select("status, message_id, error_message")
+        .eq("idempotency_key", idempotency_key)
+        .eq("recipient_email", to)
+        .in("status", ["sent", "failed"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prior?.status === "sent") {
+        console.log(`[send-email] Idempotent hit for key=${idempotency_key} → cached`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            cached: true,
+            message_id: prior.message_id ?? null,
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // ── HARD GUARD: blocca invio a email bounced/invalid ─────────────────
