@@ -312,6 +312,12 @@ export function useGlobalPromptImprover(
           await appendProposal(runId, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
         }
       }
+      // Piccola pausa tra blocchi per evitare di saturare il pool isolate
+      // di Supabase Edge Functions (cause principale di FunctionsFetchError
+      // quando si lanciano 40+ chiamate sequenziali a unified-assistant).
+      if (i < initial.length - 1) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
     }
 
     // ── Marca run come "review" ──
