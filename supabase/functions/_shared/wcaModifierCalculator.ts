@@ -6,7 +6,7 @@
  */
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import type { PartnerData, WCAModifierDetails, WCAModifierBonus } from "./qualityTypes";
+import type { PartnerData, WCAModifierDetails, WCAModifierBonus } from "./qualityTypes.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 

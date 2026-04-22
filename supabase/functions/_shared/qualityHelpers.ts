@@ -3,7 +3,7 @@
  * LOVABLE-93: Partner Quality Score engine helper functions
  */
 
-import type { DetailScore } from "./partnerQualityScore";
+import type { DetailScore } from "./partnerQualityScore.ts";
 
 /** Extracts a value from enrichment_data with type-safe access. */
 export function extractFromEnrichment<T>(

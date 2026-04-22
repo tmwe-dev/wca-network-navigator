@@ -20,7 +20,7 @@ export type {
   PartnerData,
   WCAModifierBonus,
   WCAModifierDetails,
-} from "./qualityTypes";
+} from "./qualityTypes.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // CALCULATION ORCHESTRATION
@@ -49,8 +49,8 @@ export {
   calculateBusinessSolidity,
   calculateServicesCapacity,
   calculateDeepIntelligence,
-} from "./dimensionCalculators";
+} from "./dimensionCalculators.ts";
 
-export { calculateDataCompleteness } from "./dataCompletenessCalculator";
+export { calculateDataCompleteness } from "./dataCompletenessCalculator.ts";
 
-export { calculateWCAModifier } from "./wcaModifierCalculator";
+export { calculateWCAModifier } from "./wcaModifierCalculator.ts";

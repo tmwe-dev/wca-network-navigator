@@ -6,7 +6,7 @@
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { calculatePartnerQuality } from "./qualityOrchestrator.ts";
-import type { PartnerQualityResult } from "./qualityTypes";
+import type { PartnerQualityResult } from "./qualityTypes.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
