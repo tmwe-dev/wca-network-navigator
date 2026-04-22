@@ -47,7 +47,7 @@ interface OraclePanelProps {
   hasBody: boolean;
   recipientPartnerId?: string | null;
   recipientCount?: number;
-  contextSummary?: any | null;
+  contextSummary?: Record<string, unknown> | null;
 }
 
 export default function OraclePanel({
