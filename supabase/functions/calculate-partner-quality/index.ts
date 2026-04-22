@@ -47,14 +47,10 @@ Deno.serve(async (req) => {
 
     // Single partner calculation
     if (partnerId) {
-      console.log(`[LOVABLE-93] Calculating quality score for partner: ${partnerId}`);
 
       const result = await calculatePartnerQuality(supabase, partnerId);
       await savePartnerQuality(supabase, partnerId, result);
 
-      console.log(
-        `[LOVABLE-93] Quality score calculated: ${result.stars}★ (${result.totalScore}/100)`,
-      );
 
       return new Response(
         JSON.stringify({
@@ -72,7 +68,6 @@ Deno.serve(async (req) => {
 
     // Batch calculation
     if (batch && Array.isArray(batch)) {
-      console.log(`[LOVABLE-93] Starting batch quality score calculation for ${batch.length} partners`);
 
       const results: Record<
         string,
@@ -97,7 +92,6 @@ Deno.serve(async (req) => {
           };
           successCount++;
         } catch (err) {
-          console.error(`[LOVABLE-93] Failed to calculate quality for ${pId}:`, err);
           results[pId] = {
             stars: 1,
             totalScore: 0,
@@ -107,9 +101,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(
-        `[LOVABLE-93] Batch completed: ${successCount} success, ${failureCount} failed`,
-      );
 
       return new Response(
         JSON.stringify({
@@ -128,7 +119,6 @@ Deno.serve(async (req) => {
       { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("[LOVABLE-93] Error in calculate-partner-quality:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",

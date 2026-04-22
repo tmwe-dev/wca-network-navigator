@@ -96,11 +96,9 @@ async function autoSaveToolMemory(
         })
         .then(() => {})
         .catch((e: unknown) =>
-          console.warn("non-critical failure", extractErrorMessage(e))
         );
     }
   } catch (e) {
-    console.warn("Auto-save memory failed:", extractErrorMessage(e));
   }
 }
 
@@ -185,9 +183,6 @@ export async function executeToolLoop(
     if (currentSignature === lastToolSignature) {
       repeatedToolCount++;
       if (detectStuckToolLoop(currentSignature, lastToolSignature, repeatedToolCount)) {
-        console.warn(
-          `[AI] Tool loop stuck: same call repeated ${repeatedToolCount + 1}x, breaking`
-        );
         break;
       }
     } else {
@@ -202,16 +197,11 @@ export async function executeToolLoop(
       id: string;
       function: { name: string; arguments: string };
     }>) {
-      console.log(`Tool: ${tc.function.name}`, tc.function.arguments);
       let args: Record<string, unknown>;
       try {
         args = JSON.parse(tc.function.arguments || "{}");
       } catch (parseErr: unknown) {
         const errMsg = extractErrorMessage(parseErr);
-        console.error(
-          `[ai-assistant] tool args parse failed for ${tc.function.name}:`,
-          errMsg
-        );
         toolResults.push({
           role: "tool",
           tool_call_id: tc.id,
@@ -234,9 +224,6 @@ export async function executeToolLoop(
         userId,
         authHeader
       );
-      console.log(
-        `Result ${tc.function.name}:`,
-        JSON.stringify(toolResult).substring(0, 500)
       );
       toolResults.push({
         role: "tool",

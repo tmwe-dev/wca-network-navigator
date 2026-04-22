@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       { onConflict: 'key' }
     )
 
-    console.log(`save-ra-cookie: saved (${cookie.length} chars), auth: ${auth.authMethod}`)
+    
 
     return new Response(JSON.stringify({
       success: true,

@@ -299,14 +299,10 @@ serve(async (req) => {
     // Convert array mapping to dict
     let columnMappingDict = arrayMappingToDict(result.column_mapping);
 
-    console.log("[analyze-import-structure] AI returned column_mapping entries:", Array.isArray(result.column_mapping) ? result.column_mapping.length : "not-array");
-    console.log("[analyze-import-structure] Converted dict keys:", Object.keys(columnMappingDict));
 
     // Fallback: if dict is empty but parsed_rows has data, derive mapping
     if (Object.keys(columnMappingDict).length === 0 && result.parsed_rows?.length > 0 && !isPaste) {
-      console.log("[analyze-import-structure] column_mapping empty, deriving from parsed_rows...");
       columnMappingDict = deriveMappingFromParsedRows(sample_rows || [], result.parsed_rows);
-      console.log("[analyze-import-structure] Derived mapping keys:", Object.keys(columnMappingDict));
     }
 
     const finalResult = {
@@ -317,14 +313,11 @@ serve(async (req) => {
       unmapped_columns: result.unmapped_columns || [],
     };
 
-    console.log("[analyze-import-structure] Final mapping:", JSON.stringify(finalResult.column_mapping));
-    console.log("[analyze-import-structure] confidence:", finalResult.confidence);
 
     return new Response(JSON.stringify(finalResult), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("analyze-import-structure error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }

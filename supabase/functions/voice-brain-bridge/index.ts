@@ -104,7 +104,6 @@ async function validateBridgeToken(
 
     return data.created_by as string;
   } catch (e) {
-    console.warn("bridge token validation failed:", (e as Error).message);
     return null;
   }
 }
@@ -280,7 +279,6 @@ serve(async (req) => {
     .maybeSingle();
 
   if (pauseSettings?.value === "true") {
-    console.log(`[voice-brain-bridge] AI automations paused for user ${resolvedUserId}`);
     return new Response(JSON.stringify({ error: "AI automations are paused" }), {
       status: 503,
       headers: { ...dynCors, "Content-Type": "application/json" },
@@ -324,7 +322,6 @@ serve(async (req) => {
       }
     }
   } catch (e) {
-    console.warn("voice_call_sessions upsert failed:", (e as Error).message);
   }
 
   // Build prompt
@@ -382,7 +379,6 @@ serve(async (req) => {
   } catch (e) {
     // Fallback: direct aiChat (resilience for 5xx / timeouts on unified-assistant)
     routedTo = "voice-brain-bridge→aiChat-fallback";
-    console.warn("unified-assistant proxy failed, falling back to aiChat:", (e as Error).message);
     try {
       const result = await aiChat({
         models: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
@@ -401,11 +397,9 @@ serve(async (req) => {
     } catch (e2) {
       aiStatus = "error";
       if (e2 instanceof AiGatewayError) {
-        console.error("aiChat fallback failed:", e2.message, e2.kind);
         aiErrorMessage = `${e2.kind}: ${e2.message}`;
         if (e2.kind === "timeout") aiStatus = "timeout";
       } else {
-        console.error("aiChat fallback unknown error:", (e2 as Error).message);
         aiErrorMessage = (e2 as Error).message;
       }
     }
@@ -459,7 +453,6 @@ serve(async (req) => {
       });
     }
   } catch (e) {
-    console.warn("voice post-actions failed:", (e as Error).message);
   }
 
   const totalLatency = Date.now() - t0;

@@ -42,7 +42,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[country-kb-generator] AI automations paused for user ${userId}`);
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
         status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
       });
@@ -150,18 +149,15 @@ Rispondi SOLO con un JSON valido con questa struttura:
         stats.generated++;
         stats.countries.push(code.toUpperCase());
       } catch (err: unknown) {
-        console.warn(`[country-kb-generator] Failed for ${code}:`, err instanceof Error ? err.message : String(err));
         stats.failed++;
       }
     }
 
-    console.log("[country-kb-generator] Stats:", JSON.stringify(stats));
 
     return new Response(JSON.stringify({ success: true, ...stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("country-kb-generator error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

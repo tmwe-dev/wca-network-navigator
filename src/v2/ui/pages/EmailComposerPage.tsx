@@ -14,6 +14,7 @@ import { EmailRecipientFields } from "@/components/email/EmailRecipientFields";
 import { EmailAIPanel } from "@/components/email/EmailAIPanel";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
 import { RecipientSnapshotHeader } from "@/components/email/RecipientSnapshotHeader";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function EmailComposerPage() {
   const c = useEmailComposerState();
@@ -119,10 +120,12 @@ export function EmailComposerPage() {
                       <Bookmark className="w-3.5 h-3.5" /> Salva template
                     </Button>
                   )}
-                  <Button size="sm" onClick={c.handleEnqueue} disabled={queue.sending || c.processing || c.recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
-                    {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    {queue.sending ? "Preparazione..." : `Invia a ${c.recipientsWithEmail.length} destinatari`}
-                  </Button>
+                  <PermissionGate permission="email.send" fallback={<div className="text-xs text-muted-foreground">Non hai il permesso per inviare email</div>}>
+                    <Button size="sm" onClick={c.handleEnqueue} disabled={queue.sending || c.processing || c.recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
+                      {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      {queue.sending ? "Preparazione..." : `Invia a ${c.recipientsWithEmail.length} destinatari`}
+                    </Button>
+                  </PermissionGate>
                 </div>
               )}
             </div>

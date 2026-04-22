@@ -1,0 +1,88 @@
+/**
+ * usePlanCompletion — Render completed execution plans with results and commentary
+ */
+import { useCallback } from "react";
+import { toast } from "sonner";
+import type { Message, CanvasType, FlowPhase } from "../constants";
+import type { ToolResult } from "../tools/types";
+import type { PlanExecutionState } from "../planRunner";
+import { TOOLS } from "../tools/registry";
+
+/** Map a ToolResult kind to the corresponding canvas type */
+function canvasForResult(result: ToolResult): CanvasType {
+  switch (result.kind) {
+    case "table":      return "live-table";
+    case "card-grid":  return "live-card-grid";
+    case "timeline":   return "live-timeline";
+    case "flow":       return "live-flow";
+    case "composer":   return "live-composer";
+    case "report":     return "live-report";
+    case "approval":   return "live-approval";
+    case "result":     return "live-result";
+  }
+}
+
+interface PlanCompletionDeps {
+  addMessage: (msg: Omit<Message, "id">) => void;
+  ts: () => string;
+  setFlowPhase: (p: FlowPhase) => void;
+  setExecProgress: (v: number) => void;
+  setLiveResult: (v: ToolResult | null) => void;
+  setCanvas: (c: CanvasType | null) => void;
+  setShowTools: (v: boolean) => void;
+}
+
+export function usePlanCompletion(deps: PlanCompletionDeps) {
+  const {
+    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+  } = deps;
+
+  /** Render an executed plan: messages + canvas + AI comment */
+  const renderPlanCompletion = useCallback(
+    async (
+      userPrompt: string,
+      final: PlanExecutionState,
+      onCommentNeeded: (userPrompt: string, toolId: string, result: ToolResult) => Promise<void>,
+    ) => {
+      // Step-by-step recap messages
+      for (const step of final.steps) {
+        const r = final.results[step.stepNumber];
+        const tool = TOOLS.find((t) => t.id === step.toolId);
+        const countLabel = r?.meta && "count" in r.meta ? ` · ${r.meta.count}` : "";
+        addMessage({
+          role: "assistant",
+          content: `🔧 Step ${step.stepNumber}/${final.steps.length} · ${tool?.label ?? step.toolId}${countLabel}`,
+          agentName: "Automation",
+          timestamp: ts(),
+        });
+      }
+
+      const lastStep = final.steps[final.steps.length - 1];
+      const lastResult = final.results[lastStep.stepNumber];
+      if (lastResult) {
+        setLiveResult(lastResult);
+        setCanvas(canvasForResult(lastResult));
+      }
+
+      setFlowPhase("done");
+      setExecProgress(100);
+      setShowTools(false);
+
+      if (lastResult && lastResult.kind !== "approval") {
+        await onCommentNeeded(userPrompt, lastStep.toolId, lastResult);
+      } else {
+        addMessage({
+          role: "assistant",
+          content: `✅ Piano completato: ${final.summary}`,
+          agentName: "Orchestratore",
+          timestamp: ts(),
+          meta: `${final.steps.length} step · plan-execution`,
+        });
+      }
+      toast.success("Piano completato");
+    },
+    [addMessage, setCanvas, setExecProgress, setFlowPhase, setLiveResult, setShowTools, ts],
+  );
+
+  return { renderPlanCompletion, canvasForResult };
+}

@@ -41,7 +41,6 @@ async function generateEmbeddingsForRows(
     }
     return count;
   } catch (e: unknown) {
-    console.warn("generateEmbeddingsForRows failed:", e instanceof Error ? e.message : String(e));
     return 0;
   }
 }
@@ -130,14 +129,6 @@ serve(async (req) => {
             });
             if (conflicts && conflicts.length > 0) {
               stats.conflicts_detected += conflicts.length;
-              console.warn("[memory-promoter] L3 conflict detected:", {
-                newMemoryId: mem.id,
-                conflictingL3: (conflicts as Array<{ id: string; similarity: number; content: string }>).map((r) => ({
-                  id: r.id,
-                  similarity: r.similarity,
-                  content: r.content.slice(0, 100),
-                })),
-              });
               // Create conflict alert as L1 memory
               await supabase.from("ai_memory").insert({
                 user_id: mem.user_id,
@@ -151,7 +142,6 @@ serve(async (req) => {
               });
             }
           } catch (conflictErr: unknown) {
-            console.warn("[memory-promoter] Conflict check failed for", mem.id, ":", conflictErr instanceof Error ? conflictErr.message : String(conflictErr));
           }
         }
 
@@ -276,7 +266,6 @@ serve(async (req) => {
               }
             }
           } catch (consolErr: unknown) {
-            console.warn("[memory-promoter] Consolidation check failed:", consolErr instanceof Error ? consolErr.message : String(consolErr));
           }
         }
       }
@@ -335,16 +324,13 @@ serve(async (req) => {
         }
       }
     } catch (threshErr: unknown) {
-      console.warn("[memory-promoter] Adaptive threshold failed:", threshErr instanceof Error ? threshErr.message : String(threshErr));
     }
 
-    console.log("[memory-promoter] Stats:", JSON.stringify({ ...stats, threshold_updates: thresholdUpdates }));
 
     return new Response(JSON.stringify({ success: true, stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("memory-promoter error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }

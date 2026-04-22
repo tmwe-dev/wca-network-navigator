@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     }
 
     if (scheduledForIso && clampedTime.getTime() !== new Date(scheduledForIso).getTime()) {
-      console.log(`[send-linkedin] Night pause: rescheduled from ${scheduledForIso} to ${clampedTime.toISOString()}`);
+      
       scheduledForIso = clampedTime.toISOString();
     }
 
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[send-linkedin] Queued ${queued.id} for ${recipient}${scheduledForIso ? ` scheduled ${scheduledForIso}` : ""}`);
+    
 
     return new Response(JSON.stringify({
       success: true,

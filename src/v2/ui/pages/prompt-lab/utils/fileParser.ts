@@ -126,7 +126,7 @@ function getExtension(filename: string): string {
  * @example
  * const file = new File(["Hello world"], "test.txt", { type: "text/plain" });
  * const result = await parseUploadedFile(file);
- * console.log(result.content); // "Hello world"
+ * // result.content would be "Hello world"
  */
 export async function parseUploadedFile(file: File): Promise<ParsedFile> {
   const extension = getExtension(file.name);

@@ -96,7 +96,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[pending-action-executor] AI automations paused for user ${typedAction.user_id}`);
       endMetrics(metrics, false, 200);
       return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), { status: 200, headers });
     }

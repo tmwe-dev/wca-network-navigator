@@ -48,7 +48,6 @@ Deno.serve(async (req) => {
       supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
       supabase = supabaseAdmin;
       userId = syncUserId;
-      console.log(`[check-inbox] Worker mode for user ${userId}`);
     } else {
       supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
       supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -67,7 +66,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[check-inbox] AI automations paused for user ${userId}`);
       return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
         headers: dynCors,
         status: 200,
@@ -104,15 +102,12 @@ Deno.serve(async (req) => {
     const batch = await fetchUidBatch(imapExec, lastUid);
     const { uids, remaining: remainingCount, hasMore } = batch;
 
-    if (uids.length > 0) console.log(`[check-inbox] Selected UID ${uids[0]} for this run (${remainingCount} remaining)`);
-    else console.log("[check-inbox] No new UIDs");
 
     const messages: Record<string, unknown>[] = [];
     let maxUid = lastUid;
 
     // ── Process each UID ──
     for (const uid of uids) {
-      console.log(`[check-inbox] Processing UID ${uid}`);
 
       // Skip if already in DB
       if (await skipDuplicateUid(supabase, userId, uid)) {
@@ -153,10 +148,8 @@ Deno.serve(async (req) => {
           const match = (msgData as Record<string, unknown>).match as { partnerId?: string } | null;
           await matchResponseActivity(supabase, msgData.id as string, inReplyTo, threadId, match);
         } catch (matchErr: unknown) {
-          console.warn("[check-inbox] Response matching failed (non-blocking):", matchErr instanceof Error ? matchErr.message : String(matchErr));
         }
       } else if (error) {
-        console.error(`[check-inbox] Error processing UID ${uid}:`, error);
         if (uid > maxUid) {
           maxUid = uid;
           await updateSyncState(supabase, userId, uid);
@@ -183,7 +176,6 @@ Deno.serve(async (req) => {
   } catch (err: unknown) {
     logEdgeError("check-inbox", err);
     endMetrics(metrics, false, 500);
-    console.error("[check-inbox] Error:", extractErrorMessage(err));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(err), undefined, dynCors);
   }
 });

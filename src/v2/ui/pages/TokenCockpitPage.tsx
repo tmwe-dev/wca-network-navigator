@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatTokenCount } from "@/data/tokenUsage";
 import { Card } from "@/components/ui/card";
 import { BarChart3, Activity, TrendingUp } from "lucide-react";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 function StatCard({
   icon: Icon,
@@ -149,21 +150,31 @@ function TokenCockpitContent() {
 
 export function TokenCockpitPage() {
   return (
-    <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
-      <ScrollArea className="h-full">
-        <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">Cockpit Token</h1>
-            <p className="text-muted-foreground">
-              Monitora l'utilizzo dei token e il consumo del budget AI in tempo reale
-            </p>
+    <PermissionGate permission="analytics.view" fallback={
+      <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+        <ScrollArea className="h-full">
+          <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+            <p className="text-muted-foreground">Non hai il permesso per visualizzare il cockpit dei token.</p>
           </div>
+        </ScrollArea>
+      </div>
+    }>
+      <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+        <ScrollArea className="h-full">
+          <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">Cockpit Token</h1>
+              <p className="text-muted-foreground">
+                Monitora l'utilizzo dei token e il consumo del budget AI in tempo reale
+              </p>
+            </div>
 
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <TokenCockpitContent />
-          </Suspense>
-        </div>
-      </ScrollArea>
-    </div>
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <TokenCockpitContent />
+            </Suspense>
+          </div>
+        </ScrollArea>
+      </div>
+    </PermissionGate>
   );
 }

@@ -37,7 +37,6 @@ export async function executeChatMode(
   if (processedMessages.length > 8) {
     try {
       const compressed = await compressMessages(supabase, processedMessages, LOVABLE_API_KEY || "", userId);
-      console.log(`[chat-mode] Compressed ${processedMessages.length} → ${compressed.length} messages`);
       processedMessages = compressed;
     } catch (compressErr) {
       console.warn("[chat-mode] Compression failed, using original:", compressErr);
@@ -100,10 +99,8 @@ export async function executeChatMode(
     iterations++;
     const toolResults = [];
     for (const tc of msg.tool_calls) {
-      console.log(`[Agent ${agentName}] Tool: ${tc.function.name}`);
       const args = JSON.parse(tc.function.arguments || "{}");
       const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id: agentId });
-      console.log(`[Agent ${agentName}] Result:`, JSON.stringify(toolResult).substring(0, 300));
       toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
     }
     allMessages.push(msg);

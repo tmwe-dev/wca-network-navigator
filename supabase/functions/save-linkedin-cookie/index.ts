@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString()
 
     // FIX G4 — no length/content logging
-    console.log(`save-linkedin-cookie: cookie received and encrypted, auth: ${auth.authMethod}`)
+    
 
     // FIX G1 — encrypt cookie before persisting
     const encryptedCookie = await encryptValue(cookie)

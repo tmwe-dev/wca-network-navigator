@@ -307,9 +307,7 @@ export async function assembleSystemPrompt(
   if (assembledContext) systemPrompt += assembledContext;
 
   if (budgetStats.dropped.length > 0 || budgetStats.truncated.length > 0) {
-    console.log(
-      `[TOKEN-BUDGET] model=${provider.model} budget=${contextBudget} base=${basePromptTokens} available=${availableBudget} used=${budgetStats.totalTokens} included=${budgetStats.included.join(",")} truncated=${budgetStats.truncated.join(",")} dropped=${budgetStats.dropped.join(",")}`
-    );
+    
   }
 
   // Inject page context

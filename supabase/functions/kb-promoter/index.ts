@@ -74,13 +74,11 @@ serve(async (req) => {
       stats.deactivated = ids.length;
     }
 
-    console.log("[kb-promoter] Stats:", JSON.stringify(stats));
 
     return new Response(JSON.stringify({ success: true, stats }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
-    console.error("kb-promoter error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },

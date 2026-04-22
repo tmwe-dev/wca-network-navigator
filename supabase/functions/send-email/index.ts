@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
       if (prior?.status === "sent") {
-        console.log(`[send-email] Idempotent hit for key=${idempotency_key} → cached`);
+        
         return new Response(
           JSON.stringify({
             success: true,
@@ -439,7 +439,7 @@ Deno.serve(async (req) => {
       messageIdExternal,
       threadId,
     });
-    console.log("[send-email] postSendPipeline:", JSON.stringify(pipelineResult));
+    
 
     // Persist idempotency success record
     if (idempotency_key) {

@@ -11,7 +11,7 @@
  *     models: ["google/gemini-2.5-flash"],
  *     messages: [{ role: "user", content: "ciao" }],
  *   });
- *   console.log(r.content, r.usage);
+ *   // r.content and r.usage contain the response
  */
 
 import { PROVIDER_CONFIG, MODEL_MAP, ALLOWED_MODELS, type ProviderKey } from "./aiGatewayConfig.ts";

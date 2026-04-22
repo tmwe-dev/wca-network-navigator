@@ -184,9 +184,7 @@ ${toolDescriptions}`;
         provider.isUserKey
       );
     }
-    console.log(
-      `[plan-execution] Plan generated: ${parsed.steps?.length ?? 0} steps — ${parsed.summary}`
-    );
+    
     return new Response(
       JSON.stringify({
         steps: Array.isArray(parsed.steps) ? parsed.steps : [],

@@ -45,13 +45,10 @@ export async function applyEmailRules(
     });
 
     if (!ruleResp.ok) {
-      console.warn("[check-inbox] apply-email-rules failed:", ruleResp.status);
     } else {
       const ruleResult = await ruleResp.json();
-      console.log("[check-inbox] apply-email-rules:", ruleResult);
     }
   } catch (rulesErr: unknown) {
-    console.warn("[check-inbox] apply-email-rules error (non-blocking):", extractErrorMessage(rulesErr));
   }
 }
 
@@ -93,13 +90,10 @@ export async function classifyInboundEmails(
         },
         body: JSON.stringify(classifyPayload),
       }).catch((err) => {
-        console.warn(`[check-inbox] Failed to fire classify request for msg ${msg.id}:`, extractErrorMessage(err));
       });
     }
 
-    console.log(`[check-inbox] Fired ${toClassify.length} classification requests (fire-and-forget)`);
   } catch (classErr: unknown) {
-    console.warn("[check-inbox] classify-email-response fire error (non-blocking):", extractErrorMessage(classErr));
   }
 }
 

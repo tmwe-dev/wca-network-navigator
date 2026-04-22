@@ -52,13 +52,11 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
       client = new ImapClient(config);
       await client.connect();
       await client.authenticate();
-      console.log(`[check-inbox] Authenticated OK (attempt ${attempt})`);
       return client;
     } catch (connErr: unknown) {
       if (attempt === 2) {
         throw new Error(`IMAP connection failed after 2 attempts: ${extractErrorMessage(connErr)}`);
       }
-      console.warn(`[check-inbox] Connection attempt ${attempt} failed: ${extractErrorMessage(connErr)}, retrying...`);
       await new Promise(r => setTimeout(r, 2000));
     }
   }
@@ -72,7 +70,6 @@ export async function selectInbox(client: ImapClient): Promise<{
 }> {
   const inbox = await client.selectMailbox("INBOX");
   const uidvalidity = (inbox as Record<string, unknown>).uidValidity as number | null || null;
-  console.log(`[check-inbox] INBOX: ${inbox.exists} msgs, UIDVALIDITY: ${uidvalidity}`);
   return { exists: inbox.exists, uidvalidity };
 }
 
@@ -84,7 +81,6 @@ export async function handleUidvalidityChange(
 ): Promise<number> {
   // UIDVALIDITY change detection
   if (storedUidvalidity && uidvalidity && storedUidvalidity !== uidvalidity) {
-    console.warn(`[check-inbox] UIDVALIDITY changed: ${storedUidvalidity} → ${uidvalidity}. Resetting sync.`);
     await supabase
       .from("email_sync_state")
       .update({ last_uid: 0, stored_uidvalidity: uidvalidity })
@@ -112,7 +108,6 @@ export async function fetchUidBatch(
       hasMore: nextBatch.hasMore,
     };
   } catch (searchErr: unknown) {
-    console.error("[check-inbox] UID lookup error:", extractErrorMessage(searchErr));
     return { uids: [], remainingCount: 0, hasMore: false };
   }
 }
@@ -153,7 +148,6 @@ export async function skipDuplicateUid(
       .maybeSingle();
     const dbMaxUid = (maxRow?.imap_uid as number | undefined) ?? uid;
     const jumpTo = Math.max(dbMaxUid, uid);
-    console.log(`[check-inbox] UID ${uid}: already in DB — fast-forward cursor to ${jumpTo} (DB max=${dbMaxUid})`);
     await updateSyncState(supabase, userId, jumpTo);
     return true;
   }

@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
-
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -77,7 +76,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${allCards.length} cards in external DB`);
+    
 
     // Get existing cards to avoid duplicates (match by external_id stored in raw_data)
     const { data: existingCards } = await localSb
@@ -166,7 +165,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Upserted ${upserted}, skipped ${skipped} cards`);
+    
 
     return new Response(
       JSON.stringify({ success: true, upserted, skipped, total: allCards.length }),

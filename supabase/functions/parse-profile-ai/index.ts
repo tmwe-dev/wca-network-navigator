@@ -82,7 +82,7 @@ REGOLE IMPORTANTI:
 PAGINA PROFILO:
 ${truncated}`
 
-    console.log(`AI parsing profile for partner ${partnerId} (${partner.company_name})...`)
+    
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -198,7 +198,7 @@ ${truncated}`
     }
 
     const extracted = JSON.parse(toolCall.function.arguments)
-    console.log(`AI extracted for ${partner.company_name}: ${extracted.contacts?.length || 0} contacts`)
+    
 
     // Update partner with AI-extracted data (only fill gaps, don't overwrite existing good data)
     const updates: Record<string, unknown> = { ai_parsed_at: new Date().toISOString() }

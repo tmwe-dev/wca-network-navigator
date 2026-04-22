@@ -48,12 +48,9 @@ export function selectActiveTools(
   try {
     const scopeConfig = getScopeConfig(scope);
     const scopeTools = scopeConfig.tools as Record<string, unknown>[];
-    console.log(`[AI] Scope "${scope}" → ${scopeTools.length} tools`);
     return scopeTools;
   } catch {
-    console.log(
-      `[AI] Scope "${scope}" not in scopeConfigs, using all ${allTools.length} tools`
-    );
+    
     return allTools;
   }
 }
@@ -168,9 +165,7 @@ export async function callAiWithFallback(
     : undefined;
 
   for (const tryModel of fallbackModels) {
-    console.log(
-      `[AI] Trying model: ${tryModel}${isConversational ? " (conversational)" : ""}`
-    );
+    
 
     const result = await makeAiCall(provider, {
       model: tryModel,
@@ -180,7 +175,6 @@ export async function callAiWithFallback(
 
     if (result.ok && result.data) {
       if (tryModel !== provider.model) {
-        console.log(`[AI] Fallback model ${tryModel} succeeded`);
       }
       return { ok: true, data: result.data };
     }

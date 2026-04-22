@@ -97,9 +97,9 @@ export function DesignSystemPreviewPage() {
             { label: "Canale", value: "Email" },
           ]}
           governance={{ role: "ADMIN", permission: "SEND_BATCH", policy: "approval_required" }}
-          onApprove={() => console.log("approved")}
-          onModify={() => console.log("modify")}
-          onCancel={() => console.log("cancel")}
+          onApprove={() => {}}
+          onModify={() => {}}
+          onCancel={() => {}}
         />
       </section>
 

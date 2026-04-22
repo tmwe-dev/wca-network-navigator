@@ -89,7 +89,6 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (!freshJob || freshJob.status !== "running") {
-          console.log(`[sync-worker] Job ${job.id} no longer running, stopping`);
           break;
         }
 
@@ -153,7 +152,6 @@ Deno.serve(async (req: Request) => {
               })
               .eq("id", job.id);
 
-            console.log(`[sync-worker] Job ${job.id} completed: ${totalDownloaded} downloaded, ${totalSkipped} skipped`);
             break;
           }
 

@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     if (cached) {
       const age = Date.now() - new Date(cached.scraped_at).getTime();
       if (age < CACHE_TTL_DAYS * 86_400_000) {
-        console.log(JSON.stringify({ fn: "scrape-website", cache: "hit", url }));
+        
         return new Response(JSON.stringify({ ...cached.payload, fromCache: true }), { headers });
       }
     }
@@ -243,12 +243,7 @@ Deno.serve(async (req) => {
       .from("scrape_cache")
       .upsert({ url, mode, payload, scraped_at: new Date().toISOString() }, { onConflict: "url" });
 
-    console.log(JSON.stringify({
-      fn: "scrape-website", url, mode,
-      emails: emails.length, phones: phones.length,
-      headings: headings.length, htmlLen: html.length,
-      durationMs: payload.durationMs,
-    }));
+    
 
     return new Response(JSON.stringify(payload), { headers });
   } catch (e: unknown) {

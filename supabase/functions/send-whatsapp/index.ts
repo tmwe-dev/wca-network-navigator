@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[send-whatsapp] Queued ${queued.id} for ${recipient}`);
+    
 
     if (partner_id) {
       await supabase.from("activities").insert({

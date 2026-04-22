@@ -91,7 +91,6 @@ export async function processMessage(
         const sizeMatch = line.match(/RFC822\.SIZE\s+(\d+)/i);
         if (sizeMatch) rfc822Size = parseInt(sizeMatch[1], 10);
       }
-      console.log(`[check-inbox] UID ${uid}: RFC822.SIZE=${rfc822Size}`);
 
       if (rfc822Size > 0 && rfc822Size <= MAX_RAW_FETCH_BYTES) {
         const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
@@ -101,7 +100,6 @@ export async function processMessage(
           rawHash = await sha256hex(rawBytes);
           const { data: existing } = await supabase.from("channel_messages").select("id").eq("raw_sha256", rawHash).eq("user_id", userId).maybeSingle();
           if (existing) {
-            console.log(`[check-inbox] UID ${uid}: duplicate by SHA-256, skipping`);
             return { msgData: null, error: "duplicate_by_hash" };
           }
           rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
@@ -113,7 +111,7 @@ export async function processMessage(
         }
       } else if (rfc822Size > MAX_RAW_FETCH_BYTES) {
         parseWarnings.push(`raw too large (${rfc822Size}B > ${MAX_RAW_FETCH_BYTES}B), skipping raw fetch to stay within CPU limits`);
-        console.log(`[check-inbox] UID ${uid}: skipping raw fetch (${rfc822Size}B too large for CPU budget)`);
+        
       } else {
         try {
           const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
@@ -126,7 +124,6 @@ export async function processMessage(
             rawHash = await sha256hex(rawBytes);
             const { data: existing } = await supabase.from("channel_messages").select("id").eq("raw_sha256", rawHash).eq("user_id", userId).maybeSingle();
             if (existing) {
-              console.log(`[check-inbox] UID ${uid}: duplicate by SHA-256, skipping`);
               return { msgData: null, error: "duplicate_by_hash" };
             }
             rawStoragePath = `raw-emails/${userId}/${uid}.eml`;
@@ -142,7 +139,6 @@ export async function processMessage(
       }
     } catch (rawErr: unknown) {
       parseWarnings.push(`metadata fetch failed: ${extractErrorMessage(rawErr)}`);
-      console.warn(`[check-inbox] UID ${uid}: metadata fetch error:`, extractErrorMessage(rawErr));
     }
 
     const oversized = rfc822Size > MAX_RAW_FETCH_BYTES;
@@ -182,7 +178,6 @@ export async function processMessage(
       }
     } catch (envErr: unknown) {
       parseWarnings.push(`envelope error: ${extractErrorMessage(envErr)}`);
-      console.warn(`[check-inbox] Envelope error UID ${uid}:`, extractErrorMessage(envErr));
     }
 
     /* ─── Phase 2b: Fallback to raw headers ─── */
@@ -221,7 +216,6 @@ export async function processMessage(
         .eq("user_id", userId)
         .maybeSingle();
       if (existingByMid) {
-        console.log(`[check-inbox] UID ${uid}: duplicate by Message-ID, skipping`);
         return { msgData: null, error: "duplicate_by_message_id" };
       }
     }
@@ -258,9 +252,7 @@ export async function processMessage(
       }
     }
 
-    console.log(
-      `[check-inbox] UID ${uid}: from=${fromAddr}, text=${bodyText.length}c, html=${bodyHtml.length}c, att=${attachmentRecords.length}, raw=${rawBytes.length}B`
-    );
+    
 
     /* ─── Phase 5: Match sender ─── */
     const match = await matchSender(supabase, fromAddr, userId);
@@ -269,7 +261,6 @@ export async function processMessage(
     const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", userId).maybeSingle();
     const operatorId = opRow?.id ?? null;
     if (!operatorId) {
-      console.warn(`[check-inbox] UID ${uid}: no operator found for user ${userId}, skipping insert`);
       return { msgData: null, error: "no_operator" };
     }
 
@@ -304,7 +295,6 @@ export async function processMessage(
     });
 
     if (result.error) {
-      console.error(`[check-inbox] Save error UID ${uid}:`, result.error);
       return { msgData: null, error: result.error };
     }
 
@@ -316,7 +306,6 @@ export async function processMessage(
           await handleBounce(supabase, userId, result.msgData.id as string, bounceInfo);
         }
       } catch (bounceErr) {
-        console.warn(`[check-inbox] Bounce detection error UID ${uid}:`, bounceErr);
       }
 
       return { msgData: result.msgData, error: null };
@@ -325,7 +314,6 @@ export async function processMessage(
     return { msgData: null, error: "save_returned_null" };
   } catch (e: unknown) {
     const { extractErrorMessage } = await import("../_shared/handleEdgeError.ts");
-    console.error(`[check-inbox] Error processing UID ${uid}:`, extractErrorMessage(e));
     return { msgData: null, error: extractErrorMessage(e) };
   }
 }
@@ -380,14 +368,8 @@ export async function matchResponseActivity(
         p_activity_id: activityMatch.id,
         p_response_time_hours: responseTimeHours,
       });
-      console.log("[check-inbox] Response matched:", {
-        messageId: savedMsgId,
-        activityId: activityMatch.id,
-        responseTimeHours,
-      });
     }
   } catch (matchErr: unknown) {
     const { extractErrorMessage } = await import("../_shared/handleEdgeError.ts");
-    console.warn("[check-inbox] Response matching failed (non-blocking):", matchErr instanceof Error ? matchErr.message : String(matchErr));
   }
 }

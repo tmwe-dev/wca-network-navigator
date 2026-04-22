@@ -1,0 +1,93 @@
+/**
+ * useResultCommentary — Generate AI commentary on tool execution results
+ */
+import { useCallback } from "react";
+import { toast } from "sonner";
+import type { Message, CanvasType } from "../constants";
+import type { ToolResult } from "../tools/types";
+import { TOOLS } from "../tools/registry";
+import { getAiComment, serializeResultForAI, type SuggestedAction } from "../aiBridge";
+import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
+import { tryLocalComment } from "../lib/localResultFormatter";
+import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
+
+interface CommentaryDeps {
+  addMessage: (msg: Omit<Message, "id">) => void;
+  ts: () => string;
+  governance: { role: string; permission: string; policy: string };
+  ttsSpeak: (text: string) => void;
+  setVoiceSpeaking: (v: boolean) => void;
+  buildHistory: () => { role: "user" | "assistant"; content: string }[];
+}
+
+export function useResultCommentary(deps: CommentaryDeps) {
+  const {
+    addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+  } = deps;
+
+  /** After tool execution, comment on the result + suggest next actions.
+   *  Tries LOCAL formatter first (skips LLM), falls back to AI commentary. */
+  const commentOnResult = useCallback(
+    async (userPrompt: string, toolId: string, result: ToolResult, trace?: TraceBuilder) => {
+      const tool = TOOLS.find((t) => t.id === toolId);
+      const toolLabel = tool?.label ?? toolId;
+
+      // Try LOCAL formatter (skip LLM for simple count/short list)
+      if (toolId === "ai-query") {
+        const plan = getLastSuccessfulQueryPlan();
+        const local = tryLocalComment(userPrompt, result, plan);
+        if (local) {
+          const finalTrace = trace?.finish();
+          const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+          addMessage({
+            role: "assistant",
+            content: local.message,
+            agentName: "Direttore",
+            timestamp: ts(),
+            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+            governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+            suggestedActions: local.suggestedActions,
+          });
+          // Fire TTS in parallel — does not block
+          if (local.spokenSummary.trim()) {
+            void Promise.resolve().then(() => ttsSpeak(local.spokenSummary));
+          }
+          setVoiceSpeaking(false);
+          return;
+        }
+      }
+
+      // Fallback: full AI commentary
+      const t0 = Date.now();
+      const resultSummary = serializeResultForAI(result);
+      const comment = await getAiComment({
+        userPrompt,
+        toolId,
+        toolLabel,
+        resultSummary,
+        history: buildHistory(),
+      });
+      trace?.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
+
+      const finalTrace = trace?.finish();
+      const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+
+      addMessage({
+        role: "assistant",
+        content: comment.message,
+        agentName: "Direttore",
+        timestamp: ts(),
+        meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
+        governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+        suggestedActions: comment.suggestedActions,
+      });
+
+      const tts = comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200);
+      if (tts.trim()) void Promise.resolve().then(() => ttsSpeak(tts));
+      setVoiceSpeaking(false);
+    },
+    [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak],
+  );
+
+  return { commentOnResult };
+}

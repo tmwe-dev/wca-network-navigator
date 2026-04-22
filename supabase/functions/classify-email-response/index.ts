@@ -87,7 +87,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[classify-email-response] AI automations paused for user ${input.user_id}`);
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
         status: 503, headers,
       });
@@ -178,7 +177,6 @@ serve(async (req) => {
     try {
       classification = parseClassificationResponse(aiRes.content[0].type === "text" ? aiRes.content[0].text : null);
     } catch (parseErr) {
-      console.error("[classify-email-response] Parse error:", parseErr);
       return edgeError("CLASSIFICATION_PARSE_ERROR", String(parseErr), undefined, dynCors);
     }
 
@@ -213,7 +211,6 @@ serve(async (req) => {
     });
 
     if (upsertErr) {
-      console.error("[classify-email-response] Upsert error:", upsertErr);
       return edgeError("CLASSIFICATION_UPSERT_ERROR", upsertErr.message, undefined, dynCors);
     }
 
@@ -289,15 +286,9 @@ serve(async (req) => {
               ai_suggestion_confidence: classification.confidence,
             })
             .eq("id", addressRule.id);
-
-          console.log(
-            `[classify-email-response] Updated AI suggestion for ${input.email_address}: ` +
-            `category=${classification.category}, confidence=${classification.confidence}`
-          );
         }
       }
     } catch (aiSuggestErr) {
-      console.warn("[classify-email-response] AI suggestion update error (non-blocking):", aiSuggestErr);
     }
 
     // ═══ LOVABLE-86: Post-classification pipeline ═══
@@ -318,13 +309,8 @@ serve(async (req) => {
         sentiment: classification.sentiment || undefined,
         channel: "email",
       });
-      console.log(`[classify-email-response] postClassification:`, JSON.stringify(postClassResult));
     } catch (pcErr) {
-      console.warn("[classify-email-response] postClassification error (non-blocking):", pcErr);
     }
-
-    console.log(`[classify-email-response] Done: category=${classification.category} confidence=${classification.confidence} action=${actionTaken}`);
-
     metrics.userId = input.user_id;
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
@@ -339,7 +325,6 @@ serve(async (req) => {
   } catch (e: unknown) {
     logEdgeError("classify-email-response", e);
     endMetrics(metrics, false, 500);
-    console.error("[classify-email-response] Error:", extractErrorMessage(e));
     return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, dynCors);
   }
 });

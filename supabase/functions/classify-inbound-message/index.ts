@@ -172,11 +172,9 @@ ${(body_text || "").substring(0, 3000)}`;
           }
         } else {
           const errText = await aiResp.text();
-          console.error("[classify-inbound] AI error:", aiResp.status, errText);
           result.reasoning = `AI error: ${aiResp.status}`;
         }
       } catch (aiErr) {
-        console.error("[classify-inbound] AI call failed:", aiErr);
         result.reasoning = `AI exception: ${aiErr instanceof Error ? aiErr.message : String(aiErr)}`;
       }
     }
@@ -227,7 +225,6 @@ ${(body_text || "").substring(0, 3000)}`;
             message_id,
           },
         });
-        console.log(`[classify-inbound] Autopilot: created send_proposal pending action`);
       }
     }
 
@@ -257,9 +254,7 @@ ${(body_text || "").substring(0, 3000)}`;
           sentiment: result.sentiment || undefined,
           channel: (channel as "email" | "whatsapp" | "linkedin") || "email",
         });
-        console.log(`[classify-inbound] postClassification:`, JSON.stringify(postClassResult));
       } catch (pcErr) {
-        console.warn("[classify-inbound] postClassification error (non-blocking):", pcErr);
       }
     }
 

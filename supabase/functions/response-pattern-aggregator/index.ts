@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[response-pattern-aggregator] Done: ${patternsUpdated} patterns, ${kbEntriesCreated} kb entries, ${activities.length} analyzed`);
+    
 
     return new Response(JSON.stringify({
       patterns_updated: patternsUpdated,

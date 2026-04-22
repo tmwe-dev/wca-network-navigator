@@ -103,9 +103,6 @@ export async function runPostSendHook(
     } catch (e) {
       console.warn("[postSendHook] reminder insert failed:", e);
     }
-  } else if (input.partnerId) {
-    // Fine sequenza → holding manuale (verrà gestito da evaluateTransitions su prossimo cron)
-    console.log(`[postSendHook] Sequenza primo contatto completata per partner ${input.partnerId}`);
   }
 
   // 3) Verifica next_action: se per il partner non c'è alcuna activity pending → creala generica

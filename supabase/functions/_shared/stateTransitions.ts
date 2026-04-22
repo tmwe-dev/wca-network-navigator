@@ -191,9 +191,6 @@ export async function applyTransition(
   });
 
   if (!res.applied) {
-    console.warn("[StateTransition] BLOCKED:", JSON.stringify({
-      partner_id: partnerId, from: transition.from, to: transition.to, reason: res.blockedReason,
-    }));
     return false;
   }
 
@@ -207,10 +204,5 @@ export async function applyTransition(
     description: `Transizione. Trigger: ${transition.trigger}. ${transition.autoApply ? "Auto-applicata." : "Approvata manualmente."}`,
     status: "completed",
   });
-  if (logError) console.warn("[StateTransition] Log activity failed:", logError.message);
-
-  console.log("[StateTransition] APPLIED", JSON.stringify({
-    partner_id: partnerId, from: transition.from, to: transition.to, trigger: transition.trigger,
-  }));
   return true;
 }

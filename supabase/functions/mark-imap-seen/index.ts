@@ -230,7 +230,6 @@ Deno.serve(async (req) => {
 
     // Set \Seen flag using UID
     await client.setFlags(String(msg.imap_uid), ["\\Seen"], "add", true);
-    console.log(`[mark-imap-seen] Set \\Seen on UID ${msg.imap_uid}`);
 
     await client.disconnect();
 

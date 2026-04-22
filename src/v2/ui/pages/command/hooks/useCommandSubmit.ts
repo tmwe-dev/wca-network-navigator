@@ -9,6 +9,16 @@
  *   4. Otherwise: planExecution → planRunner → per-step approval (write tools)
  *   5. Conversational AI comment + suggested next actions on the final result
  *   6. Persist last query "shape" in queryContext for follow-up handling
+ *
+ * Refactored into sub-modules:
+ *   - useCommandHistory: Build and manage conversation history
+ *   - usePromptAnalysis: Analyze prompts for execution strategy
+ *   - useResultCommentary: Generate AI commentary on results
+ *   - useQueryContext: Manage conversational context persistence
+ *   - usePlanExecution: Execute multi-step plans
+ *   - usePlanCompletion: Render completed plans
+ *   - useFastLane: Direct tool execution for simple queries
+ *   - useApprovalHandler: Handle user approvals
  */
 import { useCallback } from "react";
 import { toast } from "sonner";
@@ -17,25 +27,27 @@ import { TOOLS, TOOL_METADATA } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import { planExecution } from "@/v2/io/edge/aiAssistant";
 import {
-  executePlan,
-  executeApprovedStep,
   buildInitialStepStates,
   MAX_PLAN_STEPS,
   type PlanExecutionState,
 } from "../planRunner";
-import { getAiComment, serializeResultForAI, type SuggestedAction } from "../aiBridge";
-import { aiQueryTool, getLastSuccessfulQueryPlan, clearLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import { normalizePrompt } from "../lib/lexicalNormalizer";
 import {
-  buildContextFromPlan,
   contextHint as buildContextHint,
   isContextFresh,
   isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
-import { tryLocalComment } from "../lib/localResultFormatter";
-import { startTrace, formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import type { Message, CanvasType, FlowPhase } from "../constants";
+
+import { useCommandHistory } from "./useCommandHistory";
+import { usePromptAnalysis } from "./usePromptAnalysis";
+import { useResultCommentary } from "./useResultCommentary";
+import { useQueryContext } from "./useQueryContext";
+import { usePlanExecution } from "./usePlanExecution";
+import { usePlanCompletion } from "./usePlanCompletion";
+import { useFastLane } from "./useFastLane";
+import { useApprovalHandler } from "./useApprovalHandler";
 
 interface CommandStateApi {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -63,43 +75,6 @@ interface CommandStateApi {
   setQueryContext: (v: QueryContext | null) => void;
 }
 
-/** Map a ToolResult kind to the corresponding canvas type */
-function canvasForResult(result: ToolResult): CanvasType {
-  switch (result.kind) {
-    case "table":      return "live-table";
-    case "card-grid":  return "live-card-grid";
-    case "timeline":   return "live-timeline";
-    case "flow":       return "live-flow";
-    case "composer":   return "live-composer";
-    case "report":     return "live-report";
-    case "approval":   return "live-approval";
-    case "result":     return "live-result";
-  }
-}
-
-/** Heuristic: does this prompt look like a simple read query that ai-query handles? */
-function looksLikeSimpleQuery(prompt: string): boolean {
-  const lower = prompt.toLowerCase().trim();
-  if (!lower) return false;
-  // Action verbs → not simple read
-  const actionPatterns = [
-    /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
-    /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
-    /\bcomponi\b/, /\bnaviga\b/, /\bcompila form/, /\bprogramma\b/, /\bschedul/,
-    /\bapprov/,
-  ];
-  if (actionPatterns.some((re) => re.test(lower))) return false;
-  // Multi-step indicators → use planner
-  if (/\b(poi|quindi|dopo|infine|e poi|successivamente)\b/.test(lower)) return false;
-
-  // Aggressive read-verb + domain-noun detector
-  const readVerb = /\b(quant|mostr|elenc|trov|lista|cerca|visualiz|dammi|fammi vedere|recenti|ultim)/i;
-  const domainNoun = /\b(partner|contatt|attivit|email|messagg|agente|biglietti|campagn|prospect|outreach|job|kb)\b/i;
-  if (readVerb.test(lower) && domainNoun.test(lower)) return true;
-
-  return aiQueryTool.match(lower);
-}
-
 export function useCommandSubmit(state: CommandStateApi) {
   const {
     addMessage, setMessages, setCanvas, setFlowPhase, setShowTools, setToolPhase,
@@ -109,263 +84,71 @@ export function useCommandSubmit(state: CommandStateApi) {
     queryContext, setQueryContext,
   } = state;
 
-  /** Build short conversation history for AI context */
-  const buildHistory = useCallback((): { role: "user" | "assistant"; content: string }[] => {
-    return messages
-      .filter((m) => !m.thinking && m.content)
-      .slice(-6)
-      .map((m) => ({ role: m.role, content: m.content }));
-  }, [messages]);
+  // Initialize sub-hooks
+  const { buildHistory } = useCommandHistory(messages);
+  const { looksLikeSimpleQuery } = usePromptAnalysis();
+  const { commentOnResult } = useResultCommentary({
+    addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+  });
+  const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
+    setQueryContext, queryContext,
+  });
+  const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
+    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+  });
+  const { runPlan, handleApproveStep: handleApproveStepFromExecution } = usePlanExecution({
+    addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
+  });
+  const { runFastLane } = useFastLane({
+    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+    setActiveToolKey, setToolPhase, setChainHighlight, setExecSteps, buildHistory, canvasForResult,
+  });
+  const { handleApprove } = useApprovalHandler({
+    addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
+  });
 
-  /** After tool execution, comment on the result + suggest next actions.
-   *  Tries LOCAL formatter first (skips LLM), falls back to AI commentary. */
-  const commentOnResult = useCallback(
-    async (userPrompt: string, toolId: string, result: ToolResult, trace?: TraceBuilder) => {
-      const tool = TOOLS.find((t) => t.id === toolId);
-      const toolLabel = tool?.label ?? toolId;
-
-      // Try LOCAL formatter (skip LLM for simple count/short list)
-      if (toolId === "ai-query") {
-        const plan = getLastSuccessfulQueryPlan();
-        const local = tryLocalComment(userPrompt, result, plan);
-        if (local) {
-          const finalTrace = trace?.finish();
-          const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
-          addMessage({
-            role: "assistant",
-            content: local.message,
-            agentName: "Direttore",
-            timestamp: ts(),
-            meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
-            governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
-            suggestedActions: local.suggestedActions,
-          });
-          // Fire TTS in parallel — does not block
-          if (local.spokenSummary.trim()) {
-            void Promise.resolve().then(() => ttsSpeak(local.spokenSummary));
-          }
-          setVoiceSpeaking(false);
-          return;
-        }
-      }
-
-      // Fallback: full AI commentary
-      const t0 = Date.now();
-      const resultSummary = serializeResultForAI(result);
-      const comment = await getAiComment({
-        userPrompt,
-        toolId,
-        toolLabel,
-        resultSummary,
-        history: buildHistory(),
-      });
-      trace?.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
-
-      const finalTrace = trace?.finish();
-      const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
-
-      addMessage({
-        role: "assistant",
-        content: comment.message,
-        agentName: "Direttore",
-        timestamp: ts(),
-        meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
-        governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
-        suggestedActions: comment.suggestedActions,
-      });
-
-      const tts = comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200);
-      if (tts.trim()) void Promise.resolve().then(() => ttsSpeak(tts));
-      setVoiceSpeaking(false);
-    },
-    [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak],
-  );
-
-  /** Persist last query plan into context for follow-ups */
-  const updateQueryContextFromLastPlan = useCallback(() => {
-    const plan = getLastSuccessfulQueryPlan();
-    if (plan && plan.table !== "INVALID") {
-      setQueryContext(buildContextFromPlan(plan));
-    }
-    clearLastSuccessfulQueryPlan();
-  }, [setQueryContext]);
-
-  /** Render an executed plan: messages + canvas + AI comment */
-  const renderPlanCompletion = useCallback(
+  // Wrapper for plan completion that updates query context
+  const renderPlanWithContext = useCallback(
     async (userPrompt: string, final: PlanExecutionState) => {
-      // Step-by-step recap messages
-      for (const step of final.steps) {
-        const r = final.results[step.stepNumber];
-        const tool = TOOLS.find((t) => t.id === step.toolId);
-        const countLabel = r?.meta && "count" in r.meta ? ` · ${r.meta.count}` : "";
-        addMessage({
-          role: "assistant",
-          content: `🔧 Step ${step.stepNumber}/${final.steps.length} · ${tool?.label ?? step.toolId}${countLabel}`,
-          agentName: "Automation",
-          timestamp: ts(),
-        });
-      }
-
-      const lastStep = final.steps[final.steps.length - 1];
-      const lastResult = final.results[lastStep.stepNumber];
-      if (lastResult) {
-        setLiveResult(lastResult);
-        setCanvas(canvasForResult(lastResult));
-      }
-
-      setFlowPhase("done");
-      setExecProgress(100);
-      setShowTools(false);
-
-      // Update conversational query context (if last tool was ai-query)
+      await renderPlanCompletion(userPrompt, final, commentOnResult);
       updateQueryContextFromLastPlan();
-
-      if (lastResult && lastResult.kind !== "approval") {
-        await commentOnResult(userPrompt, lastStep.toolId, lastResult);
-      } else {
-        addMessage({
-          role: "assistant",
-          content: `✅ Piano completato: ${final.summary}`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-          meta: `${final.steps.length} step · plan-execution`,
-        });
-      }
-      toast.success("Piano completato");
     },
-    [addMessage, commentOnResult, setCanvas, setExecProgress, setFlowPhase, setLiveResult, setShowTools, ts, updateQueryContextFromLastPlan],
+    [renderPlanCompletion, commentOnResult, updateQueryContextFromLastPlan],
   );
 
-  /** Run a plan to completion (or pause for per-step approval) */
-  const runPlan = useCallback(
+  // Wrapper for runPlan that integrates with completion
+  const runPlanWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string, hint: string) => {
-      const final = await executePlan(
-        planStateVal,
-        (s) => {
-          setPlanState(s);
-          const done = Object.keys(s.results).length;
-          const total = planStateVal.steps.length || 1;
-          setExecProgress(Math.round((done / total) * 100));
-        },
-        undefined,
-        { originalPrompt: userPrompt, contextHint: hint, history: buildHistory() },
-      );
-
-      if (final.status === "awaiting-approval") {
-        setFlowPhase("proposal");
-        addMessage({
-          role: "assistant",
-          content: `⏸ Step ${final.approvalStepNumber} richiede la tua approvazione. Conferma per procedere.`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        return;
-      }
-
-      if (final.status === "done") {
-        await renderPlanCompletion(userPrompt, final);
-        return;
-      }
-
-      if (final.status === "error") {
-        toast.error(final.error ?? "Errore esecuzione piano");
-        addMessage({
-          role: "assistant",
-          content: `❌ Piano fallito: ${final.error}\n\nRiformula la richiesta o specifica meglio cosa vuoi ottenere.`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        setFlowPhase("idle");
-      }
+      await runPlan(planStateVal, userPrompt, hint, renderPlanWithContext);
     },
-    [addMessage, buildHistory, renderPlanCompletion, setExecProgress, setFlowPhase, setPlanState, ts],
+    [runPlan, renderPlanWithContext],
   );
 
-  /** User approved a paused write-step → continue the plan */
-  const handleApproveStep = useCallback(
+  // Wrapper for fast lane that integrates with completion
+  const runFastLaneWrapped = useCallback(
+    async (userPrompt: string, hint: string) => {
+      await runFastLane(userPrompt, hint, commentOnResult, updateQueryContextFromLastPlan);
+    },
+    [runFastLane, commentOnResult, updateQueryContextFromLastPlan],
+  );
+
+  // Wrapper for handleApproveStep that integrates completion rendering
+  const handleApproveStepWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string) => {
-      if (planStateVal.status !== "awaiting-approval") return;
-      setFlowPhase("executing");
-      addMessage({
-        role: "assistant",
-        content: `✓ Step ${planStateVal.approvalStepNumber} approvato. Continuo...`,
-        agentName: "Automation",
-        timestamp: ts(),
-      });
-      const final = await executeApprovedStep(planStateVal, (s) => {
-        setPlanState(s);
-        const done = Object.keys(s.results).length;
-        const total = planStateVal.steps.length || 1;
-        setExecProgress(Math.round((done / total) * 100));
-      });
-      if (final.status === "awaiting-approval") {
-        setFlowPhase("proposal");
-        addMessage({
-          role: "assistant",
-          content: `⏸ Step ${final.approvalStepNumber} richiede la tua approvazione.`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        return;
-      }
-      if (final.status === "done") {
-        await renderPlanCompletion(userPrompt, final);
-        return;
-      }
-      if (final.status === "error") {
-        toast.error(final.error ?? "Errore");
-        addMessage({
-          role: "assistant",
-          content: `❌ ${final.error}`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        setFlowPhase("idle");
-      }
+      await handleApproveStepFromExecution(planStateVal, userPrompt, renderPlanWithContext);
     },
-    [addMessage, renderPlanCompletion, setExecProgress, setFlowPhase, setPlanState, ts],
+    [handleApproveStepFromExecution, renderPlanWithContext],
   );
 
-  /** User approves a single-tool pending approval (live-approval canvas) */
-  const handleApprove = useCallback(
+  // Wrapper for handleApprove that integrates completion rendering
+  const handleApproveWrapped = useCallback(
     async (
       planStateVal: PlanExecutionState | null,
       pendingApprovalVal: { toolId: string; payload: Record<string, unknown>; prompt: string } | null,
     ) => {
-      if (planStateVal?.status === "awaiting-approval") {
-        await handleApproveStep(planStateVal, pendingApprovalVal?.prompt ?? "");
-        return;
-      }
-
-      if (pendingApprovalVal) {
-        const tool = TOOLS.find((t) => t.id === pendingApprovalVal.toolId);
-        if (!tool) return;
-        setFlowPhase("executing");
-        setCanvas(null);
-        setPendingApproval(null);
-        addMessage({ role: "assistant", content: "Esecuzione in corso...", timestamp: ts(), agentName: "Automation" });
-        try {
-          const result = await tool.execute(pendingApprovalVal.prompt, {
-            confirmed: true,
-            payload: pendingApprovalVal.payload,
-            originalPrompt: pendingApprovalVal.prompt,
-          });
-          setLiveResult(result);
-          setCanvas(canvasForResult(result));
-          setFlowPhase("done");
-          if (result.kind !== "approval") {
-            await commentOnResult(pendingApprovalVal.prompt, pendingApprovalVal.toolId, result);
-          }
-          toast.success("Azione completata");
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : "Errore";
-          toast.error(msg);
-          addMessage({ role: "assistant", content: `❌ Errore: ${msg}`, agentName: "Automation", timestamp: ts() });
-          setFlowPhase("idle");
-        }
-      }
+      await handleApprove(planStateVal, pendingApprovalVal, handleApproveStepWrapped, commentOnResult);
     },
-    [addMessage, commentOnResult, handleApproveStep, setCanvas, setFlowPhase, setLiveResult, setPendingApproval, ts],
+    [handleApprove, handleApproveStepWrapped, commentOnResult],
   );
 
   const handleCancel = useCallback(() => {
@@ -378,72 +161,6 @@ export function useCommandSubmit(state: CommandStateApi) {
       agentName: "Orchestratore",
     });
   }, [addMessage, resetForNewMessage, ts]);
-
-  /** FAST LANE: run aiQueryTool directly (skips plan-execution AI hop). */
-  const runFastLane = useCallback(
-    async (userPrompt: string, hint: string) => {
-      setActiveToolKey("ai-query");
-      setShowTools(true);
-      setToolPhase("active");
-      setChainHighlight(3);
-      setFlowPhase("executing");
-      setExecSteps([{ label: "Ricerca AI", detail: "Query DB diretta", status: "pending" as const }]);
-
-      const trace = startTrace(userPrompt);
-
-      try {
-        const tFast = Date.now();
-        const result = await aiQueryTool.execute(userPrompt, {
-          confirmed: false,
-          originalPrompt: userPrompt,
-          contextHint: hint,
-          history: buildHistory(),
-        });
-        trace.add({ source: "fast-lane", label: "ai-query", durationMs: Date.now() - tFast });
-
-        setLiveResult(result);
-        setCanvas(canvasForResult(result));
-        setFlowPhase("done");
-        setExecProgress(100);
-        setShowTools(false);
-
-        // Update query context
-        updateQueryContextFromLastPlan();
-
-        // Show step recap
-        const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
-        addMessage({
-          role: "assistant",
-          content: `🔧 Ricerca AI${countLabel}`,
-          agentName: "Automation",
-          timestamp: ts(),
-        });
-
-        if (result.kind !== "approval") {
-          await commentOnResult(userPrompt, "ai-query", result, trace);
-        } else {
-          trace.finish();
-        }
-      } catch (err: unknown) {
-        trace.finish();
-        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
-        toast.error(msg);
-        addMessage({
-          role: "assistant",
-          content: `❌ Errore ricerca AI: ${msg}`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        setFlowPhase("idle");
-        setShowTools(false);
-      }
-    },
-    [
-      addMessage, buildHistory, commentOnResult, setActiveToolKey, setCanvas, setChainHighlight,
-      setExecProgress, setExecSteps, setFlowPhase, setLiveResult, setShowTools, setToolPhase, ts,
-      updateQueryContextFromLastPlan,
-    ],
-  );
 
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
@@ -462,10 +179,10 @@ export function useCommandSubmit(state: CommandStateApi) {
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
         looksLikeSimpleQuery(text) ||
-        (isElliptical(text) && isContextFresh(queryContext));
+        (isElliptical(text) && isContextUsable());
 
       if (fastLane) {
-        await runFastLane(text, hint);
+        await runFastLaneWrapped(text, hint);
         return;
       }
 
@@ -547,7 +264,7 @@ export function useCommandSubmit(state: CommandStateApi) {
         setPlanState(newState);
         setFlowPhase("executing");
         setChainHighlight(5);
-        await runPlan(newState, text, hint);
+        await runPlanWrapped(newState, text, hint);
       } catch (err: unknown) {
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));
@@ -563,11 +280,11 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     },
     [
-      addMessage, buildHistory, queryContext, resetForNewMessage, runFastLane, runPlan,
+      addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
-      setPlanState, setShowTools, setToolPhase, ts,
+      setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
     ],
   );
 
-  return { sendMessage, handleApprove, handleCancel, handleApproveStep };
+  return { sendMessage, handleApprove: handleApproveWrapped, handleCancel, handleApproveStep: handleApproveStepWrapped };
 }

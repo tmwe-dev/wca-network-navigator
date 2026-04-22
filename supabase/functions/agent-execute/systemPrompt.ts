@@ -131,7 +131,6 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
   // Load commercial doctrine
   const doctrineLoaded = await loadCommercialDoctrine(supabase, userId);
   const commercialDoctrineBlock = doctrineLoaded.text;
-  console.log(`[systemPrompt] Doctrine source=${doctrineLoaded.source} entries=${doctrineLoaded.entriesLoaded}`);
 
   // Format KB blocks
   const personaKbBlock = personaKbEntries.length
@@ -157,9 +156,7 @@ Rispondi nella lingua configurata dall'utente. Usa markdown per formattare le ri
     contextBudget
   );
 
-  console.log(
-    `[systemPrompt] Context: ${assembled.stats.totalTokens}/${contextBudget} tokens, included=${assembled.stats.included.join(",")}, truncated=${assembled.stats.truncated.join(",") || "none"}, dropped=${assembled.stats.dropped.join(",") || "none"}`
-  );
+  
 
   return assembled.text;
 }

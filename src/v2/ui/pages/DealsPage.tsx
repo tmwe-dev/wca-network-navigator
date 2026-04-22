@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function DealsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -101,11 +102,13 @@ export function DealsPage() {
             </TabsList>
           </Tabs>
 
-          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Nuovo Affare</span>
-            <span className="sm:hidden">Nuovo</span>
-          </Button>
+          <PermissionGate permission="deals.create" fallback={<div className="text-xs text-muted-foreground">Non hai il permesso per creare affari</div>}>
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuovo Affare</span>
+              <span className="sm:hidden">Nuovo</span>
+            </Button>
+          </PermissionGate>
         </div>
       </div>
 
@@ -199,7 +202,9 @@ export function DealsPage() {
         </TabsContent>
       </Tabs>
 
-      <CreateDealDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <PermissionGate permission="deals.create">
+        <CreateDealDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      </PermissionGate>
     </div>
   );
 }

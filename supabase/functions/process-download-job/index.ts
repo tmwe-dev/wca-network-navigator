@@ -136,7 +136,7 @@ async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode:
         })
         .eq('id', cache.id)
 
-      console.log(`Verification for ${countryCode}/${networkName}: ${foundIds.size}/${wcaIds.length} — verified: ${allPresent}`)
+      
     }
   } catch (err) {
     console.error('Verification error:', err)
@@ -182,7 +182,7 @@ async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkNam
         })
         .eq('network_name', net)
 
-      console.log(`Updated network_configs for "${net}": emails=${hasEmails}, phones=${hasPhones}, names=${hasNames}`)
+      
     }
   } catch (err) {
     console.error('updateNetworkConfigsFromData error:', err)

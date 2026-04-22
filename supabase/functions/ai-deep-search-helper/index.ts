@@ -53,7 +53,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[ai-deep-search-helper] AI automations paused for user ${user.id}`);
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
         status: 503,
         headers: { ...dynCors, "Content-Type": "application/json" },

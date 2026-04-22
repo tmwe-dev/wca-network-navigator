@@ -40,7 +40,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[ai-arena-suggest] AI automations paused for user ${_userId}`);
       return json({ error: "AI automations are paused" }, 503);
     }
 

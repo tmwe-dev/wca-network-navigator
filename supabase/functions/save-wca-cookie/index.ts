@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const hasWcaCookie = cookie.includes('wca=')
     const isAuthenticated = hasAspxAuth || hasWcaCookie
 
-    console.log(`save-wca-cookie: received cookie (${cookie.length} chars), hasAspxAuth=${hasAspxAuth}, hasWcaCookie=${hasWcaCookie}`)
+    
 
     // Save cookie to both keys for compatibility
     await supabase.from('app_settings').upsert(
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       ? '✅ Cookie salvato! Sessione WCA attiva.'
       : '⏳ Cookie salvato. Nessun cookie di autenticazione rilevato, verifica reale necessaria.'
 
-    console.log(`save-wca-cookie: status=${status}, message=${message}`)
+    
 
     return respond({
       success: true,

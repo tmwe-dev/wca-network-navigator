@@ -95,7 +95,6 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
     for (const tc of assistantMessage.tool_calls) {
       const fnName = tc.function.name;
       const args = JSON.parse(tc.function.arguments || "{}");
-      console.log(`[assistant-engine] Tool: ${fnName}`, tc.function.arguments);
 
       // Try local handler first, then platform tools
       let toolResult: unknown = null;
@@ -105,8 +104,6 @@ export async function runAssistant(config: AssistantConfig): Promise<AssistantRe
       if (toolResult === null) {
         toolResult = await executePlatformTool(fnName, args, config.userId, config.authHeader);
       }
-
-      console.log(`[assistant-engine] Result ${fnName}:`, JSON.stringify(toolResult).substring(0, 500));
       toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });
     }
 

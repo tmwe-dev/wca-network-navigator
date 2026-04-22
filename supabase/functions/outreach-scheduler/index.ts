@@ -31,7 +31,6 @@ serve(async (req) => {
     const { data: batch, error: batchErr } = await supabase.rpc("acquire_outreach_batch", { p_limit: BATCH_SIZE });
 
     if (batchErr) {
-      console.error("[outreach-scheduler] acquire_outreach_batch error:", batchErr.message);
       endMetrics(metrics, false, 500);
       return new Response(JSON.stringify({ error: batchErr.message }), {
         status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
@@ -45,7 +44,6 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[outreach-scheduler] Processing batch of ${batch.length} schedules`);
 
     let processed = 0;
     let failed = 0;
@@ -54,7 +52,6 @@ serve(async (req) => {
     for (const schedule of batch) {
       // Wall clock guard
       if (Date.now() - startTime > MAX_WALL_CLOCK_MS) {
-        console.warn("[outreach-scheduler] Wall clock limit reached, releasing remaining");
         // Release remaining items back to pending
         const remaining = batch.slice(batch.indexOf(schedule));
         for (const r of remaining) {
@@ -90,7 +87,6 @@ serve(async (req) => {
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[outreach-scheduler] Error processing ${schedule.id}:`, errorMsg);
 
         if (schedule.attempt >= schedule.max_attempts) {
           // Max retries exceeded
@@ -124,7 +120,6 @@ serve(async (req) => {
     }
 
     const summary = { processed, failed, skipped, batch_size: batch.length };
-    console.log("[outreach-scheduler] Summary:", JSON.stringify(summary));
     endMetrics(metrics, true, 200);
 
     return new Response(JSON.stringify(summary), {
@@ -350,6 +345,5 @@ async function scheduleFollowups(
 
     const { error } = await supabase.from("outreach_schedules").insert([...followups, ...checks]);
     if (error) console.error("[outreach-scheduler] Failed to schedule followups:", error.message);
-    else console.log(`[outreach-scheduler] Scheduled ${followups.length} followups + ${checks.length} checks for contact ${schedule.contact_id}`);
   }
 }

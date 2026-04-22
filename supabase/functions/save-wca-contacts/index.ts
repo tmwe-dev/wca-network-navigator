@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
       // PART 2: Save CONTACTS (existing logic)
       // ══════════════════════════════════════════════════
       if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
-        console.log(`save-wca-contacts: ${partner.company_name} (${wcaId}) — profile saved, no contacts`)
+        
         results.push({ wcaId, success: true, companyName: partner.company_name, updated: 0, inserted: 0, profileSaved: true })
         continue
       }
@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`save-wca-contacts: ${partner.company_name} (${wcaId}) — contacts: updated=${updated}, inserted=${inserted}, profile saved`)
+      
       results.push({ wcaId, success: true, companyName: partner.company_name, updated, inserted, profileSaved: true })
     }
 

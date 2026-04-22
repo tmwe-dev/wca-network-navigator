@@ -1,17 +1,108 @@
 /**
- * toolExecutors.ts — Tool execution handlers + dispatcher.
+ * toolExecutors.ts — Tool execution handlers + dispatcher (refactored barrel).
+ * Re-exports main executor function for backward compatibility.
  * Extracted from ai-assistant/index.ts (lines 1383-2696).
+ *
+ * Refactored into modular components under toolExecutors/:
+ * - procedures.ts — Procedure knowledge base (47 lines)
+ * - wcaIdResolver.ts — WCA ID resolution for batch jobs (123 lines)
+ * - downloadJobs.ts — Download job creation executor (118 lines)
+ * - partnerLookup.ts — Partner/company name lookup helpers (124 lines)
+ * - partnerDownload.ts — Single partner download executor (138 lines)
+ * - email.ts — Email classification & context (65 lines)
+ * - aiActions.ts — AI pending actions (129 lines)
+ * - crm.ts — Contact & campaign management (123 lines)
+ * - agents.ts — Agent management (118 lines)
+ * - system.ts — System-level tools (42 lines)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { escapeLike } from "../_shared/sqlEscape.ts";
-import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+
+import { executeGetProcedure } from "./toolExecutors/procedures.ts";
+import { executeCreateDownloadJob } from "./toolExecutors/downloadJobs.ts";
+import { executeDownloadSinglePartner } from "./toolExecutors/partnerDownload.ts";
+import {
+  executeGetEmailClassifications,
+  executeGetConversationContext,
+  executeGetAddressRules,
+} from "./toolExecutors/email.ts";
+import {
+  executeGetPendingActions,
+  executeApproveAiAction,
+  executeRejectAiAction,
+  executeSuggestNextContacts,
+  executeDetectLanguage,
+} from "./toolExecutors/aiActions.ts";
+import {
+  executeCreateContact,
+  executeCreateCampaign,
+  executeScheduleEmail,
+} from "./toolExecutors/crm.ts";
+import {
+  executeUpdateAgentPrompt,
+  executeAddAgentKbEntry,
+} from "./toolExecutors/agents.ts";
+import { executeRunKbAudit } from "./toolExecutors/system.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
-interface ReadHandlers { executeSearchPartners: Function; executeCountryOverview: Function; executeDirectoryStatus: Function; executeListJobs: Function; executePartnerDetail: Function; executeGlobalSummary: Function; executeCheckBlacklist: Function; executeListReminders: Function; executePartnersWithoutContacts: Function; executeSearchContacts: Function; executeGetContactDetail: Function; executeSearchProspects: Function; executeListActivities: Function; executeSearchBusinessCards: Function; executeCheckJobStatus: Function; }
-interface WriteHandlers { executeUpdatePartner: Function; executeAddPartnerNote: Function; executeCreateReminder: Function; executeUpdateLeadStatus: Function; executeBulkUpdatePartners: Function; executeLinkBusinessCard: Function; executeCreateActivity: Function; executeUpdateActivity: Function; executeManagePartnerContact: Function; executeUpdateReminder: Function; executeDeleteRecords: Function; executeGenerateOutreach: Function; executeSendEmail: Function; executeDeepSearchPartner: Function; executeDeepSearchContact: Function; executeEnrichPartnerWebsite: Function; executeScanDirectory: Function; executeGenerateAliases: Function; }
-interface EnterpriseHandlers { executeSaveMemory: Function; executeSearchMemory: Function; executeCreateWorkPlan: Function; executeExecutePlanStep: Function; executeGetActivePlans: Function; executeSaveAsTemplate: Function; executeSearchTemplates: Function; executeSaveKbRule: Function; executeSaveOperativePrompt: Function; executeListWorkflows: Function; executeStartWorkflow: Function; executeAdvanceWorkflowGate: Function; executeListPlaybooks: Function; executeApplyPlaybook: Function; executeUiAction: Function; executeSearchKb: Function; }
+interface ReadHandlers {
+  executeSearchPartners: Function;
+  executeCountryOverview: Function;
+  executeDirectoryStatus: Function;
+  executeListJobs: Function;
+  executePartnerDetail: Function;
+  executeGlobalSummary: Function;
+  executeCheckBlacklist: Function;
+  executeListReminders: Function;
+  executePartnersWithoutContacts: Function;
+  executeSearchContacts: Function;
+  executeGetContactDetail: Function;
+  executeSearchProspects: Function;
+  executeListActivities: Function;
+  executeSearchBusinessCards: Function;
+  executeCheckJobStatus: Function;
+}
+
+interface WriteHandlers {
+  executeUpdatePartner: Function;
+  executeAddPartnerNote: Function;
+  executeCreateReminder: Function;
+  executeUpdateLeadStatus: Function;
+  executeBulkUpdatePartners: Function;
+  executeLinkBusinessCard: Function;
+  executeCreateActivity: Function;
+  executeUpdateActivity: Function;
+  executeManagePartnerContact: Function;
+  executeUpdateReminder: Function;
+  executeDeleteRecords: Function;
+  executeGenerateOutreach: Function;
+  executeSendEmail: Function;
+  executeDeepSearchPartner: Function;
+  executeDeepSearchContact: Function;
+  executeEnrichPartnerWebsite: Function;
+  executeScanDirectory: Function;
+  executeGenerateAliases: Function;
+}
+
+interface EnterpriseHandlers {
+  executeSaveMemory: Function;
+  executeSearchMemory: Function;
+  executeCreateWorkPlan: Function;
+  executeExecutePlanStep: Function;
+  executeGetActivePlans: Function;
+  executeSaveAsTemplate: Function;
+  executeSearchTemplates: Function;
+  executeSaveKbRule: Function;
+  executeSaveOperativePrompt: Function;
+  executeListWorkflows: Function;
+  executeStartWorkflow: Function;
+  executeAdvanceWorkflowGate: Function;
+  executeListPlaybooks: Function;
+  executeApplyPlaybook: Function;
+  executeUiAction: Function;
+  executeSearchKb: Function;
+}
 
 export interface ToolExecutorDeps {
   supabase: SupabaseClient;
@@ -20,211 +111,10 @@ export interface ToolExecutorDeps {
   entH: EnterpriseHandlers;
 }
 
-// ━━━ Procedures Knowledge Base ━━━
-
-interface ProcedureStep { order: number; action: string; tool: string | null; }
-interface Procedure { id: string; name: string; category: string; channels?: string[]; prerequisites: string[]; steps: ProcedureStep[]; tips: string[]; }
-
-const PROCEDURES_DB: Record<string, Procedure> = {
-  email_single: { id: "email_single", name: "Email Singola", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "Email destinatario valida", "Obiettivo definito"], steps: [{ order: 1, action: "Identifica destinatario", tool: "search_partners" }, { order: 2, action: "Recupera dati completi", tool: "get_partner_detail" }, { order: 3, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 4, action: "Carica profilo AI e KB", tool: "search_memory" }, { order: 5, action: "Genera messaggio", tool: "generate_outreach" }, { order: 6, action: "Revisiona con utente", tool: null }, { order: 7, action: "Invia email", tool: "send_email" }, { order: 8, action: "Registra interazione", tool: "add_partner_note" }], tips: ["Quality 'premium' per email strategiche", "Personalizza con 3+ dati partner"] },
-  email_campaign: { id: "email_campaign", name: "Campagna Email Massiva", category: "outreach", channels: ["email"], prerequisites: ["Profilo AI configurato", "5+ destinatari con email", "Obiettivo definito"], steps: [{ order: 1, action: "Seleziona destinatari", tool: "search_partners" }, { order: 2, action: "Verifica blacklist", tool: "check_blacklist" }, { order: 3, action: "Definisci obiettivo", tool: null }, { order: 4, action: "Genera email modello", tool: "generate_outreach" }, { order: 5, action: "Approva e lancia coda", tool: null }, { order: 6, action: "Monitora invio", tool: "check_job_status" }], tips: ["Limita a 50-100 destinatari", "Delay 30-60s tra invii"] },
-  linkedin_message: { id: "linkedin_message", name: "Messaggio LinkedIn", category: "outreach", channels: ["linkedin"], prerequisites: ["Profilo AI configurato", "Contatto identificato"], steps: [{ order: 1, action: "Identifica contatto", tool: "search_partners" }, { order: 2, action: "Verifica LinkedIn", tool: "get_partner_detail" }, { order: 3, action: "Genera messaggio", tool: "generate_outreach" }, { order: 4, action: "Mostra per copia", tool: null }, { order: 5, action: "Registra attività", tool: "create_activity" }], tips: ["Max 300 char", "Menziona collegamento in comune"] },
-  whatsapp_message: { id: "whatsapp_message", name: "Messaggio WhatsApp", category: "outreach", channels: ["whatsapp"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto con mobile", tool: "search_partners" }, { order: 2, action: "Genera messaggio", tool: "generate_outreach" }, { order: 3, action: "Mostra per invio", tool: null }, { order: 4, action: "Registra attività", tool: "create_activity" }], tips: ["Tono informale ma professionale"] },
-  sms_message: { id: "sms_message", name: "SMS", category: "outreach", channels: ["sms"], prerequisites: ["Contatto con cellulare"], steps: [{ order: 1, action: "Cerca contatto", tool: "search_partners" }, { order: 2, action: "Genera SMS", tool: "generate_outreach" }, { order: 3, action: "Mostra", tool: null }], tips: ["Max 160 caratteri"] },
-  multi_channel_sequence: { id: "multi_channel_sequence", name: "Sequenza Multi-Canale", category: "outreach", channels: ["email", "linkedin", "whatsapp"], prerequisites: ["Profilo AI", "Email destinatario", "Obiettivo"], steps: [{ order: 1, action: "Verifica canali disponibili", tool: "get_partner_detail" }, { order: 2, action: "Email giorno 1", tool: "generate_outreach" }, { order: 3, action: "Pianifica LinkedIn giorno 3", tool: "create_activity" }, { order: 4, action: "Genera LinkedIn", tool: "generate_outreach" }, { order: 5, action: "Pianifica WhatsApp giorno 7", tool: "create_activity" }, { order: 6, action: "Reminder giorno 14", tool: "create_reminder" }], tips: ["Email→3gg→LinkedIn→4gg→WhatsApp", "Max 3 touchpoint senza risposta"] },
-  scan_country: { id: "scan_country", name: "Verifica copertura paese", category: "network", prerequisites: ["Dati partner disponibili"], steps: [{ order: 1, action: "Verifica stato dati", tool: "get_directory_status" }, { order: 2, action: "Confronta con DB", tool: "get_country_overview" }, { order: 3, action: "Proponi arricchimento", tool: null }], tips: ["Se mancano rating o dati qualitativi, proponi deep search o website enrichment"] },
-  deep_search_partner: { id: "deep_search_partner", name: "Deep Search Partner", category: "enrichment", prerequisites: ["Partner esiste", "Crediti sufficienti"], steps: [{ order: 1, action: "Dettagli partner", tool: "get_partner_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_partner" }, { order: 3, action: "Verifica risultati", tool: "get_partner_detail" }], tips: ["Più efficace con sito web"] },
-  enrich_website: { id: "enrich_website", name: "Arricchimento Sito Web", category: "enrichment", prerequisites: ["Partner ha website", "Crediti"], steps: [{ order: 1, action: "Verifica website", tool: "get_partner_detail" }, { order: 2, action: "Enrichment", tool: "enrich_partner_website" }, { order: 3, action: "Mostra risultati", tool: "get_partner_detail" }], tips: ["Combina con Deep Search"] },
-  import_contacts: { id: "import_contacts", name: "Importazione Contatti", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Carica file", tool: null }, { order: 2, action: "Analizza struttura", tool: null }, { order: 3, action: "Mappa colonne", tool: null }, { order: 4, action: "Importa", tool: null }, { order: 5, action: "Verifica", tool: "search_contacts" }], tips: ["Supporta CSV, Excel, TSV"] },
-  deep_search_contact: { id: "deep_search_contact", name: "Deep Search Contatto", category: "crm", prerequisites: ["Contatto esiste", "Crediti"], steps: [{ order: 1, action: "Identifica", tool: "get_contact_detail" }, { order: 2, action: "Deep Search", tool: "deep_search_contact" }, { order: 3, action: "Verifica", tool: "get_contact_detail" }], tips: ["Meglio con nome+azienda+paese"] },
-  update_lead_status: { id: "update_lead_status", name: "Aggiornamento Stato Lead", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Filtra record", tool: "search_contacts" }, { order: 2, action: "Conferma selezione", tool: null }, { order: 3, action: "Aggiorna", tool: "update_lead_status" }], tips: ["Conferma per >5 record"] },
-  assign_activity: { id: "assign_activity", name: "Assegnazione Attività", category: "crm", prerequisites: [], steps: [{ order: 1, action: "Identifica target", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Conferma", tool: "list_activities" }], tips: ["Due date realistica"] },
-  create_followup: { id: "create_followup", name: "Creazione Follow-up", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partner", tool: "search_partners" }, { order: 2, action: "Crea attività", tool: "create_activity" }, { order: 3, action: "Crea reminder", tool: "create_reminder" }], tips: ["Follow-up ideale entro 3 giorni"] },
-  schedule_meeting: { id: "schedule_meeting", name: "Pianificazione Meeting", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Identifica partecipanti", tool: "get_partner_detail" }, { order: 2, action: "Crea attività meeting", tool: "create_activity" }, { order: 3, action: "Email invito", tool: "generate_outreach" }], tips: ["Specifica orario, luogo/link, agenda"] },
-  manage_reminders: { id: "manage_reminders", name: "Gestione Reminder", category: "agenda", prerequisites: [], steps: [{ order: 1, action: "Elenca reminder", tool: "list_reminders" }, { order: 2, action: "Crea/aggiorna", tool: "create_reminder" }, { order: 3, action: "Completa", tool: "update_reminder" }], tips: ["Priorità 'high' per scadenze critiche"] },
-  generate_aliases: { id: "generate_aliases", name: "Generazione Alias AI", category: "system", prerequisites: [], steps: [{ order: 1, action: "Seleziona target", tool: "search_partners" }, { order: 2, action: "Genera", tool: "generate_aliases" }, { order: 3, action: "Verifica", tool: "search_partners" }], tips: ["Max 20 per batch"] },
-  blacklist_check: { id: "blacklist_check", name: "Verifica Blacklist", category: "system", prerequisites: [], steps: [{ order: 1, action: "Cerca", tool: "check_blacklist" }, { order: 2, action: "Mostra risultati", tool: null }], tips: ["Verifica SEMPRE prima di collaborare"] },
-  bulk_update: { id: "bulk_update", name: "Aggiornamento Massivo", category: "system", prerequisites: [], steps: [{ order: 1, action: "Filtra", tool: "search_partners" }, { order: 2, action: "Conferma (OBBLIGATORIO)", tool: null }, { order: 3, action: "Aggiorna", tool: "bulk_update_partners" }, { order: 4, action: "Verifica", tool: "search_partners" }], tips: ["SEMPRE conferma per >5 record"] },
-};
-
-function executeGetProcedure(args: Record<string, unknown>): unknown {
-  if (args.procedure_id) {
-    const proc = PROCEDURES_DB[String(args.procedure_id)];
-    if (proc) return { procedure: proc };
-    return { error: `Procedura '${args.procedure_id}' non trovata. Procedure disponibili: ${Object.keys(PROCEDURES_DB).join(", ")}` };
-  }
-  if (args.search_tags && Array.isArray(args.search_tags)) {
-    const tags = (args.search_tags as string[]).map(t => t.toLowerCase());
-    const matches = Object.values(PROCEDURES_DB).filter((p) => {
-      const procText = `${p.id} ${p.name} ${p.category} ${(p.channels || []).join(" ")}`.toLowerCase();
-      return tags.some(t => procText.includes(t));
-    });
-    if (matches.length > 0) return { procedures: matches, count: matches.length };
-    return { procedures: [], count: 0, available: Object.keys(PROCEDURES_DB) };
-  }
-  return { procedures: Object.values(PROCEDURES_DB), count: Object.keys(PROCEDURES_DB).length };
-}
-
-// ━━━ Inline executors (not in shared modules) ━━━
-
-async function executeCreateDownloadJob(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
-  const countryCode = String(args.country_code || "").toUpperCase();
-  const countryName = String(args.country_name || "");
-  const mode = String(args.mode || "no_profile");
-  const networkName = String(args.network_name || "Tutti");
-  const delaySec = Math.max(15, Number(args.delay_seconds) || 15);
-
-  if (!countryCode || !countryName) return { error: "country_code e country_name sono obbligatori" };
-
-  const { data: activeJobs } = await supabase.from("download_jobs").select("id, country_code, status").in("status", ["pending", "running"]).limit(5);
-  if (activeJobs && activeJobs.length > 0) {
-    const sameCountry = (activeJobs as Record<string, unknown>[]).find((j) => j.country_code === countryCode);
-    if (sameCountry) return { error: `Esiste già un job attivo per ${countryName} (${countryCode}).`, active_job_id: sameCountry.id };
-    if (activeJobs.length >= 1) return { error: `C'è già un job attivo (${(activeJobs[0] as Record<string, unknown>).country_code}). Attendi il completamento prima di avviarne un altro.`, active_job_id: (activeJobs[0] as Record<string, unknown>).id };
-  }
-
-  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
-  const deadIdSet = new Set((deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)));
-
-  let wcaIds: number[] = [];
-  if (mode === "new") {
-    const { data: cacheRows } = await supabase.from("directory_cache").select("members").eq("country_code", countryCode);
-    if (!cacheRows || cacheRows.length === 0) return { error: `Nessuna directory cache per ${countryName}. Esegui prima una scansione directory.` };
-    const dirIds: number[] = [];
-    for (const row of cacheRows) { const members = row.members as Record<string, unknown>[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? ((m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id) : m; if (id) dirIds.push(Number(id)); } }
-    const { data: existing } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null);
-    const existingSet = new Set((existing || []).map((p: Record<string, unknown>) => p.wca_id));
-    wcaIds = [...new Set(dirIds)].filter(id => !existingSet.has(id) && !deadIdSet.has(id));
-  } else if (mode === "no_profile") {
-    const { data: noProfile } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null).is("raw_profile_html", null);
-    wcaIds = (noProfile || []).map((p: Record<string, unknown>) => p.wca_id as number).filter(Boolean);
-    const { data: cacheRows } = await supabase.from("directory_cache").select("members").eq("country_code", countryCode);
-    if (cacheRows && cacheRows.length > 0) {
-      const { data: allExisting } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null);
-      const existingSet = new Set((allExisting || []).map((p: Record<string, unknown>) => p.wca_id));
-      for (const row of cacheRows) { const members = row.members as Record<string, unknown>[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? ((m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id) : m; if (id && !existingSet.has(Number(id))) wcaIds.push(Number(id)); } }
-    }
-    wcaIds = [...new Set(wcaIds)].filter(id => !deadIdSet.has(id));
-  } else {
-    const { data: dbPartners } = await supabase.from("partners").select("wca_id").eq("country_code", countryCode).not("wca_id", "is", null);
-    wcaIds = (dbPartners || []).map((p: Record<string, unknown>) => p.wca_id as number).filter(Boolean);
-    const { data: cacheRows } = await supabase.from("directory_cache").select("members").eq("country_code", countryCode);
-    if (cacheRows) for (const row of cacheRows) { const members = row.members as Record<string, unknown>[]; if (Array.isArray(members)) for (const m of members) { const id = typeof m === "object" ? ((m as Record<string, unknown>).wca_id || (m as Record<string, unknown>).id) : m; if (id) wcaIds.push(Number(id)); } }
-    wcaIds = [...new Set(wcaIds)].filter(id => !deadIdSet.has(id));
-  }
-
-  if (wcaIds.length === 0) {
-    const modeLabels: Record<string, string> = { new: "nuovi", no_profile: "senza profilo", all: "tutti" };
-    return { success: false, message: `Nessun partner da scaricare in modalità "${modeLabels[mode] || mode}" per ${countryName}.` };
-  }
-
-  const { data: job, error } = await supabase.from("download_jobs").insert({
-    country_code: countryCode, country_name: countryName, network_name: networkName,
-    wca_ids: wcaIds as unknown, total_count: wcaIds.length, delay_seconds: delaySec, status: "pending",
-  }).select("id").single();
-
-  if (error) return { error: `Errore creazione job: ${error.message}` };
-
-  const jobItems = wcaIds.map((id: number, i: number) => ({ job_id: (job as Record<string, unknown>).id, wca_id: id, position: i, status: "pending" }));
-  for (let i = 0; i < jobItems.length; i += 500) {
-    await supabase.from("download_job_items").insert(jobItems.slice(i, i + 500));
-  }
-
-  const modeLabels: Record<string, string> = { new: "Nuovi partner", no_profile: "Solo profili mancanti", all: "Aggiorna tutti" };
-  return {
-    success: true, job_id: (job as Record<string, unknown>).id, country: `${countryName} (${countryCode})`, mode: modeLabels[mode] || mode,
-    total_partners: wcaIds.length, delay_seconds: delaySec,
-    estimated_time_minutes: Math.ceil(wcaIds.length * (delaySec + 5) / 60),
-    message: `Job creato! ${wcaIds.length} partner da scaricare per ${countryName}. Il download partirà automaticamente.`,
-  };
-}
-
-async function executeDownloadSinglePartner(supabase: SupabaseClient, args: Record<string, unknown>): Promise<unknown> {
-  const companyName = String(args.company_name || "").trim();
-  const city = args.city ? String(args.city).trim() : null;
-  const countryCode = args.country_code ? String(args.country_code).toUpperCase() : null;
-  let wcaId = args.wca_id ? Number(args.wca_id) : null;
-
-  if (!companyName && !wcaId) return { error: "Serve almeno il nome dell'azienda o il wca_id." };
-
-  if (!wcaId) {
-    let query = supabase.from("partners").select("id, wca_id, company_name, city, country_code, country_name, raw_profile_html").ilike("company_name", `%${escapeLike(companyName)}%`);
-    if (countryCode) query = query.eq("country_code", countryCode);
-    if (city) query = query.ilike("city", `%${escapeLike(city)}%`);
-    const { data: found } = await query.limit(5);
-
-    if (found && found.length > 0) {
-      const exact = (found as Record<string, unknown>[]).find((p) => String(p.company_name).toLowerCase() === companyName.toLowerCase()) || found[0] as Record<string, unknown>;
-      if (exact.raw_profile_html) {
-        return { success: true, already_downloaded: true, partner_id: exact.id, company_name: exact.company_name, city: exact.city, country_code: exact.country_code, message: `"${exact.company_name}" ha già il profilo scaricato. Non serve un nuovo download.` };
-      }
-      wcaId = exact.wca_id as number | null;
-      if (!wcaId) return { error: `"${exact.company_name}" trovata nel DB ma non ha un wca_id. Impossibile scaricare il profilo.` };
-    }
-  }
-
-  if (!wcaId) {
-    let cacheQuery = supabase.from("directory_cache").select("members, country_code");
-    if (countryCode) cacheQuery = cacheQuery.eq("country_code", countryCode);
-    const { data: cacheRows } = await cacheQuery;
-
-    if (cacheRows) {
-      for (const row of cacheRows) {
-        const members = row.members as Record<string, unknown>[];
-        if (!Array.isArray(members)) continue;
-        const match = members.find((m: Record<string, unknown>) => {
-          const name = typeof m === "object" ? (String(m.company_name || m.name || "")) : "";
-          return name.toLowerCase().includes(companyName.toLowerCase());
-        });
-        if (match) {
-          wcaId = typeof match === "object" ? Number((match as Record<string, unknown>).wca_id || (match as Record<string, unknown>).id) : Number(match);
-          if (wcaId) break;
-        }
-      }
-    }
-  }
-
-  if (!wcaId) return { error: `"${companyName}" non trovata nel database, nella directory cache, né cercando direttamente su WCA. Verifica il nome esatto dell'azienda.` };
-
-  const { data: deadRows } = await supabase.from("partners_no_contacts").select("wca_id").eq("resolved", false);
-  const deadIdSet = new Set((deadRows || []).map((r: Record<string, unknown>) => Number(r.wca_id)));
-  if (deadIdSet.has(Number(wcaId))) return { error: `"${companyName}" (WCA ID: ${wcaId}) è nella lista "senza contatti". Probabilmente non ha dati utili.` };
-
-  const { data: activeJobs } = await supabase.from("download_jobs").select("id, status, country_code").in("status", ["pending", "running"]).limit(5);
-  if (activeJobs && activeJobs.length >= 1) return { error: `C'è già un job attivo. Attendi il completamento prima di avviarne un altro.`, active_job_id: (activeJobs[0] as Record<string, unknown>).id };
-
-  let jobCountryCode = countryCode || "";
-  let jobCountryName = "";
-  if (!jobCountryCode) {
-    const { data: p } = await supabase.from("partners").select("country_code, country_name").eq("wca_id", wcaId).single();
-    if (p) { jobCountryCode = (p as Record<string, unknown>).country_code as string; jobCountryName = (p as Record<string, unknown>).country_name as string; }
-    else { jobCountryCode = "XX"; jobCountryName = "Sconosciuto"; }
-  }
-  if (!jobCountryName) {
-    const { data: p } = await supabase.from("partners").select("country_name").eq("country_code", jobCountryCode).limit(1).single();
-    jobCountryName = (p as Record<string, unknown> | null)?.country_name as string || jobCountryCode;
-  }
-
-  const { data: job, error } = await supabase.from("download_jobs").insert({
-    country_code: jobCountryCode, country_name: jobCountryName, network_name: "Tutti",
-    wca_ids: [wcaId] as unknown, total_count: 1, delay_seconds: 15, status: "pending",
-    job_type: "download",
-  }).select("id").single();
-
-  if (error) return { error: `Errore creazione job: ${error.message}` };
-
-  await supabase.from("download_job_items").insert({ job_id: (job as Record<string, unknown>).id, wca_id: wcaId, position: 0, status: "pending" });
-
-  return {
-    success: true, job_id: (job as Record<string, unknown>).id, country: `${jobCountryName} (${jobCountryCode})`,
-    mode: "Singolo partner", total_partners: 1, wca_id: wcaId, delay_seconds: 15,
-    estimated_time_minutes: 1,
-    message: `Job creato per scaricare il profilo di "${companyName}" (WCA ID: ${wcaId}). Tempo stimato: ~1 minuto.`,
-  };
-}
-
-// ━━━ Unified Tool Dispatcher ━━━
-
+/**
+ * Main tool dispatcher — routes tool calls to appropriate handlers.
+ * Integrates all modular tool executors from toolExecutors/ directory.
+ */
 export async function executeTool(
   name: string,
   args: Record<string, unknown>,
@@ -244,7 +134,8 @@ export async function executeTool(
     get_global_summary: () => readH.executeGlobalSummary(),
     check_blacklist: () => readH.executeCheckBlacklist(args),
     list_reminders: () => readH.executeListReminders(args, userId),
-    get_partners_without_contacts: () => readH.executePartnersWithoutContacts(args),
+    get_partners_without_contacts: () =>
+      readH.executePartnersWithoutContacts(args),
     search_contacts: () => readH.executeSearchContacts(args, userId),
     get_contact_detail: () => readH.executeGetContactDetail(args, userId),
     search_prospects: () => readH.executeSearchProspects(args, userId),
@@ -268,15 +159,19 @@ export async function executeTool(
   // Write handlers needing authHeader / userId
   const writeAuthMap: Record<string, () => Promise<unknown>> = {
     update_partner: () => writeH.executeUpdatePartner(args, userId!),
-    bulk_update_partners: () => writeH.executeBulkUpdatePartners(args, userId!),
+    bulk_update_partners: () =>
+      writeH.executeBulkUpdatePartners(args, userId!),
     create_reminder: () => writeH.executeCreateReminder(args, userId!),
     create_activity: () => writeH.executeCreateActivity(args, userId!),
     delete_records: () => writeH.executeDeleteRecords(args, userId!),
     generate_outreach: () => writeH.executeGenerateOutreach(args, authHeader!),
     send_email: () => writeH.executeSendEmail(args, authHeader!, userId!),
-    deep_search_partner: () => writeH.executeDeepSearchPartner(args, authHeader!),
-    deep_search_contact: () => writeH.executeDeepSearchContact(args, authHeader!),
-    enrich_partner_website: () => writeH.executeEnrichPartnerWebsite(args, authHeader!),
+    deep_search_partner: () =>
+      writeH.executeDeepSearchPartner(args, authHeader!),
+    deep_search_contact: () =>
+      writeH.executeDeepSearchContact(args, authHeader!),
+    enrich_partner_website: () =>
+      writeH.executeEnrichPartnerWebsite(args, authHeader!),
     scan_directory: () => writeH.executeScanDirectory(args, authHeader!),
     generate_aliases: () => writeH.executeGenerateAliases(args, authHeader!),
   };
@@ -287,19 +182,24 @@ export async function executeTool(
     save_memory: () => entH.executeSaveMemory(args, userId!),
     search_memory: () => entH.executeSearchMemory(args, userId!),
     create_work_plan: () => entH.executeCreateWorkPlan(args, userId!),
-    execute_plan_step: () => entH.executeExecutePlanStep(args, userId!, authHeader),
+    execute_plan_step: () =>
+      entH.executeExecutePlanStep(args, userId!, authHeader),
     get_active_plans: () => entH.executeGetActivePlans(userId!),
     save_as_template: () => entH.executeSaveAsTemplate(args, userId!),
     search_templates: () => entH.executeSearchTemplates(args, userId!),
     save_kb_rule: () => entH.executeSaveKbRule(args, userId!),
-    save_operative_prompt: () => entH.executeSaveOperativePrompt(args, userId!),
+    save_operative_prompt: () =>
+      entH.executeSaveOperativePrompt(args, userId!),
     list_workflows: () => entH.executeListWorkflows(args, userId!),
     start_workflow: () => entH.executeStartWorkflow(args, userId!),
-    advance_workflow_gate: () => entH.executeAdvanceWorkflowGate(args, userId!),
+    advance_workflow_gate: () =>
+      entH.executeAdvanceWorkflowGate(args, userId!),
     list_playbooks: () => entH.executeListPlaybooks(args, userId!),
     apply_playbook: () => entH.executeApplyPlaybook(args, userId!),
   };
-  if (entAuthMap[name]) return userId ? entAuthMap[name]() : { error: "Auth required" };
+  if (entAuthMap[name]) {
+    return userId ? entAuthMap[name]() : { error: "Auth required" };
+  }
 
   // Enterprise handlers without user requirement
   const entMap: Record<string, () => Promise<unknown>> = {
@@ -308,242 +208,88 @@ export async function executeTool(
   };
   if (entMap[name]) return entMap[name]();
 
-  // ── Inline handlers ──
-  switch (name) {
-    case "create_download_job": return executeCreateDownloadJob(supabase, args);
-    case "download_single_partner": return executeDownloadSinglePartner(supabase, args);
-    case "get_procedure": return executeGetProcedure(args);
+  // ── Modular inline handlers ──
 
-    case "get_email_classifications": {
-      let q = supabase.from("email_classifications").select("id, email_address, category, confidence, ai_summary, sentiment, urgency, keywords, action_suggested, classified_at, partner_id").order("classified_at", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
-      if (args.email_address) q = q.eq("email_address", args.email_address);
-      if (args.partner_id) q = q.eq("partner_id", args.partner_id);
-      if (args.category) q = q.eq("category", args.category);
-      if (userId) q = q.eq("user_id", userId);
-      const { data, error } = await q;
-      if (error) return { error: error.message };
-      return { count: data?.length, classifications: data };
-    }
-    case "get_conversation_context": {
-      let q = supabase.from("contact_conversation_context").select("*").eq("email_address", String(args.email_address));
-      if (userId) q = q.eq("user_id", userId);
-      const { data, error } = await q.maybeSingle();
-      if (error) return { error: error.message };
-      if (!data) return { message: "No conversation context found for this address." };
-      return data;
-    }
-    case "get_address_rules": {
-      let q = supabase.from("email_address_rules").select("*").order("interaction_count", { ascending: false }).limit(Math.min(Number(args.limit) || 20, 50));
-      if (args.email_address) q = q.eq("email_address", args.email_address);
-      if (args.is_active !== undefined) q = q.eq("is_active", !!args.is_active);
-      if (userId) q = q.eq("user_id", userId);
-      const { data, error } = await q;
-      if (error) return { error: error.message };
-      return { count: data?.length, rules: data };
-    }
-    case "suggest_next_contacts": {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const res = await fetch(`${supabaseUrl}/functions/v1/ai-arena-suggest`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authHeader || serviceKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ focus: args.focus || "tutti", preferred_channel: args.channel || "email", batch_size: Math.min(Number(args.batch_size) || 5, 10), excluded_ids: [] }),
-      });
-      if (!res.ok) return { error: await res.text() };
-      return await res.json();
-    }
-    case "detect_language": {
-      const { getLanguageHint } = await import("../_shared/textUtils.ts");
-      const hint = getLanguageHint(String(args.country_code || "US"));
-      return { country_code: args.country_code, ...hint };
-    }
-    case "get_pending_actions": {
-      const status = String(args.status || "pending");
-      let q = deps.supabase.from("ai_pending_actions").select("id, action_type, confidence, reasoning, suggested_content, partner_id, contact_id, email_address, status, created_at, source")
-        .eq("user_id", userId)
-        .eq("status", status)
-        .order("confidence", { ascending: false })
-        .limit(Number(args.limit) || 20);
-      if (args.action_type) q = q.eq("action_type", String(args.action_type));
-      const { data, error } = await q;
-      if (error) return { error: error.message };
-      return { count: data?.length || 0, actions: data || [] };
-    }
-    case "approve_ai_action": {
-      const actionId = String(args.action_id);
-      const { error } = await deps.supabase.from("ai_pending_actions")
-        .update({ status: "approved", executed_at: new Date().toISOString() })
-        .eq("id", actionId)
-        .eq("user_id", userId);
-      if (error) return { error: error.message };
-      return { success: true, message: `Azione ${actionId} approvata.` };
-    }
-    case "reject_ai_action": {
-      const actionId = String(args.action_id);
-      const reason = args.reason ? String(args.reason) : null;
-      const updatePayload: Record<string, unknown> = { status: "rejected" };
-      if (reason) updatePayload.reasoning = reason;
-      const { error } = await deps.supabase.from("ai_pending_actions")
-        .update(updatePayload)
-        .eq("id", actionId)
-        .eq("user_id", userId);
-      if (error) return { error: error.message };
+  // Procedures (procedures.ts)
+  if (name === "get_procedure") return executeGetProcedure(args);
 
-      // Save rejection as L1 memory for learning
-      if (reason && userId) {
-        deps.supabase.from("ai_memory").insert({
-          user_id: userId,
-          memory_type: "decision",
-          content: `L'utente ha rifiutato un'azione AI (${actionId}). Motivo: "${reason}". Non ripetere questo tipo di azione in futuro senza chiedere conferma.`,
-          tags: ["feedback_negativo", "correzione_utente", "azione_rifiutata"],
-          level: 1,
-          importance: 4,
-          confidence: 0.6,
-          decay_rate: 0.01,
-          source: "user_rejection",
-        }).then(() => {}).catch((e: unknown) => console.warn("rejection memory save failed:", extractErrorMessage(e)));
-      }
-
-      return { success: true, message: `Azione ${actionId} rifiutata.` };
-    }
-
-    // ━━━ NEW: Parity tools ━━━
-    case "create_contact": {
-      if (!userId) return { error: "Auth required" };
-      const insertPayload: Record<string, unknown> = { user_id: userId, lead_status: String(args.lead_status || "new"), row_number: 0 };
-      for (const f of ["name", "email", "company_name", "phone", "mobile", "position", "city", "country", "origin", "note"]) {
-        if (args[f]) insertPayload[f] = String(args[f]);
-      }
-      // Need an import_log_id — create a virtual one
-      const { data: logRow, error: logErr } = await supabase.from("import_logs").insert({ user_id: userId, file_name: "ai-assistant", total_rows: 1, imported_rows: 1, status: "completed" }).select("id").single();
-      if (logErr) return { error: `Import log creation failed: ${logErr.message}` };
-      insertPayload.import_log_id = (logRow as Record<string, unknown>).id;
-      const { data, error } = await supabase.from("imported_contacts").insert(insertPayload).select("id, name, email, company_name, lead_status").single();
-      if (error) return { error: error.message };
-      return { success: true, contact: data, message: `Contatto creato: ${args.name || args.email || "N/A"}` };
-    }
-
-    case "create_campaign": {
-      if (!userId) return { error: "Auth required" };
-      const channel = String(args.channel || "email");
-      const { data, error } = await supabase.from("outreach_missions").insert({
-        user_id: userId,
-        title: String(args.title || "Nuova campagna"),
-        channel,
-        status: "draft",
-        target_filters: args.target_filters || {},
-        ai_prompt: args.ai_prompt ? String(args.ai_prompt) : null,
-        template_id: args.template_id ? String(args.template_id) : null,
-      }).select("id, title, channel, status").single();
-      if (error) return { error: error.message };
-      return { success: true, mission: data, message: `Campagna "${args.title}" creata in stato draft.` };
-    }
-
-    case "schedule_email": {
-      if (!userId) return { error: "Auth required" };
-      const toEmail = String(args.to_email || "");
-      if (!toEmail) return { error: "to_email è obbligatorio" };
-      const scheduledAt = args.scheduled_at ? String(args.scheduled_at) : new Date(Date.now() + 3600_000).toISOString();
-      const { data, error } = await supabase.from("outreach_queue").insert({
-        user_id: userId,
-        channel: "email",
-        recipient_email: toEmail,
-        recipient_name: args.to_name ? String(args.to_name) : null,
-        subject: String(args.subject || ""),
-        body: String(args.html_body || ""),
-        status: "pending",
-        priority: 5,
-        scheduled_at: scheduledAt,
-        partner_id: args.partner_id ? String(args.partner_id) : null,
-      }).select("id, recipient_email, subject, scheduled_at, status").single();
-      if (error) return { error: error.message };
-      return { success: true, queued: data, message: `Email programmata per ${toEmail} alle ${scheduledAt}` };
-    }
-
-    case "update_agent_prompt": {
-      if (!userId) return { error: "Auth required" };
-      let agentId = args.agent_id ? String(args.agent_id) : null;
-      if (!agentId && args.agent_name) {
-        const { data: found } = await supabase.from("agents").select("id").eq("user_id", userId).ilike("name", `%${escapeLike(String(args.agent_name))}%`).limit(1).single();
-        if (found) agentId = (found as Record<string, unknown>).id as string;
-      }
-      if (!agentId) return { error: "Agente non trovato" };
-      let newPrompt: string;
-      if (args.replace_prompt) {
-        newPrompt = String(args.replace_prompt);
-      } else if (args.prompt_addition) {
-        const { data: current } = await supabase.from("agents").select("system_prompt").eq("id", agentId).single();
-        newPrompt = ((current as Record<string, unknown>)?.system_prompt || "") + "\n\n" + String(args.prompt_addition);
-      } else {
-        return { error: "Specifica replace_prompt o prompt_addition" };
-      }
-      const { error } = await supabase.from("agents").update({ system_prompt: newPrompt, updated_at: new Date().toISOString() }).eq("id", agentId);
-      if (error) return { error: error.message };
-      return { success: true, agent_id: agentId, prompt_length: newPrompt.length, message: "Prompt agente aggiornato." };
-    }
-
-    case "add_agent_kb_entry": {
-      if (!userId) return { error: "Auth required" };
-      let agentId = args.agent_id ? String(args.agent_id) : null;
-      if (!agentId && args.agent_name) {
-        const { data: found } = await supabase.from("agents").select("id").eq("user_id", userId).ilike("name", `%${escapeLike(String(args.agent_name))}%`).limit(1).single();
-        if (found) agentId = (found as Record<string, unknown>).id as string;
-      }
-      if (!agentId) return { error: "Agente non trovato" };
-      const category = String(args.category || "agent_custom");
-      const tags = Array.isArray(args.tags) ? args.tags.map(String) : ["agent"];
-      // Create KB entry
-      const { data: kbEntry, error: kbErr } = await supabase.from("kb_entries").insert({
-        user_id: userId,
-        title: String(args.title),
-        content: String(args.content),
-        category,
-        chapter: "agent",
-        tags,
-        priority: 5,
-        sort_order: 0,
-        is_active: true,
-      }).select("id, title").single();
-      if (kbErr) return { error: kbErr.message };
-      // Link to agent
-      const { error: linkErr } = await supabase.from("agent_knowledge_links").insert({
-        agent_id: agentId,
-        kb_entry_id: (kbEntry as Record<string, unknown>).id,
-        user_id: userId,
-        priority: 5,
-      });
-      if (linkErr) return { error: linkErr.message };
-      return { success: true, kb_entry: kbEntry, agent_id: agentId, message: `KB entry "${args.title}" aggiunta all'agente.` };
-    }
-
-    case "run_kb_audit": {
-      if (!userId) return { error: "Auth required" };
-      const level = String(args.audit_level || "all");
-      try {
-        const resp = await fetch(
-          `${Deno.env.get("SUPABASE_URL")}/functions/v1/kb-supervisor`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify({ user_id: userId, audit_level: level }),
-          },
-        );
-        const result = await resp.json();
-        if (!resp.ok) return { error: result.error || "Audit failed" };
-        return {
-          success: true,
-          summary: result.summary,
-          issues: result.results,
-          message: `Audit KB completato: ${result.summary?.total_issues || 0} problemi trovati (${result.summary?.critical || 0} critici, ${result.summary?.high || 0} alti).`,
-        };
-      } catch (err: unknown) {
-        return { error: extractErrorMessage(err) };
-      }
-    }
-
-    default: return { error: `Tool sconosciuto: ${name}` };
+  // Download jobs (downloadJobs.ts)
+  if (name === "create_download_job") {
+    return executeCreateDownloadJob(supabase, args);
   }
+  if (name === "download_single_partner") {
+    return executeDownloadSinglePartner(supabase, args);
+  }
+
+  // Email tools (email.ts)
+  if (name === "get_email_classifications") {
+    return executeGetEmailClassifications(supabase, args, userId);
+  }
+  if (name === "get_conversation_context") {
+    return executeGetConversationContext(supabase, args, userId);
+  }
+  if (name === "get_address_rules") {
+    return executeGetAddressRules(supabase, args, userId);
+  }
+
+  // AI actions (aiActions.ts)
+  if (name === "get_pending_actions") {
+    return userId
+      ? executeGetPendingActions(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "approve_ai_action") {
+    return userId
+      ? executeApproveAiAction(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "reject_ai_action") {
+    return userId
+      ? executeRejectAiAction(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "suggest_next_contacts") {
+    return executeSuggestNextContacts(authHeader, args);
+  }
+  if (name === "detect_language") {
+    return executeDetectLanguage(args);
+  }
+
+  // CRM tools (crm.ts)
+  if (name === "create_contact") {
+    return userId
+      ? executeCreateContact(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "create_campaign") {
+    return userId
+      ? executeCreateCampaign(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "schedule_email") {
+    return userId
+      ? executeScheduleEmail(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+
+  // Agent tools (agents.ts)
+  if (name === "update_agent_prompt") {
+    return userId
+      ? executeUpdateAgentPrompt(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+  if (name === "add_agent_kb_entry") {
+    return userId
+      ? executeAddAgentKbEntry(supabase, args, userId)
+      : { error: "Auth required" };
+  }
+
+  // System tools (system.ts)
+  if (name === "run_kb_audit") {
+    return userId
+      ? executeRunKbAudit(args, userId)
+      : { error: "Auth required" };
+  }
+
+  return { error: `Tool sconosciuto: ${name}` };
 }

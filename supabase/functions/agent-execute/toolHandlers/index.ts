@@ -51,3 +51,53 @@ export {
   handleUndoAiAction,
   handleGetApprovalDashboard,
 } from "./analysisTools.ts";
+
+export {
+  handleCreateDownloadJob,
+  handleDownloadSinglePartner,
+  handleGetBlacklist,
+  handleListReminders,
+  handleGetPartnersWithoutContacts,
+} from "./dataTools.ts";
+
+export {
+  handleGetInbox,
+  handleGetConversationHistory,
+  handleGetHoldingPattern,
+  handleUpdateMessageStatus,
+  handleGetEmailThread,
+} from "./messagingTools.ts";
+
+export {
+  handleCreateAgentTask,
+  handleListAgentTasks,
+  handleGetTeamStatus,
+  handleUpdateAgentPrompt,
+  handleAddAgentKbEntry,
+} from "./agentTools.ts";
+
+export {
+  handleCreateWorkPlan,
+  handleListWorkPlans,
+  handleUpdateWorkPlan,
+  handleCreateCampaign,
+} from "./workflowTools.ts";
+
+export {
+  handleManageWorkspacePreset,
+  handleGetConversationContext,
+  handleGetAddressRules,
+  handleSaveMemory,
+  handleDetectLanguage,
+  handleGetPendingActions,
+  handleApproveAiAction,
+  handleRejectAiAction,
+  handleExecuteUiAction,
+} from "./configTools.ts";
+
+export {
+  handleEnrichPartnerWebsite,
+  handleGenerateAliases,
+  handleScanDirectory,
+  handleSuggestNextContacts,
+} from "./externalTools.ts";

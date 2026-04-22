@@ -170,7 +170,7 @@ ${(body_text || "").substring(0, 2000)}`;
             reply_activity_id: activity_id,
           },
         });
-        console.log(`Autopilot: created send_proposal task for agent ${mission.agent_id}`);
+        
       }
     }
 

@@ -47,13 +47,11 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
     operation: "ai_call",
     description: `enrich-partner-website: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
   });
-  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`);
 }
 
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
-  console.warn("[LEGACY] enrich-partner-website called — caller should migrate to client-side deep search (useDeepSearchLocal) or readUnifiedEnrichment.");
 
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
@@ -130,13 +128,11 @@ Deno.serve(async (req) => {
       url = `https://${url}`;
     }
 
-    console.log(`Enriching ${partner.company_name}: ${url}`);
 
     // Use pre-scraped markdown if provided, otherwise fallback to server-side fetch
     let markdown = "";
     if (preScrapedMarkdown && preScrapedMarkdown.length > 50) {
       markdown = preScrapedMarkdown.substring(0, 15000);
-      console.log(`Using pre-scraped markdown (${markdown.length} chars)`);
     } else {
       // Fallback: direct fetch website content
       try {
@@ -155,7 +151,6 @@ Deno.serve(async (req) => {
             .substring(0, 15000);
         }
       } catch (e) {
-        console.error("Website fetch failed:", e);
       }
     }
 
@@ -171,7 +166,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Extracted ${markdown.length} chars, analyzing with AI...`);
 
     // Analyze with Gemini via Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -251,7 +245,6 @@ Estrai queste informazioni (metti null se non trovate):
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
       const detail = aiResponse.status === 402 ? "Crediti AI esauriti. Riprova più tardi." : `AI analysis failed (${aiResponse.status})`;
       return new Response(JSON.stringify({ error: detail }), {
         status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
@@ -275,7 +268,6 @@ Estrai queste informazioni (metti null se non trovate):
       try {
         enrichment = JSON.parse(toolCall.function.arguments);
       } catch {
-        console.error("Failed to parse tool call arguments");
       }
     }
 
@@ -284,7 +276,6 @@ Estrai queste informazioni (metti null se non trovate):
       try {
         enrichment = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
       } catch {
-        console.error("Failed to parse AI response");
       }
     }
 
@@ -308,20 +299,17 @@ Estrai queste informazioni (metti null se non trovate):
     }).eq("id", partnerId);
 
     if (updateError) {
-      console.error("DB update error:", updateError);
       return new Response(JSON.stringify({ error: "Failed to save enrichment" }), {
         status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`Enrichment saved for ${partner.company_name}`);
 
     // LOVABLE-93: Auto-calculate quality score after enrichment
     try {
       const { triggerQualityScoreRecalculation } = await import("../_shared/enrichmentAdapter.ts");
       await triggerQualityScoreRecalculation(supabase, partnerId);
     } catch (e) {
-      console.warn("[enrich-partner-website] quality score calculation failed:", e instanceof Error ? e.message : String(e));
     }
 
     return new Response(
@@ -329,7 +317,6 @@ Estrai queste informazioni (metti null se non trovate):
       { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }

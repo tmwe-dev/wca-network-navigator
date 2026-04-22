@@ -39,11 +39,6 @@ export async function suggestGroupForSender(
           ai_suggestion_confidence: confidence,
         })
         .eq("id", addressRule.id);
-
-      console.log(
-        `[classify-email-response] Updated AI suggestion for ${emailAddress}: ` +
-        `category=${category}, confidence=${confidence}`
-      );
     }
   } catch (aiSuggestErr) {
     console.warn("[classify-email-response] AI suggestion update error (non-blocking):", aiSuggestErr);

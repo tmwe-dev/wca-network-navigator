@@ -152,10 +152,6 @@ export async function handleOperativeRequest(
 
       if (insertedConversionAction?.id) {
         result.actionsExecuted.push("operative_conversion_signal_pending");
-        console.log(
-          `[LOVABLE-93] Conversion signal detected: partner=${input.partnerId} ` +
-          `status=${currentLeadStatus} category=${category}`
-        );
       }
     } catch (e) {
       result.errors.push(`Conversion signal action failed: ${e}`);
@@ -182,10 +178,6 @@ export async function handleOperativeRequest(
       });
 
       result.actionsExecuted.push("operative_soft_signal_qualification");
-      console.log(
-        `[LOVABLE-93] Qualification signal: partner=${input.partnerId} ` +
-        `category=${category}`
-      );
     } catch (e) {
       result.errors.push(`Qualification suggestion failed: ${e}`);
     }
@@ -216,10 +208,6 @@ export async function handleOperativeRequest(
 
       if (insertedUpsellAction?.id) {
         result.actionsExecuted.push("operative_upsell_signal");
-        console.log(
-          `[LOVABLE-93] Upsell opportunity detected: partner=${input.partnerId} ` +
-          `category=${category}`
-        );
       }
     } catch (e) {
       result.errors.push(`Upsell opportunity action failed: ${e}`);

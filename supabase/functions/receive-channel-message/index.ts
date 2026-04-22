@@ -110,9 +110,9 @@ Deno.serve(async (req) => {
     }
 
     if (wasDuplicate) {
-      console.log(`[receive-channel-message] ${direction} ${channel} duplicate skipped (ext_id=${message_id_external})`);
+      
     } else {
-      console.log(`[receive-channel-message] ${direction} ${channel} msg ${msgId}`);
+      
     }
 
     return new Response(JSON.stringify({

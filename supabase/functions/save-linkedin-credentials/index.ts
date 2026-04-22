@@ -71,14 +71,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('save-linkedin-credentials: stored encrypted credentials for user', user.id)
 
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...dynCors, 'Content-Type': 'application/json' } },
     )
   } catch (e: unknown) {
-    console.error('save-linkedin-credentials error:', e)
     return edgeError('INTERNAL_ERROR', extractErrorMessage(e))
   }
 })

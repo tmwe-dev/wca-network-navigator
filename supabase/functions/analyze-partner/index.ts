@@ -52,7 +52,7 @@ async function consumeCredits(userId: string, usage: { prompt_tokens: number; co
     operation: 'ai_call',
     description: `analyze-partner: ${usage.prompt_tokens} in + ${usage.completion_tokens} out`,
   })
-  console.log(`Credits consumed: ${total} (balance: ${credits.balance - total})`)
+  
 }
 
 Deno.serve(async (req) => {
@@ -134,7 +134,6 @@ Gold Medallion: ${profileData.gold_medallion || false}
 
 IMPORTANT: Only use service codes from the exact list above. Be conservative - only assign services clearly indicated by the profile.`
 
-    console.log('Calling AI gateway for partner analysis...')
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -191,7 +190,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('AI error:', response.status, errText)
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, try again later' }),
@@ -217,7 +215,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0]
     
     if (!toolCall?.function?.arguments) {
-      console.error('No tool call in response:', JSON.stringify(aiData))
       return new Response(
         JSON.stringify({ success: false, error: 'AI returned no classification' }),
         { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
@@ -225,7 +222,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     }
 
     const classification = JSON.parse(toolCall.function.arguments)
-    console.log(`Classification for ${partnerId}:`, JSON.stringify(classification))
 
     // Update partner with summary, type, and rating
     await supabase
@@ -261,7 +257,6 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
       { headers: { ...dynCors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }

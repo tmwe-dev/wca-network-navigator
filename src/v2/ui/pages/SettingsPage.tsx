@@ -31,6 +31,7 @@ import { TokenSettingsPanel } from "@/components/ai-control/TokenSettingsPanel";
 import { RoleManagementPanel } from "@/components/settings/RoleManagementPanel";
 import { UserRolesPanel } from "@/components/settings/UserRolesPanel";
 import { TeamManagementPanel } from "@/components/settings/TeamManagementPanel";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function SettingsPage() {
   const { data: settings, isLoading } = useAppSettings();
@@ -131,7 +132,9 @@ export function SettingsPage() {
               </div>
             )}
             {tab === "operatori" && <OperatorsSettings />}
-            {tab === "utenti" && <AdminUsers />}
+            <PermissionGate permission="settings.manage_users" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
+              {tab === "utenti" && <AdminUsers />}
+            </PermissionGate>
             {tab === "enrichment" && <EnrichmentSettings />}
             {tab === "memoria-ai" && (
               <div className="float-panel p-5">
@@ -158,21 +161,27 @@ export function SettingsPage() {
                 <NotificationPreferences />
               </div>
             )}
-            {tab === "ruoli" && (
-              <div className="float-panel p-5">
-                <RoleManagementPanel />
-              </div>
-            )}
-            {tab === "ruoli-utenti" && (
-              <div className="float-panel p-5">
-                <UserRolesPanel />
-              </div>
-            )}
-            {tab === "team" && (
-              <div className="float-panel p-5">
-                <TeamManagementPanel />
-              </div>
-            )}
+            <PermissionGate permission="settings.manage_roles" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
+              {tab === "ruoli" && (
+                <div className="float-panel p-5">
+                  <RoleManagementPanel />
+                </div>
+              )}
+            </PermissionGate>
+            <PermissionGate permission="settings.manage_roles" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
+              {tab === "ruoli-utenti" && (
+                <div className="float-panel p-5">
+                  <UserRolesPanel />
+                </div>
+              )}
+            </PermissionGate>
+            <PermissionGate permission="settings.manage_teams" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
+              {tab === "team" && (
+                <div className="float-panel p-5">
+                  <TeamManagementPanel />
+                </div>
+              )}
+            </PermissionGate>
             {tab === "audit" && (
               <div className="float-panel p-5">
                 <AuditTrailPanel />

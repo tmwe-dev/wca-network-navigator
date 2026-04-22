@@ -118,7 +118,7 @@ export async function handleSendEmail(
     agentId: ctx?.agentId,
     source: "agent",
   });
-  console.log(`[send_email] postSendPipeline:`, JSON.stringify(pipelineResult));
+  
 
   return { success: true, message: `Email inviata a ${args.to_email}.`, post_send: pipelineResult };
 }

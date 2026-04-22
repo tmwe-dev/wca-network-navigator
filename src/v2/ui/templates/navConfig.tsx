@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ArrowDownLeft, Calendar, Earth,
   ArrowUpDown, Gamepad2, MessageSquare,
   BrainCircuit, ShieldCheck, BarChart3, Rocket,
-  UserCog, BookOpen, Wand2, FlaskConical,
+  UserCog, BookOpen, Wand2, FlaskConical, Coins, Bell,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -63,6 +63,14 @@ export const navGroupsDef: readonly NavGroupDef[] = [
       { labelKey: "Email Forge", path: "/v2/ai-staff/email-forge", icon: <Wand2 className="h-4 w-4" /> },
       { labelKey: "Prompt Lab", path: "/v2/prompt-lab", icon: <FlaskConical className="h-4 w-4" />, badge: "NEW" },
       { labelKey: "nav.research", path: "/v2/research", icon: <BarChart3 className="h-4 w-4" /> },
+    ],
+  },
+  {
+    titleKey: "nav.group_tools",
+    items: [
+      { labelKey: "nav.token_cockpit", path: "/v2/token-cockpit", icon: <Coins className="h-4 w-4" /> },
+      { labelKey: "nav.calendar", path: "/v2/calendar", icon: <Calendar className="h-4 w-4" /> },
+      { labelKey: "nav.notifications", path: "/v2/notifications", icon: <Bell className="h-4 w-4" /> },
     ],
   },
   {

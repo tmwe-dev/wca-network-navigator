@@ -72,7 +72,6 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (pauseSettings?.value === "true") {
-          console.log(`[cadence-engine] AI automations paused for user ${action.user_id}, skipping action ${action.id}`);
           continue;
         }
 

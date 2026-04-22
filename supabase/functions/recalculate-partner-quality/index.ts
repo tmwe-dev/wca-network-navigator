@@ -58,7 +58,6 @@ Deno.serve(async (req) => {
 
     // Single partner mode
     if (partnerIdParam) {
-      console.log(`[recalculate-partner-quality] Single partner: ${partnerIdParam}`);
       try {
         const { loadAndCalculateQuality, savePartnerQuality } = await import("../_shared/partnerQualityScore.ts");
         const quality = await loadAndCalculateQuality(supabase, partnerIdParam);
@@ -81,7 +80,6 @@ Deno.serve(async (req) => {
       }
     } else {
       // Batch mode: fetch all partners
-      console.log(`[recalculate-partner-quality] Batch mode (max ${batchSize})`);
       const { data: partners, error: listErr } = await supabase
         .from("partners")
         .select("id")
@@ -119,7 +117,6 @@ Deno.serve(async (req) => {
 
       if (partners.length >= batchSize) {
         result.rate_limited_at = batchSize;
-        console.warn(`[recalculate-partner-quality] Batch reached limit (${batchSize}), invoke again for more`);
       }
     }
 
@@ -128,7 +125,6 @@ Deno.serve(async (req) => {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("[recalculate-partner-quality] Error:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",

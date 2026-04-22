@@ -56,7 +56,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (pauseSettings?.value === "true") {
-      console.log(`[analyze-email-edit] AI automations paused for user ${userId}`);
       return new Response(JSON.stringify({ error: "AI automations are paused" }), {
         status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
       });

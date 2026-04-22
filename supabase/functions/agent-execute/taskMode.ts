@@ -146,7 +146,6 @@ export async function handleGeneralTask(
       iterations++;
       const toolResults = [];
       for (const tc of msg.tool_calls) {
-        console.log(`[Agent ${agentName} Task] Tool: ${tc.function.name}`);
         const args = JSON.parse(tc.function.arguments || "{}");
         const toolResult = await executeTool(tc.function.name, args, userId, authHeader, { agent_id: agentId });
         toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(toolResult) });

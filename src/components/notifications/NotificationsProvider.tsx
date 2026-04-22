@@ -64,7 +64,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           subscribeToPush();
         } else if (Notification.permission !== "denied") {
           // Optionally request permission (can be triggered by user interaction)
-          console.log("Push notification permission available");
+          // Push notification permission available but not yet granted
         }
       }
     };

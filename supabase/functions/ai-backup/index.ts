@@ -108,7 +108,7 @@ serve(async (req) => {
       }
     }
 
-    console.log("[ai-backup] Stats:", JSON.stringify(stats));
+    
     return json({ success: true, stats });
   } catch (e: unknown) {
     console.error("ai-backup error:", e);

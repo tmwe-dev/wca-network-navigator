@@ -47,7 +47,6 @@ export async function extractBodyAndAttachments(
   // ─── Oversized message: metadata only ───
   if (isOversized) {
     const sizeMB = (rfc822Size / (1024 * 1024)).toFixed(1);
-    console.log(`[check-inbox] UID ${uid}: oversized — metadata only (${sizeMB} MB)`);
     result.bodyText = `⚠️ Messaggio troppo grande per il download completo (${sizeMB} MB). Sono stati salvati solo oggetto e dati principali.`;
     result.bodyHtml = `<div style="padding:16px;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;color:#92400e;font-family:sans-serif"><strong>⚠️ Messaggio sovradimensionato (${sizeMB} MB)</strong><br/><p>Questo messaggio supera il limite operativo per il parsing completo.</p><p>Sono stati salvati solo: oggetto, mittente, destinatari e data.</p><p>Corpo completo e allegati non sono stati scaricati per evitare errori di elaborazione.</p></div>`;
     result.parseWarnings.push(`oversized message (${sizeMB}MB) — saved metadata only`);
@@ -59,7 +58,6 @@ export async function extractBodyAndAttachments(
   if (bodyStructure) {
     try {
       parts = collectMimeLeafParts(bodyStructure);
-      console.log(`[check-inbox] UID ${uid}: ${parts.length} MIME parts`);
     } catch (bsErr: unknown) {
       result.parseWarnings.push(`BODYSTRUCTURE parse failed: ${extractErrorMessage(bsErr)}`);
     }

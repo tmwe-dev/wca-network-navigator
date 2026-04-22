@@ -305,7 +305,6 @@ serve(async (req) => {
               target_filters: { partner_id: partner.id, from_state: t.from, to_state: t.to, trigger: t.trigger } as Record<string, unknown>,
               status: "proposed",
             });
-            console.log("[AutonomousCycle] state_transition proposed", JSON.stringify({ partner_id: partner.id, from: t.from, to: t.to }));
           }
         }
       }
@@ -424,7 +423,6 @@ serve(async (req) => {
             critical: auditResult.summary?.critical || 0,
           });
         } catch (auditErr) {
-          console.warn("[autonomous-cycle] KB audit failed:", auditErr);
         }
       }
     }
@@ -434,7 +432,6 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("autonomous-cycle error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });

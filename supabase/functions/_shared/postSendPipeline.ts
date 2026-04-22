@@ -108,9 +108,6 @@ export async function runPostSendPipeline(
       .gte("created_at", sixtySecondsAgo);
 
     if ((count ?? 0) > 0) {
-      console.log(
-        `[postSendPipeline] Duplicato rilevato: ${input.channel} a partner ${input.partnerId} negli ultimi 60s. Skip.`,
-      );
       result.skippedAsDuplicate = true;
       return result;
     }

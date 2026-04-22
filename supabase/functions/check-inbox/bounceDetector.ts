@@ -109,7 +109,6 @@ export async function handleBounce(
       decision_origin: "system_trigger",
     });
 
-    console.log(`[check-inbox] Bounce detected: ${bounce.type} for ${bounce.bouncedEmail}`);
   } catch (err) {
     console.error("[check-inbox] Bounce handling error:", err);
   }
