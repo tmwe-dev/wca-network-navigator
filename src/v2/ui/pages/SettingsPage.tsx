@@ -1,12 +1,37 @@
 /**
- * SettingsPage V2 — Direct mount, no inner Suspense.
+ * SettingsPage V2 — Standalone V1 content migration (NO wrapper)
  */
-import * as React from "react";
-import V1Component from "@/pages/Settings";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package } from "lucide-react";
+import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
+import AICommandCenter from "@/components/settings/AICommandCenter";
+import { GeneralSettings } from "@/components/settings/GeneralSettings";
+import { ConnectionsSettings } from "@/components/settings/ConnectionsSettings";
+import { ImportExportSettings } from "@/components/settings/ImportExportSettings";
+import { RASettings } from "@/components/settings/RASettings";
+import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
+import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
+import OperatorsSettings from "@/pages/OperatorsSettings";
+import EmailDownloadPage from "@/pages/EmailDownloadPage";
+import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
+import OperativeJobsBoard from "@/components/settings/OperativeJobsBoard";
+import MemoryDashboard from "@/components/ai/MemoryDashboard";
+import TimingSettings from "@/components/settings/TimingSettings";
+import AdminUsers from "@/pages/AdminUsers";
+import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { BackupExportTab } from "@/components/settings/BackupExportTab";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 import { toast } from "sonner";
 
-export function SettingsPage(): React.ReactElement {
+export function SettingsPage() {
+  const { data: settings, isLoading } = useAppSettings();
+  const updateSetting = useUpdateSetting();
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "generale");
+
   useMissionDrawerEvents({
     "enrichment-batch-start": () => {
       window.dispatchEvent(new CustomEvent("settings-trigger-enrichment-batch"));
@@ -18,9 +43,107 @@ export function SettingsPage(): React.ReactElement {
     },
   });
 
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setTab(t);
+  }, [searchParams]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const tabs: VerticalTab[] = [
+    { value: "generale", label: "Generale", icon: SettingsIcon },
+    { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
+    { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
+    { value: "wca", label: "Connessioni", icon: Link },
+    { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+    { value: "provider-ai", label: "Provider AI", icon: Cpu },
+    { value: "import-export", label: "Importa", icon: Download },
+    { value: "download-email", label: "Download Email", icon: Mail },
+    { value: "reportaziende", label: "Report Aziende", icon: FileText },
+    { value: "enrichment", label: "Arricchimento", icon: Image },
+    { value: "memoria-ai", label: "Memoria AI", icon: Database },
+    { value: "operatori", label: "Operatori", icon: Users },
+    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+    { value: "timing", label: "Timing & Schedule", icon: Clock },
+    { value: "backup-export", label: "Backup & Export", icon: Package },
+  ];
+
   return (
-    <div data-testid="page-settings" className="h-full">
-      <V1Component />
+    <div data-testid="page-settings" className="flex h-full min-h-0 overflow-hidden">
+      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
+      <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
+        {tab === "download-email" ? (
+          <EmailDownloadPage />
+        ) : (
+          <div className="max-w-4xl">
+            {tab === "generale" && (
+              <div className="space-y-4">
+                <div className="float-panel p-5">
+                  <GeneralSettings settings={settings} updateSetting={updateSetting} />
+                </div>
+                <div className="float-panel p-5">
+                  <LanguageSwitcher />
+                </div>
+              </div>
+            )}
+            {tab === "wca" && (
+              <div className="float-panel p-5">
+                <ConnectionsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "voce-ai" && (
+              <div className="float-panel p-5">
+                <ElevenLabsSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "provider-ai" && (
+              <div className="float-panel p-5">
+                <AIProviderSettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "import-export" && (
+              <div className="float-panel p-5">
+                <ImportExportSettings />
+              </div>
+            )}
+            {tab === "reportaziende" && (
+              <div className="float-panel p-5">
+                <RASettings settings={settings} updateSetting={updateSetting} />
+              </div>
+            )}
+            {tab === "ai-prompt" && (
+              <div className="float-panel p-5">
+                <AICommandCenter />
+              </div>
+            )}
+            {tab === "operatori" && <OperatorsSettings />}
+            {tab === "utenti" && <AdminUsers />}
+            {tab === "enrichment" && <EnrichmentSettings />}
+            {tab === "memoria-ai" && (
+              <div className="float-panel p-5">
+                <MemoryDashboard />
+              </div>
+            )}
+            {tab === "guida-operativa" && (
+              <div className="float-panel p-5">
+                <OperativeJobsBoard />
+              </div>
+            )}
+            {tab === "timing" && (
+              <div className="float-panel p-5">
+                <TimingSettings />
+              </div>
+            )}
+            {tab === "backup-export" && (
+              <div className="float-panel p-5">
+                <BackupExportTab />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

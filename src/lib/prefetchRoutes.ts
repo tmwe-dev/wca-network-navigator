@@ -16,30 +16,26 @@ const routePrefetchMap: Record<string, readonly Loader[]> = {
     () => import("@/v2/ui/pages/NetworkPage"),
     () => import("@/pages/Operations"),
   ],
-  // CRM: V2 + V1 CRM
+  // CRM: V2 standalone (migrated from V1)
   "/v2/crm": [
     () => import("@/v2/ui/pages/CRMPage"),
-    () => import("@/pages/CRM"),
   ],
-  // Contacts hub (canonical /v2/crm/contacts)
+  // Contacts hub (canonical /v2/crm/contacts, migrated from V1)
   "/v2/crm/contacts": [
     () => import("@/v2/ui/pages/ContactsPage"),
-    () => import("@/pages/Contacts"),
   ],
-  // Outreach: V2 + V1
+  // Outreach: V2 standalone (migrated from V1)
   "/v2/outreach": [
     () => import("@/v2/ui/pages/OutreachPage"),
-    () => import("@/pages/Outreach"),
   ],
   // Agents
   "/v2/agents": [
     () => import("@/v2/ui/pages/AgentsPage"),
     () => import("@/pages/AgentChatHub"),
   ],
-  // Settings
+  // Settings: V2 standalone (migrated from V1)
   "/v2/settings": [
     () => import("@/v2/ui/pages/SettingsPage"),
-    () => import("@/pages/Settings"),
   ],
   // Email Intelligence (no V1 wrapper)
   "/v2/email-intelligence": [
