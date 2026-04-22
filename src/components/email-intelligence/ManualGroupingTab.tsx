@@ -1,15 +1,13 @@
 /**
- * ManualGroupingTab — Drag-and-drop sender classification (refactored from SenderManagementTab)
- * Tab 1 of Email Intelligence flow
+ * ManualGroupingTab — Drag-and-drop sender classification (refactored).
+ * Tab 1 of Email Intelligence flow. Now uses composable hooks.
  */
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RefreshCw, Loader2, Plus, Search, ArrowUpDown, Filter, Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
@@ -18,454 +16,101 @@ import { SenderEmailsDialog } from "./management/SenderEmailsDialog";
 import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { EmailSenderGroup, SenderAnalysis, SortOption } from "@/types/email-management";
-import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/queryKeys";
+import type { SenderAnalysis } from "@/types/email-management";
 
-const VOLUME_FILTERS = [
-  { value: "all", label: "Tutti" },
-  { value: "2", label: ">2 email" },
-  { value: "5", label: ">5 email" },
-  { value: "10", label: ">10 email" },
-  { value: "50", label: ">50 email" },
-];
+// Import refactored hooks
+import { useGroupingData } from "./manual-grouping/useGroupingData";
+import { useFilterAndSort } from "./manual-grouping/useFilterAndSort";
+import { useDragAndDrop } from "./manual-grouping/useDragAndDrop";
+import { useGroupAssignment } from "./manual-grouping/useGroupAssignment";
+import { useSelectionState } from "./manual-grouping/useSelectionState";
 
 export default function ManualGroupingTab() {
-  const qc = useQueryClient();
-  const [senders, setSenders] = useState<SenderAnalysis[]>([]);
-  const [groups, setGroups] = useState<EmailSenderGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPopulating, setIsPopulating] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  // Data management
+  const { senders, setSenders, groups, setGroups, isLoading, isPopulating, loadData, populateAddressRules } =
+    useGroupingData();
+
+  // Filtering and sorting
+  const {
+    searchQuery,
+    setSearchQuery,
+    sortOption,
+    setSortOption,
+    volumeFilter,
+    setVolumeFilter,
+    groupSortOption,
+    setGroupSortOption,
+    activeLetterFilter,
+    setActiveLetterFilter,
+    sortedSenders,
+    sortedGroups,
+    availableLetters,
+    ALPHABET,
+    VOLUME_FILTERS,
+    totalEmailCount,
+  } = useFilterAndSort(senders, groups);
+
+  // Drag and drop
+  const { activeDrag, setActiveDrag, hoveredGroupId, setHoveredGroupId, handleDragEnd } = useDragAndDrop();
+
+  // Group assignment
+  const { assignToGroup, bulkAssignGroup } = useGroupAssignment(groups, setSenders);
+
+  // Selection state
+  const { selectedSenders, setSelectedSenders, toggleSenderSelection, selectAll, getSelectedSenderObjects } =
+    useSelectionState();
+
+  // Local UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [sortOption, setSortOption] = useState<SortOption>("count-desc");
-  const [volumeFilter, setVolumeFilter] = useState("all");
-  const [activeDrag, setActiveDrag] = useState<SenderAnalysis | null>(null);
-  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
   const [emailPreviewSender, setEmailPreviewSender] = useState<SenderAnalysis | null>(null);
-  const [selectedSenders, setSelectedSenders] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!activeDrag) return;
-    const handleDrag = (e: DragEvent) => {
-      if (e.clientX === 0 && e.clientY === 0) return;
-      const dropZones = document.querySelectorAll('[data-drop-zone="true"]');
-      let found = false;
-      dropZones.forEach((zone) => {
-        const rect = zone.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          const gid = zone.getAttribute("data-group-id");
-          if (gid) { setHoveredGroupId(gid); found = true; }
-        }
-      });
-      if (!found) setHoveredGroupId(null);
-    };
-    document.addEventListener("drag", handleDrag);
-    return () => document.removeEventListener("drag", handleDrag);
-  }, [activeDrag]);
-
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    const ch = supabase.channel("manual-grouping-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "email_sender_groups" }, () => loadGroups())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-
-  const loadGroups = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+  const handleCreateCategory = async (data: {
+    nome_gruppo: string;
+    descrizione?: string;
+    colore: string;
+    icon: string;
+  }) => {
+    const { data: { user } } = await (await import("@/integrations/supabase/client")).supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from("email_sender_groups")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    setGroups((data || []) as EmailSenderGroup[]);
-  };
 
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non autenticato");
-
-      // Load groups
-      const { data: groupsData } = await supabase
-        .from("email_sender_groups")
-        .select("*")
-        .order("sort_order", { ascending: true });
-
-      const loadedGroups = (groupsData || []) as EmailSenderGroup[];
-
-      if (loadedGroups.length === 0) {
-        const inserts = PREDEFINED_GROUPS.map((g, i) => ({
-          nome_gruppo: g.name, descrizione: g.description,
-          colore: g.color, icon: g.icon, user_id: user.id, sort_order: i,
-        }));
-        const { data: created } = await supabase.from("email_sender_groups").insert(inserts).select();
-        if (created) {
-          setGroups(created as EmailSenderGroup[]);
-          toast.success(`${created.length} gruppi predefiniti creati`);
-        }
-      } else {
-        setGroups(loadedGroups);
-      }
-
-      // Load all visible uncategorized address rules with pagination
-      const rules = await fetchAllRows<{
-        id: string; email_address: string; display_name: string | null;
-        email_count: number | null; last_email_at: string | null;
-        domain: string | null; company_name: string | null;
-      }>(
-        (from, to) =>
-          supabase
-            .from("email_address_rules")
-            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
-            .is("group_id", null)
-            .order("email_count", { ascending: false })
-            .range(from, to),
-      );
-
-      const senderList: SenderAnalysis[] = rules.map((r) => ({
-        email: r.email_address,
-        domain: r.domain || r.email_address.split("@")[1] || "",
-        companyName: r.company_name || r.display_name || deriveSenderDisplayName(r.email_address),
-        emailCount: r.email_count ?? 0,
-        firstSeen: "",
-        lastSeen: r.last_email_at || "",
-        isClassified: false,
-        ruleId: r.id,
-      }));
-
-      setSenders(senderList);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Errore caricamento");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /** Fetch ALL rows from a query, paginating in chunks of 1000 to bypass Supabase default limit */
-  const fetchAllRows = async <T,>(
-    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  ): Promise<T[]> => {
-    const PAGE = 1000;
-    const all: T[] = [];
-    let offset = 0;
-    let done = false;
-    while (!done) {
-      const { data, error } = await buildQuery(offset, offset + PAGE - 1);
-      if (error) throw error;
-      const batch = data ?? [];
-      all.push(...batch);
-      if (batch.length < PAGE) done = true;
-      else offset += PAGE;
-    }
-    return all;
-  };
-
-  const populateAddressRules = async () => {
-    setIsPopulating(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get only THIS user's inbound email senders with pagination
-      const messages = await fetchAllRows<{ from_address: string | null }>(
-        (from, to) =>
-          supabase
-            .from("channel_messages")
-            .select("from_address")
-            .eq("channel", "email")
-            .eq("direction", "inbound")
-            .eq("user_id", user.id)
-            .not("from_address", "is", null)
-            .order("id", { ascending: true })
-            .range(from, to),
-      );
-
-      // Count per address
-      const addressMap = new Map<string, number>();
-      for (const msg of messages) {
-        const key = (msg.from_address || "").toLowerCase().trim();
-        if (!key || !key.includes("@")) continue;
-        addressMap.set(key, (addressMap.get(key) || 0) + 1);
-      }
-
-      // Check all visible existing rules with pagination
-      const existing = await fetchAllRows<{
-        id: string;
-        email_address: string;
-        email_count: number | null;
-      }>(
-        (from, to) =>
-          supabase
-            .from("email_address_rules")
-            .select("id, email_address, email_count")
-            .order("id", { ascending: true })
-            .range(from, to),
-      );
-      const existingByAddress = new Map<string, Array<{ id: string; email_count: number | null }>>();
-      for (const rule of existing) {
-        const key = rule.email_address.toLowerCase();
-        const matches = existingByAddress.get(key) || [];
-        matches.push({ id: rule.id, email_count: rule.email_count });
-        existingByAddress.set(key, matches);
-      }
-      const existingSet = new Set(existingByAddress.keys());
-
-      // Update email_count for any visible rule with stale counts
-      const staleUpdates: Array<{ id: string; count: number }> = [];
-      for (const [addr, count] of addressMap.entries()) {
-        const matchingRules = existingByAddress.get(addr);
-        if (!matchingRules) continue;
-        for (const rule of matchingRules) {
-          if ((rule.email_count ?? 0) !== count) {
-            staleUpdates.push({ id: rule.id, count });
-          }
-        }
-      }
-
-      if (staleUpdates.length > 0) {
-        for (let i = 0; i < staleUpdates.length; i += 20) {
-          const batch = staleUpdates.slice(i, i + 20);
-          await Promise.all(
-            batch.map(async ({ id, count }) => {
-              const { error } = await supabase
-                .from("email_address_rules")
-                .update({ email_count: count })
-                .eq("id", id);
-              if (error) throw error;
-            }),
-          );
-        }
-      }
-
-      const newRules = [...addressMap.entries()]
-        .filter(([addr]) => !existingSet.has(addr))
-        .map(([addr, count]) => ({
-          user_id: user.id,
-          email_address: addr,
-          domain: addr.split("@")[1],
-          email_count: count,
-          is_active: true,
-          company_name: deriveSenderDisplayName(addr),
-        }));
-
-      if (newRules.length > 0) {
-        for (let i = 0; i < newRules.length; i += 100) {
-          const { error } = await supabase
-            .from("email_address_rules")
-            .upsert(newRules.slice(i, i + 100), { onConflict: "user_id,email_address" });
-          if (error) throw error;
-        }
-        toast.success(`${newRules.length} nuovi address aggiunti`);
-      } else {
-        toast.info("Tutti gli address sono già presenti");
-      }
-
-      if (staleUpdates.length > 0) {
-        toast.info(`${staleUpdates.length} address aggiornati con conteggio corretto`);
-      }
-
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount }),
-        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount }),
-        qc.invalidateQueries({ queryKey: queryKeys.emailIntel.activeRules }),
-      ]);
-      await loadData();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Errore popolamento");
-    } finally {
-      setIsPopulating(false);
-    }
-  };
-
-  const handleCreateCategory = async (data: { nome_gruppo: string; descrizione?: string; colore: string; icon: string }) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: created, error } = await supabase
+    const { data: created, error } = await (
+      await import("@/integrations/supabase/client")
+    ).supabase
       .from("email_sender_groups")
       .insert({ ...data, user_id: user.id, sort_order: groups.length })
       .select()
       .single();
-    if (error) { toast.error("Errore creazione"); throw error; }
-    setGroups((prev) => [...prev, created as EmailSenderGroup]);
+
+    if (error) {
+      toast.error("Errore creazione");
+      throw error;
+    }
+    setGroups((prev) => [...prev, created as any]);
     toast.success(`${data.nome_gruppo} creato`);
   };
 
-  const handleDragStart = (sender: SenderAnalysis) => setActiveDrag(sender);
+  const handleDragStartLocal = (sender: SenderAnalysis) => setActiveDrag(sender);
 
-  const handleDragEnd = async (clientX: number, clientY: number) => {
-    if (!activeDrag) return;
-    const dropZones = document.querySelectorAll('[data-drop-zone="true"]');
-    let targetGroupId: string | null = null;
-    let targetGroupName: string | null = null;
+  const handleDragEndLocal = async (clientX: number, clientY: number) => {
+    const targetGroupId = handleDragEnd(clientX, clientY);
+    if (!targetGroupId || !activeDrag) return;
 
-    dropZones.forEach((zone) => {
-      const rect = zone.getBoundingClientRect();
-      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-        targetGroupId = zone.getAttribute("data-group-id");
-        targetGroupName = zone.getAttribute("data-group-name");
-      }
-    });
-
-    if (targetGroupId && targetGroupName) {
-      await assignToGroup(activeDrag, targetGroupName, targetGroupId);
+    const group = groups.find((g) => g.id === targetGroupId);
+    if (group) {
+      await assignToGroup(activeDrag, group.nome_gruppo, targetGroupId);
     }
-    setActiveDrag(null);
-    setHoveredGroupId(null);
   };
 
-  const assignToGroup = async (sender: SenderAnalysis, groupName: string, groupId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const group = groups.find((g) => g.id === groupId);
-
-    if (sender.ruleId) {
-      await supabase.from("email_address_rules")
-        .update({ group_id: groupId, group_name: groupName, group_color: group?.colore, group_icon: group?.icon })
-        .eq("id", sender.ruleId);
-    } else {
-      await supabase.from("email_address_rules").insert({
-        email_address: sender.email, user_id: user.id,
-        group_id: groupId, group_name: groupName,
-        group_color: group?.colore, group_icon: group?.icon,
-        domain: sender.domain, company_name: sender.companyName,
-        email_count: sender.emailCount, is_active: true,
-      });
-    }
-
-    // Log decision for learning
-    await supabase.from("ai_decision_log").insert({
-      user_id: user.id,
-      decision_type: "email_group_assignment",
-      input_context: { email_address: sender.email, email_count: sender.emailCount, domain: sender.domain },
-      decision_output: { group_name: groupName, group_id: groupId },
-      confidence: 1.0,
-    });
-
-    // Check domain pattern for auto-learning
-    const domain = sender.email.split("@")[1];
-    if (domain) {
-      const { data: pattern } = await supabase.rpc("check_domain_group_pattern", {
-        p_user_id: user.id, p_domain: domain, p_min_count: 3,
-      });
-      if (pattern && pattern.length > 0) {
-        const p = pattern[0];
-        // Check if KB entry already exists for this domain
-        const { data: existingKb } = await supabase.from("kb_entries")
-          .select("id")
-          .eq("user_id", user.id)
-          .contains("tags", ["domain_pattern", domain])
-          .maybeSingle();
-        if (!existingKb) {
-          await supabase.from("kb_entries").insert({
-            user_id: user.id,
-            category: "email_management",
-            title: `Pattern dominio ${domain}`,
-            content: `Le email dal dominio ${domain} appartengono al gruppo "${p.group_name}". Classificare automaticamente.`,
-            tags: ["email_classification", "domain_pattern", domain],
-            priority: 5,
-            is_active: true,
-          });
-          toast.info(`Pattern dominio ${domain} → ${p.group_name} salvato in KB`);
-        }
-      }
-    }
-
-    setSenders((prev) => prev.filter((s) => s.email !== sender.email));
-    setSelectedSenders((prev) => {
-      const updated = new Set(prev);
-      updated.delete(sender.email);
-      return updated;
-    });
-    qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
-    toast.success(`${sender.companyName} → ${groupName}`);
-  };
-
-  const handleToggleSenderSelection = (email: string) => {
-    setSelectedSenders((prev) => {
-      const updated = new Set(prev);
-      if (updated.has(email)) {
-        updated.delete(email);
-      } else {
-        updated.add(email);
-      }
-      return updated;
-    });
+  const handleBulkAssignLocal = async (groupName: string, groupId: string) => {
+    const selected = getSelectedSenderObjects(senders);
+    if (selected.length === 0) return;
+    await bulkAssignGroup(selected, groupName, groupId);
+    setSelectedSenders(new Set());
   };
 
   const handleSelectAll = () => {
-    if (selectedSenders.size === sortedSenders.length && selectedSenders.size > 0) {
-      // Deselect all
-      setSelectedSenders(new Set());
-    } else {
-      // Select all visible
-      setSelectedSenders(new Set(sortedSenders.map((s) => s.email)));
-    }
+    selectAll(sortedSenders);
   };
-
-  const handleBulkAssignGroup = async (senders: SenderAnalysis[], groupName: string, groupId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const group = groups.find((g) => g.id === groupId);
-
-    for (const sender of senders) {
-      if (sender.ruleId) {
-        await supabase.from("email_address_rules")
-          .update({ group_id: groupId, group_name: groupName, group_color: group?.colore, group_icon: group?.icon })
-          .eq("id", sender.ruleId);
-      } else {
-        await supabase.from("email_address_rules").insert({
-          email_address: sender.email, user_id: user.id,
-          group_id: groupId, group_name: groupName,
-          group_color: group?.colore, group_icon: group?.icon,
-          domain: sender.domain, company_name: sender.companyName,
-          email_count: sender.emailCount, is_active: true,
-        });
-      }
-
-      // Log decision for learning
-      await supabase.from("ai_decision_log").insert({
-        user_id: user.id,
-        decision_type: "email_group_assignment",
-        input_context: { email_address: sender.email, email_count: sender.emailCount, domain: sender.domain },
-        decision_output: { group_name: groupName, group_id: groupId },
-        confidence: 1.0,
-      });
-    }
-
-    setSenders((prev) => prev.filter((s) => !selectedSenders.has(s.email)));
-    setSelectedSenders(new Set());
-    qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
-    toast.success(`${senders.length} mittenti → ${groupName}`);
-  };
-
-  // Filter & sort
-  const minVolume = volumeFilter === "all" ? 0 : parseInt(volumeFilter);
-  const filteredSenders = senders.filter((s) => {
-    if (s.emailCount < minVolume) return false;
-    if (!searchQuery) return true;
-    return s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.companyName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const sortedSenders = useMemo(() => {
-    const sorted = [...filteredSenders];
-    switch (sortOption) {
-      case "name-asc": return sorted.sort((a, b) => a.companyName.localeCompare(b.companyName));
-      case "name-desc": return sorted.sort((a, b) => b.companyName.localeCompare(a.companyName));
-      case "count-asc": return sorted.sort((a, b) => a.emailCount - b.emailCount);
-      case "count-desc": return sorted.sort((a, b) => b.emailCount - a.emailCount);
-      default: return sorted;
-    }
-  }, [filteredSenders, sortOption]);
-
-  const totalEmailCount = useMemo(() => senders.reduce((sum, s) => sum + s.emailCount, 0), [senders]);
 
   if (isLoading) {
     return (
@@ -477,48 +122,6 @@ export default function ManualGroupingTab() {
       </div>
     );
   }
-
-  // Group sorting for right panel
-  const [groupSortOption, setGroupSortOption] = useState<"alpha" | "count">("alpha");
-  const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
-
-  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
-
-  // Letters that have at least one group
-  const availableLetters = useMemo(() => {
-    const letters = new Set<string>();
-    groups.forEach((g) => {
-      const first = g.nome_gruppo.charAt(0).toUpperCase();
-      if (/[A-Z]/.test(first)) letters.add(first);
-      else letters.add("#");
-    });
-    return letters;
-  }, [groups]);
-
-  const sortedGroups = useMemo(() => {
-    let filtered = [...groups];
-
-    // Apply letter filter
-    if (activeLetterFilter) {
-      if (activeLetterFilter === "#") {
-        filtered = filtered.filter((g) => !/^[A-Z]/i.test(g.nome_gruppo));
-      } else {
-        filtered = filtered.filter((g) =>
-          g.nome_gruppo.charAt(0).toUpperCase() === activeLetterFilter
-        );
-      }
-    }
-
-    if (groupSortOption === "alpha") {
-      return filtered.sort((a, b) => a.nome_gruppo.localeCompare(b.nome_gruppo));
-    } else {
-      return filtered.sort((a, b) => {
-        const countA = (a as any).assigned_count || 0;
-        const countB = (b as any).assigned_count || 0;
-        return countB - countA;
-      });
-    }
-  }, [groups, groupSortOption, activeLetterFilter]);
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -533,19 +136,30 @@ export default function ManualGroupingTab() {
         </Badge>
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9 h-9" placeholder="Cerca mittente…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <Input
+            className="pl-9 h-9"
+            placeholder="Cerca mittente…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <Select value={volumeFilter} onValueChange={setVolumeFilter}>
           <SelectTrigger className="w-[130px] h-9">
-            <Filter className="h-3.5 w-3.5 mr-1.5" /><SelectValue />
+            <Filter className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {VOLUME_FILTERS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+            {VOLUME_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Select value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
+        <Select value={sortOption} onValueChange={(v) => setSortOption(v as any)}>
           <SelectTrigger className="w-[140px] h-9">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" /><SelectValue />
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="count-desc">Più email</SelectItem>
@@ -565,7 +179,7 @@ export default function ManualGroupingTab() {
 
       {/* Main layout — fixed height, no page scroll */}
       <div className="flex flex-1 gap-4 min-h-0 overflow-hidden">
-        {/* Sender list — LEFT PANEL with internal scroll */}
+        {/* Sender list — LEFT PANEL */}
         <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
@@ -589,42 +203,46 @@ export default function ManualGroupingTab() {
                   {searchQuery ? "Nessun risultato" : "Tutti i mittenti sono classificati ✅"}
                 </p>
               ) : (
-                 sortedSenders.map((sender) => (
-                  <SenderCard key={sender.email} sender={sender}
-                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                sortedSenders.map((sender) => (
+                  <SenderCard
+                    key={sender.email}
+                    sender={sender}
+                    onDragStart={handleDragStartLocal}
+                    onDragEnd={handleDragEndLocal}
                     onViewEmails={(s) => setEmailPreviewSender(s)}
                     groups={groups}
                     onAssignGroup={assignToGroup}
                     isSelected={selectedSenders.has(sender.email)}
-                    onToggleSelect={handleToggleSenderSelection} />
+                    onToggleSelect={toggleSenderSelection}
+                  />
                 ))
               )}
             </div>
           </div>
           {selectedSenders.size > 0 && (
             <MultiSelectBulkBar
-              selectedSenders={Array.from(selectedSenders)
-                .map((email) => sortedSenders.find((s) => s.email === email))
-                .filter((s): s is SenderAnalysis => s !== undefined)}
+              selectedSenders={getSelectedSenderObjects(senders)}
               groups={groups}
               onComplete={() => {
                 setSelectedSenders(new Set());
                 loadData();
               }}
-              onAssignGroup={handleBulkAssignGroup}
+              onAssignGroup={handleBulkAssignLocal}
             />
           )}
         </div>
 
-        {/* Groups panel — RIGHT PANEL with internal scroll */}
+        {/* Groups panel — RIGHT PANEL */}
         <div className="flex-1 min-w-0 flex flex-col border rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Gruppi ({sortedGroups.length}{activeLetterFilter ? `/${groups.length}` : ""})
+              Gruppi ({sortedGroups.length}
+              {activeLetterFilter ? `/${groups.length}` : ""})
             </span>
             <Select value={groupSortOption} onValueChange={(v) => setGroupSortOption(v as "alpha" | "count")}>
               <SelectTrigger className="w-[140px] h-8">
-                <ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue />
+                <ArrowUpDown className="h-3 w-3 mr-1" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="alpha">A → Z</SelectItem>
@@ -632,6 +250,7 @@ export default function ManualGroupingTab() {
               </SelectContent>
             </Select>
           </div>
+
           {/* Alphabet filter bar */}
           <div className="flex items-center gap-0 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
             <button
@@ -664,11 +283,11 @@ export default function ManualGroupingTab() {
               );
             })}
           </div>
+
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-4 flex flex-wrap gap-4 content-start">
               {sortedGroups.map((group) => (
-                <GroupDropZone key={group.id} group={group} onRefresh={loadData}
-                  isHovered={hoveredGroupId === group.id} />
+                <GroupDropZone key={group.id} group={group} onRefresh={loadData} isHovered={hoveredGroupId === group.id} />
               ))}
               {groups.length === 0 && (
                 <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>
@@ -678,12 +297,18 @@ export default function ManualGroupingTab() {
         </div>
       </div>
 
-      <CreateCategoryDialog open={showCreateDialog} onOpenChange={setShowCreateDialog}
-        onSubmit={handleCreateCategory} existingNames={groups.map((g) => g.nome_gruppo)} />
+      <CreateCategoryDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSubmit={handleCreateCategory}
+        existingNames={groups.map((g) => g.nome_gruppo)}
+      />
 
       <SenderEmailsDialog
         open={!!emailPreviewSender}
-        onOpenChange={(open) => { if (!open) setEmailPreviewSender(null); }}
+        onOpenChange={(open) => {
+          if (!open) setEmailPreviewSender(null);
+        }}
         emailAddress={emailPreviewSender?.email || ""}
         companyName={emailPreviewSender?.companyName || ""}
       />
