@@ -26,19 +26,19 @@ export type {
 // CALCULATION ORCHESTRATION
 // ════════════════════════════════════════════════════════════════════
 
-export { calculatePartnerQuality } from "./qualityOrchestrator";
+export { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // SAVE AND BATCH OPERATIONS
 // ════════════════════════════════════════════════════════════════════
 
-export { savePartnerQuality, calculateAndSavePartnerQuality, batchRecalculatePartnerQuality } from "./qualitySaveAndBatch";
+export { savePartnerQuality, calculateAndSavePartnerQuality, batchRecalculatePartnerQuality } from "./qualitySaveAndBatch.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // LEGACY COMPATIBILITY
 // ════════════════════════════════════════════════════════════════════
 
-export { loadAndCalculateQuality } from "./legacyCompatibility";
+export { loadAndCalculateQuality } from "./legacyCompatibility.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // INTERNAL MODULE EXPORTS (for testing and advanced use)
