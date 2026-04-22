@@ -29,8 +29,8 @@ import { NotificationPreferences } from "@/components/settings/NotificationPrefe
 import { AuditTrailPanel } from "@/components/audit/AuditTrailPanel";
 import { TokenSettingsPanel } from "@/components/ai-control/TokenSettingsPanel";
 import RoleManagementPanel from "@/components/settings/RoleManagementPanel";
-import { UserRolesPanel } from "@/components/settings/UserRolesPanel";
-import { TeamManagementPanel } from "@/components/settings/TeamManagementPanel";
+import UserRolesPanel from "@/components/settings/UserRolesPanel";
+import TeamManagementPanel from "@/components/settings/TeamManagementPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function SettingsPage() {
