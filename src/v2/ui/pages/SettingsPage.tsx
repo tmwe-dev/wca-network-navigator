@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, LogSquare } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -25,6 +25,8 @@ import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
 import { BackupExportTab } from "@/components/settings/BackupExportTab";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 import { toast } from "sonner";
+import { NotificationPreferences } from "@/components/settings/NotificationPreferences";
+import { AuditTrailPanel } from "@/components/audit/AuditTrailPanel";
 
 export function SettingsPage() {
   const { data: settings, isLoading } = useAppSettings();
@@ -67,6 +69,8 @@ export function SettingsPage() {
     { value: "operatori", label: "Operatori", icon: Users },
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "timing", label: "Timing & Schedule", icon: Clock },
+    { value: "notifiche", label: "Notifiche", icon: Bell },
+    { value: "audit", label: "Audit Trail", icon: LogSquare },
     { value: "backup-export", label: "Backup & Export", icon: Package },
   ];
 
@@ -134,6 +138,16 @@ export function SettingsPage() {
             {tab === "timing" && (
               <div className="float-panel p-5">
                 <TimingSettings />
+              </div>
+            )}
+            {tab === "notifiche" && (
+              <div className="float-panel p-5">
+                <NotificationPreferences />
+              </div>
+            )}
+            {tab === "audit" && (
+              <div className="float-panel p-5">
+                <AuditTrailPanel />
               </div>
             )}
             {tab === "backup-export" && (

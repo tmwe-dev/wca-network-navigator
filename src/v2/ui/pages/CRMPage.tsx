@@ -2,9 +2,10 @@
  * CRMPage V2 — Standalone V1 content migration (NO wrapper)
  */
 import { lazy, Suspense, useState, useEffect } from "react";
-import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2 } from "lucide-react";
+import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
+import { ExportDialog } from "@/components/export/ExportDialog";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useTrackPage } from "@/hooks/useTrackPage";
@@ -27,6 +28,7 @@ function TabFallback() {
 export function CRMPage(): React.ReactElement {
   const [tab, setTab] = useUrlState<string>("tab", "contatti");
   const [showAIMatch, setShowAIMatch] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -105,6 +107,13 @@ export function CRMPage(): React.ReactElement {
           Ricalcola Score
         </button>
         <button
+          onClick={() => setShowExport(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:bg-muted/40 hover:text-foreground border border-transparent"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Esporta
+        </button>
+        <button
           onClick={() => setShowAIMatch(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20 shadow-sm"
         >
@@ -137,6 +146,7 @@ export function CRMPage(): React.ReactElement {
       </div>
 
       <AIMatchDialog open={showAIMatch} onOpenChange={setShowAIMatch} />
+      <ExportDialog open={showExport} onOpenChange={setShowExport} />
     </div>
   );
 }

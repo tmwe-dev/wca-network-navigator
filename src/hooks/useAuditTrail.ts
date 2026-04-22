@@ -44,7 +44,7 @@ interface AuditTrailRow {
 
 // ── Hook ──
 
-function useAuditTrail(filters: AuditTrailFilters) {
+export function useAuditTrail(filters: AuditTrailFilters) {
   return useQuery({
     queryKey: queryKeys.supervisor.feed(
       filters.actorType || "all",
@@ -94,7 +94,7 @@ function useAuditTrail(filters: AuditTrailFilters) {
   });
 }
 
-function useAuditTrailCount(filters: Omit<AuditTrailFilters, "offset" | "limit">) {
+export function useAuditTrailCount(filters: Omit<AuditTrailFilters, "offset" | "limit">) {
   return useQuery({
     queryKey: ["audit-trail-count", filters],
     queryFn: async () => {

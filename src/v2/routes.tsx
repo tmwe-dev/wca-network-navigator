@@ -60,6 +60,7 @@ const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
 const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
+const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
@@ -73,6 +74,7 @@ const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage"
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
 const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
 const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) => ({ default: m.AgentTasksPage })));
+const DealsPage = lazy(() => import("./ui/pages/DealsPage").then((m) => ({ default: m.DealsPage })));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -149,6 +151,7 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
+          <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="network" element={guardedPage(DeepSearchPage, "Network")} />
 
           {/* CRM + figli */}
@@ -159,6 +162,9 @@ export function V2Routes(): React.ReactElement {
           <Route path="contacts" element={<Navigate to="/v2/crm/contacts" replace />} />
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
+
+          {/* Deals & Pipeline */}
+          <Route path="deals" element={guardedPage(DealsPage, "Deals")} />
 
           {/* Outreach + figli */}
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />

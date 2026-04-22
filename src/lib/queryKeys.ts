@@ -500,9 +500,57 @@ export const queryKeys = {
     history: (userId: string, limit?: number) => ["prompt-lab-global-runs", "history", userId, limit] as const,
   },
 
+  // ── Deals & Pipeline ───────────────────────────────────
+  dealsList: ["deals-list"] as const,
+  deals: {
+    all: ["deals"] as const,
+    filtered: (filters?: Record<string, unknown>) => ["deals", "filtered", filters] as const,
+    byStage: ["deals-by-stage"] as const,
+  },
+  deal: (id: string) => ["deal", id] as const,
+  dealStats: ["deal-stats"] as const,
+  dealActivities: (dealId: string) => ["deal-activities", dealId] as const,
+
+  // ── Analytics ─────────────────────────────────────────
+  analytics: {
+    emailMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-email", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    partnerMetrics: () => ["analytics-partners"] as const,
+    outreachMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-outreach", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    aiUsageMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-ai-usage", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    pipelineMetrics: () => ["analytics-pipeline"] as const,
+    activityTimeline: (days: number) => ["analytics-timeline", days] as const,
+    metricsComparison: (
+      current: { from: Date; to: Date },
+      previous: { from: Date; to: Date }
+    ) => [
+      "analytics-comparison",
+      current.from.toISOString(),
+      current.to.toISOString(),
+      previous.from.toISOString(),
+      previous.to.toISOString(),
+    ] as const,
+  },
+
   // ── Misc / Uncategorized ──────────────────────────────
   responseRateCard: ["response-rate-card"] as const,
   activeSchedules: ["active-schedules"] as const,
   atecoGroups: ["ateco-groups"] as const,
+
+  // ── Contact Merge & Duplicates ────────────────────────
+  contactMerge: {
+    duplicates: ["contact-duplicates"] as const,
+    duplicateCount: ["contact-duplicate-count"] as const,
+  },
+
+  // ── Audit Trail ───────────────────────────────────────
+  supervisor: {
+    feed: (actorType: string, category: string, search: string, page: number) =>
+      ["supervisor-audit-log", actorType, category, search, page] as const,
+    count: (filters?: unknown) => ["supervisor-audit-count", filters] as const,
+  },
+
   noop: ["noop"] as const,
 } as const;
