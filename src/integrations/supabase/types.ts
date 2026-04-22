@@ -1328,6 +1328,42 @@ export type Database = {
           },
         ]
       }
+      ai_token_usage: {
+        Row: {
+          cost_estimate: number | null
+          created_at: string | null
+          function_name: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          output_tokens: number | null
+          total_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          cost_estimate?: number | null
+          created_at?: string | null
+          function_name: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          total_tokens?: number | null
+          user_id: string
+        }
+        Update: {
+          cost_estimate?: number | null
+          created_at?: string | null
+          function_name?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          total_tokens?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_work_plans: {
         Row: {
           completed_at: string | null
@@ -4541,6 +4577,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          created_at: string | null
+          dismissed: boolean | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          priority: string | null
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string | null
+          dismissed?: boolean | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string | null
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string | null
+          dismissed?: boolean | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string | null
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       operative_prompts: {
         Row: {
           context: string
@@ -5934,6 +6018,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       reminders: {
         Row: {
