@@ -24,11 +24,18 @@ interface AgentTask {
   result_summary: string | null;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  avatar_emoji: string;
+  role: string;
+}
+
 function useAgentTasks() {
   return useQuery({
     queryKey: ["v2", "agent-tasks-pending"],
     queryFn: async () => {
-      const { data: tasks, error } = await (supabase as any)
+      const { data: tasks, error } = await (supabase as unknown as Record<string, (...args: unknown[]) => unknown>)
         .from("agent_tasks")
         .select("*")
         .in("status", ["proposed", "pending"])
@@ -38,12 +45,12 @@ function useAgentTasks() {
 
       // Fetch agent names
       const agentIds = [...new Set((tasks || []).map((t: AgentTask) => t.agent_id))];
-      const { data: agents } = await (supabase as any)
+      const { data: agents } = await (supabase as unknown as Record<string, (...args: unknown[]) => unknown>)
         .from("agents")
         .select("id, name, avatar_emoji, role")
         .in("id", agentIds.length ? agentIds : ["__none__"]);
 
-      const agentMap = new Map((agents || []).map((a: any) => [a.id, a]));
+      const agentMap = new Map((agents || []).map((a: Agent) => [a.id, a]));
       return (tasks || []).map((t: AgentTask) => ({
         ...t,
         agent: agentMap.get(t.agent_id) || { name: "Sconosciuto", avatar_emoji: "🤖", role: "agent" },
@@ -177,7 +184,7 @@ export function AgentTasksPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pending.forEach((t: any) => handleReject(t.id))}
+              onClick={() => pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) => handleReject(t.id))}
               disabled={updateMutation.isPending}
             >
               <X className="h-4 w-4 mr-1" />
@@ -185,7 +192,7 @@ export function AgentTasksPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => pending.forEach((t: any) => handleApprove(t.id))}
+              onClick={() => pending.forEach((t: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) => handleApprove(t.id))}
               disabled={updateMutation.isPending}
             >
               <Check className="h-4 w-4 mr-1" />
@@ -207,7 +214,7 @@ export function AgentTasksPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {pending.map((task: any) => (
+          {pending.map((task: AgentTask & { agent: { name: string; avatar_emoji: string; role: string } }) => (
             <TaskCard
               key={task.id}
               task={task}

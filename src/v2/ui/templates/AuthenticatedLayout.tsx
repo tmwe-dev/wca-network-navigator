@@ -49,10 +49,11 @@ const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").the
 const GlobalVoiceFAB = lazyRetry(() => import("@/components/voice/GlobalVoiceFAB"));
 const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazyRetry(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
-const TestExtensionsContent = lazyRetry(() => import("@/pages/TestExtensions"));
+const TestExtensionsContent = lazyRetry(() => import("@/components/test-extensions/TestExtensionsView"));
 const OnboardingWizard = lazyRetry(() => import("@/components/onboarding/OnboardingWizard").then(m => ({ default: m.OnboardingWizard })));
 const MobileBottomNav = lazyRetry(() => import("@/components/mobile/MobileBottomNav").then(m => ({ default: m.MobileBottomNav })));
 const PWAInstallPrompt = lazyRetry(() => import("@/components/shared/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+const NotificationsProvider = lazyRetry(() => import("@/components/notifications/NotificationsProvider").then(m => ({ default: m.NotificationsProvider })));
 
 export function AuthenticatedLayout(): React.ReactElement | null {
   const { isAuthenticated, isLoading, profile, signOut } = useAuthV2();
@@ -229,9 +230,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
               <DeepSearchContext.Provider value={deepSearch}>
                 <GlobalFiltersProvider>
                   <MissionProvider>
-                    <SonnerToaster position="top-right" richColors closeButton />
-                    <Toaster />
-                    <LiveRegion message="" />
+                    <NotificationsProvider>
+                      <SonnerToaster position="top-right" richColors closeButton />
+                      <Toaster />
+                      <LiveRegion message="" />
 
                     <div className="flex h-screen bg-background">
                       {/* Skip navigation link for accessibility */}
@@ -382,9 +384,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </Dialog>
                     )}
 
-                    <Suspense fallback={null}><ContactRecordDrawer /></Suspense>
-                    <ClaudeBadge />
-                    {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
+                      <Suspense fallback={null}><ContactRecordDrawer /></Suspense>
+                      <ClaudeBadge />
+                      {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
+                    </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>

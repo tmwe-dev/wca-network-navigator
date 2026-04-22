@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
-const TestExtensionsContent = lazy(() => import("@/pages/TestExtensions").then((m) => ({ default: m.TestExtensionsContent })));
+const TestExtensionsContent = lazy(() => import("@/components/test-extensions/TestExtensionsView").then((m) => ({ default: m.TestExtensionsContent })));
 const CommandPalette = lazy(() => import("@/components/CommandPalette").then((m) => ({ default: m.CommandPalette })));
 const MissionDrawer = lazy(() => import("@/components/global/MissionDrawer").then((m) => ({ default: m.MissionDrawer })));
 const FiltersDrawer = lazy(() => import("@/components/global/filters-drawer").then((m) => ({ default: m.FiltersDrawer })));

@@ -13,7 +13,7 @@ const routePrefetchMap: Record<string, readonly Loader[]> = {
   // Network: V2 + V1 Operations (now imported directly)
   "/v2/network": [
     () => import("@/v2/ui/pages/NetworkPage"),
-    () => import("@/pages/Operations"),
+    () => import("@/components/operations/OperationsView"),
   ],
   // CRM: V2 standalone (migrated from V1)
   "/v2/crm": [
@@ -30,7 +30,7 @@ const routePrefetchMap: Record<string, readonly Loader[]> = {
   // Agents
   "/v2/agents": [
     () => import("@/v2/ui/pages/AgentsPage"),
-    () => import("@/pages/AgentChatHub"),
+    () => import("@/components/agents/AgentChatHubView"),
   ],
   // Settings: V2 standalone (migrated from V1)
   "/v2/settings": [

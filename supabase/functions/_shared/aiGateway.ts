@@ -149,6 +149,12 @@ export interface AiChatOptions {
   apiKey?: string;
   /** Tag opzionale per logging/correlation. */
   context?: string;
+  /** User ID for token tracking (optional). */
+  userId?: string;
+  /** Function name for token tracking (optional). */
+  functionName?: string;
+  /** Supabase client for token logging (optional). */
+  supabase?: any;
 }
 
 export interface AiChatResult {
@@ -390,6 +396,30 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
             tokens: usage.totalTokens,
             toolCalls: toolCalls.length,
           });
+
+          // Log token usage if supabase client, userId, and functionName provided
+          if (opts.supabase && opts.userId && opts.functionName) {
+            try {
+              const { logTokenUsage } = await import("./tokenLogger.ts");
+              await logTokenUsage(
+                opts.supabase,
+                opts.userId,
+                opts.functionName,
+                nativeModel,
+                usage.promptTokens,
+                usage.completionTokens,
+                0
+              );
+            } catch (tokenErr) {
+              logLine("warn", "ai_gateway.token_logging_failed", {
+                ctx,
+                userId: opts.userId,
+                functionName: opts.functionName,
+                error: tokenErr instanceof Error ? tokenErr.message : String(tokenErr),
+              });
+            }
+          }
+
           return {
             content,
             toolCalls,

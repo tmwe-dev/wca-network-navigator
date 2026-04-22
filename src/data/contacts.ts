@@ -382,8 +382,8 @@ export async function findContactsPaginated(
   const from = pageParam * pageSize;
   const to = from + pageSize - 1;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- query builder chain
-  let query: any = supabase
+  // Query builder for filtering imported contacts
+  let query = supabase
     .from("imported_contacts")
     .select("*", { count: "exact" });
 
@@ -458,8 +458,8 @@ export async function findContactsByGroup(
   pageSize: number = 200,
   holdingPattern?: "out" | "in" | "all",
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- query builder chain
-  let q: any = supabase
+  // Query builder for filtering imported contacts by group
+  let q = supabase
     .from("imported_contacts")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false });

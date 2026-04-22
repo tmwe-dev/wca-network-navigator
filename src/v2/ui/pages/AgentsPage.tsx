@@ -2,7 +2,7 @@
  * AgentsPage V2 — Direct mount, no inner Suspense.
  */
 import * as React from "react";
-import V1Component from "@/pages/AgentChatHub";
+import V1Component from "@/components/agents/AgentChatHubView";
 
 export function AgentsPage(): React.ReactElement {
   return <V1Component />;

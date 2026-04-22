@@ -58,7 +58,7 @@ const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) =
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage").then((m) => ({ default: m.GuidaPage })));
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
-const AIArenaPage = lazy(() => import("@/pages/AIArena").then((m) => ({ default: m.AIArenaPage })));
+const AIArenaPage = lazy(() => import("./ui/pages/AIArenaPage").then((m) => ({ default: m.AIArenaPage })));
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
 const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
@@ -75,7 +75,9 @@ const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorP
 const AgentCapabilitiesPage = lazy(() => import("./ui/pages/AgentCapabilitiesPage").then((m) => ({ default: m.AgentCapabilitiesPage })));
 const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) => ({ default: m.AgentTasksPage })));
 const DealsPage = lazy(() => import("./ui/pages/DealsPage").then((m) => ({ default: m.DealsPage })));
-const NotFoundPage = lazy(() => import("@/pages/NotFound"));
+const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
+const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
+const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
 function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name: string): React.ReactElement {
@@ -166,6 +168,9 @@ export function V2Routes(): React.ReactElement {
           {/* Deals & Pipeline */}
           <Route path="deals" element={guardedPage(DealsPage, "Deals")} />
 
+          {/* Calendar */}
+          <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
+
           {/* Outreach + figli */}
           <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
           <Route path="outreach/composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
@@ -247,6 +252,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
+          <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
 
           <Route path="*" element={guardedPage(NotFoundPage, "NotFound")} />

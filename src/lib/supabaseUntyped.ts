@@ -13,7 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Access a Supabase table that isn't in the generated types yet.
  * Returns a PostgREST query builder with loose typing.
+ *
+ * This is the single boundary cast in the codebase where we use an untyped
+ * query builder. The RA module tables (ra_prospects, ra_contacts, etc.) use
+ * this helper until they're added to the generated schema.
  */
-export function untypedFrom(table: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any -- boundary cast
+export function untypedFrom(table: string): Record<string, (...args: unknown[]) => unknown> {
   return (supabase as unknown as Record<string, (...args: unknown[]) => unknown>).from(table);
 }

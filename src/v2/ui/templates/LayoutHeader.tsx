@@ -10,6 +10,8 @@ import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
 import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { AIAutomationToggle } from "@/components/header/AIAutomationToggle";
+import { TokenUsageCounter } from "@/components/header/TokenUsageCounter";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
@@ -106,6 +108,7 @@ export function LayoutHeader({
         <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2" />
       </div>
       <div className="flex items-center gap-0.5">
+        <TokenUsageCounter />
         <AIAutomationToggle />
         <button
           onClick={cycleLang}
@@ -119,6 +122,7 @@ export function LayoutHeader({
           <span>{voiceLang.toUpperCase()}</span>
         </button>
         <OperatorSelector />
+        <NotificationCenter />
         <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAddContact} aria-label={t("common.add_contact")}>
           <Plus className="h-4 w-4" />
         </Button>

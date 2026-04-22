@@ -3,7 +3,7 @@
  * Singolo livello, nessun Suspense interno (gestito da guardedPage).
  */
 import * as React from "react";
-import Operations from "@/pages/Operations";
+import Operations from "@/components/operations/OperationsView";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 import { toast } from "sonner";

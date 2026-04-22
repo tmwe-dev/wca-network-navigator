@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { type ImportError } from "@/hooks/useImportLogs";
 import { createLogger } from "@/lib/log";
+import type { UseMutationResult } from "@tanstack/react-query";
 
 const log = createLogger("ImportErrorMonitor");
 
@@ -22,7 +23,7 @@ interface ImportErrorMonitorProps {
   correctedErrors: ImportError[];
   dismissedErrors: ImportError[];
   activeLogId: string | null;
-  fixErrors: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- UseMutationResult type
+  fixErrors: UseMutationResult<void, Error, { importLogId: string | null; customPrompt: string }, unknown>;
 }
 
 export function ImportErrorMonitor({

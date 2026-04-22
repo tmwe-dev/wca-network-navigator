@@ -5,11 +5,11 @@ import { useMemo } from "react";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useRequireRole } from "@/v2/hooks/useRequireRole";
-import type { TabKey } from "@/pages/telemetry/types";
-import { TABS, RANGES } from "@/pages/telemetry/constants";
-import { PageEventsView } from "@/pages/telemetry/PageEventsView";
-import { RequestLogsView } from "@/pages/telemetry/RequestLogsView";
-import { AIRequestLogsView } from "@/pages/telemetry/AIRequestLogsView";
+import type { TabKey } from "@/v2/ui/pages/telemetry/types";
+import { TABS, RANGES } from "@/v2/ui/pages/telemetry/constants";
+import { PageEventsView } from "@/v2/ui/pages/telemetry/PageEventsView";
+import { RequestLogsView } from "@/v2/ui/pages/telemetry/RequestLogsView";
+import { AIRequestLogsView } from "@/v2/ui/pages/telemetry/AIRequestLogsView";
 
 export function TelemetryPage() {
   const isAdmin = useRequireRole({ role: "admin" });

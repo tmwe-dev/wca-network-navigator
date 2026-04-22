@@ -308,6 +308,15 @@ export const queryKeys = {
     all: ["app-settings"] as const,
   },
 
+  // ── Token Usage ────────────────────────────────────────
+  tokenUsage: {
+    all: ["token-usage"] as const,
+    today: ["token-usage-today"] as const,
+    month: ["token-usage-month"] as const,
+    byFunction: (days?: number) => ["token-usage-by-function", days] as const,
+    settings: ["token-usage-settings"] as const,
+  },
+
   // ── Alert Config ──────────────────────────────────────
   alertConfig: {
     all: ["alert-config"] as const,
@@ -511,6 +520,15 @@ export const queryKeys = {
   dealStats: ["deal-stats"] as const,
   dealActivities: (dealId: string) => ["deal-activities", dealId] as const,
 
+  // ── Calendar ────────────────────────────────────────────
+  calendar: ["calendar"] as const,
+
+  // ── Notifications ────────────────────────────────────────
+  notifications: {
+    list: (filters?: unknown) => ["notifications", filters] as const,
+    unreadCount: ["notifications-unread-count"] as const,
+  },
+
   // ── Analytics ─────────────────────────────────────────
   analytics: {
     emailMetrics: (dateRange: { from: Date; to: Date }) =>
@@ -550,6 +568,19 @@ export const queryKeys = {
     feed: (actorType: string, category: string, search: string, page: number) =>
       ["supervisor-audit-log", actorType, category, search, page] as const,
     count: (filters?: unknown) => ["supervisor-audit-count", filters] as const,
+  },
+
+  // ── RBAC ──────────────────────────────────────────────
+  rbac: {
+    roles: ["rbac-roles"] as const,
+    role: (roleId: string) => ["rbac-role", roleId] as const,
+    permissions: ["rbac-permissions"] as const,
+    rolePermissions: (roleId: string) => ["rbac-role-permissions", roleId] as const,
+    userRoles: (userId?: string) => ["rbac-user-roles", userId ?? "current"] as const,
+    teams: ["rbac-teams"] as const,
+    team: (teamId: string) => ["rbac-team", teamId] as const,
+    teamMembers: (teamId: string) => ["rbac-team-members", teamId] as const,
+    hasPermission: (permissionKey: string) => ["rbac-has-permission", permissionKey] as const,
   },
 
   noop: ["noop"] as const,

@@ -42,6 +42,7 @@ import { queryKeys } from "@/lib/queryKeys";
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires: string | null }
 interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+interface AgentItem { id: string; name: string; avatar_emoji: string; role: string }
 
 interface PartnerDetailCompactProps {
   partner: PartnerViewModel;
@@ -250,7 +251,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
       {contacts.length > 0 && (
         <div className="space-y-2">
           <p className={`text-xs uppercase tracking-wider font-medium ${th.dim}`}>Contatti ({contacts.length})</p>
-          {contacts.map((c: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+          {contacts.map((c: ContactItem) => (
             <div key={c.id} className={`p-2.5 rounded-lg border ${isDark ? "bg-white/[0.02] border-white/[0.06]" : "bg-white/60 border-slate-200/60"}`}>
               <div className="flex items-center gap-2">
                 <User className={`w-4 h-4 ${th.dim}`} />
@@ -352,7 +353,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
         <div>
           <p className={`text-xs uppercase tracking-wider font-medium mb-1.5 ${th.dim}`}>Network</p>
           <div className="flex flex-wrap gap-1.5">
-            {networks.map((n: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any -- Supabase JSON/dynamic type
+            {networks.map((n: NetworkItem) => (
               <span key={n.id} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
                 {n.network_name}
                 {n.expires && <span className="ml-1 opacity-60">Exp {format(new Date(n.expires), "MM/yy")}</span>}

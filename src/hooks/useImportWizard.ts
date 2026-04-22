@@ -82,7 +82,7 @@ export function useImportWizard() {
   const [uploading, setUploading] = useState(false);
 
   // ── Re-import correction ──
-  const handleReimportCorrection = useCallback(async (rows: any[], headers: string[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any -- CSV import rows have dynamic shape
+  const handleReimportCorrection = useCallback(async (rows: Record<string, unknown>[], headers: string[]) => {
     setUploading(true);
     try {
       const idKey = headers.find(h => {

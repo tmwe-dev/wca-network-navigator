@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { sanitizeHtml } from "@/lib/security/htmlSanitizer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
+
+type Activity = Database["public"]["Tables"]["activities"]["Row"];
 
 const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   send_email: Mail,
@@ -54,7 +57,7 @@ export function AttivitaTab() {
     },
   });
 
-  const all: any[] = activities || []; // eslint-disable-line @typescript-eslint/no-explicit-any -- generic activity row from supabase
+  const all: Activity[] = activities || [];
 
   const filtered = useMemo(() => {
     let result = all;

@@ -19,7 +19,7 @@ export function useAcquisitionPipelineActions(
     extensionAvailable: boolean;
     waitForExtension: (ms?: number) => Promise<boolean>;
     verifySession: () => Promise<{ success: boolean; authenticated?: boolean }>;
-    runExtensionLoop: (jobId: string, items: any[], startFrom?: number) => Promise<LiveStats>; // eslint-disable-line @typescript-eslint/no-explicit-any -- Extension bridge untyped API
+    runExtensionLoop: (jobId: string, items: Record<string, unknown>[], startFrom?: number) => Promise<LiveStats>;
   }
 ) {
   const { extensionAvailable: _extensionAvailable, waitForExtension, verifySession, runExtensionLoop } = deps;
