@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ChevronDown, LogSquare } from "lucide-react";
+import { Loader2, ChevronDown, Square as LogSquare } from "lucide-react";
 
 interface AuditFilters {
   offset: number;

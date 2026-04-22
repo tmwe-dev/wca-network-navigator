@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, LogSquare, KeyRound, UsersRound, Coins } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -28,9 +28,9 @@ import { toast } from "sonner";
 import { NotificationPreferences } from "@/components/settings/NotificationPreferences";
 import { AuditTrailPanel } from "@/components/audit/AuditTrailPanel";
 import { TokenSettingsPanel } from "@/components/ai-control/TokenSettingsPanel";
-import { RoleManagementPanel } from "@/components/settings/RoleManagementPanel";
-import { UserRolesPanel } from "@/components/settings/UserRolesPanel";
-import { TeamManagementPanel } from "@/components/settings/TeamManagementPanel";
+import RoleManagementPanel from "@/components/settings/RoleManagementPanel";
+import UserRolesPanel from "@/components/settings/UserRolesPanel";
+import TeamManagementPanel from "@/components/settings/TeamManagementPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function SettingsPage() {

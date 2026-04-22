@@ -396,7 +396,9 @@ export const queryKeys = {
   // ── Supervisor ────────────────────────────────────────
   supervisor: {
     kpis: ["supervisor-kpis"] as const,
-    feed: (...args: unknown[]) => ["supervisor-feed", ...args] as const,
+    feed: (actorType: string, category: string, search: string, page: number) =>
+      ["supervisor-audit-log", actorType, category, search, page] as const,
+    count: (filters?: unknown) => ["supervisor-audit-count", filters] as const,
   },
 
   // ── IntelliFlow ───────────────────────────────────────
@@ -561,13 +563,6 @@ export const queryKeys = {
   contactMerge: {
     duplicates: ["contact-duplicates"] as const,
     duplicateCount: ["contact-duplicate-count"] as const,
-  },
-
-  // ── Audit Trail ───────────────────────────────────────
-  supervisor: {
-    feed: (actorType: string, category: string, search: string, page: number) =>
-      ["supervisor-audit-log", actorType, category, search, page] as const,
-    count: (filters?: unknown) => ["supervisor-audit-count", filters] as const,
   },
 
   // ── RBAC ──────────────────────────────────────────────
