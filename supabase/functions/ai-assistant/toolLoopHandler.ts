@@ -95,8 +95,9 @@ async function autoSaveToolMemory(
           source: "auto_tool",
         })
         .then(() => {})
-        .catch((e: unknown) =>
-        );
+        .catch((_e: unknown) => {
+          /* swallow auto-memory write errors */
+        });
     }
   } catch (e) {
   }
