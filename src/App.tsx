@@ -18,10 +18,6 @@ import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
-const Auth = lazyRetry(() => import("./pages/Auth"));
-const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
-const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
-const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "": "/v2",
@@ -112,9 +108,9 @@ const App = () => (
                   <Route path="/" element={<Navigate to="/v2" replace />} />
 
                   {/* Public routes */}
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
+                  <Route path="/onboarding" element={<LegacyRedirect to="/v2/onboarding" />} />
+                  <Route path="/reset-password" element={<LegacyRedirect to="/v2/reset-password" />} />
 
                   {/* V1 deprecated — redirect every legacy route to V2 */}
                   <Route path="/v1/*" element={<V1DeprecationRedirect />} />
@@ -135,7 +131,7 @@ const App = () => (
                   <Route path="/ai-staff/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
                   <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
 
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="*" element={<Navigate to="/v2" replace />} />
                 </Routes>
               </Suspense>
             </BrowserRouter>
