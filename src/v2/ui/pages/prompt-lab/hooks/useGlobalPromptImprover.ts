@@ -194,6 +194,10 @@ export function useGlobalPromptImprover(
         }));
         await appendProposal(run.id, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
       }
+      // Pausa anti-saturazione del pool isolate (vedi commento in startImprovement).
+      if (i < proposals.length - 1) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
     }
 
     await updateRun(run.id, { status: "review", progress_current: proposals.length });
@@ -311,6 +315,12 @@ export function useGlobalPromptImprover(
         if (runId) {
           await appendProposal(runId, i, { status: "error", error: errMsg }, i + 1).catch(() => {});
         }
+      }
+      // Piccola pausa tra blocchi per evitare di saturare il pool isolate
+      // di Supabase Edge Functions (cause principale di FunctionsFetchError
+      // quando si lanciano 40+ chiamate sequenziali a unified-assistant).
+      if (i < initial.length - 1) {
+        await new Promise((r) => setTimeout(r, 250));
       }
     }
 

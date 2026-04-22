@@ -232,19 +232,56 @@ export function useLabAgent() {
     ]);
   }, []);
 
+  /**
+   * callAgent — invoca unified-assistant scope kb-supervisor con retry/backoff
+   * resiliente agli errori transienti (FunctionsFetchError, 502/503/504, 429).
+   *
+   * Necessario per il "Migliora tutto" che esegue 40+ chiamate sequenziali:
+   * il pool di isolate Deno satura facilmente e supabase-js solleva
+   * `FunctionsFetchError: Failed to send a request to the Edge Function`
+   * quando la fetch verso il runtime fallisce a livello di trasporto.
+   */
   const callAgent = useCallback(async (userPrompt: string, extraContext: Record<string, unknown> = {}) => {
-    const result = await invokeEdge<UnifiedAssistantResponse>("unified-assistant", {
-      body: {
-        scope: "kb-supervisor",
-        mode: "conversational",
-        messages: [{ role: "user", content: userPrompt }],
-        pageContext: "prompt-lab",
-        operatorBriefing: PROMPT_LAB_BRIEFING,
-        extra_context: extraContext,
-      },
-      context: "promptLabAgent",
-    });
-    return (result.content ?? "").trim();
+    const MAX_ATTEMPTS = 4;
+    const BASE_DELAY_MS = 600;
+
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await invokeEdge<UnifiedAssistantResponse>("unified-assistant", {
+          body: {
+            scope: "kb-supervisor",
+            mode: "conversational",
+            messages: [{ role: "user", content: userPrompt }],
+            pageContext: "prompt-lab",
+            operatorBriefing: PROMPT_LAB_BRIEFING,
+            extra_context: extraContext,
+          },
+          context: "promptLabAgent",
+        });
+        return (result.content ?? "").trim();
+      } catch (e: unknown) {
+        lastErr = e;
+        // Identifica errori transienti: rete (FunctionsFetchError) o status retryable.
+        const msg = e instanceof Error ? e.message : String(e);
+        const errAny = e as { httpStatus?: number; code?: string };
+        const status = errAny?.httpStatus;
+        const isNetwork =
+          /failed to send a request to the edge function/i.test(msg) ||
+          /network|fetch|timeout|aborted|ECONN/i.test(msg);
+        const isRetryableStatus =
+          status === 408 || status === 425 || status === 429 ||
+          status === 500 || status === 502 || status === 503 || status === 504;
+        const retryable = isNetwork || isRetryableStatus;
+
+        if (!retryable || attempt === MAX_ATTEMPTS) throw e;
+
+        // Backoff esponenziale con jitter: 600ms, 1.2s, 2.4s
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("promptLabAgent: retry exhausted");
   }, []);
 
   const improveBlock = useCallback(
