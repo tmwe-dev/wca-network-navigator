@@ -230,33 +230,6 @@ export async function cancelMission(missionId: string) {
   if (e2) throw e2;
 }
 
-// ── Campaign queue controls ──
-export async function pauseCampaignQueue(campaignId: string) {
-  const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "paused" })
-    .eq("draft_id", campaignId).eq("status", "pending");
-  if (error) throw error;
-}
-
-export async function resumeCampaignQueue(campaignId: string) {
-  const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "pending" })
-    .eq("draft_id", campaignId).eq("status", "paused");
-  if (error) throw error;
-}
-
-export async function cancelCampaignQueue(campaignId: string) {
-  const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "cancelled" })
-    .eq("draft_id", campaignId).in("status", ["pending", "paused"]);
-  if (error) throw error;
-}
-
-export async function cancelCampaignItem(itemId: string) {
-  const { error } = await supabase.from("email_campaign_queue")
-    .update({ status: "cancelled" }).eq("id", itemId);
-  if (error) throw error;
-}
 
 // ── Audit log helper (client-side) ──
 export async function logAuditEntry(entry: {

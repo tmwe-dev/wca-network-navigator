@@ -123,7 +123,7 @@ export function useOutreachQueue() {
         default: await updateStatus(item.id, "failed", `Canale non supportato: ${item.channel}`); return false;
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
+      const msg = err instanceof Error ? err.message : String(err);
       log.error("queue processItem failed", { error: msg, channel: item.channel, id: item.id });
       await updateStatus(item.id, item.attempts + 1 >= item.max_attempts ? "failed" : "pending", msg);
       return false;
@@ -145,7 +145,7 @@ export function useOutreachQueue() {
         await new Promise(r => setTimeout(r, delay));
       }
     } catch (err: unknown) {
-      log.error("processQueue failed", { error: err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err) });
+      log.error("processQueue failed", { error: err instanceof Error ? err.message : String(err) });
     } finally { processingRef.current = false; setProcessing(false); }
   }, [processItem]);
 

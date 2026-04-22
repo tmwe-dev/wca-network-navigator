@@ -31,6 +31,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", _userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[ai-arena-suggest] AI automations paused for user ${_userId}`);
+      return json({ error: "AI automations are paused" }, 503);
+    }
+
     const body = await req.json();
     const focus = body.focus || "tutti";
     const preferredChannel = body.preferred_channel || "email";

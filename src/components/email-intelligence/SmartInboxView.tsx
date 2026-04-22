@@ -132,7 +132,7 @@ export function SmartInboxView() {
       toast.success(action === "archive" ? "Archiviata" : "Spostata in spam");
       qc.invalidateQueries({ queryKey: queryKeys.email.classifications });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Errore operazione cartella");
+      toast.error(err instanceof Error ? err.message : "Errore operazione cartella");
     }
   };
 

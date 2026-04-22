@@ -44,8 +44,24 @@ serve(async (req) => {
       });
     }
 
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[ai-deep-search-helper] AI automations paused for user ${user.id}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503,
+        headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Input validation ──
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch((e) => { console.warn("[ai-deep-search-helper] Invalid JSON body:", e.message); return {}; });
     const prompt = typeof body.prompt === "string" ? body.prompt : "";
     const requestedModel = typeof body.model === "string" ? body.model : DEFAULT_MODEL;
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;

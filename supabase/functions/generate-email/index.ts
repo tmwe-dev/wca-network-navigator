@@ -48,14 +48,29 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[generate-email] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Rate limit ──
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
     const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt, _system_prompt_override, _user_prompt_override } = await req.json();
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
-
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ── Load entity (partner + contact) ──
     let partner: PartnerData | null = null;
@@ -205,7 +220,7 @@ serve(async (req) => {
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      timeoutMs: 45000, maxRetries: 1, context: "generate-email:" + userId.substring(0, 8),
+      timeoutMs: 45000, maxRetries: 1, max_tokens: 1500, context: "generate-email:" + userId.substring(0, 8),
     });
     const aiLatencyMs = Date.now() - aiStart;
 

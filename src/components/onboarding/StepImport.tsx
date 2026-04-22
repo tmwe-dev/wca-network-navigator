@@ -99,7 +99,7 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
       toast.success(`${contacts.length} contatti importati`);
       onFinish();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? (err instanceof Error ? err.message : String(err)) : "Errore importazione");
+      toast.error(err instanceof Error ? err.message : "Errore importazione");
     } finally {
       setImporting(false);
     }

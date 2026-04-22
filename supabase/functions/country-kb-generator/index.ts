@@ -27,12 +27,28 @@ serve(async (req) => {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const body = await req.json().catch(() => ({}));
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[country-kb-generator] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json().catch((e) => { console.warn("[country-kb-generator] Invalid JSON body:", e.message); return {}; });
     const countryCodes: string[] = body.country_codes || [];
     const maxCountries = Math.min(countryCodes.length || 5, 10);
 

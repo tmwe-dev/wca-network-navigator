@@ -271,6 +271,22 @@ serve(async (req) => {
     // Use service user fallback for legacy auth
   }
 
+  // LOVABLE-93: global pause check
+  const { data: pauseSettings } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ai_automations_paused")
+    .eq("user_id", resolvedUserId)
+    .maybeSingle();
+
+  if (pauseSettings?.value === "true") {
+    console.log(`[voice-brain-bridge] AI automations paused for user ${resolvedUserId}`);
+    return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+      status: 503,
+      headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+
   // Upsert voice_call_sessions row
   let sessionId: string | null = null;
   try {
@@ -375,7 +391,7 @@ serve(async (req) => {
           { role: "user", content: userPrompt },
         ],
         temperature: 0.3,
-        max_tokens: 400,
+        max_tokens: 500,
         timeoutMs: 12000,
         maxRetries: 1,
         context: `voice-brain-bridge:${(turn.external_call_id || "no-id").slice(0, 16)}`,

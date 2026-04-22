@@ -147,6 +147,7 @@ serve(async (req) => {
         ],
         timeoutMs: 25000,
         maxRetries: 1,
+        max_tokens: 1000,
         context: "daily-briefing",
       });
       content = r.content || "{}";

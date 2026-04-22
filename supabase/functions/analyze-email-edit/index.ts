@@ -43,6 +43,24 @@ serve(async (req) => {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+    const userId = claimsData.claims.sub as string;
+
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[analyze-email-edit] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
 
     const { original_html, edited_html, recipient_country, email_type } = await req.json();
     if (!original_html || !edited_html) {

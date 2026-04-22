@@ -58,6 +58,23 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[generate-outreach] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Rate limit ──
     const rl = checkRateLimit(`generate-outreach:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
@@ -70,8 +87,6 @@ serve(async (req) => {
 
     const ch = (["email", "linkedin", "whatsapp", "sms"].includes(channel) ? channel : "email") as Channel;
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
-
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ── Assemble context ──
     let ctx;
@@ -244,7 +259,7 @@ DECISION ENGINE (raccomandazione automatica):
     const result = await aiChat({
       models: [model, "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      timeoutMs: 40000, maxRetries: 1, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
+      timeoutMs: 40000, maxRetries: 1, max_tokens: 1200, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
     });
 
     // ── Credits ──

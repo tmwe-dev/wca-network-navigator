@@ -113,6 +113,23 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[improve-email] AI automations paused for user ${userId}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     const {
       subject, html_body, recipient_count, recipient_countries,
       oracle_tone, use_kb,
@@ -120,8 +137,6 @@ serve(async (req) => {
       custom_goal, partner_id, contact_id,
     } = await req.json();
     if (!html_body) throw new Error("html_body is required");
-
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // ── LOVABLE-81/82: Contratto + detector tipo (non bloccante; improve può funzionare anche su draft puri) ──
     let typeResolutionImprove: ResolvedEmailType | null = null;
@@ -349,6 +364,7 @@ ${html_body}`;
       temperature: 0.4,
       timeoutMs: 30000,
       maxRetries: 1,
+      max_tokens: 1500,
       context: `improve-email:${userId.substring(0, 8)}`,
     });
     const rawText = result.content || "";

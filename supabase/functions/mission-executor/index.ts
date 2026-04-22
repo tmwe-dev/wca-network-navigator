@@ -67,12 +67,25 @@ serve(async (req) => {
       .eq("id", actionId)
       .single();
 
+    // Null check on action
+    if (!action) {
+      await supabase.rpc("release_mission_slot", {
+        p_action_id: actionId,
+        p_success: false,
+        p_error: "Action not found after acquisition",
+      }).catch(e =>
+        console.error("[mission-executor] Failed to release slot after action not found:", e)
+      );
+      return json({ error: "Action not found" }, 500);
+    }
+
     // Execute based on channel
     let success = false;
     let error: string | null = null;
 
+    let slotAcquired = true;
     try {
-      const partnerId = (action?.metadata as Record<string, unknown>)?.partner_id;
+      const partnerId = (action.metadata as Record<string, unknown>)?.partner_id;
       if (!partnerId) throw new Error("No partner_id in action metadata");
 
       const headers = {
@@ -86,7 +99,7 @@ serve(async (req) => {
           headers,
           body: JSON.stringify({
             partner_id: partnerId,
-            email_type: (action?.metadata as Record<string, unknown>)?.email_type || "outreach",
+            email_type: (action.metadata as Record<string, unknown>)?.email_type || "outreach",
             mission_id,
             action_id: actionId,
           }),
@@ -110,14 +123,19 @@ serve(async (req) => {
     } catch (e: unknown) {
       success = false;
       error = e instanceof Error ? e.message : "Unknown execution error";
+      console.error("[mission-executor] Execution failed:", e);
+    } finally {
+      // Always release slot, even on crash
+      if (slotAcquired) {
+        await supabase.rpc("release_mission_slot", {
+          p_action_id: actionId,
+          p_success: success,
+          p_error: error,
+        }).catch(e =>
+          console.error("[mission-executor] Failed to release slot:", e)
+        );
+      }
     }
-
-    // Release slot
-    await supabase.rpc("release_mission_slot", {
-      p_action_id: actionId,
-      p_success: success,
-      p_error: error,
-    });
 
     // Update progress
     const { data: snapshot } = await supabase.rpc("update_mission_progress", {
@@ -134,8 +152,8 @@ serve(async (req) => {
     }
 
     // Supervisor audit (fire-and-forget)
-    const partnerId = (action?.metadata as Record<string, unknown>)?.partner_id as string | undefined;
-    const targetEmail = (action?.metadata as Record<string, unknown>)?.email as string | undefined;
+    const partnerId = (action.metadata as Record<string, unknown>)?.partner_id as string | undefined;
+    const targetEmail = (action.metadata as Record<string, unknown>)?.email as string | undefined;
     logSupervisorAudit(supabase, {
       user_id, actor_type: "system",
       action_category: success ? "mission_completed" : "mission_failed",

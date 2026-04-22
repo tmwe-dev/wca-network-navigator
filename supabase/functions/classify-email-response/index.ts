@@ -276,6 +276,21 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // LOVABLE-93: global pause check
+    const { data: pauseSettings } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_automations_paused")
+      .eq("user_id", input.user_id)
+      .maybeSingle();
+
+    if (pauseSettings?.value === "true") {
+      console.log(`[classify-email-response] AI automations paused for user ${input.user_id}`);
+      return new Response(JSON.stringify({ error: "AI automations are paused" }), {
+        status: 503, headers,
+      });
+    }
+
     // 2. Load context in parallel
     const [convCtxRes, rulesRes, allClassificationsRes] = await Promise.all([
       supabase
@@ -364,7 +379,7 @@ serve(async (req) => {
         { role: "user", content: userPrompt },
       ],
       temperature: 0.2,
-      max_tokens: 1024,
+      max_tokens: 300,
       timeoutMs: 30000,
       context: "classify-email-response",
     });

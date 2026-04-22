@@ -28,7 +28,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch((e) => { console.warn("[deduplicate-contacts] Invalid JSON body:", e.message); return {}; });
     const contactIds: string[] = body.contactIds || [];
 
     if (contactIds.length < 2) {
