@@ -2,13 +2,13 @@ import { useState, lazy, Suspense } from "react";
 import { LayoutGrid, List, Building2, FileSearch, Users, CreditCard, UserPlus } from "lucide-react";
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 import { cn } from "@/lib/utils";
-import type { ViewMode } from "@/pages/Cockpit";
+import type { ViewMode } from "@/types/cockpit";
 
 export type SourceTab = "all" | "wca" | "prospect" | "contact" | "bca";
 
 export interface CockpitAIAction {
   type: "filter" | "select_all" | "clear_selection" | "select_where" | "bulk_action" | "single_action" | "view_mode" | "auto_outreach";
-  filters?: import("@/pages/Cockpit").CockpitFilter[];
+  filters?: import("@/types/cockpit").CockpitFilter[];
   field?: string;
   operator?: string;
   value?: unknown;

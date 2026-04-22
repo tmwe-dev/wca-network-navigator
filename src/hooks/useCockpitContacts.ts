@@ -6,7 +6,7 @@ import { findCockpitQueue, deleteCockpitQueueBySource, insertCockpitQueueItems }
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { autoAssignAgent } from "@/hooks/useAutoAssignAgent";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
 import { createLogger } from "@/lib/log";
 import { getContactsByIds } from "@/data/contacts";
 import { findBusinessCards } from "@/data/businessCards";

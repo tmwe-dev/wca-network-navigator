@@ -3,7 +3,7 @@
  * Scopo unico: orchestrare le azioni draft (Documento 2 §2.4 "un solo scopo").
  */
 import { toast } from "@/hooks/use-toast";
-import type { DraftState } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 import { useSendWhatsApp } from "./useSendWhatsApp";
 import { useSendLinkedIn } from "./useSendLinkedIn";
 import { useSendEmail } from "./useSendEmail";

@@ -16,7 +16,7 @@ import { useAgents } from "@/hooks/useAgents";
 import { toast } from "sonner";
 import type { CockpitAIAction, SourceTab } from "@/components/cockpit/TopCommandBar";
 import type { AssignmentInfo } from "@/components/cockpit/CockpitContactCard";
-import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/pages/Cockpit";
+import type { ViewMode, DraftState, DraftChannel, LinkedInProfileData } from "@/types/cockpit";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -46,7 +46,7 @@ async function lookupLinkedInProfileUrl(
 export function useCockpitLogic() {
   const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
-  const [activeFilters, setActiveFilters] = useState<import("@/pages/Cockpit").CockpitFilter[]>([]);
+  const [activeFilters, setActiveFilters] = useState<import("@/types/cockpit").CockpitFilter[]>([]);
   const [batchMode, setBatchMode] = useState(false);
   const [showLinkedInFlow, setShowLinkedInFlow] = useState(false);
   const [draftState, setDraftState] = useState<DraftState>({

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ContactEnrichmentCard } from "@/components/contacts/ContactEnrichmentCard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
 import { CockpitContactHeader } from "./CockpitContactHeader";
 import { CockpitContactMetrics } from "./CockpitContactMetrics";
 

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Sparkles, Search, Globe, Brain, User, CheckCircle2, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ScrapingPhase, DraftState } from "@/pages/Cockpit";
+import type { ScrapingPhase, DraftState } from "@/types/cockpit";
 
 const scrapingPhaseConfig: Record<ScrapingPhase, { icon: React.ElementType; label: string; color: string }> = {
   idle: { icon: Sparkles, label: "", color: "text-muted-foreground" },

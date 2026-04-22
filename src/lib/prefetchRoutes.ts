@@ -6,10 +6,9 @@
 type Loader = () => Promise<unknown>;
 
 const routePrefetchMap: Record<string, readonly Loader[]> = {
-  // Dashboard: V2 wrapper + V1 SuperHome3D
+  // Dashboard: V2 standalone
   "/v2": [
     () => import("@/v2/ui/pages/DashboardPage"),
-    () => import("@/pages/SuperHome3D"),
   ],
   // Network: V2 + V1 Operations (now imported directly)
   "/v2/network": [

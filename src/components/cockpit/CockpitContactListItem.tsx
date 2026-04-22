@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
 import { ContactActionMenu } from "./ContactActionMenu";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 

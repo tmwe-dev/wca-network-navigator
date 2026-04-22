@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Linkedin, MessageCircle, Smartphone, BookOpen, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DraftChannel } from "@/pages/Cockpit";
+import type { DraftChannel } from "@/types/cockpit";
 
 const channels: { id: DraftChannel; label: string; icon: React.ElementType; hoverBg: string; hoverBorder: string; hoverText: string; requiredField: string }[] = [
   { id: "email", label: "Email", icon: Mail, hoverBg: "bg-primary/10", hoverBorder: "border-primary", hoverText: "text-primary", requiredField: "email" },

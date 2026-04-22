@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
 import { Briefcase } from "lucide-react";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
 import type { AssignmentInfo } from "./CockpitContactCard";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 

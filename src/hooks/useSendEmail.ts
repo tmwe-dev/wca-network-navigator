@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import { createLogger } from "@/lib/log";
-import type { DraftState } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendEmail");
 

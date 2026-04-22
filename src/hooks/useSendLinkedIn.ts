@@ -8,7 +8,7 @@ import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
 import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
-import type { DraftState } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendLinkedIn");
 

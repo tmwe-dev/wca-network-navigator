@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
-import type { DraftState } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendWhatsApp");
 

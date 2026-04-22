@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import type { RecordSourceType } from "@/contexts/ContactDrawerContext";
-import type { ViewMode, CockpitFilter } from "@/pages/Cockpit";
+import type { ViewMode, CockpitFilter } from "@/types/cockpit";
 import type { CockpitContact } from "@/hooks/useCockpitContacts";
 
 const FLAG: Record<string, string> = {

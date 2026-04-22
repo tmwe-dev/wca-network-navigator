@@ -1,7 +1,7 @@
 import { CreditCard, Briefcase, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import type { ContactOrigin } from "@/pages/Cockpit";
+import type { ContactOrigin } from "@/types/cockpit";
 
 interface Contact {
   name: string;

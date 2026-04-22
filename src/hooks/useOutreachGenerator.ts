@@ -2,7 +2,7 @@ import { useState } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { isApiError } from "@/lib/api/apiError";
 import { toast } from "@/hooks/use-toast";
-import type { DraftChannel } from "@/pages/Cockpit";
+import type { DraftChannel } from "@/types/cockpit";
 
 export interface RecipientIntelligence {
   sources_checked: string[];

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import type { CockpitFilter } from "@/pages/Cockpit";
+import type { CockpitFilter } from "@/types/cockpit";
 
 interface ActiveFilterChipsProps {
   filters: CockpitFilter[];

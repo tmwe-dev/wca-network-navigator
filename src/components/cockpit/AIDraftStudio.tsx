@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
-import type { DraftState } from "@/pages/Cockpit";
+import type { DraftState } from "@/types/cockpit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypewriterText } from "./TypewriterText";
 import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
