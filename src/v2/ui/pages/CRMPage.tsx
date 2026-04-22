@@ -16,7 +16,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { useNavigate } from "react-router-dom";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 
-const Contacts = lazy(() => import("@/pages/Contacts"));
+const Contacts = lazy(() => import("./ContactsPage").then((m) => ({ default: m.ContactsPage })));
 const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 const ContactPipelineView = lazy(() => import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })));
 const DuplicateDetector = lazy(() => import("@/components/contacts/DuplicateDetector").then((m) => ({ default: m.DuplicateDetector })));
