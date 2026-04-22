@@ -44,7 +44,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { toast } from "sonner";
 
 const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
   core_ai: Brain,
