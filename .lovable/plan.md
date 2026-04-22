@@ -1,51 +1,54 @@
 
 
-# Fix `AIAutomationToggle` — pull GitHub rotto, da allineare allo schema reale
+# Fix runtime error: pagina /v2 non si apre
 
-## Problema
+## Diagnosi (riga per riga)
 
-Il nuovo componente `src/components/header/AIAutomationToggle.tsx` (montato in `LayoutHeader.tsx`) è stato scritto contro uno schema `app_settings` obsoleto. Lo schema reale dal 2026-04-10 richiede:
-- `user_id NOT NULL` (RLS: `auth.uid() = user_id`)
-- Unique constraint composito `(user_id, key)`
+Errore visibile:
+> `cannot add postgres_changes callbacks for realtime:token_usage_changes after subscribe()`
 
-Bug nel file:
-1. SELECT senza `.eq('user_id', userId)` → legge righe di altri utenti o nulla per via RLS
-2. UPSERT senza `user_id` nel payload → viola NOT NULL e RLS
-3. `onConflict: 'key'` invece di `'user_id,key'` → vincolo non corrispondente
-4. Duplicato funzionale di `GlobalAIAutomationPause` (stessa chiave `ai_automations_paused`, stesso scopo)
+**Catena causale (la causa che il messaggio di errore mostra è solo la punta dell'iceberg):**
 
-L'enorme lista "Check ..." nel build error sono solo i file edge function elencati per controllo statico — non sono errori reali, solo l'unico file rotto è `AIAutomationToggle.tsx`.
+1. `src/hooks/useTokenUsage.ts` riga 41-45 chiama `getTodayUsage`, `getMonthUsage`, `getTokenSettings` su tabella `ai_token_usage`.
+2. `src/data/tokenUsage.ts` riga 31 esegue `supabase.from("ai_token_usage")…` → il DB risponde **`PGRST205: Could not find the table 'public.ai_token_usage' in the schema cache`** (visibile in console).
+3. Stessa cosa per `notifications` (riga `Error fetching notifications: PGRST205`).
+4. Le migration `20260422180000_lovable102_token_management.sql` e `20260422180300_lovable102_notifications.sql` esistono in `supabase/migrations/` ma **non sono mai state applicate** al DB live (verificato con `information_schema.tables`: solo `bridge_tokens`, nessuna `ai_token_usage`, nessuna `notifications`).
+5. Riga 70-84: l'hook crea il channel realtime `token_usage_changes`, registra il listener `.on("postgres_changes", …)`, poi `.subscribe()`. In React StrictMode l'effect viene montato due volte; quando il primo subscribe va in errore (perché la tabella non esiste lato Realtime publication), il canale resta in stato corrotto e il secondo mount riusa il nome canale, causando l'errore `cannot add ... callbacks after subscribe()`. È **una conseguenza**, non la causa.
 
-## Cosa correggo
+**Conclusione:** non è un bug del codice React — è una migration mancante. Una volta applicate le tabelle, sia le query che il subscribe Realtime funzioneranno e l'errore scompare.
 
-**File:** `src/components/header/AIAutomationToggle.tsx`
+## Soluzione
 
-Tre fix chirurgici, mantengo design e UX identici (badge compatto verde/rosso in header):
+### 1. Applicare migration tabella `ai_token_usage` + colonna `app_settings.user_id`
 
-1. SELECT con `.eq('user_id', data.user.id)` per leggere solo la riga dell'utente corrente.
-2. UPSERT con `user_id: userId` nel payload e `onConflict: 'user_id,key'`.
-3. Non tocco il design né LayoutHeader.
+`app_settings.user_id` esiste già nel DB live (verificato), quindi salto l'`ALTER TABLE` e l'`UNIQUE INDEX`. Creo solo `ai_token_usage` con RLS per user, indici e seed dei default.
 
-Risultato: il toggle in header funziona correttamente, condivide lo stato con `GlobalAIAutomationPause` (entrambi leggono/scrivono la stessa chiave per lo stesso user_id, quindi sono sincronizzati automaticamente).
+### 2. Applicare migration tabella `notifications` + `push_subscriptions`
 
-## Cosa NON tocco
+Crea entrambe le tabelle con RLS `user_id = auth.uid()` e indici come da migration esistente.
 
-- `GlobalAIAutomationPause.tsx` (già corretto)
-- `LayoutHeader.tsx` (montaggio del toggle è ok)
-- Tabella `app_settings` (schema già corretto, no migration)
-- Edge functions (la lista nel build error è rumore, non errori veri)
-- Nessuna modifica al conflitto Partner Connect / WhatsApp — quello resta separato (ricordo che hai già rifiutato due volte quel piano, qui non lo ritocco)
+### 3. Hardening hook `useTokenUsage.ts`
 
-## Verifica
+Anche se la causa primaria è il DB, miglioro la resilienza del subscribe per evitare ricadute future:
+- Genero un nome canale univoco per istanza (`token_usage_changes_${user.id}`) per evitare collisioni tra mount/unmount in StrictMode.
+- Avvio il subscribe solo se l'utente è autenticato.
+- Aggiungo un guard `unsubscribed` nella cleanup per safety.
 
-1. Header mostra `AI on` (verde) o `AI off` (rosso) coerente con lo stato reale del DB per il tuo utente.
-2. Click sul toggle aggiorna DB senza errori RLS / NOT NULL / conflict.
-3. Aprire `/v2/ai-control` mostra lo stesso stato (i due componenti sono sincronizzati sulla stessa chiave).
-4. Build error si svuota.
+### 4. Abilitare Realtime sulla tabella
+
+`ALTER PUBLICATION supabase_realtime ADD TABLE public.ai_token_usage;` per far funzionare effettivamente il subscribe `postgres_changes`.
 
 ## File modificati
 
-- `src/components/header/AIAutomationToggle.tsx` (3 piccoli fix in select/upsert)
+- **DB migration (nuova)**: crea `ai_token_usage`, `notifications`, `push_subscriptions`, RLS, indici, seed default settings, abilita Realtime su `ai_token_usage`.
+- `src/hooks/useTokenUsage.ts`: nome canale univoco + guard auth.
 
-Nessun DB, nessuna edge function, nessuna migration.
+Nessun edge function, nessuna modifica a edge code.
+
+## Risultato atteso
+
+1. La pagina `/v2` carica senza Error Boundary.
+2. `TokenUsageCounter` nell'header mostra 0/limit (nessun consumo ancora registrato).
+3. Console pulita: niente più `PGRST205` su `ai_token_usage`/`notifications`, niente più errore Realtime.
+4. Future INSERT in `ai_token_usage` fanno invalidare la query in tempo reale.
 
