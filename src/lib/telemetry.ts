@@ -28,7 +28,7 @@ function getSessionId(): string {
   }
 }
 
-export interface TrackOptions {
+interface TrackOptions {
   page?: string;
   entityType?: string;
   entityId?: string;

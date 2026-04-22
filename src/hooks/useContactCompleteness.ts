@@ -1,6 +1,6 @@
 import { useCountryStats } from "./useCountryStats";
 
-export interface CountryContactStats {
+interface CountryContactStats {
   country_code: string;
   total_partners: number;
   with_personal_email: number;
@@ -8,7 +8,7 @@ export interface CountryContactStats {
   with_both: number;
 }
 
-export interface ContactCompletenessData {
+interface ContactCompletenessData {
   global: {
     total: number;
     withEmail: number;

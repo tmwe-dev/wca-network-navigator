@@ -30,7 +30,7 @@ export interface SearchLogEntry {
   reasoning?: string;
 }
 
-export interface SmartSearchResult {
+interface SmartSearchResult {
   url: string | null;
   profile: {
     name?: string;
@@ -44,7 +44,7 @@ export interface SmartSearchResult {
   resolvedMethod: string | null;
 }
 
-export interface LookupProgress {
+interface LookupProgress {
   current: number;
   total: number;
   currentName: string;

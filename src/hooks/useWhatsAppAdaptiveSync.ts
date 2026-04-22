@@ -103,7 +103,7 @@ export function useWhatsAppAdaptiveSync() {
       .maybeSingle();
     const operatorId = opRow?.id ?? null;
     if (!operatorId) {
-      console.warn("[useWhatsAppAdaptiveSync] No operator found for user, skipping save");
+      // No operator found for user, skipping save
       return { newCount: 0 };
     }
 

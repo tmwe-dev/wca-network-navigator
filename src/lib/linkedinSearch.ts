@@ -1,14 +1,14 @@
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("linkedinSearch");
-export type GoogleSearchResultLike = {
+type GoogleSearchResultLike = {
   url?: string | null;
   title?: string | null;
   description?: string | null;
   snippet?: string | null;
 };
 
-export interface LinkedInProfileCandidate {
+interface LinkedInProfileCandidate {
   name?: string;
   headline?: string;
   profileUrl: string;

@@ -29,15 +29,6 @@ export async function listPlaybooks(): Promise<SherlockPlaybook[]> {
   return (data ?? []) as SherlockPlaybook[];
 }
 
-export async function listAllPlaybooks(): Promise<SherlockPlaybook[]> {
-  const { data, error } = await untypedFrom("sherlock_playbooks")
-    .select("*")
-    .order("level", { ascending: true })
-    .order("sort_order", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as SherlockPlaybook[];
-}
-
 export async function getPlaybookByLevel(level: SherlockLevel): Promise<SherlockPlaybook | null> {
   const { data, error } = await untypedFrom("sherlock_playbooks")
     .select("*")
@@ -50,19 +41,9 @@ export async function getPlaybookByLevel(level: SherlockLevel): Promise<Sherlock
   return (data as SherlockPlaybook | null) ?? null;
 }
 
-export async function updatePlaybook(
-  id: string,
-  patch: Partial<Pick<SherlockPlaybook, "name" | "description" | "steps" | "target_fields" | "is_active" | "estimated_seconds" | "sort_order">>,
-): Promise<void> {
-  const { error } = await untypedFrom("sherlock_playbooks")
-    .update(patch as Record<string, unknown>)
-    .eq("id", id);
-  if (error) throw error;
-}
-
 // ─────────────────────── Investigations ──────────────────────
 
-export interface CreateInvestigationInput {
+interface CreateInvestigationInput {
   user_id: string;
   operator_id?: string | null;
   playbook_id: string | null;
@@ -109,22 +90,6 @@ export async function updateInvestigation(
     .update(patch as Record<string, unknown>)
     .eq("id", id);
   if (error) throw error;
-}
-
-export async function listInvestigationsForTarget(
-  partnerId: string | null,
-  contactId: string | null,
-  limit = 20,
-): Promise<SherlockInvestigation[]> {
-  let q = untypedFrom("sherlock_investigations")
-    .select("*")
-    .order("started_at", { ascending: false })
-    .limit(limit);
-  if (partnerId) q = q.eq("partner_id", partnerId);
-  if (contactId) q = q.eq("contact_id", contactId);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as SherlockInvestigation[];
 }
 
 /**

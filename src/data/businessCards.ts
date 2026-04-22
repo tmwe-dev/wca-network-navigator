@@ -54,13 +54,6 @@ export async function findMatchedContactIds() {
   return new Set((data ?? []).map((r) => r.matched_contact_id));
 }
 
-export async function getBusinessCardFilterOptions() {
-  const { data, error } = await supabase
-    .from("business_cards")
-    .select("event_name, match_status");
-  if (error) throw error;
-  return data ?? [];
-}
 
 export async function createBusinessCard(card: BCInsert) {
   const { error } = await supabase.from("business_cards").insert(card);

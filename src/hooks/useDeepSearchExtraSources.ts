@@ -15,9 +15,9 @@ import { aiCall, delay, cleanCompanyName, type GoogleSearchResult } from "./useD
 
 type FsBridge = ReturnType<typeof useFireScrapeExtensionBridge>;
 
-export interface ContactMention { url: string; title: string; snippet: string; }
+interface ContactMention { url: string; title: string; snippet: string; }
 
-export interface GoogleMapsData {
+interface GoogleMapsData {
   address: string | null;
   phone: string | null;
   website: string | null;
@@ -28,16 +28,16 @@ export interface GoogleMapsData {
   placeUrl: string | null;
 }
 
-export interface WebsiteTeamMember { name: string; role: string; email?: string; }
+interface WebsiteTeamMember { name: string; role: string; email?: string; }
 
-export interface WebsiteMultiPageData {
+interface WebsiteMultiPageData {
   pagesScraped: string[];
   team: WebsiteTeamMember[];
   contactsExtra: { phones: string[]; emails: string[]; addresses: string[]; };
   about: string | null;
 }
 
-export interface ReputationData {
+interface ReputationData {
   trustpilot: { url: string; rating: number | null; reviewsCount: number | null; } | null;
   wikipedia: { url: string; summary: string | null; } | null;
   news: Array<{ title: string; url: string; date?: string }>;

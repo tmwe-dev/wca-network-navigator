@@ -188,7 +188,7 @@ export default function GlobalVoiceFAB() {
   const startListening = useCallback(() => {
     const SpeechRec = getSpeechRecognition();
     if (!SpeechRec) {
-      console.warn("[GlobalVoiceFAB] Web Speech API not supported");
+      // Web Speech API not supported
       setState("idle");
       return;
     }
@@ -211,7 +211,7 @@ export default function GlobalVoiceFAB() {
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       if (e.error === "not-allowed" || e.error === "service-not-available") {
         if (recognition.lang !== "en-US") {
-          console.warn(`[GlobalVoiceFAB] STT failed for ${recognition.lang}, falling back to en-US`);
+          // STT failed, falling back to en-US
           recognition.lang = "en-US";
           try {
             recognition.start();

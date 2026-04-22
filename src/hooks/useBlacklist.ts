@@ -12,20 +12,6 @@ type _BlacklistSyncLogInsert = Database["public"]["Tables"]["blacklist_sync_log"
 export type BlacklistEntry = BlacklistEntryRow;
 export type BlacklistSyncLog = BlacklistSyncLogRow;
 
-export function useBlacklistEntries() {
-  return useQuery({
-    queryKey: queryKeys.blacklist.all,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blacklist_entries")
-        .select("*")
-        .order("blacklist_no", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
 export function useBlacklistSyncLog() {
   return useQuery({
     queryKey: queryKeys.blacklist.syncLog,
@@ -75,22 +61,6 @@ export function useBlacklistForPartner(partnerId: string | undefined) {
         .eq("matched_partner_id", partnerId!);
       if (error) throw error;
       return data ?? [];
-    },
-  });
-}
-
-export function useBlacklistByPartnerIds(partnerIds: string[]) {
-  return useQuery({
-    queryKey: queryKeys.blacklist.partnerIds,
-    enabled: partnerIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blacklist_entries")
-        .select("matched_partner_id")
-        .not("matched_partner_id", "is", null);
-      if (error) throw error;
-      const ids = new Set((data ?? []).map(d => d.matched_partner_id as string));
-      return ids;
     },
   });
 }

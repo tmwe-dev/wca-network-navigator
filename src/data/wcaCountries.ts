@@ -272,11 +272,3 @@ export const WCA_COUNTRIES_MAP: Record<string, WCACountry> = WCA_COUNTRIES.reduc
   acc[country.code] = country;
   return acc;
 }, {} as Record<string, WCACountry>);
-
-// Get countries by region
-export const getCountriesByRegion = (region: WCACountry['region']): WCACountry[] => {
-  return WCA_COUNTRIES.filter(c => c.region === region);
-};
-
-// Total count for display
-export const TOTAL_WCA_COUNTRIES = WCA_COUNTRIES.length;

@@ -63,25 +63,6 @@ export function useEmailTemplates() {
   });
 }
 
-export function useCreateCampaignJobs() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (jobs: Omit<CampaignJob, "id" | "created_at" | "completed_at" | "status" | "assigned_to" | "notes">[]) => {
-      const { data, error } = await supabase
-        .from("campaign_jobs")
-        .insert(jobs as CJInsert[])
-        .select();
-      if (error) throw error;
-
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.campaigns.jobs() });
-      qc.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
-    },
-  });
-}
-
 export function useUpdateCampaignJob() {
   const qc = useQueryClient();
   return useMutation({

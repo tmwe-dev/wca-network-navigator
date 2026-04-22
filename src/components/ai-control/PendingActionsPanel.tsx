@@ -114,7 +114,7 @@ export function PendingActionsPanel() {
             }
             await supabase.from("agents").update({ system_prompt: updatedPrompt }).eq("id", agent.id);
           }
-        } catch (e) { console.warn("prompt refinement apply failed:", e); }
+        } catch (e) { /* prompt refinement apply failed */ }
       }
       // Execute the approved action via pending-action-executor
       if (action?.action_type !== "prompt_refinement") {
@@ -123,7 +123,7 @@ export function PendingActionsPanel() {
             body: { pending_action_id: params.id },
           });
           if (execError) console.error("Execution failed:", execError);
-        } catch (e) { console.warn("pending-action-executor invocation failed:", e); }
+        } catch (e) { /* pending-action-executor invocation failed */ }
       }
     },
     onSuccess: () => { toast.success("Azione approvata — esecuzione avviata"); setDraftEditId(null); qc.invalidateQueries({ queryKey: queryKeys.ai.pendingActions }); },

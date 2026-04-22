@@ -165,9 +165,7 @@ export async function deleteJobsByStatus(statuses: string[]): Promise<number> {
 
 // ── Job Items ──
 
-export interface JobItemResult { status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }
-
-export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<JobItemResult[]> {
+export async function getJobItemsByJobId(jobId: string, select = "status, contacts_found, contacts_missing"): Promise<Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>> {
   const { data, error } = await supabase
     .from("download_job_items")
     .select(select)

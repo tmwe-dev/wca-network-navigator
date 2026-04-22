@@ -62,13 +62,6 @@ export function getWcaCookie(): string | null {
 }
 
 /**
- * Controlla se c'è un cookie valido senza restituirlo.
- */
-export function hasWcaCookie(): boolean {
-  return getWcaCookie() !== null;
-}
-
-/**
  * Invalida il cookie (logout/errore).
  */
 export function clearWcaCookie(): void {

@@ -10,7 +10,7 @@ export const WCA_NETWORKS = [
   "WCA Pharma",
 ] as const;
 
-export const WCA_REGIONS = [
+const WCA_REGIONS_INTERNAL = [
   "Africa",
   "Asia Pacific",
   "Europe",
@@ -21,7 +21,7 @@ export const WCA_REGIONS = [
   "Oceania",
 ] as const;
 
-export const WCA_SERVICES = [
+const WCA_SERVICES_INTERNAL = [
   "Air Freight",
   "Ocean Freight",
   "Road Freight",
@@ -35,6 +35,5 @@ export const WCA_SERVICES = [
   "Pharma",
 ] as const;
 
-export type WCANetwork = typeof WCA_NETWORKS[number];
-export type WCARegion = typeof WCA_REGIONS[number];
-export type WCAService = typeof WCA_SERVICES[number];
+type WCARegion = typeof WCA_REGIONS_INTERNAL[number];
+type WCAService = typeof WCA_SERVICES_INTERNAL[number];

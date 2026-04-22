@@ -64,34 +64,6 @@ export function trackNavigation(route: string): void {
 }
 
 /**
- * Adds an Edge Function API call breadcrumb to Sentry.
- */
-export function trackApiCall(functionName: string, success: boolean, durationMs?: number): void {
-  if (_Sentry) {
-    _Sentry.addBreadcrumb({
-      category: "edge-function",
-      message: `${functionName}: ${success ? "ok" : "error"}`,
-      level: success ? "info" : "error",
-      data: { functionName, success, durationMs },
-    });
-  }
-}
-
-/**
- * Sets the authenticated user context in Sentry.
- */
-export function setUserContext(userId: string, email?: string): void {
-  if (_Sentry) _Sentry.setUser({ id: userId, email });
-}
-
-/**
- * Clears the user context from Sentry (call on logout).
- */
-export function clearUserContext(): void {
-  if (_Sentry) _Sentry.setUser(null);
-}
-
-/**
  * Proxy object for safe access to Sentry methods.
  * Methods are no-ops until the SDK loads.
  */

@@ -81,14 +81,3 @@ export async function deleteTimingTemplate(id: string) {
     .eq("id", id);
   if (error) throw error;
 }
-
-export async function updateTimingTemplate(
-  id: string,
-  updates: Partial<Omit<TimingTemplate, "id" | "created_at" | "updated_at">>
-) {
-  const { error } = await supabase
-    .from("outreach_timing_templates" as never)
-    .update(updates as never)
-    .eq("id", id);
-  if (error) throw error;
-}

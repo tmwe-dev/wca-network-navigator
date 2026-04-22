@@ -42,7 +42,7 @@ export type SortField = "name" | "domain" | "source" | "emailCount";
 export type SortDir = "asc" | "desc";
 
 /** Calcola lo score di arricchimento per una riga: 0..3 (LinkedIn + Sito + Logo). */
-export function computeEnrichmentScore(r: EnrichedRow): number {
+function computeEnrichmentScore(r: EnrichedRow): number {
   return [r.hasLinkedin, !!r.hasWebsiteExcerpt, r.hasLogo].filter(Boolean).length;
 }
 export type EnrichStatus = "missing" | "partial" | "complete";

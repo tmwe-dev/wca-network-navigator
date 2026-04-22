@@ -30,7 +30,7 @@ export interface DeepSearchSources {
   maxQueriesPerContact: number;
 }
 
-export interface DeepSearchPresetMeta {
+interface DeepSearchPresetMeta {
   quality: DeepSearchQuality;
   label: string;
   description: string;
@@ -128,7 +128,7 @@ export function getDeepSearchMeta(quality: DeepSearchQuality): DeepSearchPresetM
 /**
  * Definizione human-friendly di ogni fonte, per la checklist granulare.
  */
-export interface SourceDescriptor {
+interface SourceDescriptor {
   key: keyof DeepSearchSources;
   label: string;
   description: string;
@@ -136,7 +136,7 @@ export interface SourceDescriptor {
   group: "google" | "site" | "social" | "extra";
 }
 
-export const SOURCE_DESCRIPTORS: SourceDescriptor[] = [
+const SOURCE_DESCRIPTORS: SourceDescriptor[] = [
   { key: "googleSerp", label: "Google SERP cascade", description: "Cerca link verificati con cascade di query", icon: "search", group: "google" },
   { key: "googleGeneral", label: "Google generale (no LinkedIn)", description: "Menzioni sui media e directory settoriali", icon: "search", group: "google" },
   { key: "googleNews30d", label: "Google News (30gg)", description: "Notizie recenti sull'azienda", icon: "newspaper", group: "google" },

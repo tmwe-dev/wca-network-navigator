@@ -104,10 +104,6 @@ export function useBaseEnrichment(getTargets: () => BaseEnrichTarget[]) {
     const targets = allTargets.filter((t) =>
       !t.hasLinkedin || (isCompanyLike(t.source) && (!t.hasLogo || !t.hasWebsiteExcerpt))
     );
-    console.info(`[BaseEnrichment] Selezionati: ${allTargets.length} · Da arricchire: ${targets.length}`, {
-      sources: allTargets.reduce((acc, t) => { acc[t.source] = (acc[t.source] || 0) + 1; return acc; }, {} as Record<string, number>),
-      withDomain: allTargets.filter(t => !!t.domain).length,
-    });
     if (targets.length === 0) {
       toast({
         title: "Nessun record da arricchire",

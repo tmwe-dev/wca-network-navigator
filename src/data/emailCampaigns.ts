@@ -43,12 +43,6 @@ export async function getEmailDraftField(id: string, field: string) {
   return data;
 }
 
-export async function createEmailDraft(draft: Record<string, unknown>) {
-  const { data, error } = await supabase.from("email_drafts").insert(draft as never)
-  if (error) throw error;
-  return data;
-}
-
 export async function countEmailDrafts() {
   const { count, error } = await supabase.from("email_drafts").select("*", { count: "exact", head: true });
   if (error) throw error;

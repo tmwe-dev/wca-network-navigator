@@ -6,12 +6,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ImportLogInsert = Database["public"]["Tables"]["import_logs"]["Insert"];
 
-export async function createImportLog(log: ImportLogInsert) {
-  const { data, error } = await supabase.from("import_logs").insert(log).select().single();
-  if (error) throw error;
-  return data;
-}
-
 export async function updateImportLog(id: string, updates: Record<string, unknown>) {
   const { error } = await supabase.from("import_logs").update(updates as never).eq("id", id);
   if (error) throw error;

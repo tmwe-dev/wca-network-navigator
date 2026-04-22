@@ -17,7 +17,7 @@ import { queryKeys } from "@/lib/queryKeys";
 
 export type EmailAction = "archive" | "spam" | "move" | "hide";
 
-export interface BulkActionInput {
+interface BulkActionInput {
   messages: Array<{ id: string; imap_uid: number | null }>;
   action: EmailAction;
   targetFolder?: string;
@@ -128,7 +128,7 @@ export function useBulkEmailAction() {
   });
 }
 
-export interface CreateRuleFromMessageInput {
+interface CreateRuleFromMessageInput {
   email_address: string;
   display_name?: string | null;
   auto_action: string; // 'mark_read' | 'archive' | 'hide' | 'move_to_folder' | 'spam'
@@ -222,7 +222,7 @@ export function useCreateRuleFromSender() {
   });
 }
 
-export function useApplyRulesToHistory() {
+function useApplyRulesToHistory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ruleId: string) => {

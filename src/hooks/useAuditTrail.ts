@@ -8,7 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 
 // ── Types ──
 
-export interface AuditTrailFilters {
+interface AuditTrailFilters {
   offset: number;
   limit: number;
   actionCategory?: string;
@@ -21,7 +21,7 @@ export interface AuditTrailFilters {
   searchText?: string;
 }
 
-export interface AuditTrailRow {
+interface AuditTrailRow {
   id: string;
   actor_type: string;
   actor_id: string | null;
@@ -44,7 +44,7 @@ export interface AuditTrailRow {
 
 // ── Hook ──
 
-export function useAuditTrail(filters: AuditTrailFilters) {
+function useAuditTrail(filters: AuditTrailFilters) {
   return useQuery({
     queryKey: queryKeys.supervisor.feed(
       filters.actorType || "all",
@@ -94,7 +94,7 @@ export function useAuditTrail(filters: AuditTrailFilters) {
   });
 }
 
-export function useAuditTrailCount(filters: Omit<AuditTrailFilters, "offset" | "limit">) {
+function useAuditTrailCount(filters: Omit<AuditTrailFilters, "offset" | "limit">) {
   return useQuery({
     queryKey: ["audit-trail-count", filters],
     queryFn: async () => {
