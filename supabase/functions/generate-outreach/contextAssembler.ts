@@ -1,128 +1,21 @@
 /**
- * contextAssembler.ts — Loads all contextual data from DB for generate-outreach.
- * Returns pre-built text blocks ready for the promptBuilder.
+ * contextAssembler.ts — Orchestrator for outreach context assembly.
+ * Loads all contextual data from DB and returns pre-built text blocks.
+ * Delegates specialized logic to focused modules.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { Channel } from "./promptBuilder.ts";
-import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
+import { fetchKbEntriesForOutreach } from "./kbFetcher.ts";
+import { loadConversationContextOutreach } from "./conversationContext.ts";
+import { buildChannelDeclaration } from "./channelDeclaration.ts";
+import { loadActivePlaybook } from "./playbookLoader.ts";
+import { assemblePartnerEnrichmentContext, getEnrichmentMetadata, type RecipientIntelligence } from "./enrichmentAssembler.ts";
+import { analyzePartnerRelationship } from "./relationshipAnalyzer.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
-// ── KB fetcher ──
-
-export async function fetchKbEntriesForOutreach(
-  supabase: SupabaseClient, quality: Quality, channel: Channel, userId: string,
-): Promise<{ text: string; sections: string[] }> {
-  const limit = quality === "fast" ? 6 : quality === "standard" ? 15 : 35;
-  const categories = ["regole_sistema", "filosofia"];
-  if (channel === "email") categories.push("struttura_email", "hook", "cold_outreach");
-  if (channel === "linkedin") categories.push("cold_outreach", "tono");
-  if (channel === "whatsapp") categories.push("tono", "frasi_modello");
-  if (quality !== "fast") categories.push("negoziazione", "chris_voss", "dati_partner");
-  if (quality === "premium") categories.push("arsenale", "persuasione", "obiezioni", "chiusura", "followup", "errori");
-
-  const { data: entries } = await supabase
-    .from("kb_entries").select("title, content, category, chapter, tags")
-    .eq("user_id", userId).eq("is_active", true).in("category", categories)
-    .order("priority", { ascending: false }).order("sort_order").limit(limit);
-
-  if (!entries?.length) return { text: "", sections: [] };
-  const sections = [...new Set(entries.map((e: { category: string }) => e.category))];
-  const text = entries.map((e: { title: string; content: string; chapter: string }) => `### ${e.title} [${e.chapter}]\n${e.content}`).join("\n\n---\n\n");
-  return { text, sections };
-}
-
-// ── Conversation Intelligence ──
-
-export async function loadConversationContextOutreach(
-  supabase: SupabaseClient, userId: string, emailAddress: string | null,
-): Promise<{ text: string; customPrompt?: string; category?: string }> {
-  if (!emailAddress) return { text: "" };
-
-  const [ctxRes, rulesRes, classRes] = await Promise.all([
-    supabase.from("contact_conversation_context").select("conversation_summary, last_exchanges, response_rate, avg_response_time_hours, dominant_sentiment")
-      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
-    supabase.from("email_address_rules").select("tone_override, topics_to_emphasize, topics_to_avoid, custom_prompt, category, email_prompts(instructions)")
-      .eq("user_id", userId).eq("email_address", emailAddress).maybeSingle(),
-    supabase.from("email_classifications")
-      .select("category, confidence, ai_summary, sentiment")
-      .eq("user_id", userId).eq("email_address", emailAddress)
-      .order("classified_at", { ascending: false }).limit(3),
-  ]);
-
-  const parts: string[] = [];
-  const ctx = ctxRes.data;
-  const rules = rulesRes.data;
-  const classes = classRes.data ?? [];
-
-  // ── PRIORITY: custom_prompt and category injection ──
-  // LOVABLE-93: category as decision signal — holding pattern detection + priority modulation
-  let customPrompt: string | undefined;
-  let category: string | undefined;
-  if (rules) {
-    if ((rules as Record<string, unknown>).custom_prompt && typeof (rules as Record<string, unknown>).custom_prompt === "string") {
-      customPrompt = (rules as Record<string, unknown>).custom_prompt as string;
-      parts.push(`ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO:\n${customPrompt}`);
-    }
-    if ((rules as Record<string, unknown>).category && typeof (rules as Record<string, unknown>).category === "string") {
-      category = (rules as Record<string, unknown>).category as string;
-      const isCat = category.toLowerCase();
-
-      // Detect holding pattern signals
-      const isHoldingPattern = isCat.includes("attesa") || isCat.includes("hold") ||
-                              isCat.includes("paused") || isCat.includes("on_hold") ||
-                              isCat.includes("holding") || isCat.includes("pausa") ||
-                              isCat.includes("pending");
-
-      // Detect priority signals
-      const isPriority = isCat.includes("priority") || isCat.includes("urgente") ||
-                        isCat.includes("vip") || isCat.includes("prioritario");
-
-      if (isHoldingPattern) {
-        parts.push(`⚠️ CONTATTO IN CIRCUITO DI ATTESA (da email_address_rules):\nQuesto indirizzo è marcato come "${category}".\nAdatta il tono: cordiale ma non insistente. Non proporre azioni immediate.\nSuggerisci di riprendere il contatto con un pretesto leggero (novità, evento, articolo).`);
-      } else if (isPriority) {
-        parts.push(`🔴 CONTATTO PRIORITARIO (da email_address_rules):\nQuesto indirizzo è marcato come "${category}".\nDedicare maggiore attenzione alla personalizzazione. Tono diretto e propositivo.`);
-      } else {
-        parts.push(`CATEGORIA CONTATTO: ${category}`);
-      }
-    }
-  }
-
-  if (ctx) {
-    if (ctx.conversation_summary) parts.push(`CONVERSATION HISTORY: ${ctx.conversation_summary}`);
-    const exchanges = Array.isArray(ctx.last_exchanges) ? (ctx.last_exchanges as Array<Record<string, unknown>>).slice(-5) : [];
-    if (exchanges.length) {
-      parts.push(`Last exchanges:\n${exchanges.map((ex: Record<string, unknown>) => `  ${ex.date || "?"} - ${ex.subject || "N/A"} - ${ex.sentiment || "neutral"}`).join("\n")}`);
-    }
-    parts.push(`RESPONSE PATTERN: Rate ${Math.round(ctx.response_rate ?? 0)}%, avg ${ctx.avg_response_time_hours != null ? `${Math.round(ctx.avg_response_time_hours)}h` : "N/A"}, sentiment: ${ctx.dominant_sentiment || "neutral"}`);
-  }
-
-  if (rules) {
-    const rp: string[] = [];
-    if (rules.tone_override) rp.push(`Tone=${rules.tone_override}`);
-    if (rules.topics_to_emphasize?.length) rp.push(`Emphasize=${rules.topics_to_emphasize.join(", ")}`);
-    if (rules.topics_to_avoid?.length) rp.push(`Avoid=${rules.topics_to_avoid.join(", ")}`);
-    if (rp.length) parts.push(`SENDER RULES: ${rp.join(", ")}`);
-    if ((rules as Record<string, unknown>)?.email_prompts && ((rules as Record<string, unknown>).email_prompts as Record<string, unknown>)?.instructions) parts.push(`SENDER PROMPT: ${((rules as Record<string, unknown>).email_prompts as Record<string, unknown>).instructions}`);
-  }
-
-  if (classes.length) {
-    parts.push(`RECENT CLASSIFICATIONS:\n${classes.map((c: Record<string, unknown>) => `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || ""}`).join("\n")}`);
-  }
-
-  const text = parts.length ? `\nCONVERSATION INTELLIGENCE:\n${parts.join("\n")}\n` : "";
-  return { text, customPrompt, category };
-}
-
-// ── Intelligence assembly ──
-
-export interface RecipientIntelligence {
-  sources_checked: string[];
-  data_found: Record<string, boolean>;
-  enrichment_snippet: string;
-  warning: string | null;
-}
+export type { RecipientIntelligence };
 
 export interface OutreachContextBlocks {
   intelligence: RecipientIntelligence;
@@ -139,7 +32,6 @@ export interface OutreachContextBlocks {
   partnerId: string | null;
   websiteSource: "cached" | "not_available";
   linkedinSource: "cached" | "live_scraped" | "not_available";
-  // ── Fix 3.1: real relationship stage (single source of truth) ──
   relationshipStage: "cold" | "warm" | "active" | "stale" | "ghosted";
   relationshipMetrics: {
     response_rate: number;
@@ -148,92 +40,14 @@ export interface OutreachContextBlocks {
     commercial_state: "new" | "holding" | "engaged";
     total_interactions: number;
   };
-  // ── Fix 3.2: active playbook injection ──
   playbookBlock: string;
   playbookActive: boolean;
-  // ── Fix 3.3: honest channel declaration ──
   channelDeclaration: string;
-  // ── Fix (email_address_rules propagation) ──
   addressCustomPrompt?: string;
   addressCategory?: string;
-  // ── Oracle enrichment metadata ──
   enrichmentAgeDays?: number | null;
   sherlockLevel?: number;
   lastDeepSearchScore?: number;
-}
-
-/**
- * Fix 3.2 — Loader del playbook commerciale attivo per un partner.
- * Path: partner_workflow_state(active) → commercial_workflows.code → commercial_playbooks(workflow_code, is_active=true).
- */
-export async function loadActivePlaybook(
-  supabase: SupabaseClient,
-  userId: string,
-  partnerId: string | null,
-): Promise<{ block: string; active: boolean }> {
-  if (!partnerId) return { block: "", active: false };
-
-  const { data: state } = await supabase
-    .from("partner_workflow_state")
-    .select("workflow_id, status, current_step")
-    .eq("user_id", userId)
-    .eq("partner_id", partnerId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!state?.workflow_id) return { block: "", active: false };
-
-  const { data: workflow } = await supabase
-    .from("commercial_workflows")
-    .select("code, name")
-    .eq("id", state.workflow_id)
-    .maybeSingle();
-
-  if (!workflow?.code) return { block: "", active: false };
-
-  const { data: playbooks } = await supabase
-    .from("commercial_playbooks")
-    .select("name, description, prompt_template, suggested_actions, kb_tags, code")
-    .eq("workflow_code", workflow.code)
-    .eq("is_active", true)
-    .order("priority", { ascending: false })
-    .limit(1);
-
-  const playbook = playbooks?.[0];
-  if (!playbook) return { block: "", active: false };
-
-  const lines: string[] = [
-    `# PLAYBOOK ATTIVO — ${playbook.name} (workflow: ${workflow.code}, step: ${state.current_step ?? 0})`,
-  ];
-  if (playbook.description) lines.push(`Obiettivo: ${playbook.description}`);
-  if (playbook.prompt_template) lines.push(`\nIstruzioni operative:\n${playbook.prompt_template}`);
-  if (playbook.suggested_actions) {
-    const actions = typeof playbook.suggested_actions === "string"
-      ? playbook.suggested_actions
-      : JSON.stringify(playbook.suggested_actions);
-    lines.push(`\nAzioni suggerite: ${actions}`);
-  }
-  lines.push(`\nQuesto playbook GUIDA tono, contenuto e CTA. Rispetta le istruzioni prima di applicare la KB generica.`);
-
-  return { block: lines.join("\n") + "\n", active: true };
-}
-
-/**
- * Fix 3.3 — Dichiarazione onesta del canale: l'AI deve sapere se ha contesto storico completo o limitato.
- */
-export function buildChannelDeclaration(channel: Channel): string {
-  switch (channel) {
-    case "email":
-      return `CANALE: EMAIL — canale primario, contesto storico completo (interazioni, classificazioni, risposte).`;
-    case "whatsapp":
-      return `CANALE: WHATSAPP — contesto storico LIMITATO (no thread completo). Tono breve, diretto, conversazionale. Max 2-4 righe.`;
-    case "linkedin":
-      return `CANALE: LINKEDIN — contesto storico LIMITATO. Tono professionale, conciso. Max 4-6 righe.`;
-    case "sms":
-      return `CANALE: SMS — un solo messaggio breve (max 160 caratteri). Solo per follow-up urgenti.`;
-    default:
-      return `CANALE: ${(channel as string).toUpperCase()} — adatta tono e lunghezza.`;
-  }
 }
 
 export async function assembleOutreachContext(
@@ -273,32 +87,13 @@ export async function assembleOutreachContext(
       }
       if (parts.length) contextParts.push(`[PARTNER DB]\n${parts.join("\n")}`);
 
-      // LOVABLE-77B: enrichment unificato (Base + Deep Local + Sherlock + Legacy)
+      // LOVABLE-77B: unified enrichment (Base + Deep Local + Sherlock + Legacy)
       try {
-        const unified = await readUnifiedEnrichment(partner.id, supabase);
-        if (unified.has_any) {
-          const enrichmentBlock = formatEnrichmentForPrompt(unified, quality);
-          if (enrichmentBlock) {
-            contextParts.push(`[ARRICCHIMENTO PARTNER]\n${enrichmentBlock}`);
-            intelligence.data_found.enrichment = true;
-            if (unified.sherlock.summary) intelligence.data_found.sherlock = true;
-            if (unified.deep.contact_profiles?.length) intelligence.data_found.contact_profiles = true;
-          }
-
-          // LOVABLE-93: Add Partner Quality Score to calibrate outreach tone
-          try {
-            const { loadAndCalculateQuality, formatQualityForPrompt } = await import("../_shared/partnerQualityScore.ts");
-            const qualityScore = await loadAndCalculateQuality(supabase, partner.id);
-            const qualityBlock = formatQualityForPrompt(qualityScore);
-            if (qualityBlock) {
-              contextParts.push(`[QUALITÀ PARTNER]\n${qualityBlock}`);
-            }
-          } catch (e) {
-            console.warn("[generate-outreach] quality score failed:", e instanceof Error ? e.message : String(e));
-          }
-        }
+        const { websiteSource, linkedinSource } = await assemblePartnerEnrichmentContext(
+          supabase, partner.id, quality, contextParts, intelligence
+        );
       } catch (e) {
-        console.warn("[generate-outreach] enrichment read failed:", e instanceof Error ? e.message : e);
+        console.warn("[assembleOutreachContext] enrichment assembly failed:", e instanceof Error ? e.message : e);
       }
     } else {
       intelligence.data_found.partner = false;
@@ -349,49 +144,7 @@ export async function assembleOutreachContext(
 
   // 6) Interaction history + Relationship
   intelligence.sources_checked.push("interactions");
-  let interactionHistoryCount = 0;
-  let relationshipBlock = "";
-  let interlocutorBlock = "";
-  let branchBlock = "";
-  let historyText = "";
-  // Fix 3.1: expose real relationship metrics (single source of truth)
-  let relationshipStage: "cold" | "warm" | "active" | "stale" | "ghosted" = "cold";
-  let relationshipMetrics = {
-    response_rate: 0,
-    unanswered_count: 0,
-    days_since_last_contact: 0,
-    commercial_state: "new" as "new" | "holding" | "engaged",
-    total_interactions: 0,
-  };
-
-  const { checkSameLocationContacts, getSameCompanyBranches, analyzeRelationshipHistory, buildInterlocutorTypeBlock, buildBranchCoordinationBlock, buildRelationshipAnalysisBlock } = await import("../_shared/sameLocationGuard.ts");
-
-  if (partnerId) {
-    const guardResult = await checkSameLocationContacts(supabase, partnerId, params.contact_email || null, userId);
-    if (!guardResult.allowed) {
-      throw Object.assign(new Error(guardResult.reason), { code: "duplicate_branch", recentContact: guardResult.recentContact });
-    }
-    const { metrics, historyText: ht } = await analyzeRelationshipHistory(supabase, partnerId, userId);
-    historyText = ht;
-    interactionHistoryCount = metrics.total_interactions;
-    relationshipBlock = buildRelationshipAnalysisBlock(metrics);
-    // Fix 3.1: capture real metrics for downstream decision
-    relationshipStage = metrics.relationship_stage;
-    relationshipMetrics = {
-      response_rate: metrics.response_rate ?? 0,
-      unanswered_count: metrics.unanswered_count ?? 0,
-      days_since_last_contact: metrics.days_since_last_contact ?? 0,
-      commercial_state: metrics.commercial_state,
-      total_interactions: metrics.total_interactions ?? 0,
-    };
-    if (historyText) { intelligence.data_found.interactions = true; contextParts.push(`[STORIA INTERAZIONI]\n${historyText}`); }
-    else { intelligence.data_found.interactions = false; }
-    const branches = await getSameCompanyBranches(supabase, partnerId);
-    branchBlock = buildBranchCoordinationBlock(branches, "");
-  } else { intelligence.data_found.interactions = false; }
-
-  const sourceType = partnerId ? "partner" : "contact";
-  interlocutorBlock = buildInterlocutorTypeBlock(sourceType);
+  const relationshipAnalysis = await analyzePartnerRelationship(supabase, partnerId, userId);
 
   // 7) Met in Person
   let metInPersonContext = "";
@@ -443,38 +196,12 @@ export async function assembleOutreachContext(
     }
   }
 
-  // Website/LinkedIn cache
+  // Website/LinkedIn cache (reassess after live scrape)
   let websiteSource: "cached" | "not_available" = "not_available";
-  if (partnerId && quality !== "fast") {
-    // LOVABLE-72: lettura unificata (Base + Deep Local + Legacy + Sherlock)
-    const { readUnifiedEnrichment, formatEnrichmentForPrompt } = await import("../_shared/enrichmentAdapter.ts");
-    const unified = await readUnifiedEnrichment(partnerId, supabase);
-    if (unified.has_any) {
-      const block = formatEnrichmentForPrompt(unified, quality);
-      if (block) {
-        contextParts.push(`[ENRICHMENT UNIFICATO]\n${block}`);
-        websiteSource = "cached";
-        if (unified.legacy.linkedin_summary || unified.base.linkedin_url) {
-          linkedinSource = "cached";
-          intelligence.data_found.linkedin = true;
-        }
-        if (unified.base.website_excerpt || unified.legacy.website_summary) {
-          intelligence.data_found.website = true;
-        }
-
-        // LOVABLE-93: Add Partner Quality Score to calibrate outreach tone
-        try {
-          const { loadAndCalculateQuality, formatQualityForPrompt } = await import("../_shared/partnerQualityScore.ts");
-          const qualityScore = await loadAndCalculateQuality(supabase, partnerId);
-          const qualityBlock = formatQualityForPrompt(qualityScore);
-          if (qualityBlock) {
-            contextParts.push(`[QUALITÀ PARTNER]\n${qualityBlock}`);
-          }
-        } catch (e) {
-          console.warn("[generate-outreach] quality score failed:", e instanceof Error ? e.message : String(e));
-        }
-      }
-    }
+  if (partnerId && linkedinSource !== "live_scraped") {
+    const enrichment = await assemblePartnerEnrichmentContext(supabase, partnerId, quality, contextParts, intelligence);
+    websiteSource = enrichment.websiteSource;
+    linkedinSource = enrichment.linkedinSource;
   }
 
   // Build enrichment snippet
@@ -489,17 +216,9 @@ export async function assembleOutreachContext(
 
   // Sales KB
   const kbResult = await fetchKbEntriesForOutreach(supabase, quality, channel, userId);
-  if (!kbResult.text && settings.ai_sales_knowledge_base) {
-    console.warn("[generate-outreach] kb_entries vuoto, fallback monolitico DEPRECATO — migrare a kb_entries");
-  }
 
   // ── Conversation Intelligence ──
-  const convResult = await loadConversationContextOutreach(
-    supabase, userId, params.contact_email || null,
-  );
-  const conversationIntelligenceContext = convResult.text;
-  const addressCustomPrompt = convResult.customPrompt;
-  const addressCategory = convResult.category;
+  const convResult = await loadConversationContextOutreach(supabase, userId, params.contact_email || null);
 
   // Commercial state for prompt context
   let commercialState = "new";
@@ -534,51 +253,32 @@ export async function assembleOutreachContext(
   const channelDeclaration = buildChannelDeclaration(channel);
 
   // ── Oracle enrichment metadata ──
-  let enrichmentAgeDays: number | null = null;
-  let sherlockLevel: number = 0;
-  let lastDeepSearchScore: number = 0;
-  if (partnerId && quality !== "fast") {
-    try {
-      const unified = await readUnifiedEnrichment(partnerId, supabase);
-      enrichmentAgeDays = unified.freshness.deep_age_days ?? unified.freshness.base_age_days;
-      sherlockLevel = (unified.sherlock?.level as number | undefined) ?? 0;
-      if (unified.has_any && enrichmentAgeDays !== null && enrichmentAgeDays > 30) {
-        contextParts.push(`\nATTENZIONE: dati arricchimento obsoleti (${enrichmentAgeDays} giorni). Usare con cautela — considera di aggiornare con Deep Search.\n`);
-      }
-
-      // Calculate deep search score
-      const { calculateDeepSearchScore, formatScoreForPrompt } = await import("../_shared/deepSearchScore.ts");
-      const interactionCountResult = await supabase
-        .from("interactions")
-        .select("id", { count: "exact", head: true })
-        .eq("partner_id", partnerId);
-      const kbCountResult = await supabase
-        .from("kb_entries")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .contains("tags", [`partner_${partnerId}`]);
-      const dsScore = calculateDeepSearchScore({
-        enrichment: unified,
-        interactionCount: interactionCountResult.count ?? 0,
-        kbEntryCount: kbCountResult.count ?? 0,
-        hasActiveConversation: !!historyText,
-      });
-      lastDeepSearchScore = dsScore.score;
-    } catch (e) {
-      console.warn("[generate-outreach] Oracle metadata assembly failed:", e instanceof Error ? e.message : String(e));
-    }
-  }
+  const enrichMetadata = await getEnrichmentMetadata(supabase, partnerId, quality);
 
   return {
-    intelligence, interlocutorBlock, relationshipBlock, branchBlock, metInPersonContext,
-    historyText, interactionHistoryCount, conversationIntelligenceContext,
-    salesKBSlice: kbResult.text, salesKBSections: kbResult.sections,
-    settings, partnerId, websiteSource, linkedinSource,
-    commercialState, touchCount, daysSinceLastContact, warmthScore,
-    relationshipStage, relationshipMetrics,
-    playbookBlock: playbook.block, playbookActive: playbook.active,
+    intelligence,
+    interlocutorBlock: relationshipAnalysis.interlocutorBlock,
+    relationshipBlock: relationshipAnalysis.relationshipBlock,
+    branchBlock: relationshipAnalysis.branchBlock,
+    metInPersonContext,
+    historyText: relationshipAnalysis.historyText,
+    interactionHistoryCount: relationshipAnalysis.interactionHistoryCount,
+    conversationIntelligenceContext: convResult.text,
+    salesKBSlice: kbResult.text,
+    salesKBSections: kbResult.sections,
+    settings,
+    partnerId,
+    websiteSource,
+    linkedinSource,
+    relationshipStage: relationshipAnalysis.relationshipStage,
+    relationshipMetrics: relationshipAnalysis.relationshipMetrics,
+    playbookBlock: playbook.block,
+    playbookActive: playbook.active,
     channelDeclaration,
-    addressCustomPrompt, addressCategory,
-    enrichmentAgeDays, sherlockLevel, lastDeepSearchScore,
+    addressCustomPrompt: convResult.customPrompt,
+    addressCategory: convResult.category,
+    enrichmentAgeDays: enrichMetadata.enrichmentAgeDays,
+    sherlockLevel: enrichMetadata.sherlockLevel,
+    lastDeepSearchScore: enrichMetadata.lastDeepSearchScore,
   };
 }

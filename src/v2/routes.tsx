@@ -77,6 +77,7 @@ const AgentTasksPage = lazy(() => import("./ui/pages/AgentTasksPage").then((m) =
 const DealsPage = lazy(() => import("./ui/pages/DealsPage").then((m) => ({ default: m.DealsPage })));
 const CalendarPage = lazy(() => import("./ui/pages/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
+const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })));
 const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 /** Wraps a lazy page with error boundary and suspense skeleton */
@@ -252,6 +253,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
+          <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
           <Route path="design-system-preview" element={guardedPage(DesignSystemPreviewPage, "DesignSystemPreview")} />
 

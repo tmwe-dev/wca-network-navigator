@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Trash2, Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock } from "lucide-react";
-import type { NotificationType, NotificationPriority } from "@/data/notifications";
+import type { NotificationType, NotificationPriority, Notification } from "@/data/notifications";
 
 export default function NotificationsPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export default function NotificationsPage(): React.ReactElement {
   const dismissNotification = useDismissNotification();
   const markAsRead = useMarkAsRead();
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
       markAsRead.mutate(notification.id);
     }

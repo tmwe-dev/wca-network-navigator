@@ -10,7 +10,7 @@ import { assessPageQuality, reasonLabel } from "./pageQuality";
 import { scrapeUrl, makeStepResult } from "./scrapeOperations";
 import { extractInternalLinks, extractGoogleResults, normalizeUrl, detectLinkedinCompanyUrl } from "./urlUtils";
 import { callExtractAI } from "./aiIntegrations";
-import type { SherlockStepResult } from "./sherlockTypes";
+import type { SherlockStepResult, SherlockChannel } from "./sherlockTypes";
 
 export interface BootstrapResult {
   website: string | null;
@@ -29,7 +29,7 @@ export async function bootstrapHome(args: {
   targetFields: string[];
   partnerId: string | null;
   signal: AbortSignal;
-  throttle?: (channel: any, url: string, signal: AbortSignal) => Promise<void>;
+  throttle?: (channel: SherlockChannel, url: string, signal: AbortSignal) => Promise<void>;
   onProgress?: (step: SherlockStepResult) => void;
 }): Promise<{
   website: string | null;
@@ -143,7 +143,7 @@ export async function bootstrapGoogleSearch(args: {
   website: string | null;
   level: number;
   signal: AbortSignal;
-  throttle?: (channel: any, url: string, signal: AbortSignal) => Promise<void>;
+  throttle?: (channel: SherlockChannel, url: string, signal: AbortSignal) => Promise<void>;
   onProgress?: (step: SherlockStepResult) => void;
   partnerId: string | null;
 }): Promise<{

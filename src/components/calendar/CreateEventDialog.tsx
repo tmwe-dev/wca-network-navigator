@@ -12,6 +12,14 @@ import { usePartners } from "@/hooks/usePartners";
 import { useContacts } from "@/hooks/useContacts";
 import { useDeals } from "@/hooks/useDeals";
 import type { EventType, RecurrenceType } from "@/data/calendar";
+import type { Partner } from "@/data/partners";
+import type { Deal } from "@/data/deals";
+
+interface Contact {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
 
 interface CreateEventDialogProps {
   open: boolean;
@@ -267,7 +275,7 @@ export function CreateEventDialog({
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded p-2 text-sm"
               >
                 <option value="">Nessuno</option>
-                {partners.map((p: any) => (
+                {partners.map((p: Partner) => (
                   <option key={p.id} value={p.id}>
                     {p.company_name}
                   </option>
@@ -285,7 +293,7 @@ export function CreateEventDialog({
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded p-2 text-sm"
               >
                 <option value="">Nessuno</option>
-                {contacts.map((c: any) => (
+                {contacts.map((c: Contact) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -303,7 +311,7 @@ export function CreateEventDialog({
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded p-2 text-sm"
               >
                 <option value="">Nessuno</option>
-                {deals.map((d: any) => (
+                {deals.map((d: Deal) => (
                   <option key={d.id} value={d.id}>
                     {d.title}
                   </option>

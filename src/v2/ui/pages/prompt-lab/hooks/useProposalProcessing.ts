@@ -1,0 +1,85 @@
+/**
+ * useProposalProcessing — Handles block improvement requests and proposal generation.
+ *
+ * Manages:
+ * - System map building
+ * - Block improvement via Lab Agent
+ * - Proposal state tracking
+ */
+
+import { type Block, type BlockSource, PROMPT_LAB_TABS } from "../types";
+import { SYSTEM_MISSION } from "./useGlobalPromptImprover";
+
+export interface GlobalProposal {
+  block: Block;
+  tabLabel: string;
+  tabActivation?: string;
+  before: string;
+  after?: string;
+  status: "pending" | "improving" | "ready" | "skipped" | "error" | "saved";
+  error?: string;
+}
+
+/** Stringa "tab label" per ogni tipo di sorgente. */
+export function tabLabelFor(src: BlockSource): string {
+  switch (src.kind) {
+    case "app_setting": return src.key === "system_prompt_blocks" ? "System Prompt" : "Email";
+    case "kb_entry": return "KB Doctrine";
+    case "operative_prompt": return "Operative";
+    case "email_prompt": return "Email";
+    case "email_address_rule": return "Email";
+    case "playbook": return "Playbooks";
+    case "agent_persona": return "Agent Personas";
+    case "agent": return "AI Profile";
+    default: return "n/d";
+  }
+}
+
+function activationFor(tabLabel: string): string | undefined {
+  return PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation;
+}
+
+/** Costruisce una mappa testuale compatta di tutti i blocchi. */
+export function buildSystemMap(all: ReadonlyArray<{ tabLabel: string; block: Block }>): string {
+  const groups = new Map<string, Block[]>();
+  for (const { tabLabel, block } of all) {
+    if (!groups.has(tabLabel)) groups.set(tabLabel, []);
+    groups.get(tabLabel)!.push(block);
+  }
+  const lines: string[] = [];
+  for (const [tab, blocks] of groups) {
+    const activation = activationFor(tab);
+    lines.push(`\n## TAB: ${tab}`);
+    if (activation) lines.push(`Attivazione runtime: ${activation}`);
+    for (const b of blocks) {
+      const snippet = (b.content || "(vuoto)").slice(0, 280).replace(/\s+/g, " ").trim();
+      lines.push(`- [${b.id}] ${b.label}: ${snippet}${b.content.length > 280 ? "…" : ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+/** Converte GlobalProposal[] a GlobalRunProposal[] per DB. */
+export function toRunProposals(proposals: GlobalProposal[]): Array<{
+  block_id: string;
+  tab_label: string;
+  tab_activation?: string;
+  source: Record<string, unknown>;
+  label: string;
+  before: string;
+  after?: string;
+  status: string;
+  error?: string;
+}> {
+  return proposals.map((p) => ({
+    block_id: p.block.id,
+    tab_label: p.tabLabel,
+    tab_activation: p.tabActivation,
+    source: p.block.source as unknown as Record<string, unknown>,
+    label: p.block.label,
+    before: p.before,
+    after: p.after,
+    status: p.status,
+    error: p.error,
+  }));
+}

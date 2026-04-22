@@ -1,225 +1,15 @@
 /**
- * promptBuilder.ts — System + User prompt composition for generate-email.
- * Extracted from index.ts for modularity (Prompt #59).
+ * promptBuilder.ts — System + User prompt composition orchestrator.
+ * Delegates to focused modules; orchestrates final prompt assembly.
  */
 import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
+import { getProfileTruncation, getModel } from "./promptHelpers.ts";
+import { buildStrategicAdvisor } from "./strategicAdvisor.ts";
+import type { EmailPromptContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
 
-// ── Types ──
-
-export interface PartnerData {
-  id: string | null;
-  company_name: string;
-  company_alias: string | null;
-  country_code: string;
-  country_name: string;
-  city: string;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  profile_description: string | null;
-  rating: number | null;
-  raw_profile_markdown: string | null;
-  enrichment_data?: Record<string, unknown>;
-  office_type?: string;
-  lead_status?: string;
-}
-
-export interface ContactData {
-  id: string;
-  name: string;
-  email: string | null;
-  direct_phone: string | null;
-  mobile: string | null;
-  title: string | null;
-  contact_alias: string | null;
-}
-
-export interface NetworkRow { network_name: string; }
-export interface ServiceRow { service_category: string; }
-export interface SocialLinkRow { platform: string; url: string; contact_id: string | null; }
-
-export interface EmailPromptContext {
-  partner: PartnerData;
-  contact: ContactData | null;
-  contactEmail: string | null;
-  sourceType: string;
-  quality: Quality;
-  language?: string;
-  goal?: string;
-  base_proposal?: string;
-  oracle_type?: string;
-  oracle_tone?: string;
-  use_kb?: boolean;
-  // Fix 1+2: structured email-type metadata propagated from Composer
-  email_type_prompt?: string | null;
-  email_type_structure?: string | null;
-  networks: NetworkRow[];
-  services: ServiceRow[];
-  socialLinks: SocialLinkRow[];
-  settings: Record<string, string>;
-  // Contextual blocks (pre-built by contextAssembler)
-  historyContext: string;
-  relationshipBlock: string;
-  branchBlock: string;
-  interlocutorBlock: string;
-  metInPersonContext: string;
-  cachedEnrichmentContext: string;
-  documentsContext: string;
-  stylePreferencesContext: string;
-  editPatternsContext: string;
-  responseInsightsContext: string;
-  conversationIntelligenceContext: string;
-  salesKBSlice: string;
-  salesKBSections: string[];
-  signatureBlock: string;
-  // Commercial state context (holding pattern awareness)
-  commercialState?: string;
-  touchCount?: number;
-  lastChannel?: string;
-  lastOutcome?: string;
-  daysSinceLastContact?: number;
-  warmthScore?: number;
-  // Fix 3.2: active playbook (governs tone/content/CTA)
-  playbookBlock?: string;
-  // Fix (email_address_rules propagation)
-  addressCustomPrompt?: string;
-  addressCategory?: string;
-  // LOVABLE-93: Decision Engine context injected into generation
-  decisionContext?: {
-    action: string;
-    autonomy: string;
-    channel?: string;
-    journalist_role?: string;
-    reasoning: string;
-    priority: number;
-    state: {
-      leadStatus: string;
-      touchCount: number;
-      daysSinceLastOutbound: number;
-      enrichmentScore: number;
-    };
-  };
-}
-
-// ── Helpers ──
-
-function getProfileTruncation(quality: Quality): { description: number; rawProfile: number } {
-  // LOVABLE-77: alzati i limiti — Standard ora 800/2500, Premium 1500/5000.
-  // Razionale: Gemini 3 Flash supporta 1M token; meglio dare contesto ricco che tagliare.
-  if (quality === "fast") return { description: 200, rawProfile: 0 };
-  if (quality === "standard") return { description: 800, rawProfile: 2500 };
-  return { description: 1500, rawProfile: 5000 };
-}
-
-export interface StrategicAdvisorContext {
-  emailCategory?: string;
-  hasHistory?: boolean;
-  followUpCount?: number;
-  hasEnrichmentData?: boolean;
-  commercialState?: string;
-  touchCount?: number;
-  // LOVABLE-77: data points disponibili (aiutano l'AI a scegliere su cosa ancorare il messaggio)
-  dataPoints?: {
-    hasWebsite?: boolean;
-    hasLinkedin?: boolean;
-    contactProfilesCount?: number;
-    hasSherlock?: boolean;
-    bcaCount?: number;
-    historyCount?: number;
-    hasReputation?: boolean;
-    hasProfileDescription?: boolean;
-  };
-}
-
-export function buildStrategicAdvisor(context: StrategicAdvisorContext): string {
-  const phaseContext = context.commercialState
-    ? `\n- Fase commerciale: ${context.commercialState} (touch #${context.touchCount || 0})`
-    : "";
-  const tc = context.touchCount ?? 0;
-  const toneGuide = tc === 0
-    ? "\n- PRIMO CONTATTO: tono freddo-professionale, breve, CTA basso impegno"
-    : tc <= 3
-      ? "\n- FOLLOW-UP INIZIALE: tono cordiale, riferirsi a scambi precedenti, aggiungere valore"
-      : "\n- RELAZIONE ATTIVA: tono da collega, personalizzazione alta, NON ripetere presentazione";
-
-  // LOVABLE-77: blocco "Data points disponibili" — guida l'AI a scegliere ancore concrete
-  const dp = context.dataPoints || {};
-  const availableAnchors: string[] = [];
-  if (dp.hasProfileDescription) availableAnchors.push("profilo partner (servizi/network/città)");
-  if (dp.hasWebsite) availableAnchors.push("sito web (analizzato)");
-  if (dp.hasLinkedin) availableAnchors.push("LinkedIn azienda");
-  if ((dp.contactProfilesCount ?? 0) > 0) availableAnchors.push(`${dp.contactProfilesCount} decision maker da Deep Search`);
-  if (dp.hasSherlock) availableAnchors.push("indagine Sherlock");
-  if ((dp.bcaCount ?? 0) > 0) availableAnchors.push(`${dp.bcaCount} incontro/i di persona`);
-  if ((dp.historyCount ?? 0) > 0) availableAnchors.push(`${dp.historyCount} touch precedenti`);
-  if (dp.hasReputation) availableAnchors.push("reputazione online");
-
-  const totalAnchors = availableAnchors.length;
-  const dataPointsBlock = totalAnchors > 0
-    ? `
-## DATA POINTS DISPONIBILI PER QUESTO PARTNER (${totalAnchors})
-${availableAnchors.map((a) => `- ✓ ${a}`).join("\n")}
-
-→ USA ALMENO ${Math.min(2, totalAnchors)} di questi data points come ancore concrete nel messaggio.
-→ Cita un servizio specifico letto dal sito, un nome di decision maker da Sherlock, un evento BCA, un servizio di profilo. NON restare generico.
-`
-    : `
-## DATA POINTS DISPONIBILI: NESSUNO
-⚠️ Non hai dati specifici su questo partner. Aggiungi tag [GENERIC] nel subject e procedi con presentazione standard onesta.
-`;
-
-  return `
-# STRATEGIC ADVISOR — Contesto per Decisione Autonoma
-
-Sei un EDITOR GIORNALISTA esperto, non un copywriter generico.
-Il tuo lavoro: leggere TUTTO il dossier sul partner (profilo, sito, Sherlock, history, BCA, network),
-farti un'idea precisa di chi è l'azienda e di cosa fa, e scrivere un messaggio che dimostri
-— senza dirlo esplicitamente — che hai studiato chi hai davanti e che non è un blast generico.
-
-## Contesto:
-- Tipo email: ${context.emailCategory || "generico"}
-- Storia interazioni disponibile: ${context.hasHistory ? "SÌ" : "NO"}
-- Tentativo follow-up: ${context.followUpCount ? `#${context.followUpCount}` : "N/A"}
-- Dati enrichment disponibili: ${context.hasEnrichmentData ? "SÌ" : "NO"}${phaseContext}${toneGuide}
-${dataPointsBlock}
-## Metodo dell'editor:
-1. LEGGI: profilo + enrichment + Sherlock + history. Costruisci nella tua testa un ritratto del partner:
-   che servizi fa, su che rotte, in che mercato opera, cosa lo distingue, dove può crescere.
-2. CONNETTI: collega ciò che il partner fa con ciò che WCA Network offre come vantaggio competitivo
-   (vedi sezione "Filosofia WCA" nel system prompt). Trova UNA leva di interesse reale per LUI.
-3. SCRIVI: messaggio breve, asciutto, da professionista a professionista. Mai vendita aggressiva,
-   mai entusiasmo finto, mai elenchi puntati di feature. Una sola idea forte, ben argomentata.
-
-## Guardrail:
-- Se c'è storia interazioni → non ripetere approcci già usati
-- Se dati scarsi → resta qualitativo ma vero (NON inventare numeri, %, casi cliente, certificazioni)
-- Le tecniche della KB servono a STRUTTURARE (hook, framing, CTA), non a fabbricare prove inesistenti
-- Adatta il tono alla fase della relazione (mai forzare familiarità nei primi contatti)
-`;
-}
-
-export function getModel(quality: Quality): string {
-  return quality === "fast"
-    ? "google/gemini-2.5-flash-lite"
-    : "google/gemini-3-flash-preview";
-}
-
-// ── Main builder ──
-
-export interface PromptBlock {
-  label: string;
-  content: string;
-}
-
-export interface BuiltPrompts {
-  systemPrompt: string;
-  userPrompt: string;
-  /** Forge debug: labeled blocks composing the user prompt (in order) */
-  blocks: PromptBlock[];
-  /** Forge debug: labeled blocks composing the system prompt */
-  systemBlocks: PromptBlock[];
-}
+export type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow, EmailPromptContext, StrategicAdvisorContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
+export { getModel };
 
 export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
   const {
@@ -284,13 +74,13 @@ ${recipientName ? `- Nome persona: ${recipientName}` : `- Nome persona: non disp
 ${quality !== "fast" ? `- Telefono: ${contact.direct_phone || contact.mobile || "N/A"}` : ""}
 ` : `NOTA: Nessun contatto selezionato.`;
 
-  // Fix 3 (Gap C): no hardcoded fallback — derive from touchCount/commercialState if oracle_type is missing
+  // Infer category from touchCount/commercialState if oracle_type is missing
   const tcFallback = touchCount ?? 0;
   const inferredCategory = tcFallback === 0 ? "primo_contatto" : "follow_up";
   const emailCategory = oracle_type || inferredCategory;
   const prevActCount = historyContext ? (historyContext.match(/\[/g) || []).length : 0;
 
-  // LOVABLE-77: estrai data points dai blocchi caricati per guidare l'AI
+  // LOVABLE-77: extract data points from loaded blocks
   const ce = cachedEnrichmentContext || "";
   const dataPoints = {
     hasWebsite: /INFORMAZIONI SITO AZIENDALE/i.test(ce),
@@ -336,14 +126,14 @@ ${settings.ai_sector_notes ? `- Note settoriali: ${settings.ai_sector_notes}` : 
   const detected = getLanguageHint(partner.country_code);
   const effectiveLanguage = language || detected.language;
 
-  // Fix 2 (Gap B): explicit "EMAIL TYPE STRUCTURE" block in system prompt — parallel to Playbook
+  // Email type structure block
   const emailTypeStructureBlock = (email_type_prompt || email_type_structure) ? `
 # TIPO EMAIL "${emailCategory}" — STRUTTURA E ISTRUZIONI OBBLIGATORIE
 ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}\n` : ""}${email_type_structure ? `\n## Struttura tattica richiesta:\n${email_type_structure}\n` : ""}
 ⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
 ` : "";
 
-  // ── Build address-specific priority instruction block ──
+  // Address-specific priority instruction block
   let addressPriorityBlock = "";
   if (addressCustomPrompt || addressCategory) {
     const parts: string[] = [];
@@ -351,7 +141,6 @@ ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}
       parts.push(`⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO EMAIL:\n${addressCustomPrompt}`);
     }
     if (addressCategory) {
-      // Detect holding pattern signals
       const category = addressCategory.toLowerCase();
       const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
                               category.includes("pausa") || category.includes("pending");
@@ -429,7 +218,7 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
 - Saluto con alias/nome breve, mai nome completo
 - Zero allucinazioni: usa SOLO ciò che è nei blocchi sotto.`;
 
-  // Forge debug: track labeled system blocks (for /v2/ai-staff/email-forge)
+  // Forge debug: track labeled system blocks
   const systemBlocks: PromptBlock[] = [];
   if (addressCustomPrompt) systemBlocks.push({ label: "Address Custom Prompt (Priority)", content: addressCustomPrompt });
   if (addressCategory) systemBlocks.push({ label: "Address Category (Priority)", content: addressCategory });
@@ -444,13 +233,12 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
   systemBlocks.push({ label: "Ancora obbligatoria", content: "Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione WCA onesta." });
   systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
 
-  // LOVABLE-93: Commercial state context — category override for holding pattern detection
+  // Commercial state context
   let commercialBlock = "";
   if (commercialState !== undefined || touchCount !== undefined || addressCategory) {
     const tc = touchCount || 0;
     const ws = warmthScore ?? 0;
 
-    // LOVABLE-93: category as SECONDARY signal — overrides lead_status if it says "holding"
     let effectiveState = commercialState || "new";
     let holdingPatternNote = "";
     if (addressCategory) {
@@ -495,7 +283,7 @@ ${base_proposal || "Proposta generica di collaborazione nel settore freight forw
 
 Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge Base.`;
 
-  // Forge debug: assemble user prompt as labeled blocks (in order)
+  // Assemble user prompt blocks
   const blocks: PromptBlock[] = [];
   blocks.push({ label: "Mittente", content: senderContext });
   blocks.push({ label: "Partner", content: partnerContext });
@@ -513,7 +301,7 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
   if (conversationIntelligenceContext) blocks.push({ label: "ConvIntel", content: conversationIntelligenceContext });
   if (commercialBlock) blocks.push({ label: "CommercialBlock", content: commercialBlock });
 
-  // LOVABLE-93: Decision Engine context — informa l'AI della raccomandazione del motore
+  // Decision engine context
   if (ctx.decisionContext && ctx.decisionContext.action !== "no_action") {
     const dc = ctx.decisionContext;
     const journalistHint = dc.journalist_role

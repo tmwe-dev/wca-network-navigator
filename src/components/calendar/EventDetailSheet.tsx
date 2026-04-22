@@ -25,6 +25,14 @@ import { usePartners } from "@/hooks/usePartners";
 import { useContacts } from "@/hooks/useContacts";
 import { useDeals } from "@/hooks/useDeals";
 import type { CalendarEvent, EventType } from "@/data/calendar";
+import type { Partner } from "@/data/partners";
+import type { Deal } from "@/data/deals";
+
+interface Contact {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
 
 interface EventDetailSheetProps {
   eventId: string | null;
@@ -103,12 +111,12 @@ export function EventDetailSheet({
   };
 
   const partner = event.partner_id
-    ? partners.find((p: any) => p.id === event.partner_id)
+    ? partners.find((p: Partner) => p.id === event.partner_id)
     : null;
   const contact = event.contact_id
-    ? contacts.find((c: any) => c.id === event.contact_id)
+    ? contacts.find((c: Contact) => c.id === event.contact_id)
     : null;
-  const deal = event.deal_id ? deals.find((d: any) => d.id === event.deal_id) : null;
+  const deal = event.deal_id ? deals.find((d: Deal) => d.id === event.deal_id) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

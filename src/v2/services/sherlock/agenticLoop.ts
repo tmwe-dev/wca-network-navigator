@@ -5,7 +5,7 @@ import { assessPageQuality, reasonLabel } from "./pageQuality";
 import { scrapeUrl, makeStepResult } from "./scrapeOperations";
 import { extractInternalLinks, normalizeUrl, safeHost } from "./urlUtils";
 import { callExtractAI, callDecideAI } from "./aiIntegrations";
-import type { SherlockStepResult, SherlockProgressEvent } from "./sherlockTypes";
+import type { SherlockStepResult, SherlockProgressEvent, SherlockChannel } from "./sherlockTypes";
 
 export interface AgenticLoopOptions {
   companyName: string;
@@ -21,7 +21,7 @@ export interface AgenticLoopOptions {
   consolidated: Record<string, unknown>;
   lastSummary: string;
   signal: AbortSignal;
-  throttle?: (channel: any, url: string, signal: AbortSignal) => Promise<void>;
+  throttle?: (channel: SherlockChannel, url: string, signal: AbortSignal) => Promise<void>;
   onProgress?: (event: SherlockProgressEvent) => void;
   onStepResult?: (step: SherlockStepResult) => void;
 }

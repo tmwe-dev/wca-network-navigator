@@ -3,12 +3,12 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { savePushSubscription, deletePushSubscription } from "@/data/notifications";
+import { savePushSubscription, deletePushSubscription, type Notification } from "@/data/notifications";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface UsePushNotificationsOptions {
   enabled?: boolean;
-  onNotification?: (notification: any) => void;
+  onNotification?: (notification: Notification) => void;
 }
 
 export function usePushNotifications(options: UsePushNotificationsOptions = {}) {
