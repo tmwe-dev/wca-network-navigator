@@ -1,20 +1,31 @@
 /**
- * partnerQualityScore.ts — Sistema di valutazione della qualità partner (LOVABLE-93)
+ * partnerQualityScore.ts — Main orchestrator for partner quality scoring (LOVABLE-93)
  *
- * Calcola uno score 1-5 stelle basato su 4 dimensioni di qualità + WCA logistics modifier:
- *   1. Profilo e Presenza (25%) — completezza dati, sito web, LinkedIn, contatti
- *   2. Solidità Aziendale (30%) — anzianità, reti, certificazioni, multilocazione
- *   3. Servizi e Capacità (25%) — diversità servizi, specializzazioni, reputazione
- *   4. Intelligence Profonda (20%) — investigazioni Sherlock, data freshness
- *   5. Valore Logistico WCA (modifier -20 to +30) — bonus per courier/fleet/customs, penalità per FCL-only/giovani da regioni rischio
- *
- * Star mapping: totalScore 0-20 = 1*, 21-40 = 2*, 41-60 = 3*, 61-80 = 4*, 81-100 = 5*
- * (totalScore = clamp(baseScore + wcaModifier, 0, 100))
- *
- * Aggiorna automaticamente partners.rating (1-5) e partners.rating_details (JSONB).
+ * Calculates 1-5 star rating based on 4 quality dimensions + WCA logistics modifier.
+ * Aggiorna automaticamente partners.rating e partners.rating_details.
  */
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import {
+  QUALITY_WEIGHTS,
+  STAR_THRESHOLDS,
+  WCA_MODIFIER_BOUNDS,
+  HIGH_RISK_COUNTRIES,
+  CAPABILITY_KEYWORDS,
+  WCA_BONUS_POINTS,
+  WCA_PENALTY_POINTS,
+} from "./qualityRules";
+import {
+  extractFromEnrichment,
+  normalizeScore,
+  calculateYearsSince,
+  isDateInFuture,
+  scoreMembershipYears,
+  scoreContactQuality,
+  scoreDataFreshness,
+  scoreToStars,
+  clamp,
+} from "./qualityHelpers";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -751,16 +762,7 @@ async function calculateDeepIntelligence(
   };
 }
 
-/**
- * Mappa lo score totale a stelle 1-5.
- */
-function scoreToStars(totalScore: number): number {
-  if (totalScore <= 20) return 1;
-  if (totalScore <= 40) return 2;
-  if (totalScore <= 60) return 3;
-  if (totalScore <= 80) return 4;
-  return 5;
-}
+// scoreToStars is imported from qualityHelpers
 
 /**
  * Calcola la disponibilità dei dati (percentuale di data sources disponibili).
@@ -1380,24 +1382,7 @@ export async function calculateAndSavePartnerQuality(
   return result;
 }
 
-// ════════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * Estrae un valore da enrichment_data con type-safe access.
- */
-function extractFromEnrichment<T>(
-  enrichmentData: Record<string, unknown> | null,
-  key: string,
-  defaultValue: T,
-): T {
-  if (!enrichmentData || typeof enrichmentData !== "object") {
-    return defaultValue;
-  }
-  const value = enrichmentData[key];
-  return value !== undefined && value !== null ? (value as T) : defaultValue;
-}
+// Helper functions are imported from qualityHelpers and qualityRules
 
 /**
  * Recalcola la qualità di più partner in batch.

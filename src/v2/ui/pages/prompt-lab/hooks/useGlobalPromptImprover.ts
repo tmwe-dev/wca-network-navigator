@@ -1,15 +1,10 @@
 /**
- * useGlobalPromptImprover — orchestrator del "Migliora tutto" con persistenza.
+ * useGlobalPromptImprover — orchestrator del "Migliora tutto" con persistenza (LOVABLE-91).
  *
- * LOVABLE-91: ogni run viene persistito su DB incrementalmente.
- * Se il browser crasha, l'utente può riprendere dal punto in cui era.
+ * Raccoglie TUTTI i blocchi modificabili dal Prompt Lab, costruisce una "system map"
+ * + dottrina completa come contesto, e per ogni blocco chiede al Lab Agent una versione
+ * migliorata coerente con il resto.
  *
- * Raccoglie TUTTI i blocchi modificabili dal Prompt Lab (system prompt, KB doctrine,
- * operative prompts, email prompts, address rules, playbooks, agent personas),
- * costruisce una "system map" + dottrina completa come contesto, e per ogni blocco
- * chiede al Lab Agent una versione migliorata coerente con il resto.
- *
- * Niente hard-coded constraints sulla forma: solo guard-rail in `improveBlockGlobal`.
  * Salvataggio è una fase separata (review prima di scrivere su DB).
  */
 import { useCallback, useState, useEffect, useRef } from "react";
@@ -37,6 +32,9 @@ import {
 } from "@/data/promptLabGlobalRuns";
 import { buildSystemManifest, buildCompanyProfile } from "../utils/systemManifest";
 import type { ParsedFile } from "../utils/fileParser";
+import { calculatePromptQualityScore } from "./promptAnalysis";
+import { generateImprovementSuggestions, suggestStructure } from "./promptSuggestions";
+import { createHistoryState, addVersion, getCurrentVersion, canUndo, canRedo } from "./promptHistory";
 
 const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
