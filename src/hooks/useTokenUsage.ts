@@ -67,7 +67,7 @@ export function useTokenUsage() {
 
   // Subscribe to realtime changes
   useEffect(() => {
-    const { data: subscription } = supabase
+    const channel = supabase
       .channel("token_usage_changes")
       .on(
         "postgres_changes",
@@ -84,9 +84,7 @@ export function useTokenUsage() {
       .subscribe();
 
     return () => {
-      if (subscription) {
-        supabase.removeChannel(subscription);
-      }
+      supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
