@@ -6,7 +6,6 @@ import { useCallback, useMemo, useState } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
-import { UploadButton } from "./prompt-lab/UploadButton";
 import { ExportButton } from "./prompt-lab/ExportButton";
 import { GlobalImproverDialog } from "./prompt-lab/GlobalImproverDialog";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
-import { toast } from "sonner";
 
 const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
   core_ai: Brain,
@@ -116,10 +114,6 @@ export function PromptLabPage() {
     [lab, activeTab.label, activeTab.activation],
   );
 
-  const handleUpload = useCallback((blocks: Block[]) => {
-    toast.info(`${blocks.length} blocchi importati. Funzione di assegnazione al tab attivo in arrivo.`);
-  }, []);
-
   const handleExport = useCallback((): Record<string, ReadonlyArray<Block>> => {
     return { _info: [] as ReadonlyArray<Block> };
   }, []);
@@ -145,7 +139,6 @@ export function PromptLabPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                   Migliora tutto
                 </Button>
-                <UploadButton onBlocksUploaded={handleUpload} />
                 <ExportButton getSnapshot={handleExport} />
               </div>
             </header>
