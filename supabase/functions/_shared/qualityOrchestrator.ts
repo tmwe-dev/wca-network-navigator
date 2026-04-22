@@ -10,11 +10,11 @@ import {
   calculateBusinessSolidity,
   calculateServicesCapacity,
   calculateDeepIntelligence,
-} from "./dimensionCalculators";
-import { calculateDataCompleteness } from "./dataCompletenessCalculator";
-import { calculateWCAModifier } from "./wcaModifierCalculator";
-import { scoreToStars } from "./qualityHelpers";
-import type { PartnerData, PartnerQualityResult } from "./qualityTypes";
+} from "./dimensionCalculators.ts";
+import { calculateDataCompleteness } from "./dataCompletenessCalculator.ts";
+import { calculateWCAModifier } from "./wcaModifierCalculator.ts";
+import { scoreToStars } from "./qualityHelpers.ts";
+import type { PartnerData, PartnerQualityResult } from "./qualityTypes.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 

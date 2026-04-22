@@ -5,8 +5,8 @@
  */
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { extractFromEnrichment } from "./qualityHelpers";
-import type { PartnerData } from "./qualityTypes";
+import { extractFromEnrichment } from "./qualityHelpers.ts";
+import type { PartnerData } from "./qualityTypes.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 

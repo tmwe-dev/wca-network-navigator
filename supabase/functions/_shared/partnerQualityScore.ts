@@ -20,25 +20,25 @@ export type {
   PartnerData,
   WCAModifierBonus,
   WCAModifierDetails,
-} from "./qualityTypes";
+} from "./qualityTypes.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // CALCULATION ORCHESTRATION
 // ════════════════════════════════════════════════════════════════════
 
-export { calculatePartnerQuality } from "./qualityOrchestrator";
+export { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // SAVE AND BATCH OPERATIONS
 // ════════════════════════════════════════════════════════════════════
 
-export { savePartnerQuality, calculateAndSavePartnerQuality, batchRecalculatePartnerQuality } from "./qualitySaveAndBatch";
+export { savePartnerQuality, calculateAndSavePartnerQuality, batchRecalculatePartnerQuality } from "./qualitySaveAndBatch.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // LEGACY COMPATIBILITY
 // ════════════════════════════════════════════════════════════════════
 
-export { loadAndCalculateQuality } from "./legacyCompatibility";
+export { loadAndCalculateQuality } from "./legacyCompatibility.ts";
 
 // ════════════════════════════════════════════════════════════════════
 // INTERNAL MODULE EXPORTS (for testing and advanced use)
@@ -49,8 +49,8 @@ export {
   calculateBusinessSolidity,
   calculateServicesCapacity,
   calculateDeepIntelligence,
-} from "./dimensionCalculators";
+} from "./dimensionCalculators.ts";
 
-export { calculateDataCompleteness } from "./dataCompletenessCalculator";
+export { calculateDataCompleteness } from "./dataCompletenessCalculator.ts";
 
-export { calculateWCAModifier } from "./wcaModifierCalculator";
+export { calculateWCAModifier } from "./wcaModifierCalculator.ts";
