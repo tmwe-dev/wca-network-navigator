@@ -225,7 +225,6 @@ export async function executeToolLoop(
         userId,
         authHeader
       );
-      );
       toolResults.push({
         role: "tool",
         tool_call_id: tc.id,
