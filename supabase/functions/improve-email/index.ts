@@ -5,6 +5,7 @@ import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
@@ -355,6 +356,7 @@ ${subject ? `Oggetto originale: ${subject}\n` : ""}
 Corpo:
 ${html_body}`;
 
+    const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_improve_email", 1500);
     const result = await aiChat({
       models: ["google/gemini-3-flash-preview", "openai/gpt-5-mini"],
       messages: [
@@ -364,7 +366,7 @@ ${html_body}`;
       temperature: 0.4,
       timeoutMs: 30000,
       maxRetries: 1,
-      max_tokens: 1500,
+      max_tokens: maxTokens,
       context: `improve-email:${userId.substring(0, 8)}`,
     });
     const rawText = result.content || "";

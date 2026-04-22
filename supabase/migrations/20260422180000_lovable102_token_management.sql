@@ -52,6 +52,10 @@ INSERT INTO app_settings (key, value, user_id)
 SELECT 'ai_max_tokens_ai_assistant', '2048', id FROM auth.users
 ON CONFLICT (user_id, key) DO NOTHING;
 
+INSERT INTO app_settings (key, value, user_id)
+SELECT 'ai_max_tokens_daily_briefing', '1000', id FROM auth.users
+ON CONFLICT (user_id, key) DO NOTHING;
+
 -- Timing settings
 INSERT INTO app_settings (key, value, user_id)
 SELECT 'ai_rate_limit_per_minute', '20', id FROM auth.users

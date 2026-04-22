@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, AiGatewayError } from "../_shared/aiGateway.ts";
 import { assemblePrompt } from "../_shared/prompts/assembler.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -139,6 +140,8 @@ serve(async (req) => {
     // Call LLM via centralized gateway
     let content = "{}";
     try {
+      // For daily-briefing, use default max_tokens (no per-user override since it's global/admin view)
+      const maxTokens = 1000;
       const r = await aiChat({
         models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
         messages: [
@@ -147,7 +150,7 @@ serve(async (req) => {
         ],
         timeoutMs: 25000,
         maxRetries: 1,
-        max_tokens: 1000,
+        max_tokens: maxTokens,
         context: "daily-briefing",
       });
       content = r.content || "{}";

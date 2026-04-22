@@ -9,6 +9,7 @@ import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 
 import { loadEntityFromActivity, loadStandalonePartner, assembleContextBlocks } from "./contextAssembler.ts";
@@ -217,10 +218,11 @@ serve(async (req) => {
     // ── AI call ──
     const model = getModel(quality);
     const aiStart = Date.now();
+    const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_email", 1500);
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      timeoutMs: 45000, maxRetries: 1, max_tokens: 1500, context: "generate-email:" + userId.substring(0, 8),
+      timeoutMs: 45000, maxRetries: 1, max_tokens: maxTokens, context: "generate-email:" + userId.substring(0, 8),
     });
     const aiLatencyMs = Date.now() - aiStart;
 

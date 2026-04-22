@@ -8,6 +8,7 @@ import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 import { runPostClassificationPipeline } from "../_shared/postClassificationPipeline.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 
 // ── Import refactored modules ──
 import { buildClassificationPrompt, ConversationExchange } from "./classificationPrompts.ts";
@@ -164,12 +165,13 @@ serve(async (req) => {
       relationalContext
     );
 
+    const maxTokens = await getMaxTokensForFunction(supabase, input.user_id, "ai_max_tokens_classify_email", 1000);
     const aiRes = await aiChat({
       model: "claude-opus-4-1-20250805",
       system: "Ti specializzi nella classificazione di email commerciali. Analizza con cura il dominio, la categoria, la fiducia e l'urgenza. Rispondi SOLO con JSON valido, no markdown, no code fences.",
       messages: [{ role: "user", content: classPrompt }],
       temperature: 0.3,
-      max_tokens: 1000,
+      max_tokens: maxTokens,
     });
 
     let classification: ClassificationResult;

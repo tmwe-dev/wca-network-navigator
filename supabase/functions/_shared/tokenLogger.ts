@@ -222,6 +222,33 @@ export async function checkTokenBudget(supabase: SupabaseClient, userId: string)
 }
 
 /**
+ * Get configurable max_tokens for a specific edge function.
+ * Falls back to provided default if no setting found.
+ */
+export async function getMaxTokensForFunction(
+  supabase: SupabaseClient,
+  userId: string,
+  settingKey: string,
+  defaultValue: number
+): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("key", settingKey)
+      .maybeSingle();
+    if (data?.value) {
+      const parsed = parseInt(data.value, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch {
+    // fallback silently
+  }
+  return defaultValue;
+}
+
+/**
  * Format token count for display (e.g., "45.2K" or "1.2M")
  */
 export function formatTokenCount(tokens: number): string {

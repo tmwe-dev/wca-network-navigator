@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 
@@ -256,10 +257,11 @@ DECISION ENGINE (raccomandazione automatica):
 
     // ── AI call ──
     const model = getModel(quality);
+    const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_outreach", 1200);
     const result = await aiChat({
       models: [model, "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      timeoutMs: 40000, maxRetries: 1, max_tokens: 1200, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
+      timeoutMs: 40000, maxRetries: 1, max_tokens: maxTokens, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
     });
 
     // ── Credits ──
