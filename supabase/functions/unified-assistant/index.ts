@@ -45,12 +45,24 @@ serve(async (req) => {
       delete body.message;
     }
 
+    // Normalizza metadati legacy nel body.context così ai-assistant li legge davvero.
+    if (!body.context || typeof body.context !== "object") {
+      body.context = {};
+    }
+    if (typeof body.pageContext === "string" && !body.context.currentPage) {
+      body.context.currentPage = body.pageContext;
+      body.context.page = body.pageContext;
+    }
+    if (typeof body.operatorBriefing === "string" && !body.context.operatorBriefing) {
+      body.context.operatorBriefing = body.operatorBriefing;
+    }
+    if (body.extra_context !== undefined && body.context.extra_context === undefined) {
+      body.context.extra_context = body.extra_context;
+    }
+
     // Propagate conversational mode to ai-assistant via context
     const mode: string = body.mode || "operative";
     if (mode === "conversational") {
-      if (!body.context || typeof body.context !== "object") {
-        body.context = {};
-      }
       body.context.conversational = true;
       body.context.mode = "conversational";
     }

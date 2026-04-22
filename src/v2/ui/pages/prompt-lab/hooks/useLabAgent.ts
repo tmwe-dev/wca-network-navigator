@@ -253,9 +253,12 @@ export function useLabAgent() {
             scope: "kb-supervisor",
             mode: "conversational",
             messages: [{ role: "user", content: userPrompt }],
-            pageContext: "prompt-lab",
-            operatorBriefing: PROMPT_LAB_BRIEFING,
-            extra_context: extraContext,
+            context: {
+              currentPage: "prompt-lab",
+              page: "prompt-lab",
+              operatorBriefing: PROMPT_LAB_BRIEFING,
+              extra_context: extraContext,
+            },
           },
           context: "promptLabAgent",
         });
