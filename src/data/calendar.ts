@@ -5,11 +5,33 @@
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
-import type { Database } from "@/integrations/supabase/types";
 
-type CalendarEventRow = Database["public"]["Tables"]["calendar_events"]["Row"];
-type CalendarEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
-type CalendarEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+// Local type definitions for calendar_events table
+// (table exists in database but not in generated Database types)
+interface CalendarEventRow {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  event_type: "meeting" | "call" | "task" | "reminder" | "follow_up";
+  start_at: string;
+  end_at: string | null;
+  all_day: boolean;
+  partner_id: string | null;
+  contact_id: string | null;
+  deal_id: string | null;
+  location: string | null;
+  color: string;
+  recurrence: "daily" | "weekly" | "monthly" | "none" | null;
+  reminder_minutes: number;
+  status: "scheduled" | "completed" | "cancelled";
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CalendarEventInsert extends Omit<CalendarEventRow, "id" | "created_at" | "updated_at"> {}
+interface CalendarEventUpdate extends Partial<Omit<CalendarEventRow, "id" | "created_at" | "updated_at">> {}
 
 // ─── Types ──────────────────────────────────────────────
 export type EventType = "meeting" | "call" | "task" | "reminder" | "follow_up";
