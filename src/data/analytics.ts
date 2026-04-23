@@ -129,10 +129,10 @@ export async function getEmailMetrics(
  */
 export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsData> {
   try {
-    const { data: partners } = await (supabase
+    const { data: partners } = await (supabase as any)
       .from("partners")
       .select("lead_status, country, enrichment_score")
-      .eq("user_id", userId) as any);
+      .eq("user_id", userId);
 
     if (!partners) {
       return {
@@ -256,12 +256,12 @@ export async function getAIUsageMetrics(
   dateRange: { from: Date; to: Date }
 ): Promise<AIUsageMetricsData> {
   try {
-    const { data: logs } = await (supabase
+    const { data: logs } = await (supabase as any)
       .from("supervisor_audit_log")
       .select("created_at, action")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
-      .lte("created_at", dateRange.to.toISOString()) as any);
+      .lte("created_at", dateRange.to.toISOString());
 
     const byType: Record<string, number> = {};
     const dailyUsage: Record<string, number> = {};
@@ -304,10 +304,10 @@ export async function getAIUsageMetrics(
  */
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
-    const { data: deals } = await (supabase
+    const { data: deals } = await (supabase as any)
       .from("deals")
       .select("stage, value")
-      .eq("user_id", userId) as any);
+      .eq("user_id", userId);
 
     if (!deals || deals.length === 0) {
       return {
