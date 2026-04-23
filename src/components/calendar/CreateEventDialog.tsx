@@ -59,7 +59,10 @@ export function CreateEventDialog({
 
   const createEvent = useCreateEvent();
   const { data: partners = [] } = usePartners();
-  const { data: contacts = [] } = useContacts();
+  const { data: contactsData } = useContacts();
+  const contacts: Contact[] = Array.isArray(contactsData)
+    ? (contactsData as unknown as Contact[])
+    : ((contactsData as { items?: unknown[] } | undefined)?.items as unknown as Contact[]) ?? [];
   const { data: deals = [] } = useDeals();
 
   const handleSubmit = async (e: React.FormEvent) => {
