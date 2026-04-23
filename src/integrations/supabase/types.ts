@@ -5743,6 +5743,57 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_lab_global_runs: {
+        Row: {
+          completed_at: string | null
+          deleted_at: string | null
+          doctrine_full: string | null
+          goal: string | null
+          id: string
+          progress_current: number
+          progress_total: number
+          proposals: Json
+          started_at: string
+          status: string
+          system_map: string | null
+          system_mission: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          deleted_at?: string | null
+          doctrine_full?: string | null
+          goal?: string | null
+          id?: string
+          progress_current?: number
+          progress_total?: number
+          proposals?: Json
+          started_at?: string
+          status?: string
+          system_map?: string | null
+          system_mission?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          deleted_at?: string | null
+          doctrine_full?: string | null
+          goal?: string | null
+          id?: string
+          progress_current?: number
+          progress_total?: number
+          proposals?: Json
+          started_at?: string
+          status?: string
+          system_map?: string | null
+          system_mission?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       prospect_contacts: {
         Row: {
           codice_fiscale: string | null
