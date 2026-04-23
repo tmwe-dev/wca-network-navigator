@@ -168,6 +168,46 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
     }
   } catch { /* skip */ }
 
+  // 5) Performance drop: confronta volumi email inviate/generate vs periodo precedente
+  try {
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Volume ultime 7 gg
+    const { count: recentGenerated } = await supabase
+      .from("supervisor_audit_log" as never)
+      .select("id" as never, { count: "exact", head: true })
+      .gte("created_at" as never, sevenDaysAgo as never)
+      .eq("action" as never, "generate_email" as never);
+
+    // Volume 7 gg precedenti (14-7 giorni fa)
+    const { count: previousGenerated } = await supabase
+      .from("supervisor_audit_log" as never)
+      .select("id" as never, { count: "exact", head: true })
+      .gte("created_at" as never, fourteenDaysAgo as never)
+      .lt("created_at" as never, sevenDaysAgo as never)
+      .eq("action" as never, "generate_email" as never);
+
+    const recent = recentGenerated ?? 0;
+    const previous = previousGenerated ?? 0;
+
+    // Segnala solo se c'era attività precedente e c'è un calo significativo (>40%)
+    if (previous >= 5 && recent < previous * 0.6) {
+      const dropPct = Math.round((1 - recent / previous) * 100);
+      signals.push({
+        id: `perf-drop-email-${Date.now()}`,
+        type: "performance_drop",
+        severity: dropPct >= 70 ? "critical" : "warning",
+        title: `Calo utilizzo email: -${dropPct}%`,
+        description: `Le email generate sono calate del ${dropPct}% rispetto alla settimana precedente (da ${previous} a ${recent}). Potrebbe indicare problemi nei prompt, bassa qualità percepita o cambio di strategia operativa.`,
+        affected_blocks: ["Email Forge", "Email Types", "System Prompt"],
+        evidence: { recentCount: recent, previousCount: previous, dropPercent: dropPct, period: "7d vs 7d" },
+        suggested_action: "Verifica se i prompt email sono stati modificati di recente. Controlla il tasso di accettazione e i feedback utente.",
+        status: "new",
+        created_at: now.toISOString(),
+      });
+    }
+  } catch { /* skip */ }
+
   // LOVABLE-93: coerenza Prompt Lab multi-dominio — detect domain misclassification patterns
   try {
     const { data: corrections } = await supabase

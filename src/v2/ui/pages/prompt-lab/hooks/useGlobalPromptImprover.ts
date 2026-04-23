@@ -29,6 +29,7 @@ import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
 import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
 import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
+import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/data/suggestedImprovements";
 
 export const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
@@ -78,6 +79,8 @@ export function useGlobalPromptImprover(
     dbSaveCount: 0,
   });
   const lastDbSave = useRef(0);
+  /** IDs dei suggerimenti approvati consumati nell'ultimo run. */
+  const consumedSuggestionIds = useRef<string[]>([]);
 
   // ── Check per run ripresabile all'avvio ──
   useEffect(() => {
@@ -248,6 +251,7 @@ export function useGlobalPromptImprover(
     let doctrineFull = "";
     let systemMap = "";
     let extraContext = "";
+    let approvedSuggestions: SuggestedImprovement[] = [];
 
     try {
       collected = await collectAllBlocks(userId);
@@ -256,13 +260,26 @@ export function useGlobalPromptImprover(
         ? buildSystemMapByAgent(collected)
         : buildSystemMap(collected);
       extraContext = await buildExtraContext(userId, referenceMaterial, uploadedFiles);
+      // ── Carica suggerimenti approvati dall'admin ──
+      approvedSuggestions = await listApprovedForArchitect().catch(() => []);
     } catch (e) {
       setState((s) => ({ ...s, loading: false, phase: "idle", error: e instanceof Error ? e.message : String(e) }));
       return;
     }
 
     // Arricchisci la doctrine con il contesto extra
-    const fullContext = doctrineFull + extraContext;
+    let fullContext = doctrineFull + extraContext;
+
+    // ── Inietta suggerimenti approvati come contesto aggiuntivo ──
+    if (approvedSuggestions.length > 0) {
+      const suggestionsBlock = approvedSuggestions.map((s) =>
+        `- [${s.suggestion_type}] ${s.title}: ${s.content}${s.target_block_id ? ` (target: ${s.target_block_id})` : ""}${s.target_category ? ` (categoria: ${s.target_category})` : ""}`
+      ).join("\n");
+      fullContext += `\n\n## SUGGERIMENTI APPROVATI DALL'ADMIN (da integrare nei blocchi pertinenti)\n${suggestionsBlock}`;
+    }
+
+    // Salva IDs dei suggerimenti consumati per marcarli dopo il save
+    consumedSuggestionIds.current = approvedSuggestions.map((s) => s.id);
 
     const initial: GlobalProposal[] = collected.map(({ tabLabel, block }) => ({
       block,
@@ -415,6 +432,11 @@ export function useGlobalPromptImprover(
     // Marca run come "done"
     if (state.runId) {
       await updateRun(state.runId, { status: "done", completed_at: new Date().toISOString() }).catch(() => {});
+      // ── Marca suggerimenti consumati come "applied" ──
+      if (consumedSuggestionIds.current.length > 0) {
+        await markSuggestionsApplied(consumedSuggestionIds.current, state.runId).catch(() => {});
+        consumedSuggestionIds.current = [];
+      }
     }
 
     setState((s) => ({ ...s, loading: false, phase: "done" }));

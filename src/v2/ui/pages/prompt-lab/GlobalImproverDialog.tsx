@@ -13,9 +13,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban, Undo2 } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
+import { rollbackSavedProposals } from "@/data/promptLabGlobalRuns";
 import { useAuth } from "@/providers/AuthProvider";
+import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
 import { toast } from "sonner";
 import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileParser";
 import { usePromptLabSignals } from "./hooks/usePromptLabSignals";
@@ -24,17 +26,21 @@ import { SignalsBanner } from "./SignalsBanner";
 interface GlobalImproverDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Modalità iniziale: "tab" (Prompt Lab) o "agent" (Atlas). */
+  defaultGrouping?: "tab" | "agent";
 }
 
-export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialogProps) {
+export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "tab" }: GlobalImproverDialogProps) {
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [goal, setGoal] = useState("");
   const [referenceMaterial, setReferenceMaterial] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
+  const [grouping, setGrouping] = useState<"tab" | "agent">(defaultGrouping);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal, referenceMaterial, uploadedFiles);
+  const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal, referenceMaterial, uploadedFiles, grouping);
   const signals = usePromptLabSignals(userId);
+  const { counts: suggestionCounts } = useSuggestedImprovements(userId, true);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +88,8 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
     setAccepted(new Set());
   }
 
+  const [rollbackBusy, setRollbackBusy] = useState(false);
+
   async function handleSave() {
     if (accepted.size === 0) {
       toast.warning("Nessuna proposta selezionata");
@@ -92,6 +100,20 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
     setAccepted(new Set());
   }
 
+  async function handleRollback() {
+    if (!state.runId) return;
+    setRollbackBusy(true);
+    try {
+      const count = await rollbackSavedProposals(state.runId);
+      toast.success(`Rollback completato: ${count} blocchi ripristinati`);
+      handleClose(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore durante il rollback");
+    } finally {
+      setRollbackBusy(false);
+    }
+  }
+
   function handleClose(nextOpen: boolean) {
     // LOVABLE-91: ora il run è persistito su DB, si può chiudere durante improving
     if (!nextOpen) {
@@ -100,6 +122,7 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
       setGoal("");
       setReferenceMaterial("");
       setUploadedFiles([]);
+      setGrouping(defaultGrouping);
     }
     onOpenChange(nextOpen);
   }
@@ -138,6 +161,21 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                 onAcknowledge={signals.acknowledge}
                 onCopySuggestion={(text) => setReferenceMaterial((prev) => prev ? `${prev}\n\n${text}` : text)}
               />
+
+              {/* LOVABLE-110: Banner suggerimenti approvati pronti per l'Architect */}
+              {suggestionCounts.approved > 0 && (
+                <div className="rounded border border-green-500/40 bg-green-500/5 p-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <div className="text-xs flex-1">
+                    <span className="font-medium text-green-700">
+                      {suggestionCounts.approved} suggeriment{suggestionCounts.approved === 1 ? "o approvato" : "i approvati"} pronto{suggestionCounts.approved > 1 ? "i" : ""} per l'Architect.
+                    </span>
+                    <span className="text-muted-foreground ml-1">
+                      Verranno integrati automaticamente al prossimo "Migliora tutto".
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {state.hasResumableRun && state.resumableRun && (
                 <div className="rounded border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
@@ -228,6 +266,32 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Toggle raggruppamento: Tab vs Agente */}
+              <div className="flex items-center gap-3 rounded border bg-muted/20 p-3">
+                <span className="text-xs font-medium text-muted-foreground">Raggruppa per:</span>
+                <div className="flex rounded-md border overflow-hidden">
+                  <button
+                    type="button"
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${grouping === "tab" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                    onClick={() => setGrouping("tab")}
+                  >
+                    Tab UI
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${grouping === "agent" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                    onClick={() => setGrouping("agent")}
+                  >
+                    Agente runtime
+                  </button>
+                </div>
+                <span className="text-[10px] text-muted-foreground flex-1">
+                  {grouping === "tab"
+                    ? "Blocchi vicini = stessa tab nell'editor"
+                    : "Blocchi vicini = stesso agente AI a runtime (più preciso)"}
+                </span>
               </div>
 
               <div className="rounded border bg-muted/30 p-3 text-xs space-y-1.5">
@@ -420,16 +484,32 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
               </ScrollArea>
 
               <Separator />
-              <div className="px-5 py-3 flex items-center justify-end gap-2 flex-shrink-0">
-                <Button variant="outline" onClick={() => handleClose(false)}>
-                  {state.phase === "done" ? "Chiudi" : "Annulla"}
-                </Button>
-                {state.phase === "review" && (
-                  <Button onClick={handleSave} disabled={accepted.size === 0 || state.loading}>
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                    Salva {accepted.size > 0 ? `${accepted.size} ` : ""}selezionati
+              <div className="px-5 py-3 flex items-center justify-between flex-shrink-0">
+                <div>
+                  {state.phase === "done" && state.runId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 text-destructive hover:text-destructive"
+                      onClick={handleRollback}
+                      disabled={rollbackBusy}
+                    >
+                      {rollbackBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                      Annulla ultimo miglioramento
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => handleClose(false)}>
+                    {state.phase === "done" ? "Chiudi" : "Annulla"}
                   </Button>
-                )}
+                  {state.phase === "review" && (
+                    <Button onClick={handleSave} disabled={accepted.size === 0 || state.loading}>
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                      Salva {accepted.size > 0 ? `${accepted.size} ` : ""}selezionati
+                    </Button>
+                  )}
+                </div>
               </div>
             </>
           )}

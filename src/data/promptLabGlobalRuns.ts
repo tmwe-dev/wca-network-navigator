@@ -198,6 +198,70 @@ export async function cancelRun(runId: string): Promise<void> {
   if (error) throw new Error(`cancelRun failed: ${error.message}`);
 }
 
+/**
+ * Rollback: ripristina i blocchi salvati da un run al loro valore "before".
+ * Ritorna il numero di blocchi ripristinati con successo.
+ */
+export async function rollbackSavedProposals(runId: string): Promise<number> {
+  // Carica il run
+  const { data, error } = await supabase
+    .from("prompt_lab_global_runs" as never)
+    .select("proposals" as never)
+    .eq("id" as never, runId as never)
+    .single();
+
+  if (error || !data) throw new Error(`rollbackSavedProposals: run non trovato`);
+
+  const row = data as unknown as Record<string, unknown>;
+  let proposals: GlobalRunProposal[];
+  try {
+    proposals = typeof row.proposals === "string"
+      ? JSON.parse(row.proposals as string)
+      : (row.proposals as GlobalRunProposal[]) ?? [];
+  } catch {
+    throw new Error("rollbackSavedProposals: proposals corrotte");
+  }
+
+  const saved = proposals.filter((p) => p.status === "saved" && p.before);
+  let restored = 0;
+
+  for (const p of saved) {
+    const src = p.source as Record<string, unknown>;
+    const kind = src.kind as string;
+    try {
+      if (kind === "app_setting") {
+        await (supabase as any).from("app_settings").update({ value: p.before }).eq("key", src.key);
+        restored++;
+      } else if (kind === "kb_entry") {
+        await (supabase as any).from("kb_entries").update({ content: p.before }).eq("id", src.id);
+        restored++;
+      } else if (kind === "operative_prompt") {
+        await (supabase as any).from("operative_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
+        restored++;
+      } else if (kind === "email_prompt") {
+        await (supabase as any).from("email_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
+        restored++;
+      } else if (kind === "playbook") {
+        await (supabase as any).from("commercial_playbooks").update({ [src.field as string]: p.before }).eq("id", src.id);
+        restored++;
+      } else if (kind === "agent_persona") {
+        await (supabase as any).from("agent_personas").update({ [src.field as string]: p.before }).eq("id", src.id);
+        restored++;
+      }
+    } catch {
+      // Skip singolo blocco se fallisce
+    }
+  }
+
+  // Aggiorna status run a "rolled_back"
+  await supabase
+    .from("prompt_lab_global_runs" as never)
+    .update({ status: "rolled_back" } as never)
+    .eq("id" as never, runId as never);
+
+  return restored;
+}
+
 function parseRun(row: Record<string, unknown>): GlobalRun {
   let proposals: GlobalRunProposal[];
   try {

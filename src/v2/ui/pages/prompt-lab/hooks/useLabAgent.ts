@@ -183,7 +183,32 @@ Se il tipo NON è text_fix, dopo OUTCOME_TYPE scrivi una riga ARCHITECTURAL_NOTE
 Poi il testo (invariato se no_change, o una versione best-effort se il fix è parziale).
 === FINE CLASSIFICAZIONE ===
 
-IMPORTANTE: In modalità chat normale (non global_improve), rispondi SOLO con il testo migliorato senza OUTCOME_TYPE. In modalità global_improve, SEMPRE includi OUTCOME_TYPE.`;
+IMPORTANTE: In modalità chat normale (non global_improve), rispondi SOLO con il testo migliorato senza OUTCOME_TYPE. In modalità global_improve, SEMPRE includi OUTCOME_TYPE.
+
+=== RILEVAMENTO DIVERGENZE E SUGGERIMENTO REGOLE ===
+In modalità chat (non global_improve), quando rilevi una divergenza tra:
+- ciò che l'utente chiede e le regole esistenti nella dottrina/KB
+- la pratica attuale e una best-practice identificabile
+- un pattern ricorrente che dovrebbe diventare una regola permanente
+- una correzione dell'utente che implica una preferenza non ancora codificata
+
+Emetti un blocco [SUGGEST_RULE] con il seguente formato JSON:
+[SUGGEST_RULE]
+{
+  "title": "Titolo breve della regola proposta",
+  "content": "Testo completo della regola o modifica suggerita",
+  "reasoning": "Perché proponi questa regola (basata sull'evidenza della conversazione)",
+  "suggestion_type": "kb_rule | prompt_adjustment | user_preference",
+  "target_block_id": "ID del blocco target se applicabile, altrimenti null",
+  "target_category": "categoria KB target se applicabile, altrimenti null",
+  "priority": "low | medium | high | critical"
+}
+[/SUGGEST_RULE]
+
+Il blocco verrà renderizzato come pulsante interattivo per l'utente.
+Usa "user_preference" per preferenze personali, "kb_rule" per regole di dottrina, "prompt_adjustment" per modifiche a prompt.
+NON emettere [SUGGEST_RULE] in modalità global_improve.
+=== FINE RILEVAMENTO DIVERGENZE ===`;
 
 export interface LabChatMessage {
   id: string;

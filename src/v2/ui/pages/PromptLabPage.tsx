@@ -6,11 +6,15 @@ import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
 import { ExportButton } from "./prompt-lab/ExportButton";
 import { GlobalImproverDialog } from "./prompt-lab/GlobalImproverDialog";
+import { CreateBlockDialog } from "./prompt-lab/CreateBlockDialog";
 import { Button } from "@/components/ui/button";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
+import { useSuggestedImprovements } from "./prompt-lab/hooks/useSuggestedImprovements";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   PROMPT_LAB_TABS,
   PROMPT_LAB_GROUPS,
@@ -43,6 +47,8 @@ import {
   Sparkles,
   Newspaper,
   Network,
+  Plus,
+  BookmarkPlus,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -71,10 +77,13 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
 };
 
 export function PromptLabPage() {
+  const { user } = useAuth();
   const [activeGroupId, setActiveGroupId] = useState<PromptLabGroupId>("core_ai");
   const [activeTabId, setActiveTabId] = useState<PromptLabTabId>("system_prompt");
   const [globalImproverOpen, setGlobalImproverOpen] = useState(false);
+  const [createBlockOpen, setCreateBlockOpen] = useState(false);
   const lab = useLabAgent();
+  const { counts } = useSuggestedImprovements(user?.id ?? "", true);
 
   const activeTab = useMemo(
     () => PROMPT_LAB_TABS.find((t) => t.id === activeTabId) ?? PROMPT_LAB_TABS[0],
@@ -132,19 +141,39 @@ export function PromptLabPage() {
                 <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5"
+                  onClick={() => setCreateBlockOpen(true)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Nuovo
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
+                  <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                    Review
+                    {counts.pending > 0 && (
+                      <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] leading-none">
+                        {counts.pending}
+                      </Badge>
+                    )}
+                  </Link>
+                </Button>
                 <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
                   <Link to="/v2/prompt-lab/atlas" title="Mappa visuale agenti × prompt × KB">
                     <Network className="h-3.5 w-3.5" />
-                    Agent Atlas
+                    Atlas
                   </Link>
                 </Button>
                 <Button
                   size="sm"
                   variant="default"
-                  className="h-7 gap-1.5"
+                  className="h-8 gap-1.5 px-4 font-semibold"
                   onClick={() => setGlobalImproverOpen(true)}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="h-4 w-4" />
                   Migliora tutto
                 </Button>
                 <ExportButton getSnapshot={handleExport} />
@@ -211,7 +240,8 @@ export function PromptLabPage() {
           />
         </ResizablePanel>
       </ResizablePanelGroup>
-      <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} />
+      <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} defaultGrouping="tab" />
+      <CreateBlockDialog open={createBlockOpen} onOpenChange={setCreateBlockOpen} />
     </div>
   );
 }

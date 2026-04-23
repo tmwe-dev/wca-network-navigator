@@ -1,16 +1,21 @@
 /**
- * AgentAtlasPage v2 — Brain Map degli agenti AI.
+ * AgentAtlasPage v3 — Brain Map + Azione unificata.
  *
- * Layout: sidebar sinistra (avatar + metadata + lista agenti)
- *         area contenuto full-width a destra con sezioni a 2 colonne.
+ * Layout: sidebar sinistra (lista agenti filtrabili)
+ *         area contenuto (brain map + blocchi assegnati)
+ *         header con 2 tasti visibili: "+ Nuovo" e "Migliora per agente"
+ *
+ * Il tasto "Migliora per agente" apre GlobalImproverDialog con contextGrouping="agent".
  */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AGENT_REGISTRY, type AgentCategory } from "@/data/agentPrompts";
 import { AtlasSidebar } from "./AtlasSidebar";
 import { AtlasContent } from "./AtlasContent";
+import { GlobalImproverDialog } from "../GlobalImproverDialog";
+import { CreateBlockDialog } from "../CreateBlockDialog";
 
 const CATEGORY_LABEL: Record<AgentCategory | "all", string> = {
   all: "Tutti",
@@ -27,6 +32,8 @@ export default function AgentAtlasPage() {
   const allAgents = useMemo(() => Object.values(AGENT_REGISTRY), []);
   const [filter, setFilter] = useState<AgentCategory | "all">("all");
   const [selectedId, setSelectedId] = useState<string>(allAgents[0]?.id ?? "");
+  const [improverOpen, setImproverOpen] = useState(false);
+  const [createBlockOpen, setCreateBlockOpen] = useState(false);
 
   const filteredAgents = useMemo(
     () => (filter === "all" ? allAgents : allAgents.filter((a) => a.category === filter)),
@@ -59,19 +66,41 @@ export default function AgentAtlasPage() {
             — brain map di {allAgents.length} agenti
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-1">
-          {categories.map((c) => (
-            <Button
-              key={c}
-              size="sm"
-              variant={filter === c ? "default" : "outline"}
-              className="h-6 px-2 text-[11px]"
-              onClick={() => setFilter(c)}
-            >
-              {CATEGORY_LABEL[c]}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5"
+            onClick={() => setCreateBlockOpen(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nuovo
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 gap-1.5 px-4 font-semibold"
+            onClick={() => setImproverOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Migliora per agente
+          </Button>
         </div>
+      </div>
+
+      {/* Category filter */}
+      <div className="flex flex-wrap items-center gap-1 border-b px-4 py-1.5 bg-muted/20">
+        {categories.map((c) => (
+          <Button
+            key={c}
+            size="sm"
+            variant={filter === c ? "default" : "outline"}
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setFilter(c)}
+          >
+            {CATEGORY_LABEL[c]}
+          </Button>
+        ))}
       </div>
 
       {/* Body */}
@@ -91,6 +120,18 @@ export default function AgentAtlasPage() {
           )}
         </div>
       </div>
+
+      {/* Dialogs */}
+      <GlobalImproverDialog
+        open={improverOpen}
+        onOpenChange={setImproverOpen}
+        defaultGrouping="agent"
+      />
+      <CreateBlockDialog
+        open={createBlockOpen}
+        onOpenChange={setCreateBlockOpen}
+        defaultType="kb_entry"
+      />
     </div>
   );
 }

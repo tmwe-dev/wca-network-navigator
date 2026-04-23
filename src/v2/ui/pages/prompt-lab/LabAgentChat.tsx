@@ -1,11 +1,70 @@
 /**
  * LabAgentChat — Footer chat con Lab Agent.
+ * LOVABLE-110: parsing [SUGGEST_RULE] tags per rendering inline SuggestRuleButton.
  */
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Sparkles, Trash2, Wrench } from "lucide-react";
 import type { LabChatMessage } from "./hooks/useLabAgent";
+import { SuggestRuleButton } from "./SuggestRuleButton";
+import { useAuth } from "@/providers/AuthProvider";
+
+/**
+ * Parsa un messaggio assistant cercando blocchi [SUGGEST_RULE]...[/SUGGEST_RULE].
+ * Ritorna un array di segmenti: testo normale o dati per SuggestRuleButton.
+ */
+interface SuggestRuleData {
+  title: string;
+  content: string;
+  reasoning?: string;
+  suggestionType?: "kb_rule" | "prompt_adjustment" | "user_preference";
+  targetBlockId?: string;
+  targetCategory?: string;
+  priority?: "low" | "medium" | "high" | "critical";
+}
+
+type MessageSegment =
+  | { type: "text"; text: string }
+  | { type: "suggest_rule"; data: SuggestRuleData };
+
+function parseAssistantMessage(raw: string): MessageSegment[] {
+  const segments: MessageSegment[] = [];
+  const regex = /\[SUGGEST_RULE\]([\s\S]*?)\[\/SUGGEST_RULE\]/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(raw)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: "text", text: raw.slice(lastIndex, match.index) });
+    }
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      segments.push({
+        type: "suggest_rule",
+        data: {
+          title: parsed.title ?? "Regola suggerita",
+          content: parsed.content ?? "",
+          reasoning: parsed.reasoning,
+          suggestionType: parsed.suggestion_type ?? "kb_rule",
+          targetBlockId: parsed.target_block_id,
+          targetCategory: parsed.target_category,
+          priority: parsed.priority ?? "medium",
+        },
+      });
+    } catch {
+      // JSON non valido — mostra come testo
+      segments.push({ type: "text", text: match[0] });
+    }
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < raw.length) {
+    segments.push({ type: "text", text: raw.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: "text", text: raw }];
+}
 
 interface LabAgentChatProps {
   messages: ReadonlyArray<LabChatMessage>;
@@ -20,6 +79,8 @@ interface LabAgentChatProps {
 }
 
 export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, mode, onModeChange }: LabAgentChatProps) {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
   const [input, setInput] = React.useState("");
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -87,7 +148,29 @@ export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, 
             <div className="font-medium text-[10px] text-muted-foreground mb-0.5">
               {m.role === "user" ? "Tu" : "Lab Agent"}
             </div>
-            <div className="whitespace-pre-wrap">{m.content}</div>
+            {m.role === "assistant" ? (
+              <div>
+                {parseAssistantMessage(m.content).map((seg, i) =>
+                  seg.type === "text" ? (
+                    <div key={i} className="whitespace-pre-wrap">{seg.text}</div>
+                  ) : (
+                    <SuggestRuleButton
+                      key={i}
+                      title={seg.data.title}
+                      content={seg.data.content}
+                      reasoning={seg.data.reasoning}
+                      suggestionType={seg.data.suggestionType}
+                      targetBlockId={seg.data.targetBlockId}
+                      targetCategory={seg.data.targetCategory}
+                      priority={seg.data.priority}
+                      userId={userId}
+                    />
+                  ),
+                )}
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap">{m.content}</div>
+            )}
           </div>
         ))}
         {loading && (

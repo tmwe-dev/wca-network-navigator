@@ -9,14 +9,20 @@
  *  5. Contratto I/O (input → output)
  *  6. Diagnostica (warnings, variabili richieste)
  */
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import * as Icons from "lucide-react";
 import {
   FileText, BookOpen, Wrench, Network, AlertTriangle, Zap,
-  ExternalLink, ShieldAlert, Variable, ArrowRight,
+  ExternalLink, ShieldAlert, Variable, ArrowRight, Blocks,
 } from "lucide-react";
 import type { AgentRegistryEntry } from "@/data/agentPrompts";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/providers/AuthProvider";
+import { collectAllBlocks } from "../hooks/useBlockCollector";
+import { groupBlocksByAgent } from "../hooks/agentMapping";
+import type { Block } from "../types";
+import { ArchitectReviewPanel } from "./ArchitectReviewPanel";
 
 /* ─── Section wrapper ─── */
 function Section({
@@ -46,6 +52,22 @@ function Section({
 
 /* ─── Main content ─── */
 export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
+  const { user } = useAuth();
+  const [agentBlocks, setAgentBlocks] = useState<Array<{ tabLabel: string; block: Block }>>([]);
+  const [blocksLoaded, setBlocksLoaded] = useState(false);
+
+  // Carica i blocchi assegnati a questo agente
+  useEffect(() => {
+    if (!user?.id) return;
+    setBlocksLoaded(false);
+    collectAllBlocks(user.id).then((all) => {
+      const groups = groupBlocksByAgent(all);
+      const myGroup = groups.get(agent.id);
+      setAgentBlocks(myGroup?.items ?? []);
+      setBlocksLoaded(true);
+    }).catch(() => setBlocksLoaded(true));
+  }, [user?.id, agent.id]);
+
   const hasApprovalTools = agent.approvalRequiredTools.length > 0;
   const hasWarnings =
     agent.requiredVars.length > 0 ||
@@ -261,6 +283,48 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
             </Section>
           </div>
         )}
+
+        {/* ── Blocchi assegnati a questo agente (full width) ── */}
+        <div className="lg:col-span-2">
+          <Section icon={Blocks} title="Blocchi assegnati" count={blocksLoaded ? agentBlocks.length : undefined}>
+            {!blocksLoaded ? (
+              <p className="text-muted-foreground text-xs italic">Caricamento blocchi...</p>
+            ) : agentBlocks.length === 0 ? (
+              <p className="text-muted-foreground text-xs italic">
+                Nessun blocco direttamente mappato a questo agente. I blocchi condivisi (KB doctrine globale) sono visibili tramite il tab Prompt Lab.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-[400px] overflow-auto">
+                {agentBlocks.map(({ tabLabel, block }) => (
+                  <div key={block.id} className="group flex items-start gap-2 rounded border bg-muted/10 p-2 hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{tabLabel}</Badge>
+                        <span className="text-xs font-medium truncate">{block.label}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+                        {block.content.slice(0, 200).replace(/\s+/g, " ").trim()}
+                        {block.content.length > 200 ? "..." : ""}
+                      </p>
+                    </div>
+                    <Link
+                      to={`/v2/prompt-lab`}
+                      className="text-muted-foreground hover:text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-1"
+                      title="Apri nel Prompt Lab"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
+
+        {/* ── Architect Review (full width) ── */}
+        <div className="lg:col-span-2">
+          <ArchitectReviewPanel agent={agent} />
+        </div>
       </div>
     </div>
   );

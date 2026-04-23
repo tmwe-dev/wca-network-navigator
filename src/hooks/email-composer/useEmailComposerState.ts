@@ -13,6 +13,8 @@ import { useSaveEmailDraft } from "@/hooks/useEmailDrafts";
 import { useEmailTemplates } from "@/hooks/useCampaignJobs";
 import { useEnqueueCampaign, useProcessQueue } from "@/hooks/useEmailCampaignQueue";
 import { insertEmailDraft, insertEmailDraftReturning } from "@/data/emailDrafts";
+import { buildLearnedPatterns } from "@/data/suggestedImprovements";
+import { useAuth } from "@/providers/AuthProvider";
 import { findPartnerByEmail } from "@/data/partners";
 import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
@@ -30,6 +32,8 @@ import { escapeHtml, isValidUrl } from "./utils";
 const log = createLogger("EmailComposer");
 
 export function useEmailComposerState() {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
   const mission = useMission();
   const { goal, baseProposal, documents, referenceLinks, recipients, removeRecipient, addRecipient } = mission;
   const location = useLocation();
@@ -191,6 +195,8 @@ export function useEmailComposerState() {
       const effectiveGoal = [typePart, goalPart].filter(Boolean).join("\n\nISTRUZIONI SPECIFICHE DELL'UTENTE:\n");
       const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
+      // LOVABLE-110: inietta learned_patterns da suggerimenti approvati
+      const learnedPatterns = await buildLearnedPatterns(userId).catch(() => "");
       const data = await invokeEdge<GenerateContentResponse>("generate-content", { body: {
         action: "email", goal: effectiveGoal, base_proposal: baseProposal, language: "italiano",
         document_ids: documents.map((d) => d.id), reference_urls: referenceLinks, quality: "standard",
@@ -205,6 +211,7 @@ export function useEmailComposerState() {
         email_type_prompt: config.emailType?.prompt || null,
         email_type_structure: config.emailType?.structure || null,
         email_type_kb_categories: config.emailType?.kb_categories || null,
+        learned_patterns: learnedPatterns || undefined,
       }, context: "EmailComposer.generate_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
@@ -223,6 +230,8 @@ export function useEmailComposerState() {
     try {
       const singleRecipient = recipientsWithEmail.length === 1 ? recipientsWithEmail[0] : null;
       const hasRealPartnerId = singleRecipient?.partnerId && singleRecipient.partnerId.length === 36 && singleRecipient.isEnriched;
+      // LOVABLE-110: inietta learned_patterns da suggerimenti approvati
+      const learnedPatterns = await buildLearnedPatterns(userId).catch(() => "");
       const data = await invokeEdge<ImproveEmailResponse>("improve-email", { body: {
         subject: email.subject, html_body: email.htmlBody,
         recipient_count: recipientsWithEmail.length,
@@ -240,6 +249,7 @@ export function useEmailComposerState() {
         ].filter(Boolean).join("\n\n"),
         partner_id: hasRealPartnerId ? singleRecipient!.partnerId : null,
         contact_id: singleRecipient?.contactId || null,
+        learned_patterns: learnedPatterns || undefined,
       }, context: "EmailComposer.improve_email" });
       if (data?.subject) dispatch({ type: "SET_SUBJECT", payload: data.subject });
       if (data?.body) dispatch({ type: "SET_HTML_BODY", payload: data.body });
