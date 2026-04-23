@@ -1945,6 +1945,101 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          color: string | null
+          contact_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          description: string | null
+          end_at: string | null
+          event_type: string
+          id: string
+          location: string | null
+          metadata: Json | null
+          partner_id: string | null
+          recurrence: string | null
+          reminder_minutes: number | null
+          start_at: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          color?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          recurrence?: string | null
+          reminder_minutes?: number | null
+          start_at: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean | null
+          color?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          recurrence?: string | null
+          reminder_minutes?: number | null
+          start_at?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "imported_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_jobs: {
         Row: {
           assigned_to: string | null
