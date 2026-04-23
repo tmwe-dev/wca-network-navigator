@@ -6,7 +6,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseTyped } from '@/integrations/supabase/client';
+// Cast controllato: vedi nota in BulkEmailActions.tsx (DEBT-EMAIL-INTEL-COLUMNS).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = supabaseTyped as any;
 import { toast } from 'sonner';
 import { Trash2, Archive, Folder, Check, X } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';

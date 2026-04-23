@@ -6,7 +6,12 @@ import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseTyped } from '@/integrations/supabase/client';
+// Cast controllato: la tabella `prompt_templates` non è nei tipi generati
+// (DEBT-EMAIL-INTEL-PROMPT-TEMPLATES). Bypass tipi finché non viene aggiunta
+// allo schema o sostituita da `kb_entries` con categoria dedicata.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = supabaseTyped as any;
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 

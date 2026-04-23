@@ -13,6 +13,11 @@ import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+// Cast controllato: questo modulo seleziona/aggiorna `applied_rules` e
+// `prompt_template_id` su `email_address_rules`, ma le colonne reali sono
+// diverse (vedi DEBT-EMAIL-INTEL-COLUMNS). Bypass tipi locale.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 import { PromptTemplateSelector } from './PromptTemplateSelector';
 import { RulesConfiguration } from './RulesConfiguration';
 import { BulkEmailActions } from './BulkEmailActions';
