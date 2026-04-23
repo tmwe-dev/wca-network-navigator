@@ -18,9 +18,10 @@ import { Loader2, Wrench, AlertTriangle, ArrowRight } from "lucide-react";
 import type { AgentRegistryEntry } from "@/data/agentPrompts";
 import { useLabAgent } from "../hooks/useLabAgent";
 import type {
-  ArchitectDiagnostic,
+  ArchitectDiagnosticV2,
   DiagnosticDestination,
   DiagnosticSeverity,
+  ProblemClass,
 } from "../hooks/diagnostics";
 import type { Block } from "../types";
 
@@ -74,7 +75,7 @@ function buildAgentBlock(agent: AgentRegistryEntry): Block {
 export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
   const lab = useLabAgent();
   const [loading, setLoading] = useState(false);
-  const [diagnostics, setDiagnostics] = useState<ArchitectDiagnostic[] | null>(null);
+  const [diagnostics, setDiagnostics] = useState<ArchitectDiagnosticV2[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const block = useMemo(() => buildAgentBlock(agent), [agent]);
@@ -168,31 +169,70 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
               <span className="text-[9px] font-bold uppercase tracking-wider">
                 {d.severity}
               </span>
-              {d.blockId && (
-                <span className="text-[9px] opacity-70">block: {d.blockId}</span>
-              )}
+              <span className="bg-background/50 rounded px-1 py-0.5 text-[9px] font-mono">
+                Impact: {d.impactScore}/10
+              </span>
+              <span className="rounded bg-primary/10 px-1 py-0.5 text-[9px]">
+                {d.problemClass}
+              </span>
               <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium">
                 <ArrowRight className="h-3 w-3" />
                 {destinationLabel(d.destination)}
               </span>
             </div>
-            <p className="mb-1 text-[11px] leading-snug">{d.why}</p>
-            {d.proposal && (
+            <p className="mb-1 text-[11px] leading-snug">{d.currentIssue}</p>
+
+            {/* Affected surfaces */}
+            {d.affectedSurfaces.length > 0 && (
+              <div className="mb-1 flex flex-wrap gap-1">
+                {d.affectedSurfaces.map((s) => (
+                  <span key={s} className="bg-muted rounded px-1 py-0.5 text-[9px]">{s}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Ghost variables / missing contracts */}
+            {d.requiredVariables.length > 0 && (
+              <p className="text-[10px] opacity-80">
+                Variabili usate: <code className="bg-muted rounded px-0.5">{d.requiredVariables.join(", ")}</code>
+              </p>
+            )}
+            {d.missingContracts.length > 0 && (
+              <p className="text-[10px] font-medium text-destructive">
+                Contratti mancanti: {d.missingContracts.join(", ")}
+              </p>
+            )}
+
+            {/* Test urgency */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-[9px] opacity-70">Test: {d.testUrgency}</span>
+              {d.applyRecommended && (
+                <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] font-medium text-green-700 dark:text-green-300">
+                  Applica consigliato
+                </span>
+              )}
+            </div>
+
+            {d.proposedText && (
               <details className="mt-1">
                 <summary className="cursor-pointer text-[10px] font-medium opacity-80">
                   Proposta
                 </summary>
                 <pre className="bg-background/60 mt-1 overflow-auto rounded p-1.5 text-[10px] leading-snug">
-                  {d.proposal}
+                  {d.proposedText}
                 </pre>
               </details>
             )}
-            {d.test && (
+            {d.testsRequired.length > 0 && (
               <details className="mt-1">
                 <summary className="cursor-pointer text-[10px] font-medium opacity-80">
-                  Test di verifica
+                  Test di verifica ({d.testsRequired.length})
                 </summary>
-                <p className="mt-1 text-[10px] leading-snug opacity-90">{d.test}</p>
+                <ul className="mt-1 space-y-0.5">
+                  {d.testsRequired.map((t, j) => (
+                    <li key={j} className="text-[10px] leading-snug opacity-90">• {t}</li>
+                  ))}
+                </ul>
               </details>
             )}
           </article>

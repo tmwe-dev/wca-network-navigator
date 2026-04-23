@@ -20,6 +20,7 @@ export type OutcomeType =
   | "kb_fix"               // Serve aggiungere/modificare una voce KB
   | "contract_needed"      // Serve un contratto backend / logica runtime
   | "code_policy_needed"   // Serve una policy hard nel codice
+  | "runtime_mapping_fix"  // Serve correggere il routing/mapping runtime (agente sbagliato, trigger errato)
   | "no_change";           // Blocco già ottimo, nessun intervento
 
 export interface GlobalProposal {
