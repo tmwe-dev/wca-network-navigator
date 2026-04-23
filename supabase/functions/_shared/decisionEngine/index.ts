@@ -13,3 +13,4 @@ export type { NextAction, PartnerState, DecisionContext } from "./types.ts";
 export { resolveAutonomy } from "./autonomy.ts";
 export { decideNextActions } from "./decider.ts";
 export { evaluatePartner } from "./evaluator.ts";
+export type { EvaluatePartnerResult } from "./evaluator.ts";

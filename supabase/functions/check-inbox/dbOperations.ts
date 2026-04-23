@@ -5,6 +5,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -290,10 +291,15 @@ export async function saveMessageToDb(
   // Auto-escalation (tassonomia 9 stati: new → first_touch_sent al primo inbound match)
   if (params.match.source_type === "imported_contact" && params.match.source_id && UUID_RE.test(String(params.match.source_id))) {
     await supabase.rpc("increment_contact_interaction", { p_contact_id: params.match.source_id });
-    await supabase.from("imported_contacts")
-      .update({ lead_status: "first_touch_sent" })
-      .eq("id", params.match.source_id)
-      .eq("lead_status", "new");
+    await applyLeadStatusChange(supabase, {
+      table: "imported_contacts",
+      recordId: params.match.source_id,
+      newStatus: "first_touch_sent",
+      userId: params.userId,
+      actor: { type: "system", name: "check-inbox" },
+      decisionOrigin: "system_trigger",
+      trigger: "inbound_email_match",
+    });
   }
   if ((params.match.source_type === "partner" || params.match.source_type === "partner_contact") && params.match.partner_id && UUID_RE.test(String(params.match.partner_id))) {
     const { data: partnerData } = await supabase.from("partners")
@@ -305,12 +311,20 @@ export async function saveMessageToDb(
         interaction_count: ((partnerData.interaction_count as number) || 0) + 1,
         last_interaction_at: new Date().toISOString(),
       };
-      if (partnerData.lead_status === "new") {
-        updates.lead_status = "first_touch_sent";
-      }
       await supabase.from("partners")
         .update(updates)
         .eq("id", params.match.partner_id);
+      if (partnerData.lead_status === "new") {
+        await applyLeadStatusChange(supabase, {
+          table: "partners",
+          recordId: params.match.partner_id,
+          newStatus: "first_touch_sent",
+          userId: params.userId,
+          actor: { type: "system", name: "check-inbox" },
+          decisionOrigin: "system_trigger",
+          trigger: "inbound_email_match",
+        });
+      }
     }
   }
 

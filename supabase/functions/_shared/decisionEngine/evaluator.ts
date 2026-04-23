@@ -1,8 +1,12 @@
 /**
- * decisionEngine/evaluator.ts — Partner state loading and evaluation.
+ * decisionEngine/evaluator.ts — Unified partner evaluation.
  *
- * Loads partner data from Supabase and enriches it to create PartnerState,
- * then calculates recommended next actions. One-shot evaluation convenience function.
+ * FIX 2: Single entry point that orchestrates:
+ *   1. stateTransitions — auto-apply pending state changes
+ *   2. decider — recommend next actions based on current state
+ *   3. cadenceEngine — filter/annotate actions with timing constraints
+ *
+ * Callers only need `evaluatePartner()`. No more conflicting decisions.
  */
 
 import {
@@ -13,6 +17,8 @@ import {
   SupabaseClient,
 } from "./types.ts";
 import { decideNextActions } from "./decider.ts";
+import { evaluateTransitions, applyTransition } from "../stateTransitions.ts";
+import { checkCadence, type CadenceCheckResult } from "../cadenceEngine.ts";
 
 /**
  * Carica lo stato di un partner e calcola le next actions.
@@ -24,13 +30,39 @@ import { decideNextActions } from "./decider.ts";
  * @param userAutonomy - Optional override for user's autonomy preference
  * @returns Partner state and recommended actions
  */
+/** Extended result with cadence + transition metadata */
+export interface EvaluatePartnerResult {
+  state: PartnerState;
+  actions: NextAction[];
+  /** State transitions that were auto-applied (FIX 2) */
+  appliedTransitions: Array<{ from: string; to: string; trigger: string }>;
+  /** Cadence constraints applied to each action (FIX 2) */
+  cadenceAnnotations: Array<{ action: string; channel?: string; cadence: CadenceCheckResult }>;
+}
+
 export async function evaluatePartner(
   supabase: SupabaseClient,
   partnerId: string,
   userId: string,
   userAutonomy?: AutonomyLevel,
-): Promise<{ state: PartnerState; actions: NextAction[] }> {
-  // Carica partner
+): Promise<EvaluatePartnerResult> {
+  // ── Phase 0: State Transitions — auto-apply pending changes FIRST ──
+  const appliedTransitions: EvaluatePartnerResult["appliedTransitions"] = [];
+  try {
+    const transitions = await evaluateTransitions(supabase, partnerId, userId);
+    for (const t of transitions) {
+      if (t.shouldTransition && t.autoApply) {
+        const ok = await applyTransition(supabase, partnerId, userId, t);
+        if (ok) {
+          appliedTransitions.push({ from: t.from, to: t.to, trigger: t.trigger });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[evaluatePartner] stateTransitions failed (non-blocking):", e);
+  }
+
+  // ── Phase 1: Load partner (re-read after transitions may have changed lead_status) ──
   const { data: partner } = await supabase
     .from("partners")
     .select("lead_status, email, enrichment_data")
@@ -59,6 +91,8 @@ export async function evaluatePartner(
         reasoning: "Partner non trovato",
         priority: 5,
       }],
+      appliedTransitions,
+      cadenceAnnotations: [],
     };
   }
 
@@ -161,11 +195,91 @@ export async function evaluatePartner(
     isWhitelisted: false,
   };
 
-  const actions = decideNextActions(state, {
+  // ── Phase 2: Decide next actions ──
+  const rawActions = decideNextActions(state, {
     userId,
     userAutonomyPreference: userPref,
     globalErrorRate: errorRate,
   });
 
-  return { state, actions };
+  // ── Phase 3: Filter through cadence engine — reconcile conflicts ──
+  const cadenceAnnotations: EvaluatePartnerResult["cadenceAnnotations"] = [];
+  const lastContactDate = lastOutbound?.[0]?.created_at || null;
+
+  // Count touches this week for cadence check
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { count: touchesThisWeek } = await supabase
+    .from("activities")
+    .select("id", { count: "exact", head: true })
+    .eq("partner_id", partnerId)
+    .eq("user_id", userId)
+    .in("activity_type", ["send_email", "whatsapp_message", "linkedin_message"])
+    .gte("created_at", weekAgo);
+
+  // Last channel used
+  const lastChannel = lastOutbound?.[0]
+    ? (await supabase
+        .from("activities")
+        .select("activity_type")
+        .eq("partner_id", partnerId)
+        .eq("user_id", userId)
+        .in("activity_type", ["send_email", "whatsapp_message", "linkedin_message"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+      ).data?.[0]?.activity_type ?? null
+    : null;
+
+  const channelMap: Record<string, "email" | "linkedin" | "whatsapp"> = {
+    send_email: "email", whatsapp_message: "whatsapp", linkedin_message: "linkedin",
+  };
+
+  const actions: NextAction[] = [];
+  for (const action of rawActions) {
+    const channel = action.channel;
+    if (channel) {
+      const cadenceResult = checkCadence(
+        state.leadStatus,
+        lastContactDate,
+        lastChannel ? (channelMap[lastChannel] || lastChannel) : null,
+        touchesThisWeek ?? 0,
+        channel,
+        state.hasInboundWhatsApp || state.isWhitelisted,
+      );
+      cadenceAnnotations.push({ action: action.action, channel, cadence: cadenceResult });
+      if (!cadenceResult.allowed) {
+        // Cadence blocks this action — downgrade to suggestion with reason
+        actions.push({
+          ...action,
+          autonomy: "suggest",
+          reasoning: `${action.reasoning} [CADENZA BLOCCA: ${cadenceResult.reason}]`,
+          // If cadence suggests alternative channel, note it
+          channel: cadenceResult.suggestedChannel || channel,
+          context: {
+            ...action.context,
+            cadence_blocked: true,
+            cadence_reason: cadenceResult.reason,
+            next_allowed_date: cadenceResult.nextAllowedDate,
+          },
+        });
+      } else {
+        // Cadence allows — pass through with optional channel suggestion
+        if (cadenceResult.suggestedChannel && cadenceResult.suggestedChannel !== channel) {
+          actions.push({
+            ...action,
+            context: {
+              ...action.context,
+              cadence_suggested_channel: cadenceResult.suggestedChannel,
+            },
+          });
+        } else {
+          actions.push(action);
+        }
+      }
+    } else {
+      // Non-channel actions (deep_search, archive, etc.) pass through
+      actions.push(action);
+    }
+  }
+
+  return { state, actions, appliedTransitions, cadenceAnnotations };
 }

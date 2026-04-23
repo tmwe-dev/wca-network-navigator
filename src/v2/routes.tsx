@@ -157,7 +157,7 @@ export function V2Routes(): React.ReactElement {
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
-          <Route path="network" element={guardedPage(DeepSearchPage, "Network")} />
+          <Route path="network" element={guardedPage(NetworkPage, "Network")} />
 
           {/* CRM + figli */}
           <Route path="crm" element={guardedPage(CRMPage, "CRM")} />

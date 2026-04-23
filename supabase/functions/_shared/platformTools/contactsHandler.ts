@@ -4,6 +4,7 @@
  */
 
 import { supabase, escapeLike } from "./supabaseClient.ts";
+import { applyLeadStatusChange } from "../leadStatusGuard.ts";
 
 export async function handleSearchContacts(
   args: Record<string, unknown>
@@ -57,16 +58,37 @@ export async function handleGetContactDetail(
 }
 
 export async function handleUpdateLeadStatus(
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  userId?: string
 ): Promise<unknown> {
   const status = String(args.status);
   if (args.contact_ids && Array.isArray(args.contact_ids)) {
-    const { error } = await supabase
-      .from("imported_contacts")
-      .update({ lead_status: status })
-      .in("id", args.contact_ids as string[]);
-    if (error) return { error: error.message };
-    return { success: true, updated: (args.contact_ids as string[]).length };
+    const contactIds = args.contact_ids as string[];
+    let successCount = 0;
+    let lastError: string | null = null;
+
+    for (const contactId of contactIds) {
+      const result = await applyLeadStatusChange(supabase, {
+        table: "imported_contacts",
+        recordId: contactId,
+        newStatus: status,
+        userId: userId || "unknown",
+        actor: { type: "ai_agent", name: "platform-tools" },
+        decisionOrigin: "ai_auto",
+        trigger: "platform_tool_update",
+      });
+
+      if (result.error) {
+        lastError = result.error;
+      } else {
+        successCount++;
+      }
+    }
+
+    if (successCount === 0) {
+      return { error: lastError || "Failed to update lead status" };
+    }
+    return { success: true, updated: successCount };
   }
   return { error: "Specificare contact_ids" };
 }

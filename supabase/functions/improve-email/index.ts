@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { aiChat, mapErrorToResponse } from "../_shared/aiGateway.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
@@ -17,11 +18,14 @@ async function fetchKbEntriesForImprove(
   userId: string,
   emailTypeId: string | null,
   isFollowUp: boolean,
+  extraCategories?: string[],
 ): Promise<{ text: string; sections: string[] }> {
   const categories: string[] = ["regole_sistema", "filosofia", "struttura_email", "hook"];
   if (emailTypeId === "follow_up" || isFollowUp) categories.push("followup", "chris_voss", "obiezioni");
   if (emailTypeId === "primo_contatto") categories.push("cold_outreach");
   categories.push("negoziazione", "tono", "frasi_modello");
+  // FIX 3b-I: accept email_type_kb_categories (allineato con generate-email)
+  if (extraCategories?.length) categories.push(...extraCategories);
   const { data: entries } = await supabase
     .from("kb_entries").select("title, content, category, chapter, tags")
     .eq("user_id", userId).eq("is_active", true)
@@ -114,6 +118,10 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
+    // FIX 12: Rate limit (allineato con generate-email)
+    const rl = checkRateLimit(`improve-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
+    if (!rl.allowed) return rateLimitResponse(rl, dynCors);
+
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // LOVABLE-93: global pause check
@@ -134,9 +142,14 @@ serve(async (req) => {
       subject, html_body, recipient_count, recipient_countries,
       oracle_tone, use_kb,
       email_type_id, email_type_prompt, email_type_structure,
+      email_type_kb_categories,
       custom_goal, partner_id, contact_id,
       learned_patterns,
+      quality: rawQuality,
     } = await req.json();
+    // FIX 3b-G: accept quality param (allineato con generate-email)
+    const quality: "fast" | "standard" | "premium" =
+      (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard");
     if (!html_body) throw new Error("html_body is required");
 
     // ── LOVABLE-110: learned_patterns — client-side o fallback server-side ──
@@ -189,6 +202,15 @@ serve(async (req) => {
           );
         }
         typeResolutionImprove = detectEmailType(contract);
+        // FIX 3b-B: surface type conflicts as warnings (non-blocking, a differenza di generate-email)
+        if (typeResolutionImprove && !typeResolutionImprove.proceed) {
+          const blockingConflicts = typeResolutionImprove.conflicts
+            ?.filter((c: { severity: string }) => c.severity === "blocking")
+            .map((c: { suggestion: string }) => c.suggestion) ?? [];
+          if (blockingConflicts.length) {
+            contractWarningsImprove.push(`TYPE_CONFLICT (non-blocking): ${blockingConflicts.join("; ")}`);
+          }
+        }
       } catch (cerr) {
         console.warn("[improve-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
       }
@@ -244,8 +266,8 @@ serve(async (req) => {
       try {
         const unified = await readUnifiedEnrichment(partner_id, supabase);
         if (unified.has_any) {
-          // LOVABLE-77: improve-email usa "standard" (default), allineato con generate-email
-          const block = formatEnrichmentForPrompt(unified, "standard");
+          // FIX 3b-G: usa quality param (allineato con generate-email)
+          const block = formatEnrichmentForPrompt(unified, quality);
           if (block) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${block}\n`;
         }
       } catch (e) {
@@ -254,8 +276,10 @@ serve(async (req) => {
     }
 
     // ── KB strategica (filtrata per tipo) ──
+    // FIX 3b-I: pass email_type_kb_categories (allineato con generate-email)
+    const extraKbCats = Array.isArray(email_type_kb_categories) ? email_type_kb_categories as string[] : undefined;
     const kbResult = use_kb !== false
-      ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp)
+      ? await fetchKbEntriesForImprove(supabase, userId, email_type_id || null, isFollowUp, extraKbCats)
       : { text: "", sections: [] };
     const fullSalesKB = settings.ai_sales_knowledge_base || "";
     if (!kbResult.text && fullSalesKB) {
@@ -429,7 +453,12 @@ ${html_body}`;
             country: partner?.country_name,
           },
           contact: contact ? { name: contact.contact_alias || contact.name, role: contact.title } : undefined,
+          // FIX 3b-D: pass history to journalist (allineato con generate-email)
+          history_summary: history.touchCount > 0
+            ? `${history.touchCount} interazioni, ultimo ${history.daysSince ?? "?"} gg fa via ${history.lastChannel || "?"}`
+            : undefined,
           kb_summary: kbResult.sections.join(", ") || undefined,
+          is_reply: isFollowUp || history.touchCount > 0,
         }, { mode: optimus.mode, strictness: optimus.strictness });
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           improvedBody = journalistResult.edited_text;
