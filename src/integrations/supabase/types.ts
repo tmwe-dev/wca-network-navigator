@@ -3024,6 +3024,7 @@ export type Database = {
           display_name: string | null
           domain: string | null
           domain_pattern: string | null
+          domain_type: string | null
           email_address: string
           email_count: number | null
           exclusive_agent_id: string | null
@@ -3069,6 +3070,7 @@ export type Database = {
           display_name?: string | null
           domain?: string | null
           domain_pattern?: string | null
+          domain_type?: string | null
           email_address: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -3114,6 +3116,7 @@ export type Database = {
           display_name?: string | null
           domain?: string | null
           domain_pattern?: string | null
+          domain_type?: string | null
           email_address?: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -3327,6 +3330,7 @@ export type Database = {
           created_at: string | null
           detected_patterns: string[] | null
           direction: string
+          domain: string | null
           email_address: string
           id: string
           keywords: string[] | null
@@ -3350,6 +3354,7 @@ export type Database = {
           created_at?: string | null
           detected_patterns?: string[] | null
           direction?: string
+          domain?: string | null
           email_address: string
           id?: string
           keywords?: string[] | null
@@ -3373,6 +3378,7 @@ export type Database = {
           created_at?: string | null
           detected_patterns?: string[] | null
           direction?: string
+          domain?: string | null
           email_address?: string
           id?: string
           keywords?: string[] | null
