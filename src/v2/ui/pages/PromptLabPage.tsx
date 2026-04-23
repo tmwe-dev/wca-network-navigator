@@ -11,7 +11,10 @@ import { LabAgentChat } from "./prompt-lab/LabAgentChat";
 import { ExportButton } from "./prompt-lab/ExportButton";
 import { GlobalImproverDialog } from "./prompt-lab/GlobalImproverDialog";
 import { CreateBlockDialog } from "./prompt-lab/CreateBlockDialog";
+import { RunHistoryPanel } from "./prompt-lab/RunHistoryPanel";
+import { MetricsSummaryBadge } from "./prompt-lab/MetricsSummaryBadge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
 import { useSuggestedImprovements } from "./prompt-lab/hooks/useSuggestedImprovements";
 import { useAuth } from "@/providers/AuthProvider";
@@ -49,6 +52,7 @@ import {
   Network,
   Plus,
   BookmarkPlus,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -82,6 +86,7 @@ export function PromptLabPage() {
   const [activeTabId, setActiveTabId] = useState<PromptLabTabId>("system_prompt");
   const [globalImproverOpen, setGlobalImproverOpen] = useState(false);
   const [createBlockOpen, setCreateBlockOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const lab = useLabAgent();
   const { counts } = useSuggestedImprovements(user?.id ?? "", true);
 
@@ -138,6 +143,7 @@ export function PromptLabPage() {
               <div className="flex items-center gap-2 min-w-0">
                 <FlaskConical className="h-4 w-4 text-primary flex-shrink-0" />
                 <h1 className="text-sm font-semibold leading-none">Prompt Lab</h1>
+                <MetricsSummaryBadge />
                 <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -166,6 +172,16 @@ export function PromptLabPage() {
                     <Network className="h-3.5 w-3.5" />
                     Atlas
                   </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1.5"
+                  onClick={() => setHistoryPanelOpen(true)}
+                  title="Storico dei run Migliora tutto"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Storico
                 </Button>
                 <Button
                   size="sm"
@@ -242,6 +258,21 @@ export function PromptLabPage() {
       </ResizablePanelGroup>
       <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} defaultGrouping="tab" />
       <CreateBlockDialog open={createBlockOpen} onOpenChange={setCreateBlockOpen} />
+
+      {/* Drawer per il storico dei run */}
+      <Sheet open={historyPanelOpen} onOpenChange={setHistoryPanelOpen}>
+        <SheetContent side="right" className="w-[500px] max-w-[90vw] flex flex-col">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Storico "Migliora tutto"
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 mt-4">
+            <RunHistoryPanel />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

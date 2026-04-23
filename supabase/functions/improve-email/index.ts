@@ -135,8 +135,30 @@ serve(async (req) => {
       oracle_tone, use_kb,
       email_type_id, email_type_prompt, email_type_structure,
       custom_goal, partner_id, contact_id,
+      learned_patterns,
     } = await req.json();
     if (!html_body) throw new Error("html_body is required");
+
+    // ── LOVABLE-110: learned_patterns — client-side o fallback server-side ──
+    let effectiveLearnedPatterns: string = learned_patterns || "";
+    if (!effectiveLearnedPatterns) {
+      try {
+        const { data: lpRows } = await supabase
+          .from("suggested_improvements")
+          .select("suggestion_type, priority, title, content")
+          .eq("user_id", userId)
+          .in("status", ["approved", "applied"])
+          .order("priority", { ascending: false })
+          .limit(30);
+        if (lpRows && lpRows.length > 0) {
+          effectiveLearnedPatterns = (lpRows as Array<{ suggestion_type: string; priority: string; title: string; content: string }>)
+            .map((r) => `[${r.suggestion_type}|${r.priority}] ${r.title}: ${r.content.substring(0, 200)}`)
+            .join("\n");
+        }
+      } catch (lpErr) {
+        console.warn("[improve-email] learned_patterns fallback failed:", lpErr instanceof Error ? lpErr.message : lpErr);
+      }
+    }
 
     // ── LOVABLE-81/82: Contratto + detector tipo (non bloccante; improve può funzionare anche su draft puri) ──
     let typeResolutionImprove: ResolvedEmailType | null = null;
@@ -329,7 +351,7 @@ ${use_kb !== false && kbResult.text ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${
 ${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
 ${email_type_prompt ? `\nLINEE GUIDA TIPO EMAIL "${email_type_id}":\n${email_type_prompt}\n` : ""}
 ${email_type_structure ? `STRUTTURA EMAIL RICHIESTA:\n${email_type_structure}\n` : ""}
-
+${effectiveLearnedPatterns ? `REGOLE E PREFERENZE APPRESE (rispettale obbligatoriamente):\n${effectiveLearnedPatterns}\n` : ""}
 REGOLE DI MIGLIORAMENTO:
 1. Mantieni la STESSA lingua dell'email originale.
 2. Mantieni voce e personalità dell'autore — alzi la qualità, non lo trasformi.

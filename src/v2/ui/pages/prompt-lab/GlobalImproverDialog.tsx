@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban, Undo2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban, Undo2, ChevronDown, Clock } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
 import { rollbackSavedProposals } from "@/data/promptLabGlobalRuns";
 import { useAuth } from "@/providers/AuthProvider";
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileParser";
 import { usePromptLabSignals } from "./hooks/usePromptLabSignals";
 import { SignalsBanner } from "./SignalsBanner";
+import { ScheduledImproverConfig } from "./ScheduledImproverConfig";
 
 interface GlobalImproverDialogProps {
   open: boolean;
@@ -37,6 +39,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
   const [referenceMaterial, setReferenceMaterial] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
   const [grouping, setGrouping] = useState<"tab" | "agent">(defaultGrouping);
+  const [schedulingOpen, setSchedulingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state, startImprovement, saveAccepted, reset, resumeRun, dismissResumable } = useGlobalPromptImprover(userId, goal, referenceMaterial, uploadedFiles, grouping);
   const signals = usePromptLabSignals(userId);
@@ -304,6 +307,23 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                   <li>Ti mostra le proposte: tu approvi blocco per blocco prima del salvataggio</li>
                 </ul>
               </div>
+
+              {/* Programmazione settimanale */}
+              <Collapsible open={schedulingOpen} onOpenChange={setSchedulingOpen} className="border rounded">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between h-8 text-xs">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5" />
+                      Programmazione
+                    </span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${schedulingOpen ? "rotate-180" : ""}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="p-3 border-t">
+                  <ScheduledImproverConfig onRunNow={startImprovement} />
+                </CollapsibleContent>
+              </Collapsible>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => handleClose(false)}>Annulla</Button>
                 <Button onClick={startImprovement} disabled={!userId}>

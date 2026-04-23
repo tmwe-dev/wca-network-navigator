@@ -30,6 +30,7 @@ import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalPropo
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
 import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
 import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/data/suggestedImprovements";
+import { trackImprovementMetrics } from "@/data/promptLabMetrics";
 
 export const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
@@ -436,6 +437,14 @@ export function useGlobalPromptImprover(
       if (consumedSuggestionIds.current.length > 0) {
         await markSuggestionsApplied(consumedSuggestionIds.current, state.runId).catch(() => {});
         consumedSuggestionIds.current = [];
+      }
+
+      // ── Traccia metriche per il run ──
+      try {
+        await trackImprovementMetrics(state.runId, userId, state.proposals);
+      } catch (e) {
+        console.error("[useGlobalPromptImprover] Errore tracking metriche:", e);
+        // Non interrompiamo il flusso se il tracking fallisce
       }
     }
 

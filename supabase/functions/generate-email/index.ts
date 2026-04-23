@@ -69,7 +69,7 @@ serve(async (req) => {
     const rl = checkRateLimit(`generate-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
     if (!rl.allowed) return rateLimitResponse(rl, dynCors);
 
-    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt, _system_prompt_override, _user_prompt_override } = await req.json();
+    const { activity_id, goal, base_proposal, language, document_ids, quality: rawQuality, oracle_type, oracle_tone, use_kb, deep_search, standalone, partner_id, _recipient_count, recipient_countries, recipient_name, recipient_company, email_type_prompt, email_type_structure, email_type_kb_categories, _debug_return_prompt, _system_prompt_override, _user_prompt_override, learned_patterns } = await req.json();
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     // ── Load entity (partner + contact) ──
@@ -197,12 +197,32 @@ serve(async (req) => {
       }
     }
 
+    // ── LOVABLE-110: Carica learned_patterns (preferenze + regole approvate) ──
+    let effectiveLearnedPatterns = learned_patterns || "";
+    if (!effectiveLearnedPatterns) {
+      try {
+        const { data: lpRows } = await supabase
+          .from("suggested_improvements")
+          .select("title, content, suggestion_type, priority")
+          .or(`and(created_by.eq.${userId},suggestion_type.eq.user_preference),suggestion_type.in.(kb_rule,prompt_adjustment)`)
+          .in("status", ["approved", "applied"])
+          .order("priority", { ascending: false })
+          .limit(20);
+        if (lpRows && lpRows.length > 0) {
+          effectiveLearnedPatterns = (lpRows as Array<{ title: string; content: string; suggestion_type: string; priority: string }>)
+            .map((r) => `[${r.suggestion_type}|${r.priority}] ${r.title}: ${r.content.slice(0, 200)}`)
+            .join("\n");
+        }
+      } catch { /* non-blocking */ }
+    }
+
     // ── Build prompts ──
     const built = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
       email_type_prompt, email_type_structure,
       decisionContext: decisionContext as never,
+      learnedPatterns: effectiveLearnedPatterns || undefined,
       ...ctx,
     });
     // Prompt-Lab overrides: replace system/user prompt entirely if provided

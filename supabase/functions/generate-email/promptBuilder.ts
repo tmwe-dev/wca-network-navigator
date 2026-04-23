@@ -301,6 +301,14 @@ Genera l'email completa con oggetto e corpo. Applica le tecniche dalla Knowledge
   if (conversationIntelligenceContext) blocks.push({ label: "ConvIntel", content: conversationIntelligenceContext });
   if (commercialBlock) blocks.push({ label: "CommercialBlock", content: commercialBlock });
 
+  // LOVABLE-110: Learned patterns (preferenze e regole dal ciclo di apprendimento)
+  if (ctx.learnedPatterns) {
+    blocks.push({
+      label: "LearnedPatterns",
+      content: `REGOLE E PREFERENZE APPRESE (rispettale obbligatoriamente):\n${ctx.learnedPatterns}`,
+    });
+  }
+
   // Decision engine context
   if (ctx.decisionContext && ctx.decisionContext.action !== "no_action") {
     const dc = ctx.decisionContext;

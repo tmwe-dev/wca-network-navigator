@@ -76,6 +76,8 @@ export interface EmailPromptContext {
   playbookBlock?: string;
   addressCustomPrompt?: string;
   addressCategory?: string;
+  /** LOVABLE-110: Regole e preferenze apprese dal ciclo di feedback. */
+  learnedPatterns?: string;
   decisionContext?: {
     action: string;
     autonomy: string;
