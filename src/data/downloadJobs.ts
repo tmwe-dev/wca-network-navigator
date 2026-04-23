@@ -171,7 +171,7 @@ export async function getJobItemsByJobId(jobId: string, select = "status, contac
     .select(select)
     .eq("job_id", jobId);
   if (error) throw error;
-  return (data ?? []) as unknown as JobItemResult[];
+  return (data ?? []) as unknown as Array<{ status: string; contacts_found: number; contacts_missing: number; [k: string]: unknown }>;
 }
 
 export async function getJobItemById(itemId: string, select = "attempt_count"): Promise<unknown> {
