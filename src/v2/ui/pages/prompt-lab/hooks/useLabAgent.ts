@@ -8,6 +8,8 @@ import { findKbEntries } from "@/data/kbEntries";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
 import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnostics";
 import { useArchitectKb } from "./useArchitectKb";
+import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/data/agentPrompts";
+import { resolveBlockAgent } from "./agentMapping";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
