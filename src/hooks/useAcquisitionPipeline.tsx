@@ -278,7 +278,14 @@ export function useAcquisitionPipeline() {
   }, [state.includeEnrich, state.includeDeepSearch, extensionAvailable, checkExtension, extensionExtract, state.liveStats, scrapingSettings]);
 
   const actions = useAcquisitionPipelineActions(state, {
-    extensionAvailable, waitForExtension, verifySession, runExtensionLoop: runExtensionLoop as (jobId: string, items: Record<string, unknown>[], startFrom?: number) => Promise<LiveStats>,
+    extensionAvailable,
+    waitForExtension,
+    verifySession,
+    runExtensionLoop: runExtensionLoop as unknown as (
+      jobId: string,
+      items: Record<string, unknown>[],
+      startFrom?: number,
+    ) => Promise<LiveStats>,
   });
 
   return {
