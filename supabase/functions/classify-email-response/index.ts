@@ -5,7 +5,8 @@ import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
-import { runPostClassificationPipeline } from "../_shared/postClassificationPipeline.ts";
+import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
+import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
@@ -291,10 +292,14 @@ serve(async (req) => {
     } catch (aiSuggestErr) {
     }
 
-    // ═══ LOVABLE-86: Post-classification pipeline ═══
+    // ═══ Post-classification via EmailProcessManager (event-driven) ═══
     let postClassResult = null;
     try {
-      postClassResult = await runPostClassificationPipeline(supabase, {
+      // Init both PMs — LeadPM reacts to EmailPM's events automatically
+      const leadPM = initLeadProcessManager(supabase);
+      const emailPM = initEmailProcessManager(supabase);
+      const pmResult = await emailPM.processClassification({
+        messageId: input.message_id || crypto.randomUUID(),
         userId: input.user_id,
         partnerId: input.partner_id || null,
         contactId: input.contact_id || null,
@@ -309,6 +314,7 @@ serve(async (req) => {
         sentiment: classification.sentiment || undefined,
         channel: "email",
       });
+      postClassResult = pmResult.pipelineResult;
     } catch (pcErr) {
     }
     metrics.userId = input.user_id;

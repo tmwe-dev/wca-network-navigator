@@ -18,6 +18,8 @@ import {
 import { matchSender, saveMessageToDb, type AttachmentRecord } from "./dbOperations.ts";
 import { detectBounce, handleBounce } from "./bounceDetector.ts";
 import { extractBodyAndAttachments } from "./bodyExtractor.ts";
+import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
+import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 
 interface MessageData {
   uid: number;
@@ -299,6 +301,23 @@ export async function processMessage(
     }
 
     if (result.msgData) {
+      // ── Publish email.inbound_received via EmailProcessManager ──
+      try {
+        const leadPM = initLeadProcessManager(supabase);
+        const emailPM = initEmailProcessManager(supabase);
+        await emailPM.processInboundReceived({
+          messageId: result.msgData.id as string,
+          userId,
+          partnerId: match.partner_id || null,
+          contactId: match.source_type === "imported_contact" ? match.source_id || undefined : undefined,
+          fromAddress: fromAddr,
+          subject: subject || undefined,
+          channel: "email",
+        });
+      } catch (inboundErr) {
+        console.warn("[messageProcessor] EmailPM inbound event failed (non-blocking):", inboundErr);
+      }
+
       // ── Bounce detection (best-effort) ──
       try {
         const bounceInfo = detectBounce({ fromAddr, subject, bodyText });

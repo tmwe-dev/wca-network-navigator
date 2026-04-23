@@ -180,6 +180,7 @@ export class LeadProcessManager {
   /**
    * Handle outbound message sent.
    * Gate: new → first_touch_sent (auto)
+   * Supports: partners, imported_contacts, business_cards
    */
   private async onOutboundSent(
     partnerId: string,
@@ -209,6 +210,78 @@ export class LeadProcessManager {
         .eq("id", partnerId)
         .eq("user_id", userId);
     }
+  }
+
+  // ── Entity-specific outbound handlers (imported_contacts, business_cards) ──
+
+  /**
+   * Handle outbound for imported_contact — apply new→first_touch_sent.
+   * Bypasses the partner-only EventBus flow for legacy entities.
+   */
+  async onImportedContactOutbound(
+    contactId: string,
+    userId: string,
+    channel: string,
+    source: string,
+  ): Promise<{ applied: boolean }> {
+    const { data: contact } = await this.supabase
+      .from("imported_contacts")
+      .select("lead_status")
+      .eq("id", contactId)
+      .maybeSingle();
+
+    if (!contact) return { applied: false };
+    const currentStatus = contact.lead_status || "new";
+
+    if (currentStatus === "new" || !contact.lead_status) {
+      const result = await applyLeadStatusChange(this.supabase, {
+        table: "imported_contacts",
+        recordId: contactId,
+        newStatus: "first_touch_sent",
+        userId,
+        actor: { type: "system", name: "LeadProcessManager" },
+        decisionOrigin: "system_trigger",
+        trigger: `Primo messaggio inviato (${channel}) via ${source}`,
+        contactIdForAudit: contactId,
+        metadata: { channel, source },
+      });
+      return { applied: result.applied };
+    } else {
+      await this.supabase
+        .from("imported_contacts")
+        .update({ last_interaction_at: new Date().toISOString() })
+        .eq("id", contactId);
+      return { applied: false };
+    }
+  }
+
+  /**
+   * Handle outbound for business_card — apply new→first_touch_sent.
+   * business_cards table doesn't use the guard (no RLS/audit needed),
+   * so we update directly.
+   */
+  async onBusinessCardOutbound(
+    businessCardId: string,
+    channel: string,
+    source: string,
+  ): Promise<{ applied: boolean }> {
+    const { data: bc } = await this.supabase
+      .from("business_cards")
+      .select("lead_status")
+      .eq("id", businessCardId)
+      .maybeSingle();
+
+    if (!bc) return { applied: false };
+    const currentStatus = bc.lead_status || "new";
+
+    if (currentStatus === "new" || !bc.lead_status) {
+      await this.supabase
+        .from("business_cards")
+        .update({ lead_status: "first_touch_sent" })
+        .eq("id", businessCardId);
+      return { applied: true };
+    }
+    return { applied: false };
   }
 
   /**

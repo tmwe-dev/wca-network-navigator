@@ -19,7 +19,6 @@
  */
 
 import { logActivity } from "./activityLogger.ts";
-import { updateLeadStatus } from "./leadStatusUpdater.ts";
 import { createReminder, ensureNextAction } from "./reminderManager.ts";
 import { checkAndCreateEnrichmentRefresh } from "./oracleRefresh.ts";
 import { logInteractions } from "./interactionLogger.ts";
@@ -119,8 +118,7 @@ export async function runPostSendPipeline(
   result.activityLogged = await logActivity(supabase, input, resolvedSourceId, resolvedSourceType, now);
 
   // === b. UPDATE LEAD STATUS (via LeadProcessManager + DomainEvent) ===
-  // Il PM si registra sull'EventBus, riceve EmailSent, decide la transizione.
-  // Manteniamo fallback diretto per imported_contacts/business_cards (non gestiti dal PM).
+  // Tutti i tipi entità passano dal LeadPM. Niente più fallback diretto.
   const leadPM = initLeadProcessManager(supabase);
   if (resolvedSourceType === "partner" && input.partnerId) {
     // Pubblica EmailSent → il PM reagisce con new→first_touch_sent se necessario
@@ -136,11 +134,25 @@ export async function runPostSendPipeline(
       },
     );
     await publishAndPersist(supabase, emailSentEvent);
-    // Il PM avrà già reagito (sincrono su EventBus in-process)
-    result.statusUpdated = true; // Il PM decide se applicare o meno
-  } else {
-    // Fallback per imported_contacts / business_cards (legacy, non ancora migrati al PM)
-    result.statusUpdated = await updateLeadStatus(supabase, input, resolvedSourceType, resolvedSourceId, now);
+    result.statusUpdated = true;
+  } else if (resolvedSourceType === "imported_contact" && (input.contactId || input.sourceId)) {
+    // imported_contacts: LeadPM gestisce direttamente
+    const cid = input.contactId || input.sourceId!;
+    try {
+      const res = await leadPM.onImportedContactOutbound(cid, input.userId, input.channel, input.source);
+      result.statusUpdated = res.applied;
+    } catch (e) {
+      console.warn("[postSendPipeline] LeadPM imported_contact update failed:", e);
+    }
+  } else if (resolvedSourceType === "business_card" && (input.businessCardId || input.sourceId)) {
+    // business_cards: LeadPM gestisce direttamente
+    const bcid = input.businessCardId || input.sourceId!;
+    try {
+      const res = await leadPM.onBusinessCardOutbound(bcid, input.channel, input.source);
+      result.statusUpdated = res.applied;
+    } catch (e) {
+      console.warn("[postSendPipeline] LeadPM business_card update failed:", e);
+    }
   }
 
   // === c. CREATE REMINDER FOLLOW-UP ===

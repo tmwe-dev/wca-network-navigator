@@ -9,7 +9,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
-import { runPostClassificationPipeline } from "../_shared/postClassificationPipeline.ts";
+import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
+import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -236,13 +237,16 @@ ${(body_text || "").substring(0, 3000)}`;
       }).eq("id", activity_id);
     }
 
-    // ── LOVABLE-93: Post-classification pipeline (unified for all channels) ──
+    // ── Post-classification via EmailProcessManager (event-driven) ──
     let postClassResult = null;
     if (body.user_id) {
       try {
         const mappedCategory = mapInboundToEmailCategory(result.classification);
-        const mappedUrgency = mapUrgencyToNumber(result.urgency);
-        postClassResult = await runPostClassificationPipeline(supabase, {
+        // Init both PMs — LeadPM reacts to EmailPM's events automatically
+        const leadPM = initLeadProcessManager(supabase);
+        const emailPM = initEmailProcessManager(supabase);
+        const pmResult = await emailPM.processClassification({
+          messageId: body.message_id || crypto.randomUUID(),
           userId: body.user_id,
           partnerId: partner_id || null,
           category: mappedCategory,
@@ -250,10 +254,11 @@ ${(body_text || "").substring(0, 3000)}`;
           senderEmail: from_address,
           subject: subject || undefined,
           aiSummary: result.intent || undefined,
-          urgency: mappedUrgency,
+          urgency: result.urgency || undefined,
           sentiment: result.sentiment || undefined,
           channel: (channel as "email" | "whatsapp" | "linkedin") || "email",
         });
+        postClassResult = pmResult.pipelineResult;
       } catch (pcErr) {
       }
     }

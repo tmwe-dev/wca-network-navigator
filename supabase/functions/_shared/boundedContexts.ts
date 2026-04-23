@@ -40,14 +40,14 @@ export interface TableOwnership {
 export const TABLE_OWNERSHIP: TableOwnership[] = [
   // ── LEAD DOMAIN ──
   { table: "partners", domain: "lead", writeAuthority: "LeadProcessManager", syncsWith: ["business_cards"], notes: "lead_status owned by LeadPM" },
-  { table: "business_cards", domain: "lead", writeAuthority: "LeadProcessManager", syncsWith: ["partners"], notes: "Sync via triggers" },
-  { table: "imported_contacts", domain: "lead", writeAuthority: "LeadProcessManager", notes: "Legacy, migrating to partners" },
+  { table: "business_cards", domain: "lead", writeAuthority: "LeadProcessManager", syncsWith: ["partners"], notes: "Business cards — lead_status via LeadPM" },
+  { table: "imported_contacts", domain: "lead", writeAuthority: "LeadProcessManager", notes: "Legacy contacts — lead_status via LeadPM" },
   { table: "partner_contacts", domain: "lead", writeAuthority: "CRM/UI", notes: "Contact details" },
 
   // ── EMAIL DOMAIN ──
   { table: "channel_messages", domain: "email", writeAuthority: "EmailProcessManager", notes: "Inbound/outbound messages" },
-  { table: "email_classifications", domain: "email", writeAuthority: "classify-inbound-message", notes: "AI classification results" },
-  { table: "email_address_rules", domain: "email", writeAuthority: "check-inbox/postClassification", notes: "Per-address rules" },
+  { table: "email_classifications", domain: "email", writeAuthority: "EmailProcessManager", notes: "AI classification results (via classify-inbound-message)" },
+  { table: "email_address_rules", domain: "email", writeAuthority: "EmailProcessManager", notes: "Per-address rules (bounce/unsub hygiene)" },
   { table: "email_templates", domain: "email", writeAuthority: "UI/admin", notes: "Email templates" },
 
   // ── OUTREACH DOMAIN ──
