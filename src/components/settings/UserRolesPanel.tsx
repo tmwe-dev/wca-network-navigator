@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useRoles, useAssignUserRole, useRemoveUserRole } from "@/hooks/useRBAC";
+import { useRoles, useAssignUserRole, useRemoveUserRole, type Role } from "@/hooks/useRBAC";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,9 +23,15 @@ interface UserWithRoles {
   roles: { id: string; name: string }[];
 }
 
+interface UserRoleJoin {
+  user_id: string;
+  roles: { id: string; name: string } | null;
+}
+
 export default function UserRolesPanel() {
   const qc = useQueryClient();
-  const { data: roles = [] } = useRoles();
+  const { data: rolesData } = useRoles();
+  const roles: Role[] = rolesData || [];
   const assignRoleMut = useAssignUserRole();
   const removeRoleMut = useRemoveUserRole();
 
@@ -58,11 +64,11 @@ export default function UserRolesPanel() {
         .in(
           "user_id",
           allUsers.map((u) => u.id)
-        );
+        ) as any;
       if (error) throw error;
 
       const map: Record<string, { id: string; name: string }[]> = {};
-      (data || []).forEach((ur) => {
+      (data as UserRoleJoin[] || []).forEach((ur) => {
         if (!map[ur.user_id]) map[ur.user_id] = [];
         if (ur.roles) map[ur.user_id].push(ur.roles);
       });
