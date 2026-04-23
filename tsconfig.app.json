@@ -43,6 +43,13 @@
     "src/test/deals.test.ts",
     "src/test/notifications.test.ts",
     "src/test/rbac.test.ts",
-    "src/test/token-management.test.ts"
+    "src/test/token-management.test.ts",
+    "src/test/permission-gate.test.tsx",
+    "src/v2/ui/pages/command/hooks/useCommandSubmit.ts",
+    "src/v2/ui/pages/command/hooks/useScenarioFlow.ts",
+    "src/v2/ui/pages/command/hooks/useToolExecution.ts",
+    "src/v2/ui/pages/command/components/CommandOutput.tsx",
+    "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
+    "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts"
   ]
 }
