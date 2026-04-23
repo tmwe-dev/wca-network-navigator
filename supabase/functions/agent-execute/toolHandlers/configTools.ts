@@ -272,3 +272,29 @@ export async function handleExecuteUiAction(
           : `Filtro applicato: ${target}`,
   };
 }
+
+export async function handleReadKb(
+  args: Record<string, unknown>
+): Promise<unknown> {
+  return {
+    error: "Tool not yet implemented",
+    message: "read_kb tool è programmato per future implementazione. Contattare il team di development.",
+    details: {
+      requested_kb_category: args.kb_category || "unknown",
+      requested_query: args.query || "none",
+    },
+  };
+}
+
+export async function handleGetOutreachStats(
+  args: Record<string, unknown>
+): Promise<unknown> {
+  return {
+    error: "Tool not yet implemented",
+    message: "get_outreach_stats tool è programmato per future implementazione. Contattare il team di development.",
+    details: {
+      requested_period: args.period || "all_time",
+      requested_filter: args.filter || "none",
+    },
+  };
+}

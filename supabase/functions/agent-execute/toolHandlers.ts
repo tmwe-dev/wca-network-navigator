@@ -94,6 +94,8 @@ import {
   handleApproveAiAction,
   handleRejectAiAction,
   handleExecuteUiAction,
+  handleReadKb,
+  handleGetOutreachStats,
 } from "./toolHandlers/configTools.ts";
 
 import {
@@ -326,6 +328,10 @@ export async function executeTool(
       return handleRejectAiAction(supabase, userId, args);
     case "execute_ui_action":
       return handleExecuteUiAction(args);
+    case "read_kb":
+      return handleReadKb(args);
+    case "get_outreach_stats":
+      return handleGetOutreachStats(args);
 
     // ── EXTERNAL TOOLS ──
     case "enrich_partner_website":

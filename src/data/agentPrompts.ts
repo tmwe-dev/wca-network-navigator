@@ -441,7 +441,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       modelDefault: "gpt-4o",
       triggers: ["Analisi partner manuale", "Deep search automatica"],
     },
-    tools: ["search_partners", "evaluate_partner", "get_global_summary"],
+    tools: [], // TODO: implement edge function
     approvalRequiredTools: [],
     dependsOn: [],
     contract: {
@@ -472,7 +472,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       modelDefault: "gpt-4o",
       triggers: ["Richiesta contenuto editoriale", "Generazione articolo"],
     },
-    tools: ["read_kb", "search_memory"],
+    tools: [], // TODO: implement edge function
     approvalRequiredTools: [],
     dependsOn: [],
     contract: {
@@ -502,7 +502,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       modelDefault: "elevenlabs-v2",
       triggers: ["Richiesta sintesi vocale", "Scenario voice agent"],
     },
-    tools: ["read_kb"],
+    tools: [], // TODO: implement edge function
     approvalRequiredTools: [],
     dependsOn: [],
     contract: {
@@ -562,8 +562,8 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       modelDefault: "gpt-4o",
       triggers: ["Lancio missione batch", "Coda missioni autonome"],
     },
-    tools: ["execute_decision", "search_partners", "bulk_update_partners"],
-    approvalRequiredTools: ["bulk_update_partners", "execute_decision"],
+    tools: [], // TODO: implement edge function
+    approvalRequiredTools: [],
     dependsOn: [],
     contract: {
       input: "{ mission: MissionDefinition, scope: PartnerFilter }",

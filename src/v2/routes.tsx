@@ -135,10 +135,9 @@ export function V2Routes(): React.ReactElement {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
-        {/* Legacy /v2/login → redirect to unified /auth */}
-        <Route path="login" element={<Navigate to="/auth" replace />} />
-        {/* Public routes */}
+        {/* Public routes (login, reset-password) */}
         <Route element={<PublicLayout />}>
+          <Route path="login" element={guardedPage(LoginPage, "Login")} />
           <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
         </Route>
 

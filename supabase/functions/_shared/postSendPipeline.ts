@@ -29,6 +29,78 @@ import { initLeadProcessManager } from "./processManagers/leadProcessManager.ts"
 
 type SupabaseClient = any;
 
+// FIX ISSUE 2: Helper to detect manual email edits
+function calculateSimilarity(text1: string, text2: string): number {
+  // Simple similarity check: compare normalized text length ratio
+  // If edited, expect >10% difference in substantive content
+  const normalize = (t: string) => t.toLowerCase().replace(/\s+/g, " ").trim();
+  const n1 = normalize(text1);
+  const n2 = normalize(text2);
+  if (n1 === n2) return 1.0; // Identical
+  const longer = Math.max(n1.length, n2.length);
+  if (longer === 0) return 0.0;
+  // Simple Levenshtein-like: count character diff ratio
+  let diff = 0;
+  for (let i = 0; i < Math.min(n1.length, n2.length); i++) {
+    if (n1[i] !== n2[i]) diff++;
+  }
+  diff += Math.abs(n1.length - n2.length);
+  return 1.0 - (diff / longer);
+}
+
+async function detectAndLogEmailEdit(
+  supabase: SupabaseClient,
+  userId: string,
+  partnerId: string | null | undefined,
+  sentBody: string | undefined,
+  now: string,
+): Promise<boolean> {
+  // FIX ISSUE 2: Compare sent body with last AI-generated version
+  if (!partnerId || !sentBody) return false;
+
+  try {
+    // Find the most recent email activity for this partner with an email_body
+    const { data: lastActivities } = await supabase
+      .from("activities")
+      .select("email_body, created_at")
+      .eq("user_id", userId)
+      .eq("partner_id", partnerId)
+      .eq("activity_type", "email")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (!lastActivities || lastActivities.length === 0) return false;
+
+    const lastActivity = lastActivities[0];
+    if (!lastActivity.email_body) return false;
+
+    // Calculate similarity between sent body and previous version
+    const similarity = calculateSimilarity(sentBody, lastActivity.email_body);
+
+    // If similarity < 0.85 (>15% different), flag as manual edit
+    if (similarity < 0.85) {
+      // Create a suggested_improvement record for admin review
+      const editDiff = `Previous AI body vs sent body: ~${Math.round((1 - similarity) * 100)}% difference detected`;
+      await supabase.from("suggested_improvements").insert({
+        created_by: userId,
+        source_context: "email_edit",
+        suggestion_type: "user_preference",
+        title: "Manual email edit detected",
+        content: editDiff,
+        reasoning: `User edited email before sending to partner. Original was ~${Math.round(similarity * 100)}% similar.`,
+        priority: "low",
+        status: "approved", // Auto-approve as user_preference (observational learning)
+        reviewed_by: userId,
+        reviewed_at: now,
+      });
+      return true;
+    }
+  } catch (e) {
+    console.warn("[postSendPipeline] email edit detection failed:", e);
+  }
+  return false;
+}
+
 export type SendChannel = "email" | "whatsapp" | "linkedin" | "sms";
 export type SourceType = "partner" | "imported_contact" | "business_card";
 
@@ -116,6 +188,12 @@ export async function runPostSendPipeline(
 
   // === a. LOG ACTIVITY ===
   result.activityLogged = await logActivity(supabase, input, resolvedSourceId, resolvedSourceType, now);
+
+  // === a-bis. DETECT MANUAL EMAIL EDITS (FIX ISSUE 2) ===
+  // After logging activity, check if email was manually edited vs last AI version
+  if (input.channel === "email" && input.partnerId && input.body) {
+    await detectAndLogEmailEdit(supabase, input.userId, input.partnerId, input.body, now);
+  }
 
   // === b. UPDATE LEAD STATUS (via LeadProcessManager + DomainEvent) ===
   // Tutti i tipi entità passano dal LeadPM. Niente più fallback diretto.

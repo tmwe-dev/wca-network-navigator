@@ -471,6 +471,8 @@ ${html_body}`;
     return new Response(JSON.stringify({
       subject: improvedSubject,
       body: improvedBody,
+      // FIX ISSUE 1: Set journalist_reviewed=true so send-email knows review already passed
+      journalist_reviewed: journalistResult ? journalistResult.verdict !== "block" : false,
       readiness,
       decision,
       journalist_review: journalistResult ? {
