@@ -23,14 +23,6 @@ const log = createLogger("useTrackActivity");
  * Mantenuto temporaneamente per retrocompatibilità dei test.
  */
 
-/**
- * Returns true only if the current status allows escalation to "first_touch_sent".
- * Never downgrades advanced states (holding, engaged, qualified, negotiation, converted, archived, blacklisted).
- */
-function canEscalateToFirstTouch(status: string | null | undefined): boolean {
-  return !status || status === "new";
-}
-
 export function useTrackActivity() {
   const qc = useQueryClient();
 
@@ -58,20 +50,12 @@ export function useTrackActivity() {
         });
       } catch (actErr: unknown) { log.error("track activity insert failed", { message: actErr instanceof Error ? actErr.message : String(actErr) }); }
 
-      // 2. Escalate lead_status only from "new" → "first_touch_sent"; never downgrade
+      // 2. Lead status escalation is handled by server-side postSendPipeline (called by send-email edge function).
+      // This client-side tracking is deprecated (LOVABLE-93) and kept only for activity logging + timestamps.
+      // Do NOT attempt to update lead_status here — the server RPC enforces proper transitions.
       if (params.sourceType === "partner" && params.partnerId) {
-        const { data: currentPartner } = await supabase
-          .from("partners")
-          .select("lead_status")
-          .eq("id", params.partnerId)
-          .maybeSingle();
-
-        if (canEscalateToFirstTouch(currentPartner?.lead_status)) {
-          await updatePartner(params.partnerId, { lead_status: "first_touch_sent", last_interaction_at: now });
-        } else {
-          // Advanced state (holding / engaged / qualified / negotiation / converted / archived) — refresh timestamp only
-          await updatePartner(params.partnerId, { last_interaction_at: now });
-        }
+        // Update last_interaction_at timestamp only
+        await updatePartner(params.partnerId, { last_interaction_at: now });
 
         // Create interaction record
         await createInteraction({
@@ -81,18 +65,10 @@ export function useTrackActivity() {
           notes: params.description || `Attività: ${params.title}`,
         });
       } else if (params.sourceType === "imported_contact") {
-        const { data: currentContact } = await supabase
-          .from("imported_contacts")
-          .select("lead_status")
-          .eq("id", params.sourceId)
-          .maybeSingle();
+        // Update last_interaction_at timestamp only
+        await updateContact(params.sourceId, { last_interaction_at: now });
 
-        if (canEscalateToFirstTouch(currentContact?.lead_status)) {
-          await updateContact(params.sourceId, { lead_status: "first_touch_sent", last_interaction_at: now });
-        } else {
-          await updateContact(params.sourceId, { last_interaction_at: now });
-        }
-
+        // Create interaction record
         await insertContactInteraction({
           contact_id: params.sourceId,
           interaction_type: params.activityType === "send_email" ? "email" : "other",
@@ -101,16 +77,8 @@ export function useTrackActivity() {
           created_by: user.id,
         });
       } else if (params.sourceType === "business_card") {
-        const { data: currentBca } = await supabase
-          .from("business_cards")
-          .select("lead_status")
-          .eq("id", params.sourceId)
-          .maybeSingle();
-
-        if (canEscalateToFirstTouch(currentBca?.lead_status)) {
-          await updateBusinessCard(params.sourceId, { lead_status: "first_touch_sent" });
-        }
-        // No timestamp column on business_cards — nothing else to update
+        // business_cards table has no timestamp column and no server-side guard.
+        // Skip both status and timestamp updates for this source type.
       }
     },
     onSuccess: () => {

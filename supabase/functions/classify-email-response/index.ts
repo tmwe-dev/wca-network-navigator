@@ -231,35 +231,32 @@ serve(async (req) => {
         const nextStatus = getNextStatus(partner.lead_status, classification);
         if (nextStatus) {
           const guardRes = await applyLeadStatusChange(supabase, {
+            table: "partners",
+            recordId: input.partner_id,
+            newStatus: nextStatus,
             userId: input.user_id,
-            partnerId: input.partner_id,
-            newLeadStatus: nextStatus,
-            reason: `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
-            channel: "email",
+            actor: { type: "ai_agent", name: "classify-email-response" },
+            decisionOrigin: "ai_auto",
+            trigger: `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
+            reason: `Email classification: ${classification.domain}/${classification.category}`,
+            metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
           });
 
-          if (guardRes.allowed) {
-            const { error: statusErr } = await supabase
-              .from("partners")
-              .update({ lead_status: nextStatus, updated_at: new Date().toISOString() })
-              .eq("id", input.partner_id);
-
-            if (!statusErr) {
-              actionTaken = "auto_executed";
-              decisionLogId = crypto.randomUUID();
-              await logSupervisorAudit(supabase, {
-                audit_id: decisionLogId,
-                user_id: input.user_id,
-                action_type: "lead_status_change",
-                action_detail: `Email da ${input.email_address} classificata: ${classification.domain}/${classification.category} (${Math.round(classification.confidence * 100)}%)`,
-                target_type: "email",
-                partner_id: input.partner_id || undefined,
-                email_address: input.email_address,
-                decision_origin: "ai_auto",
-                ai_decision_log_id: decisionLogId || undefined,
-                metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
-              });
-            }
+          if (guardRes.applied) {
+            actionTaken = "auto_executed";
+            decisionLogId = crypto.randomUUID();
+            await logSupervisorAudit(supabase, {
+              audit_id: decisionLogId,
+              user_id: input.user_id,
+              action_type: "lead_status_change",
+              action_detail: `Email da ${input.email_address} classificata: ${classification.domain}/${classification.category} (${Math.round(classification.confidence * 100)}%)`,
+              target_type: "email",
+              partner_id: input.partner_id || undefined,
+              email_address: input.email_address,
+              decision_origin: "ai_auto",
+              ai_decision_log_id: decisionLogId || undefined,
+              metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+            });
           }
         }
       }

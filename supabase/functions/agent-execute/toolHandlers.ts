@@ -227,7 +227,7 @@ export async function executeTool(
     case "update_reminder":
       return handleUpdateReminder(supabase, args);
     case "update_lead_status":
-      return handleUpdateLeadStatus(supabase, args);
+      return handleUpdateLeadStatus(supabase, userId, args);
     case "bulk_update_partners":
       return handleBulkUpdatePartners(supabase, args);
     case "delete_records":

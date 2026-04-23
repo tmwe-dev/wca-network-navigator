@@ -437,8 +437,14 @@ export async function getPartnerWebsite(id: string) {
 }
 
 export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
-  const { error } = await supabase.from(table).update({ lead_status: status }).eq("id", id);
+  // Route through server-side guard via RPC to enforce lead_status transitions
+  const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+    p_table: table,
+    p_record_id: id,
+    p_new_status: status,
+  });
   if (error) throw error;
+  if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
 }
 
 // ─── Cache Invalidation ────────────────────────────────

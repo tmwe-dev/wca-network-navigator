@@ -18,6 +18,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 
 interface PendingAction {
   id: string;
@@ -288,10 +289,13 @@ async function executeAction(
     case "update_lead_status": {
       const partnerId = action.partner_id ?? payload.partner_id;
       if (!partnerId) return { success: false, action_type: action.action_type, detail: "No partner_id" };
-      const { error } = await supabase.from("partners")
-        .update({ lead_status: payload.new_status as string })
-        .eq("id", partnerId);
-      if (error) return { success: false, action_type: action.action_type, detail: error.message };
+      const leadPM = new LeadProcessManager(supabase);
+      const transResult = await leadPM.requestTransition(partnerId, action.user_id, payload.new_status as string, {
+        trigger: `Pending action update_lead_status approvata`,
+        actor: { type: "ai_agent", name: "pending-action-executor" },
+        decisionOrigin: "ai_approved",
+      });
+      if (!transResult.applied) return { success: false, action_type: action.action_type, detail: transResult.blockedReason || "Transition blocked" };
       return { success: true, action_type: action.action_type, detail: `Lead status → ${payload.new_status}` };
     }
 

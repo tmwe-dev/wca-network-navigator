@@ -161,6 +161,9 @@ export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: RALeadStatus }) => {
+      // NOTE: ra_prospects is a separate domain with its own lead lifecycle, distinct from the
+      // partners/imported_contacts domains. It does not route through the RPC guard since it has
+      // its own state machine. This direct write is intentional and not a bypass of lead_status guards.
       const { error } = (await untypedFrom("ra_prospects")
         .update({ lead_status: status, updated_at: new Date().toISOString() })
         .eq("id", id)) as {

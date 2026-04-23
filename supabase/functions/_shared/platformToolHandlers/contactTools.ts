@@ -3,6 +3,7 @@
  */
 import { escapeLike } from "../sqlEscape.ts";
 import { supabase } from "../platformToolHelpers.ts";
+import { applyLeadStatusChange } from "../leadStatusGuard.ts";
 
 export async function executeContactToolHandler(
   name: string,
@@ -61,12 +62,22 @@ export async function executeContactToolHandler(
     case "update_lead_status": {
       const status = String(args.status);
       if (args.contact_ids && Array.isArray(args.contact_ids)) {
-        const { error } = await supabase
-          .from("imported_contacts")
-          .update({ lead_status: status })
-          .in("id", args.contact_ids as string[]);
-        if (error) return { error: error.message };
-        return { success: true, updated: (args.contact_ids as string[]).length };
+        const contact_ids = args.contact_ids as string[];
+        let successCount = 0;
+        for (const contact_id of contact_ids) {
+          const result = await applyLeadStatusChange(supabase, {
+            table: "imported_contacts",
+            recordId: contact_id,
+            newStatus: status,
+            userId: userId,
+            actor: { type: "user", id: userId },
+            decisionOrigin: "manual",
+            trigger: `Manual lead status update via contact tool`,
+            contactIdForAudit: contact_id,
+          });
+          if (result.applied) successCount++;
+        }
+        return { success: true, updated: successCount };
       }
       return { error: "Specificare contact_ids" };
     }

@@ -16,8 +16,9 @@ export interface DashboardCounts {
 
 export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, AppError>> {
   try {
-    const [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
-      supabase.from("partners").select("id", { count: "exact", head: true }),
+    // v_kpi_dashboard provides total_partners; other counts still need individual queries
+    const [kpiRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
+      supabase.from("v_kpi_dashboard").select("total_partners").limit(1).maybeSingle(),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("agents").select("id", { count: "exact", head: true }).eq("is_active", true),
@@ -25,7 +26,7 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
       supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
     ]);
 
-    const firstError = [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes]
+    const firstError = [kpiRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes]
       .find((r) => r.error);
 
     if (firstError?.error) {
@@ -35,7 +36,7 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
     }
 
     return ok({
-      partners: partnersRes.count ?? 0,
+      partners: (kpiRes.data as Record<string, number> | null)?.total_partners ?? 0,
       contacts: contactsRes.count ?? 0,
       pendingActivities: activitiesRes.count ?? 0,
       activeAgents: agentsRes.count ?? 0,
@@ -75,33 +76,29 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
     todayStart.setHours(0, 0, 0, 0);
     const todayISO = todayStart.toISOString();
 
+    // v_kpi_dashboard provides partner counts by status + outreach_sent_today + outreach_queue_pending
+    // in a single pre-aggregated row per user → replaces 6 individual partner COUNT queries
     const [
-      // Contacts
-      totalPartnersRes,
+      kpiRes,
+      // imported_contacts still need individual queries (not in materialized view)
       totalContactsRes,
-      newPartnersRes,
       newContactsRes,
-      contactedPartnersRes,
       contactedContactsRes,
       repliedRes,
-      // Outreach pipeline
+      // Outreach pipeline (schedules/actions not in materialized view)
       schedulesAllRes,
       schedulesPendingRes,
       actionsApprovedRes,
       actionsProposedRes,
-      // Messages
-      sentTodayRes,
+      // Messages (outreach queue stats partially in view)
       awaitingRes,
       repliesReceivedRes,
     ] = await Promise.all([
-      // Contacts totals
-      supabase.from("partners").select("id", { count: "exact", head: true }),
+      // Single read replaces: totalPartners, newPartners, contactedPartners, sentToday
+      supabase.from("v_kpi_dashboard").select("total_partners, partners_new, partners_first_touch, outreach_sent_today, outreach_queue_pending").limit(1).maybeSingle(),
+      // imported_contacts
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
-      // To contact (new)
-      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
-      // Contacted (primo touch inviato — tassonomia 9 stati)
-      supabase.from("partners").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent"),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "first_touch_sent"),
       // Replied (activities with response)
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("response_received", true),
@@ -113,8 +110,6 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
       supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "approved"),
       // Pending approval
       supabase.from("mission_actions").select("id", { count: "exact", head: true }).eq("status", "proposed"),
-      // Sent today
-      supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "sent").gte("processed_at", todayISO),
       // Awaiting reply (sent, no reply)
       supabase.from("outreach_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
       // Replies received
@@ -122,21 +117,23 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
     ]);
 
     const allRes = [
-      totalPartnersRes, totalContactsRes, newPartnersRes, newContactsRes,
-      contactedPartnersRes, contactedContactsRes, repliedRes,
+      kpiRes, totalContactsRes, newContactsRes, contactedContactsRes, repliedRes,
       schedulesAllRes, schedulesPendingRes, actionsApprovedRes, actionsProposedRes,
-      sentTodayRes, awaitingRes, repliesReceivedRes,
+      awaitingRes, repliesReceivedRes,
     ];
     const firstErr = allRes.find((r) => r.error);
     if (firstErr?.error) {
       return err(ioError("DATABASE_ERROR", firstErr.error.message, { table: "operative_metrics" }, "fetchOperativeMetrics"));
     }
 
+    // Extract pre-aggregated partner stats from materialized view
+    const kpi = (kpiRes.data ?? {}) as Record<string, number>;
+
     return ok({
       contacts: {
-        total: (totalPartnersRes.count ?? 0) + (totalContactsRes.count ?? 0),
-        toContact: (newPartnersRes.count ?? 0) + (newContactsRes.count ?? 0),
-        contacted: (contactedPartnersRes.count ?? 0) + (contactedContactsRes.count ?? 0),
+        total: (kpi.total_partners ?? 0) + (totalContactsRes.count ?? 0),
+        toContact: (kpi.partners_new ?? 0) + (newContactsRes.count ?? 0),
+        contacted: (kpi.partners_first_touch ?? 0) + (contactedContactsRes.count ?? 0),
         replied: repliedRes.count ?? 0,
       },
       outreach: {
@@ -146,7 +143,7 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
         pendingApproval: actionsProposedRes.count ?? 0,
       },
       messages: {
-        sentToday: sentTodayRes.count ?? 0,
+        sentToday: kpi.outreach_sent_today ?? 0,
         awaitingReply: awaitingRes.count ?? 0,
         repliesReceived: repliesReceivedRes.count ?? 0,
       },

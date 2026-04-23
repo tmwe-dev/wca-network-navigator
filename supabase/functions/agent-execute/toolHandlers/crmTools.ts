@@ -1,5 +1,6 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { escapeLike, resolvePartnerId } from "../shared.ts";
+import { applyLeadStatusChange } from "../../_shared/leadStatusGuard.ts";
 
 interface ActivityRow { id: string; title: string; status: string; activity_type: string; scheduled_at: string | null; due_date: string | null; source_meta: Record<string, unknown> | null; partner_id: string | null; description: string | null; created_at: string; }
 interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: string]: unknown; }
@@ -176,13 +177,27 @@ export async function handleUpdateReminder(
 
 export async function handleUpdateLeadStatus(
   supabase: SupabaseClient,
+  userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const status = String(args.status);
   if (args.contact_ids && Array.isArray(args.contact_ids)) {
-    const { error } = await supabase.from("imported_contacts").update({ lead_status: status }).in("id", args.contact_ids as string[]);
-    if (error) return { error: error.message };
-    return { success: true, updated: (args.contact_ids as string[]).length };
+    const contact_ids = args.contact_ids as string[];
+    let successCount = 0;
+    for (const contact_id of contact_ids) {
+      const result = await applyLeadStatusChange(supabase, {
+        table: "imported_contacts",
+        recordId: contact_id,
+        newStatus: status,
+        userId: userId,
+        actor: { type: "user", id: userId },
+        decisionOrigin: "manual",
+        trigger: `Manual lead status update via agent tool`,
+        contactIdForAudit: contact_id,
+      });
+      if (result.applied) successCount++;
+    }
+    return { success: true, updated: successCount };
   }
   return { error: "Specificare contact_ids" };
 }

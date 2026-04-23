@@ -13,6 +13,7 @@ import { UserPlus, Send, Clock, Handshake, Star, Snowflake, ArrowRight, GripVert
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { updateLeadStatus } from "@/data/partners";
 
 // ── Stage definitions mapped to lead_status ──
 interface Stage {
@@ -106,16 +107,13 @@ export function ContactPipelineView(): React.ReactElement {
       (old || []).map((c) => c.id === contactId ? { ...c, lead_status: newStatus } : c)
     );
 
-    const { error } = await supabase
-      .from("imported_contacts")
-      .update({ lead_status: newStatus })
-      .eq("id", contactId);
-
-    if (error) {
-      toast.error("Errore aggiornamento stato");
-      qc.invalidateQueries({ queryKey: queryKeys.contacts.pipeline() });
-    } else {
+    try {
+      // Route through updateLeadStatus helper which enforces server-side guard via RPC
+      await updateLeadStatus("imported_contacts", contactId, newStatus);
       toast.success(`Stato aggiornato a "${STAGES.find((s) => s.id === newStatus)?.label}"`);
+    } catch (err: unknown) {
+      toast.error(`Errore aggiornamento stato: ${err instanceof Error ? err.message : "Sconosciuto"}`);
+      qc.invalidateQueries({ queryKey: queryKeys.contacts.pipeline() });
     }
   }, [contacts, qc]);
 
