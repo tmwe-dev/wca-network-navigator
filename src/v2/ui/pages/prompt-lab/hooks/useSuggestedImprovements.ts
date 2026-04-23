@@ -7,7 +7,8 @@
  * - approve/reject/editAndApprove (admin)
  * - pendingCount per badge
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   createSuggestion,
   listPendingForAdmin,
@@ -33,6 +34,7 @@ export function useSuggestedImprovements(userId: string, isAdmin: boolean = fals
     applied: 0,
   });
   const [loading, setLoading] = useState(false);
+  const prevPendingCount = useRef<number>(0);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -42,6 +44,17 @@ export function useSuggestedImprovements(userId: string, isAdmin: boolean = fals
         countByStatus(),
         listUserPreferences(userId),
       ]);
+
+      // Notifica admin se ci sono nuovi suggerimenti pending
+      if (isAdmin && c.pending > prevPendingCount.current && prevPendingCount.current > 0) {
+        const newCount = c.pending - prevPendingCount.current;
+        toast.info(
+          `${newCount} nuov${newCount === 1 ? "o" : "i"} suggeriment${newCount === 1 ? "o" : "i"} da revisionare`,
+          { description: "Vai a Review nel Prompt Lab per approvarli." },
+        );
+      }
+      prevPendingCount.current = c.pending;
+
       setCounts(c);
       setPreferences(prefs);
 
