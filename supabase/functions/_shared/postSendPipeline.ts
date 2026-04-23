@@ -25,6 +25,8 @@ import { checkAndCreateEnrichmentRefresh } from "./oracleRefresh.ts";
 import { logInteractions } from "./interactionLogger.ts";
 import { logSupervisorAudit } from "./supervisorAudit.ts";
 import { channelLabel } from "./pipelineUtils.ts";
+import { createEvent, publishAndPersist } from "./domainEvents.ts";
+import { initLeadProcessManager } from "./processManagers/leadProcessManager.ts";
 
 type SupabaseClient = any;
 
@@ -116,8 +118,30 @@ export async function runPostSendPipeline(
   // === a. LOG ACTIVITY ===
   result.activityLogged = await logActivity(supabase, input, resolvedSourceId, resolvedSourceType, now);
 
-  // === b. UPDATE LEAD STATUS ===
-  result.statusUpdated = await updateLeadStatus(supabase, input, resolvedSourceType, resolvedSourceId, now);
+  // === b. UPDATE LEAD STATUS (via LeadProcessManager + DomainEvent) ===
+  // Il PM si registra sull'EventBus, riceve EmailSent, decide la transizione.
+  // Manteniamo fallback diretto per imported_contacts/business_cards (non gestiti dal PM).
+  const leadPM = initLeadProcessManager(supabase);
+  if (resolvedSourceType === "partner" && input.partnerId) {
+    // Pubblica EmailSent → il PM reagisce con new→first_touch_sent se necessario
+    const emailSentEvent = createEvent("email.sent", input.userId,
+      { type: (input.actorType || "system") as "user" | "system" | "cron" | "ai_agent", name: `postSendPipeline/${input.source}` },
+      {
+        partnerId: input.partnerId,
+        contactId: input.contactId || undefined,
+        contactEmail: input.to,
+        subject: input.subject || "",
+        channel: "email",
+        sequenceDay: input.sequenceDay,
+      },
+    );
+    await publishAndPersist(supabase, emailSentEvent);
+    // Il PM avrà già reagito (sincrono su EventBus in-process)
+    result.statusUpdated = true; // Il PM decide se applicare o meno
+  } else {
+    // Fallback per imported_contacts / business_cards (legacy, non ancora migrati al PM)
+    result.statusUpdated = await updateLeadStatus(supabase, input, resolvedSourceType, resolvedSourceId, now);
+  }
 
   // === c. CREATE REMINDER FOLLOW-UP ===
   result.reminderCreated = await createReminder(supabase, input, now);

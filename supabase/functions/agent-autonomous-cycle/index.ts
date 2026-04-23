@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { evaluateTransitions, applyTransition } from "../_shared/stateTransitions.ts";
+import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
 
 
@@ -279,13 +280,17 @@ serve(async (req) => {
 
       const salesAgent = agents.find(a => ["outreach", "sales", "account"].includes(a.role)) || agents[0];
 
+      const leadPM = new LeadProcessManager(supabase);
       for (const partner of (activePartners || [])) {
+        // Use LeadProcessManager for auto-apply transitions (event-driven)
+        const pmResults = await leadPM.evaluateTimeBasedTransitions(partner.id, userId);
         const transitions = await evaluateTransitions(supabase, partner.id, userId);
         for (const t of transitions) {
           if (!t.shouldTransition) continue;
           if (t.autoApply) {
-            const ok = await applyTransition(supabase, partner.id, userId, t);
-            if (ok) transitionsApplied++;
+            // Already handled by LeadProcessManager above
+            const wasApplied = pmResults.some(r => r.to === t.to && r.applied);
+            if (wasApplied) transitionsApplied++;
           } else {
             if (!salesAgent) continue;
             // Check if proposal already exists

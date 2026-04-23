@@ -19,6 +19,7 @@ import {
 import { decideNextActions } from "./decider.ts";
 import { evaluateTransitions, applyTransition } from "../stateTransitions.ts";
 import { checkCadence, type CadenceCheckResult } from "../cadenceEngine.ts";
+import { LeadProcessManager } from "../processManagers/leadProcessManager.ts";
 
 /**
  * Carica lo stato di un partner e calcola le next actions.
@@ -46,20 +47,18 @@ export async function evaluatePartner(
   userId: string,
   userAutonomy?: AutonomyLevel,
 ): Promise<EvaluatePartnerResult> {
-  // ── Phase 0: State Transitions — auto-apply pending changes FIRST ──
+  // ── Phase 0: State Transitions via LeadProcessManager ──
   const appliedTransitions: EvaluatePartnerResult["appliedTransitions"] = [];
   try {
-    const transitions = await evaluateTransitions(supabase, partnerId, userId);
-    for (const t of transitions) {
-      if (t.shouldTransition && t.autoApply) {
-        const ok = await applyTransition(supabase, partnerId, userId, t);
-        if (ok) {
-          appliedTransitions.push({ from: t.from, to: t.to, trigger: t.trigger });
-        }
+    const leadPM = new LeadProcessManager(supabase);
+    const pmResults = await leadPM.evaluateTimeBasedTransitions(partnerId, userId);
+    for (const r of pmResults) {
+      if (r.applied) {
+        appliedTransitions.push({ from: r.from, to: r.to, trigger: r.trigger });
       }
     }
   } catch (e) {
-    console.warn("[evaluatePartner] stateTransitions failed (non-blocking):", e);
+    console.warn("[evaluatePartner] LeadProcessManager failed (non-blocking):", e);
   }
 
   // ── Phase 1: Load partner (re-read after transitions may have changed lead_status) ──

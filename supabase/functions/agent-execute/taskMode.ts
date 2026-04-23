@@ -43,14 +43,15 @@ export async function handleStateTransition(
     throw new Error("task_invalid: partner_id/to_state mancanti");
   }
 
-  const { applyTransition } = await import("../_shared/stateTransitions.ts");
-  const applied = await applyTransition(supabase, partnerId, userId, {
-    shouldTransition: true,
-    from: fromState,
-    to: toState,
+  // Use LeadProcessManager for transitions (event-driven architecture)
+  const { LeadProcessManager } = await import("../_shared/processManagers/leadProcessManager.ts");
+  const leadPM = new LeadProcessManager(supabase);
+  const result = await leadPM.requestTransition(partnerId, userId, toState, {
     trigger,
-    autoApply: true,
+    actor: { type: "ai_agent", name: "agent-execute/taskMode" },
+    decisionOrigin: "ai_approved",
   });
+  const applied = result.applied;
 
   await supabase.from("agent_tasks").update({
     status: applied ? "completed" : "failed",
