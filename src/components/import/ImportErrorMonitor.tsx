@@ -59,7 +59,7 @@ export function ImportErrorMonitor({
   // Single batch fix
   const handleSingleBatch = useCallback(async () => {
     if (!activeLogId) return;
-    const prompt = customPrompt.trim() || undefined;
+    const prompt = customPrompt.trim() || "";
     await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt });
   }, [activeLogId, fixErrors, customPrompt]);
 
@@ -76,11 +76,11 @@ export function ImportErrorMonitor({
 
     while (hasMore) {
       try {
-        const prompt = customPrompt.trim() || undefined;
-        const result = await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt });
-        corrected += result.corrected;
-        dismissed += result.dismissed;
-        hasMore = result.has_more;
+        const prompt = customPrompt.trim() || "";
+        const result = (await fixErrors.mutateAsync({ importLogId: activeLogId, customPrompt: prompt })) as unknown as { corrected: number; dismissed: number; has_more: boolean };
+        corrected += result?.corrected ?? 0;
+        dismissed += result?.dismissed ?? 0;
+        hasMore = !!result?.has_more;
         setBatchProgress({
           processed: corrected + dismissed,
           total,

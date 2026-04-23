@@ -8,7 +8,7 @@ import { getCustomGoalPlaceholder } from "@/lib/oracleCoherence";
 interface GoalInputProps {
   selectedType: EmailType | null;
   customGoal: string;
-  coherence: { ok: boolean; warning?: string; suggestion?: string };
+  coherence: { ok: boolean; warning?: string | null; suggestion?: string | null };
   onGoalChange: (text: string) => void;
   speech: {
     listening: boolean;
