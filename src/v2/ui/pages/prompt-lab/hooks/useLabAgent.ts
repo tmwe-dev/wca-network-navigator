@@ -7,6 +7,7 @@ import type { Block, BlockSource } from "../types";
 import { findKbEntries } from "@/data/kbEntries";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
 import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnostics";
+import { useArchitectKb } from "./useArchitectKb";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -225,6 +226,17 @@ async function loadVoiceTemplatesFewShot(): Promise<string> {
 export function useLabAgent() {
   const [messages, setMessages] = useState<LabChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * mode — Fase 4 dell'evoluzione Atlas/Architect.
+   *  - "standard" (default): comportamento storico, miglioramento blocco-per-blocco.
+   *  - "architect": il Lab Agent NON riscrive ma diagnostica strutturalmente,
+   *     usando la procedura KB isolata (`lab_architect_procedure`).
+   * Lo stato vive nel hook: ogni consumer (Lab Agent UI, GlobalImproverDialog…)
+   * può leggerlo/cambiarlo. La modalità Architect carica una KB extra che
+   * NESSUN agente di produzione vede mai.
+   */
+  const [mode, setMode] = useState<"standard" | "architect">("standard");
+  const { loadProcedure: loadArchitectProcedure } = useArchitectKb();
 
   const appendMessage = useCallback((m: Omit<LabChatMessage, "id" | "timestamp">) => {
     setMessages((prev) => [
