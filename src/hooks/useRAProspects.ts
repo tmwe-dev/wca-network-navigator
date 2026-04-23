@@ -40,7 +40,11 @@ export function useRAProspects(filters: RAProspectFilters = {}) {
       const to = from + pageSize - 1;
       q = q.range(from, to);
 
-      const { data, error, count } = await q;
+      const { data, error, count } = (await q) as {
+        data: unknown;
+        error: unknown;
+        count: unknown;
+      };
       if (error) throw error;
 
       return {
@@ -59,10 +63,13 @@ export function useRAProspect(id: string | undefined) {
     queryKey: queryKeys.prospects.ra.prospect(id),
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await untypedFrom("ra_prospects")
+      const { data, error } = (await untypedFrom("ra_prospects")
         .select("*")
         .eq("id", id)
-        .single();
+        .single()) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return data as RAProspect;
     },
@@ -75,10 +82,13 @@ export function useRAProspectContacts(prospectId: string | undefined) {
     queryKey: queryKeys.prospects.ra.contacts(prospectId),
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await untypedFrom("ra_contacts")
+      const { data, error } = (await untypedFrom("ra_contacts")
         .select("*")
         .eq("prospect_id", prospectId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return (data ?? []) as RAContact[];
     },
@@ -91,10 +101,13 @@ export function useRAProspectInteractions(prospectId: string | undefined) {
     queryKey: queryKeys.prospects.ra.interactions(prospectId),
     queryFn: async () => {
       if (!prospectId) return [];
-      const { data, error } = await untypedFrom("ra_interactions")
+      const { data, error } = (await untypedFrom("ra_interactions")
         .select("*")
         .eq("prospect_id", prospectId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return (data ?? []) as RAInteraction[];
     },
@@ -107,26 +120,34 @@ export function useUpsertRAProspect() {
   return useMutation({
     mutationFn: async (prospect: Partial<RAProspect> & { company_name: string }) => {
       if (prospect.partita_iva) {
-        const { data: existing } = await untypedFrom("ra_prospects")
+        const { data: existing } = (await untypedFrom("ra_prospects")
           .select("id")
           .eq("partita_iva", prospect.partita_iva)
-          .maybeSingle();
+          .maybeSingle()) as {
+          data: unknown;
+        };
 
         if (existing) {
-          const { data, error } = await untypedFrom("ra_prospects")
+          const { data, error } = (await untypedFrom("ra_prospects")
             .update({ ...prospect, updated_at: new Date().toISOString() })
             .eq("id", (existing as Record<string, string>).id)
             .select()
-            .single();
+            .single()) as {
+            data: unknown;
+            error: unknown;
+          };
           if (error) throw error;
           return data;
         }
       }
 
-      const { data, error } = await untypedFrom("ra_prospects")
+      const { data, error } = (await untypedFrom("ra_prospects")
         .insert(prospect)
         .select()
-        .single();
+        .single()) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return data;
     },
@@ -140,9 +161,11 @@ export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: RALeadStatus }) => {
-      const { error } = await untypedFrom("ra_prospects")
+      const { error } = (await untypedFrom("ra_prospects")
         .update({ lead_status: status, updated_at: new Date().toISOString() })
-        .eq("id", id);
+        .eq("id", id)) as {
+        error: unknown;
+      };
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,9 +178,11 @@ export function useDeleteRAProspects() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await untypedFrom("ra_prospects")
+      const { error } = (await untypedFrom("ra_prospects")
         .delete()
-        .in("id", ids);
+        .in("id", ids)) as {
+        error: unknown;
+      };
       if (error) throw error;
     },
     onSuccess: () => {

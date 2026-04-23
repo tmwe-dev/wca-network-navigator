@@ -19,5 +19,5 @@ import { supabase } from "@/integrations/supabase/client";
  * this helper until they're added to the generated schema.
  */
 export function untypedFrom(table: string): Record<string, (...args: unknown[]) => unknown> {
-  return (supabase as unknown as Record<string, (...args: unknown[]) => unknown>).from(table);
+  return ((supabase as unknown) as Record<string, (...args: unknown[]) => unknown>).from(table);
 }

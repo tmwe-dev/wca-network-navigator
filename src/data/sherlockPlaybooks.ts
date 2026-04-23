@@ -20,23 +20,29 @@ export const sherlockKeys = {
 // ───────────────────────── Playbooks ─────────────────────────
 
 export async function listPlaybooks(): Promise<SherlockPlaybook[]> {
-  const { data, error } = await untypedFrom("sherlock_playbooks")
+  const { data, error } = (await untypedFrom("sherlock_playbooks")
     .select("*")
     .eq("is_active", true)
     .order("level", { ascending: true })
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })) as {
+    data: unknown;
+    error: unknown;
+  };
   if (error) throw error;
   return (data ?? []) as SherlockPlaybook[];
 }
 
 export async function getPlaybookByLevel(level: SherlockLevel): Promise<SherlockPlaybook | null> {
-  const { data, error } = await untypedFrom("sherlock_playbooks")
+  const { data, error } = (await untypedFrom("sherlock_playbooks")
     .select("*")
     .eq("level", level)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()) as {
+    data: unknown;
+    error: unknown;
+  };
   if (error) throw error;
   return (data as SherlockPlaybook | null) ?? null;
 }
@@ -57,7 +63,7 @@ interface CreateInvestigationInput {
 export async function createInvestigation(
   input: CreateInvestigationInput,
 ): Promise<SherlockInvestigation> {
-  const { data, error } = await untypedFrom("sherlock_investigations")
+  const { data, error } = (await untypedFrom("sherlock_investigations")
     .insert({
       user_id: input.user_id,
       operator_id: input.operator_id ?? null,
@@ -70,7 +76,10 @@ export async function createInvestigation(
       status: "running",
     })
     .select("*")
-    .single();
+    .single()) as {
+    data: unknown;
+    error: unknown;
+  };
   if (error) throw error;
   return data as SherlockInvestigation;
 }
@@ -86,9 +95,11 @@ export async function updateInvestigation(
     completed_at?: string;
   },
 ): Promise<void> {
-  const { error } = await untypedFrom("sherlock_investigations")
+  const { error } = (await untypedFrom("sherlock_investigations")
     .update(patch as Record<string, unknown>)
-    .eq("id", id);
+    .eq("id", id)) as {
+    error: unknown;
+  };
   if (error) throw error;
 }
 
@@ -102,15 +113,19 @@ export async function updatePartnerWebsiteIfMissing(
 ): Promise<boolean> {
   if (!partnerId || !website) return false;
   try {
-    const { data: current } = await untypedFrom("partners")
+    const { data: current } = (await untypedFrom("partners")
       .select("website")
       .eq("id", partnerId)
-      .maybeSingle();
+      .maybeSingle()) as {
+      data: unknown;
+    };
     const existing = (current as { website?: string | null } | null)?.website;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = await untypedFrom("partners")
+    const { error } = (await untypedFrom("partners")
       .update({ website } as Record<string, unknown>)
-      .eq("id", partnerId);
+      .eq("id", partnerId)) as {
+      error: unknown;
+    };
     if (error) throw error;
     return true;
   } catch (e) {
@@ -129,15 +144,19 @@ export async function updatePartnerLinkedinIfMissing(
 ): Promise<boolean> {
   if (!partnerId || !linkedinUrl) return false;
   try {
-    const { data: current } = await untypedFrom("partners")
+    const { data: current } = (await untypedFrom("partners")
       .select("linkedin_url")
       .eq("id", partnerId)
-      .maybeSingle();
+      .maybeSingle()) as {
+      data: unknown;
+    };
     const existing = (current as { linkedin_url?: string | null } | null)?.linkedin_url;
     if (existing && existing.trim().length > 0) return false;
-    const { error } = await untypedFrom("partners")
+    const { error } = (await untypedFrom("partners")
       .update({ linkedin_url: linkedinUrl } as Record<string, unknown>)
-      .eq("id", partnerId);
+      .eq("id", partnerId)) as {
+      error: unknown;
+    };
     if (error) throw error;
     return true;
   } catch (e) {

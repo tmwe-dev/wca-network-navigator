@@ -103,7 +103,7 @@ export function useAcquisitionPipelineActions(
       console.error("create/update acquisition job failed", err);
     }
 
-    const localStats = await runExtensionLoop(jobId!, items);
+    const localStats = await runExtensionLoop(jobId!, items as Record<string, unknown>[]);
 
     state.setCanvasPhase("idle");
     state.setCanvasData(null);

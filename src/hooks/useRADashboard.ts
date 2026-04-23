@@ -8,7 +8,7 @@ export function useRADashboard() {
   return useQuery({
     queryKey: RA_DASHBOARD_KEY,
     queryFn: async (): Promise<RADashboardStats> => {
-      const results = await Promise.all([
+      const results = (await Promise.all([
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }),
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("email", "is", null),
         untypedFrom("ra_prospects").select("*", { count: "exact", head: true }).not("pec", "is", null),
@@ -16,7 +16,7 @@ export function useRADashboard() {
         untypedFrom("ra_prospects").select("*").order("created_at", { ascending: false }).limit(10),
         untypedFrom("ra_scraping_jobs").select("*").in("status", ["pending", "running"]).order("created_at", { ascending: false }).limit(5),
         untypedFrom("ra_prospects").select("codice_ateco, descrizione_ateco"),
-      ]) as Record<string, unknown>[];
+      ])) as unknown as Record<string, unknown>[];
       const totalProspects = (results[0] as Record<string, unknown>).count as number | null;
       const withEmail = (results[1] as Record<string, unknown>).count as number | null;
       const withPec = (results[2] as Record<string, unknown>).count as number | null;

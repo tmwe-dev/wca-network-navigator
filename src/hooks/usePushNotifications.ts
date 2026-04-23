@@ -136,7 +136,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
           }
 
           // Trigger callback
-          onNotification?.(payload.new);
+          onNotification?.(payload.new as Notification);
         }
       )
       .subscribe();

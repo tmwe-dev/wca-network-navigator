@@ -101,12 +101,12 @@ describe("Calendar Data Layer", () => {
       vi.mocked(supabase.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
       } as any);
-      const mockQuery = vi.mocked(supabase.from)("calendar_events");
+      const mockQuery = vi.mocked(supabase.from)("calendar_events" as any);
       vi.mocked(mockQuery.select).mockReturnValueOnce({
         eq: vi.fn().mockReturnThis(),
       } as any);
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
+      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
       vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
         gte: vi.fn().mockReturnThis(),
       } as any);
@@ -132,7 +132,7 @@ describe("Calendar Data Layer", () => {
         select: vi.fn().mockReturnThis(),
       } as any);
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
+      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
       vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
         gte: vi.fn().mockReturnThis(),
       } as any);
@@ -159,7 +159,7 @@ describe("Calendar Data Layer", () => {
         select: vi.fn().mockReturnThis(),
       } as any);
 
-      const mockSelectFn = vi.mocked(supabase.from)("calendar_events").select("*");
+      const mockSelectFn = vi.mocked(supabase.from)("calendar_events" as any).select("*");
       vi.mocked(mockSelectFn.eq).mockReturnValueOnce({
         single: vi.fn().mockResolvedValueOnce({ data: mockCalendarEvent, error: null }),
       } as any);

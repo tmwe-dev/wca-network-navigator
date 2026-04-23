@@ -71,7 +71,7 @@ async function convertToExcel(
 // ── Export functions ──
 
 async function fetchContactsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  let query = (supabase as any)
     .from("imported_contacts")
     .select(
       "id, name, email, phone, mobile, company_name, title, country, lead_status, created_at, interaction_count"
@@ -99,7 +99,7 @@ async function fetchContactsData(filters?: ExportFilters): Promise<Record<string
 }
 
 async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  let query = (supabase as any)
     .from("partners")
     .select(
       "id, name, country, website, email, phone, registration_number, contact_person, status, created_at"
@@ -127,7 +127,7 @@ async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string
 }
 
 async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  let query = (supabase as any)
     .from("deals")
     .select(
       "id, title, partner_id, contact_id, stage, amount, probability, close_date, created_at, updated_at"
@@ -150,7 +150,7 @@ async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, u
 }
 
 async function fetchEmailsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  let query = (supabase as any)
     .from("emails")
     .select(
       "id, from_address, to_address, subject, created_at, message_id, contact_id, campaign_id, status"
@@ -251,7 +251,7 @@ export function useExportExcel() {
       const excelBuffer = await convertToExcel(columns, data, options.entity);
 
       // Trigger download
-      const blob = new Blob([excelBuffer], {
+      const blob = new Blob([excelBuffer as unknown as BlobPart], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const link = document.createElement("a");

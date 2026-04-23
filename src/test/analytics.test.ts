@@ -106,7 +106,7 @@ describe("Analytics Data Layer", () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table) => {
+      mockSupabase.from.mockImplementation((table: any) => {
         callCount++;
         return callCount === 1 ? mockActivityQuery : mockChannelQuery;
       });
@@ -136,7 +136,7 @@ describe("Analytics Data Layer", () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table) => {
+      mockSupabase.from.mockImplementation((table: any) => {
         callCount++;
         return callCount === 1 ? mockActivityQuery : mockChannelQuery;
       });
@@ -163,7 +163,7 @@ describe("Analytics Data Layer", () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table) => {
+      mockSupabase.from.mockImplementation((table: any) => {
         callCount++;
         return callCount === 1 ? mockActivityQuery : mockChannelQuery;
       });
@@ -648,7 +648,7 @@ describe("Analytics Data Layer", () => {
       const result = await getActivityTimeline("user-1", 30);
 
       for (let i = 1; i < result.length; i++) {
-        expect(result[i - 1].date).toBeGreaterThanOrEqual(result[i].date);
+        expect(result[i - 1].date as string).toBeGreaterThanOrEqual(result[i].date as string);
       }
     });
 
@@ -710,7 +710,7 @@ describe("Analytics Data Layer", () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table) => {
+      mockSupabase.from.mockImplementation((table: any) => {
         callCount++;
         // First set of calls for current period
         if (callCount <= 2) {
@@ -763,7 +763,7 @@ describe("Analytics Data Layer", () => {
       };
 
       let callCount = 0;
-      mockSupabase.from.mockImplementation((table) => {
+      mockSupabase.from.mockImplementation((table: any) => {
         callCount++;
         if (callCount === 1 || callCount === 3) return mockActivityQuery;
         if (callCount === 2) return mockChannelQueryCurrent;

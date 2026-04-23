@@ -79,7 +79,7 @@ export function useFireScrapeExtensionBridge() {
           pendingRef.current.delete(requestId);
           resolve({ success: false, error: "Timeout" } as FsResponse<T>);
         }, timeoutMs);
-        pendingRef.current.set(requestId, (r) => { clearTimeout(timer); resolve(r); });
+        pendingRef.current.set(requestId, (r) => { clearTimeout(timer); resolve(r as FsResponse<T>); });
         window.postMessage({ direction: "from-webapp-fs", action, requestId, ...payload }, window.location.origin);
       }),
     []

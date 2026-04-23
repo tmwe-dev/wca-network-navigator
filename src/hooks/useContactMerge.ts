@@ -86,7 +86,7 @@ export function useFindDuplicates() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicates,
     queryFn: async () => {
-      const { data: contacts, error } = await supabase
+      const { data: contacts, error } = await (supabase as any)
         .from("imported_contacts")
         .select(
           "id, name, email, phone, mobile, company_name, company_id, title, country, created_at, interaction_count"
@@ -228,7 +228,7 @@ export function useMergeContacts() {
       if (updateError) throw updateError;
 
       // 2. Reassign activities to surviving contact
-      const { error: activityError } = await supabase
+      const { error: activityError } = await (supabase as any)
         .from("activities")
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
@@ -236,7 +236,7 @@ export function useMergeContacts() {
       if (activityError) console.warn("Activity reassignment warning:", activityError);
 
       // 3. Reassign emails to surviving contact
-      const { error: emailError } = await supabase
+      const { error: emailError } = await (supabase as any)
         .from("emails")
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
@@ -259,8 +259,10 @@ export function useDuplicateCount() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicateCount,
     queryFn: async () => {
-      const { data } = await useFindDuplicates().data;
-      return data?.length || 0;
+      const result = await (supabase as any)
+        .from("imported_contacts")
+        .select("id", { count: "exact", head: true });
+      return result.count || 0;
     },
   });
 }

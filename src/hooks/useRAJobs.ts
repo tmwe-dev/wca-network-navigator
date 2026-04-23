@@ -15,7 +15,10 @@ export function useRAJobs(status?: RAScrapingJob["status"]) {
 
       if (status) q = q.eq("status", status);
 
-      const { data, error } = await q;
+      const { data, error } = (await q) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return (data ?? []) as RAScrapingJob[];
     },
@@ -33,7 +36,7 @@ export function useCreateRAJob() {
         "job_type" | "ateco_codes" | "regions" | "provinces" | "min_fatturato" | "max_fatturato" | "delay_seconds" | "batch_size"
       >
     ) => {
-      const { data, error } = await untypedFrom("ra_scraping_jobs")
+      const { data, error } = (await untypedFrom("ra_scraping_jobs")
         .insert({
           ...job,
           status: "pending",
@@ -43,7 +46,10 @@ export function useCreateRAJob() {
           error_count: 0,
         })
         .select()
-        .single();
+        .single()) as {
+        data: unknown;
+        error: unknown;
+      };
       if (error) throw error;
       return data as RAScrapingJob;
     },
@@ -60,9 +66,11 @@ export function useUpdateRAJob() {
       id,
       ...updates
     }: Partial<RAScrapingJob> & { id: string }) => {
-      const { error } = await untypedFrom("ra_scraping_jobs")
+      const { error } = (await untypedFrom("ra_scraping_jobs")
         .update(updates)
-        .eq("id", id);
+        .eq("id", id)) as {
+        error: unknown;
+      };
       if (error) throw error;
     },
     onSuccess: () => {
