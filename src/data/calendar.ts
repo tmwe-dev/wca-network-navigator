@@ -5,11 +5,33 @@
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
-import type { Database } from "@/integrations/supabase/types";
 
-type CalendarEventRow = Database["public"]["Tables"]["calendar_events"]["Row"];
-type CalendarEventInsert = Database["public"]["Tables"]["calendar_events"]["Insert"];
-type CalendarEventUpdate = Database["public"]["Tables"]["calendar_events"]["Update"];
+// Local type definitions for calendar_events table
+// (table exists in database but not in generated Database types)
+interface CalendarEventRow {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  event_type: "meeting" | "call" | "task" | "reminder" | "follow_up";
+  start_at: string;
+  end_at: string | null;
+  all_day: boolean;
+  partner_id: string | null;
+  contact_id: string | null;
+  deal_id: string | null;
+  location: string | null;
+  color: string;
+  recurrence: "daily" | "weekly" | "monthly" | "none" | null;
+  reminder_minutes: number;
+  status: "scheduled" | "completed" | "cancelled";
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CalendarEventInsert extends Omit<CalendarEventRow, "id" | "created_at" | "updated_at"> {}
+interface CalendarEventUpdate extends Partial<Omit<CalendarEventRow, "id" | "created_at" | "updated_at">> {}
 
 // ─── Types ──────────────────────────────────────────────
 export type EventType = "meeting" | "call" | "task" | "reminder" | "follow_up";
@@ -54,7 +76,7 @@ export async function listEvents(
   from: string,
   to: string,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("user_id", userId)
@@ -70,7 +92,7 @@ export async function listEvents(
  * Get a single event by ID
  */
 export async function getEvent(id: string): Promise<CalendarEvent | null> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("id", id)
@@ -90,7 +112,7 @@ export async function getEvent(id: string): Promise<CalendarEvent | null> {
  * Create a new event
  */
 export async function createEvent(event: CalendarEventInsert): Promise<CalendarEvent> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .insert(event)
     .select()
@@ -104,7 +126,7 @@ export async function createEvent(event: CalendarEventInsert): Promise<CalendarE
  * Update an existing event
  */
 export async function updateEvent(id: string, updates: CalendarEventUpdate): Promise<CalendarEvent> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
@@ -119,7 +141,7 @@ export async function updateEvent(id: string, updates: CalendarEventUpdate): Pro
  * Delete an event
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+  const { error } = await (supabase as any).from("calendar_events").delete().eq("id", id);
 
   if (error) throw error;
 }
@@ -130,7 +152,7 @@ export async function deleteEvent(id: string): Promise<void> {
 export async function getUpcomingEvents(userId: string, limit = 5): Promise<CalendarEvent[]> {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("user_id", userId)
@@ -147,7 +169,7 @@ export async function getUpcomingEvents(userId: string, limit = 5): Promise<Cale
  * Get events for a specific partner
  */
 export async function getEventsForPartner(partnerId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("partner_id", partnerId)
@@ -162,7 +184,7 @@ export async function getEventsForPartner(partnerId: string): Promise<CalendarEv
  * Get events for a specific deal
  */
 export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("deal_id", dealId)
@@ -176,7 +198,7 @@ export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]>
  * Get events for a specific contact
  */
 export async function getEventsForContact(contactId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("contact_id", contactId)
@@ -193,7 +215,7 @@ export async function getEventsByType(
   userId: string,
   eventType: EventType,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("calendar_events")
     .select("*")
     .eq("user_id", userId)

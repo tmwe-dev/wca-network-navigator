@@ -129,7 +129,7 @@ export async function getEmailMetrics(
  */
 export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsData> {
   try {
-    const { data: partners } = await supabase
+    const { data: partners } = await (supabase as any)
       .from("partners")
       .select("lead_status, country, enrichment_score")
       .eq("user_id", userId);
@@ -205,7 +205,7 @@ export async function getOutreachMetrics(
     if (channels) {
       for (const msg of channels) {
         if (msg.direction === "outbound") {
-          const date = msg.created_at.split("T")[0];
+          const date = (msg.created_at ?? "").split("T")[0];
           emailsSentPerDay[date] = (emailsSentPerDay[date] || 0) + 1;
         }
       }
@@ -256,7 +256,7 @@ export async function getAIUsageMetrics(
   dateRange: { from: Date; to: Date }
 ): Promise<AIUsageMetricsData> {
   try {
-    const { data: logs } = await supabase
+    const { data: logs } = await (supabase as any)
       .from("supervisor_audit_log")
       .select("created_at, action")
       .eq("user_id", userId)
@@ -273,7 +273,7 @@ export async function getAIUsageMetrics(
         byType[type] = (byType[type] || 0) + 1;
 
         // Count daily
-        const date = log.created_at.split("T")[0];
+        const date = (log.created_at ?? "").split("T")[0];
         dailyUsage[date] = (dailyUsage[date] || 0) + 1;
       }
     }
@@ -304,7 +304,7 @@ export async function getAIUsageMetrics(
  */
 export async function getPipelineMetrics(userId: string): Promise<PipelineMetricsData> {
   try {
-    const { data: deals } = await supabase
+    const { data: deals } = await (supabase as any)
       .from("deals")
       .select("stage, value")
       .eq("user_id", userId);
@@ -395,7 +395,7 @@ export async function getActivityTimeline(
 
     if (activities) {
       for (const activity of activities) {
-        const date = activity.created_at.split("T")[0];
+        const date = (activity.created_at ?? "").split("T")[0];
         const type = activity.activity_type || "other";
 
         if (!timeline[date]) {
