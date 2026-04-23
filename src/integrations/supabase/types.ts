@@ -1744,6 +1744,54 @@ export type Database = {
         }
         Relationships: []
       }
+      block_versions: {
+        Row: {
+          block_id: string
+          changed_by: string | null
+          changed_by_label: string | null
+          communication_context: Json | null
+          content: string
+          created_at: string | null
+          id: string
+          previous_content: string | null
+          run_id: string | null
+          source_field: string | null
+          source_kind: string
+          source_table: string
+          version_num: number
+        }
+        Insert: {
+          block_id: string
+          changed_by?: string | null
+          changed_by_label?: string | null
+          communication_context?: Json | null
+          content: string
+          created_at?: string | null
+          id?: string
+          previous_content?: string | null
+          run_id?: string | null
+          source_field?: string | null
+          source_kind: string
+          source_table: string
+          version_num: number
+        }
+        Update: {
+          block_id?: string
+          changed_by?: string | null
+          changed_by_label?: string | null
+          communication_context?: Json | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          previous_content?: string | null
+          run_id?: string | null
+          source_field?: string | null
+          source_kind?: string
+          source_table?: string
+          version_num?: number
+        }
+        Relationships: []
+      }
       bridge_tokens: {
         Row: {
           agent_id: string | null
@@ -4484,6 +4532,7 @@ export type Database = {
           access_count: number | null
           category: string
           chapter: string
+          communication_context: Json | null
           content: string
           created_at: string
           deleted_at: string | null
@@ -4507,6 +4556,7 @@ export type Database = {
           access_count?: number | null
           category?: string
           chapter?: string
+          communication_context?: Json | null
           content?: string
           created_at?: string
           deleted_at?: string | null
@@ -4530,6 +4580,7 @@ export type Database = {
           access_count?: number | null
           category?: string
           chapter?: string
+          communication_context?: Json | null
           content?: string
           created_at?: string
           deleted_at?: string | null
