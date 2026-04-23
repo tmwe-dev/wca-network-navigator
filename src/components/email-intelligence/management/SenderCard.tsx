@@ -98,7 +98,7 @@ export function SenderCard({
   const loadAddressRule = async () => {
     try {
       setIsLoadingRule(true);
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('email_address_rules')
         .select('id, custom_prompt, applied_rules, prompt_template_id')
         .eq('email_address', sender.email)
@@ -117,7 +117,7 @@ export function SenderCard({
         });
       } else {
         // Create a new rule if it doesn't exist
-        const { data: newRule, error: createError } = await supabase
+        const { data: newRule, error: createError } = await sb
           .from('email_address_rules')
           .insert({
             email_address: sender.email,
@@ -159,7 +159,7 @@ export function SenderCard({
 
     try {
       setIsSavingRule(true);
-      const { error } = await supabase
+      const { error } = await sb
         .from('email_address_rules')
         .update({
           custom_prompt: prompt || null,
@@ -185,7 +185,7 @@ export function SenderCard({
 
     try {
       setIsSavingRule(true);
-      const { error } = await supabase
+      const { error } = await sb
         .from('email_address_rules')
         .update({ applied_rules: rules })
         .eq('id', addressRule.id);
