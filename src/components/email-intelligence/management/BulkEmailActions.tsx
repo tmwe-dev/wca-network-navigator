@@ -102,7 +102,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
 
       if (fetchError) throw fetchError;
 
-      const emailIds = (emails || []).map(e => e.id);
+      const emailIds = (emails || []).map((e: { id: string }) => e.id);
       const total = emailIds.length;
 
       if (total === 0) {
@@ -149,14 +149,13 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
       }
 
       // Show success message
-      const actionLabels: Record<ActionType, string> = {
+      const actionLabels: Record<Exclude<ActionType, null>, string> = {
         delete: 'eliminate',
         archive: 'archiviate',
         'mark-read': 'marked as read',
-        null: ''
       };
-
-      toast.success(`${total} email ${actionLabels[action]} da ${senderEmail}`);
+      const label = action ? actionLabels[action] : '';
+      toast.success(`${total} email ${label} da ${senderEmail}`);
 
       // Reset UI
       setPendingAction(null);
