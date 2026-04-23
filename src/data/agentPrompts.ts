@@ -1,20 +1,102 @@
 /**
  * Registro Metadati Agenti AI
  *
- * Espone AGENT_PROMPTS: vista compatibile per documentazione (AIExportPanel)
+ * Espone:
+ *  - AGENT_REGISTRY: registro esteso (runtime, contratti, prompt sources, KB, tools)
+ *    usato da Agent Atlas (/v2/prompt-lab/atlas) e dal Lab Agent in modalità Architect.
+ *  - AGENT_PROMPTS: vista compatibile per documentazione (AIExportPanel).
+ *
+ * NOTE — DEBITO TECNICO NOTO (v1):
+ * Questo registro è MANUALE. Quando aggiungi una nuova edge function che esegue
+ * un prompt LLM o un nuovo agente conversazionale, AGGIORNA QUI manualmente.
+ * Esiste un test guard (src/v2/test/agentRegistry.test.ts) che fallisce se trova
+ * directory in supabase/functions/ etichettate come "agent" non mappate qui.
  */
 
-// Internal registry used to build AGENT_PROMPTS
-interface AgentRegistryEntry {
-  id: string;
-  coreFile: string;
-  kbCategories: string[];
-  criticalProcedures: string[];
-  requiredVars: string[];
-  description: string;
+/** Categoria funzionale dell'agente (drives sidebar grouping in Atlas). */
+export type AgentCategory =
+  | "conversational"
+  | "generative"
+  | "classification"
+  | "reviewer"
+  | "scraper"
+  | "voice"
+  | "worker"
+  | "strategy";
+
+/** Sorgente di un blocco prompt visualizzato in Atlas (mirror BlockSource del Prompt Lab). */
+export interface AgentPromptSourceRef {
+  /** Tab del Prompt Lab che ospita l'editor di questo blocco. */
+  promptLabTab:
+    | "system_prompt"
+    | "kb_doctrine"
+    | "operative"
+    | "email"
+    | "voice"
+    | "playbooks"
+    | "personas"
+    | "ai_profile"
+    | "journalists"
+    | "operative_kb"
+    | "administrative_kb"
+    | "support_kb"
+    | "domain_routing";
+  /** Etichetta umana del blocco (mostrata nella colonna Prompt). */
+  label: string;
+  /** Descrizione tecnica della sorgente DB/file (per tooltip). */
+  source: string;
+  /** Riferimento per "Apri nell'editor" (chiave/categoria/id da risolvere a runtime). */
+  hint?: string;
 }
 
-const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
+/** Metadata runtime: dove gira, con quale modello, chi lo invoca. */
+export interface AgentRuntime {
+  /** Edge function principale che esegue questo agente (o "client" se vive solo lato browser). */
+  edgeFunction: string;
+  /** Modello AI di default (override possibile via app_settings). */
+  modelDefault: string;
+  /** Trigger: chi invoca questo agente (UI/cron/webhook/altro agente). */
+  triggers: string[];
+}
+
+/** Contratto I/O semplificato per modalità Architect del Lab Agent. */
+export interface AgentContract {
+  /** Schema sintetico dell'input atteso (firma testuale, non Zod). */
+  input: string;
+  /** Schema sintetico dell'output prodotto. */
+  output: string;
+}
+
+export interface AgentRegistryEntry {
+  id: string;
+  /** Nome leggibile mostrato in Atlas. */
+  displayName: string;
+  /** Categoria funzionale. */
+  category: AgentCategory;
+  /** File del prompt core (vuoto per agenti che vivono solo in edge function). */
+  coreFile: string;
+  /** KB categories caricate dall'assembler a runtime. */
+  kbCategories: string[];
+  /** Procedure critiche iniettate esplicitamente nel system prompt. */
+  criticalProcedures: string[];
+  /** Variabili obbligatorie nel contesto runtime. */
+  requiredVars: string[];
+  /** Descrizione operativa breve. */
+  description: string;
+  /** Metadata runtime (dove gira, modello, trigger). */
+  runtime: AgentRuntime;
+  /** Contratto I/O (per Lab Agent Architect). */
+  contract: AgentContract;
+  /** Tool platform a cui ha accesso (id da supabase/functions/_shared/platformToolDefs/). */
+  tools: string[];
+  /** Sorgenti prompt visualizzate nella colonna destra di Atlas. */
+  promptSources: AgentPromptSourceRef[];
+  /** Avatar: icona lucide-react + colore semantico. */
+  avatarIcon: string;
+  avatarColor: "primary" | "secondary" | "accent" | "muted" | "destructive";
+}
+
+export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
   "luca": {
     id: "luca",
     coreFile: "core/luca",
