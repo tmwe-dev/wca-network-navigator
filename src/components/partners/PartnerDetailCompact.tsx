@@ -40,8 +40,8 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { queryKeys } from "@/lib/queryKeys";
 
 interface ServiceItem { service_category: string }
-interface NetworkItem { id: string; network_name: string; expires: string | null }
-interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+interface NetworkItem { id: string; network_name: string; expires?: string | null }
+interface ContactItem { id: string; name: string; title?: string | null; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 interface AgentItem { id: string; name: string; avatar_emoji: string; role: string }
 
 interface PartnerDetailCompactProps {
@@ -260,7 +260,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
                  {c.is_primary && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Primary</span>}
                 <div className="ml-auto">
                   <PartnerContactActionMenu
-                    contact={c}
+                    contact={c as any}
                     partner={{ id: partner.id, company_name: partner.company_name }}
                     onSendEmail={handleSendEmail}
                     onSendWhatsApp={handleSendWhatsApp}
@@ -272,7 +272,7 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
               <div className="space-y-0.5 ml-6 mt-1">
                 {c.email && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleSendEmail(c); }}
+                    onClick={(e) => { e.stopPropagation(); handleSendEmail(c as any); }}
                      className="flex items-center gap-1.5 text-xs group w-full text-left hover:bg-primary/10 rounded px-1 -mx-1 py-0.5 transition-colors"
                    >
                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" />

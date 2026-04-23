@@ -46,7 +46,7 @@ export function TokenUsageChart() {
       // Aggregate by day
       const dailyData: Record<string, number> = {};
       for (const row of data || []) {
-        const date = new Date(row.created_at).toLocaleDateString("it-IT");
+        const date = new Date(row.created_at ?? "").toLocaleDateString("it-IT");
         dailyData[date] = (dailyData[date] || 0) + (row.total_tokens || 0);
       }
 

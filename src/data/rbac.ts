@@ -7,19 +7,56 @@ import type { Database } from "@/integrations/supabase/types";
 
 // ─── Types ──────────────────────────────────────────────
 
-type RoleRow = Database["public"]["Tables"]["roles"]["Row"];
-type PermissionRow = Database["public"]["Tables"]["permissions"]["Row"];
-type RolePermissionRow = Database["public"]["Tables"]["role_permissions"]["Row"];
-type UserRoleRow = Database["public"]["Tables"]["user_roles"]["Row"];
-type TeamRow = Database["public"]["Tables"]["teams"]["Row"];
-type TeamMemberRow = Database["public"]["Tables"]["team_members"]["Row"];
+// Local type definitions for tables that may not be in Supabase schema
+export interface Role {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_system: boolean;
+  module?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
 
-export interface Role extends RoleRow {}
-export interface Permission extends PermissionRow {}
-export interface RolePermission extends RolePermissionRow {}
+export interface Permission {
+  id: string;
+  key: string;
+  description?: string | null;
+  module?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RolePermission {
+  id?: string;
+  role_id: string;
+  permission_id: string;
+  created_at?: string;
+}
+
+type UserRoleRow = Database["public"]["Tables"]["user_roles"]["Row"];
 export interface UserRole extends UserRoleRow {}
-export interface Team extends TeamRow {}
-export interface TeamMember extends TeamMemberRow {}
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string | null;
+  owner_id?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TeamMember {
+  id?: string;
+  team_id?: string;
+  user_id: string;
+  role?: string | null;
+  joined_at?: string;
+  created_at?: string;
+  name?: string;
+  email?: string | null;
+  is_active?: boolean;
+}
 
 export interface RoleWithPermissions extends Role {
   permissions: Permission[];

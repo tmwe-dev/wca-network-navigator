@@ -94,7 +94,7 @@ export function TokenBudgetGauge() {
       const monthlyUsed = (monthlyData || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
 
       const settings = (settingsData || []).reduce((acc, row) => {
-        acc[row.key] = row.value;
+        acc[row.key] = row.value ?? "";
         return acc;
       }, {} as Record<string, string>);
 
