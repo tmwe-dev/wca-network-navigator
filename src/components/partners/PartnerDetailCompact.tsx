@@ -40,8 +40,8 @@ import { PartnerContactActionMenu } from "@/components/partners/PartnerContactAc
 import { queryKeys } from "@/lib/queryKeys";
 
 interface ServiceItem { service_category: string }
-interface NetworkItem { id: string; network_name: string; expires: string | null }
-interface ContactItem { id: string; name: string; title: string | null; email: string | null; direct_phone: string | null; mobile: string | null; is_primary: boolean | null; contact_alias: string | null }
+interface NetworkItem { id: string; network_name: string; expires?: string | null }
+interface ContactItem { id: string; name: string; title?: string | null; email?: string | null; direct_phone?: string | null; mobile?: string | null; is_primary?: boolean | null; contact_alias?: string | null }
 interface AgentItem { id: string; name: string; avatar_emoji: string; role: string }
 
 interface PartnerDetailCompactProps {

@@ -83,7 +83,8 @@ export function NotificationPreferences() {
         if (data && data.length > 0) {
           const settingsMap = data.reduce(
             (acc, row) => {
-              acc[row.key] = row.value === true || row.value === "true";
+              const value = String(row.value || "");
+              acc[row.key] = value === "true" || value === "1" || value === "True";
               return acc;
             },
             {} as Record<string, boolean>
@@ -132,7 +133,7 @@ export function NotificationPreferences() {
           {
             user_id: user.id,
             key: setting.key,
-            value: setting.value,
+            value: String(setting.value),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id,key" }

@@ -71,7 +71,7 @@ export async function getEmailMetrics(
 
     const { data: channels } = await supabase
       .from("channel_messages")
-      .select("direction, created_at, message_metadata")
+      .select("direction, created_at")
       .eq("user_id", userId)
       .gte("created_at", dateRange.from.toISOString())
       .lte("created_at", dateRange.to.toISOString());
@@ -90,12 +90,12 @@ export async function getEmailMetrics(
       // Calculate response rate (inbound after outbound from same contact)
       const outboundDates = channels
         .filter((c) => c.direction === "outbound")
-        .map((c) => c.created_at);
+        .map((c) => c.created_at ?? "");
 
       if (outboundDates.length > 0) {
         responded = channels.filter(
           (c) => c.direction === "inbound" &&
-                  outboundDates.some(od => new Date(od) < new Date(c.created_at))
+                  outboundDates.some(od => new Date(od) < new Date(c.created_at ?? ""))
         ).length;
         totalWithResponse = outboundDates.length;
       }
