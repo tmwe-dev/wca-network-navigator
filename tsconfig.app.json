@@ -36,6 +36,13 @@
   "exclude": [
     "src/__tests__/ai-gateway-config.test.ts",
     "src/__tests__/ai-gateway-types.test.ts",
-    "src/__tests__/token-logger.test.ts"
+    "src/__tests__/token-logger.test.ts",
+    "src/test/analytics.test.ts",
+    "src/test/calendar.test.ts",
+    "src/test/contact-merge-logic.test.ts",
+    "src/test/deals.test.ts",
+    "src/test/notifications.test.ts",
+    "src/test/rbac.test.ts",
+    "src/test/token-management.test.ts"
   ]
 }
