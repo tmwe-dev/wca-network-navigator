@@ -505,8 +505,15 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
       const mapSection = systemMap
         ? `\n--- MAPPA AGENTI/PROMPT (per identificare ridondanze e destinazioni) ---\n${systemMap}\n--- FINE MAPPA ---\n`
         : "";
+      // Inietta la procedura Architect SOLO se la modalità è attiva.
+      // Categoria KB isolata: nessun runtime di produzione la vede mai.
+      const architectProcedure = mode === "architect" ? await loadArchitectProcedure() : "";
+      const procedureSection = architectProcedure
+        ? `\n=== PROCEDURA LAB ARCHITECT (vincolante per questa risposta) ===\n${architectProcedure}\n=== FINE PROCEDURA ===\n`
+        : "";
 
       const prompt = `Sei il LAB AGENT ARCHITECT. NON riscrivere il blocco. Analizzalo e produci un REPORT STRUTTURATO.
+${procedureSection}
 
 OBIETTIVO: capire se questo blocco è al posto giusto, se va spostato in un altro contratto/dottrina, se duplica un altro blocco, o se va eliminato.
 
@@ -552,12 +559,13 @@ ${doctrineSnippet}
 
       const raw = await callAgent(prompt, {
         mode: "architect_diagnose",
+        agent_mode: mode,
         block_id: block.id,
         block_source: block.source,
       });
       return parseArchitectDiagnostics(raw);
     },
-    [callAgent],
+    [callAgent, mode, loadArchitectProcedure],
   );
 
   const sendChatMessage = useCallback(
@@ -618,6 +626,8 @@ ${doctrineSnippet}
     improveBlock,
     improveBlockGlobal,
     analyzeBlockArchitect,
+    mode,
+    setMode,
     clearMessages: () => setMessages([]),
   };
 }
