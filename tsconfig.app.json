@@ -50,6 +50,7 @@
     "src/v2/ui/pages/command/hooks/useToolExecution.ts",
     "src/v2/ui/pages/command/components/CommandOutput.tsx",
     "src/v2/ui/pages/command/lib/safeQueryExecutor.ts",
-    "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts"
+    "src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts",
+    "src/v2/ui/pages/command/hooks/useToolExecution.ts"
   ]
 }
