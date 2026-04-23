@@ -2593,8 +2593,11 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          input_tokens: number | null
           operation: string
           operator_id: string | null
+          output_tokens: number | null
+          provider: string | null
           user_id: string
         }
         Insert: {
@@ -2602,8 +2605,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          input_tokens?: number | null
           operation: string
           operator_id?: string | null
+          output_tokens?: number | null
+          provider?: string | null
           user_id: string
         }
         Update: {
@@ -2611,8 +2617,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          input_tokens?: number | null
           operation?: string
           operator_id?: string | null
+          output_tokens?: number | null
+          provider?: string | null
           user_id?: string
         }
         Relationships: [
@@ -6878,6 +6887,39 @@ export type Database = {
           id?: string
           is_active?: boolean
           provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_automation_settings: {
+        Row: {
+          automation_type: string
+          created_at: string
+          id: string
+          is_paused: boolean
+          paused_at: string | null
+          paused_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          automation_type: string
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          automation_type?: string
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           updated_at?: string
           user_id?: string
         }
