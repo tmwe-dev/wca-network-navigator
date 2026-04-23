@@ -7,6 +7,7 @@ import type { Block, BlockSource } from "../types";
 import { findKbEntries } from "@/data/kbEntries";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
 import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnostics";
+import { useArchitectKb } from "./useArchitectKb";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -225,6 +226,17 @@ async function loadVoiceTemplatesFewShot(): Promise<string> {
 export function useLabAgent() {
   const [messages, setMessages] = useState<LabChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * mode — Fase 4 dell'evoluzione Atlas/Architect.
+   *  - "standard" (default): comportamento storico, miglioramento blocco-per-blocco.
+   *  - "architect": il Lab Agent NON riscrive ma diagnostica strutturalmente,
+   *     usando la procedura KB isolata (`lab_architect_procedure`).
+   * Lo stato vive nel hook: ogni consumer (Lab Agent UI, GlobalImproverDialog…)
+   * può leggerlo/cambiarlo. La modalità Architect carica una KB extra che
+   * NESSUN agente di produzione vede mai.
+   */
+  const [mode, setMode] = useState<"standard" | "architect">("standard");
+  const { loadProcedure: loadArchitectProcedure } = useArchitectKb();
 
   const appendMessage = useCallback((m: Omit<LabChatMessage, "id" | "timestamp">) => {
     setMessages((prev) => [
@@ -493,8 +505,15 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
       const mapSection = systemMap
         ? `\n--- MAPPA AGENTI/PROMPT (per identificare ridondanze e destinazioni) ---\n${systemMap}\n--- FINE MAPPA ---\n`
         : "";
+      // Inietta la procedura Architect SOLO se la modalità è attiva.
+      // Categoria KB isolata: nessun runtime di produzione la vede mai.
+      const architectProcedure = mode === "architect" ? await loadArchitectProcedure() : "";
+      const procedureSection = architectProcedure
+        ? `\n=== PROCEDURA LAB ARCHITECT (vincolante per questa risposta) ===\n${architectProcedure}\n=== FINE PROCEDURA ===\n`
+        : "";
 
       const prompt = `Sei il LAB AGENT ARCHITECT. NON riscrivere il blocco. Analizzalo e produci un REPORT STRUTTURATO.
+${procedureSection}
 
 OBIETTIVO: capire se questo blocco è al posto giusto, se va spostato in un altro contratto/dottrina, se duplica un altro blocco, o se va eliminato.
 
@@ -540,12 +559,13 @@ ${doctrineSnippet}
 
       const raw = await callAgent(prompt, {
         mode: "architect_diagnose",
+        agent_mode: mode,
         block_id: block.id,
         block_source: block.source,
       });
       return parseArchitectDiagnostics(raw);
     },
-    [callAgent],
+    [callAgent, mode, loadArchitectProcedure],
   );
 
   const sendChatMessage = useCallback(
@@ -606,6 +626,8 @@ ${doctrineSnippet}
     improveBlock,
     improveBlockGlobal,
     analyzeBlockArchitect,
+    mode,
+    setMode,
     clearMessages: () => setMessages([]),
   };
 }
