@@ -13,19 +13,17 @@ interface AgentSidebarProps {
 }
 
 const CATEGORY_ORDER: AgentCategory[] = [
-  "conversational", "generative", "classification",
-  "reviewer", "scraper", "voice", "worker", "strategy",
+  "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
 ];
 
 const CATEGORY_LABEL: Record<AgentCategory, string> = {
-  conversational: "Conversational",
-  generative: "Generative",
-  classification: "Classification",
-  reviewer: "Reviewer",
-  scraper: "Scraper",
+  core: "Core",
+  email: "Email",
+  outreach: "Outreach",
+  analysis: "Analisi",
   voice: "Voice",
-  worker: "Worker",
-  strategy: "Strategy",
+  autonomous: "Autonomi",
+  classifier: "Classificatori",
 };
 
 export function AgentSidebar({ agents, selectedId, onSelect }: AgentSidebarProps) {

@@ -67,6 +67,7 @@ function buildAgentBlock(agent: AgentRegistryEntry): Block {
     label: `Agente ${agent.displayName}`,
     content: lines.join("\n"),
     source: { kind: "ephemeral" },
+    dirty: false,
   };
 }
 
