@@ -41,7 +41,6 @@ export const navGroupsDef: readonly NavGroupDef[] = [
     items: [
       { labelKey: "nav.dashboard", path: "/v2", icon: <LayoutDashboard className="h-4 w-4" />, pinned: true, pinOrder: 1 },
       { labelKey: "nav.network", path: "/v2/network", icon: <Globe className="h-4 w-4" />, pinned: true, pinOrder: 3 },
-      { labelKey: "nav.globe", path: "/v2/globe", icon: <Earth className="h-4 w-4" /> },
       { labelKey: "nav.crm", path: "/v2/crm", icon: <Users className="h-4 w-4" />, pinned: true, pinOrder: 4 },
     ],
   },
@@ -53,24 +52,21 @@ export const navGroupsDef: readonly NavGroupDef[] = [
       { labelKey: "nav.agenda", path: "/v2/outreach/agenda", icon: <Calendar className="h-4 w-4" /> },
       { labelKey: "nav.campaigns", path: "/v2/campaigns", icon: <Megaphone className="h-4 w-4" /> },
       { labelKey: "nav.approvals", path: "/v2/sorting", icon: <ArrowUpDown className="h-4 w-4" /> },
-      { labelKey: "nav.ai_arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
     ],
   },
   {
     titleKey: "nav.group_intelligence",
     items: [
-      { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
-      { labelKey: "Email Forge", path: "/v2/ai-staff/email-forge", icon: <Wand2 className="h-4 w-4" /> },
-      { labelKey: "Prompt Lab", path: "/v2/prompt-lab", icon: <FlaskConical className="h-4 w-4" />, badge: "NEW" },
+      { labelKey: "nav.globe", path: "/v2/globe", icon: <Earth className="h-4 w-4" /> },
       { labelKey: "nav.research", path: "/v2/research", icon: <BarChart3 className="h-4 w-4" /> },
+      { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <BrainCircuit className="h-4 w-4" /> },
+      { labelKey: "Prompt Lab", path: "/v2/prompt-lab", icon: <FlaskConical className="h-4 w-4" />, badge: "NEW" },
     ],
   },
   {
     titleKey: "nav.group_tools",
     items: [
-      { labelKey: "nav.token_cockpit", path: "/v2/token-cockpit", icon: <Coins className="h-4 w-4" /> },
       { labelKey: "nav.calendar", path: "/v2/calendar", icon: <Calendar className="h-4 w-4" /> },
-      { labelKey: "nav.notifications", path: "/v2/notifications", icon: <Bell className="h-4 w-4" /> },
     ],
   },
   {
@@ -79,6 +75,8 @@ export const navGroupsDef: readonly NavGroupDef[] = [
       { labelKey: "nav.agents", path: "/v2/agents", icon: <Bot className="h-4 w-4" />, pinned: true, pinOrder: 7 },
       { labelKey: "nav.missions", path: "/v2/agents/missions", icon: <Rocket className="h-4 w-4" /> },
       { labelKey: "nav.ai_staff", path: "/v2/ai-staff", icon: <UserCog className="h-4 w-4" /> },
+      { labelKey: "Email Forge", path: "/v2/ai-staff/email-forge", icon: <Wand2 className="h-4 w-4" /> },
+      { labelKey: "nav.ai_arena", path: "/v2/ai-arena", icon: <Gamepad2 className="h-4 w-4" /> },
       { labelKey: "nav.ai_control", path: "/v2/ai-control", icon: <ShieldCheck className="h-4 w-4" /> },
     ],
   },
@@ -87,6 +85,8 @@ export const navGroupsDef: readonly NavGroupDef[] = [
     items: [
       { labelKey: "nav.settings", path: "/v2/settings", icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 8 },
       { labelKey: "nav.guide", path: "/v2/guida", icon: <BookOpen className="h-4 w-4" /> },
+      { labelKey: "nav.token_cockpit", path: "/v2/token-cockpit", icon: <Coins className="h-4 w-4" /> },
+      { labelKey: "nav.notifications", path: "/v2/notifications", icon: <Bell className="h-4 w-4" /> },
     ],
   },
 ];
