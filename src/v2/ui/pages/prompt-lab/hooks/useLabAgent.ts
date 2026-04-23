@@ -499,6 +499,13 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
       systemMap?: string;
       doctrineFull?: string;
       goal?: string;
+      /**
+       * Agente proprietario opzionale. Se omesso viene risolto via resolveBlockAgent.
+       * Quando presente (e mode='architect'), il prompt include i contratti I/O
+       * runtime per permettere al modello di proporre `move-to-contract`
+       * con la firma corretta del nuovo backend contract (Fase 5).
+       */
+      agent?: AgentRegistryEntry;
     }): Promise<ArchitectDiagnostic[]> => {
       const { block, tabLabel, tabActivation, nearbyBlocks, systemMap, doctrineFull, goal } = params;
       const sourceDesc = describeSource(block.source);
@@ -514,8 +521,32 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
         ? `\n=== PROCEDURA LAB ARCHITECT (vincolante per questa risposta) ===\n${architectProcedure}\n=== FINE PROCEDURA ===\n`
         : "";
 
+      // Fase 5 — Contratti backend.
+      // Risolvi (o usa) l'agente proprietario per esporre input/output contract.
+      // Solo in mode='architect': in standard non c'è bisogno del contratto,
+      // perché il Lab Agent non può proporre `move-to-contract` (resta rewrite).
+      const ownerAgent: AgentRegistryEntry | undefined =
+        params.agent ?? AGENT_REGISTRY[resolveBlockAgent(block).agentId];
+      const contractSection =
+        mode === "architect" && ownerAgent
+          ? `\n=== CONTRATTI RUNTIME DELL'AGENTE PROPRIETARIO ===
+Agente: ${ownerAgent.displayName} (${ownerAgent.id})
+Edge function: ${ownerAgent.runtime.edgeFunction}
+Modello default: ${ownerAgent.runtime.modelDefault}
+INPUT CONTRACT:
+${ownerAgent.contract.input}
+OUTPUT CONTRACT:
+${ownerAgent.contract.output}
+TOOLS DISPONIBILI: ${ownerAgent.tools.join(", ") || "(nessuno)"}
+=== FINE CONTRATTI ===
+
+Quando proponi DESTINATION: move-to-contract, includi nel campo PROPOSAL la FIRMA del nuovo contratto in forma TypeScript-like (es. \`type EmailBrief = { goal: string; audience: 'cold'|'warm'; cta?: string }\`). Senza firma, la proposta è invalida.
+`
+          : "";
+
       const prompt = `Sei il LAB AGENT ARCHITECT. NON riscrivere il blocco. Analizzalo e produci un REPORT STRUTTURATO.
 ${procedureSection}
+${contractSection}
 
 OBIETTIVO: capire se questo blocco è al posto giusto, se va spostato in un altro contratto/dottrina, se duplica un altro blocco, o se va eliminato.
 
@@ -564,6 +595,7 @@ ${doctrineSnippet}
         agent_mode: mode,
         block_id: block.id,
         block_source: block.source,
+        owner_agent_id: ownerAgent?.id,
       });
       return parseArchitectDiagnostics(raw);
     },
