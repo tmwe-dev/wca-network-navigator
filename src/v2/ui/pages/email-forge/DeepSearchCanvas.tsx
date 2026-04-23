@@ -9,6 +9,7 @@ import { fs } from "@/v2/io/extensions/bridge";
 import {
   resolvePipelineUrls,
   type PipelineKey,
+  ALL_PIPELINES,
 } from "@/v2/io/extensions/deep-search-pipelines";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { ForgeRecipient } from "./ForgeRecipientPicker";

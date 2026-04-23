@@ -235,7 +235,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         pageState.setFlowPhase("done");
         pageState.setChainHighlight(6);
-        pageState.setCanvas(getCanvasType(tool.id));
+        pageState.setCanvas(getCanvasType(tool.id) as Parameters<typeof pageState.setCanvas>[0]);
         pageState.setShowTools(false);
 
         const countLabel = getCountLabel(tool.id, result);

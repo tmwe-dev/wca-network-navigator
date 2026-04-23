@@ -35,7 +35,7 @@ function useAgentTasks() {
   return useQuery({
     queryKey: ["v2", "agent-tasks-pending"],
     queryFn: async () => {
-      const { data: tasks, error } = await (supabase as unknown as Record<string, (...args: unknown[]) => unknown>)
+      const { data: tasks, error } = await (supabase as unknown as { from: (t: string) => any })
         .from("agent_tasks")
         .select("*")
         .in("status", ["proposed", "pending"])
@@ -45,7 +45,7 @@ function useAgentTasks() {
 
       // Fetch agent names
       const agentIds = [...new Set((tasks || []).map((t: AgentTask) => t.agent_id))];
-      const { data: agents } = await (supabase as unknown as Record<string, (...args: unknown[]) => unknown>)
+      const { data: agents } = await (supabase as unknown as { from: (t: string) => any })
         .from("agents")
         .select("id, name, avatar_emoji, role")
         .in("id", agentIds.length ? agentIds : ["__none__"]);

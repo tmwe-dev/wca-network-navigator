@@ -18,6 +18,13 @@ import { supabase } from "@/integrations/supabase/client";
  * query builder. The RA module tables (ra_prospects, ra_contacts, etc.) use
  * this helper until they're added to the generated schema.
  */
-export function untypedFrom(table: string): Record<string, (...args: unknown[]) => unknown> {
-  return ((supabase as unknown) as Record<string, (...args: unknown[]) => unknown>).from(table);
+// We deliberately widen the return type to `any` here because PostgREST's
+// fluent query builder is highly polymorphic (select / eq / in / order / limit
+// / single / maybeSingle / insert / update / delete / upsert ...) and cannot be
+// reasonably modelled with a hand-written `Record<string, ...>` type. This is
+// the SINGLE sanctioned `any` boundary in the codebase — see the file header.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function untypedFrom(table: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).from(table);
 }

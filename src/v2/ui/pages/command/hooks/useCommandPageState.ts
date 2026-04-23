@@ -128,3 +128,6 @@ export function useCommandPageState() {
     resetForNewMessage,
   };
 }
+
+// Tipo derivato dal return value dell'hook, esportato per i sotto-hook (useApprovalFlow, useScenarioFlow, useToolExecution).
+export type CommandPageState = ReturnType<typeof useCommandPageState>;

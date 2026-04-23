@@ -1744,6 +1744,54 @@ export type Database = {
         }
         Relationships: []
       }
+      block_versions: {
+        Row: {
+          block_id: string
+          changed_by: string | null
+          changed_by_label: string | null
+          communication_context: Json | null
+          content: string
+          created_at: string | null
+          id: string
+          previous_content: string | null
+          run_id: string | null
+          source_field: string | null
+          source_kind: string
+          source_table: string
+          version_num: number
+        }
+        Insert: {
+          block_id: string
+          changed_by?: string | null
+          changed_by_label?: string | null
+          communication_context?: Json | null
+          content: string
+          created_at?: string | null
+          id?: string
+          previous_content?: string | null
+          run_id?: string | null
+          source_field?: string | null
+          source_kind: string
+          source_table: string
+          version_num: number
+        }
+        Update: {
+          block_id?: string
+          changed_by?: string | null
+          changed_by_label?: string | null
+          communication_context?: Json | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          previous_content?: string | null
+          run_id?: string | null
+          source_field?: string | null
+          source_kind?: string
+          source_table?: string
+          version_num?: number
+        }
+        Relationships: []
+      }
       bridge_tokens: {
         Row: {
           agent_id: string | null
@@ -1941,6 +1989,101 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          color: string | null
+          contact_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          description: string | null
+          end_at: string | null
+          event_type: string
+          id: string
+          location: string | null
+          metadata: Json | null
+          partner_id: string | null
+          recurrence: string | null
+          reminder_minutes: number | null
+          start_at: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          color?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          recurrence?: string | null
+          reminder_minutes?: number | null
+          start_at: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean | null
+          color?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          recurrence?: string | null
+          reminder_minutes?: number | null
+          start_at?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "imported_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -4389,6 +4532,7 @@ export type Database = {
           access_count: number | null
           category: string
           chapter: string
+          communication_context: Json | null
           content: string
           created_at: string
           deleted_at: string | null
@@ -4412,6 +4556,7 @@ export type Database = {
           access_count?: number | null
           category?: string
           chapter?: string
+          communication_context?: Json | null
           content?: string
           created_at?: string
           deleted_at?: string | null
@@ -4435,6 +4580,7 @@ export type Database = {
           access_count?: number | null
           category?: string
           chapter?: string
+          communication_context?: Json | null
           content?: string
           created_at?: string
           deleted_at?: string | null
@@ -5956,6 +6102,30 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          module: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          module?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          module?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ai_config: Json | null
@@ -6649,6 +6819,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permissions: {
+        Row: {
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+        }
+        Relationships: []
       }
       scrape_cache: {
         Row: {

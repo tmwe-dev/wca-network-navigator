@@ -40,7 +40,7 @@ export function CommandOutput({
           className="w-[50%] p-4 overflow-y-auto"
         >
           {canvas === "table" && (
-            <TableCanvas data={tableData} onClose={onClose} />
+            <TableCanvas data={tableData as unknown as Parameters<typeof TableCanvas>[0]["data"]} onClose={onClose} />
           )}
           {canvas === "campaign" && (
             <CampaignCanvas onClose={onClose} />

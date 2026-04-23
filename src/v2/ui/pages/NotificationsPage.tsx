@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks/useNotifications";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
-import { Trash2, Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock } from "lucide-react";
+import { Trash2, Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock, Bell } from "lucide-react";
 import type { NotificationType, NotificationPriority, Notification } from "@/data/notifications";
 
 export default function NotificationsPage(): React.ReactElement {
