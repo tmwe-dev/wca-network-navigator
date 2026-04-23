@@ -17,10 +17,10 @@ import {
   getDealActivities,
   invalidateDealCache,
 } from "@/data/deals";
-import type { Deal, DealActivity, DealFilters, DealStats, DealWithRelations } from "@/data/deals";
+import type { Deal, DealActivity, DealFilters, DealStats, DealStage, DealWithRelations } from "@/data/deals";
 
 // Re-export types
-export type { Deal, DealActivity, DealFilters, DealStats, DealWithRelations };
+export type { Deal, DealActivity, DealFilters, DealStats, DealStage, DealWithRelations };
 
 /**
  * Get list of deals with optional filters

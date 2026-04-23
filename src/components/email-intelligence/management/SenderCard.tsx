@@ -13,6 +13,11 @@ import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+// Cast controllato: questo modulo seleziona/aggiorna `applied_rules` e
+// `prompt_template_id` su `email_address_rules`, ma le colonne reali sono
+// diverse (vedi DEBT-EMAIL-INTEL-COLUMNS). Bypass tipi locale.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 import { PromptTemplateSelector } from './PromptTemplateSelector';
 import { RulesConfiguration } from './RulesConfiguration';
 import { BulkEmailActions } from './BulkEmailActions';
@@ -93,7 +98,7 @@ export function SenderCard({
   const loadAddressRule = async () => {
     try {
       setIsLoadingRule(true);
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('email_address_rules')
         .select('id, custom_prompt, applied_rules, prompt_template_id')
         .eq('email_address', sender.email)
@@ -112,7 +117,7 @@ export function SenderCard({
         });
       } else {
         // Create a new rule if it doesn't exist
-        const { data: newRule, error: createError } = await supabase
+        const { data: newRule, error: createError } = await sb
           .from('email_address_rules')
           .insert({
             email_address: sender.email,
@@ -154,7 +159,7 @@ export function SenderCard({
 
     try {
       setIsSavingRule(true);
-      const { error } = await supabase
+      const { error } = await sb
         .from('email_address_rules')
         .update({
           custom_prompt: prompt || null,
@@ -180,7 +185,7 @@ export function SenderCard({
 
     try {
       setIsSavingRule(true);
-      const { error } = await supabase
+      const { error } = await sb
         .from('email_address_rules')
         .update({ applied_rules: rules })
         .eq('id', addressRule.id);

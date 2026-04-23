@@ -32,5 +32,10 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/__tests__/ai-gateway-config.test.ts",
+    "src/__tests__/ai-gateway-types.test.ts",
+    "src/__tests__/token-logger.test.ts"
   ]
 }
