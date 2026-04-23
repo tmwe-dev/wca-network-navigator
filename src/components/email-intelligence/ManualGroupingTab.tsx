@@ -101,8 +101,11 @@ export default function ManualGroupingTab() {
     }
   };
 
-  const handleBulkAssignLocal = async (groupName: string, groupId: string) => {
-    const selected = getSelectedSenderObjects(senders);
+  const handleBulkAssignLocal = async (
+    selected: ReturnType<typeof getSelectedSenderObjects>,
+    groupName: string,
+    groupId: string,
+  ) => {
     if (selected.length === 0) return;
     await bulkAssignGroup(selected, groupName, groupId);
     setSelectedSenders(new Set());
