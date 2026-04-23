@@ -75,7 +75,7 @@ export interface DealStats {
  * List deals with optional filters
  */
 export async function listDeals(userId: string, filters?: DealFilters): Promise<DealWithRelations[]> {
-  let query = supabase
+  let query = (supabase as any)
     .from("deals")
     .select(
       `
@@ -123,7 +123,7 @@ export async function listDeals(userId: string, filters?: DealFilters): Promise<
  * Get a single deal with full details
  */
 export async function getDeal(id: string): Promise<DealWithRelations | null> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("deals")
     .select(
       `
@@ -146,7 +146,7 @@ export async function createDeal(
   userId: string,
   deal: Omit<Deal, "id" | "user_id" | "created_at" | "updated_at">
 ): Promise<Deal> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("deals")
     .insert([
       {
@@ -168,7 +168,7 @@ export async function updateDeal(id: string, updates: Partial<Deal>): Promise<De
   // Get current deal to detect stage changes
   const current = await getDeal(id);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("deals")
     .update({
       ...updates,
@@ -199,7 +199,7 @@ export async function updateDeal(id: string, updates: Partial<Deal>): Promise<De
  * Delete a deal
  */
 export async function deleteDeal(id: string): Promise<void> {
-  const { error } = await supabase.from("deals").delete().eq("id", id);
+  const { error } = await (supabase as any).from("deals").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -300,7 +300,7 @@ export async function logDealActivity(
   oldValue?: string,
   newValue?: string
 ): Promise<DealActivity> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("deal_activities")
     .insert([
       {
@@ -323,7 +323,7 @@ export async function logDealActivity(
  * Get activities for a deal
  */
 export async function getDealActivities(dealId: string, limit = 50): Promise<DealActivity[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("deal_activities")
     .select("*")
     .eq("deal_id", dealId)
