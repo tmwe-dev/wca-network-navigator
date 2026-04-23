@@ -24,7 +24,7 @@ import {
 } from "@/data/promptLabGlobalRuns";
 import type { ParsedFile } from "../utils/fileParser";
 import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
-import { buildSystemMap, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
+import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
 import { buildExtraContext } from "./useContextBuilder";
 
@@ -58,6 +58,13 @@ export function useGlobalPromptImprover(
   goal: string,
   referenceMaterial: string = "",
   uploadedFiles: ParsedFile[] = [],
+  /**
+   * Modalità di raggruppamento del contesto "Blocchi vicini":
+   *  - "tab" (default, comportamento storico): vicini = blocchi dello stesso tab UI.
+   *  - "agent" (Fase 3 Atlas): vicini = blocchi dello stesso agente runtime.
+   * I due rendering della system map sono mutuamente esclusivi nel singolo run.
+   */
+  contextGrouping: "tab" | "agent" = "tab",
 ) {
   const lab = useLabAgent();
   const [state, setState] = useState<GlobalImproverState>({
@@ -230,7 +237,9 @@ export function useGlobalPromptImprover(
     try {
       collected = await collectAllBlocks(userId);
       doctrineFull = await loadFullDoctrine();
-      systemMap = buildSystemMap(collected);
+      systemMap = contextGrouping === "agent"
+        ? buildSystemMapByAgent(collected)
+        : buildSystemMap(collected);
       extraContext = await buildExtraContext(userId, referenceMaterial, uploadedFiles);
     } catch (e) {
       setState((s) => ({ ...s, loading: false, phase: "idle", error: e instanceof Error ? e.message : String(e) }));

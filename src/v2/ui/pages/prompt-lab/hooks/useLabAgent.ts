@@ -6,6 +6,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Block, BlockSource } from "../types";
 import { findKbEntries } from "@/data/kbEntries";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
+import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnostics";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -521,6 +522,7 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
     sendChatMessage,
     improveBlock,
     improveBlockGlobal,
+    analyzeBlockArchitect,
     clearMessages: () => setMessages([]),
   };
 }
