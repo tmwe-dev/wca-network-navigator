@@ -100,8 +100,8 @@ export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWith
   if (permError) throw permError;
 
   const perms = (permissions || [])
-    .map((rp) => rp.permissions)
-    .filter((p) => p !== null) as Permission[];
+    .map((rp: any) => rp.permissions)
+    .filter((p: any) => p !== null) as Permission[];
 
   return { ...role, permissions: perms };
 }
@@ -185,8 +185,8 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
   if (error) throw error;
 
   return (data || [])
-    .map((rp) => rp.permissions)
-    .filter((p) => p !== null) as Permission[];
+    .map((rp: any) => rp.permissions)
+    .filter((p: any) => p !== null) as Permission[];
 }
 
 /**
@@ -227,8 +227,8 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
   if (error) throw error;
 
   return (data || [])
-    .map((ur) => ur.roles)
-    .filter((r) => r !== null) as Role[];
+    .map((ur: any) => ur.roles)
+    .filter((r: any) => r !== null) as Role[];
 }
 
 /**
@@ -270,7 +270,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
     .eq("user_id", user.id);
   if (roleError) throw roleError;
 
-  const roleIds = (userRoles || []).map((ur) => ur.role_id);
+  const roleIds = (userRoles || []).map((ur: any) => ur.role_id);
   if (!roleIds.length) return false;
 
   // Fetch permission ID

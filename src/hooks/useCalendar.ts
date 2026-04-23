@@ -87,10 +87,11 @@ export function useCreateEvent() {
       const event = await calendarData.createEvent({
         user_id: user.id,
         ...input,
+        description: input.description ?? null,
         color: input.color || "#3B82F6",
         reminder_minutes: input.reminder_minutes ?? 15,
         status: "scheduled" as const,
-      });
+      } as any);
 
       return event;
     },
