@@ -227,6 +227,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_response_channel_message_id_fkey"
             columns: ["response_channel_message_id"]
             isOneToOne: false
@@ -818,6 +825,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ai_decision_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ai_edit_patterns: {
@@ -1097,16 +1111,19 @@ export type Database = {
         Row: {
           action_payload: Json | null
           action_type: string
+          autonomy_level: string | null
           confidence: number | null
           contact_id: string | null
           created_at: string | null
           decision_log_id: string | null
           email_address: string | null
+          execute_after: string | null
           executed_at: string | null
           expires_at: string | null
           id: string
           operator_id: string | null
           partner_id: string | null
+          priority: number | null
           reasoning: string | null
           source: string | null
           status: string | null
@@ -1116,16 +1133,19 @@ export type Database = {
         Insert: {
           action_payload?: Json | null
           action_type: string
+          autonomy_level?: string | null
           confidence?: number | null
           contact_id?: string | null
           created_at?: string | null
           decision_log_id?: string | null
           email_address?: string | null
+          execute_after?: string | null
           executed_at?: string | null
           expires_at?: string | null
           id?: string
           operator_id?: string | null
           partner_id?: string | null
+          priority?: number | null
           reasoning?: string | null
           source?: string | null
           status?: string | null
@@ -1135,16 +1155,19 @@ export type Database = {
         Update: {
           action_payload?: Json | null
           action_type?: string
+          autonomy_level?: string | null
           confidence?: number | null
           contact_id?: string | null
           created_at?: string | null
           decision_log_id?: string | null
           email_address?: string | null
+          execute_after?: string | null
           executed_at?: string | null
           expires_at?: string | null
           id?: string
           operator_id?: string | null
           partner_id?: string | null
+          priority?: number | null
           reasoning?: string | null
           source?: string | null
           status?: string | null
@@ -1171,6 +1194,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_pending_actions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -1533,7 +1563,7 @@ export type Database = {
           key: string
           operator_id: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
           value: string | null
         }
         Insert: {
@@ -1542,7 +1572,7 @@ export type Database = {
           key: string
           operator_id?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           value?: string | null
         }
         Update: {
@@ -1551,7 +1581,7 @@ export type Database = {
           key?: string
           operator_id?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           value?: string | null
         }
         Relationships: [
@@ -1679,6 +1709,13 @@ export type Database = {
             columns: ["matched_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blacklist_entries_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -1890,6 +1927,13 @@ export type Database = {
             columns: ["matched_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cards_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
           {
@@ -2535,6 +2579,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contact_conversation_context_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contact_interactions: {
@@ -2584,8 +2635,11 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          input_tokens: number | null
           operation: string
           operator_id: string | null
+          output_tokens: number | null
+          provider: string | null
           user_id: string
         }
         Insert: {
@@ -2593,8 +2647,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          input_tokens?: number | null
           operation: string
           operator_id?: string | null
+          output_tokens?: number | null
+          provider?: string | null
           user_id: string
         }
         Update: {
@@ -2602,8 +2659,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          input_tokens?: number | null
           operation?: string
           operator_id?: string | null
+          output_tokens?: number | null
+          provider?: string | null
           user_id?: string
         }
         Relationships: [
@@ -2645,6 +2705,129 @@ export type Database = {
           started_at?: string
         }
         Relationships: []
+      }
+      deal_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          deal_id: string
+          description: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          deal_id: string
+          description?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          deal_id?: string
+          description?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          actual_close_date: string | null
+          amount: number | null
+          contact_id: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          expected_close_date: string | null
+          id: string
+          lost_reason: string | null
+          metadata: Json | null
+          partner_id: string | null
+          probability: number | null
+          stage: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_close_date?: string | null
+          amount?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lost_reason?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          probability?: number | null
+          stage?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_close_date?: string | null
+          amount?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lost_reason?: string | null
+          metadata?: Json | null
+          partner_id?: string | null
+          probability?: number | null
+          stage?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "imported_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       directory_cache: {
         Row: {
@@ -3003,6 +3186,7 @@ export type Database = {
           ai_suggestion_accepted: boolean | null
           ai_suggestion_confidence: number | null
           applied_count: number | null
+          applied_rules: Json | null
           auto_action: string | null
           auto_action_params: Json | null
           auto_execute: boolean | null
@@ -3015,6 +3199,7 @@ export type Database = {
           display_name: string | null
           domain: string | null
           domain_pattern: string | null
+          domain_type: string | null
           email_address: string
           email_count: number | null
           exclusive_agent_id: string | null
@@ -3034,6 +3219,7 @@ export type Database = {
           preferred_channel: string | null
           priority: number | null
           prompt_id: string | null
+          prompt_template_id: string | null
           success_rate: number | null
           tone_override: string | null
           topics_to_avoid: string[] | null
@@ -3048,6 +3234,7 @@ export type Database = {
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
           applied_count?: number | null
+          applied_rules?: Json | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -3060,6 +3247,7 @@ export type Database = {
           display_name?: string | null
           domain?: string | null
           domain_pattern?: string | null
+          domain_type?: string | null
           email_address: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -3079,6 +3267,7 @@ export type Database = {
           preferred_channel?: string | null
           priority?: number | null
           prompt_id?: string | null
+          prompt_template_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
           topics_to_avoid?: string[] | null
@@ -3093,6 +3282,7 @@ export type Database = {
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
           applied_count?: number | null
+          applied_rules?: Json | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -3105,6 +3295,7 @@ export type Database = {
           display_name?: string | null
           domain?: string | null
           domain_pattern?: string | null
+          domain_type?: string | null
           email_address?: string
           email_count?: number | null
           exclusive_agent_id?: string | null
@@ -3124,6 +3315,7 @@ export type Database = {
           preferred_channel?: string | null
           priority?: number | null
           prompt_id?: string | null
+          prompt_template_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
           topics_to_avoid?: string[] | null
@@ -3318,6 +3510,7 @@ export type Database = {
           created_at: string | null
           detected_patterns: string[] | null
           direction: string
+          domain: string | null
           email_address: string
           id: string
           keywords: string[] | null
@@ -3341,6 +3534,7 @@ export type Database = {
           created_at?: string | null
           detected_patterns?: string[] | null
           direction?: string
+          domain?: string | null
           email_address: string
           id?: string
           keywords?: string[] | null
@@ -3364,6 +3558,7 @@ export type Database = {
           created_at?: string | null
           detected_patterns?: string[] | null
           direction?: string
+          domain?: string | null
           email_address?: string
           id?: string
           keywords?: string[] | null
@@ -3389,6 +3584,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_classifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -4112,6 +4314,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "imported_contacts_wca_partner_id_fkey"
+            columns: ["wca_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       interactions: {
@@ -4164,6 +4373,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5221,6 +5437,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_certifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_contacts: {
@@ -5287,6 +5510,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_contacts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_networks: {
@@ -5335,6 +5565,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_networks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_services: {
@@ -5375,6 +5612,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_services_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5430,6 +5674,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_social_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5493,6 +5744,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_workflow_state_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
           {
@@ -5730,6 +5988,90 @@ export type Database = {
           onboarding_completed?: boolean
           operator_role?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_lab_global_runs: {
+        Row: {
+          completed_at: string | null
+          deleted_at: string | null
+          doctrine_full: string | null
+          goal: string | null
+          id: string
+          progress_current: number
+          progress_total: number
+          proposals: Json
+          started_at: string
+          status: string
+          system_map: string | null
+          system_mission: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          deleted_at?: string | null
+          doctrine_full?: string | null
+          goal?: string | null
+          id?: string
+          progress_current?: number
+          progress_total?: number
+          proposals?: Json
+          started_at?: string
+          status?: string
+          system_map?: string | null
+          system_mission?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          deleted_at?: string | null
+          doctrine_full?: string | null
+          goal?: string | null
+          id?: string
+          progress_current?: number
+          progress_total?: number
+          proposals?: Json
+          started_at?: string
+          status?: string
+          system_map?: string | null
+          system_mission?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          prompt_text: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          prompt_text: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          prompt_text?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -6108,6 +6450,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -6673,6 +7022,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supervisor_audit_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       team_members: {
@@ -6812,6 +7168,39 @@ export type Database = {
           id?: string
           is_active?: boolean
           provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_automation_settings: {
+        Row: {
+          automation_type: string
+          created_at: string
+          id: string
+          is_paused: boolean
+          paused_at: string | null
+          paused_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          automation_type: string
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          automation_type?: string
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -7062,6 +7451,45 @@ export type Database = {
           id?: string | null
           level?: number | null
           memory_type?: string | null
+        }
+        Relationships: []
+      }
+      vw_partner_quality_scores: {
+        Row: {
+          calculated_at: string | null
+          city: string | null
+          company_name: string | null
+          country_name: string | null
+          data_completeness: number | null
+          id: string | null
+          is_active: boolean | null
+          rating: number | null
+          total_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          calculated_at?: never
+          city?: string | null
+          company_name?: string | null
+          country_name?: string | null
+          data_completeness?: never
+          id?: string | null
+          is_active?: boolean | null
+          rating?: number | null
+          total_score?: never
+          updated_at?: string | null
+        }
+        Update: {
+          calculated_at?: never
+          city?: string | null
+          company_name?: string | null
+          country_name?: string | null
+          data_completeness?: never
+          id?: string | null
+          is_active?: boolean | null
+          rating?: number | null
+          total_score?: never
+          updated_at?: string | null
         }
         Relationships: []
       }
