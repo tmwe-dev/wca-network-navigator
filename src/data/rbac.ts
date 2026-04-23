@@ -73,7 +73,7 @@ export interface UserWithRoles {
  * Fetch all roles
  */
 export async function fetchRoles(): Promise<Role[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("roles")
     .select("*")
     .order("name");
@@ -85,7 +85,7 @@ export async function fetchRoles(): Promise<Role[]> {
  * Fetch a single role with its permissions
  */
 export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWithPermissions | null> {
-  const { data: role, error: roleError } = await supabase
+  const { data: role, error: roleError } = await (supabase as any)
     .from("roles")
     .select("*")
     .eq("id", roleId)
@@ -93,7 +93,7 @@ export async function fetchRoleWithPermissions(roleId: string): Promise<RoleWith
   if (roleError) throw roleError;
   if (!role) return null;
 
-  const { data: permissions, error: permError } = await supabase
+  const { data: permissions, error: permError } = await (supabase as any)
     .from("role_permissions")
     .select("permission_id, permissions(id, key, description, module)")
     .eq("role_id", roleId);
@@ -114,7 +114,7 @@ export async function createRole(
   description?: string,
   isSystem: boolean = false
 ): Promise<Role> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("roles")
     .insert({ name, description, is_system: isSystem })
     .select()
@@ -130,7 +130,7 @@ export async function updateRole(
   roleId: string,
   updates: { name?: string; description?: string }
 ): Promise<Role> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("roles")
     .update(updates)
     .eq("id", roleId)
@@ -144,7 +144,7 @@ export async function updateRole(
  * Delete a role (cannot delete system roles)
  */
 export async function deleteRole(roleId: string): Promise<void> {
-  const { data: role, error: fetchError } = await supabase
+  const { data: role, error: fetchError } = await (supabase as any)
     .from("roles")
     .select("is_system")
     .eq("id", roleId)
@@ -154,7 +154,7 @@ export async function deleteRole(roleId: string): Promise<void> {
     throw new Error("Cannot delete system role");
   }
 
-  const { error } = await supabase.from("roles").delete().eq("id", roleId);
+  const { error } = await (supabase as any).from("roles").delete().eq("id", roleId);
   if (error) throw error;
 }
 
@@ -164,7 +164,7 @@ export async function deleteRole(roleId: string): Promise<void> {
  * Fetch all permissions
  */
 export async function fetchPermissions(): Promise<Permission[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("permissions")
     .select("*")
     .order("module, key");
@@ -178,7 +178,7 @@ export async function fetchPermissions(): Promise<Permission[]> {
  * Fetch permissions for a role
  */
 export async function fetchRolePermissions(roleId: string): Promise<Permission[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("role_permissions")
     .select("permission_id, permissions(id, key, description, module)")
     .eq("role_id", roleId);
@@ -193,7 +193,7 @@ export async function fetchRolePermissions(roleId: string): Promise<Permission[]
  * Assign a permission to a role
  */
 export async function assignPermission(roleId: string, permissionId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("role_permissions")
     .insert({ role_id: roleId, permission_id: permissionId });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
@@ -203,7 +203,7 @@ export async function assignPermission(roleId: string, permissionId: string): Pr
  * Remove a permission from a role
  */
 export async function removePermission(roleId: string, permissionId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("role_permissions")
     .delete()
     .eq("role_id", roleId)
@@ -220,7 +220,7 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
   const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
   if (!targetUserId) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("user_roles")
     .select("role_id, roles(id, name, description, is_system)")
     .eq("user_id", targetUserId);
@@ -236,7 +236,7 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
  */
 export async function assignUserRole(userId: string, roleId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("user_roles")
     .insert({ user_id: userId, role_id: roleId, assigned_by: user?.id });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
@@ -246,7 +246,7 @@ export async function assignUserRole(userId: string, roleId: string): Promise<vo
  * Remove a role from a user
  */
 export async function removeUserRole(userId: string, roleId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("user_roles")
     .delete()
     .eq("user_id", userId)
@@ -264,7 +264,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (!user) return false;
 
   // Fetch user's roles
-  const { data: userRoles, error: roleError } = await supabase
+  const { data: userRoles, error: roleError } = await (supabase as any)
     .from("user_roles")
     .select("role_id")
     .eq("user_id", user.id);
@@ -274,7 +274,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (!roleIds.length) return false;
 
   // Fetch permission ID
-  const { data: permission, error: permError } = await supabase
+  const { data: permission, error: permError } = await (supabase as any)
     .from("permissions")
     .select("id")
     .eq("key", permissionKey)
@@ -283,7 +283,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   if (!permission) return false;
 
   // Check if any of user's roles have this permission
-  const { data: rolePerms, error: checkError } = await supabase
+  const { data: rolePerms, error: checkError } = await (supabase as any)
     .from("role_permissions")
     .select("id")
     .eq("permission_id", permission.id)
@@ -303,7 +303,7 @@ export async function fetchTeams(): Promise<Team[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("teams")
     .select("*")
     .or(`owner_id.eq.${user.id},id.in.(SELECT team_id FROM team_members WHERE user_id = ${user.id})`)
@@ -319,7 +319,7 @@ export async function createTeam(name: string, description?: string): Promise<Te
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("teams")
     .insert({ name, description, owner_id: user.id })
     .select()
@@ -335,7 +335,7 @@ export async function updateTeam(
   teamId: string,
   updates: { name?: string; description?: string }
 ): Promise<Team> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("teams")
     .update(updates)
     .eq("id", teamId)
@@ -349,7 +349,7 @@ export async function updateTeam(
  * Delete a team
  */
 export async function deleteTeam(teamId: string): Promise<void> {
-  const { error } = await supabase.from("teams").delete().eq("id", teamId);
+  const { error } = await (supabase as any).from("teams").delete().eq("id", teamId);
   if (error) throw error;
 }
 
@@ -359,7 +359,7 @@ export async function deleteTeam(teamId: string): Promise<void> {
  * Fetch members of a team
  */
 export async function fetchTeamMembers(teamId: string): Promise<TeamMember[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("team_members")
     .select("*")
     .eq("team_id", teamId)
@@ -372,7 +372,7 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMember[]> {
  * Add a user to a team
  */
 export async function addTeamMember(teamId: string, userId: string, role: string = "member"): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("team_members")
     .insert({ team_id: teamId, user_id: userId, role });
   if (error && error.code !== "23505") throw error; // Ignore unique constraint
@@ -382,7 +382,7 @@ export async function addTeamMember(teamId: string, userId: string, role: string
  * Remove a user from a team
  */
 export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("team_members")
     .delete()
     .eq("team_id", teamId)
@@ -394,7 +394,7 @@ export async function removeTeamMember(teamId: string, userId: string): Promise<
  * Update team member role
  */
 export async function updateMemberRole(teamId: string, userId: string, role: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("team_members")
     .update({ role })
     .eq("team_id", teamId)
