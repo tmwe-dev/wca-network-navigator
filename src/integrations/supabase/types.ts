@@ -1097,16 +1097,19 @@ export type Database = {
         Row: {
           action_payload: Json | null
           action_type: string
+          autonomy_level: string | null
           confidence: number | null
           contact_id: string | null
           created_at: string | null
           decision_log_id: string | null
           email_address: string | null
+          execute_after: string | null
           executed_at: string | null
           expires_at: string | null
           id: string
           operator_id: string | null
           partner_id: string | null
+          priority: number | null
           reasoning: string | null
           source: string | null
           status: string | null
@@ -1116,16 +1119,19 @@ export type Database = {
         Insert: {
           action_payload?: Json | null
           action_type: string
+          autonomy_level?: string | null
           confidence?: number | null
           contact_id?: string | null
           created_at?: string | null
           decision_log_id?: string | null
           email_address?: string | null
+          execute_after?: string | null
           executed_at?: string | null
           expires_at?: string | null
           id?: string
           operator_id?: string | null
           partner_id?: string | null
+          priority?: number | null
           reasoning?: string | null
           source?: string | null
           status?: string | null
@@ -1135,16 +1141,19 @@ export type Database = {
         Update: {
           action_payload?: Json | null
           action_type?: string
+          autonomy_level?: string | null
           confidence?: number | null
           contact_id?: string | null
           created_at?: string | null
           decision_log_id?: string | null
           email_address?: string | null
+          execute_after?: string | null
           executed_at?: string | null
           expires_at?: string | null
           id?: string
           operator_id?: string | null
           partner_id?: string | null
+          priority?: number | null
           reasoning?: string | null
           source?: string | null
           status?: string | null
