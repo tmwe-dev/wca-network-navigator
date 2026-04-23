@@ -24,11 +24,12 @@ const MAX_FILES = 6;
 const MAX_FILE_CHARS = 6_000;
 const MAX_TOTAL_FILE_CHARS = 20_000;
 
-// Limiti per contesto filtrato per blocco
-const MAX_RELEVANT_DOCTRINE_CHARS = 3_000;
-const MAX_RELEVANT_FILE_CHARS = 4_000;
-const MAX_NEARBY_BLOCKS = 6;
-const MAX_INDEX_BLOCKS = 40;
+// Limiti per contesto — il Lab Agent deve avere piena visione di tutto
+// Dottrina e system map passate INTEGRALMENTE (non troncate)
+const MAX_RELEVANT_DOCTRINE_CHARS = 100_000; // praticamente illimitato
+const MAX_RELEVANT_FILE_CHARS = 20_000;
+const MAX_NEARBY_BLOCKS = 50;  // tutti i blocchi dello stesso tab
+const MAX_INDEX_BLOCKS = 200;  // tutti i blocchi di altri tab
 
 function compactText(text: string, maxChars: number, label: string): string {
   const normalized = text.replace(/\u0000/g, "").replace(/\s{3,}/g, "  ").trim();
@@ -67,61 +68,61 @@ function relevanceScore(block: Block, tabLabel: string, referenceText: string): 
 }
 
 /**
- * Filtra la dottrina per rilevanza al blocco specifico.
- * Restituisce: contenuto completo dei top-N più rilevanti + indice compatto del resto.
+ * Passa la dottrina COMPLETA al Lab Agent.
+ *
+ * Il Lab Agent deve avere piena visione di tutta la dottrina per:
+ * - verificare duplicazioni tra blocchi
+ * - individuare contraddizioni
+ * - proporre centralizzazione di regole ripetute
+ * - rispettare la gerarchia di verità
+ *
+ * Le sezioni rilevanti al blocco corrente vengono evidenziate per contesto,
+ * ma NIENTE viene tagliato.
  */
 export function filterDoctrineForBlock(
   fullDoctrine: string,
   block: Block,
   tabLabel: string,
 ): string {
-  // Splitta per sezioni (### header)
+  // Se la dottrina è breve, passala così com'è
+  if (fullDoctrine.length <= MAX_RELEVANT_DOCTRINE_CHARS) {
+    return `--- KB DOCTRINE COMPLETA ---\n${fullDoctrine}\n--- FINE KB DOCTRINE ---`;
+  }
+
+  // Per dottrine molto grandi, splitta per sezioni e ordina per rilevanza
+  // ma includi TUTTE le sezioni — quelle rilevanti prima, le altre dopo
   const sections = fullDoctrine.split(/(?=^### )/m).filter((s) => s.trim());
   if (sections.length === 0) return fullDoctrine;
 
-  // Calcola rilevanza per ogni sezione
   const scored = sections.map((section) => ({
     section,
     score: relevanceScore(block, tabLabel, section),
     title: section.split("\n")[0]?.replace(/^###\s*/, "").trim() || "(senza titolo)",
   }));
 
-  // Ordina per score discendente
+  // Ordina: sezioni più rilevanti prima, ma TUTTE incluse
   scored.sort((a, b) => b.score - a.score);
 
-  // Top rilevanti: contenuto completo (entro budget)
   const parts: string[] = [];
-  let charBudget = MAX_RELEVANT_DOCTRINE_CHARS;
-  const detailedCount = Math.min(scored.length, 8);
-
-  parts.push("--- KB DOCTRINE RILEVANTE (dettaglio) ---");
-  for (let i = 0; i < detailedCount && charBudget > 0; i++) {
-    const s = scored[i];
-    if (s.section.length <= charBudget) {
-      parts.push(s.section);
-      charBudget -= s.section.length;
-    } else {
-      parts.push(compactText(s.section, charBudget, s.title));
-      charBudget = 0;
-    }
+  parts.push(`--- KB DOCTRINE COMPLETA (${sections.length} sezioni, ordinate per rilevanza al blocco "${block.label}") ---`);
+  for (const s of scored) {
+    parts.push(s.section);
   }
-  parts.push("--- FINE KB DOCTRINE RILEVANTE ---");
-
-  // Resto: solo indice (titoli)
-  if (scored.length > detailedCount) {
-    parts.push("\n--- INDICE KB DOCTRINE COMPLETA (solo titoli — non dettagliati per questo blocco) ---");
-    for (let i = detailedCount; i < scored.length; i++) {
-      parts.push(`• ${scored[i].title}`);
-    }
-    parts.push("--- FINE INDICE ---");
-  }
+  parts.push("--- FINE KB DOCTRINE ---");
 
   return parts.join("\n");
 }
 
 /**
- * Filtra la system map per rilevanza al blocco specifico.
- * Restituisce: blocchi dello stesso tab completi + indice compatto del resto.
+ * Costruisce la system map COMPLETA per il Lab Agent.
+ *
+ * Il Lab Agent deve vedere TUTTI i blocchi del sistema per:
+ * - verificare duplicazioni cross-tab
+ * - individuare contraddizioni tra prompt diversi
+ * - capire il contesto completo del blocco corrente
+ *
+ * Blocchi dello stesso tab: contenuto integrale (sono i "vicini" diretti).
+ * Blocchi di altri tab: contenuto sintetico ma con label + snippet significativo.
  */
 export function filterSystemMapForBlock(
   allBlocks: ReadonlyArray<{ tabLabel: string; block: Block }>,
@@ -143,36 +144,27 @@ export function filterSystemMapForBlock(
 
   const parts: string[] = [];
 
-  // Blocchi dello stesso tab: dettaglio completo (primi N)
+  // Blocchi dello stesso tab: contenuto INTEGRALE
   parts.push(`\n--- BLOCCHI VICINI (stesso tab: ${currentTabLabel}) — NON contraddirli ---`);
   for (const item of sameTab.slice(0, MAX_NEARBY_BLOCKS)) {
-    const snippet = item.block.content.slice(0, 400).replace(/\s+/g, " ").trim();
-    parts.push(`• ${item.block.label}: ${snippet}${item.block.content.length > 400 ? "…" : ""}`);
-  }
-  if (sameTab.length > MAX_NEARBY_BLOCKS) {
-    parts.push(`  [+${sameTab.length - MAX_NEARBY_BLOCKS} altri blocchi nello stesso tab]`);
+    parts.push(`\n### ${item.block.label}\n${item.block.content}`);
   }
   parts.push("--- FINE BLOCCHI VICINI ---");
 
-  // Altri tab: solo indice compatto
-  parts.push("\n--- INDICE ALTRI TAB (solo etichette — per coerenza globale) ---");
+  // Altri tab: label + snippet esteso per piena visibilità
+  parts.push("\n--- ALTRI TAB DEL SISTEMA (per coerenza globale) ---");
   let indexCount = 0;
   for (const [tab, blocks] of otherTabs) {
-    if (indexCount >= MAX_INDEX_BLOCKS) {
-      parts.push(`  [… altri tab omessi]`);
-      break;
-    }
-    parts.push(`## ${tab} (${blocks.length} blocchi)`);
-    for (const { block } of blocks.slice(0, 5)) {
-      parts.push(`  - ${block.label}`);
-      indexCount++;
-    }
-    if (blocks.length > 5) {
-      parts.push(`  [+${blocks.length - 5} altri]`);
+    if (indexCount >= MAX_INDEX_BLOCKS) break;
+    parts.push(`\n## ${tab} (${blocks.length} blocchi)`);
+    for (const { block } of blocks) {
+      if (indexCount >= MAX_INDEX_BLOCKS) break;
+      const snippet = block.content.slice(0, 800).replace(/\s+/g, " ").trim();
+      parts.push(`  • ${block.label}: ${snippet}${block.content.length > 800 ? "…" : ""}`);
       indexCount++;
     }
   }
-  parts.push("--- FINE INDICE ---");
+  parts.push("--- FINE ALTRI TAB ---");
 
   return parts.join("\n");
 }
