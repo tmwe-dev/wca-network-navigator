@@ -6,6 +6,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { Block, BlockSource } from "../types";
 import { findKbEntries } from "@/data/kbEntries";
 import { resolveRubric, rubricToPromptSection, validateAgainstRubric, isVoiceBlock } from "../promptRubrics";
+import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnostics";
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
@@ -464,6 +465,89 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
     [callAgent],
   );
 
+  /**
+   * analyzeBlockArchitect — modalità Lab Agent Architect (Fase 3).
+   *
+   * NON riscrive il blocco. Restituisce una diagnostica strutturata
+   * (severity / why / destination / proposal / test) per aiutare
+   * l'operatore a decidere se il blocco va spostato/fuso/eliminato.
+   *
+   * Il prompt forza un output a campi e parsiamo lato client con
+   * `parseArchitectDiagnostics`. Il modello sa che è in modalità "review",
+   * non "rewrite": vincoli espliciti nel prompt.
+   */
+  const analyzeBlockArchitect = useCallback(
+    async (params: {
+      block: Block;
+      tabLabel?: string;
+      tabActivation?: string;
+      nearbyBlocks?: ReadonlyArray<Block>;
+      systemMap?: string;
+      doctrineFull?: string;
+      goal?: string;
+    }): Promise<ArchitectDiagnostic[]> => {
+      const { block, tabLabel, tabActivation, nearbyBlocks, systemMap, doctrineFull, goal } = params;
+      const sourceDesc = describeSource(block.source);
+      const nearbySummary = summarizeNearby(nearbyBlocks ?? [], block.id);
+      const doctrineSnippet = doctrineFull ?? (await loadDoctrineSnippet(8));
+      const mapSection = systemMap
+        ? `\n--- MAPPA AGENTI/PROMPT (per identificare ridondanze e destinazioni) ---\n${systemMap}\n--- FINE MAPPA ---\n`
+        : "";
+
+      const prompt = `Sei il LAB AGENT ARCHITECT. NON riscrivere il blocco. Analizzalo e produci un REPORT STRUTTURATO.
+
+OBIETTIVO: capire se questo blocco è al posto giusto, se va spostato in un altro contratto/dottrina, se duplica un altro blocco, o se va eliminato.
+
+FORMATO OBBLIGATORIO (rispetta esattamente le etichette in maiuscolo, una per riga):
+
+BLOCK: ${block.id}
+SEVERITY: low | medium | high | critical
+WHY: <una sola frase, max 200 caratteri>
+DESTINATION: keep-here | move-to-doctrine | move-to-procedure | move-to-contract | merge-with:<block_id> | delete
+PROPOSAL: <opzionale, testo proposto se SEVERITY ≥ medium>
+TEST: <opzionale, scenario operativo per verificare la modifica>
+
+Se identifichi PIÙ blocchi vicini problematici, ripeti l'intero schema (BLOCK/SEVERITY/...) per ognuno, separato da una riga vuota.
+
+REGOLE:
+- "keep-here" se il blocco è ben collocato, anche se migliorabile (severity low/medium ammessa).
+- "move-to-doctrine" se è una regola fondamentale che dovrebbe vivere in kb_entries (categoria doctrine/system_doctrine/sales_doctrine).
+- "move-to-procedure" se è una procedura operativa lunga che dovrebbe vivere in kb_entries (categoria procedures).
+- "move-to-contract" se descrive struttura I/O di un agente che dovrebbe vivere come AgentContract nel registry.
+- "merge-with:<block_id>" se è duplicato/ridondante con un altro blocco visibile in mappa.
+- "delete" se è obsoleto o contraddittorio rispetto alla dottrina.
+
+NIENTE preamboli, niente commenti fuori formato, niente markdown extra.
+
+--- BLOCCO ANALIZZATO ---
+Tab: ${tabLabel ?? "n/d"}
+Runtime: ${tabActivation ?? "n/d"}
+Sorgente DB: ${sourceDesc}
+Etichetta: ${block.label}
+ID: ${block.id}
+${goal?.trim() ? `\nObiettivo dichiarato: ${goal.trim()}\n` : ""}
+--- TESTO ATTUALE ---
+${block.content}
+--- FINE TESTO ---
+${mapSection}
+--- BLOCCHI VICINI (per cercare duplicati/contraddizioni) ---
+${nearbySummary}
+--- FINE BLOCCHI VICINI ---
+
+--- KB DOCTRINE rilevante (per valutare se va promossa a doctrine) ---
+${doctrineSnippet}
+--- FINE KB DOCTRINE ---`;
+
+      const raw = await callAgent(prompt, {
+        mode: "architect_diagnose",
+        block_id: block.id,
+        block_source: block.source,
+      });
+      return parseArchitectDiagnostics(raw);
+    },
+    [callAgent],
+  );
+
   const sendChatMessage = useCallback(
     async (
       content: string,
@@ -521,6 +605,7 @@ Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
     sendChatMessage,
     improveBlock,
     improveBlockGlobal,
+    analyzeBlockArchitect,
     clearMessages: () => setMessages([]),
   };
 }

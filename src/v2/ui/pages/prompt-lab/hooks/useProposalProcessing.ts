@@ -9,6 +9,7 @@
 
 import { type Block, type BlockSource, PROMPT_LAB_TABS } from "../types";
 import { SYSTEM_MISSION } from "./useGlobalPromptImprover";
+import { resolveBlockAgent, ORPHAN_AGENT_LABEL } from "./agentMapping";
 
 export interface GlobalProposal {
   block: Block;
@@ -52,6 +53,36 @@ export function buildSystemMap(all: ReadonlyArray<{ tabLabel: string; block: Blo
     lines.push(`\n## TAB: ${tab}`);
     if (activation) lines.push(`Attivazione runtime: ${activation}`);
     for (const b of blocks) {
+      const snippet = (b.content || "(vuoto)").slice(0, 280).replace(/\s+/g, " ").trim();
+      lines.push(`- [${b.id}] ${b.label}: ${snippet}${b.content.length > 280 ? "…" : ""}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Variante agent-centric: raggruppa per agente proprietario invece che per tab UI.
+ * Usata dal "Migliora tutto" in modalità Atlas (Fase 3).
+ * I blocchi orfani finiscono in una sezione dedicata in coda.
+ */
+export function buildSystemMapByAgent(all: ReadonlyArray<{ tabLabel: string; block: Block }>): string {
+  const groups = new Map<string, { label: string; items: Block[] }>();
+  for (const { block } of all) {
+    const binding = resolveBlockAgent(block);
+    const bucket = groups.get(binding.agentId);
+    if (bucket) bucket.items.push(block);
+    else groups.set(binding.agentId, { label: binding.agentLabel, items: [block] });
+  }
+  const lines: string[] = [];
+  // Stampa prima gli agenti, poi orfani in coda
+  const ordered = Array.from(groups.entries()).sort(([, a], [, b]) => {
+    if (a.label === ORPHAN_AGENT_LABEL) return 1;
+    if (b.label === ORPHAN_AGENT_LABEL) return -1;
+    return a.label.localeCompare(b.label);
+  });
+  for (const [, { label, items }] of ordered) {
+    lines.push(`\n## AGENT: ${label}`);
+    for (const b of items) {
       const snippet = (b.content || "(vuoto)").slice(0, 280).replace(/\s+/g, " ").trim();
       lines.push(`- [${b.id}] ${b.label}: ${snippet}${b.content.length > 280 ? "…" : ""}`);
     }
