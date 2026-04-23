@@ -84,7 +84,7 @@ function TokenCockpitContent() {
       const month = (monthlyData || []).reduce((sum, row) => sum + (row.total_tokens || 0), 0);
 
       const settings = (settingsData || []).reduce((acc, row) => {
-        acc[row.key] = row.value;
+        if (row.key) acc[row.key] = String(row.value ?? "");
         return acc;
       }, {} as Record<string, string>);
 
