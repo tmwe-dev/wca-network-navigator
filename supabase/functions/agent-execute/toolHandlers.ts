@@ -213,7 +213,7 @@ export async function executeTool(
 
     // ── CRM TOOLS ──
     case "update_partner":
-      return handleUpdatePartner(supabase, args);
+      return handleUpdatePartner(supabase, userId, args);
     case "add_partner_note":
       return handleAddPartnerNote(supabase, args);
     case "create_reminder":
@@ -231,7 +231,7 @@ export async function executeTool(
     case "update_lead_status":
       return handleUpdateLeadStatus(supabase, userId, args);
     case "bulk_update_partners":
-      return handleBulkUpdatePartners(supabase, args);
+      return handleBulkUpdatePartners(supabase, userId, args);
     case "delete_records":
       return handleDeleteRecords(supabase, userId, args);
     case "get_email_classifications":

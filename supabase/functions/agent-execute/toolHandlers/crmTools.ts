@@ -7,19 +7,47 @@ interface SourceMetaRecord { company_name?: string; scheduled?: boolean; [key: s
 
 export async function handleUpdatePartner(
   supabase: SupabaseClient,
+  userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const partner = await resolvePartnerId(args);
   if (!partner) return { error: "Partner non trovato" };
   const updates: Record<string, unknown> = {};
+  let leadStatusChange: string | undefined;
+
   if (args.is_favorite !== undefined) updates.is_favorite = args.is_favorite;
-  if (args.lead_status) updates.lead_status = args.lead_status;
+  if (args.lead_status) leadStatusChange = String(args.lead_status);
   if (args.rating !== undefined) updates.rating = Math.min(5, Math.max(0, Number(args.rating)));
   if (args.company_alias) updates.company_alias = args.company_alias;
-  if (Object.keys(updates).length === 0) return { error: "Nessun campo da aggiornare" };
-  updates.updated_at = new Date().toISOString();
-  const { error } = await supabase.from("partners").update(updates).eq("id", partner.id);
-  if (error) return { error: error.message };
+
+  if (Object.keys(updates).length === 0 && !leadStatusChange) {
+    return { error: "Nessun campo da aggiornare" };
+  }
+
+  // Update non-lead_status fields if any exist
+  if (Object.keys(updates).length > 0) {
+    updates.updated_at = new Date().toISOString();
+    const { error } = await supabase.from("partners").update(updates).eq("id", partner.id);
+    if (error) return { error: error.message };
+  }
+
+  // Apply lead_status change via guard if specified
+  if (leadStatusChange) {
+    const result = await applyLeadStatusChange(supabase, {
+      table: "partners",
+      recordId: partner.id,
+      newStatus: leadStatusChange,
+      userId: userId,
+      actor: { type: "user", id: userId },
+      decisionOrigin: "manual",
+      trigger: "Manual lead status update via agent tool",
+      partnerIdForAudit: partner.id,
+    });
+    if (!result.applied) {
+      return { error: result.blockedReason || "Impossibile aggiornare lead_status" };
+    }
+  }
+
   return { success: true, partner: partner.name, message: `Partner "${partner.name}" aggiornato.` };
 }
 
@@ -204,19 +232,63 @@ export async function handleUpdateLeadStatus(
 
 export async function handleBulkUpdatePartners(
   supabase: SupabaseClient,
+  userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const updates: Record<string, unknown> = {};
+  let leadStatusChange: string | undefined;
+
   if (args.is_favorite !== undefined) updates.is_favorite = args.is_favorite;
-  if (args.lead_status) updates.lead_status = args.lead_status;
-  if (Object.keys(updates).length === 0) return { error: "Nessun aggiornamento" };
-  updates.updated_at = new Date().toISOString();
-  let query = supabase.from("partners").update(updates);
-  if (args.partner_ids) query = query.in("id", args.partner_ids as string[]);
-  else if (args.country_code) query = query.eq("country_code", String(args.country_code).toUpperCase());
-  else return { error: "Specifica country_code o partner_ids" };
-  const { error } = await query;
-  if (error) return { error: error.message };
+  if (args.lead_status) leadStatusChange = String(args.lead_status);
+
+  if (Object.keys(updates).length === 0 && !leadStatusChange) {
+    return { error: "Nessun aggiornamento" };
+  }
+
+  // Determine which partners to update
+  let partnerIds: string[] = [];
+  if (args.partner_ids) {
+    partnerIds = args.partner_ids as string[];
+  } else if (args.country_code) {
+    const { data } = await supabase
+      .from("partners")
+      .select("id")
+      .eq("country_code", String(args.country_code).toUpperCase());
+    partnerIds = (data || []).map((p: { id: string }) => p.id);
+  } else {
+    return { error: "Specifica country_code o partner_ids" };
+  }
+
+  if (partnerIds.length === 0) return { error: "Nessun partner trovato" };
+
+  // Update non-lead_status fields in bulk if any exist
+  if (Object.keys(updates).length > 0) {
+    updates.updated_at = new Date().toISOString();
+    const { error } = await supabase.from("partners").update(updates).in("id", partnerIds);
+    if (error) return { error: error.message };
+  }
+
+  // Apply lead_status change via guard for each partner if specified
+  if (leadStatusChange) {
+    let successCount = 0;
+    for (const partnerId of partnerIds) {
+      const result = await applyLeadStatusChange(supabase, {
+        table: "partners",
+        recordId: partnerId,
+        newStatus: leadStatusChange,
+        userId: userId,
+        actor: { type: "user", id: userId },
+        decisionOrigin: "manual",
+        trigger: "Manual bulk lead status update via agent tool",
+        partnerIdForAudit: partnerId,
+      });
+      if (result.applied) successCount++;
+    }
+    if (successCount === 0 && partnerIds.length > 0) {
+      return { error: "Impossibile aggiornare lead_status per nessun partner" };
+    }
+  }
+
   return { success: true, message: "Partner aggiornati." };
 }
 

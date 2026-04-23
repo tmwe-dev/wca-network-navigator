@@ -76,8 +76,12 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
     todayStart.setHours(0, 0, 0, 0);
     const todayISO = todayStart.toISOString();
 
-    // v_kpi_dashboard provides partner counts by status + outreach_sent_today + outreach_queue_pending
-    // in a single pre-aggregated row per user → replaces 6 individual partner COUNT queries
+    // v_kpi_dashboard provides comprehensive pre-aggregated metrics in a single row:
+    // - Partner counts by all statuses (new, first_touch, etc.)
+    // - Activity stats (emails/whatsapp/linkedin sent in last 30d)
+    // - Inbox stats (unread, inbound today)
+    // - Outreach queue stats (pending, sent today)
+    // This replaces 9+ individual COUNT queries
     const [
       kpiRes,
       // imported_contacts still need individual queries (not in materialized view)
@@ -90,12 +94,15 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
       schedulesPendingRes,
       actionsApprovedRes,
       actionsProposedRes,
-      // Messages (outreach queue stats partially in view)
+      // Messages (outreach queue stats from view, but verify individual counts)
       awaitingRes,
       repliesReceivedRes,
     ] = await Promise.all([
-      // Single read replaces: totalPartners, newPartners, contactedPartners, sentToday
-      supabase.from("v_kpi_dashboard").select("total_partners, partners_new, partners_first_touch, outreach_sent_today, outreach_queue_pending").limit(1).maybeSingle(),
+      // Single read from v_kpi_dashboard replaces 6+ partner COUNT queries
+      // Columns: total_partners, partners_new, partners_first_touch, partners_holding,
+      // partners_engaged, partners_qualified, partners_negotiation, partners_converted,
+      // partners_archived, partners_blacklisted, plus activity/inbox/queue stats
+      supabase.from("v_kpi_dashboard").select("total_partners, partners_new, partners_first_touch, outreach_sent_today, outreach_queue_pending, inbound_today, unread_messages").limit(1).maybeSingle(),
       // imported_contacts
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),

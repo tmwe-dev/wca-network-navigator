@@ -126,51 +126,89 @@ export async function getEmailMetrics(
 
 /**
  * Get partner metrics
+ * Uses v_kpi_dashboard materialized view for lead status counts
  */
 export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsData> {
   try {
+    // Fetch pre-aggregated partner counts by status from materialized view
+    const { data: kpiRow } = await supabase
+      .from("v_kpi_dashboard")
+      .select("total_partners, partners_new, partners_first_touch, partners_holding, partners_engaged, partners_qualified, partners_negotiation, partners_converted, partners_archived, partners_blacklisted")
+      .limit(1)
+      .maybeSingle();
+
+    // Still need to fetch raw partner data for country counts and enrichment coverage
     const { data: partners } = await (supabase as any)
       .from("partners")
-      .select("lead_status, country, enrichment_score")
-      .eq("user_id", userId);
+      .select("lead_status, country_code, enrichment_data");
 
-    if (!partners) {
+    // Build byLeadStatus from materialized view if available
+    let byLeadStatus: Record<string, number> = {};
+    let totalPartners = 0;
+    let activePartners = 0;
+
+    if (kpiRow) {
+      byLeadStatus = {
+        new: kpiRow.partners_new || 0,
+        first_touch_sent: kpiRow.partners_first_touch || 0,
+        holding: kpiRow.partners_holding || 0,
+        engaged: kpiRow.partners_engaged || 0,
+        qualified: kpiRow.partners_qualified || 0,
+        negotiation: kpiRow.partners_negotiation || 0,
+        converted: kpiRow.partners_converted || 0,
+        archived: kpiRow.partners_archived || 0,
+        blacklisted: kpiRow.partners_blacklisted || 0,
+      };
+      totalPartners = kpiRow.total_partners || 0;
+      activePartners = (kpiRow.partners_qualified || 0) + (kpiRow.partners_negotiation || 0);
+    } else if (partners) {
+      // Fallback: compute from raw data
+      let enrichedCount = 0;
+      const byCountry: Record<string, number> = {};
+
+      for (const p of partners) {
+        const status = p.lead_status || "unknown";
+        byLeadStatus[status] = (byLeadStatus[status] || 0) + 1;
+        if (p.country_code) {
+          byCountry[p.country_code] = (byCountry[p.country_code] || 0) + 1;
+        }
+        if (p.enrichment_data) {
+          enrichedCount++;
+        }
+      }
+
+      totalPartners = partners.length;
+      activePartners = (byLeadStatus["qualified"] || 0) + (byLeadStatus["in_progress"] || 0);
+
       return {
-        totalPartners: 0,
-        byLeadStatus: {},
-        byCountry: {},
-        enrichmentCoverage: 0,
-        activePartners: 0,
+        totalPartners,
+        byLeadStatus,
+        byCountry,
+        enrichmentCoverage: totalPartners > 0 ? (enrichedCount / totalPartners) * 100 : 0,
+        activePartners,
       };
     }
 
-    const byLeadStatus: Record<string, number> = {};
+    // Count by country from raw partner data
     const byCountry: Record<string, number> = {};
     let enrichedCount = 0;
 
-    for (const p of partners) {
-      // Count by lead status
-      const status = p.lead_status || "unknown";
-      byLeadStatus[status] = (byLeadStatus[status] || 0) + 1;
-
-      // Count by country
-      if (p.country) {
-        byCountry[p.country] = (byCountry[p.country] || 0) + 1;
-      }
-
-      // Count enrichment
-      if (p.enrichment_score && p.enrichment_score > 0.5) {
-        enrichedCount++;
+    if (partners) {
+      for (const p of partners) {
+        if (p.country_code) {
+          byCountry[p.country_code] = (byCountry[p.country_code] || 0) + 1;
+        }
+        if (p.enrichment_data) {
+          enrichedCount++;
+        }
       }
     }
 
-    const activePartners = (byLeadStatus["qualified"] || 0) + (byLeadStatus["in_progress"] || 0);
-
     return {
-      totalPartners: partners.length,
+      totalPartners,
       byLeadStatus,
       byCountry,
-      enrichmentCoverage: (enrichedCount / partners.length) * 100,
+      enrichmentCoverage: totalPartners > 0 ? (enrichedCount / totalPartners) * 100 : 0,
       activePartners,
     };
   } catch (error) {

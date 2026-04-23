@@ -166,11 +166,28 @@ export async function getPartner(id: string) {
 }
 
 export async function updatePartner(id: string, updates: Partial<PartnerRow>) {
-  const { error } = await supabase
-    .from("partners")
-    .update(updates)
-    .eq("id", id);
-  if (error) throw error;
+  // Separate lead_status updates to route through RPC guard
+  const { lead_status, ...otherUpdates } = updates;
+
+  if (lead_status) {
+    // Route lead_status through RPC to enforce state machine
+    const { data, error: rpcError } = await supabase.rpc("apply_lead_status_rpc", {
+      p_table: "partners",
+      p_record_id: id,
+      p_new_status: lead_status,
+    });
+    if (rpcError) throw rpcError;
+    if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+  }
+
+  // Apply remaining non-status updates
+  if (Object.keys(otherUpdates).length > 0) {
+    const { error } = await supabase
+      .from("partners")
+      .update(otherUpdates)
+      .eq("id", id);
+    if (error) throw error;
+  }
 }
 
 export async function toggleFavorite(id: string, isFavorite: boolean) {
@@ -407,6 +424,55 @@ export async function getPartnersByLeadStatus(statuses: string[], select = "id")
     .in("lead_status", statuses);
   if (error) throw error;
   return (data ?? []) as unknown as PartnerLeadResult[];
+}
+
+/**
+ * Get partners by lead status using v_pipeline_lead materialized view.
+ * Provides enriched pipeline data (touch counts, last activity, pending reminders, etc.)
+ * faster than individual queries. Use this for pipeline views, funnel analysis, and
+ * lead status filtering.
+ */
+export interface PipelineLeadRow {
+  partner_id: string;
+  user_id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code: string;
+  country_name: string;
+  city: string;
+  email: string | null;
+  phone: string | null;
+  lead_status: string;
+  is_active: boolean | null;
+  is_favorite: boolean | null;
+  rating: number | null;
+  interaction_count: number;
+  last_interaction_at: string | null;
+  partner_created_at: string | null;
+  enriched_at: string | null;
+  converted_at: string | null;
+  touch_count: number;
+  last_outbound_at: string | null;
+  days_since_last_outbound: number;
+  last_inbound_at: string | null;
+  last_inbound_category: string | null;
+  days_since_last_inbound: number | null;
+  pending_reminders: number;
+  has_deep_search: boolean;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+}
+
+export async function getPartnersByLeadStatusFromView(
+  statuses: string[],
+  select = "partner_id, company_name, email, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
+): Promise<PipelineLeadRow[]> {
+  const { data, error } = await supabase
+    .from("v_pipeline_lead")
+    .select(select)
+    .in("lead_status", statuses);
+  if (error) throw error;
+  return (data ?? []) as unknown as PipelineLeadRow[];
 }
 
 export async function findPartnerByEmail(email: string) {

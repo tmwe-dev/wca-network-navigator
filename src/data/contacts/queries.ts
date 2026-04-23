@@ -119,22 +119,45 @@ export async function insertContacts(contacts: Record<string, unknown>[]) {
 }
 
 export async function updateContactStatus(id: string, status: string, extra?: Record<string, unknown>) {
-  const updates: Record<string, unknown> = { lead_status: status, ...extra };
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update(updates as never)
-    .eq("id", id);
+  // Route through LeadProcessManager RPC to enforce lead_status transitions
+  const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+    p_table: "imported_contacts",
+    p_record_id: id,
+    p_new_status: status,
+  });
   if (error) throw error;
+  if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+
+  // Apply additional non-status updates if provided
+  if (extra && Object.keys(extra).length > 0) {
+    const { error: updateError } = await supabase
+      .from("imported_contacts")
+      .update(extra as never)
+      .eq("id", id);
+    if (updateError) throw updateError;
+  }
 }
 
 export async function updateLeadStatus(ids: string[], status: LeadStatus) {
-  const updates: Record<string, unknown> = { lead_status: status };
-  if (status === "converted") updates.converted_at = new Date().toISOString();
-  const { error } = await supabase
-    .from("imported_contacts")
-    .update(updates as never)
-    .in("id", ids);
-  if (error) throw error;
+  // Route through LeadProcessManager RPC for each contact to enforce lead_status transitions
+  for (const id of ids) {
+    const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+      p_table: "imported_contacts",
+      p_record_id: id,
+      p_new_status: status,
+    });
+    if (error) throw error;
+    if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+  }
+
+  // Handle converted_at timestamp if needed
+  if (status === "converted") {
+    const { error } = await supabase
+      .from("imported_contacts")
+      .update({ converted_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) throw error;
+  }
 }
 
 export async function toggleContactSelection(id: string, selected: boolean) {

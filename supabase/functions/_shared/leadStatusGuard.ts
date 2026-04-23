@@ -50,7 +50,7 @@ export function isValidLeadTransition(from: string | null | undefined, to: strin
 }
 
 export interface ApplyLeadStatusInput {
-  table: "partners" | "imported_contacts";
+  table: "partners" | "imported_contacts" | "business_cards";
   recordId: string;
   newStatus: string;
   userId: string;

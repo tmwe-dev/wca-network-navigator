@@ -100,11 +100,17 @@ export async function updateLeadStatus(
       if (bc) {
         const currentStatus = bc.lead_status || "new";
         if (currentStatus === "new" || !bc.lead_status) {
-          await supabase
-            .from("business_cards")
-            .update({ lead_status: "first_touch_sent" })
-            .eq("id", bcid);
-          statusUpdated = true;
+          const res = await applyLeadStatusChange(supabase, {
+            table: "business_cards",
+            recordId: bcid,
+            newStatus: "first_touch_sent",
+            userId: input.userId,
+            actor: { type: "system", name: "postSendPipeline" },
+            decisionOrigin: "system_trigger",
+            trigger: `Primo messaggio inviato (${input.channel}) via ${input.source}`,
+            metadata: { channel: input.channel, source: input.source },
+          });
+          if (res.applied) statusUpdated = true;
         }
       }
     } catch (e) {
