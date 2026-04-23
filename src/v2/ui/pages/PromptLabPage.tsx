@@ -3,6 +3,7 @@
  * Layout: ResizablePanelGroup verticale (tabs sopra, chat Lab Agent sotto).
  */
 import { useCallback, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
@@ -41,6 +42,7 @@ import {
   Users,
   Sparkles,
   Newspaper,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -130,6 +132,12 @@ export function PromptLabPage() {
                 <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
+                  <Link to="/v2/prompt-lab/atlas" title="Mappa visuale agenti × prompt × KB">
+                    <Network className="h-3.5 w-3.5" />
+                    Agent Atlas
+                  </Link>
+                </Button>
                 <Button
                   size="sm"
                   variant="default"
