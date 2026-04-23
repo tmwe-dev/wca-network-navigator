@@ -1563,7 +1563,7 @@ export type Database = {
           key: string
           operator_id: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
           value: string | null
         }
         Insert: {
@@ -1572,7 +1572,7 @@ export type Database = {
           key: string
           operator_id?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           value?: string | null
         }
         Update: {
@@ -1581,7 +1581,7 @@ export type Database = {
           key?: string
           operator_id?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           value?: string | null
         }
         Relationships: [
