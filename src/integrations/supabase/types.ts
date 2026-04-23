@@ -3063,6 +3063,7 @@ export type Database = {
           ai_suggestion_accepted: boolean | null
           ai_suggestion_confidence: number | null
           applied_count: number | null
+          applied_rules: Json | null
           auto_action: string | null
           auto_action_params: Json | null
           auto_execute: boolean | null
@@ -3095,6 +3096,7 @@ export type Database = {
           preferred_channel: string | null
           priority: number | null
           prompt_id: string | null
+          prompt_template_id: string | null
           success_rate: number | null
           tone_override: string | null
           topics_to_avoid: string[] | null
@@ -3109,6 +3111,7 @@ export type Database = {
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
           applied_count?: number | null
+          applied_rules?: Json | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -3141,6 +3144,7 @@ export type Database = {
           preferred_channel?: string | null
           priority?: number | null
           prompt_id?: string | null
+          prompt_template_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
           topics_to_avoid?: string[] | null
@@ -3155,6 +3159,7 @@ export type Database = {
           ai_suggestion_accepted?: boolean | null
           ai_suggestion_confidence?: number | null
           applied_count?: number | null
+          applied_rules?: Json | null
           auto_action?: string | null
           auto_action_params?: Json | null
           auto_execute?: boolean | null
@@ -3187,6 +3192,7 @@ export type Database = {
           preferred_channel?: string | null
           priority?: number | null
           prompt_id?: string | null
+          prompt_template_id?: string | null
           success_rate?: number | null
           tone_override?: string | null
           topics_to_avoid?: string[] | null
@@ -5910,6 +5916,39 @@ export type Database = {
           system_map?: string | null
           system_mission?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          prompt_text: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          prompt_text: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          prompt_text?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
