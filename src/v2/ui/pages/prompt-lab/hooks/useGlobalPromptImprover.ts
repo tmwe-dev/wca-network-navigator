@@ -1,16 +1,18 @@
 /**
  * useGlobalPromptImprover — orchestrator del "Migliora tutto" con persistenza (LOVABLE-91).
  *
+ * LOVABLE-109: Contesto filtrato per blocco, gerarchia di verità, classificazione esito.
+ *
  * Raccoglie TUTTI i blocchi modificabili dal Prompt Lab, costruisce una "system map"
  * + dottrina completa come contesto, e per ogni blocco chiede al Lab Agent una versione
- * migliorata coerente con il resto.
+ * migliorata coerente con il resto — filtrando il contesto per rilevanza.
  *
  * Salvataggio è una fase separata (review prima di scrivere su DB).
  *
  * REFACTORED: Splits into focused modules for collection, processing, saving, and context building.
  */
 import { useCallback, useState, useEffect, useRef } from "react";
-import { useLabAgent } from "./useLabAgent";
+import { useLabAgent, parseImproveResponse } from "./useLabAgent";
 import type { Block, BlockSource } from "../types";
 import {
   createRun,
@@ -26,7 +28,7 @@ import type { ParsedFile } from "../utils/fileParser";
 import { collectAllBlocks, loadFullDoctrine } from "./useBlockCollector";
 import { buildSystemMap, buildSystemMapByAgent, toRunProposals, type GlobalProposal } from "./useProposalProcessing";
 import { saveProposal, auditSaveProposal } from "./useProposalSaver";
-import { buildExtraContext } from "./useContextBuilder";
+import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
 
 export const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
@@ -169,27 +171,40 @@ export function useGlobalPromptImprover(
       }));
 
       try {
-        const improved = await lab.improveBlockGlobal({
+        // LOVABLE-109: Contesto filtrato per blocco — riduce rumore e token
+        const filteredDoctrine = filterDoctrineForBlock(doctrineFull, p.block, p.tabLabel);
+        const filteredMap = filterSystemMapForBlock(collected, p.block, p.tabLabel);
+
+        const rawImproved = await lab.improveBlockGlobal({
           block: p.block,
           tabLabel: p.tabLabel,
           tabActivation: p.tabActivation,
-          systemMap,
-          doctrineFull,
+          systemMap: filteredMap,
+          doctrineFull: filteredDoctrine,
           systemMission: SYSTEM_MISSION,
           goal: run.goal || undefined,
         });
-        const isSame = improved.trim() === p.before.trim();
-        const newStatus = isSame ? "skipped" as const : "ready" as const;
+
+        // LOVABLE-109: Parse outcome_type e architectural note dalla risposta
+        const parsed = parseImproveResponse(rawImproved);
+        const isSame = parsed.text.trim() === p.before.trim();
+        const newStatus = (isSame || parsed.outcomeType === "no_change") ? "skipped" as const : "ready" as const;
 
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i ? { ...x, after: improved, status: newStatus } : x,
+            idx === i ? {
+              ...x,
+              after: parsed.text,
+              status: newStatus,
+              outcomeType: parsed.outcomeType,
+              architecturalNote: parsed.architecturalNote,
+            } : x,
           ),
         }));
 
         // Persist to DB
-        await appendProposal(run.id, i, { after: improved, status: newStatus }, i + 1);
+        await appendProposal(run.id, i, { after: parsed.text, status: newStatus }, i + 1);
         setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
@@ -284,21 +299,37 @@ export function useGlobalPromptImprover(
       }));
 
       try {
-        const improved = await lab.improveBlockGlobal({
+        // LOVABLE-109: Contesto filtrato per blocco — riduce rumore e token
+        const filteredDoctrine = filterDoctrineForBlock(fullContext, p.block, p.tabLabel);
+        const filteredMap = filterSystemMapForBlock(collected, p.block, p.tabLabel);
+        const filteredRef = filterReferenceForBlock(referenceMaterial, uploadedFiles, p.block, p.tabLabel);
+        // Combina dottrina filtrata + riferimenti filtrati
+        const blockDoctrine = filteredDoctrine + (filteredRef ? "\n\n" + filteredRef : "");
+
+        const rawImproved = await lab.improveBlockGlobal({
           block: p.block,
           tabLabel: p.tabLabel,
-          systemMap,
-          doctrineFull: fullContext,
+          systemMap: filteredMap,
+          doctrineFull: blockDoctrine,
           systemMission: SYSTEM_MISSION,
           goal: goal.trim() || undefined,
         });
-        const isSame = improved.trim() === p.before.trim();
-        const newStatus = isSame ? "skipped" as const : "ready" as const;
+
+        // LOVABLE-109: Parse outcome_type e architectural note dalla risposta
+        const parsed = parseImproveResponse(rawImproved);
+        const isSame = parsed.text.trim() === p.before.trim();
+        const newStatus = (isSame || parsed.outcomeType === "no_change") ? "skipped" as const : "ready" as const;
 
         setState((s) => ({
           ...s,
           proposals: s.proposals.map((x, idx) =>
-            idx === i ? { ...x, after: improved, status: newStatus } : x,
+            idx === i ? {
+              ...x,
+              after: parsed.text,
+              status: newStatus,
+              outcomeType: parsed.outcomeType,
+              architecturalNote: parsed.architecturalNote,
+            } : x,
           ),
         }));
 
@@ -308,7 +339,7 @@ export function useGlobalPromptImprover(
           const isLast = i === initial.length - 1;
           if (isLast || now - lastDbSave.current >= DB_THROTTLE_MS) {
             lastDbSave.current = now;
-            await appendProposal(runId, i, { after: improved, status: newStatus }, i + 1).catch(() => {});
+            await appendProposal(runId, i, { after: parsed.text, status: newStatus }, i + 1).catch(() => {});
             setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
           }
         }

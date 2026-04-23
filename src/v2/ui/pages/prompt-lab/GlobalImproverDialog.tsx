@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2 } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, FileText, RotateCcw, Save, X, Upload, Trash2, Wrench, Code2, BookOpen, Ban } from "lucide-react";
 import { useGlobalPromptImprover } from "./hooks/useGlobalPromptImprover";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
@@ -62,6 +62,10 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
   );
   const skippedCount = state.proposals.filter((p) => p.status === "skipped").length;
   const errorCount = state.proposals.filter((p) => p.status === "error").length;
+  // LOVABLE-109: conteggi outcome_type per segnalazioni architetturali
+  const contractNeededCount = state.proposals.filter((p) => p.outcomeType === "contract_needed").length;
+  const codePolicyCount = state.proposals.filter((p) => p.outcomeType === "code_policy_needed").length;
+  const kbFixCount = state.proposals.filter((p) => p.outcomeType === "kb_fix").length;
 
   function toggle(id: string) {
     setAccepted((prev) => {
@@ -296,6 +300,24 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                       {errorCount} errori
                     </Badge>
                   )}
+                  {contractNeededCount > 0 && (
+                    <Badge variant="outline" className="gap-1 border-amber-500 text-amber-700">
+                      <Wrench className="h-3 w-3" />
+                      {contractNeededCount} contratto backend
+                    </Badge>
+                  )}
+                  {codePolicyCount > 0 && (
+                    <Badge variant="outline" className="gap-1 border-purple-500 text-purple-700">
+                      <Code2 className="h-3 w-3" />
+                      {codePolicyCount} policy codice
+                    </Badge>
+                  )}
+                  {kbFixCount > 0 && (
+                    <Badge variant="outline" className="gap-1 border-blue-500 text-blue-700">
+                      <BookOpen className="h-3 w-3" />
+                      {kbFixCount} fix KB
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     Selezionati: <strong>{accepted.size}</strong> / {readyProposals.length}
                   </span>
@@ -342,10 +364,36 @@ export function GlobalImproverDialog({ open, onOpenChange }: GlobalImproverDialo
                               {isSaved && <Badge variant="default" className="bg-success text-success-foreground text-[10px]">Salvato</Badge>}
                               {isError && <Badge variant="destructive" className="text-[10px]">Errore</Badge>}
                               {isSkipped && <Badge variant="secondary" className="text-[10px]">Già ottimo</Badge>}
+                              {/* LOVABLE-109: outcome_type badges */}
+                              {p.outcomeType === "contract_needed" && (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700 gap-0.5">
+                                  <Wrench className="h-2.5 w-2.5" /> Contratto backend
+                                </Badge>
+                              )}
+                              {p.outcomeType === "code_policy_needed" && (
+                                <Badge variant="outline" className="text-[10px] border-purple-500 text-purple-700 gap-0.5">
+                                  <Code2 className="h-2.5 w-2.5" /> Policy codice
+                                </Badge>
+                              )}
+                              {p.outcomeType === "kb_fix" && (
+                                <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-700 gap-0.5">
+                                  <BookOpen className="h-2.5 w-2.5" /> Fix KB
+                                </Badge>
+                              )}
+                              {p.outcomeType === "no_change" && (
+                                <Badge variant="outline" className="text-[10px] gap-0.5">
+                                  <Ban className="h-2.5 w-2.5" /> Nessun intervento
+                                </Badge>
+                              )}
                             </div>
                             {p.tabActivation && (
                               <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
                                 <span className="font-medium">Runtime:</span> {p.tabActivation}
+                              </p>
+                            )}
+                            {p.architecturalNote && (
+                              <p className="text-[10px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1">
+                                <span className="font-medium">Nota architetturale:</span> {p.architecturalNote}
                               </p>
                             )}
                           </div>

@@ -11,6 +11,17 @@ import { type Block, type BlockSource, PROMPT_LAB_TABS } from "../types";
 import { SYSTEM_MISSION } from "./useGlobalPromptImprover";
 import { resolveBlockAgent, ORPHAN_AGENT_LABEL } from "./agentMapping";
 
+/**
+ * Classificazione dell'esito proposto dal Lab Agent.
+ * Non tutti i problemi si risolvono riscrivendo il testo.
+ */
+export type OutcomeType =
+  | "text_fix"             // Riscrittura testo sufficiente
+  | "kb_fix"               // Serve aggiungere/modificare una voce KB
+  | "contract_needed"      // Serve un contratto backend / logica runtime
+  | "code_policy_needed"   // Serve una policy hard nel codice
+  | "no_change";           // Blocco già ottimo, nessun intervento
+
 export interface GlobalProposal {
   block: Block;
   tabLabel: string;
@@ -19,6 +30,10 @@ export interface GlobalProposal {
   after?: string;
   status: "pending" | "improving" | "ready" | "skipped" | "error" | "saved";
   error?: string;
+  /** Classificazione del tipo di intervento necessario */
+  outcomeType?: OutcomeType;
+  /** Nota architetturale se il problema non è solo testuale */
+  architecturalNote?: string;
 }
 
 /** Stringa "tab label" per ogni tipo di sorgente. */

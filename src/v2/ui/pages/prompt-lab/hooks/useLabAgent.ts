@@ -1,5 +1,8 @@
 /**
  * useLabAgent — wrapper unified-assistant scope kb-supervisor con briefing Prompt Lab.
+ *
+ * LOVABLE-109: Aggiunta gerarchia di verità, classificazione esito (outcome_type),
+ * e parsing strutturato della risposta AI per distinguere text_fix da contract_needed.
  */
 import { useCallback, useState } from "react";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -10,10 +13,54 @@ import { parseArchitectDiagnostics, type ArchitectDiagnostic } from "./diagnosti
 import { useArchitectKb } from "./useArchitectKb";
 import { AGENT_REGISTRY, type AgentRegistryEntry } from "@/data/agentPrompts";
 import { resolveBlockAgent } from "./agentMapping";
+import type { OutcomeType } from "./useProposalProcessing";
+
+/** Risultato parsato dalla risposta del Lab Agent in modalità global_improve */
+export interface ParsedImproveResult {
+  text: string;
+  outcomeType: OutcomeType;
+  architecturalNote?: string;
+}
+
+const VALID_OUTCOME_TYPES = new Set<OutcomeType>(["text_fix", "kb_fix", "contract_needed", "code_policy_needed", "no_change"]);
+
+/** Parsa OUTCOME_TYPE e ARCHITECTURAL_NOTE dalla risposta AI */
+export function parseImproveResponse(raw: string): ParsedImproveResult {
+  const lines = raw.split("\n");
+  let outcomeType: OutcomeType = "text_fix"; // default fallback
+  let architecturalNote: string | undefined;
+  let textStartIdx = 0;
+
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const line = lines[i].trim();
+    if (line.startsWith("OUTCOME_TYPE:")) {
+      const parsed = line.replace("OUTCOME_TYPE:", "").trim().toLowerCase() as OutcomeType;
+      if (VALID_OUTCOME_TYPES.has(parsed)) {
+        outcomeType = parsed;
+      }
+      textStartIdx = i + 1;
+    } else if (line.startsWith("ARCHITECTURAL_NOTE:")) {
+      architecturalNote = line.replace("ARCHITECTURAL_NOTE:", "").trim();
+      textStartIdx = i + 1;
+    }
+  }
+
+  const text = lines.slice(textStartIdx).join("\n").trim();
+  return { text: text || raw.trim(), outcomeType, architecturalNote };
+}
 
 const PROMPT_LAB_BRIEFING = `Sei il Prompt Lab Architect. Migliori prompt, KB e configurazioni AI per WCA Network Navigator.
 
-REGOLE:
+=== GERARCHIA DI VERITÀ (rispetta SEMPRE questo ordine, senza eccezioni) ===
+1. POLICY HARD NEL CODICE — regole implementate come logica runtime (gate, validator, policy). Non puoi sovrascriverle con testo.
+2. COSTITUZIONE / KB DOCTRINE — regole scritte nella KB doctrine (dottrina 9 stati, governance, procedure). Il testo che scrivi non può contraddirle.
+3. PROMPT CORE — system prompt e prompt operativi esistenti. Mantieni coerenza.
+4. INPUT UTENTE — obiettivo e materiale di riferimento forniti dall'operatore. Integra, non sovrascrivere i livelli superiori.
+5. BLOCCO DA MIGLIORARE — il testo su cui stai lavorando. È il livello più basso nella catena.
+Se un miglioramento contraddirebbe un livello superiore, NON farlo — segnala il conflitto.
+=== FINE GERARCHIA ===
+
+REGOLE DI FORMA:
 - System Prompt: max 2000 chars, struttura RUOLO/REGOLE/DOTTRINA/OUTPUT
 - KB Entry: max 800 chars, struttura REGOLA/PROCEDURA/ESEMPIO
 - Email Prompt: max 500 chars, struttura TIPO/TONO/STRUTTURA/CTA
@@ -24,7 +71,22 @@ QUANDO MIGLIORI: elimina ridondanze, sostituisci frasi vaghe con istruzioni prec
 
 CONTESTO RUNTIME: ogni richiesta include "Dove si attiva" (in quali pagine/edge function viene eseguito il blocco), "Sorgente" (tabella/campo DB), "Blocchi vicini" (altri blocchi dello stesso tab — NON contraddirli) e "KB doctrine rilevante" (regole già scritte in KB — rispettale, non duplicarle). Se l'operatore ha dichiarato un OBIETTIVO, ottimizza esplicitamente per quello.
 
-IMPORTANTE: rispondi SOLO con il testo migliorato del blocco richiesto, senza intro né commenti. Mantieni la struttura originale a meno che non sia esplicitamente sbagliata.`;
+=== CLASSIFICAZIONE ESITO (OBBLIGATORIA in modalità global_improve) ===
+Prima del testo migliorato, scrivi ESATTAMENTE una riga con il formato:
+OUTCOME_TYPE: <tipo>
+dove <tipo> è uno di:
+- text_fix — il blocco va riscritto (procedi con la riscrittura sotto)
+- kb_fix — serve aggiungere/modificare una voce KB (spiega quale nella nota)
+- contract_needed — il problema non è il testo ma un contratto backend / logica runtime mancante (spiega nella nota)
+- code_policy_needed — serve una policy hard nel codice, non basta il testo (spiega nella nota)
+- no_change — il blocco è già ottimo, non serve intervento
+
+Se il tipo è text_fix, dopo la riga OUTCOME_TYPE scrivi il testo migliorato.
+Se il tipo NON è text_fix, dopo OUTCOME_TYPE scrivi una riga ARCHITECTURAL_NOTE: con la spiegazione.
+Poi il testo (invariato se no_change, o una versione best-effort se il fix è parziale).
+=== FINE CLASSIFICAZIONE ===
+
+IMPORTANTE: In modalità chat normale (non global_improve), rispondi SOLO con il testo migliorato senza OUTCOME_TYPE. In modalità global_improve, SEMPRE includi OUTCOME_TYPE.`;
 
 export interface LabChatMessage {
   id: string;
