@@ -91,7 +91,7 @@ export function MultiSelectBulkBar({
       const allEmails: string[] = [];
       results.forEach((result) => {
         if (!result.error && result.data) {
-          allEmails.push(...result.data.map((e) => e.id));
+          allEmails.push(...result.data.map((e: { id: string }) => e.id));
         }
       });
 
@@ -141,16 +141,15 @@ export function MultiSelectBulkBar({
         }
       }
 
-      const actionLabels: Record<ActionType, string> = {
+      const actionLabels: Record<Exclude<ActionType, null>, string> = {
         delete: 'eliminate',
         archive: 'archiviate',
         'mark-read': 'marked as read',
         move: 'moved',
-        null: '',
       };
-
+      const label = action ? actionLabels[action] : '';
       toast.success(
-        `${allEmails.length} email ${actionLabels[action]} da ${totalSendersCount} mittenti`
+        `${allEmails.length} email ${label} da ${totalSendersCount} mittenti`
       );
 
       setPendingAction(null);
