@@ -29,14 +29,17 @@ export function ExpandedGroupContent({ groupType, groupKey, selectedId, onSelect
   const filtered = useMemo(() => {
     const search = searchFilter?.trim().toLowerCase();
     if (!search) return rawContacts;
-    return rawContacts.filter((c: Record<string, string | null>) =>
-      (c.company_name || "").toLowerCase().includes(search) ||
-      (c.name || "").toLowerCase().includes(search) ||
-      (c.email || "").toLowerCase().includes(search) ||
-      (c.city || "").toLowerCase().includes(search) ||
-      (c.company_alias || "").toLowerCase().includes(search) ||
-      (c.contact_alias || "").toLowerCase().includes(search)
-    );
+    return rawContacts.filter((c) => {
+      const r = c as unknown as Record<string, string | null>;
+      return (
+        (r.company_name || "").toLowerCase().includes(search) ||
+        (r.name || "").toLowerCase().includes(search) ||
+        (r.email || "").toLowerCase().includes(search) ||
+        (r.city || "").toLowerCase().includes(search) ||
+        (r.company_alias || "").toLowerCase().includes(search) ||
+        (r.contact_alias || "").toLowerCase().includes(search)
+      );
+    });
   }, [rawContacts, searchFilter]);
 
   const contacts = useMemo(() => sortContacts(filtered, sortKey), [filtered, sortKey]);

@@ -77,7 +77,7 @@ export interface DuplicatePair {
 
 export interface MergeFieldChoice {
   fieldName: string;
-  keepValue: string | null | undefined;
+  keepValue: string | number | null | undefined;
 }
 
 // ── Hook: Find Duplicates ──
