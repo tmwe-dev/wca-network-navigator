@@ -1,28 +1,26 @@
 /**
- * AgentAtlasPage — Mappa visuale agenti × prompt × KB.
+ * AgentAtlasPage v2 — Brain Map degli agenti AI.
  *
- * Read-only: ogni agente del sistema (incluso Optimus, Cockpit, Voice, Journalists)
- * mostra a sinistra avatar+identità, a destra colonne Prompt / KB / Tools / Contract.
- * Da ogni blocco si salta nell'editor del Prompt Lab esistente (no doppio editor).
+ * Layout: sidebar sinistra (avatar + metadata + lista agenti)
+ *         area contenuto full-width a destra con sezioni a 2 colonne.
  */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AGENT_REGISTRY, type AgentCategory } from "@/data/agentPrompts";
-import { AgentSidebar } from "./AgentSidebar";
-import { AgentDetail } from "./AgentDetail";
+import { AtlasSidebar } from "./AtlasSidebar";
+import { AtlasContent } from "./AtlasContent";
 
 const CATEGORY_LABEL: Record<AgentCategory | "all", string> = {
   all: "Tutti",
-  conversational: "Conversational",
-  generative: "Generative",
-  classification: "Classification",
-  reviewer: "Reviewer",
-  scraper: "Scraper",
+  core: "Core",
+  email: "Email",
+  outreach: "Outreach",
+  analysis: "Analisi",
   voice: "Voice",
-  worker: "Worker",
-  strategy: "Strategy",
+  autonomous: "Autonomi",
+  classifier: "Classificatori",
 };
 
 export default function AgentAtlasPage() {
@@ -41,8 +39,7 @@ export default function AgentAtlasPage() {
   );
 
   const categories: ReadonlyArray<AgentCategory | "all"> = [
-    "all", "conversational", "generative", "classification",
-    "reviewer", "scraper", "voice", "worker",
+    "all", "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
   ];
 
   return (
@@ -59,7 +56,7 @@ export default function AgentAtlasPage() {
           <span className="text-muted-foreground text-xs">/</span>
           <h1 className="text-sm font-semibold">Agent Atlas</h1>
           <span className="text-muted-foreground text-xs">
-            — mappa runtime di {allAgents.length} agenti
+            — brain map di {allAgents.length} agenti
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-1">
@@ -79,14 +76,14 @@ export default function AgentAtlasPage() {
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        <AgentSidebar
+        <AtlasSidebar
           agents={filteredAgents}
           selectedId={selected?.id ?? ""}
           onSelect={setSelectedId}
         />
         <div className="flex-1 overflow-auto">
           {selected ? (
-            <AgentDetail agent={selected} />
+            <AtlasContent agent={selected} />
           ) : (
             <div className="text-muted-foreground p-8 text-sm">
               Nessun agente in questa categoria.
