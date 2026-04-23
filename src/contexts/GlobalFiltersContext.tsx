@@ -27,6 +27,8 @@ export interface GlobalFilterState {
   cockpitStatus: string;
   attivitaStatus: string;
   attivitaPriority: string;
+  agendaType: string;
+  agendaPriority: string;
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
@@ -78,6 +80,8 @@ const defaults: GlobalFilterState = {
   cockpitStatus: "all",
   attivitaStatus: "all",
   attivitaPriority: "all",
+  agendaType: "all",
+  agendaPriority: "all",
   networkSearch: "",
   networkQuality: "all",
   networkSort: "name",

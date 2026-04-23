@@ -28,12 +28,12 @@ export function AgendaFiltersSection() {
       <FilterSection icon={ListTodo} label="Tipo">
         <ChipGroup>
           {AGENDA_TYPES.map(o => (
-            <Chip key={o.value} active={g.filters.attivitaStatus === o.value} onClick={() => g.setAttivitaStatus(o.value)}>{o.label}</Chip>
+            <Chip key={o.value} active={g.filters.agendaType === o.value} onClick={() => g.setAgendaType(o.value)}>{o.label}</Chip>
           ))}
         </ChipGroup>
       </FilterSection>
       <FilterSection icon={Zap} label="Priorità">
-        <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.attivitaPriority === o.value} onClick={() => g.setAttivitaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
+        <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.agendaPriority === o.value} onClick={() => g.setAgendaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
       </FilterSection>
       <FilterSection icon={ArrowUpDown} label="Ordina">
         <ChipGroup>

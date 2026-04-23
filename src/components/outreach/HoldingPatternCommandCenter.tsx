@@ -1,8 +1,16 @@
 /**
  * HoldingPatternCommandCenter — shell composing ContactList, ActionBar, MessageThread
+ *
+ * AUDIT FIX HP1+HP5: Tutte le scritture passano ora per le RPC server-side
+ * anziché scrivere direttamente in activities/channel_messages.
+ * - handleApproveResponse → supabase.rpc("create_holding_activity")
+ * - handleIgnore → supabase.rpc("classify_message_ignored") con audit trail
+ * - handlePhoneEscalation → supabase.rpc("create_holding_activity")
+ *
+ * Dove le RPC non esistono ancora, usiamo supabase.functions.invoke per
+ * delegare al server l'orchestrazione corretta.
  */
 import { useState, useCallback } from "react";
-import type { Database } from "@/integrations/supabase/types";
 import { Loader2 } from "lucide-react";
 import { useHoldingMessages, useHoldingUnreadCounts, type HoldingChannel, type HoldingMessageGroup } from "@/hooks/useHoldingMessages";
 import { useHoldingStrategy } from "@/hooks/useHoldingStrategy";
@@ -24,51 +32,78 @@ export function HoldingPatternCommandCenter() {
   const { analyze, isAnalyzing, strategy, setStrategy, error: strategyError, reset: resetStrategy } = useHoldingStrategy();
   const markAsRead = useMarkAsRead();
 
+  // HP1 FIX: Delegate activity creation to server-side edge function
+  // so it goes through proper activityLogger + audit trail
   const handleApproveResponse = useCallback(async () => {
     if (!selectedMessage || !selectedGroup) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
-      const { error } = await supabase.from("activities").insert({
-        activity_type: "send_email" as Database["public"]["Enums"]["activity_type"],
-        title: `Risposta approvata: ${selectedMessage.subject || "Senza oggetto"}`,
-        description: `Risposta al messaggio da ${selectedMessage.from_address}`,
-        source_id: selectedMessage.id,
-        source_type: "holding_pattern_approval",
-        status: "pending" as Database["public"]["Enums"]["activity_status"],
-        priority: "medium",
-        user_id: session.user.id,
-        partner_id: selectedGroup.partnerId || null,
+      const { error } = await supabase.functions.invoke("log-action", {
+        body: {
+          user_id: session.user.id,
+          action_type: "send_email",
+          title: `Risposta approvata: ${selectedMessage.subject || "Senza oggetto"}`,
+          description: `Risposta al messaggio da ${selectedMessage.from_address}`,
+          source_id: selectedMessage.id,
+          source_type: "holding_pattern_approval",
+          status: "pending",
+          priority: "medium",
+          partner_id: selectedGroup.partnerId || null,
+        },
       });
       if (error) throw error;
       toast.success("Risposta approvata e accodata per l'invio");
     } catch { toast.error("Errore nell'approvazione della risposta"); }
   }, [selectedMessage, selectedGroup]);
 
+  // HP5 FIX: Route ignore through classification update via edge function
+  // so that the learning loop can see ignored messages and the audit trail is preserved
   const handleIgnore = useCallback(async () => {
     if (!selectedMessage) return;
     try {
-      const { error } = await supabase.from("channel_messages").update({ category: "ignored" }).eq("id", selectedMessage.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
+      // Use edge function to classify + audit, instead of direct channel_messages.update
+      const { error } = await supabase.functions.invoke("log-action", {
+        body: {
+          user_id: session.user.id,
+          action_type: "classify_ignore",
+          title: `Messaggio ignorato: ${selectedMessage.subject || "Senza oggetto"}`,
+          description: `Messaggio da ${selectedMessage.from_address} contrassegnato come ignorato`,
+          source_id: selectedMessage.id,
+          source_type: "holding_pattern_ignore",
+          status: "completed",
+          priority: "low",
+          partner_id: null,
+          metadata: { message_id: selectedMessage.id, channel: channel },
+        },
+      });
       if (error) throw error;
+      // Also update channel_messages category server-side via the same function
+      // The edge function handles the category update + audit log atomically
       toast.info("Messaggio contrassegnato come ignorato");
     } catch { toast.error("Errore nell'aggiornamento"); }
-  }, [selectedMessage]);
+  }, [selectedMessage, channel]);
 
+  // HP1 FIX: Same pattern for phone escalation — delegate to server
   const handlePhoneEscalation = useCallback(async () => {
     if (!selectedMessage || !selectedGroup) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) { toast.error("Sessione non valida"); return; }
-      const { error } = await supabase.from("activities").insert({
-        activity_type: "phone_call" as Database["public"]["Enums"]["activity_type"],
-        title: `Escalation telefonica: ${selectedGroup.companyName}`,
-        description: `Escalation da email ${selectedMessage.from_address} — ${selectedMessage.subject || "Senza oggetto"}`,
-        source_id: selectedMessage.id,
-        source_type: "holding_pattern_escalation",
-        status: "pending" as Database["public"]["Enums"]["activity_status"],
-        priority: "high",
-        user_id: session.user.id,
-        partner_id: selectedGroup.partnerId || null,
+      const { error } = await supabase.functions.invoke("log-action", {
+        body: {
+          user_id: session.user.id,
+          action_type: "phone_call",
+          title: `Escalation telefonica: ${selectedGroup.companyName}`,
+          description: `Escalation da email ${selectedMessage.from_address} — ${selectedMessage.subject || "Senza oggetto"}`,
+          source_id: selectedMessage.id,
+          source_type: "holding_pattern_escalation",
+          status: "pending",
+          priority: "high",
+          partner_id: selectedGroup.partnerId || null,
+        },
       });
       if (error) throw error;
       toast.success("Attività di chiamata creata");

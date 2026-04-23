@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Send, CheckCircle2, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ABTestCreator } from "./ABTestCreator";
 import { DaInviareSubTab } from "./DaInviareSubTab";
 import { InviatiSubTab } from "./InviatiSubTab";
 import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
@@ -78,7 +77,6 @@ export function InUscitaTab() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <ABTestCreator />
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         {sub === "da-inviare" && <DaInviareSubTab />}

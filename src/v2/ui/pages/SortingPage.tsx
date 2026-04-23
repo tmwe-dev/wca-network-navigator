@@ -63,6 +63,15 @@ export function Sorting() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-4 py-2 border-b border-border/30 flex items-center gap-3 shrink-0 bg-muted/10">
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <CheckCircle2 className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-sm font-bold text-foreground">Approvazioni</h1>
+          <p className="text-[11px] text-muted-foreground">Rivedi e approva azioni in attesa</p>
+        </div>
+      </div>
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left panel - 40% */}
         <div className="w-[40%] min-w-[320px] overflow-hidden">

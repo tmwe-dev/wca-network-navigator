@@ -1,3 +1,6 @@
+// @deprecated — Dead code. OutreachPage imports HoldingPatternCommandCenter instead.
+// TODO: Delete this file in next cleanup pass.
+
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";

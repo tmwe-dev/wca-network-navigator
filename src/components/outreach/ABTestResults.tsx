@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { ABTestCreator } from "./ABTestCreator";
 
 interface ABTest {
   id: string;
@@ -171,9 +172,12 @@ export function ABTestResults() {
   return (
     <ScrollArea className="h-full">
       <div className="space-y-4 p-4 max-w-3xl mx-auto">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <FlaskConical className="w-4 h-4 text-primary" /> A/B Test ({tests.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-primary" /> A/B Test ({tests.length})
+          </h2>
+          <ABTestCreator />
+        </div>
         {tests.map(t => (
           <TestCard key={t.id} test={t} onComplete={(id) => completeMutation.mutate(id)} />
         ))}

@@ -27,7 +27,7 @@ export function ArenaPreSession({
   batchSize, setBatchSize, onStart,
 }: Props): React.ReactElement {
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
+    <div className="h-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-500/5" />
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}

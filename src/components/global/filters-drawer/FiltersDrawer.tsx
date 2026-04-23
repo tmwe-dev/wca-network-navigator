@@ -18,6 +18,10 @@ import { CRMFiltersSection } from "./CRMFiltersSection";
 import { BCAFiltersSection } from "./BCAFiltersSection";
 import { CampaignsFiltersSection } from "./CampaignsFiltersSection";
 import { EmailForgeFiltersSection } from "./EmailForgeFiltersSection";
+import { SortingFiltersSection } from "./SortingFiltersSection";
+import { CodaAIFiltersSection } from "./CodaAIFiltersSection";
+import { ABTestFiltersSection } from "./ABTestFiltersSection";
+import { ArenaFiltersSection } from "./ArenaFiltersSection";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import type { FiltersDrawerProps } from "./types";
 
@@ -102,9 +106,13 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isAgenda && <AgendaFiltersSection />}
             {state.isCampaigns && <CampaignsFiltersSection />}
             {state.isEmailForge && <EmailForgeFiltersSection />}
+            {state.isSorting && <SortingFiltersSection />}
+            {state.isCodaAI && <CodaAIFiltersSection />}
+            {state.isABTest && <ABTestFiltersSection />}
+            {state.isArena && <ArenaFiltersSection />}
             {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && !state.isSorting && !state.isCodaAI && !state.isABTest && !state.isArena && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>
