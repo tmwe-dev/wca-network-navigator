@@ -113,7 +113,8 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
   const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
 
   // Query builder for whitelisted tables (cast required for dynamic table names)
-  let q = (supabase as unknown as Record<string, (...args: unknown[]) => unknown>)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = (supabase as unknown as { from: (t: string) => any })
     .from(plan.table)
     .select(selectCols, { count: "exact" });
 

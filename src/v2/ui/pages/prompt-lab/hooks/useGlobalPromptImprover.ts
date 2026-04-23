@@ -274,7 +274,14 @@ export function useGlobalPromptImprover(
     // ── Crea run DB ──
     let runId: string | undefined;
     try {
-      const run = await createRun(userId, goal, toRunProposals(initial), systemMap, fullContext, SYSTEM_MISSION);
+      const run = await createRun(
+        userId,
+        goal,
+        toRunProposals(initial) as unknown as Parameters<typeof createRun>[2],
+        systemMap,
+        fullContext,
+        SYSTEM_MISSION,
+      );
       runId = run.id;
     } catch (e) {
       console.warn("[GlobalImprover] DB create failed, continuing without persistence:", e);
