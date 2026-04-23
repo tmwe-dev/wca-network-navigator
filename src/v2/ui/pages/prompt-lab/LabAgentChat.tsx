@@ -4,7 +4,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Sparkles, Trash2 } from "lucide-react";
+import { Send, Sparkles, Trash2, Wrench } from "lucide-react";
 import type { LabChatMessage } from "./hooks/useLabAgent";
 
 interface LabAgentChatProps {
@@ -13,9 +13,13 @@ interface LabAgentChatProps {
   onSend: (text: string) => void;
   onClear: () => void;
   placeholder?: string;
+  /** Modalità corrente del Lab Agent (Fase 4-5). */
+  mode?: "standard" | "architect";
+  /** Callback per cambiare modalità. Se omesso, il toggle non è mostrato. */
+  onModeChange?: (mode: "standard" | "architect") => void;
 }
 
-export function LabAgentChat({ messages, loading, onSend, onClear, placeholder }: LabAgentChatProps) {
+export function LabAgentChat({ messages, loading, onSend, onClear, placeholder, mode, onModeChange }: LabAgentChatProps) {
   const [input, setInput] = React.useState("");
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -36,10 +40,33 @@ export function LabAgentChat({ messages, loading, onSend, onClear, placeholder }
         <div className="flex items-center gap-1.5 text-xs font-medium">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           Lab Agent — Prompt Architect
+          {mode === "architect" && (
+            <span className="ml-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground">
+              ARCHITECT
+            </span>
+          )}
         </div>
-        <Button size="sm" variant="ghost" className="h-6 px-2" onClick={onClear}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {onModeChange && (
+            <Button
+              size="sm"
+              variant={mode === "architect" ? "default" : "ghost"}
+              className="h-6 px-2 text-[10px]"
+              onClick={() => onModeChange(mode === "architect" ? "standard" : "architect")}
+              title={
+                mode === "architect"
+                  ? "Torna a modalità Standard (riscrittura)"
+                  : "Passa a modalità Architect (diagnosi strutturale)"
+              }
+            >
+              <Wrench className="mr-1 h-3 w-3" />
+              {mode === "architect" ? "Architect" : "Standard"}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" className="h-6 px-2" onClick={onClear}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-2 space-y-2">

@@ -7,6 +7,7 @@ import { PromptColumn } from "./columns/PromptColumn";
 import { KBColumn } from "./columns/KBColumn";
 import { ToolsColumn } from "./columns/ToolsColumn";
 import { ContractColumn } from "./columns/ContractColumn";
+import { ArchitectReviewPanel } from "./ArchitectReviewPanel";
 
 export function AgentDetail({ agent }: { agent: AgentRegistryEntry }) {
   return (
@@ -19,11 +20,12 @@ export function AgentDetail({ agent }: { agent: AgentRegistryEntry }) {
       {/* Centro: prompt */}
       <PromptColumn agent={agent} />
 
-      {/* Destra: KB + Tools + Contract impilati */}
+      {/* Destra: KB + Tools + Contract + Architect Review impilati */}
       <div className="space-y-4">
         <KBColumn agent={agent} />
         <ToolsColumn agent={agent} />
         <ContractColumn agent={agent} />
+        <ArchitectReviewPanel agent={agent} />
       </div>
     </div>
   );
