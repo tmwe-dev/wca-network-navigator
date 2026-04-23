@@ -227,6 +227,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_response_channel_message_id_fkey"
             columns: ["response_channel_message_id"]
             isOneToOne: false
@@ -818,6 +825,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ai_decision_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ai_edit_patterns: {
@@ -1180,6 +1194,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_pending_actions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -1690,6 +1711,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "blacklist_entries_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       blacklist_sync_log: {
@@ -1899,6 +1927,13 @@ export type Database = {
             columns: ["matched_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cards_matched_partner_id_fkey"
+            columns: ["matched_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
           {
@@ -2542,6 +2577,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_conversation_context_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -3415,6 +3457,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_classifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       email_drafts: {
@@ -4136,6 +4185,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "imported_contacts_wca_partner_id_fkey"
+            columns: ["wca_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       interactions: {
@@ -4188,6 +4244,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5245,6 +5308,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_certifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_contacts: {
@@ -5311,6 +5381,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_contacts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_networks: {
@@ -5359,6 +5436,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_networks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_services: {
@@ -5399,6 +5483,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_services_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5454,6 +5545,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_social_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
         ]
@@ -5517,6 +5615,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_workflow_state_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
           {
@@ -6185,6 +6290,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reminders_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reply_classifications: {
@@ -6748,6 +6860,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supervisor_audit_log_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       team_members: {
@@ -7170,6 +7289,45 @@ export type Database = {
           id?: string | null
           level?: number | null
           memory_type?: string | null
+        }
+        Relationships: []
+      }
+      vw_partner_quality_scores: {
+        Row: {
+          calculated_at: string | null
+          city: string | null
+          company_name: string | null
+          country_name: string | null
+          data_completeness: number | null
+          id: string | null
+          is_active: boolean | null
+          rating: number | null
+          total_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          calculated_at?: never
+          city?: string | null
+          company_name?: string | null
+          country_name?: string | null
+          data_completeness?: never
+          id?: string | null
+          is_active?: boolean | null
+          rating?: number | null
+          total_score?: never
+          updated_at?: string | null
+        }
+        Update: {
+          calculated_at?: never
+          city?: string | null
+          company_name?: string | null
+          country_name?: string | null
+          data_completeness?: never
+          id?: string | null
+          is_active?: boolean | null
+          rating?: number | null
+          total_score?: never
+          updated_at?: string | null
         }
         Relationships: []
       }
