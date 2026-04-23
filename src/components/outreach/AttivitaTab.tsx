@@ -236,7 +236,7 @@ export function AttivitaTab() {
                   <CollapsibleContent>
                     <div className="px-3 pb-3 pt-1 bg-muted/10 rounded-b-lg border-t border-border/20 space-y-3">
                       {/* Email content */}
-                      {(item.activity_type === "send_email" || item.activity_type === "email") && item.email_subject && (
+                      {(item.activity_type === "send_email" || (item.activity_type as string) === "email") && item.email_subject && (
                         <div className="space-y-1">
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase">Email</p>
                           <p className="text-xs font-medium">{item.email_subject}</p>
@@ -250,7 +250,7 @@ export function AttivitaTab() {
                       )}
 
                       {/* Description */}
-                      {item.description && item.activity_type !== "send_email" && item.activity_type !== "email" && (
+                      {item.description && item.activity_type !== "send_email" && (item.activity_type as string) !== "email" && (
                         <div>
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase">Descrizione</p>
                           <p className="text-xs text-foreground mt-0.5">{item.description}</p>
