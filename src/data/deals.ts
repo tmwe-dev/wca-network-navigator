@@ -5,10 +5,38 @@
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
-import type { Database } from "@/integrations/supabase/types";
 
-type DealRow = Database["public"]["Tables"]["deals"]["Row"];
-type DealActivityRow = Database["public"]["Tables"]["deal_activities"]["Row"];
+// Local interface definitions to work around missing table types
+interface DealRow {
+  id: string;
+  user_id: string;
+  partner_id: string | null;
+  contact_id: string | null;
+  title: string;
+  description: string | null;
+  stage: "lead" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
+  amount: number;
+  currency: string;
+  probability: number;
+  expected_close_date: string | null;
+  actual_close_date: string | null;
+  lost_reason: string | null;
+  tags: string[];
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DealActivityRow {
+  id: string;
+  deal_id: string;
+  user_id: string;
+  activity_type: "stage_change" | "note" | "email_sent" | "call" | "meeting" | "update";
+  description: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+}
 
 // ─── Types ──────────────────────────────────────────────
 export type DealStage = "lead" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
