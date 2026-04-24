@@ -67,7 +67,8 @@ export async function findPendingOutreachItemsFromView(
   limit = 100,
   offset = 0
 ): Promise<OutreachQueueRow[]> {
-  let q = supabase.from("v_outreach_today").select("*");
+  // View not in generated types — cast to any to bypass TS narrowing.
+  let q = (supabase as any).from("v_outreach_today").select("*");
 
   if (status) {
     q = q.eq("status", status);

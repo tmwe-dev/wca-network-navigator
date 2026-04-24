@@ -18,7 +18,8 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
   try {
     // v_kpi_dashboard provides total_partners; other counts still need individual queries
     const [kpiRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
-      supabase.from("v_kpi_dashboard").select("total_partners").limit(1).maybeSingle(),
+      // View not in generated types — cast to any.
+      (supabase as any).from("v_kpi_dashboard").select("total_partners").limit(1).maybeSingle(),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("agents").select("id", { count: "exact", head: true }).eq("is_active", true),
@@ -102,7 +103,7 @@ export async function fetchOperativeMetrics(): Promise<Result<OperativeMetrics, 
       // Columns: total_partners, partners_new, partners_first_touch, partners_holding,
       // partners_engaged, partners_qualified, partners_negotiation, partners_converted,
       // partners_archived, partners_blacklisted, plus activity/inbox/queue stats
-      supabase.from("v_kpi_dashboard").select("total_partners, partners_new, partners_first_touch, outreach_sent_today, outreach_queue_pending, inbound_today, unread_messages").limit(1).maybeSingle(),
+      (supabase as any).from("v_kpi_dashboard").select("total_partners, partners_new, partners_first_touch, outreach_sent_today, outreach_queue_pending, inbound_today, unread_messages").limit(1).maybeSingle(),
       // imported_contacts
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }).eq("lead_status", "new"),
