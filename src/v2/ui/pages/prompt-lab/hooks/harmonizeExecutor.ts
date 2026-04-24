@@ -199,6 +199,7 @@ async function execAgent(p: HarmonizeProposal): Promise<ExecuteResult> {
     const insert: AgentInsert = {
       name,
       role,
+      user_id: "",
       system_prompt: String(payload.system_prompt ?? p.after ?? ""),
       avatar_emoji: payload.avatar_emoji ? String(payload.avatar_emoji) : undefined,
       knowledge_base: Array.isArray(payload.knowledge_base) ? (payload.knowledge_base as never) : undefined,
