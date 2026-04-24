@@ -1,4 +1,5 @@
 import { VALID_DOMAINS, VALID_CATEGORIES, VALID_URGENCY, VALID_SENTIMENT } from "./classificationPrompts.ts";
+import { stripMarkdownFences } from "../_shared/responseParserFactory.ts";
 
 export interface ClassificationResult {
   domain: string;
@@ -13,25 +14,47 @@ export interface ClassificationResult {
   reasoning: string;
 }
 
-export function parseClassificationResponse(raw: string | null): ClassificationResult {
-  if (!raw) throw new Error("Empty AI response");
-
-  // Strip markdown fences if present
-  let cleaned = raw.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-  }
-
-  const parsed = JSON.parse(cleaned);
-
+function _fallback(): ClassificationResult {
   return {
-    domain: VALID_DOMAINS.includes(parsed.domain) ? parsed.domain : "commercial",
-    category: VALID_CATEGORIES.includes(parsed.category) ? parsed.category : "uncategorized",
+    domain: "commercial",
+    category: "uncategorized",
+    confidence: 0.1,
+    ai_summary: "",
+    keywords: [],
+    urgency: "normal",
+    sentiment: "neutral",
+    detected_patterns: [],
+    action_suggested: "",
+    reasoning: "Fallback: AI response could not be parsed.",
+  };
+}
+
+export function parseClassificationResponse(raw: string | null, model = "unknown"): ClassificationResult {
+  if (!raw) {
+    console.error(`[PARSE_FAIL] classify-email-response model=${model} err=empty_response`);
+    return _fallback();
+  }
+  let parsed: Record<string, unknown>;
+  try {
+    const cleaned = stripMarkdownFences(raw);
+    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[PARSE_FAIL] classify-email-response model=${model} err=${msg} raw="${raw.slice(0, 200)}"`);
+    return _fallback();
+  }
+  const domain = String(parsed.domain ?? "");
+  const category = String(parsed.category ?? "");
+  const urgency = String(parsed.urgency ?? "");
+  const sentiment = String(parsed.sentiment ?? "");
+  return {
+    domain: VALID_DOMAINS.includes(domain) ? domain : "commercial",
+    category: VALID_CATEGORIES.includes(category) ? category : "uncategorized",
     confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
     ai_summary: String(parsed.ai_summary || "").substring(0, 1000),
     keywords: Array.isArray(parsed.keywords) ? parsed.keywords.map(String).slice(0, 20) : [],
-    urgency: VALID_URGENCY.includes(parsed.urgency) ? parsed.urgency : "normal",
-    sentiment: VALID_SENTIMENT.includes(parsed.sentiment) ? parsed.sentiment : "neutral",
+    urgency: VALID_URGENCY.includes(urgency) ? urgency : "normal",
+    sentiment: VALID_SENTIMENT.includes(sentiment) ? sentiment : "neutral",
     detected_patterns: Array.isArray(parsed.detected_patterns) ? parsed.detected_patterns.map(String).slice(0, 10) : [],
     action_suggested: String(parsed.action_suggested || "").substring(0, 500),
     reasoning: String(parsed.reasoning || "").substring(0, 1000),

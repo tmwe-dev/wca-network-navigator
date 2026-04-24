@@ -1,14 +1,16 @@
 /**
  * responseParser.ts — Parse AI response for generate-email.
  * Extracts subject/body, normalises HTML, appends signature.
+ * Wrapped by responseParserFactory.safeParseEmailResponse for resilience.
  */
+import { safeParseEmailResponse, sanitizeForFallback } from "../_shared/responseParserFactory.ts";
 
 export interface ParsedEmailResponse {
   subject: string;
   body: string;
 }
 
-export function parseEmailResponse(rawContent: string, signatureBlock: string): ParsedEmailResponse {
+function _parseInternal(rawContent: string): ParsedEmailResponse {
   let subject = "";
   let body = rawContent;
 
@@ -36,11 +38,22 @@ export function parseEmailResponse(rawContent: string, signatureBlock: string): 
     .replace(/>\s{2,}</g, "> <")
     .trim();
 
-  // Append signature
+  return { subject, body };
+}
+
+export function parseEmailResponse(rawContent: string, signatureBlock: string, model = "unknown"): ParsedEmailResponse {
+  const parsed = safeParseEmailResponse(
+    rawContent,
+    "generate-email",
+    model,
+    _parseInternal,
+    { fallbackSubject: "Follow-up" },
+  );
+  let body = parsed.body;
+  // Append signature (anche in fallback, mantenendo coerenza output)
   if (signatureBlock.trim()) {
     const sigHtml = signatureBlock.replace(/\n/g, "<br>");
     body = body + `<br><br>${sigHtml}`;
   }
-
-  return { subject, body };
+  return { subject: parsed.subject, body };
 }
