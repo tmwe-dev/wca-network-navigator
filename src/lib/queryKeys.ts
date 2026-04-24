@@ -136,6 +136,7 @@ export const queryKeys = {
     downloadedFeed: (filters?: unknown) => ["downloaded-emails-feed", filters] as const,
     promptsTab4: ["email-prompts-tab4"] as const,
     addressRulesTab4: ["address-rules-tab4"] as const,
+    sendLog: (range: string) => ["email-send-log", range] as const,
   },
 
   // ── Email Intelligence ────────────────────────────────
