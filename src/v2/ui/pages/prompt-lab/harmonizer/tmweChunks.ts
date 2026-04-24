@@ -15,6 +15,27 @@
  */
 import type { ConflictEntry } from "@/data/harmonizerSessions";
 
+/**
+ * Helper per generare ConflictEntry "seed" senza UUID runtime
+ * (usiamo slug deterministici così sono dedupabili tra run).
+ */
+function seedConflict(
+  slug: string,
+  topic: string,
+  notes: string,
+  detectedInChunk: number,
+): ConflictEntry {
+  return {
+    id: `seed:${slug}`,
+    topic,
+    source_a: { ref: "luca_audit_2026_04", value: "(da risolvere)" },
+    source_b: { ref: `chunk_${detectedInChunk}`, value: "(da risolvere)" },
+    status: "pending",
+    detected_in_chunk: detectedInChunk,
+    notes,
+  };
+}
+
 export interface TmweChunkDef {
   index: number;
   name: string;
@@ -48,7 +69,14 @@ export const TMWE_CHUNKS: TmweChunkDef[] = [
     name: "Doctrine commerciale",
     description: "9 lead status, gate transizioni, regole holding pattern, dottrina outreach.",
     sourceLines: [801, 1700],
-    preloadedConflicts: [],
+    preloadedConflicts: [
+      seedConflict(
+        "frequenza_monitoraggio",
+        "Frequenza monitoraggio holding pattern",
+        "Audit Luca segnala valori divergenti (4h vs 6h) tra documenti. NON sovrascrivere senza conferma.",
+        1,
+      ),
+    ],
     preloadedDuplicates: [],
     targetTables: ["kb_entries", "commercial_playbooks"],
     contractGuidance:
@@ -81,7 +109,20 @@ export const TMWE_CHUNKS: TmweChunkDef[] = [
     name: "Email Intelligence",
     description: "Template email, regole sender classification, address rules.",
     sourceLines: [3601, 4400],
-    preloadedConflicts: [],
+    preloadedConflicts: [
+      seedConflict(
+        "supplemento_pct_a",
+        "Percentuale supplemento commerciale (variante A)",
+        "Audit Luca: percentuali contraddittorie nei template. Apri ConflictEntry, non scegliere.",
+        4,
+      ),
+      seedConflict(
+        "supplemento_pct_b",
+        "Percentuale supplemento commerciale (variante B)",
+        "Audit Luca: secondo valore divergente per stessa categoria.",
+        4,
+      ),
+    ],
     preloadedDuplicates: [],
     targetTables: ["email_prompts", "email_address_rules", "kb_entries"],
     contractGuidance:
@@ -103,7 +144,26 @@ export const TMWE_CHUNKS: TmweChunkDef[] = [
     name: "FindAIr 2026 / Roadmap",
     description: "Iniziative speciali, roadmap, claim commerciali, KPI 2026.",
     sourceLines: [5201, 5708],
-    preloadedConflicts: [],
+    preloadedConflicts: [
+      seedConflict(
+        "copertura_findair_2026",
+        "Copertura FindAIr 2026",
+        "Audit Luca: ambito copertura non univoco fra documenti. Apri ConflictEntry, non assumere.",
+        6,
+      ),
+      seedConflict(
+        "rating_4_8_source",
+        "Fonte rating 4.8/5",
+        "Audit Luca: la fonte (Trustpilot? Google? interna?) non è esplicitata. NON inserire claim senza source.",
+        6,
+      ),
+      seedConflict(
+        "claim_unica_al_mondo",
+        "Claim 'unica al mondo' usato per più prodotti",
+        "Audit Luca: rilevato uso del claim per 3 prodotti diversi. Mantenere UN solo titolare del claim, gli altri vanno riformulati.",
+        6,
+      ),
+    ],
     preloadedDuplicates: [],
     targetTables: ["kb_entries", "commercial_playbooks"],
     contractGuidance:
