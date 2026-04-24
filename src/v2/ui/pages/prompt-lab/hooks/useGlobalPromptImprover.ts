@@ -14,6 +14,7 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useLabAgent, parseImproveResponse } from "./useLabAgent";
 import type { Block, BlockSource } from "../types";
+import { PROMPT_LAB_TABS } from "../types";
 import {
   createRun,
   updateRun,
@@ -31,12 +32,39 @@ import { saveProposal, auditSaveProposal } from "./useProposalSaver";
 import { buildExtraContext, filterDoctrineForBlock, filterSystemMapForBlock, filterReferenceForBlock } from "./useContextBuilder";
 import { listApprovedForArchitect, markSuggestionsApplied, type SuggestedImprovement } from "@/data/suggestedImprovements";
 import { trackImprovementMetrics } from "@/data/promptLabMetrics";
+import { getAppSetting } from "@/data/appSettings";
+import { computeChangeRatio, MINOR_CHANGE_THRESHOLD } from "./changeRatio";
 
-export const SYSTEM_MISSION = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
+/**
+ * SYSTEM_MISSION_DEFAULT — fallback usato se non c'è nessun valore in
+ * app_settings con chiave `system_mission_text`.
+ *
+ * Fix B3 (apr 2026): la missione era hardcoded e non menzionava TMWE,
+ * FIndAIr, i 7 agenti, Brain & Skin. Ora il valore canonico vive in
+ * app_settings e può essere editato dal Prompt Lab senza redeploy.
+ * Il fallback resta in codice come safety net.
+ */
+export const SYSTEM_MISSION_DEFAULT = `WCA Network Navigator è un CRM/Business Intelligence che gestisce ~12.000 partner logistici WCA.
 Gli agenti AI orchestrano outreach multicanale (Email, WhatsApp, LinkedIn) seguendo la dottrina commerciale a 9 stati lead
 (new → first_touch_sent → holding → engaged → qualified → negotiation → converted | archived | blacklisted).
 Ogni azione passa da gate (blacklist, cadenze multicanale, dottrina di stato) e produce side-effect tracciati (activities, reminders, lead_status).
 Obiettivo del sistema: massimizzare risposte qualificate, far avanzare i lead di stato in modo verificabile, mai inventare dati né bypassare governance.`;
+
+/** Re-export legacy name per backward-compat (alcuni file importano SYSTEM_MISSION). */
+export const SYSTEM_MISSION = SYSTEM_MISSION_DEFAULT;
+
+export const SYSTEM_MISSION_KEY = "system_mission_text";
+
+/** Carica la mission da DB con fallback al default in codice. */
+async function loadSystemMission(userId: string): Promise<string> {
+  try {
+    const v = await getAppSetting(SYSTEM_MISSION_KEY, userId);
+    if (v && v.trim()) return v.trim();
+  } catch {
+    /* ignore */
+  }
+  return SYSTEM_MISSION_DEFAULT;
+}
 
 export interface GlobalImproverState {
   loading: boolean;
