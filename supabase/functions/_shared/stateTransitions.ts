@@ -20,10 +20,10 @@
  * monotona (new<first_touch_sent<holding<engaged<qualified<negotiation<converted).
  * archived/blacklisted sono terminali e si applicano solo manualmente.
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 export interface TransitionGate {
   from: string;
