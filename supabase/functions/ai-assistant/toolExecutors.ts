@@ -105,7 +105,8 @@ interface EnterpriseHandlers {
 }
 
 export interface ToolExecutorDeps {
-  supabase: SupabaseClient;
+  // deno-lint-ignore no-explicit-any
+  supabase: any;
   readH: ReadHandlers;
   writeH: WriteHandlers;
   entH: EnterpriseHandlers;

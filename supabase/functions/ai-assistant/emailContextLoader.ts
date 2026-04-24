@@ -8,10 +8,10 @@
  * - Email classification data
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 export async function loadRecentEmailContext(
   supabase: SupabaseClient,
@@ -57,12 +57,13 @@ export async function loadRecentEmailContext(
           .maybeSingle();
 
         if (classification) {
+          const c = classification as Record<string, unknown>;
           contextParts.push(
             `\n--- CLASSIFICAZIONE AI per ${email} ---\n` +
-            `Categoria: ${classification.category} (${Math.round((classification.confidence || 0) * 100)}%)\n` +
-            `Sentiment: ${classification.sentiment} | Urgenza: ${classification.urgency}\n` +
-            `Riepilogo: ${classification.ai_summary || "n/d"}\n` +
-            `Azione suggerita: ${classification.action_suggested || "nessuna"}`
+            `Categoria: ${c.category} (${Math.round(((c.confidence as number) || 0) * 100)}%)\n` +
+            `Sentiment: ${c.sentiment} | Urgenza: ${c.urgency}\n` +
+            `Riepilogo: ${c.ai_summary || "n/d"}\n` +
+            `Azione suggerita: ${c.action_suggested || "nessuna"}`
           );
         }
       }

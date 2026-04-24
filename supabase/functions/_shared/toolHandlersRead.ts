@@ -22,7 +22,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       if (userId) q = q.eq("user_id", userId);
       const { data } = await q;
       partnerIdFilter = (data || []).map((r: { partner_id: string }) => r.partner_id);
-      if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+      if (partnerIdFilter!.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.certification) {
       let q = supabase.from("partner_certifications").select("partner_id").eq("certification", args.certification);
@@ -30,7 +30,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       const { data } = await q;
       const certIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => certIds.includes(id)) : certIds;
-      if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+      if (partnerIdFilter!.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.network_name) {
       let q = supabase.from("partner_networks").select("partner_id").ilike("network_name", `%${escapeLike(args.network_name)}%`);
@@ -38,7 +38,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
       const { data } = await q;
       const netIds = (data || []).map((r: { partner_id: string }) => r.partner_id);
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => netIds.includes(id)) : netIds;
-      if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+      if (partnerIdFilter!.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
     if (args.has_phone !== undefined && args.has_phone) {
       let q = supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
@@ -256,19 +256,19 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (args.priority) query = query.eq("priority", args.priority);
     const { data, error } = await query;
     if (error) return { error: error.message };
-    const partnerIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
+    const partnerIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))] as string[];
     let pq = supabase.from("partners").select("id, company_name").in("id", partnerIds);
     if (userId) pq = pq.eq("user_id", userId);
     const { data: partners } = await pq;
     const nameMap: Record<string, string> = {};
     for (const p of (partners || []) as Array<{ id: string; company_name: string }>) nameMap[p.id] = p.company_name;
-    let results = (data || []).map((r: Record<string, unknown>) => ({
+    let results: Array<Record<string, unknown> & { partner: string }> = (data || []).map((r: Record<string, unknown>) => ({
       id: r.id, title: r.title, description: r.description, due_date: r.due_date,
-      priority: r.priority, status: r.status, partner: nameMap[r.partner_id] || "Sconosciuto",
+      priority: r.priority, status: r.status, partner: nameMap[r.partner_id as string] || "Sconosciuto",
     }));
     if (args.partner_name) {
       const search = String(args.partner_name).toLowerCase();
-      results = results.filter(r => r.partner.toLowerCase().includes(search));
+      results = results.filter((r) => r.partner.toLowerCase().includes(search));
     }
     return { count: results.length, reminders: results };
   }
@@ -369,7 +369,8 @@ export function createReadHandlers(supabase: SupabaseClient) {
       const search = String(args.partner_name).toLowerCase();
       results = results.filter((a: Record<string, unknown>) => {
         const meta = a.source_meta as Record<string, unknown> | null;
-        return meta?.company_name?.toLowerCase().includes(search) || false;
+        const cn = meta?.company_name as string | undefined;
+        return cn ? cn.toLowerCase().includes(search) : false;
       });
     }
     return { count: results.length, activities: results.map((a: Record<string, unknown>) => ({ ...a, company_name: (a.source_meta as Record<string, unknown> | null)?.company_name || null })) };
@@ -387,7 +388,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
     if (args.match_status) query = query.eq("match_status", args.match_status);
     const { data, error } = await query;
     if (error) return { error: error.message };
-    const partnerIds = [...new Set((data || []).filter((c: Record<string, unknown>) => c.matched_partner_id).map((c: Record<string, unknown>) => c.matched_partner_id))];
+    const partnerIds = [...new Set((data || []).filter((c: Record<string, unknown>) => c.matched_partner_id).map((c: Record<string, unknown>) => c.matched_partner_id))] as string[];
     const partnerNames: Record<string, string> = {};
     if (partnerIds.length > 0) {
       let pq = supabase.from("partners").select("id, company_name").in("id", partnerIds);
@@ -401,7 +402,7 @@ export function createReadHandlers(supabase: SupabaseClient) {
         id: c.id, company_name: c.company_name, contact_name: c.contact_name, email: c.email,
         event_name: c.event_name, met_at: c.met_at, location: c.location,
         match_status: c.match_status, match_confidence: c.match_confidence,
-        matched_partner: c.matched_partner_id ? partnerNames[c.matched_partner_id] || c.matched_partner_id : null,
+        matched_partner: c.matched_partner_id ? partnerNames[c.matched_partner_id as string] || c.matched_partner_id : null,
         tags: c.tags,
       })),
     };
@@ -440,11 +441,15 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const { data: activeJobs } = await activeQ;
     result.active_downloads = {
       count: activeJobs?.length || 0,
-      jobs: (activeJobs || []).map((j: Record<string, unknown>) => ({
-        id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status,
-        progress: j.total_count > 0 ? `${Math.round((j.current_index / j.total_count) * 100)}%` : "0%",
-        detail: `${j.current_index}/${j.total_count}`, last_company: j.last_processed_company, error: j.error_message,
-      })),
+      jobs: (activeJobs || []).map((j: Record<string, unknown>) => {
+        const total = Number(j.total_count) || 0;
+        const current = Number(j.current_index) || 0;
+        return {
+          id: j.id, country: `${j.country_name} (${j.country_code})`, status: j.status,
+          progress: total > 0 ? `${Math.round((current / total) * 100)}%` : "0%",
+          detail: `${current}/${total}`, last_company: j.last_processed_company, error: j.error_message,
+        };
+      }),
     };
     let recentQ = supabase.from("download_jobs")
       .select("id, country_name, country_code, status, current_index, total_count, contacts_found_count, contacts_missing_count, completed_at, error_message")
