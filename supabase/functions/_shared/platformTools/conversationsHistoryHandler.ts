@@ -64,7 +64,7 @@ export async function handleGetConversationHistory(
   if (pid) {
     const { data: emails } = await supabase
       .from("channel_messages")
-      .select("id, direction, from_address, to_address, subject, body_text, email_date, channel")
+      .select("id, direction, from_address, to_address, subject, body_text, email_date, created_at, channel")
       .eq("user_id", userId)
       .or(`partner_id.eq.${pid}`)
       .order("email_date", { ascending: false })

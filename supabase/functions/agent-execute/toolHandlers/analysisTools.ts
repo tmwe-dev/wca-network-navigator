@@ -92,7 +92,7 @@ export async function handleGetOperationsDashboard(
       active: downloads.filter((j: { status: string }) => ["running", "pending"].includes(j.status)).length,
       completed: downloads.filter((j: { status: string }) => j.status === "completed").length,
       failed: downloads.filter((j: { status: string }) => j.status === "failed").length,
-      jobs: downloads.map((j: DownloadJobRow) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
+      jobs: downloads.map((j: { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number }) => ({ id: j.id, country: j.country_name, status: j.status, progress: `${j.current_index}/${j.total_count}`, found: j.contacts_found_count })),
     },
     emails: {
       pending: emails.filter((e: { status: string; scheduled_at?: string | null }) => e.status === "pending").length,
@@ -214,11 +214,11 @@ export async function handleEvaluatePartner(
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  const partnerId = await resolvePartnerId(args, userId);
-  if (!partnerId) return { error: "Partner non trovato" };
-  const { state, actions } = await evaluatePartner(supabase, partnerId, userId);
+  const partner = await resolvePartnerId(args);
+  if (!partner) return { error: "Partner non trovato" };
+  const { state, actions } = await evaluatePartner(supabase, partner.id, userId);
   return {
-    partner_id: partnerId,
+    partner_id: partner.id,
     lead_status: state.leadStatus,
     touch_count: state.touchCount,
     days_since_last_outbound: state.daysSinceLastOutbound,
@@ -242,18 +242,18 @@ export async function handleExecuteDecision(
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  const partnerId = await resolvePartnerId(args, userId);
-  if (!partnerId) return { error: "Partner non trovato" };
+  const partner = await resolvePartnerId(args);
+  if (!partner) return { error: "Partner non trovato" };
   const autonomyOverride = args.autonomy as string | undefined;
   const { state, actions } = await evaluatePartner(
     supabase,
-    partnerId,
+    partner.id,
     userId,
     autonomyOverride as import("../../_shared/decisionEngine.ts").AutonomyLevel | undefined
   );
-  const results = await processAllDecisionActions(supabase, userId, partnerId, actions);
+  const results = await processAllDecisionActions(supabase, userId, partner.id, actions);
   return {
-    partner_id: partnerId,
+    partner_id: partner.id,
     lead_status: state.leadStatus,
     actions_processed: results.length,
     results: results.map((r) => ({

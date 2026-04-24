@@ -97,10 +97,10 @@ export async function handleListWorkPlans(
   if (args.tag) {
     return {
       count: plans.filter((p: any) =>
-        (p.tags as string[])?.includes(args.tag)
+        (p.tags as string[] | undefined)?.includes(String(args.tag))
       ).length,
       plans: plans.filter((p: any) =>
-        (p.tags as string[])?.includes(args.tag)
+        (p.tags as string[] | undefined)?.includes(String(args.tag))
       ),
     };
   }
@@ -196,11 +196,12 @@ export async function handleCreateCampaign(
   }
 
   const abTest = args.ab_test as AbTestConfig | undefined;
-  if (abTest?.enabled && abTest?.variants?.length > 0) {
+  const variants = abTest?.variants ?? [];
+  if (abTest?.enabled && variants.length > 0) {
     steps.push({
       index: steps.length,
       title: "Configurazione A/B Test",
-      description: `Varianti: ${abTest.variants
+      description: `Varianti: ${variants
         .map(
           (v: AbTestVariant) =>
             `${v.agent_name}(${v.tone}/${v.percentage}%)`
