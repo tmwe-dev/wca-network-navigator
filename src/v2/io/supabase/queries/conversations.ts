@@ -27,8 +27,7 @@ export interface ConversationMessage {
 
 export async function fetchConversations(limit = 30): Promise<Result<Conversation[]>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_conversations")
+    const { data, error } = await tFrom("command_conversations")
       .select("*")
       .eq("archived", false)
       .order("last_message_at", { ascending: false })
@@ -45,8 +44,7 @@ export async function fetchConversationMessages(
   limit = 50,
 ): Promise<Result<ConversationMessage[]>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_messages")
+    const { data, error } = await tFrom("command_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
