@@ -27,28 +27,37 @@ export interface ParsedImproveResult {
 
 const VALID_OUTCOME_TYPES = new Set<OutcomeType>(["text_fix", "kb_fix", "contract_needed", "code_policy_needed", "runtime_mapping_fix", "no_change"]);
 
-/** Parsa OUTCOME_TYPE e ARCHITECTURAL_NOTE dalla risposta AI */
-export function parseImproveResponse(raw: string): ParsedImproveResult {
-  const lines = raw.split("\n");
-  let outcomeType: OutcomeType = "text_fix"; // default fallback
-  let architecturalNote: string | undefined;
-  let textStartIdx = 0;
+/**
+ * Parsa OUTCOME_TYPE e ARCHITECTURAL_NOTE dalla risposta AI.
+ *
+ * Fix A2 (apr 2026): cerca i marker su TUTTA la stringa con regex multilinea
+ * invece che solo nelle prime 5 righe. Se il modello mette un preambolo
+ * lungo o una riga vuota in testa, prima il tag veniva perso e fallback a
+ * "text_fix" — risultato: blocchi che andrebbero classificati `contract_needed`
+ * o `no_change` venivano riscritti come testo, sovrascrivendo testo corretto.
+ */
+const OUTCOME_LINE_RE = /^[ \t]*OUTCOME_TYPE:[ \t]*([A-Za-z_]+)[ \t]*$/m;
+const ARCH_NOTE_LINE_RE = /^[ \t]*ARCHITECTURAL_NOTE:[ \t]*(.+)$/m;
 
-  for (let i = 0; i < Math.min(lines.length, 5); i++) {
-    const line = lines[i].trim();
-    if (line.startsWith("OUTCOME_TYPE:")) {
-      const parsed = line.replace("OUTCOME_TYPE:", "").trim().toLowerCase() as OutcomeType;
-      if (VALID_OUTCOME_TYPES.has(parsed)) {
-        outcomeType = parsed;
-      }
-      textStartIdx = i + 1;
-    } else if (line.startsWith("ARCHITECTURAL_NOTE:")) {
-      architecturalNote = line.replace("ARCHITECTURAL_NOTE:", "").trim();
-      textStartIdx = i + 1;
-    }
+export function parseImproveResponse(raw: string): ParsedImproveResult {
+  let outcomeType: OutcomeType = "text_fix";
+  let architecturalNote: string | undefined;
+
+  const outcomeMatch = raw.match(OUTCOME_LINE_RE);
+  if (outcomeMatch) {
+    const candidate = outcomeMatch[1].trim().toLowerCase() as OutcomeType;
+    if (VALID_OUTCOME_TYPES.has(candidate)) outcomeType = candidate;
   }
 
-  const text = lines.slice(textStartIdx).join("\n").trim();
+  const archMatch = raw.match(ARCH_NOTE_LINE_RE);
+  if (archMatch) architecturalNote = archMatch[1].trim();
+
+  // Rimuovi le righe-marker dal testo finale, ovunque siano nel raw.
+  const text = raw
+    .replace(OUTCOME_LINE_RE, "")
+    .replace(ARCH_NOTE_LINE_RE, "")
+    .trim();
+
   return { text: text || raw.trim(), outcomeType, architecturalNote };
 }
 
@@ -385,6 +394,39 @@ VIOLARE ANCHE UNA DI QUESTE REGOLE invalida l'output e forza un retry.
 === FINE REGOLE OBBLIGATORIE ===`;
 
 /**
+ * buildRetryPrompt — costruisce un prompt retry COMPATTO dopo violazione rubrica.
+ *
+ * Fix A3 (apr 2026): la versione precedente concatenava tutto il `userPrompt`
+ * originale (che già contiene system map, doctrine completa, voice rules,
+ * contract reference, briefing). Su 40+ blocchi con il 20% di retry,
+ * il payload doppio aggravava le FunctionsFetchError sul pool di isolate.
+ *
+ * Il modello, sulla stessa connessione conversazionale, ha già visto il
+ * prompt originale: serve solo ricordargli il blocco da riscrivere e le
+ * violazioni da correggere. Risparmio: ~70-80% del payload retry.
+ */
+function buildRetryPrompt(args: {
+  blockLabel: string;
+  blockContent: string;
+  violations: ReadonlyArray<string>;
+  contextHint?: string;
+}): string {
+  const { blockLabel, blockContent, violations, contextHint } = args;
+  const hint = contextHint ? `Contesto: ${contextHint}\n\n` : "";
+  return `Riscrittura ulteriore necessaria — il tuo primo tentativo per il blocco "${blockLabel}" ha violato la rubrica.
+
+${hint}--- TESTO ORIGINALE DEL BLOCCO ---
+${blockContent}
+--- FINE TESTO ORIGINALE ---
+
+--- VIOLAZIONI DA CORREGGERE ---
+${violations.map((i) => `✗ ${i}`).join("\n")}
+--- FINE VIOLAZIONI ---
+
+Riscrivi il blocco correggendo TUTTE le violazioni sopra, mantenendo coerenza con la rubrica e i vincoli già forniti nel prompt iniziale di questa sessione. Restituisci SOLO il nuovo testo del blocco, niente preamboli, niente commenti.`;
+}
+
+/**
  * Carica la KB doctrine COMPLETA e la filtra per rilevanza al blocco.
  *
  * FIX MIOPIA: la versione precedente caricava solo 5 voci troncate a 220 char,
@@ -592,13 +634,13 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta IN OR
       const issues = validateAgainstRubric(first, rubric);
       if (issues.length === 0) return first;
 
-      const retryPrompt = `${userPrompt}
-
---- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
-${issues.map((i) => `✗ ${i}`).join("\n")}
---- FINE VIOLAZIONI ---
-
-Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nuovo testo.`;
+      // Fix A3: retry compatto invece di ri-inviare l'intero userPrompt.
+      const retryPrompt = buildRetryPrompt({
+        blockLabel: block.label,
+        blockContent: block.content,
+        violations: issues,
+        contextHint: `tab=${tabLabel ?? "n/d"}, sorgente=${block.source.kind}`,
+      });
       const second = await callAgent(retryPrompt, {
         block_id: block.id,
         retry: true,
@@ -689,13 +731,13 @@ ISTRUZIONI:
       const issues = validateAgainstRubric(first, rubric);
       if (issues.length === 0) return first;
 
-      const retryPrompt = `${userPrompt}
-
---- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
-${issues.map((i) => `✗ ${i}`).join("\n")}
---- FINE VIOLAZIONI ---
-
-Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
+      // Fix A3: retry compatto (no system map / doctrine / contract reference duplicati).
+      const retryPrompt = buildRetryPrompt({
+        blockLabel: block.label,
+        blockContent: block.content,
+        violations: issues,
+        contextHint: `tab=${tabLabel}, sorgente=${block.source.kind}`,
+      });
       const second = await callAgent(retryPrompt, {
         mode: "global_improve_retry",
         block_id: block.id,
