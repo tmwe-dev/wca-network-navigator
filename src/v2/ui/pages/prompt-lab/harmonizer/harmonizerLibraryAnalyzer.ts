@@ -209,6 +209,24 @@ export async function runLibraryChunkAnalyzer(input: {
 }): Promise<LibraryAnalyzerOutput> {
   const { collector, chunkDef, session, goal } = input;
 
+  if (collector.diagnostics?.placeholder_detected) {
+    throw new Error(
+      `Chunk #${chunkDef.index} contiene ancora testo placeholder, non la libreria reale. Carica il file corretto e rilancia.`,
+    );
+  }
+
+  if ((collector.diagnostics?.source_line_count ?? 0) === 0) {
+    throw new Error(
+      `Chunk #${chunkDef.index} è vuoto nel file caricato. Il documento non rispetta la mappa a 7 chunk o è incompleto.`,
+    );
+  }
+
+  if ((collector.diagnostics?.desired_parsed_count ?? collector.desired.length) === 0) {
+    throw new Error(
+      `Chunk #${chunkDef.index} non contiene blocchi parseabili. Verifica heading/struttura del documento sorgente.`,
+    );
+  }
+
   const actionable = [...collector.gaps.text_only, ...collector.gaps.needs_kb_governance];
   if (actionable.length === 0) {
     return { proposals: [], extractedFacts: [], newConflicts: [], newCrossRefs: [], entitiesCreated: [] };

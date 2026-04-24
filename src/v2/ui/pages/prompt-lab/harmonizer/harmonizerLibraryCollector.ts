@@ -10,7 +10,7 @@
  */
 import {
   collectRealInventory,
-  parseDesiredInventory,
+  parseDesiredInventoryDetailed,
   classifyGaps,
   type InventoryItem,
   type CollectorOutput,
@@ -51,7 +51,7 @@ export async function runLibraryChunkCollector(
   const realWithSession = [...filteredReal, ...sessionCreated];
 
   // 4. Parsa desired SOLO dal chunk corrente.
-  const desired = parseDesiredInventory(chunkText, []);
+  const { items: desired, diagnostics } = parseDesiredInventoryDetailed(chunkText, []);
 
   // 5. Skip preloadedDuplicates.
   const dupTitles = new Set(
@@ -73,6 +73,7 @@ export async function runLibraryChunkCollector(
   return {
     real: realWithSession,
     desired: desiredFiltered,
+    diagnostics,
     gaps,
     realSummary: summarize(realWithSession),
     desiredSummary: summarize(desiredFiltered),
