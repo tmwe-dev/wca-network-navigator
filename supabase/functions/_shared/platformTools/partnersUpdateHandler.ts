@@ -60,7 +60,7 @@ export async function handleUpdatePartner(
       decisionOrigin: "ai_auto",
       trigger: "platform_tool_update",
     });
-    if (statusResult.error) return { error: statusResult.error };
+    if (!statusResult.applied) return { error: statusResult.blockedReason || "Lead status non applicato" };
   }
 
   if (Object.keys(updates).length > 1) {
@@ -125,7 +125,7 @@ export async function handleBulkUpdatePartners(
         decisionOrigin: "ai_auto",
         trigger: "platform_tool_update",
       });
-      if (statusResult.error) return { error: statusResult.error };
+      if (!statusResult.applied) return { error: statusResult.blockedReason || "Lead status non applicato" };
     }
   }
 
