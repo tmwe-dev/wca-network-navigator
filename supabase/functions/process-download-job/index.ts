@@ -174,7 +174,7 @@ async function updateNetworkConfigsFromData(supabase: SupabaseClient, networkNam
 
       const hasEmails = (contacts || []).some((c: Record<string, unknown>) => c.email)
       const hasPhones = (contacts || []).some((c: Record<string, unknown>) => c.direct_phone || c.mobile)
-      const hasNames = (contacts || []).some((c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name))
+      const hasNames = (contacts || []).some((c: Record<string, unknown>) => c.name && !/Members\s*only/i.test(c.name as string))
 
       await supabase
         .from('network_configs')
