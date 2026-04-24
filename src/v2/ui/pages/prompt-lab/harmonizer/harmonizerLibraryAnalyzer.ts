@@ -74,17 +74,19 @@ function buildLibraryUserPrompt(
   const realSummary = `Tabelle filtrate: ${Object.entries(collector.realSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.realSummary.total}`;
   const desiredSummary = `Da chunk: ${Object.entries(collector.desiredSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.desiredSummary.total}`;
 
-  const factsTop = Object.entries(session.facts_registry).slice(0, 30).map(([k, f]) =>
-    `- ${k} = "${f.value}" (chunk ${f.source_chunk})`,
+  const factsTop = Object.entries(session.facts_registry).slice(0, 15).map(([k, f]) =>
+    `- ${k} = "${f.value}"`,
   ).join("\n") || "(nessuno)";
 
-  const conflictsList = session.conflicts_found.slice(0, 20).map((c) =>
-    `- [${c.status}] ${c.topic}: A="${c.source_a.value}" vs B="${c.source_b.value}"`,
+  const conflictsList = session.conflicts_found.slice(0, 10).map((c) =>
+    `- [${c.status}] ${c.topic}`,
   ).join("\n") || "(nessuno)";
 
-  const entitiesList = session.entities_created.filter((e) => chunkDef.targetTables.includes(e.table)).slice(0, 50).map((e) =>
-    `- ${e.table}/${e.id ?? "?"}: "${e.title}" (chunk ${e.created_in_chunk})`,
-  ).join("\n") || "(nessuna)";
+  const entitiesList = session.entities_created
+    .filter((e) => chunkDef.targetTables.includes(e.table))
+    .slice(0, 30)
+    .map((e) => `- ${e.table}: "${e.title}"`)
+    .join("\n") || "(nessuna)";
 
   const preloadedDups = chunkDef.preloadedDuplicates.map((d) => `- ${d.title} (${d.reason})`).join("\n") || "(nessuno)";
   const preloadedConfs = chunkDef.preloadedConflicts.map((c) => `- ${c.topic}: ${c.notes ?? ""}`).join("\n") || "(nessuno)";
@@ -102,7 +104,7 @@ DESIDERATO:
 - tabella target: ${g.desired.table}
 - categoria: ${g.desired.category ?? "n/d"}
 - contenuto:
-${g.desired.content.slice(0, 1200)}
+${g.desired.content.slice(0, 500)}
 
 ${matchedInfo}`;
   }).join("\n\n");
@@ -212,11 +214,10 @@ export async function runLibraryChunkAnalyzer(input: {
     return { proposals: [], extractedFacts: [], newConflicts: [], newCrossRefs: [], entitiesCreated: [] };
   }
 
-  // Per le sessioni di ingestione lavoriamo a CHUNK INTERO (non sotto-chunk),
-  // perché lo stato sessione fa già da governance. Cap di sicurezza alzato a
-  // 60 perché chunk come "Doctrine" (9 status) ed "Email" (decine di template)
-  // saturavano i 30 gap iniziali.
-  const cap = actionable.slice(0, 60);
+  // Cap a 20 gap per chunk: il modello a 60 con KB+briefing+stato saturava
+  // la context window e restituiva output vuoto. Per chunk densi (Doctrine,
+  // Email) si fa retry/resume per processare i restanti.
+  const cap = actionable.slice(0, 20);
   const userPrompt = buildLibraryUserPrompt(collector, cap, chunkDef, session, goal);
 
   // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
@@ -232,16 +233,48 @@ export async function runLibraryChunkAnalyzer(input: {
     ? `${TMWE_INGESTION_BRIEFING}${kbContext}`
     : TMWE_INGESTION_BRIEFING;
 
-  let raw = "";
-  try {
-    raw = await callHarmonizer(userPrompt, systemPrompt);
-  } catch (e) {
-    console.error("[libraryAnalyzer] call failed", e);
-    throw e;
+  // Helper: chiama il modello e ritenta UNA volta con prompt compatto se
+  // la prima call torna vuota (sintomo classico di token explosion).
+  async function callWithRetry(): Promise<string> {
+    let r = "";
+    try {
+      r = await callHarmonizer(userPrompt, systemPrompt);
+    } catch (e) {
+      console.error("[libraryAnalyzer] call failed", e);
+      throw e;
+    }
+    if (r && r.trim().length > 0) return r;
+
+    console.warn("[libraryAnalyzer] empty response, retrying without KB injection");
+    try {
+      r = await callHarmonizer(userPrompt, TMWE_INGESTION_BRIEFING);
+    } catch (e) {
+      console.error("[libraryAnalyzer] retry failed", e);
+      throw e;
+    }
+    return r;
+  }
+
+  const raw = await callWithRetry();
+
+  // Empty response anche dopo retry → ERRORE esplicito (la pipeline si ferma).
+  if (!raw || raw.trim().length === 0) {
+    throw new Error(
+      `Modello AI ha restituito risposta vuota per chunk #${chunkDef.index} (${chunkDef.name}). ` +
+      `Possibile token explosion o rate limit. Riprova il chunk o riduci il sorgente.`,
+    );
   }
 
   const proposals = parseProposalsFromText(raw, cap);
   const extended = parseExtended(raw, chunkDef.index);
+
+  // Parser ha fallito su tutto → ERRORE (invece di marciare a 0 proposte).
+  if (proposals.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
+    throw new Error(
+      `Parser non è riuscito a estrarre nulla dalla risposta del modello per chunk #${chunkDef.index}. ` +
+      `Preview: "${raw.slice(0, 200).replace(/\n/g, " ")}..."`,
+    );
+  }
 
   // Deriva entities_created dalle proposals INSERT.
   const entitiesCreated: EntityCreatedEntry[] = proposals
