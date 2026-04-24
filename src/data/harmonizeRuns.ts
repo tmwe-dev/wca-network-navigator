@@ -20,6 +20,8 @@ export type HarmonizeStatus =
 export type HarmonizeActionType = "UPDATE" | "INSERT" | "MOVE" | "DELETE";
 export type HarmonizeResolutionLayer = "text" | "contract" | "code_policy" | "kb_governance";
 export type HarmonizeProposalStatus = "pending" | "approved" | "rejected" | "executed" | "failed";
+export type HarmonizeSeverity = "low" | "medium" | "high" | "critical";
+export type HarmonizeTestUrgency = "none" | "manual_smoke" | "regression_full";
 
 export interface HarmonizeTarget {
   table:
@@ -41,6 +43,13 @@ export interface HarmonizeEvidence {
   location?: string;
 }
 
+/** Riferimento ad un contratto/payload runtime mancante (es. EmailBrief.field_x). */
+export interface MissingContract {
+  contract_name: string;
+  field?: string;
+  why_needed: string;
+}
+
 export interface HarmonizeProposal {
   id: string;
   action: HarmonizeActionType;
@@ -57,6 +66,21 @@ export interface HarmonizeProposal {
   status: HarmonizeProposalStatus;
   block_label?: string;
   failure_reason?: string;
+  // Campi del nuovo vocabolario (opzionali per retro-compat con run salvati pre-refactor).
+  /** Severità del problema rilevato (separata dall'impatto operativo). */
+  severity?: HarmonizeSeverity;
+  /** Punteggio numerico 1-10 di rischio/portata, più espressivo del low/medium/high. */
+  impact_score?: number;
+  /** Quanto serve testare dopo l'esecuzione. */
+  test_urgency?: HarmonizeTestUrgency;
+  /** Posizione attuale (es. "kb_entries.id=xxx, category=doctrine"). */
+  current_location?: string;
+  /** Posizione proposta (per MOVE). */
+  proposed_location?: string;
+  /** Lista di contratti runtime mancanti se resolution_layer=contract. */
+  missing_contracts?: MissingContract[];
+  /** True se il modello considera safe applicarla in batch "approva tutte le sicure". */
+  apply_recommended?: boolean;
 }
 
 export interface InventorySummary {
