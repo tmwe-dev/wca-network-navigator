@@ -26,6 +26,7 @@ const AgentStatusPanel = lazyRetry(() => import("@/components/home/AgentStatusPa
 const DashboardCharts = lazyRetry(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazyRetry(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
 const EmailObservabilityPanel = lazyRetry(() => import("@/v2/ui/components/dashboard/EmailObservabilityPanel").then(m => ({ default: m.EmailObservabilityPanel })));
+const SystemDiagnosticsBadge = lazyRetry(() => import("@/v2/ui/components/admin/SystemDiagnosticsBadge").then(m => ({ default: m.SystemDiagnosticsBadge })));
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 1 }).format(value);
@@ -82,6 +83,9 @@ export function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {greeting}. <span className="text-muted-foreground">Cosa vuoi fare oggi?</span>
           </h1>
+          <Suspense fallback={null}>
+            <SystemDiagnosticsBadge />
+          </Suspense>
           <HomeAIPrompt
             systemStats={{ activeJobs, pendingActivities: dashData?.openActivitiesCount ?? 0, totalPartners: dashData?.partnerCount ?? 0 }}
             briefingActions={briefing?.actions}
