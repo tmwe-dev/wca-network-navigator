@@ -34,6 +34,8 @@ import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER, type TmweChunkDef } from "./tmweChun
 import { runLibraryChunkCollector } from "./harmonizerLibraryCollector";
 import { runLibraryChunkAnalyzer, type LibraryAnalyzerOutput } from "./harmonizerLibraryAnalyzer";
 import type { ParsedFile } from "../utils/fileParser";
+import { collectRealInventory } from "../hooks/harmonizeCollector";
+import type { EntityCreatedEntry } from "@/data/harmonizerSessions";
 
 export type IngestionPhase =
   | "idle"
@@ -80,6 +82,32 @@ const INITIAL: IngestionState = {
   })),
   totalProposals: 0,
 };
+
+/**
+ * Pre-popola entities_created leggendo TUTTE le righe attive del DB nelle
+ * tabelle target unite di tutti i chunk. Così, dal chunk #0, il modello
+ * "sa" cosa esiste e propone UPDATE invece di INSERT spuri.
+ *
+ * Marker: created_in_chunk = -1 → significa "preesistente al run".
+ */
+async function bootstrapEntitiesFromDb(userId: string): Promise<EntityCreatedEntry[]> {
+  try {
+    const allTargetTables = new Set<string>();
+    for (const c of TMWE_CHUNKS) for (const t of c.targetTables) allTargetTables.add(t);
+    const real = await collectRealInventory(userId);
+    return real
+      .filter((i) => allTargetTables.has(i.table))
+      .map((i) => ({
+        table: i.table,
+        id: i.id,
+        title: i.title,
+        created_in_chunk: -1, // preesistente
+      }));
+  } catch (e) {
+    console.warn("[ingestion] bootstrap entities failed, proceeding empty", e);
+    return [];
+  }
+}
 
 export function useHarmonizerLibraryIngestion(userId: string) {
   const [state, setState] = useState<IngestionState>(INITIAL);
@@ -179,12 +207,14 @@ export function useHarmonizerLibraryIngestion(userId: string) {
       let run: HarmonizeRun;
       try {
         run = await createHarmonizeRun(userId, input.goal, "library_ingestion");
+        const bootstrap = await bootstrapEntitiesFromDb(userId);
         session = await createHarmonizerSession({
           userId,
           sourceFile: input.sourceFile.name,
           sourceKind: "library",
           totalChunks: TMWE_CHUNKS.length,
           harmonizeRunId: run.id,
+          bootstrapEntities: bootstrap,
         });
       } catch (e) {
         setState((s) => ({ ...s, phase: "error", loading: false, error: e instanceof Error ? e.message : String(e) }));

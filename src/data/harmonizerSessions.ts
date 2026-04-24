@@ -108,6 +108,12 @@ export async function createHarmonizerSession(input: {
   sourceKind?: HarmonizerSourceKind;
   totalChunks: number;
   harmonizeRunId?: string | null;
+  /**
+   * Entità da pre-popolare in `entities_created` (bootstrap dal DB reale).
+   * Riduce drasticamente i falsi INSERT: il modello vede subito che certe
+   * righe esistono già e propone UPDATE invece di INSERT.
+   */
+  bootstrapEntities?: EntityCreatedEntry[];
 }): Promise<HarmonizerSession> {
   const { data, error } = await supabase
     .from("harmonizer_sessions" as never)
@@ -119,6 +125,7 @@ export async function createHarmonizerSession(input: {
       harmonize_run_id: input.harmonizeRunId ?? null,
       status: "in_progress",
       started_at: new Date().toISOString(),
+      entities_created: input.bootstrapEntities ?? [],
     } as never)
     .select()
     .single();
