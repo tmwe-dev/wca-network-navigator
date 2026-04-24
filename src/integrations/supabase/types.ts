@@ -7309,6 +7309,27 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           created_at: string
@@ -7821,6 +7842,7 @@ export type Database = {
           group_name: string
         }[]
       }
+      count_inbound_activities: { Args: never; Returns: Json }
       cron_job_status: {
         Args: never
         Returns: {
@@ -7900,6 +7922,7 @@ export type Database = {
         Returns: string
       }
       get_system_diagnostics: { Args: never; Returns: Json }
+      get_system_paused: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -8000,11 +8023,16 @@ export type Database = {
           title: string
         }[]
       }
+      purge_inbound_activities: {
+        Args: { p_only_orphans?: boolean }
+        Returns: Json
+      }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
       release_mission_slot: {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
         Returns: undefined
       }
+      set_system_paused: { Args: { p_paused: boolean }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       topup_credits: {

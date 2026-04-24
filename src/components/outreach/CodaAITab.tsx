@@ -49,15 +49,50 @@ export function CodaAITab() {
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session) return [];
-      const { data } = await supabase
+      const userId = session.session.user.id;
+
+      // 1) attività pending con agente assegnato
+      const { data: actData } = await supabase
         .from("activities")
         .select("*")
-        .eq("user_id", session.session.user.id)
+        .eq("user_id", userId)
         .eq("status", "pending")
         .not("executed_by_agent_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(100);
-      return (data || []) as AgentAction[];
+
+      // 2) agent_tasks proposti/pending (dove vivono davvero le proposte agente)
+      const { data: taskData } = await supabase
+        .from("agent_tasks")
+        .select("id, agent_id, task_type, description, status, created_at")
+        .in("status", ["proposed", "pending"])
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      const fromActivities = ((actData || []) as unknown) as AgentAction[];
+      const fromTasks: AgentAction[] = ((taskData || []) as Array<{
+        id: string;
+        agent_id: string | null;
+        task_type: string | null;
+        description: string | null;
+        status: string;
+        created_at: string;
+      }>).map((t) => ({
+        id: t.id,
+        activity_type: t.task_type || "agent_task",
+        title: t.description || "Task agente",
+        description: t.description,
+        email_subject: null,
+        email_body: null,
+        partner_id: null,
+        executed_by_agent_id: t.agent_id,
+        created_at: t.created_at,
+        status: t.status,
+        priority: "medium",
+        source_meta: { source: "agent_tasks" },
+      }));
+
+      return [...fromActivities, ...fromTasks];
     },
     refetchInterval: 30000,
   });

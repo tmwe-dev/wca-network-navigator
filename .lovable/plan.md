@@ -1,147 +1,142 @@
 
+# Piano — Pausa sistema + reset attività + fix Coda AI
 
-# P3 — Stabilizzazione e Hardening
+## Diagnosi DB (numeri reali ora)
 
-Lavoro in 9 task indipendenti. Ognuna chiude un buco critico individuato nell'audit.
+| Cosa | Numero | Origine |
+|---|---|---|
+| `activities` pending | **2.611** | Trigger `on_inbound_message` su ogni email IMAP, anche spam/newsletter |
+| `activities` con `executed_by_agent_id` | **0** | Coda AI sempre vuota |
+| `cockpit_queue` (tutte `queued`) | 8 | Vecchi BCA/partner_contact, invisibili in UI (cerca `pending`/`scheduled`/`failed`) |
+| `outreach_missions` | **0** | Nessuna missione attiva |
+| `agent_tasks` pending+proposed | 220 | Vecchia tabella, non visibile in Coda AI |
+| `channel_messages` inbound 24h | **492** | Sync IMAP gira ogni 3 e 5 min |
+| Cron attivi | `email_cron_sync_tick` (5min), `email-sync-worker` (3min) | Continuano a generare attività |
 
-## P3.1 — Fix invii email + reset draft in errore
+**Causa**: Il trigger `on_inbound_message` crea SEMPRE una activity `follow_up` per ogni inbound, indipendentemente dal mittente. Newsletter, notifiche di sicurezza, conferme PosteID, fatture Apple → tutte diventano "task da gestire".
 
-**Stato attuale (verificato):**
-- `email_drafts`: 4 in `status='error'`, 1 in `queued/idle`. Nessuna colonna `error_message` su questa tabella (è solo su `email_campaign_queue`).
-- `email_campaign_queue`: 4 righe totali — 2 `sent`, 2 `failed`. Le 2 fallite hanno `error_message = "supabase.rpc(...).catch is not a function"` e risalgono al **5 aprile** (18 giorni fa).
-- `app_settings` SMTP: credenziali presenti per due utenti (`luca@tmwe.it`, `luigi@tmwe.it`), host/port/password compilati. **SMTP non è il blocco**.
+## Cosa faccio (3 interventi)
 
-**Diagnosi:** il vecchio bug era una `.catch()` chainata su una promise Supabase (che non espone `.catch` come metodo). Nel codice attuale di `process-email-queue` quel pattern non c'è più — l'errore è stato risolto in passato ma i 4 draft sono rimasti "appesi" in stato `error`.
+### 1. Toggle "Pausa Sistema" (admin only)
 
-**Azioni:**
-1. Migration: `UPDATE email_drafts SET status='draft', queue_status='idle' WHERE status='error'` (così l'utente può rilanciare).
-2. Migration: `UPDATE email_campaign_queue SET status='pending', error_message=NULL, retry_count=0 WHERE status='failed' AND error_message LIKE '%catch is not a function%'`.
-3. Audit ricerca residui `.rpc(...).catch(` in tutto `supabase/functions/` (già fatto: 0 occorrenze, sano).
+Aggiungo un controllo unico nel badge diagnostico admin (top dashboard) chiamato **"Pausa Sistema"**. Quando ON:
 
-## P3.2 — Riattivare IMAP sync
+- Disattiva i cron `email_cron_sync_tick` e `email-sync-worker` (no più letture IMAP)
+- Disattiva il trigger `on_inbound_message` (no più classificazione/creazione attività anche se arrivano messaggi da altre fonti)
+- Mostra banner rosso "Sistema in pausa — no letture/classificazione attive"
 
-**Stato verificato:**
-- Cron `email-sync-worker` esiste già (`*/3 * * * *`, jobid 36) e `email_cron_sync_tick` (`*/5 * * * *`, jobid 29). Schedulati e con auth header inline corretto.
-- Ultimo `email_sync_jobs` completato 20 giorni fa. **Non ci sono job in stato `running`** → il worker tick trova "No running jobs" e esce subito (verificato dai log).
+Quando OFF: riattiva tutto. Stato persistito in tabella nuova `system_settings(key, value)` letto via RPC `get_system_paused()`.
 
-**Diagnosi:** il worker non crea job da solo, drena solo quelli `running`. L'utente deve avviare un job. La UI esiste ma probabilmente nessuno l'ha riavviata dopo la finestra di interruzione.
+**Interfaccia**: switch grande dentro il pannello del badge diagnostico, accanto ai numeri. Solo admin lo vede.
 
-**Azioni:**
-1. Invocare manualmente `email-sync-worker` per confermare che gira (sarà no-op).
-2. Creare un `email_sync_jobs` di test in `status='running'` per l'utente principale, con limite basso (es. 50 email), per verificare end-to-end.
-3. Verificare il risultato dopo 10 minuti: `downloaded_count` deve incrementare e/o `status='completed'`.
-4. Se la creazione del job manuale non basta, controllare che la UI "Sync inbox" in `EmailMailboxPage` sia accessibile e funzionante.
+### 2. Reset attività fantasma
 
-## P3.3 — Job batch enrichment automatico
+Al primo click su "Pausa Sistema" mostro un dialog con conteggio attività:
+> "Hai 2.611 attività in coda. Vuoi azzerarle?"
+- **Sì → cancella tutte** (`DELETE` reale dalle 2.611 follow_up auto-generate)
+- **Solo da partner reali** (tieni quelle con `partner_id` valorizzato e mappato)
+- **No, solo pausa**
 
-**Stato verificato:** 1/12.286 partner arricchiti (peggio del previsto), 12.263 hanno `website`.
+Cleanup parallelo: i **8 cockpit_queue** in stato `queued` → marco tutti `cancelled`.
 
-**Azioni:**
-1. Nuova edge function `batch-enrichment-worker`:
-   - Pesca 5 partner: `enrichment_data IS NULL OR enrichment_data='{}'::jsonb`, `website IS NOT NULL`, `is_active=true`, `deleted_at IS NULL`, ordinati per `rating DESC NULLS LAST`.
-   - Per ognuno: invoca `enrich-partner-website` con `partnerId`. Try/catch isolato per partner.
-   - Rate limit: `await sleep(10000)` tra una chiamata e l'altra.
-   - Wall clock cap 50s (esce prima dei 60s del runtime).
-   - Skip immediato se nel frattempo qualcuno ha già popolato `enrichment_data`.
-2. Schedulazione cron `*/30 * * * *` con auth header anon inline (pattern P2.D).
-3. Output JSON: `{processed, skipped, errors[]}`.
+### 3. Fix Coda AI
 
-**Vincoli:** nessuna sovrascrittura, fire-and-forget, log strutturato per errore.
+Due problemi:
+- a) La query legge `activities WHERE executed_by_agent_id IS NOT NULL` ma nessun agente scrive in `activities`. I 220 task vivono in `agent_tasks` (status `pending`/`proposed`).
+- b) `outreach_missions` è vuota: gli agenti non hanno missioni assegnate, quindi non producono.
 
-## P3.4 — Parser Factory robusto AI
+**Cosa faccio in questa iterazione**:
+- Modifico `CodaAITab` per leggere da **`agent_tasks WHERE status IN ('proposed','pending')`** in OR con activities-con-agent. Così i 220 task esistenti diventano visibili e approvabili.
+- Aggiungo nota "Nessuna missione attiva" se `outreach_missions` è vuota, con CTA per crearne una (link a `/v2/missions`).
 
-**Stato:** 4 funzioni (`generate-email`, `generate-outreach`, `classify-email-response`, `improve-email`) parsano output AI senza fallback.
+Non tocco la creazione di missioni autopilot in questo round (è un capitolo a sé).
 
-**Azioni:**
-1. Nuovo file `supabase/functions/_shared/responseParserFactory.ts`:
-   - `stripMarkdownFences(text)` — rimuove ` ```json ` e ` ``` `.
-   - `sanitizeForFallback(text)` — rimuove tag pericolosi, tronca a 5000 char.
-   - `parseEmailResponse(raw, model, fnName)` — estrae `subject`/`body`. Fallback `{subject: "Follow-up", body: sanitized}`.
-   - `parseClassification(raw, model, fnName)` — JSON.parse + valida enum category + clamp confidence 0-1. Fallback `{category: "uncategorized", confidence: 0.1, sentiment: "neutral"}`.
-   - Ogni fallback: `console.error("[PARSE_FAIL]", fnName, model, raw.slice(0,200))`.
-2. Integro nei 4 file mantenendo l'output esistente (solo wrap con try/catch + fallback).
-3. Deploy delle 4 funzioni.
+## Tecnica
 
-**Verifica post-deploy:** test manuale via `curl_edge_functions` con input volutamente malformato.
+**DB (migration):**
+```sql
+CREATE TABLE public.system_settings (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid
+);
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "admin read" ON public.system_settings FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(),'admin'::app_role));
+CREATE POLICY "admin write" ON public.system_settings FOR ALL TO authenticated
+  USING (public.has_role(auth.uid(),'admin'::app_role))
+  WITH CHECK (public.has_role(auth.uid(),'admin'::app_role));
 
-## P3.5 — Typed Supabase Query Builders
+-- RPC che applica/rimuove la pausa
+CREATE OR REPLACE FUNCTION public.set_system_paused(p_paused boolean)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  IF NOT public.has_role(auth.uid(),'admin'::app_role) THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
 
-**Stato:** ~570 occorrenze di `as any`/`as unknown as` in `src/data/`.
+  IF p_paused THEN
+    PERFORM cron.unschedule('email_cron_sync_tick');
+    PERFORM cron.unschedule('email-sync-worker');
+    EXECUTE 'ALTER TABLE public.channel_messages DISABLE TRIGGER trg_on_inbound_message';
+  ELSE
+    -- ri-creo i cron con la stessa schedule
+    PERFORM cron.schedule('email_cron_sync_tick','*/5 * * * *', _cron_invoke_edge_sql('email-sync-worker'));
+    PERFORM cron.schedule('email-sync-worker','*/3 * * * *',  _cron_invoke_edge_sql('email-sync-worker'));
+    EXECUTE 'ALTER TABLE public.channel_messages ENABLE TRIGGER trg_on_inbound_message';
+  END IF;
 
-**Azioni (incrementali, una alla volta con build verificata):**
-1. Nuovo file `src/lib/supabaseQueryBuilders.ts`.
-2. Refactor in ordine, uno per commit logico:
-   - `partners.ts` (più occorrenze): builder `selectPartners(filters)` tipizzato `Promise<PartnerWithRelations[]>`. Cast UNICO interno.
-   - `outreachTimingTemplates.ts`, `downloadJobs.ts`, `channelMessages.ts`, `outreachPipeline.ts`, `contacts/queries.ts`: stesso pattern.
-3. Per JSONB: ad-hoc helper, ma vero wrapping in P3.6.
-4. Per RPC non in types (`apply_lead_status_rpc`): un helper `applyLeadStatus(table, id, status)` che incapsula il singolo cast.
+  INSERT INTO public.system_settings(key,value,updated_by)
+  VALUES ('paused', to_jsonb(p_paused), auth.uid())
+  ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now(), updated_by=auth.uid();
 
-**Vincolo:** zero cambi di logica, build passa dopo ogni file.
+  RETURN jsonb_build_object('paused', p_paused);
+END $$;
 
-## P3.6 — TypedJson + return type esplicito
+-- RPC pulizia attività fantasma
+CREATE OR REPLACE FUNCTION public.purge_inbound_activities(p_only_orphans boolean DEFAULT false)
+RETURNS int LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE v_count int;
+BEGIN
+  IF NOT public.has_role(auth.uid(),'admin'::app_role) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF p_only_orphans THEN
+    DELETE FROM public.activities
+    WHERE activity_type='follow_up'
+      AND title LIKE 'Reply received%'
+      AND (partner_id IS NULL OR NOT EXISTS (SELECT 1 FROM partners p WHERE p.id=activities.partner_id));
+  ELSE
+    DELETE FROM public.activities
+    WHERE activity_type='follow_up' AND title LIKE 'Reply received%' AND status='pending';
+  END IF;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END $$;
+```
+Nota: trovo il nome esatto del trigger prima della migration; se diverso da `trg_on_inbound_message` lo correggo.
 
-**Azioni:**
-1. Nuovo `src/types/json.ts` con interfacce `EnrichmentData`, `AgentStats`, `ScheduleConfig` e wrapper `TypedJson<T>`.
-2. Refactor in ordine: `downloadJobs.ts`, `aiConversations.ts`, `useEnrichmentData.ts`, `useDeepSearchRunner.ts`.
-3. Aggiungo return type esplicito (`Promise<PartnerRow[]>`) sulle funzioni data che oggi castano lato consumer. Cast UNICO interno alla funzione (`as PartnerRow[]`), niente `as unknown as` nei consumer.
+**Frontend:**
+- `src/v2/ui/components/admin/SystemPauseToggle.tsx` (nuovo) — switch + dialog cleanup
+- Inserito dentro `SystemDiagnosticsBadge.tsx` esistente
+- `src/v2/hooks/useSystemPaused.ts` (nuovo) — read/write via RPC
+- `src/components/outreach/CodaAITab.tsx` — query estesa a `agent_tasks`
+- `src/components/outreach/InUscitaTab.tsx` — opzionale: mappare `queued` → `pending` nel filtro (cleanup pre-emptivo dei record vecchi rende non necessario)
 
-**Verifica:** `tsc --noEmit` pulito + count `as unknown as` ridotto.
+**Cleanup oneshot via insert tool:**
+```sql
+UPDATE public.cockpit_queue SET status='cancelled' WHERE status='queued';
+```
 
-## P3.7 — Eliminare codice morto viste DB
+## Cosa NON faccio in questo round
 
-**Stato verificato:** 126 match in 10 file per le 4 viste e l'RPC `apply_lead_status_rpc`. ATTENZIONE: l'RPC `apply_lead_status_rpc` è **realmente in uso** (route LeadProcessManager) — verifico in DB se esiste prima di rimuoverlo.
+- Non riscrivo la logica del classifier inbound (la blocklist domini per filtrare spam alla fonte è P3.2 dedicato)
+- Non creo missioni autopilot di default
+- Non tocco `outreach_missions` (resta vuoto fino a quando non crei una missione)
 
-**Pre-azione:** check `pg_proc` per `apply_lead_status_rpc`. Se esiste → mantenere, solo eliminare il cast `as any` aggiungendo tipi corretti. Se non esiste → confermare con utente prima di rimuovere chiamate.
+## Verifica post-deploy
 
-**Azioni viste mancanti (`v_kpi_dashboard`, `v_inbox_unified`, `v_outreach_today`, `v_pipeline_lead`):**
-1. Per ogni call site: rimuovo cast `(supabase as any).from("v_…")` e sostituisco con query equivalente sulle tabelle base + aggregazione lato client (oppure RPC dedicata).
-2. Per `v_kpi_dashboard` (in `src/data/analytics.ts` e `src/v2/io/supabase/queries/dashboard.ts`): sostituisco con N count query separati (è il pattern già esistente come fallback).
-3. Per `v_pipeline_lead` (in `partners.ts`, usata da AgendaListView): query diretta a `partners` + join `activities` lato client per `touch_count`/`last_outbound_at`.
-4. Per `v_outreach_today` (in `outreachQueue.ts`): query a `outreach_queue` + join partner.
-
-**Vincolo:** nessuna creazione di viste, fallback grazioso `data ?? []` ovunque.
-
-## P3.8 — Dashboard observability email
-
-**Già implementata.** `EmailObservabilityPanel` esiste in `src/v2/ui/components/dashboard/` e è caricata da `DashboardPage.tsx`. Verifico se copre tutte le metriche richieste:
-- Contatori sent/failed ultime 24h ✓ (presunto, verifico al momento del fix se mancante)
-- Ultimi 10 invii ✓
-- Tasso successo 7d ✓
-- Stato vuoto ✓
-
-**Azioni:** se manca qualcuna delle 4 metriche → la aggiungo. Altrimenti **skip P3.8** e segnalo come già fatta.
-
-## P3.9 — Badge diagnostico admin
-
-**Stato:** ruoli admin gestiti via `user_roles` + `has_role` RPC (verificato). Esiste hook `useAuthV2` con `loadRoles`.
-
-**Azioni:**
-1. Nuovo componente `src/v2/ui/components/admin/SystemDiagnosticsBadge.tsx`:
-   - Visibile solo se `roles.includes('admin')`.
-   - Mostra in piccolo: pending counts (`agent_tasks`, `email_campaign_queue`, `extension_dispatch_queue`), cron job count (`SELECT COUNT(*) FROM cron.job` via RPC), last sync (`MAX(created_at) FROM email_sync_jobs WHERE status='completed'`), build URL host.
-   - Click → expand con dettagli.
-   - Soglie rosso: pending >100, last sync >24h.
-2. Nuova RPC `get_system_diagnostics()` (SECURITY DEFINER, restituisce JSON con i counts) — necessaria perché `cron.job` non è leggibile da RLS client.
-3. Mounting in `DashboardPage` come slot in alto.
-4. Query con `staleTime: 60s`, no polling.
-
----
-
-## Dettagli tecnici riassunti
-
-- **Migrations DB:** 1 per P3.1 (reset stati), 1 per P3.9 (RPC diagnostics).
-- **Nuove edge functions:** `batch-enrichment-worker` (P3.3).
-- **Nuovi cron job:** 1 (`*/30 * * * *` per batch enrichment).
-- **Nuovi file shared:** `responseParserFactory.ts` (P3.4), `supabaseQueryBuilders.ts` (P3.5), `types/json.ts` (P3.6).
-- **Edge functions modificate:** 4 (P3.4) + redeploy.
-- **File frontend toccati:** ~10-15 (P3.5+P3.6+P3.7), 1 nuovo (P3.9).
-
-## Ordine di esecuzione consigliato
-
-Blocco A — fix immediati (sblocca utente):  P3.1 → P3.2 → P3.3
-Blocco B — resilienza backend:  P3.4
-Blocco C — type safety (lungo, incrementale): P3.7 (rimozione viste fantasma) → P3.5 → P3.6
-Blocco D — observability admin:  P3.9 (P3.8 già fatto, da verificare)
-
-Procedo con il Blocco A appena confermi.
-
+1. Badge admin: switch "Sistema in pausa" appare e funziona
+2. Click pausa → cron disattivati (verifico con `SELECT * FROM cron.job WHERE active=true`)
+3. Cleanup: 2.611 → 0 (o N solo da partner)
+4. Coda AI mostra i 220 task agent_tasks
+5. Riapro pausa → cron tornano attivi, sync IMAP riprende
