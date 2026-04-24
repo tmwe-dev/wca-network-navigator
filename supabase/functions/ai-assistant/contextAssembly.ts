@@ -137,7 +137,7 @@ async function loadContextParallel(
       loadUserProfile(supabase, userId),
       loadKBContext(supabase, lastUserMsg, userId, ctxTags),
       loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg),
+      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
     ]);
     return {
       memoryContext,
@@ -157,7 +157,7 @@ async function loadContextParallel(
       loadOperativePrompts(supabase, userId),
       loadMissionHistory(supabase, userId),
       loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg),
+      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
     ]);
     return {
       memoryContext,
