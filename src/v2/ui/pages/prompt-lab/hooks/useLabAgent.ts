@@ -634,13 +634,13 @@ Restituisci SOLO il testo migliorato del blocco, niente commenti. Rispetta IN OR
       const issues = validateAgainstRubric(first, rubric);
       if (issues.length === 0) return first;
 
-      const retryPrompt = `${userPrompt}
-
---- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
-${issues.map((i) => `✗ ${i}`).join("\n")}
---- FINE VIOLAZIONI ---
-
-Riscrivi il blocco correggendo TUTTE le violazioni sopra. Restituisci SOLO il nuovo testo.`;
+      // Fix A3: retry compatto invece di ri-inviare l'intero userPrompt.
+      const retryPrompt = buildRetryPrompt({
+        blockLabel: block.label,
+        blockContent: block.content,
+        violations: issues,
+        contextHint: `tab=${tabLabel ?? "n/d"}, sorgente=${block.source.kind}`,
+      });
       const second = await callAgent(retryPrompt, {
         block_id: block.id,
         retry: true,
