@@ -4202,6 +4202,63 @@ export type Database = {
           },
         ]
       }
+      harmonize_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          deleted_at: string | null
+          desired_inventory_summary: Json | null
+          executed_count: number
+          failed_count: number
+          gap_classification: Json | null
+          goal: string | null
+          id: string
+          proposals: Json
+          real_inventory_summary: Json | null
+          scope: string
+          status: string
+          updated_at: string
+          uploaded_files: Json | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          desired_inventory_summary?: Json | null
+          executed_count?: number
+          failed_count?: number
+          gap_classification?: Json | null
+          goal?: string | null
+          id?: string
+          proposals?: Json
+          real_inventory_summary?: Json | null
+          scope?: string
+          status?: string
+          updated_at?: string
+          uploaded_files?: Json | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          desired_inventory_summary?: Json | null
+          executed_count?: number
+          failed_count?: number
+          gap_classification?: Json | null
+          goal?: string | null
+          id?: string
+          proposals?: Json
+          real_inventory_summary?: Json | null
+          scope?: string
+          status?: string
+          updated_at?: string
+          uploaded_files?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       impersonation_log: {
         Row: {
           action: string
