@@ -44,9 +44,9 @@ export function createReadHandlers(supabase: SupabaseClient) {
       let q = supabase.from("partner_contacts").select("partner_id").or("direct_phone.not.is.null,mobile.not.is.null");
       if (userId) q = q.eq("user_id", userId);
       const { data } = await q;
-      const phoneIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))];
+      const phoneIds = [...new Set((data || []).map((r: { partner_id: string }) => r.partner_id))] as string[];
       partnerIdFilter = partnerIdFilter ? partnerIdFilter.filter(id => phoneIds.includes(id)) : phoneIds;
-      if (partnerIdFilter.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
+      if (partnerIdFilter!.length === 0) return isCount ? { count: 0 } : { count: 0, partners: [] };
     }
 
     let query = supabase.from("partners").select(
@@ -96,18 +96,19 @@ export function createReadHandlers(supabase: SupabaseClient) {
   }
 
   async function executeCountryOverview(args: Record<string, unknown>) {
+    type StatRow = { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count: number; branch_count: number };
     const { data, error } = await supabase.rpc("get_country_stats");
     if (error) return { error: error.message };
-    let stats = data || [];
-    if (args.country_code) stats = stats.filter((s: Record<string, unknown>) => s.country_code === String(args.country_code).toUpperCase());
+    let stats: StatRow[] = (data || []) as StatRow[];
+    if (args.country_code) stats = stats.filter((s) => s.country_code === String(args.country_code).toUpperCase());
     const sortBy = String(args.sort_by || "total");
-    if (sortBy === "missing_profiles") stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.without_profile || 0) - (a.without_profile || 0));
-    else if (sortBy === "missing_emails") stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
-    else stats.sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.total_partners || 0) - (a.total_partners || 0));
+    if (sortBy === "missing_profiles") stats.sort((a, b) => (b.without_profile || 0) - (a.without_profile || 0));
+    else if (sortBy === "missing_emails") stats.sort((a, b) => ((b.total_partners - b.with_email) || 0) - ((a.total_partners - a.with_email) || 0));
+    else stats.sort((a, b) => (b.total_partners || 0) - (a.total_partners || 0));
     const limit = Number(args.limit) || 30;
     return {
       total_countries: stats.length,
-      countries: stats.slice(0, limit).map((s: Record<string, unknown>) => ({
+      countries: stats.slice(0, limit).map((s) => ({
         country_code: s.country_code, total_partners: s.total_partners, hq: s.hq_count, branches: s.branch_count,
         with_profile: s.with_profile, without_profile: s.without_profile, with_email: s.with_email, with_phone: s.with_phone,
         profile_coverage: s.total_partners ? `${Math.round((s.with_profile / s.total_partners) * 100)}%` : "0%",
@@ -116,12 +117,13 @@ export function createReadHandlers(supabase: SupabaseClient) {
   }
 
   async function executeDirectoryStatus(args: Record<string, unknown>) {
+    type StatRow = { country_code: string; total_partners: number; with_profile: number; without_profile: number };
     const { data: dirData } = await supabase.rpc("get_directory_counts");
     const { data: statsData } = await supabase.rpc("get_country_stats");
     const dirMap: Record<string, { members: number; verified: boolean }> = {};
     for (const r of (dirData || []) as Array<{ country_code: string; member_count: number; is_verified: boolean }>) dirMap[r.country_code] = { members: Number(r.member_count), verified: r.is_verified };
-    const statsMap: Record<string, Record<string, unknown>> = {};
-    for (const r of (statsData || []) as Array<Record<string, unknown>>) statsMap[r.country_code] = r;
+    const statsMap: Record<string, StatRow> = {};
+    for (const r of (statsData || []) as StatRow[]) statsMap[r.country_code] = r;
     const allCodes = [...new Set([...Object.keys(dirMap), ...Object.keys(statsMap)])];
     if (args.country_code) {
       const code = String(args.country_code).toUpperCase();
