@@ -1,10 +1,9 @@
 /**
  * kbFetcher.ts — Knowledge Base retrieval for outreach context.
  */
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import type { Channel } from "./promptBuilder.ts";
-
-type SupabaseClient = ReturnType<typeof (await import("https://esm.sh/@supabase/supabase-js@2.39.3")).createClient>;
 
 export async function fetchKbEntriesForOutreach(
   supabase: SupabaseClient, quality: Quality, channel: Channel, userId: string,
