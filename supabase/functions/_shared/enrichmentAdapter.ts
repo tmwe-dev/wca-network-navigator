@@ -253,9 +253,8 @@ export async function triggerQualityScoreRecalculation(
   partnerId: string,
 ): Promise<void> {
   try {
-    const { loadAndCalculateQuality, savePartnerQuality } = await import("./partnerQualityScore.ts");
-    const quality = await loadAndCalculateQuality(supabase, partnerId);
-    await savePartnerQuality(supabase, partnerId, quality);
+    const { calculateAndSavePartnerQuality } = await import("./partnerQualityScore.ts");
+    await calculateAndSavePartnerQuality(supabase, partnerId);
   } catch (e) {
     console.warn(
       "[enrichment] Quality score calculation failed:",
