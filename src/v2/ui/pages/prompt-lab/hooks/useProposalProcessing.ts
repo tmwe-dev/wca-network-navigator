@@ -29,12 +29,18 @@ export interface GlobalProposal {
   tabActivation?: string;
   before: string;
   after?: string;
-  status: "pending" | "improving" | "ready" | "skipped" | "error" | "saved";
+  status: "pending" | "improving" | "ready" | "minor_change" | "skipped" | "error" | "saved";
   error?: string;
   /** Classificazione del tipo di intervento necessario */
   outcomeType?: OutcomeType;
   /** Nota architetturale se il problema non è solo testuale */
   architecturalNote?: string;
+  /**
+   * Ratio di cambiamento testuale (0..1) tra before e after.
+   * Calcolato lato client al momento del parse della risposta AI.
+   * Usato per distinguere riscritture sostanziali da variazioni cosmetiche.
+   */
+  changeRatio?: number;
 }
 
 /** Stringa "tab label" per ogni tipo di sorgente. */
@@ -52,7 +58,7 @@ export function tabLabelFor(src: BlockSource): string {
   }
 }
 
-function activationFor(tabLabel: string): string | undefined {
+export function activationFor(tabLabel: string): string | undefined {
   return PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation;
 }
 
