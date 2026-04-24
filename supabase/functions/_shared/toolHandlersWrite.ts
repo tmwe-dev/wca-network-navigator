@@ -7,7 +7,10 @@
 import { escapeLike } from "./sqlEscape.ts";
 import { applyLeadStatusChange, TERMINAL_STATUSES } from "./leadStatusGuard.ts";
 
-type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient>;
+// Permissive client type — `createClient` without a Database generic
+// infers `never` for every table, breaking all .from()/.insert() calls below.
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = false) {
 
