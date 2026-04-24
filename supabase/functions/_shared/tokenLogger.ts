@@ -9,7 +9,7 @@
  *  - loadTokenSettings() — fetch all ai_* settings
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export interface TokenUsageRecord {
   id: string;

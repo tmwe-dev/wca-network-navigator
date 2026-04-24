@@ -3,11 +3,14 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
 
 export interface AuthContext {
   userId: string;
   authHeader: string;
-  authClient: ReturnType<typeof createClient>;
+  authClient: AgentExecuteSupabaseClient;
 }
 
 /**
@@ -96,7 +99,7 @@ export async function authenticateRequest(
  * Validate that agent_id exists and belongs to user
  */
 export async function validateAgent(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AgentExecuteSupabaseClient,
   agentId: string,
   userId: string,
   dynCors: Record<string, string>
@@ -106,7 +109,7 @@ export async function validateAgent(
     .select("*")
     .eq("id", agentId)
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (agentErr || !agent) {
     return {
