@@ -2,6 +2,7 @@
  * useContactMerge — Hook for contact deduplication and merging
  * Provides utilities for finding duplicate contacts and merging them
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
@@ -86,8 +87,7 @@ export function useFindDuplicates() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicates,
     queryFn: async () => {
-      const { data: contacts, error } = await (supabase as any)
-        .from("imported_contacts")
+      const { data: contacts, error } = await tFrom("imported_contacts")
         .select(
           "id, name, email, phone, mobile, company_name, company_id, title, country, created_at, interaction_count"
         )
@@ -228,16 +228,14 @@ export function useMergeContacts() {
       if (updateError) throw updateError;
 
       // 2. Reassign activities to surviving contact
-      const { error: activityError } = await (supabase as any)
-        .from("activities")
+      const { error: activityError } = await tFrom("activities")
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
 
       if (activityError) console.warn("Activity reassignment warning:", activityError);
 
       // 3. Reassign emails to surviving contact
-      const { error: emailError } = await (supabase as any)
-        .from("emails")
+      const { error: emailError } = await tFrom("emails")
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
 
@@ -259,8 +257,7 @@ export function useDuplicateCount() {
   return useQuery({
     queryKey: queryKeys.contactMerge.duplicateCount,
     queryFn: async () => {
-      const result = await (supabase as any)
-        .from("imported_contacts")
+      const result = await tFrom("imported_contacts")
         .select("id", { count: "exact", head: true });
       return result.count || 0;
     },

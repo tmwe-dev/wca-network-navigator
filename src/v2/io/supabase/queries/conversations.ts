@@ -1,6 +1,7 @@
 /**
  * Queries for command conversations (multi-turn memory)
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";
@@ -26,8 +27,7 @@ export interface ConversationMessage {
 
 export async function fetchConversations(limit = 30): Promise<Result<Conversation[]>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_conversations")
+    const { data, error } = await tFrom("command_conversations")
       .select("*")
       .eq("archived", false)
       .order("last_message_at", { ascending: false })
@@ -44,8 +44,7 @@ export async function fetchConversationMessages(
   limit = 50,
 ): Promise<Result<ConversationMessage[]>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_messages")
+    const { data, error } = await tFrom("command_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })

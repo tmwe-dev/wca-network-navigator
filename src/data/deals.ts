@@ -2,6 +2,7 @@
  * Data Access Layer — Deals & Pipeline Management
  * Single source of truth for all deals table queries.
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
@@ -103,8 +104,7 @@ export interface DealStats {
  * List deals with optional filters
  */
 export async function listDeals(userId: string, filters?: DealFilters): Promise<DealWithRelations[]> {
-  let query = (supabase as any)
-    .from("deals")
+  let query = tFrom("deals")
     .select(
       `
         *,
@@ -151,8 +151,7 @@ export async function listDeals(userId: string, filters?: DealFilters): Promise<
  * Get a single deal with full details
  */
 export async function getDeal(id: string): Promise<DealWithRelations | null> {
-  const { data, error } = await (supabase as any)
-    .from("deals")
+  const { data, error } = await tFrom("deals")
     .select(
       `
         *,
@@ -174,8 +173,7 @@ export async function createDeal(
   userId: string,
   deal: Omit<Deal, "id" | "user_id" | "created_at" | "updated_at">
 ): Promise<Deal> {
-  const { data, error } = await (supabase as any)
-    .from("deals")
+  const { data, error } = await tFrom("deals")
     .insert([
       {
         user_id: userId,
@@ -196,8 +194,7 @@ export async function updateDeal(id: string, updates: Partial<Deal>): Promise<De
   // Get current deal to detect stage changes
   const current = await getDeal(id);
 
-  const { data, error } = await (supabase as any)
-    .from("deals")
+  const { data, error } = await tFrom("deals")
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
@@ -227,7 +224,7 @@ export async function updateDeal(id: string, updates: Partial<Deal>): Promise<De
  * Delete a deal
  */
 export async function deleteDeal(id: string): Promise<void> {
-  const { error } = await (supabase as any).from("deals").delete().eq("id", id);
+  const { error } = await tFrom("deals").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -328,8 +325,7 @@ export async function logDealActivity(
   oldValue?: string,
   newValue?: string
 ): Promise<DealActivity> {
-  const { data, error } = await (supabase as any)
-    .from("deal_activities")
+  const { data, error } = await tFrom("deal_activities")
     .insert([
       {
         deal_id: dealId,
@@ -351,8 +347,7 @@ export async function logDealActivity(
  * Get activities for a deal
  */
 export async function getDealActivities(dealId: string, limit = 50): Promise<DealActivity[]> {
-  const { data, error } = await (supabase as any)
-    .from("deal_activities")
+  const { data, error } = await tFrom("deal_activities")
     .select("*")
     .eq("deal_id", dealId)
     .order("created_at", { ascending: false })

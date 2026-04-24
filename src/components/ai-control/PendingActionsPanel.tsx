@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
+import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
@@ -80,13 +81,11 @@ export function PendingActionsPanel() {
       // LOVABLE-93: if draft was edited, update action_payload before approval
       let updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
       if (params.draftSubject !== undefined || params.draftBody !== undefined) {
-        const existingPayload = (action?.action_payload as Record<string, unknown>) || {};
-        updatePayload.action_payload = {
-          ...existingPayload,
+        updatePayload.action_payload = mergeJsonObject(action?.action_payload, {
           ...(params.draftSubject !== undefined && { draft_subject: params.draftSubject }),
           ...(params.draftBody !== undefined && { draft_body: params.draftBody }),
           user_edited: true,
-        };
+        });
       }
 
       const { error } = await supabase
@@ -249,7 +248,7 @@ export function PendingActionsPanel() {
                     draftEditId === action.id ? (
                     <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
                       <p className="text-xs font-medium text-foreground">Modifica Draft</p>
-                      {(action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined && (
+                      {getJsonField<string>(action.action_payload, "draft_subject") !== undefined && (
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Oggetto</label>
                           <Input
@@ -260,7 +259,7 @@ export function PendingActionsPanel() {
                           />
                         </div>
                       )}
-                      {(action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined && (
+                      {getJsonField<string>(action.action_payload, "draft_body") !== undefined && (
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Corpo</label>
                           <Textarea
@@ -350,17 +349,17 @@ export function PendingActionsPanel() {
                       <>
                         {/* Show draft editing UI for email-like actions with draft fields */}
                         {(action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
-                          ((action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined ||
-                            (action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined) && (
+                          (getJsonField<string>(action.action_payload, "draft_subject") !== undefined ||
+                            getJsonField<string>(action.action_payload, "draft_body") !== undefined) && (
                             <>
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 className="h-7 text-xs gap-1 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
                                 onClick={() => {
-                                  const payload = action.action_payload as Record<string, unknown> | null;
-                                  setEditedDraftSubject((payload?.draft_subject as string) || "");
-                                  setEditedDraftBody((payload?.draft_body as string) || "");
+                                  const payload = asJsonObject(action.action_payload);
+                                  setEditedDraftSubject((payload.draft_subject as string | undefined) ?? "");
+                                  setEditedDraftBody((payload.draft_body as string | undefined) ?? "");
                                   setDraftEditId(action.id);
                                 }}
                               >
@@ -387,8 +386,8 @@ export function PendingActionsPanel() {
                           )}
                         {/* For non-draft actions, show standard approve */}
                         {!((action.action_type === "reply" || action.action_type === "send_email" || action.action_type === "forward") &&
-                          ((action.action_payload as Record<string, unknown> | null)?.draft_subject !== undefined ||
-                            (action.action_payload as Record<string, unknown> | null)?.draft_body !== undefined)) && (
+                          (getJsonField<string>(action.action_payload, "draft_subject") !== undefined ||
+                            getJsonField<string>(action.action_payload, "draft_body") !== undefined)) && (
                           <Button
                             size="sm"
                             variant="ghost"
