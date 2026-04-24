@@ -27,7 +27,7 @@ export interface SystemKpis {
   funnel: Record<string, number>;
 }
 
-async function safeCount(query: () => Promise<{ count: number | null; error: unknown }>): Promise<number> {
+async function safeCount(query: () => PromiseLike<{ count: number | null; error: unknown }>): Promise<number> {
   try {
     const { count, error } = await query();
     if (error) return 0;
