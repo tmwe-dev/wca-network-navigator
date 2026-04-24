@@ -25,17 +25,21 @@ const TABLE_TO_KB_FILES: Record<string, string[]> = {
   app_settings: ["60-code-policies-active.md"],
 };
 
-/** File SEMPRE iniettati (foundation comune a tutti i chunk). */
+/**
+ * File SEMPRE iniettati — ridotti al minimo critico per non saturare
+ * la context window. Ordine = priorità (i primi sono garantiti).
+ */
 const ALWAYS_INJECT: string[] = [
-  "00-context-wca.md",
-  "20-truth-hierarchy.md",
-  "30-business-constraints.md",
-  "60-code-policies-active.md",
-  "90-output-schema-reference.md",
+  "60-code-policies-active.md",   // policy hard: bloccante
+  "30-business-constraints.md",   // constraint business: bloccante
 ];
 
-/** Cap di sicurezza per evitare token explosion (somma chars KB iniettata). */
-const KB_INJECTION_BUDGET_CHARS = 24_000;
+/**
+ * Cap di sicurezza ridotto. Con 8KB rimane spazio per briefing (~6KB),
+ * stato sessione (~3KB) e gap testo (~10KB). Sopra ai 12KB il modello
+ * smetteva di rispondere (output vuoto → parser fallisce).
+ */
+const KB_INJECTION_BUDGET_CHARS = 8_000;
 
 const KB_BASE_PATH = "/kb-source/harmonizer";
 
@@ -78,7 +82,11 @@ export async function buildHarmonizerKbContext(
   }
 
   // 2. Fetch parallelo, ordinato per nome (per determinismo del prompt).
-  const fileList = Array.from(fileSet).sort();
+  // ALWAYS_INJECT mantiene il proprio ordine (priorità), poi tabelle in ordine.
+  const tableFiles = Array.from(fileSet)
+    .filter((f) => !ALWAYS_INJECT.includes(f))
+    .sort();
+  const fileList = [...ALWAYS_INJECT.filter((f) => fileSet.has(f)), ...tableFiles];
   const contents = await Promise.all(
     fileList.map(async (f) => ({ name: f, body: await fetchKbFile(f) })),
   );
