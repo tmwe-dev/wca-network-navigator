@@ -1,155 +1,92 @@
 
 
-# P0.1 — Creare `email_send_log` + retrofit `send-email` & `process-email-queue`
+# Piano P0.2 → P1.3 — Sblocchi e diagnosi V2
 
-Audit completo salvato in `docs/audit/AUDIT-FLUSSI-FONDAMENTALI-2026-04-24.md`. Procediamo step atomici.
+P0.1 già completato (tabella `email_send_log` + retrofit fire-and-forget). Procediamo con i 5 step rimanenti, ognuno atomico.
 
-## Cosa fa questo step
+## Stato accertato dalla diagnosi preliminare
 
-Aggiunge **un solo nuovo binario** al sistema email: una tabella audit append-only + due punti di scrittura fire-and-forget. Zero modifiche alla logica esistente di invio.
+- `app_settings` ha **alcune** chiavi WA/LI globali già presenti (`linkedin_send_start_hour`, `linkedin_send_end_hour`, `linkedin_min_delay_seconds`, `linkedin_max_delay_seconds`, `linkedin_daily_limit`, `linkedin_hourly_limit`, `linkedin_bulk_max`) ma **mancano**: `whatsapp_send_*`, `whatsapp_*_limit`, `whatsapp_min/max_delay`, `whatsapp_cadence_days`, `linkedin_max_message_length`, `linkedin_cadence_days`. `ON CONFLICT DO NOTHING` lascerà intatti i valori esistenti.
+- `operative_prompts` **non ha colonna `scope`** (ha `context`). Il codebase NON cerca `scope` su `operative_prompts` (verificato: nessun match). DAL legge correttamente `context`.
+- `email_prompts` **ha `scope`** (CHECK `address|category|global`). Il codebase usa correttamente `scope`. Tabella vuota.
+- Agenti duplicati: solo `1d51961d…` ha 2 attivi con stesso nome (`marco` lowercase + `Luca/Marco/Sara` già disattivati). L'utente `fe1db58a…` ha 4 record disattivi duplicati. Marco user `1d519…` ha **1 attivo + 1 inattivo** stesso nome → niente da fare. **Verifica reale**: nessun gruppo (user_id, name) ha >1 attivo. La dedup è già di fatto fatta, ma puliamo i `name` con suffisso `[DUP]` sui disattivati duplicati e normalizziamo.
+- Cron jobs **già attivi**: `agent_autopilot_worker_tick` ogni 10 min (`succeeded` ultimo run alle 07:00), `agent_autonomous_cycle_tick` ogni 2 min, `outreach_scheduler_tick` ogni minuto, ecc. **Il worker GIRA**. Il problema non è cron.
+- agent_tasks: 1584 pending (era 1539, sale → l'autopilot accoda, l'esecutore non drena), 1582 hanno `agent_id` di agente attivo, solo 2 orfani. Schema agent_tasks **non ha** `locked_at` né `updated_at`.
 
-## 1. Migrazione DB
+## P0.2 — Settings WhatsApp/LinkedIn mancanti
 
-Nuova tabella `public.email_send_log`:
+**Solo INSERT** in `app_settings` (user_id NULL, ON CONFLICT DO NOTHING). Niente schema change.
 
-| Colonna | Tipo | Note |
-|---|---|---|
-| `id` | uuid PK default `gen_random_uuid()` | |
-| `user_id` | uuid NOT NULL, FK `auth.users(id)` ON DELETE CASCADE | |
-| `message_id` | text | Message-ID SMTP (es. `<…@wca-crm.app>`) |
-| `idempotency_key` | text | quando presente |
-| `recipient_email` | text NOT NULL | |
-| `subject` | text NOT NULL | |
-| `partner_id` | uuid | nullable, no FK (soft) |
-| `activity_id` | uuid | nullable |
-| `draft_id` | uuid | nullable |
-| `campaign_queue_id` | uuid | nullable, link a `email_campaign_queue.id` |
-| `channel` | text DEFAULT `'email'` | |
-| `send_method` | text CHECK in (`'direct'`,`'queue'`,`'campaign'`,`'agent'`) | |
-| `status` | text CHECK in (`'sent'`,`'failed'`,`'bounced'`,`'rejected'`) | |
-| `error_message` | text | |
-| `sent_at` | timestamptz NOT NULL DEFAULT `now()` | |
+Chiavi nuove da inserire:
+- WA: `whatsapp_send_start_hour=8`, `whatsapp_send_end_hour=21`, `whatsapp_daily_limit=200`, `whatsapp_hourly_limit=20`, `whatsapp_min_delay_seconds=4`, `whatsapp_max_delay_seconds=12`, `whatsapp_cadence_days=7`
+- LI: `linkedin_max_message_length=300`, `linkedin_cadence_days=7` (le altre 6 esistono già — `ON CONFLICT DO NOTHING` le rispetta)
 
-Indici:
-- `idx_esl_user_sent_at` su `(user_id, sent_at DESC)`
-- `idx_esl_status_partial` su `(status)` WHERE `status <> 'sent'`
-- `idx_esl_message_id` su `(message_id)` WHERE `message_id IS NOT NULL` — utile per dedup futura
+Servono unique constraint? Verifico: la tabella ha `id` PK ma non c'è UNIQUE su `(key, user_id)` visibile. Per evitare duplicati uso pattern `INSERT … WHERE NOT EXISTS (SELECT 1 FROM app_settings WHERE key=… AND user_id IS NULL)`.
 
-RLS:
+`MultichannelTimingPanel` legge già da `useSettingsV2` → user-scoped settings con fallback ai default hard-coded. Una volta inseriti i globali, il panel continua a usare i suoi default UI ma quando l'utente salva i propri valori vanno nel suo scope.
+
+**Nessuna modifica codice TS in P0.2.** Solo seed DB.
+
+## P0.3 — Rinomina duplicati agenti già disattivati
+
+Stato reale (per (user_id, name) attivo): nessun gruppo con >1 attivo. La dedup logica è OK.
+
+Da fare: per i record `is_active=false` che hanno omonimo attivo nello stesso `user_id`, aggiungere suffisso ` [DUP]` al nome se non già presente. Vincolo `no-physical-delete` rispettato.
+
+UPDATE chirurgico (un solo statement):
 ```sql
-ALTER TABLE public.email_send_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "esl_select_own" ON public.email_send_log
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
-CREATE POLICY "esl_insert_own_or_service" ON public.email_send_log
-  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-```
-Service role bypassa RLS (usato dagli edge): nessuna policy aggiuntiva serve.
-
-Niente UPDATE/DELETE policy: append-only by design.
-
-## 2. Retrofit `supabase/functions/send-email/index.ts`
-
-Due punti di scrittura, entrambi fire-and-forget (nessun `await` che blocchi la response, errore loggato in console e basta).
-
-**Punto A — successo SMTP** (subito dopo `await client.send(sendOptions)` riuscito, prima di `runPostSendPipeline`):
-```ts
-supabase.from("email_send_log").insert({
-  user_id: userIdEarly,
-  message_id: messageIdExternal,
-  idempotency_key: idempotency_key ?? null,
-  recipient_email: to,
-  subject,
-  partner_id: partner_id ?? null,
-  channel: "email",
-  send_method: agent_id ? "agent" : "direct",
-  status: "sent",
-}).then(({ error }) => { if (error) console.error("[send-email] esl insert failed:", error.message); });
+UPDATE agents a SET name = a.name || ' [DUP]'
+WHERE a.is_active = false
+  AND name NOT LIKE '% [DUP]'
+  AND EXISTS (SELECT 1 FROM agents b WHERE b.user_id = a.user_id AND b.name = a.name AND b.is_active = true AND b.id <> a.id);
 ```
 
-**Punto B — fallimento SMTP** (dentro il `catch (smtpErr)`, dopo `console.error`):
-```ts
-supabase.from("email_send_log").insert({
-  user_id: userIdEarly,
-  idempotency_key: idempotency_key ?? null,
-  recipient_email: to,
-  subject,
-  partner_id: partner_id ?? null,
-  channel: "email",
-  send_method: agent_id ? "agent" : "direct",
-  status: "failed",
-  error_message: errMsg.slice(0, 1000),
-}).then(({ error }) => { if (error) console.error("[send-email] esl insert (fail) failed:", error.message); });
-```
+Per il caso `fe1db58a…` (4 disattivi senza alcun attivo per stesso nome): se non c'è "vincitore attivo", li lasciamo intatti (non sono duplicati di un attivo, sono record morti — cura cosmetica solo se richiesto).
 
-Nessuna modifica a:
-- blacklist guards
-- journalist review
-- idempotency su `email_campaign_queue`
-- post-send pipeline
-- response shape
+**Nessuna modifica codice.** Solo UPDATE DB.
 
-## 3. Retrofit `supabase/functions/process-email-queue/index.ts`
+## P1.1 — Fix `operative_prompts.scope` → `.context`
 
-Dentro il loop `for (const item of queueItems)`, due insert fire-and-forget:
+Dopo audit: **nessun file referenzia `scope` su `operative_prompts`**. Tutte le query usano `context` (corretto).
 
-**Punto A — dopo `client.send` riuscito** (subito dopo `await supabase.from("email_campaign_queue").update({status:"sent",...})`):
-```ts
-supabase.from("email_send_log").insert({
-  user_id: userId,
-  recipient_email: item.recipient_email,
-  subject: item.subject,
-  partner_id: item.partner_id ?? null,
-  draft_id,
-  campaign_queue_id: item.id,
-  idempotency_key: item.idempotency_key ?? null,
-  channel: "email",
-  send_method: "campaign",
-  status: "sent",
-}).then(({ error }) => { if (error) console.error("[pq] esl insert failed:", error.message); });
-```
+Email_prompts: tutte le query usano `scope` (corretto: la tabella ha `scope`).
 
-**Punto B — nel `catch (err)` del send**:
-```ts
-supabase.from("email_send_log").insert({
-  user_id: userId,
-  recipient_email: item.recipient_email,
-  subject: item.subject,
-  partner_id: item.partner_id ?? null,
-  draft_id,
-  campaign_queue_id: item.id,
-  idempotency_key: item.idempotency_key ?? null,
-  channel: "email",
-  send_method: "campaign",
-  status: "failed",
-  error_message: errorMsg.slice(0, 1000),
-}).then(({ error }) => { if (error) console.error("[pq] esl insert (fail) failed:", error.message); });
-```
+Output P1.1: report di non-azione. **Nessuna modifica.** Documenterò in `docs/audit/AUDIT-FLUSSI-FONDAMENTALI-2026-04-24.md` che la verifica è negativa.
 
-Nessuna modifica a:
-- pause/cancel handling
-- idempotency dedup
-- batch size, delay
-- finalizzazione draft
+## P1.2 — Diagnostica 1584 agent_tasks pending (read-only)
 
-## 4. Deploy
+Devo ispezionare:
+1. `supabase/functions/agent-autopilot-worker/index.ts` — verificare: lettura `ai_automations_paused`, finestra oraria, `approval_required`, query SELECT su `agent_tasks` (filtri usati), batch size, gestione `started_at/completed_at` come signal di lock.
+2. `cron_job_status()`: già fatto. Worker schedulato ogni 10 min, ultimo run `succeeded`.
+3. Edge function logs ultimi run worker per capire se trova 0 task o le scarta.
+4. Distribuzione pending per `task_type` e `agent_id` — capire se filtro su tipo le esclude.
+5. `app_settings` rilevanti: `agent_max_actions_per_cycle`, `agent_require_approval`, `agent_work_start_hour/end_hour`, `ai_automations_paused`.
 
-Dopo le modifiche, deploy di entrambe le edge: `send-email`, `process-email-queue`.
+Output: report scritto in `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md` con risposte alle 8 domande del brief. **Nessuna modifica.**
 
-## Verifiche post-step
+## P1.3 — Seed `email_prompts`
 
-1. Migrazione applicata, tabella visibile con `SELECT count(*) FROM email_send_log;` → 0.
-2. Invio email di test dal Composer → 1 riga `status='sent'` in `email_send_log` con `message_id` valorizzato.
-3. Invio con SMTP credenziali volutamente sbagliate → 1 riga `status='failed'` con `error_message`.
-4. RLS: query da utente non proprietario non vede i record.
-5. Build TS pulito, types regenerati automaticamente.
+User principale = `27b60e53-eab1-4528-9e9c-f19c5c7dae90` (1100 activities, top).
 
-## Cosa NON è incluso in P0.1
-- Dashboard observability (richiede questa tabella ma è un feature separato).
-- Modifiche a `useEmailComposerV2`, `useSendEmail`: continuano a funzionare invariati.
-- Cambi su V1 legacy.
-- P0.2 e P0.3 (faremo dopo conferma).
+INSERT 3 prompt globali (`scope='global'`, `is_active=true`, priorità 10/5/5). Pattern `WHERE NOT EXISTS` su `(user_id, scope, title)` per idempotenza (la tabella non ha unique constraint visibile).
 
-## Rischi
-- Minimo. Insert in fail-soft, niente FK rigida verso `partners`/`activities` per non bloccare insert con id orfani.
-- `auth.users` FK con CASCADE: se cancelli un utente, sparisce il suo log → coerente con privacy.
+**Nessuna modifica codice.** Solo seed DB.
+
+## Esecuzione
+
+Esegui i passi nell'ordine: **P0.2 → P0.3 → P1.1 → P1.2 → P1.3**, ciascuno con conferma prima del successivo. Tutti tranne P1.2 sono operazioni DB veloci. P1.2 produce documento.
+
+## File toccati
+
+- DB: 3 INSERT/UPDATE (P0.2, P0.3, P1.3) — niente migration, solo dati.
+- `docs/audit/AUDIT-FLUSSI-FONDAMENTALI-2026-04-24.md` — aggiornato con esito P1.1.
+- `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md` — nuovo, output P1.2.
+- Codice TS/Edge: **zero** modifiche. Tutti gli step rimanenti sono dati o documentazione.
+
+## Vincoli rispettati
+
+- `no-physical-delete`: solo `is_active=false` + rename suffisso, mai DELETE.
+- `whitelist-email-auth-standard`: nessun cambio auth.
+- DAL pattern: nessuna nuova query Supabase fuori da `src/data/`.
+- Architecture layer rules: nessuna modifica a layer V1/V2.
 
