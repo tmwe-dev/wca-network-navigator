@@ -167,9 +167,9 @@ export async function loadStandalonePartner(
   if (contacts?.length) {
     const matched = recipientName
       ? contacts.find(
-          (c: Record<string, unknown>) =>
-            c.name?.toLowerCase().includes(recipientName.toLowerCase()) ||
-            c.contact_alias?.toLowerCase().includes(recipientName.toLowerCase()),
+          (c: Record<string, any>) =>
+            (c.name as string | null)?.toLowerCase().includes(recipientName.toLowerCase()) ||
+            (c.contact_alias as string | null)?.toLowerCase().includes(recipientName.toLowerCase()),
         ) || contacts[0]
       : contacts[0];
     contact = matched as ContactData;

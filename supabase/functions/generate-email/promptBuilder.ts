@@ -18,7 +18,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
     metInPersonContext, cachedEnrichmentContext, documentsContext,
     stylePreferencesContext, editPatternsContext, responseInsightsContext,
     conversationIntelligenceContext,
-    salesKBSlice, salesKBSections, _signatureBlock,
+    salesKBSlice, salesKBSections, signatureBlock: _signatureBlock,
     goal, base_proposal, oracle_type, oracle_tone, use_kb, language,
     email_type_prompt, email_type_structure,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,

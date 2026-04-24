@@ -96,7 +96,7 @@ export async function assembleEnrichmentContext(
     const { loadAndCalculateQuality } = await import("../_shared/partnerQualityScore.ts");
     const qualityScore = await loadAndCalculateQuality(supabase, partnerId);
     const qualityBlock = qualityScore
-      ? `PARTNER QUALITY SCORE: ${qualityScore.totalScore ?? "?"}/100 (${qualityScore.stars ?? "?"}★) — completeness ${qualityScore.dataCompleteness ?? "?"}%`
+      ? `PARTNER QUALITY SCORE: ${qualityScore.total_score ?? "?"}/100 (${qualityScore.star_rating ?? "?"}★) — completeness ${qualityScore.data_completeness_percent ?? "?"}%`
       : "";
     if (qualityBlock) {
       cachedEnrichmentContext += `\n${qualityBlock}\n`;
