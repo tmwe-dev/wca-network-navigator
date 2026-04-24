@@ -126,7 +126,7 @@ export async function checkSameLocationContacts(
  * Get other branches (different cities) of the same company using company_name from the partner record.
  */
 export async function getSameCompanyBranches(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnyClient,
   partnerId: string,
 ): Promise<Array<{ city: string; country_code: string; contact_count: number }>> {
   // Get partner's company_name and city
