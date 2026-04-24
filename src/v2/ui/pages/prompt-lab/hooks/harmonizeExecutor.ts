@@ -71,7 +71,7 @@ export async function executeProposal(
       case "agent_personas":
         return await execAgentPersona(p);
       case "agents":
-        return await execAgent(p);
+        return await execAgent(userId, p);
       case "app_settings":
         return await execAppSetting(userId, p);
       default:
@@ -184,7 +184,7 @@ async function execAgentPersona(p: HarmonizeProposal): Promise<ExecuteResult> {
   return { ok: true };
 }
 
-async function execAgent(p: HarmonizeProposal): Promise<ExecuteResult> {
+async function execAgent(userId: string, p: HarmonizeProposal): Promise<ExecuteResult> {
   if (p.action === "DELETE") return { ok: false, reason: "DELETE su agents non consentito." };
   if (p.action === "MOVE") return { ok: false, reason: "MOVE non applicabile a agents." };
   const payload = (p.payload ?? {}) as Record<string, unknown>;
@@ -199,7 +199,7 @@ async function execAgent(p: HarmonizeProposal): Promise<ExecuteResult> {
     const insert: AgentInsert = {
       name,
       role,
-      user_id: "",
+      user_id: userId,
       system_prompt: String(payload.system_prompt ?? p.after ?? ""),
       avatar_emoji: payload.avatar_emoji ? String(payload.avatar_emoji) : undefined,
       knowledge_base: Array.isArray(payload.knowledge_base) ? (payload.knowledge_base as never) : undefined,
