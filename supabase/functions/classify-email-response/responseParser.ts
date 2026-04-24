@@ -43,14 +43,18 @@ export function parseClassificationResponse(raw: string | null, model = "unknown
     console.error(`[PARSE_FAIL] classify-email-response model=${model} err=${msg} raw="${raw.slice(0, 200)}"`);
     return _fallback();
   }
+  const domain = String(parsed.domain ?? "");
+  const category = String(parsed.category ?? "");
+  const urgency = String(parsed.urgency ?? "");
+  const sentiment = String(parsed.sentiment ?? "");
   return {
-    domain: VALID_DOMAINS.includes(parsed.domain) ? parsed.domain : "commercial",
-    category: VALID_CATEGORIES.includes(parsed.category) ? parsed.category : "uncategorized",
+    domain: VALID_DOMAINS.includes(domain) ? domain : "commercial",
+    category: VALID_CATEGORIES.includes(category) ? category : "uncategorized",
     confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
     ai_summary: String(parsed.ai_summary || "").substring(0, 1000),
     keywords: Array.isArray(parsed.keywords) ? parsed.keywords.map(String).slice(0, 20) : [],
-    urgency: VALID_URGENCY.includes(parsed.urgency) ? parsed.urgency : "normal",
-    sentiment: VALID_SENTIMENT.includes(parsed.sentiment) ? parsed.sentiment : "neutral",
+    urgency: VALID_URGENCY.includes(urgency) ? urgency : "normal",
+    sentiment: VALID_SENTIMENT.includes(sentiment) ? sentiment : "neutral",
     detected_patterns: Array.isArray(parsed.detected_patterns) ? parsed.detected_patterns.map(String).slice(0, 10) : [],
     action_suggested: String(parsed.action_suggested || "").substring(0, 500),
     reasoning: String(parsed.reasoning || "").substring(0, 1000),
