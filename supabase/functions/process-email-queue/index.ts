@@ -195,6 +195,22 @@ Deno.serve(async (req) => {
           sent_at: smtpSentAt,
         }).eq("id", item.id);
 
+        // ── Audit log (fire-and-forget) ──
+        supabase.from("email_send_log").insert({
+          user_id: userId,
+          recipient_email: item.recipient_email,
+          subject: item.subject,
+          partner_id: item.partner_id ?? null,
+          draft_id,
+          campaign_queue_id: item.id,
+          idempotency_key: item.idempotency_key ?? null,
+          channel: "email",
+          send_method: "campaign",
+          status: "sent",
+        }).then(({ error }) => {
+          if (error) console.error("[pq] esl insert failed:", error.message);
+        });
+
         // ── Post-send: pipeline unificata (LOVABLE-85) ──
         await runPostSendPipeline(supabase, {
           userId,
@@ -225,6 +241,24 @@ Deno.serve(async (req) => {
           error_message: errorMsg,
           retry_count: (item.retry_count || 0) + 1,
         }).eq("id", item.id);
+
+        // ── Audit log (fire-and-forget) ──
+        supabase.from("email_send_log").insert({
+          user_id: userId,
+          recipient_email: item.recipient_email,
+          subject: item.subject,
+          partner_id: item.partner_id ?? null,
+          draft_id,
+          campaign_queue_id: item.id,
+          idempotency_key: item.idempotency_key ?? null,
+          channel: "email",
+          send_method: "campaign",
+          status: "failed",
+          error_message: errorMsg.slice(0, 1000),
+        }).then(({ error }) => {
+          if (error) console.error("[pq] esl insert (fail) failed:", error.message);
+        });
+
         failedCount++;
       }
 

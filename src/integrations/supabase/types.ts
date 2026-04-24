@@ -3862,6 +3862,60 @@ export type Database = {
           },
         ]
       }
+      email_send_log: {
+        Row: {
+          activity_id: string | null
+          campaign_queue_id: string | null
+          channel: string
+          draft_id: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          message_id: string | null
+          partner_id: string | null
+          recipient_email: string
+          send_method: string
+          sent_at: string
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          campaign_queue_id?: string | null
+          channel?: string
+          draft_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          message_id?: string | null
+          partner_id?: string | null
+          recipient_email: string
+          send_method: string
+          sent_at?: string
+          status: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          campaign_queue_id?: string | null
+          channel?: string
+          draft_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          message_id?: string | null
+          partner_id?: string | null
+          recipient_email?: string
+          send_method?: string
+          sent_at?: string
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_sender_groups: {
         Row: {
           auto_action: string | null

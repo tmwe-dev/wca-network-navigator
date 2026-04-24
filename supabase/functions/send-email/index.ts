@@ -413,6 +413,21 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── Audit log (fire-and-forget) ──
+      supabase.from("email_send_log").insert({
+        user_id: userIdEarly,
+        idempotency_key: idempotency_key ?? null,
+        recipient_email: to,
+        subject,
+        partner_id: partner_id ?? null,
+        channel: "email",
+        send_method: agent_id ? "agent" : "direct",
+        status: "failed",
+        error_message: errMsg.slice(0, 1000),
+      }).then(({ error }) => {
+        if (error) console.error("[send-email] esl insert (fail) failed:", error.message);
+      });
+
       console.error(`[send-email] SMTP failure (retriable=${retriable}):`, errMsg);
       return new Response(
         JSON.stringify({ success: false, retriable, error: errMsg }),
@@ -422,6 +437,21 @@ Deno.serve(async (req) => {
         },
       );
     }
+
+    // ── Audit log (fire-and-forget): SMTP success ──
+    supabase.from("email_send_log").insert({
+      user_id: userIdEarly,
+      message_id: messageIdExternal,
+      idempotency_key: idempotency_key ?? null,
+      recipient_email: to,
+      subject,
+      partner_id: partner_id ?? null,
+      channel: "email",
+      send_method: agent_id ? "agent" : "direct",
+      status: "sent",
+    }).then(({ error }) => {
+      if (error) console.error("[send-email] esl insert failed:", error.message);
+    });
 
     // Log side effects ONLY after confirmed SMTP success — via pipeline unificata
     // LOVABLE-93: sourceType esplicito per multi-source support
