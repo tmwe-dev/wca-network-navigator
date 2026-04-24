@@ -290,5 +290,4 @@ export async function runPostSendPipeline(
   return result;
 }
 
-// Re-export types for convenience
-export type { PostSendPipelineInput, PostSendPipelineResult };
+// Types are already exported above via `export interface`.
