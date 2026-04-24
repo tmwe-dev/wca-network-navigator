@@ -4259,6 +4259,72 @@ export type Database = {
         }
         Relationships: []
       }
+      harmonizer_followups: {
+        Row: {
+          assigned_to: string | null
+          block_name: string | null
+          code_policy_needed: string | null
+          created_at: string
+          created_by: string
+          description: string
+          evidence: Json
+          id: string
+          impact_score: number
+          layer: string
+          missing_contracts: Json
+          proposal_id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          run_id: string
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          block_name?: string | null
+          code_policy_needed?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          evidence?: Json
+          id?: string
+          impact_score?: number
+          layer: string
+          missing_contracts?: Json
+          proposal_id: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          run_id: string
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          block_name?: string | null
+          code_policy_needed?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          evidence?: Json
+          id?: string
+          impact_score?: number
+          layer?: string
+          missing_contracts?: Json
+          proposal_id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          run_id?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       impersonation_log: {
         Row: {
           action: string

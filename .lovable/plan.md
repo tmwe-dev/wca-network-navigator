@@ -1,291 +1,122 @@
-# Armonizza tutto — Piano di implementazione
+## Obiettivo
 
-## Scopo
+Trasformare l'Harmonizer da "indovinatore con prompt monolitico" a "consultatore di documentazione strutturata", separando in 3 strati nettamente distinti: **prompt** (chi è / come ragiona), **KB dedicata** (cosa sa), **contesto runtime** (cosa gli arriva per questo run). Risolvere in parallelo i 5 buchi sostanziali (goal injection, schema awareness, executor agents, parser robusto, loop di chiusura).
 
-Affiancare a "Migliora tutto" un secondo strumento, **Armonizza tutto**, che fa refactor profondo del sistema confrontando:
+## Struttura a 3 strati
 
-- **stato reale** del DB (prompt, KB, personas, playbook, email rules, agents)
-- **stato desiderato** espresso in `LIBRERIA_TMWE_COMPLETA.md` + altri documenti caricati
-
-e produce un **diff strutturato** con proposte tipizzate (UPDATE / INSERT / MOVE / DELETE), ognuna con evidenza, dipendenze e classificazione del gap (testo / contratto backend / policy hard).
-
-"Migliora tutto" resta invariato.
-
----
-
-## Architettura: dipendenze tra i 5 componenti
-
-```text
-                    ┌────────────────────────────────┐
-                    │  HarmonizeSystemDialog (UI)    │
-                    │  - upload libreria + docs      │
-                    │  - goal + scope (tab/agent/all)│
-                    └───────────────┬────────────────┘
-                                    │ avvia
-                                    ▼
-        ┌───────────────────────────────────────────────┐
-        │  useHarmonizeOrchestrator (hook)              │
-        │  fasi: collect → analyze → review → execute    │
-        └────┬───────────────────┬──────────────────┬───┘
-             │                   │                  │
-             ▼                   ▼                  ▼
-   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-   │ harmonizeCollector│ │ harmonizeAnalyzer│  │ harmonizeExecutor│
-   │ (real + desired   │ │ (LLM Harmonizer  │  │ (UPDATE/INSERT/  │
-   │  + gap classifier)│ │  prompt + diff)  │  │  MOVE/DELETE)    │
-   └──────────┬────────┘ └────────┬─────────┘  └────────┬─────────┘
-              │                   │                     │
-              └───────────────────┴─────────────────────┘
-                                  │
-                                  ▼
-                    ┌──────────────────────────┐
-                    │  harmonize_runs (tabla)  │
-                    │  persistenza incrementale│
-                    └──────────────────────────┘
-                                  ▲
-                                  │
-                    ┌──────────────────────────┐
-                    │  HarmonizeReviewPanel    │
-                    │  approva / rifiuta /     │
-                    │  modifica per proposta   │
-                    └──────────────────────────┘
+```
+┌──────────────────────────────────────────────────┐
+│ STRATO 1 — PROMPT (700-900 token, immutabile)     │
+│ Identità, ragionamento, output schema, routing KB│
+├──────────────────────────────────────────────────┤
+│ STRATO 2 — KB HARMONIZER (10 file .md in RAG)    │
+│ Schema DB, enum, dominio, costituzione, esempi   │
+├──────────────────────────────────────────────────┤
+│ STRATO 3 — CONTESTO RUNTIME (iniettato per run)  │
+│ Goal utente, inventario, gap chunk, KB recuperata│
+└──────────────────────────────────────────────────┘
 ```
 
-**Ordine di dipendenza forte:**
+## Decisione preliminare obbligatoria
 
-1. Tabella `harmonize_runs` (nessuna dipendenza)
-2. Collector (legge DB + parser libreria; nessuna dipendenza dal resto)
-3. Prompt Harmonizer + Analyzer (dipende da collector)
-4. Executor (dipende da output dell'analyzer)
-5. UI Dialog + Review (dipende da tutto il resto)
+**Vocabolario campi**: nel prompt nuovo concordato l'utente usa `action_type`, `impact_score`, `severity`, `test_urgency`, `block_name`. Il codice attuale usa `action`, `impact`, `block_label`. Decisione adottata: **migrazione completa al vocabolario nuovo**, perché più espressivo (impact 1-10 vs low/medium/high, severity separata da impact_score, ecc.). Questo richiede aggiornamento coordinato di prompt + tipo + parser + executor + UI di review.
 
 ---
 
-## Ordine di implementazione
+## Lavoro 1 — Creare la KB Harmonizer (10 file)
 
-**Fase 1 — Fondamenta dati (no UI)**
-1. Migrazione SQL: tabella `harmonize_runs` + RLS + trigger updated_at
-2. DAL `src/data/harmonizeRuns.ts` (create / update / appendProposal / markExecuted / cancel / findActive)
-3. Caricamento `LIBRERIA_TMWE_COMPLETA.md` come asset statico in `public/kb-source/libreria-tmwe.md` (sorgente versionabile)
+Tutti in `public/kb-source/harmonizer/`. Sono `.md` letti dal RAG per nome.
 
-**Fase 2 — Collector tri-partito**
-4. `harmonizeCollector.ts`:
-   - `collectRealInventory(userId)` → riusa `collectAllBlocks` esistente + carica `agents`, `agent_personas`, `kb_entries` (TUTTE, non solo doctrine)
-   - `parseDesiredInventory(librarySource, uploadedDocs)` → spacca `## 📄` in entries con `category/chapter/priority/figure`
-   - `classifyGaps(real, desired)` → 4 bucket:
-     - `text_only` → riscrivibile dal Harmonizer
-     - `needs_contract` → richiede nuovo contratto backend (es. EmailBrief)
-     - `needs_code_policy` → richiede hard guard / policy
-     - `needs_kb_governance` → solo riorganizzazione KB (move/merge/split)
+1. `00-context-wca.md` — Cos'è WCA Network Navigator, le 17 reti, ruoli operatori, glossario (partner, contact, mission, outreach, agent, persona, holding pattern), pipeline lead a 9 stati come diagramma testuale.
+2. `10-action-examples.md` — 1 esempio canonico per ciascuna delle 4 azioni + 2-3 anti-esempi ("sembrava UPDATE ma era INSERT").
+3. `20-truth-hierarchy.md` — Gerarchia di verità con casi reali del WCA Network Navigator (esempi presi da `hardGuards.ts`, da `mem://constraints/*`, dai prompt core).
+4. `30-business-constraints.md` — Lista esatta dei 9 stati lead, lista tabelle business protette (contacts, partners, activities, channel_messages, campaigns, missions), tabelle backend riservate, Costituzione commerciale in 10 punti.
+5. `40-agents-schema.md` — Schema completo della tabella `agents` (estratto via query: id, name, role, system_prompt, knowledge_base, assigned_tools, territory_codes, can_send_email, daily_send_limit, ecc.) + relazione con `agent_personas`.
+6. `41-agents-existing.md` — File **generato runtime** dal collector ad ogni run: snapshot agenti attivi con territori, persona, tool. Non scritto a mano.
+7. `50-kb-categories.md` — Enum esatti di `kb_entries.category`, cosa va in ciascuna, convenzioni `chapter`, range `priority`.
+8. `60-code-policies-active.md` — Estratto da `src/v2/agent/policy/hardGuards.ts` + memoria `mem://constraints/*`: lista policy hard già implementate. Per ciascuna: nome, file, vincolo. Regola: se gap richiede una di queste → `resolution_layer = code_policy`.
+9. `70-runtime-contracts.md` — EmailBrief, VoiceBrief, ContactLifecycleBrief, OutreachBrief: schema, dove vivono, contratti mancanti noti. Regola: se gap richiede campo non in nessuno → `resolution_layer = contract`.
+10. `80-resolved-cases.md` — Memoria storica auto-aggiornata: 10-15 gap risolti con before/after/decisione. Ogni proposta approvata aggiunge un caso (loop di apprendimento, implementato in Lavoro 5).
 
-**Fase 3 — Harmonizer LLM**
-5. Prompt `HARMONIZER_BRIEFING` in `src/v2/agent/prompts/core/harmonizer-briefing.ts` (versione controproposta, non riusa `PROMPT_LAB_BRIEFING`)
-6. `harmonizeAnalyzer.ts`:
-   - per ogni gap → chiama Lab Agent con tool calling strutturato
-   - output JSON con schema: `{ action, target, evidence, dependencies, impact, tests_required, resolution_layer }`
-   - persistenza incrementale in `harmonize_runs.proposals`
+## Lavoro 2 — Riscrivere il prompt (`harmonizer-briefing.ts`)
 
-**Fase 4 — Executor**
-7. `harmonizeExecutor.ts` con un handler per ogni `action`:
-   - `UPDATE` → riusa `saveProposal` esistente di `useProposalSaver`
-   - `INSERT` → crea nuove righe (kb_entries, agents+agent_personas, operative_prompts...)
-   - `MOVE` → cambia `category/chapter/agent_id` mantenendo id
-   - `DELETE` → soft delete (`deleted_at` o `is_active=false`); MAI hard delete
-8. Audit log per ogni azione tramite `logSupervisorAudit`
+Sostituire integralmente con la nuova versione strutturata in 8 sezioni brevi:
+- **A** Identità e missione (5 righe)
+- **B** Le 4 azioni e i 4 resolution_layer (definizioni secche)
+- **C** Gerarchia di verità non negoziabile (4 punti, 1 riga ciascuno)
+- **D** Regole di disambiguazione UPDATE/INSERT/MOVE (dalla v2 concordata)
+- **E** Guard-rail duri (lista, riferimenti a KB per dettagli)
+- **F** Routing alla KB Harmonizer (mappa esplicita: "per X consulta documento Y")
+- **G** Schema di output JSON puro (vocabolario nuovo)
+- **H** Vincolo finale + fallback `{"proposals": []}`
 
-**Fase 5 — UI**
-9. `HarmonizeSystemDialog.tsx` (sibling di `GlobalImproverDialog.tsx`)
-10. `HarmonizeReviewPanel.tsx` — tabella diff con:
-    - badge azione (UPDATE/INSERT/MOVE/DELETE)
-    - badge resolution_layer (text/contract/code/governance)
-    - before/after, evidenza, dipendenze
-    - per-row: approva / modifica / rifiuta
-    - bulk approve per tipo
-11. Bottone "Armonizza tutto" in `PromptLabPage.tsx` accanto a "Migliora tutto"
+Target: 700-900 token totali. Tutto ciò che è "elenco di valori" o "esempio lungo" rimosso e migrato in KB.
 
----
+## Lavoro 3 — Allineare tipi, parser, executor al vocabolario nuovo
 
-## Contratti dati richiesti
+**File da toccare**:
+- `src/data/harmonizeRuns.ts` — `HarmonizeProposal` riallineato: `action_type`, `target_type` (enum esteso con `system_prompt_block`, `readonly_note`), `severity`, `impact_score: 1-10`, `test_urgency`, `current_location`, `proposed_location`, `current_issue`, `proposed_content`, `evidence: [...]` (array), `required_variables`, `missing_contracts`, `apply_recommended`, `block_name`. Mantenere campo `dependencies` invariato.
+- `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` — Nuovo parser robusto con validazione **Zod** dello schema output. Se il modello sbaglia un campo, errore visibile invece di `[]` silenzioso. Logging visibile dei chunk falliti.
+- `src/v2/ui/pages/prompt-lab/hooks/harmonizeExecutor.ts` — Mappatura `target_type` → tabella DB. Implementazione completa di `agents` (INSERT + UPDATE) e `app_settings` (oggi sono stub). Mappatura `system_prompt_block` → `app_settings`, `readonly_note` → skip + registrazione in nuova tabella `harmonizer_followups`.
+- `src/v2/ui/pages/prompt-lab/HarmonizeReviewPanel.tsx` — Adattamento UI ai campi nuovi (impact_score 1-10, severity badge separato, test_urgency, dependencies cablati: bottone Approva di B disabilitato finché A non approvata).
 
-### `HarmonizeAction` (output Analyzer, input Executor)
+## Lavoro 4 — Iniezione goal + contesto + KB nel runtime
 
-```ts
-type ResolutionLayer = "text" | "contract" | "code_policy" | "kb_governance";
-type ActionType = "UPDATE" | "INSERT" | "MOVE" | "DELETE";
+**File da toccare**: `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` + `harmonizeCollector.ts`
 
-interface HarmonizeProposal {
-  id: string;                      // uuid client-side
-  action: ActionType;
-  target: {
-    table: "kb_entries" | "agents" | "agent_personas" | "operative_prompts"
-         | "email_prompts" | "email_address_rules" | "commercial_playbooks"
-         | "app_settings";
-    id?: string;                   // null per INSERT
-    field?: string;                // per UPDATE parziale
-  };
-  before?: string | null;          // null per INSERT
-  after?: string | null;           // null per DELETE
-  payload?: Record<string, unknown>; // per INSERT/MOVE: campi nuovi
-  evidence: {
-    source: "library" | "real_db" | "uploaded_doc";
-    excerpt: string;
-    location?: string;             // es. "LIBRERIA_TMWE_COMPLETA.md §Bruce"
-  };
-  dependencies: string[];          // id di altre proposals che devono passare prima
-  impact: "low" | "medium" | "high";
-  tests_required: string[];        // es. ["e2e/agent-chat-flow.spec.ts"]
-  resolution_layer: ResolutionLayer;
-  reasoning: string;               // perché serve
-  status: "pending" | "approved" | "rejected" | "executed" | "failed";
-}
-```
+- `buildUserPrompt` riceve e inietta nel system message: **goal utente**, **operatore corrente** (id, ruolo, country), **modalità** (first_run / delta / review_riaperta), **lingua**.
+- Collector arricchito: per ogni chunk fa **retrieval mirato** dei doc KB rilevanti (es: chunk con gap su `agents` → carica `40-agents-schema.md` + `41-agents-existing.md`) e li passa al modello come blocco "REFERENCES" nel user message.
+- Generazione runtime di `41-agents-existing.md` ad ogni run dal collector.
 
-### `harmonize_runs` (nuova tabella)
+## Lavoro 5 — Loop di chiusura e follow-up
 
-```sql
-CREATE TABLE harmonize_runs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  goal text,
-  scope text NOT NULL DEFAULT 'all',          -- 'all' | 'tab:<name>' | 'agent:<id>'
-  status text NOT NULL DEFAULT 'collecting',  -- collecting|analyzing|review|executing|done|cancelled|failed
-  real_inventory_summary jsonb,               -- conteggi per tabella
-  desired_inventory_summary jsonb,            -- conteggi per category dalla libreria
-  gap_classification jsonb,                   -- { text_only:N, needs_contract:N, ... }
-  proposals jsonb NOT NULL DEFAULT '[]'::jsonb,
-  uploaded_files jsonb DEFAULT '[]'::jsonb,
-  executed_count int NOT NULL DEFAULT 0,
-  failed_count int NOT NULL DEFAULT 0,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  completed_at timestamptz,
-  deleted_at timestamptz
-);
+**Migrazione DB**: nuova tabella `harmonizer_followups` per registrare proposte `resolution_layer in ('contract','code_policy')` come note sviluppatore tracciabili (oggi finiscono solo nell'audit log e si perdono).
 
-ALTER TABLE harmonize_runs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "users manage own harmonize runs"
-  ON harmonize_runs FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
+**Modifiche codice**:
+- Executor: ogni proposta su `agents` o `agent_personas` eseguita genera un `agent_task` di tipo "verifica comportamento post-armonizzazione" assegnato all'operatore corrente.
+- Executor: ogni proposta `executed` con esito `ok` aggiunge un caso a `80-resolved-cases.md` (append automatico via edge function dedicata o via supabase storage, da decidere in implementazione).
+
+## Lavoro 6 — Verifica delle 2 cose segnalate dal commentatore
+
+- **Verifica `dependencies` UI**: oggi `HarmonizeReviewPanel` mostra solo "Dipendenze: N", non disabilita i bottoni in catena. Cablare in `useHarmonizeOrchestrator.toggleApproval` la regola: una proposta con `dependencies` non approvabile finché tutte le sue dipendenze non sono in `approvedIds`.
+- **Verifica `contract_status: missing`**: confermato che oggi `executeProposal` skippa `resolution_layer === "contract"`. Ma `missing_contracts: [...]` viene perso. Lavoro 5 risolve registrandolo in `harmonizer_followups`.
 
 ---
 
-## Tabelle lette e scritte
+## Dettagli tecnici
 
-**Lettura (collector):**
-- `kb_entries` (tutte le category, non solo doctrine)
-- `agents`, `agent_personas`
-- `operative_prompts`, `email_prompts`, `email_address_rules`
-- `commercial_playbooks`
-- `app_settings` (system_prompt_blocks, email_oracle_types)
-- file statico `public/kb-source/libreria-tmwe.md`
+**Stack**: invariato. React 18 + Vite + Supabase. Validazione output: Zod.
 
-**Scrittura (executor, solo dopo approvazione):**
-- `kb_entries` (UPDATE / INSERT / soft-DELETE via `is_active=false`)
-- `agents` (INSERT / UPDATE; MAI delete)
-- `agent_personas` (INSERT / UPDATE)
-- `operative_prompts`, `email_prompts`, `email_address_rules`, `commercial_playbooks` (UPDATE / INSERT)
-- `app_settings` (UPDATE)
-- `harmonize_runs` (continuo: append proposals, update status)
-- `supervisor_audit_log` (audit per ogni azione)
+**Edge function**: nessuna nuova. Riusiamo `unified-assistant` con il briefing aggiornato. Il RAG è già in piedi sui file `public/kb-source/`, basta che i nuovi `.md` rispettino la convenzione di indicizzazione.
 
-**MAI scritte direttamente:**
-- nessuna tabella business reale (contacts, partners, activities, ecc.)
-- nessun hard delete su nessuna tabella (rispetta `mem://constraints/no-physical-delete`)
+**Tabella nuova `harmonizer_followups`**: id, run_id, proposal_id, layer (contract|code_policy), title, description, missing_contracts (jsonb), code_policy_needed (text), severity, status (open|in_progress|resolved|wont_fix), assigned_to, created_at, resolved_at. RLS: visibile a tutti gli operatori (i follow-up sono shared, come la KB).
 
----
+**Backward compatibility**: il vocabolario campi cambia. I run vecchi su `harmonize_runs` con il vecchio schema `proposals` restano leggibili ma non eseguibili (la UI mostra un badge "schema legacy"). Nessuna migrazione retroattiva dei dati.
 
-## Prompt Harmonizer (uso esatto della tua controproposta)
+**Ordine di esecuzione obbligato**:
+1. Migrazione DB (tabella `harmonizer_followups`)
+2. Creazione 9 file KB statici (tutti tranne `41-agents-existing.md`)
+3. Riallineamento tipi (`harmonizeRuns.ts`)
+4. Riscrittura prompt (`harmonizer-briefing.ts`)
+5. Riscrittura parser + iniezione goal/contesto (`harmonizeAnalyzer.ts`, `harmonizeCollector.ts`)
+6. Implementazione executor completa (`harmonizeExecutor.ts`) + generazione runtime `41-agents-existing.md`
+7. Adattamento UI review (`HarmonizeReviewPanel.tsx`) con dipendenze cablate
+8. Loop di chiusura (agent_task + append a `80-resolved-cases.md`)
 
-Il prompt vive in `src/v2/agent/prompts/core/harmonizer-briefing.ts` ed enforce questa struttura output (tool calling, non testo libero):
+## Non fa parte di questo piano (rimandato)
 
-```text
-Per ogni proposta:
-- BLOCCO (target tabella + id o "nuovo")
-- DIAGNOSI (cosa non quadra confrontando real vs desired)
-- AZIONE (UPDATE/INSERT/MOVE/DELETE)
-- VERSIONE PROPOSTA (contenuto finale o payload)
-- EVIDENZA (citazione dalla libreria o dal DB)
-- DIPENDENZE (id altre proposte)
-- IMPATTO + TEST
-- DECISIONE (text | contract | code_policy | kb_governance)
-```
+- Tool calling vero (richiederebbe modifiche a `unified-assistant` per esporre `propose_harmonize_actions` come tool nativo del provider). Continuiamo con JSON puro + parser robusto, come concordato.
+- Migrazione retroattiva dei run vecchi al nuovo schema.
+- UI per gestire la coda `harmonizer_followups` (per ora solo registrazione, gestione manuale via SQL/dashboard).
 
-L'enforcement è via tool calling con schema JSON (vedi `HarmonizeProposal`). Niente parsing di markdown.
+## Risultato atteso
 
----
-
-## Rischi tecnici
-
-| Rischio | Mitigazione |
-|---|---|
-| **Esplosione proposte** (libreria 23 voci × N blocchi reali = centinaia) | Cap di 50 proposte per run; raggruppamento per `target.table`; classifier di priorità nel collector |
-| **Dipendenze cicliche tra proposte** | Validazione DAG prima dell'execute; se ciclo → run in stato `failed` con report |
-| **DELETE distruttivi** | Solo soft delete (`is_active=false` o `deleted_at`); approvazione manuale obbligatoria per ogni DELETE; bulk approve disabilitato per DELETE |
-| **Context window overflow** del LLM con libreria + DB completo | Chunking per sezione libreria; il Harmonizer vede 1 sezione per call + il sottoinsieme rilevante del DB filtrato per category |
-| **Esecuzione parziale + crash** | Persistenza incrementale su `harmonize_runs.proposals[].status`; resume cancella solo le `executed`, ri-tenta le `failed` |
-| **Conflitto con "Migliora tutto" in corso** | Lock soft: se `findActiveRun` (di `prompt_lab_global_runs`) è attivo, l'avvio Harmonize chiede conferma esplicita |
-| **Costi LLM** | Default `google/gemini-3-flash-preview`; opzione "deep" con `gemini-2.5-pro`; budget guardrail riusa `cost-control-guardrails` esistente |
-| **Confusione utente tra i due bottoni** | Tooltip espliciti + dialog di intro la prima volta; titoli inequivocabili: "Migliora (riscrive testo)" vs "Armonizza (refactor sistema)" |
-| **Tipi Supabase non aggiornati per `harmonize_runs`** | Cast `as never` come fa già `promptLabGlobalRuns.ts`, in attesa che `types.ts` si rigeneri |
-
----
-
-## Punti che richiedono approvazione manuale
-
-Approvazione obbligatoria, **mai bulk auto-approve**:
-
-1. Ogni proposta `DELETE` (anche se soft)
-2. Ogni proposta `INSERT` su `agents` (nuova figura agente)
-3. Ogni proposta con `resolution_layer = "contract"` o `"code_policy"` → questa NON viene eseguita: viene solo registrata nel run come "follow-up richiesto" (testo per developer / nuovo task)
-4. Ogni proposta con `impact = "high"`
-5. Ogni proposta che modifica `system_prompt_blocks` o `system_doctrine`
-
-Approvazione bulk **consentita** per:
-- UPDATE testuale di `kb_entries` con `impact ≤ medium`
-- UPDATE di `agent_personas.signature_template` / `custom_tone_prompt`
-- UPDATE di prompt operativi con `resolution_layer = "text"`
-
----
-
-## Comportamento esplicito sul collector tri-partito (tuo vincolo)
-
-Il collector restituisce sempre tre output separati e li persiste in `harmonize_runs`:
-
-```ts
-interface CollectorOutput {
-  real:    InventoryItem[];     // cosa c'è oggi nel DB
-  desired: InventoryItem[];     // cosa dice la libreria + docs
-  gaps: {
-    text_only:        Gap[];    // l'Harmonizer può proporre UPDATE/INSERT testuali
-    needs_contract:   Gap[];    // NON tocca, segnala "serve contract <nome>"
-    needs_code_policy:Gap[];    // NON tocca, segnala "serve hard guard"
-    needs_kb_governance: Gap[]; // MOVE/MERGE/SPLIT entro KB
-  };
-}
-```
-
-L'Harmonizer riceve **solo** `text_only` + `needs_kb_governance` come materiale azionabile. Gli altri due bucket diventano voci read-only nel review panel con etichetta "Richiede intervento sviluppatore" — così non si tenta mai di "scrivere meglio" un problema che è di runtime.
-
----
-
-## Cosa NON faccio in questa iterazione (out of scope)
-
-- Generazione automatica del codice TypeScript per i nuovi contract backend (resta proposta testuale)
-- Esecuzione automatica delle migrazioni SQL eventualmente necessarie
-- Rollback automatico oltre il marker per-proposta `status=failed` (no transazioni cross-tabella)
-- Modifica del flusso "Migliora tutto" (resta esattamente com'è)
-
----
-
-## Deliverables finali
-
-- 1 migrazione SQL (`harmonize_runs`)
-- 1 file markdown sorgente (`public/kb-source/libreria-tmwe.md`)
-- 1 DAL (`src/data/harmonizeRuns.ts`)
-- 1 prompt (`src/v2/agent/prompts/core/harmonizer-briefing.ts`)
-- 4 hook in `src/v2/ui/pages/prompt-lab/hooks/`: `harmonizeCollector.ts`, `harmonizeAnalyzer.ts`, `harmonizeExecutor.ts`, `useHarmonizeOrchestrator.ts`
-- 2 componenti UI: `HarmonizeSystemDialog.tsx`, `HarmonizeReviewPanel.tsx`
-- Bottone in `PromptLabPage.tsx`
-
-Stima: ~1500 righe nuove, zero modifiche a file esistenti tranne `PromptLabPage.tsx` (aggiunta bottone).
+Dopo questo refactor:
+- Il prompt resta a ~800 token e cambia raramente.
+- Aggiungere conoscenza all'Harmonizer = aggiungere/modificare un `.md` in `public/kb-source/harmonizer/`, **senza toccare codice né prompt**.
+- L'Harmonizer riceve davvero il `goal` dell'utente.
+- L'Harmonizer conosce schema colonne, enum, dominio, policy attive, contratti.
+- L'Harmonizer può creare e modificare agenti davvero.
+- Le proposte non eseguibili lasciano traccia (`harmonizer_followups`) invece di sparire.
+- Le proposte approvate generano agent_task e arricchiscono la memoria storica (`80-resolved-cases.md`).
+- L'Harmonizer migliora col tempo invece di ricominciare da zero ad ogni run.
