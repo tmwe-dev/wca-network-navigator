@@ -21,6 +21,7 @@ import { useAuth } from "@/providers/AuthProvider";
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const KpiPage = lazy(() => import("./ui/pages/KpiPage").then((m) => ({ default: m.KpiPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
 const CRMPage = lazy(() => import("./ui/pages/CRMPage").then((m) => ({ default: m.CRMPage })));
 const OutreachPage = lazy(() => import("./ui/pages/OutreachPage").then((m) => ({ default: m.OutreachPage })));
@@ -156,6 +157,7 @@ export function V2Routes(): React.ReactElement {
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
+          <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
 
           {/* CRM + figli */}
