@@ -323,16 +323,41 @@ export async function runLibraryChunkAnalyzer(input: {
   const proposals = parseProposalsFromText(raw, cap);
   const extended = parseExtended(raw, chunkDef.index);
 
+  // SCOPE GUARD: scarta proposte fuori dalle target tables del chunk.
+  // Le proposte fuori scope vanno gestite nel chunk dedicato per evitare
+  // doppie modifiche e collisioni di sessione. Loggiamo cosa abbiamo scartato.
+  const inScope: typeof proposals = [];
+  const outOfScope: typeof proposals = [];
+  for (const p of proposals) {
+    if (chunkDef.targetTables.includes(p.target?.table)) {
+      inScope.push(p);
+    } else {
+      outOfScope.push(p);
+    }
+  }
+  if (outOfScope.length > 0) {
+    console.warn(
+      `[libraryAnalyzer] chunk #${chunkDef.index} ${outOfScope.length} proposte fuori scope scartate`,
+      {
+        scope: chunkDef.targetTables,
+        outOfScope: outOfScope.map((p) => ({ table: p.target?.table, label: p.block_label })),
+      },
+    );
+  }
+
   // Parser ha fallito su tutto → ERRORE (invece di marciare a 0 proposte).
-  if (proposals.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
+  if (inScope.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
+    const outScopeNote = outOfScope.length > 0
+      ? ` (${outOfScope.length} proposte erano fuori scope: ${outOfScope.map((p) => p.target?.table).join(", ")})`
+      : "";
     throw new Error(
-      `Parser non è riuscito a estrarre nulla dalla risposta del modello per chunk #${chunkDef.index}. ` +
+      `Parser non è riuscito a estrarre nulla in scope per chunk #${chunkDef.index}.${outScopeNote} ` +
       `Preview: "${raw.slice(0, 200).replace(/\n/g, " ")}..."`,
     );
   }
 
   // Deriva entities_created dalle proposals INSERT.
-  const entitiesCreated: EntityCreatedEntry[] = proposals
+  const entitiesCreated: EntityCreatedEntry[] = inScope
     .filter((p) => p.action === "INSERT" && p.target?.table)
     .map((p) => ({
       table: p.target.table,
@@ -343,7 +368,7 @@ export async function runLibraryChunkAnalyzer(input: {
     }));
 
   return {
-    proposals,
+    proposals: inScope,
     extractedFacts: extended.facts,
     newConflicts: extended.conflicts,
     newCrossRefs: extended.crossRefs,
