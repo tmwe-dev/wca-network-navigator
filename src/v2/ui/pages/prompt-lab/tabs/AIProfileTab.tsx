@@ -23,6 +23,7 @@ const AI_PROFILE_KEYS: Array<{ key: string; label: string }> = [
   { key: "ai_business_goals", label: "Obiettivi business" },
   { key: "ai_behavior_rules", label: "Regole comportamentali" },
   { key: "ai_style_instructions", label: "Istruzioni stile" },
+  { key: "system_mission_text", label: "Mission di Sistema (Migliora tutto)" },
 ];
 
 export function AIProfileTab() {

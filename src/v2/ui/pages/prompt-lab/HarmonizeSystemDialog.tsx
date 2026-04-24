@@ -12,11 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Layers, Upload, Trash2, Play, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Loader2, Layers, Upload, Trash2, Play, X, CheckCircle2, AlertCircle, BookOpen, RotateCw } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileParser";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
+import { useHarmonizerLibraryIngestion } from "./harmonizer/useHarmonizerLibraryIngestion";
+import { TMWE_CHUNKS } from "./harmonizer/tmweChunks";
 import { toast } from "sonner";
 
 interface Props {
@@ -32,6 +35,14 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state, start, toggleApproval, approveAllSafe, execute, cancel, reset } = useHarmonizeOrchestrator(userId);
+
+  // ── Ingestion pipeline (tab "Documento grande") ──
+  const ingestion = useHarmonizerLibraryIngestion(userId);
+  const ingestionFileRef = useRef<HTMLInputElement>(null);
+  const [ingestionFile, setIngestionFile] = useState<ParsedFile | null>(null);
+  const [ingestionGoal, setIngestionGoal] = useState(
+    "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
+  );
 
   // Carica la libreria di default da public/kb-source/libreria-tmwe.md
   useEffect(() => {
@@ -69,6 +80,35 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     onOpenChange(false);
   }, [reset, onOpenChange]);
 
+  const handleIngestionUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseUploadedFile(file);
+      setIngestionFile(parsed);
+      toast.success(`File caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
+    }
+    if (ingestionFileRef.current) ingestionFileRef.current.value = "";
+  }, []);
+
+  const handleIngestionStart = useCallback(() => {
+    if (!ingestionFile) {
+      toast.error("Carica prima il file della libreria.");
+      return;
+    }
+    void ingestion.start({ sourceFile: ingestionFile, goal: ingestionGoal });
+  }, [ingestionFile, ingestionGoal, ingestion]);
+
+  const handleIngestionResume = useCallback(() => {
+    if (!ingestionFile) {
+      toast.error("Ricarica il file sorgente per riprendere la sessione.");
+      return;
+    }
+    void ingestion.resume(ingestionFile, ingestionGoal);
+  }, [ingestionFile, ingestionGoal, ingestion]);
+
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : handleClose())}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
@@ -83,8 +123,17 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto pr-2">
-          {/* FASE INPUT */}
+        <Tabs defaultValue="classic" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="self-start">
+            <TabsTrigger value="classic">
+              <Layers className="h-4 w-4 mr-1" /> Modalità classica
+            </TabsTrigger>
+            <TabsTrigger value="ingestion">
+              <BookOpen className="h-4 w-4 mr-1" /> Ingestione documento grande
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="classic" className="flex-1 overflow-auto pr-2 mt-4">
           {state.phase === "idle" && (
             <div className="space-y-4">
               <div>
@@ -195,7 +244,215 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
               <p className="text-sm">{state.error ?? "Errore durante l'armonizzazione."}</p>
             </div>
           )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="ingestion" className="flex-1 overflow-auto pr-2 mt-4">
+            {/* Banner sessione ripresabile */}
+            {ingestion.state.resumable && ingestion.state.phase === "idle" && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 mb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-xs">
+                    <p className="font-semibold flex items-center gap-1">
+                      <RotateCw className="h-3.5 w-3.5" /> Sessione interrotta trovata
+                    </p>
+                    <p className="text-muted-foreground mt-1">
+                      File: <code>{ingestion.state.resumable.source_file}</code> · Chunk completati: {ingestion.state.resumable.current_chunk}/{ingestion.state.resumable.total_chunks}.
+                      Ricarica lo stesso file e clicca "Riprendi".
+                    </p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button size="sm" variant="outline" onClick={handleIngestionResume} disabled={!ingestionFile}>
+                      Riprendi
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={ingestion.dismissResumable}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* INPUT */}
+            {(ingestion.state.phase === "idle" || ingestion.state.phase === "starting") && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
+                  <p className="font-semibold mb-1">Pipeline ingestione 7-chunk</p>
+                  <p className="text-muted-foreground">
+                    Adatta a documenti grandi (~80K+ token). La sessione tiene traccia di facts, conflitti e
+                    cross-references tra chunk diversi. In caso di errore puoi riprendere dal chunk fallito.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">Obiettivo dell'ingestione</label>
+                  <Textarea value={ingestionGoal} onChange={(e) => setIngestionGoal(e.target.value)} rows={2} />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">Documento sorgente</label>
+                  <input ref={ingestionFileRef} type="file" accept={ACCEPT_STRING} onChange={handleIngestionUpload} className="hidden" />
+                  <Button variant="outline" size="sm" onClick={() => ingestionFileRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-2" /> {ingestionFile ? "Sostituisci file" : "Carica libreria"}
+                  </Button>
+                  {ingestionFile && (
+                    <div className="mt-2 flex items-center gap-2 text-xs bg-muted px-2 py-1 rounded">
+                      <span className="font-mono">{ingestionFile.name}</span>
+                      <Badge variant="outline">{ingestionFile.sizeKb}KB</Badge>
+                      <Badge variant="outline">{ingestionFile.content.split("\n").length} righe</Badge>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-md border border-border p-2">
+                  <p className="text-xs font-semibold mb-2">Mappa chunk previsti ({TMWE_CHUNKS.length})</p>
+                  <ul className="text-xs space-y-1">
+                    {TMWE_CHUNKS.map((c) => (
+                      <li key={c.index} className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">#{c.index}</Badge>
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-muted-foreground">L{c.sourceLines[0]}–{c.sourceLines[1]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button onClick={handleIngestionStart} disabled={!userId || !ingestionFile} className="w-full">
+                  <Play className="h-4 w-4 mr-2" /> Avvia pipeline 7-chunk
+                </Button>
+              </div>
+            )}
+
+            {/* RUNNING */}
+            {ingestion.state.phase === "running" && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <p className="text-sm font-semibold">
+                    Pipeline in esecuzione · {ingestion.state.totalProposals} proposte totali finora
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {ingestion.state.chunks.map((c) => {
+                    const def = TMWE_CHUNKS[c.chunkIndex];
+                    return (
+                      <div key={c.chunkIndex} className="rounded border border-border p-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            {c.status === "running" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                            {c.status === "completed" && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                            {c.status === "error" && <AlertCircle className="h-3 w-3 text-destructive" />}
+                            <Badge variant="outline" className="text-[10px]">#{c.chunkIndex}</Badge>
+                            <span className="font-medium">{c.chunkName}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Badge variant="secondary" className="text-[10px]">prop {c.proposals}</Badge>
+                            <Badge variant="secondary" className="text-[10px]">facts {c.facts}</Badge>
+                            <Badge variant="secondary" className="text-[10px]">conf {c.conflicts}</Badge>
+                            <Badge variant="secondary" className="text-[10px]">ent {c.entities}</Badge>
+                          </div>
+                        </div>
+                        {c.errorMsg && (
+                          <p className="text-[11px] text-destructive mt-1">{c.errorMsg}</p>
+                        )}
+                        {def && c.status === "pending" && (
+                          <p className="text-[10px] text-muted-foreground mt-1">{def.description}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button variant="ghost" size="sm" onClick={ingestion.cancel}>
+                  <X className="h-4 w-4 mr-1" /> Annulla
+                </Button>
+              </div>
+            )}
+
+            {/* ERROR (con retry per chunk) */}
+            {ingestion.state.phase === "error" && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  <p className="text-sm font-semibold">Errore in un chunk</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{ingestion.state.error}</p>
+                <div className="space-y-2">
+                  {ingestion.state.chunks.filter((c) => c.status === "error").map((c) => (
+                    <div key={c.chunkIndex} className="flex items-center justify-between text-xs border border-destructive/40 rounded p-2">
+                      <span>#{c.chunkIndex} {c.chunkName}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!ingestionFile}
+                        onClick={() => ingestionFile && void ingestion.retryChunk(c.chunkIndex, ingestionFile.content, ingestionGoal)}
+                      >
+                        <RotateCw className="h-3 w-3 mr-1" /> Ritenta
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* REVIEW (post-pipeline) */}
+            {ingestion.state.phase === "review" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <p className="text-sm font-semibold">Pipeline completata · {ingestion.state.totalProposals} proposte pronte</p>
+                </div>
+                <div className="rounded border border-border p-3 text-xs space-y-1">
+                  <p>
+                    <strong>Sessione:</strong> {ingestion.state.session?.id.slice(0, 8)}…
+                  </p>
+                  <p><strong>File:</strong> {ingestion.state.session?.source_file}</p>
+                  <p>
+                    <strong>Chunk completati:</strong>{" "}
+                    {ingestion.state.chunks.filter((c) => c.status === "completed").length}/{TMWE_CHUNKS.length}
+                  </p>
+                  <p>
+                    <strong>Fatti registrati:</strong>{" "}
+                    {Object.keys(ingestion.state.session?.facts_registry ?? {}).length}
+                  </p>
+                  <p>
+                    <strong>Conflitti aperti:</strong> {ingestion.state.session?.conflicts_found.length ?? 0}
+                  </p>
+                  <p>
+                    <strong>Cross-references:</strong> {ingestion.state.session?.cross_references.length ?? 0}
+                  </p>
+                  <p>
+                    <strong>Entità create:</strong> {ingestion.state.session?.entities_created.length ?? 0}
+                  </p>
+                </div>
+                {(ingestion.state.session?.conflicts_found.length ?? 0) > 0 && (
+                  <div className="rounded border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+                    <p className="font-semibold mb-1">Top conflitti da risolvere</p>
+                    <ul className="space-y-1">
+                      {ingestion.state.session?.conflicts_found.slice(0, 10).map((c, i) => (
+                        <li key={i} className="flex gap-2">
+                          <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
+                          <div>
+                            <p className="font-medium">{c.topic}</p>
+                            <p className="text-muted-foreground">
+                              A: {c.source_a.value} · B: {c.source_b.value}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Le proposte sono salvate sul run figlio. Apri "Modalità classica" → review (run id:{" "}
+                  <code>{ingestion.state.run?.id.slice(0, 8)}…</code>) per approvare ed eseguire.
+                </p>
+              </div>
+            )}
+
+            {ingestion.state.phase === "cancelled" && (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sessione annullata.</p>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* FOOTER */}
         {state.phase === "review" && (
