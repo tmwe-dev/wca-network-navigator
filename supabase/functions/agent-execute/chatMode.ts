@@ -2,11 +2,11 @@
 // CHAT MODE EXECUTION - AI Conversation & Tool Calling Loop
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { executeTool } from "./toolHandlers.ts";
 import { compressMessages } from "../_shared/messageCompression.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = BaseSupabaseClient<any, "public", any>;
 
 interface ChatMessage {
   role: string;

@@ -2,11 +2,11 @@
 // TASK EXECUTION MODE - Agent Task Processing
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { executeTool } from "./toolHandlers.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = BaseSupabaseClient<any, "public", any>;
 
 interface AgentTask {
   id: string;
