@@ -305,6 +305,8 @@ AUTONOMO: puoi analizzare la KB in profondità, proporre batch di modifiche corr
 
 In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione esplicita dell'utente.`,
         tools: PLATFORM_TOOLS,
+        model: "google/gemini-2.5-flash",
+        temperature: 0.2,
         creditLabel: "KB Supervisor",
       };
 

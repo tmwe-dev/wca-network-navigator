@@ -71,21 +71,22 @@ function buildLibraryUserPrompt(
   chunkDef: TmweChunkDef,
   session: HarmonizerSession,
   goal: string,
+  opts?: { gapsBudgetChars?: number },
 ): string {
   const realSummary = `Tabelle filtrate: ${Object.entries(collector.realSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.realSummary.total}`;
   const desiredSummary = `Da chunk: ${Object.entries(collector.desiredSummary.by_table).map(([k, v]) => `${k}=${v}`).join(", ")}. Totale: ${collector.desiredSummary.total}`;
 
-  const factsTop = Object.entries(session.facts_registry).slice(0, 15).map(([k, f]) =>
+  const factsTop = Object.entries(session.facts_registry).slice(0, 10).map(([k, f]) =>
     `- ${k} = "${f.value}"`,
   ).join("\n") || "(nessuno)";
 
-  const conflictsList = session.conflicts_found.slice(0, 10).map((c) =>
+  const conflictsList = session.conflicts_found.slice(0, 5).map((c) =>
     `- [${c.status}] ${c.topic}`,
   ).join("\n") || "(nessuno)";
 
   const entitiesList = session.entities_created
     .filter((e) => chunkDef.targetTables.includes(e.table))
-    .slice(0, 30)
+    .slice(0, 15)
     .map((e) => `- ${e.table}: "${e.title}"`)
     .join("\n") || "(nessuna)";
 
@@ -115,6 +116,10 @@ function buildLibraryUserPrompt(
     ? remainingChunkIndexes.map(fmtChunkRef).join("\n  - ")
     : "(nessuno — questo è l'ultimo chunk)";
 
+  // Adaptive budget for gap section: avoid token explosion on large chunks.
+  const gapsBudget = opts?.gapsBudgetChars ?? 12000;
+  const allocPerGap = chunk.length > 0 ? Math.floor(gapsBudget / chunk.length) : gapsBudget;
+  const contentMaxChars = Math.max(150, allocPerGap - 250);
   const gapsText = chunk.map((g, i) => {
     const matchedInfo = g.matched
       ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")`
@@ -128,7 +133,7 @@ DESIDERATO:
 - tabella target: ${g.desired.table}
 - categoria: ${g.desired.category ?? "n/d"}
 - contenuto:
-${g.desired.content.slice(0, 500)}
+${g.desired.content.slice(0, contentMaxChars)}
 
 ${matchedInfo}`;
   }).join("\n\n");
@@ -155,13 +160,13 @@ non come proposta diretta — sarà coperta nel chunk dedicato.
 ${chunkDef.contractGuidance}
 
 === STATO SESSIONE PRECEDENTE ===
-facts_registry (top 30):
+facts_registry (top 10):
 ${factsTop}
 
-conflicts_found (top 20):
+conflicts_found (top 5):
 ${conflictsList}
 
-entities_created (target tables, top 50):
+entities_created (target tables, top 15):
 ${entitiesList}
 
 === CONFLITTI/DUPLICATI PRE-CARICATI PER QUESTO CHUNK ===
@@ -273,7 +278,6 @@ export async function runLibraryChunkAnalyzer(input: {
   // la context window e restituiva output vuoto. Per chunk densi (Doctrine,
   // Email) si fa retry/resume per processare i restanti.
   const cap = actionable.slice(0, 20);
-  const userPrompt = buildLibraryUserPrompt(collector, cap, chunkDef, session, goal);
 
   // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
   // chunk. Senza questa iniezione il modello "vede" solo i nomi dei file
@@ -284,30 +288,38 @@ export async function runLibraryChunkAnalyzer(input: {
   } catch (e) {
     console.warn("[libraryAnalyzer] KB injection failed, proceeding without", e);
   }
-  const systemPrompt = kbContext
-    ? `${TMWE_INGESTION_BRIEFING}${kbContext}`
-    : TMWE_INGESTION_BRIEFING;
 
-  // Helper: chiama il modello e ritenta UNA volta con prompt compatto se
-  // la prima call torna vuota (sintomo classico di token explosion).
+  // Build prompt at multiple compression levels for retry strategy.
+  const buildAtLevel = (level: 1 | 2 | 3) => {
+    const budget = level === 3 ? 6000 : 12000;
+    const userPrompt = buildLibraryUserPrompt(
+      collector, cap, chunkDef, session, goal, { gapsBudgetChars: budget },
+    );
+    const systemPrompt = level === 1 && kbContext
+      ? `${TMWE_INGESTION_BRIEFING}${kbContext}`
+      : TMWE_INGESTION_BRIEFING;
+    return { userPrompt, systemPrompt };
+  };
+
+  // 3-level retry on empty response (token explosion symptom):
+  //   L1 = full prompt + KB context
+  //   L2 = full prompt without KB context
+  //   L3 = compressed prompt (50% gap budget) without KB context
   async function callWithRetry(): Promise<string> {
-    let r = "";
-    try {
-      r = await callHarmonizer(userPrompt, systemPrompt);
-    } catch (e) {
-      console.error("[libraryAnalyzer] call failed", e);
-      throw e;
+    for (const level of [1, 2, 3] as const) {
+      const { userPrompt, systemPrompt } = buildAtLevel(level);
+      let r = "";
+      try {
+        r = await callHarmonizer(userPrompt, systemPrompt);
+      } catch (e) {
+        console.error(`[libraryAnalyzer] call failed (level=${level})`, e);
+        if (level === 3) throw e;
+        continue;
+      }
+      if (r && r.trim().length > 0) return r;
+      console.warn(`[libraryAnalyzer] retry level=${level} reason=empty chunk=#${chunkDef.index}`);
     }
-    if (r && r.trim().length > 0) return r;
-
-    console.warn("[libraryAnalyzer] empty response, retrying without KB injection");
-    try {
-      r = await callHarmonizer(userPrompt, TMWE_INGESTION_BRIEFING);
-    } catch (e) {
-      console.error("[libraryAnalyzer] retry failed", e);
-      throw e;
-    }
-    return r;
+    return "";
   }
 
   const raw = await callWithRetry();
