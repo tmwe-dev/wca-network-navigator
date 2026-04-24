@@ -12,6 +12,12 @@
 import { PLATFORM_TOOLS } from "./platformTools.ts";
 import { escapeLike } from "./sqlEscape.ts";
 
+// Permissive supabase client type for scope-local handlers.
+// Using `any` here avoids cascading "unknown" errors on .from/.rpc chains
+// without requiring full Database typing for every internal helper.
+// deno-lint-ignore no-explicit-any
+type ScopedSupabase = any;
+
 // ━━━━━━━━━━ CONTACTS SCOPE — extra tools only ━━━━━━━━━━
 
 const CONTACTS_EXTRA_TOOLS = [
@@ -58,7 +64,7 @@ export interface ScopeConfig {
   buildPrompt?: (body: Record<string, unknown>, basePrompt: string) => string;
 }
 
-function buildContactQuery(supabase: SupabaseClient, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
+function buildContactQuery(supabase: ScopedSupabase, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
   let q = opts?.count
     ? supabase.from("imported_contacts").select(selectCols, { count: "exact", head: true })
     : supabase.from("imported_contacts").select(selectCols);
