@@ -66,6 +66,20 @@ export interface CollectorOutput {
 
 export type CollectorDiagnostics = NonNullable<CollectorOutput["diagnostics"]>;
 
+function isPlaceholderSource(cleaned: string): boolean {
+  const normalized = cleaned.trim().toLowerCase();
+  if (!normalized) return false;
+
+  const hasPlaceholderCue = /placeholder|sostituire questo file con la libreria reale/.test(normalized);
+  const hasStructuredSections = /^##+\s+/m.test(cleaned) || /^###\s+/m.test(cleaned);
+  const hasMeaningfulLength = normalized.length > 3000 || normalized.split("\n").length > 120;
+
+  // Consideriamo "placeholder" solo i file chiaramente stub/istruzioni.
+  // Se il documento è lungo e strutturato, la presenza della parola in un'intro
+  // o in un esempio non deve bloccare l'ingestione reale.
+  return hasPlaceholderCue && !hasStructuredSections && !hasMeaningfulLength;
+}
+
 /** Heuristic mapping da "categoria suggerita" della libreria a tabella DB. */
 const CATEGORY_TO_TABLE: Record<string, string> = {
   doctrine: "kb_entries",
@@ -121,7 +135,7 @@ function parseSingleDesiredSource(content: string): {
   const cleaned = stripFrontmatter(content);
   const source_line_count = cleaned ? cleaned.split("\n").length : 0;
   const source_char_count = cleaned.length;
-  const placeholder_detected = /placeholder|sostituire questo file con la libreria reale/i.test(cleaned);
+  const placeholder_detected = isPlaceholderSource(cleaned);
 
   const sections = cleaned
     .split(/\n(?=##+\s+)/g)
