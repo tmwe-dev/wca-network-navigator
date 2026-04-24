@@ -13,8 +13,6 @@
  * Logs every execution to supervisor_audit_log.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-// deno-lint-ignore no-explicit-any
-const _typedCreateClient = createClient<any>;
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
@@ -68,7 +66,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing pending_action_id" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
+    // deno-lint-ignore no-explicit-any
+    const supabase = createClient<any>(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
