@@ -21,6 +21,7 @@ import type {
   EntityCreatedEntry,
 } from "@/data/harmonizerSessions";
 import type { TmweChunkDef } from "./tmweChunks";
+import { buildHarmonizerKbContext } from "./harmonizerKbInjector";
 
 const FactSchema = z.object({
   value: z.string(),
@@ -212,13 +213,28 @@ export async function runLibraryChunkAnalyzer(input: {
   }
 
   // Per le sessioni di ingestione lavoriamo a CHUNK INTERO (non sotto-chunk),
-  // perché lo stato sessione fa già da governance. Cap di sicurezza: 30 gap.
-  const cap = actionable.slice(0, 30);
+  // perché lo stato sessione fa già da governance. Cap di sicurezza alzato a
+  // 60 perché chunk come "Doctrine" (9 status) ed "Email" (decine di template)
+  // saturavano i 30 gap iniziali.
+  const cap = actionable.slice(0, 60);
   const userPrompt = buildLibraryUserPrompt(collector, cap, chunkDef, session, goal);
+
+  // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
+  // chunk. Senza questa iniezione il modello "vede" solo i nomi dei file
+  // citati nel briefing → inventa colonne, categorie, enum.
+  let kbContext = "";
+  try {
+    kbContext = await buildHarmonizerKbContext(chunkDef.targetTables);
+  } catch (e) {
+    console.warn("[libraryAnalyzer] KB injection failed, proceeding without", e);
+  }
+  const systemPrompt = kbContext
+    ? `${TMWE_INGESTION_BRIEFING}${kbContext}`
+    : TMWE_INGESTION_BRIEFING;
 
   let raw = "";
   try {
-    raw = await callHarmonizer(userPrompt, TMWE_INGESTION_BRIEFING);
+    raw = await callHarmonizer(userPrompt, systemPrompt);
   } catch (e) {
     console.error("[libraryAnalyzer] call failed", e);
     throw e;
