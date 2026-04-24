@@ -25,6 +25,7 @@ const OperativeMetricsGrid = lazyRetry(() => import("@/components/home/Operative
 const AgentStatusPanel = lazyRetry(() => import("@/components/home/AgentStatusPanel").then(m => ({ default: m.AgentStatusPanel })));
 const DashboardCharts = lazyRetry(() => import("@/components/analytics/DashboardCharts").then(m => ({ default: m.DashboardCharts })));
 const ResponseRateCard = lazyRetry(() => import("@/components/analytics/ResponseRateCard").then(m => ({ default: m.ResponseRateCard })));
+const EmailObservabilityPanel = lazyRetry(() => import("@/v2/ui/components/dashboard/EmailObservabilityPanel").then(m => ({ default: m.EmailObservabilityPanel })));
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("it-IT", { notation: "compact", maximumFractionDigits: 1 }).format(value);
@@ -157,6 +158,12 @@ export function DashboardPage() {
         <DeferredOnVisible placeholder={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
           <Suspense fallback={<div className="h-32 animate-pulse bg-muted rounded-lg" />}>
             <ResponseRateCard />
+          </Suspense>
+        </DeferredOnVisible>
+
+        <DeferredOnVisible placeholder={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+          <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}>
+            <EmailObservabilityPanel />
           </Suspense>
         </DeferredOnVisible>
 
