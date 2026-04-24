@@ -1,36 +1,24 @@
 
 
-# Esecuzione approvata — Agent Atlas + Lab Agent Architect
+# Piano: Fix LoginPage "Rendered fewer hooks than expected"
 
-Procedo con le 5 fasi nell'ordine concordato, integrando i tuoi 3 punti.
+## Causa
+`src/v2/ui/pages/LoginPage.tsx` riga 31 fa `return <Navigate>` prima dei `useCallback` di `handleLogin`, `handleSignup`, `handleForgot`. Quando l'utente non è autenticato React registra 5 hook (`useLocation`, `useAuthV2`, 5× `useState`); quando il login va a buon fine `isAuthenticated` diventa `true`, il return parte prima e React registra solo gli hook fino a quel punto → crash al render successivo.
 
-## Fase 1 — Registry esteso
-Estendo `src/data/agentPrompts.ts` aggiungendo gli agenti mancanti (`optimus`, `journalists`, `generate-email`, `generate-outreach`, `mission-executor`, `voice-elevenlabs`, `agent-execute`, `classify-inbound-message`, `reply-classifier`) e per tutti i campi nuovi: `category`, `runtime { edgeFunction, modelDefault, triggers[] }`, `inputContract`, `outputContract`, `avatarIcon`, `avatarColor`, `promptSources[]` (mappa esplicita ai BlockSource del Prompt Lab).
+## Fix scelto
+Spostare il blocco `if (isAuthenticated && !authLoading) return <Navigate ... />` **dopo** la definizione di tutti gli `useCallback` (subito prima di `switchMode`). Tutti gli hook vengono chiamati incondizionatamente in ogni render, l'early return resta solo per il JSX.
 
-## Fase 2 — Pagina Atlas read-only
-Nuova route `/v2/prompt-lab/atlas`. Layout: sidebar agenti a sinistra, avatar card + colonne Prompt / KB / Tools / Contract a destra. Pulsante "Apri nell'editor" su ogni blocco verso le tab Prompt Lab esistenti. Zero scritture.
+Soluzione alternativa scartata: convertire `switchMode` in `useCallback` non risolverebbe il problema (è una funzione, non un hook) e l'early return resterebbe comunque sopra hook reali.
 
-## Fase 3 — Contesto per agente unificato
-- `useGlobalPromptImprover` raggruppa **da subito** per agente (non più per tab) usando il registry come pivot.
-- Nuovo `improveBlockForAgent(agentId, blockId)` in `useLabAgent`.
-- Output Lab Agent forzato a schema strutturato: `SEVERITY` · `WHY` · `DESTINATION (keep|move-to-kb|move-to-code|move-to-contract|duplicate)` · `PROPOSAL` · `TEST_SCENARIOS[]`. Parsing tollerante con fallback.
-- `promptRubrics.ts` aggiornato.
+## Modifica
+File: `src/v2/ui/pages/LoginPage.tsx`
+- Rimuovere l'`if (isAuthenticated && !authLoading) return <Navigate>` da riga 31
+- Reinserirlo dopo `handleForgot` (riga ~58) e prima di `switchMode`
 
-## Fase 4 — KB Architect isolata
-- Migration: nuova categoria `lab_architect_procedure` (NON in `DOCTRINE_CATEGORIES`, quindi assembler produzione non la caricano mai).
-- Insert voce KB con la procedura passo-passo del documento Architect.
-- Mirror `public/kb-source/lab-agent-architect.md`.
-- `useLabAgent` riceve `mode: 'standard' | 'architect'` (default `standard` = invariato). Solo in `architect` la KB viene caricata esplicitamente e prepended al system prompt del Lab Agent.
+Nessun altro file toccato. Nessun cambio di logica, solo riordino.
 
-## Fase 5 — Contratti backend
-In Architect mode il Lab Agent riceve `inputContract`/`outputContract` dal registry e può proporre `DESTINATION: move-to-contract` con firma del nuovo contratto (es. `EmailBrief`, `VoiceBrief`).
-
-## Garanzie
-- Zero modifiche a edge function di produzione.
-- Solo additive sullo schema DB (categoria KB nuova).
-- Comportamento default Lab Agent invariato.
-- Tab Prompt Lab esistenti restano gli editor canonici.
-
-## Debito noto
-Registry manuale in v1. Aggiungo commento in testa + test che fallisce se trova directory in `supabase/functions/` non mappata nel registry.
+## Verifica
+- Login con credenziali valide → redirect a `/v2` senza crash
+- Refresh su `/v2/login` da utente già loggato → redirect immediato senza errori in console
+- Build TS pulito
 
