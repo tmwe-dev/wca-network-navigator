@@ -181,7 +181,7 @@ function reconstructEvent(row: DomainEventRow): WCADomainEvent {
       type: row.actor_type as "user" | "system" | "cron" | "ai_agent" | "trigger",
       name: row.actor_name,
     },
-    payload: row.payload,
+    payload: row.payload as never,
     metadata: row.metadata || undefined,
   };
 }
