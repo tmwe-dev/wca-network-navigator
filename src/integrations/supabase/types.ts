@@ -7899,6 +7899,7 @@ export type Database = {
         Args: { p_channel: string; p_identifier: string }
         Returns: string
       }
+      get_system_diagnostics: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
