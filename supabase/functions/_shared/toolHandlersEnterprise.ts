@@ -182,7 +182,7 @@ export function createEnterpriseHandlers(supabase: SupabaseClient) {
         return { matches: data || [], method: "fallback_text" };
       }
       return {
-        matches: matches.map((m: { id: string; title: string; content: string; category: string; chapter: string; tags: string[]; similarity: number }) => ({
+        matches: matches.map((m: { id: string; title: string; content: string; category: string; chapter: string | null; tags: string[]; similarity: number }) => ({
           id: m.id, title: m.title, content: m.content.slice(0, 800),
           category: m.category, chapter: m.chapter, tags: m.tags,
           similarity: Number(m.similarity.toFixed(3)),
