@@ -109,6 +109,12 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     void ingestion.resume(ingestionFile, ingestionGoal);
   }, [ingestionFile, ingestionGoal, ingestion]);
 
+  const sessionFactsCount = Object.keys(ingestion.state.session?.facts_registry ?? {}).length;
+  const sessionConflictsCount = ingestion.state.session?.conflicts_found.length ?? 0;
+  const sessionCrossRefsCount = ingestion.state.session?.cross_references.length ?? 0;
+  const sessionBootstrapEntities = (ingestion.state.session?.entities_created ?? []).filter((e) => e.created_in_chunk < 0).length;
+  const sessionRunCreatedEntities = (ingestion.state.session?.entities_created ?? []).filter((e) => e.created_in_chunk >= 0).length;
+
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : handleClose())}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
@@ -411,19 +417,22 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                   </p>
                   <p>
                     <strong>Fatti registrati:</strong>{" "}
-                    {Object.keys(ingestion.state.session?.facts_registry ?? {}).length}
+                    {sessionFactsCount}
                   </p>
                   <p>
-                    <strong>Conflitti aperti:</strong> {ingestion.state.session?.conflicts_found.length ?? 0}
+                    <strong>Conflitti aperti:</strong> {sessionConflictsCount}
                   </p>
                   <p>
-                    <strong>Cross-references:</strong> {ingestion.state.session?.cross_references.length ?? 0}
+                    <strong>Cross-references:</strong> {sessionCrossRefsCount}
                   </p>
                   <p>
-                    <strong>Entità create:</strong> {ingestion.state.session?.entities_created.length ?? 0}
+                    <strong>Entità create dal run:</strong> {sessionRunCreatedEntities}
+                  </p>
+                  <p>
+                    <strong>Entità bootstrap da DB:</strong> {sessionBootstrapEntities}
                   </p>
                 </div>
-                {(ingestion.state.session?.conflicts_found.length ?? 0) > 0 && (
+                {sessionConflictsCount > 0 && (
                   <div className="rounded border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
                     <p className="font-semibold mb-1">Top conflitti da risolvere</p>
                     <ul className="space-y-1">

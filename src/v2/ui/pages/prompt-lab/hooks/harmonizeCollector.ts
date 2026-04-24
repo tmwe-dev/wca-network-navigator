@@ -46,6 +46,13 @@ export interface GapCandidate {
 export interface CollectorOutput {
   real: InventoryItem[];
   desired: InventoryItem[];
+  diagnostics?: {
+    source_line_count: number;
+    source_char_count: number;
+    desired_parsed_count: number;
+    parse_mode: "structured" | "fallback" | "empty";
+    placeholder_detected: boolean;
+  };
   gaps: {
     text_only: GapCandidate[];
     needs_contract: GapCandidate[];
@@ -56,6 +63,8 @@ export interface CollectorOutput {
   desiredSummary: InventorySummary;
   classification: GapClassification;
 }
+
+export type CollectorDiagnostics = NonNullable<CollectorOutput["diagnostics"]>;
 
 /** Heuristic mapping da "categoria suggerita" della libreria a tabella DB. */
 const CATEGORY_TO_TABLE: Record<string, string> = {
@@ -76,6 +85,121 @@ const CONTRACT_KEYWORDS = /\b(EmailBrief|VoiceBrief|ContactLifecycleBrief|Outrea
 
 /** Patterns che indicano una policy hard nel codice. */
 const POLICY_KEYWORDS = /\b(blacklist|guard|hard rule|never allow|forbidden|VIETATO|cap di sicurezza|safety cap)\b/i;
+
+function stripFrontmatter(text: string): string {
+  return text.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
+}
+
+function readMeta(section: string, label: string): string | undefined {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.+)$`, "im"),
+    new RegExp(`^${escaped}:\\s*(.+)$`, "im"),
+  ];
+  for (const pattern of patterns) {
+    const match = section.match(pattern);
+    if (match?.[1]?.trim()) return match[1].trim();
+  }
+  return undefined;
+}
+
+function inferCategory(title: string, body: string): string {
+  const haystack = `${title}\n${body}`.toLowerCase();
+  if (/\bpersona\b|tone|signature|stile/.test(haystack)) return "persona";
+  if (/\bagent\b|\bagente\b|kpi|responsabilit|scope operativo|trigger/.test(haystack)) return "agent";
+  if (/playbook|sequenza commerciale|cadence|outreach/.test(haystack)) return "playbook";
+  if (/template email|subject:|oggetto:|email|sender|whitelist/.test(haystack)) return "email";
+  if (/procedura|workflow|step-by-step|runbook|briefing|checklist operativa/.test(haystack)) return "operative";
+  if (/mission|identit|company|brand|manifesto/.test(haystack)) return "system_prompt";
+  return "doctrine";
+}
+
+function parseSingleDesiredSource(content: string): {
+  items: InventoryItem[];
+  diagnostics: CollectorDiagnostics;
+} {
+  const cleaned = stripFrontmatter(content);
+  const source_line_count = cleaned ? cleaned.split("\n").length : 0;
+  const source_char_count = cleaned.length;
+  const placeholder_detected = /placeholder|sostituire questo file con la libreria reale/i.test(cleaned);
+
+  const sections = cleaned
+    .split(/\n(?=##+\s+)/g)
+    .map((section) => section.trim())
+    .filter(Boolean);
+
+  const items: InventoryItem[] = [];
+  let parseMode: CollectorDiagnostics["parse_mode"] = "empty";
+
+  for (const sec of sections) {
+    const titleMatch = sec.match(/^##+\s*(?:📄|📚|🎯|🤖|✉️|📞)?\s*(.+)$/m);
+    if (!titleMatch) continue;
+    const title = titleMatch[1].trim();
+    if (!title || title.toLowerCase().includes("placeholder")) continue;
+
+    const category = (readMeta(sec, "Categoria suggerita") ?? inferCategory(title, sec)).trim().toLowerCase();
+    const chapter = readMeta(sec, "Capitolo");
+    const priorityRaw = readMeta(sec, "Priorità") ?? readMeta(sec, "Priorita");
+    const figure = readMeta(sec, "Figura (opzionale)") ?? readMeta(sec, "Figura");
+    const table = CATEGORY_TO_TABLE[category] ?? "kb_entries";
+    const body = sec
+      .replace(/^##+.*$/m, "")
+      .replace(/^\*\*(?:Categoria suggerita|Capitolo|Priorit[àa]|Figura(?:\s*\(opzionale\))?):\*\*.+$/gim, "")
+      .replace(/^(?:Categoria suggerita|Capitolo|Priorit[àa]|Figura(?:\s*\(opzionale\))?):.+$/gim, "")
+      .trim();
+
+    if (!body) continue;
+
+    items.push({
+      table,
+      category,
+      chapter: chapter?.trim(),
+      title,
+      content: body,
+      priority: priorityRaw ? Number(priorityRaw.replace(/[^\d]/g, "")) || 50 : 50,
+      figure: figure?.trim(),
+    });
+  }
+
+  if (items.length > 0) parseMode = "structured";
+
+  if (items.length === 0 && cleaned) {
+    const fallbackSections = cleaned
+      .split(/\n(?=###\s+)/g)
+      .map((section) => section.trim())
+      .filter((section) => /^###\s+/.test(section));
+
+    for (const sec of fallbackSections) {
+      const titleMatch = sec.match(/^###\s*(.+)$/m);
+      if (!titleMatch) continue;
+      const title = titleMatch[1].trim();
+      if (!title || title.toLowerCase().includes("placeholder")) continue;
+      const body = sec.replace(/^###.*$/m, "").trim();
+      if (body.length < 80) continue;
+      const category = inferCategory(title, body);
+      items.push({
+        table: CATEGORY_TO_TABLE[category] ?? "kb_entries",
+        category,
+        title,
+        content: body,
+        priority: 50,
+      });
+    }
+
+    if (items.length > 0) parseMode = "fallback";
+  }
+
+  return {
+    items,
+    diagnostics: {
+      source_line_count,
+      source_char_count,
+      desired_parsed_count: items.length,
+      parse_mode: parseMode,
+      placeholder_detected,
+    },
+  };
+}
 
 /** Carica TUTTO l'inventario reale dal DB (no filtri). */
 export async function collectRealInventory(userId: string): Promise<InventoryItem[]> {
@@ -150,43 +274,44 @@ export async function collectRealInventory(userId: string): Promise<InventoryIte
  *  - **Figura (opzionale):** <name>
  */
 export function parseDesiredInventory(librarySource: string, uploadedDocs: ParsedFile[] = []): InventoryItem[] {
+  return parseDesiredInventoryDetailed(librarySource, uploadedDocs).items;
+}
+
+export function parseDesiredInventoryDetailed(
+  librarySource: string,
+  uploadedDocs: ParsedFile[] = [],
+): { items: InventoryItem[]; diagnostics: CollectorDiagnostics } {
   const sources: Array<{ name: string; content: string }> = [];
   if (librarySource.trim()) sources.push({ name: "libreria-tmwe.md", content: librarySource });
   for (const f of uploadedDocs) sources.push({ name: f.name, content: f.content });
 
   const out: InventoryItem[] = [];
+  const mergedDiagnostics: CollectorDiagnostics = {
+    source_line_count: 0,
+    source_char_count: 0,
+    desired_parsed_count: 0,
+    parse_mode: "empty",
+    placeholder_detected: false,
+  };
+
   for (const src of sources) {
-    const sections = src.content.split(/\n(?=## (?:📄|📚|🎯|🤖|✉️|📞)?\s*)/g);
-    for (const sec of sections) {
-      const titleMatch = sec.match(/^##\s*(?:📄|📚|🎯|🤖|✉️|📞)?\s*(.+)$/m);
-      if (!titleMatch) continue;
-      const title = titleMatch[1].trim();
-      if (!title || title.toLowerCase().includes("placeholder")) continue;
-
-      const catMatch = sec.match(/\*\*Categoria suggerita:\*\*\s*(.+)/i);
-      const chapMatch = sec.match(/\*\*Capitolo:\*\*\s*(.+)/i);
-      const prioMatch = sec.match(/\*\*Priorit[àa]:\*\*\s*(\d+)/i);
-      const figMatch = sec.match(/\*\*Figura(?:\s*\(opzionale\))?:\*\*\s*(.+)/i);
-
-      const category = (catMatch?.[1] ?? "doctrine").trim().toLowerCase();
-      const table = CATEGORY_TO_TABLE[category] ?? "kb_entries";
-      const body = sec
-        .replace(/^##.*$/m, "")
-        .replace(/\*\*(?:Categoria suggerita|Capitolo|Priorit[àa]|Figura(?:\s*\(opzionale\))?):\*\*.+/gi, "")
-        .trim();
-
-      out.push({
-        table,
-        category,
-        chapter: chapMatch?.[1]?.trim(),
-        title,
-        content: body,
-        priority: prioMatch ? Number(prioMatch[1]) : 50,
-        figure: figMatch?.[1]?.trim(),
-      });
+    const parsed = parseSingleDesiredSource(src.content);
+    out.push(...parsed.items);
+    mergedDiagnostics.source_line_count += parsed.diagnostics.source_line_count;
+    mergedDiagnostics.source_char_count += parsed.diagnostics.source_char_count;
+    mergedDiagnostics.desired_parsed_count += parsed.diagnostics.desired_parsed_count;
+    mergedDiagnostics.placeholder_detected ||= parsed.diagnostics.placeholder_detected;
+    if (parsed.diagnostics.parse_mode === "structured") {
+      mergedDiagnostics.parse_mode = "structured";
+    } else if (
+      parsed.diagnostics.parse_mode === "fallback" &&
+      mergedDiagnostics.parse_mode !== "structured"
+    ) {
+      mergedDiagnostics.parse_mode = "fallback";
     }
   }
-  return out;
+
+  return { items: out, diagnostics: mergedDiagnostics };
 }
 
 /** Confronto fuzzy tra desired e real per matching. */
