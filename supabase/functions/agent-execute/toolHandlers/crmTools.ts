@@ -1,4 +1,4 @@
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { AgentExecuteSupabaseClient as SupabaseClient } from "../shared.ts";
 import { escapeLike, resolvePartnerId } from "../shared.ts";
 import { applyLeadStatusChange } from "../../_shared/leadStatusGuard.ts";
 
