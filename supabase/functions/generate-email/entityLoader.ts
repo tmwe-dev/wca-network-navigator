@@ -38,11 +38,11 @@ export async function loadEntityFromActivity(
     .single();
 
   if (actErr || !actData) throw new Error("Activity not found");
-  const activity = actData as Record<string, unknown>;
-  let partner: PartnerData | null = activity.partners;
-  let contact: ContactData | null = activity.selected_contact;
+  const activity = actData as Record<string, any>;
+  let partner: PartnerData | null = (activity.partners as PartnerData | null) ?? null;
+  let contact: ContactData | null = (activity.selected_contact as ContactData | null) ?? null;
   let contactEmail: string | null = null;
-  const sourceType = activity.source_type || "partner";
+  const sourceType: string = (activity.source_type as string | null) || "partner";
 
   if (sourceType === "contact" && activity.source_id) {
     const { data: ic } = await supabase
@@ -134,7 +134,7 @@ export async function loadEntityFromActivity(
     contactEmail = contact?.email || partner?.email || null;
   }
 
-  return { partner, contact, contactEmail, sourceType, activityPartnerId: activity.partner_id };
+  return { partner, contact, contactEmail, sourceType, activityPartnerId: (activity.partner_id as string | null) ?? null };
 }
 
 export async function loadStandalonePartner(

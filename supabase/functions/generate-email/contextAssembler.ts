@@ -124,13 +124,14 @@ export async function assembleContextBlocks(
   },
 ): Promise<ContextBlocks> {
   const isPartnerSource = sourceType === "partner" && partner.id && (!standalone || opts.partner_id);
-  const effectivePartnerId = isPartnerSource ? opts.activityPartnerId || partner.id : partner.id;
+  const effectivePartnerId: string | undefined =
+    (isPartnerSource ? opts.activityPartnerId || partner.id : partner.id) ?? undefined;
 
   // ── Auto-generate aliases if missing ──
   await ensureAliasesExist(supabase, partner, contact, sourceType, standalone);
 
   // ── Load partner metadata (networks, services, settings, social links) ──
-  const metadata = await loadPartnerMetadata(supabase, userId, partner, quality, isPartnerSource);
+  const metadata = await loadPartnerMetadata(supabase, userId, partner, quality, !!isPartnerSource);
   const { networks, services, socialLinks, settings } = metadata;
 
   // ── Load style context (preferences, edit patterns, response insights) ──
@@ -245,6 +246,6 @@ export async function assembleContextBlocks(
     deepSearchAgeDays: enrichmentCtx.deepSearchAgeDays,
     enrichmentAgeDays: enrichmentCtx.enrichmentAgeDays,
     sherlockLevel: enrichmentCtx.sherlockLevel,
-    lastDeepSearchScore: enrichmentCtx.lastDeepSearchScore,
+    lastDeepSearchScore: enrichmentCtx.lastDeepSearchScore ?? undefined,
   };
 }
