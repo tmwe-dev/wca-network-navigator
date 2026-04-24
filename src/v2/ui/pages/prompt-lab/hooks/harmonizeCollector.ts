@@ -66,6 +66,21 @@ export interface CollectorOutput {
 
 export type CollectorDiagnostics = NonNullable<CollectorOutput["diagnostics"]>;
 
+function isPlaceholderSource(cleaned: string): boolean {
+  const normalized = cleaned.trim().toLowerCase();
+  if (!normalized) return false;
+
+  const hasPlaceholderCue = /placeholder|sostituire questo file con la libreria reale/.test(normalized);
+  const hasExplicitPlaceholderHeading = /^##+\s*(?:📄\s*)?placeholder\b/im.test(cleaned);
+  const sectionCount = (cleaned.match(/^##+\s+/gm) ?? []).length + (cleaned.match(/^###\s+/gm) ?? []).length;
+  const isShortStub = normalized.length < 4000 && normalized.split("\n").length < 120;
+
+  // Blocchiamo solo gli stub espliciti o i file molto corti che contengono
+  // istruzioni di placeholder. Un documento reale grande può citare la parola
+  // "placeholder" in un esempio o in una nota senza essere invalido.
+  return hasExplicitPlaceholderHeading || (hasPlaceholderCue && isShortStub && sectionCount <= 4);
+}
+
 /** Heuristic mapping da "categoria suggerita" della libreria a tabella DB. */
 const CATEGORY_TO_TABLE: Record<string, string> = {
   doctrine: "kb_entries",
@@ -121,7 +136,7 @@ function parseSingleDesiredSource(content: string): {
   const cleaned = stripFrontmatter(content);
   const source_line_count = cleaned ? cleaned.split("\n").length : 0;
   const source_char_count = cleaned.length;
-  const placeholder_detected = /placeholder|sostituire questo file con la libreria reale/i.test(cleaned);
+  const placeholder_detected = isPlaceholderSource(cleaned);
 
   const sections = cleaned
     .split(/\n(?=##+\s+)/g)
