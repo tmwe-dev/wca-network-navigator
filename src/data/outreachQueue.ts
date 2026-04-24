@@ -67,20 +67,57 @@ export async function findPendingOutreachItemsFromView(
   limit = 100,
   offset = 0
 ): Promise<OutreachQueueRow[]> {
-  // View not in generated types — cast to any to bypass TS narrowing.
-  let q = (supabase as any).from("v_outreach_today").select("*");
-
-  if (status) {
-    q = q.eq("status", status);
-  } else {
-    q = q.eq("status", "pending");
-  }
-
+  // P3.7: v_outreach_today view non esiste. Query diretta a outreach_queue
+  // mappata sulla shape OutreachQueueRow. Campi denormalizzati a null.
+  let q = supabase
+    .from("outreach_queue")
+    .select(
+      "id, user_id, channel, recipient_name, recipient_email, subject, status, attempts, max_attempts, priority, created_at, scheduled_for, partner_id, contact_id, mission_id"
+    );
+  q = q.eq("status", status ?? "pending");
   const { data, error } = await q
     .order("priority", { ascending: false })
     .order("created_at", { ascending: true })
     .range(offset, offset + limit - 1);
-
   if (error) throw error;
-  return (data ?? []) as unknown as OutreachQueueRow[];
+  type Row = {
+    id: string;
+    user_id: string | null;
+    channel: string | null;
+    recipient_name: string | null;
+    recipient_email: string | null;
+    subject: string | null;
+    status: string | null;
+    attempts: number | null;
+    max_attempts: number | null;
+    priority: string | null;
+    created_at: string | null;
+    scheduled_for: string | null;
+    partner_id: string | null;
+    contact_id: string | null;
+    mission_id: string | null;
+  };
+  return ((data ?? []) as Row[]).map((r): OutreachQueueRow => ({
+    queue_id: r.id,
+    user_id: r.user_id ?? "",
+    channel: r.channel ?? "",
+    recipient_name: r.recipient_name ?? "",
+    recipient_email: r.recipient_email ?? "",
+    subject: r.subject,
+    status: r.status ?? "",
+    attempts: r.attempts ?? 0,
+    max_attempts: r.max_attempts ?? 0,
+    priority: r.priority ?? "",
+    created_at: r.created_at ?? "",
+    scheduled_for: r.scheduled_for,
+    partner_id: r.partner_id,
+    contact_id: r.contact_id,
+    partner_name: null,
+    partner_lead_status: null,
+    partner_country: null,
+    mission_id: r.mission_id,
+    mission_name: null,
+    last_outbound_at: null,
+    last_channel: null,
+  }));
 }
