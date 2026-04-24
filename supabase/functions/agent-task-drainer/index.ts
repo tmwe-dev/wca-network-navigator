@@ -14,8 +14,8 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 
-const BATCH_SIZE = 10;
-const MAX_CONCURRENT = 3;
+const BATCH_SIZE = 25;
+const MAX_CONCURRENT = 5;
 const TASK_TIMEOUT_MS = 15_000;
 const STUCK_THRESHOLD_MINUTES = 10;
 const MAX_WALL_CLOCK_MS = 55_000;
