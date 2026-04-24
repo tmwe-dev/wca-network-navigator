@@ -1,142 +1,291 @@
+# Armonizza tutto — Piano di implementazione
 
-# Piano — Pausa sistema + reset attività + fix Coda AI
+## Scopo
 
-## Diagnosi DB (numeri reali ora)
+Affiancare a "Migliora tutto" un secondo strumento, **Armonizza tutto**, che fa refactor profondo del sistema confrontando:
 
-| Cosa | Numero | Origine |
-|---|---|---|
-| `activities` pending | **2.611** | Trigger `on_inbound_message` su ogni email IMAP, anche spam/newsletter |
-| `activities` con `executed_by_agent_id` | **0** | Coda AI sempre vuota |
-| `cockpit_queue` (tutte `queued`) | 8 | Vecchi BCA/partner_contact, invisibili in UI (cerca `pending`/`scheduled`/`failed`) |
-| `outreach_missions` | **0** | Nessuna missione attiva |
-| `agent_tasks` pending+proposed | 220 | Vecchia tabella, non visibile in Coda AI |
-| `channel_messages` inbound 24h | **492** | Sync IMAP gira ogni 3 e 5 min |
-| Cron attivi | `email_cron_sync_tick` (5min), `email-sync-worker` (3min) | Continuano a generare attività |
+- **stato reale** del DB (prompt, KB, personas, playbook, email rules, agents)
+- **stato desiderato** espresso in `LIBRERIA_TMWE_COMPLETA.md` + altri documenti caricati
 
-**Causa**: Il trigger `on_inbound_message` crea SEMPRE una activity `follow_up` per ogni inbound, indipendentemente dal mittente. Newsletter, notifiche di sicurezza, conferme PosteID, fatture Apple → tutte diventano "task da gestire".
+e produce un **diff strutturato** con proposte tipizzate (UPDATE / INSERT / MOVE / DELETE), ognuna con evidenza, dipendenze e classificazione del gap (testo / contratto backend / policy hard).
 
-## Cosa faccio (3 interventi)
+"Migliora tutto" resta invariato.
 
-### 1. Toggle "Pausa Sistema" (admin only)
+---
 
-Aggiungo un controllo unico nel badge diagnostico admin (top dashboard) chiamato **"Pausa Sistema"**. Quando ON:
+## Architettura: dipendenze tra i 5 componenti
 
-- Disattiva i cron `email_cron_sync_tick` e `email-sync-worker` (no più letture IMAP)
-- Disattiva il trigger `on_inbound_message` (no più classificazione/creazione attività anche se arrivano messaggi da altre fonti)
-- Mostra banner rosso "Sistema in pausa — no letture/classificazione attive"
+```text
+                    ┌────────────────────────────────┐
+                    │  HarmonizeSystemDialog (UI)    │
+                    │  - upload libreria + docs      │
+                    │  - goal + scope (tab/agent/all)│
+                    └───────────────┬────────────────┘
+                                    │ avvia
+                                    ▼
+        ┌───────────────────────────────────────────────┐
+        │  useHarmonizeOrchestrator (hook)              │
+        │  fasi: collect → analyze → review → execute    │
+        └────┬───────────────────┬──────────────────┬───┘
+             │                   │                  │
+             ▼                   ▼                  ▼
+   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+   │ harmonizeCollector│ │ harmonizeAnalyzer│  │ harmonizeExecutor│
+   │ (real + desired   │ │ (LLM Harmonizer  │  │ (UPDATE/INSERT/  │
+   │  + gap classifier)│ │  prompt + diff)  │  │  MOVE/DELETE)    │
+   └──────────┬────────┘ └────────┬─────────┘  └────────┬─────────┘
+              │                   │                     │
+              └───────────────────┴─────────────────────┘
+                                  │
+                                  ▼
+                    ┌──────────────────────────┐
+                    │  harmonize_runs (tabla)  │
+                    │  persistenza incrementale│
+                    └──────────────────────────┘
+                                  ▲
+                                  │
+                    ┌──────────────────────────┐
+                    │  HarmonizeReviewPanel    │
+                    │  approva / rifiuta /     │
+                    │  modifica per proposta   │
+                    └──────────────────────────┘
+```
 
-Quando OFF: riattiva tutto. Stato persistito in tabella nuova `system_settings(key, value)` letto via RPC `get_system_paused()`.
+**Ordine di dipendenza forte:**
 
-**Interfaccia**: switch grande dentro il pannello del badge diagnostico, accanto ai numeri. Solo admin lo vede.
+1. Tabella `harmonize_runs` (nessuna dipendenza)
+2. Collector (legge DB + parser libreria; nessuna dipendenza dal resto)
+3. Prompt Harmonizer + Analyzer (dipende da collector)
+4. Executor (dipende da output dell'analyzer)
+5. UI Dialog + Review (dipende da tutto il resto)
 
-### 2. Reset attività fantasma
+---
 
-Al primo click su "Pausa Sistema" mostro un dialog con conteggio attività:
-> "Hai 2.611 attività in coda. Vuoi azzerarle?"
-- **Sì → cancella tutte** (`DELETE` reale dalle 2.611 follow_up auto-generate)
-- **Solo da partner reali** (tieni quelle con `partner_id` valorizzato e mappato)
-- **No, solo pausa**
+## Ordine di implementazione
 
-Cleanup parallelo: i **8 cockpit_queue** in stato `queued` → marco tutti `cancelled`.
+**Fase 1 — Fondamenta dati (no UI)**
+1. Migrazione SQL: tabella `harmonize_runs` + RLS + trigger updated_at
+2. DAL `src/data/harmonizeRuns.ts` (create / update / appendProposal / markExecuted / cancel / findActive)
+3. Caricamento `LIBRERIA_TMWE_COMPLETA.md` come asset statico in `public/kb-source/libreria-tmwe.md` (sorgente versionabile)
 
-### 3. Fix Coda AI
+**Fase 2 — Collector tri-partito**
+4. `harmonizeCollector.ts`:
+   - `collectRealInventory(userId)` → riusa `collectAllBlocks` esistente + carica `agents`, `agent_personas`, `kb_entries` (TUTTE, non solo doctrine)
+   - `parseDesiredInventory(librarySource, uploadedDocs)` → spacca `## 📄` in entries con `category/chapter/priority/figure`
+   - `classifyGaps(real, desired)` → 4 bucket:
+     - `text_only` → riscrivibile dal Harmonizer
+     - `needs_contract` → richiede nuovo contratto backend (es. EmailBrief)
+     - `needs_code_policy` → richiede hard guard / policy
+     - `needs_kb_governance` → solo riorganizzazione KB (move/merge/split)
 
-Due problemi:
-- a) La query legge `activities WHERE executed_by_agent_id IS NOT NULL` ma nessun agente scrive in `activities`. I 220 task vivono in `agent_tasks` (status `pending`/`proposed`).
-- b) `outreach_missions` è vuota: gli agenti non hanno missioni assegnate, quindi non producono.
+**Fase 3 — Harmonizer LLM**
+5. Prompt `HARMONIZER_BRIEFING` in `src/v2/agent/prompts/core/harmonizer-briefing.ts` (versione controproposta, non riusa `PROMPT_LAB_BRIEFING`)
+6. `harmonizeAnalyzer.ts`:
+   - per ogni gap → chiama Lab Agent con tool calling strutturato
+   - output JSON con schema: `{ action, target, evidence, dependencies, impact, tests_required, resolution_layer }`
+   - persistenza incrementale in `harmonize_runs.proposals`
 
-**Cosa faccio in questa iterazione**:
-- Modifico `CodaAITab` per leggere da **`agent_tasks WHERE status IN ('proposed','pending')`** in OR con activities-con-agent. Così i 220 task esistenti diventano visibili e approvabili.
-- Aggiungo nota "Nessuna missione attiva" se `outreach_missions` è vuota, con CTA per crearne una (link a `/v2/missions`).
+**Fase 4 — Executor**
+7. `harmonizeExecutor.ts` con un handler per ogni `action`:
+   - `UPDATE` → riusa `saveProposal` esistente di `useProposalSaver`
+   - `INSERT` → crea nuove righe (kb_entries, agents+agent_personas, operative_prompts...)
+   - `MOVE` → cambia `category/chapter/agent_id` mantenendo id
+   - `DELETE` → soft delete (`deleted_at` o `is_active=false`); MAI hard delete
+8. Audit log per ogni azione tramite `logSupervisorAudit`
 
-Non tocco la creazione di missioni autopilot in questo round (è un capitolo a sé).
+**Fase 5 — UI**
+9. `HarmonizeSystemDialog.tsx` (sibling di `GlobalImproverDialog.tsx`)
+10. `HarmonizeReviewPanel.tsx` — tabella diff con:
+    - badge azione (UPDATE/INSERT/MOVE/DELETE)
+    - badge resolution_layer (text/contract/code/governance)
+    - before/after, evidenza, dipendenze
+    - per-row: approva / modifica / rifiuta
+    - bulk approve per tipo
+11. Bottone "Armonizza tutto" in `PromptLabPage.tsx` accanto a "Migliora tutto"
 
-## Tecnica
+---
 
-**DB (migration):**
+## Contratti dati richiesti
+
+### `HarmonizeAction` (output Analyzer, input Executor)
+
+```ts
+type ResolutionLayer = "text" | "contract" | "code_policy" | "kb_governance";
+type ActionType = "UPDATE" | "INSERT" | "MOVE" | "DELETE";
+
+interface HarmonizeProposal {
+  id: string;                      // uuid client-side
+  action: ActionType;
+  target: {
+    table: "kb_entries" | "agents" | "agent_personas" | "operative_prompts"
+         | "email_prompts" | "email_address_rules" | "commercial_playbooks"
+         | "app_settings";
+    id?: string;                   // null per INSERT
+    field?: string;                // per UPDATE parziale
+  };
+  before?: string | null;          // null per INSERT
+  after?: string | null;           // null per DELETE
+  payload?: Record<string, unknown>; // per INSERT/MOVE: campi nuovi
+  evidence: {
+    source: "library" | "real_db" | "uploaded_doc";
+    excerpt: string;
+    location?: string;             // es. "LIBRERIA_TMWE_COMPLETA.md §Bruce"
+  };
+  dependencies: string[];          // id di altre proposals che devono passare prima
+  impact: "low" | "medium" | "high";
+  tests_required: string[];        // es. ["e2e/agent-chat-flow.spec.ts"]
+  resolution_layer: ResolutionLayer;
+  reasoning: string;               // perché serve
+  status: "pending" | "approved" | "rejected" | "executed" | "failed";
+}
+```
+
+### `harmonize_runs` (nuova tabella)
+
 ```sql
-CREATE TABLE public.system_settings (
-  key text PRIMARY KEY,
-  value jsonb NOT NULL,
+CREATE TABLE harmonize_runs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  goal text,
+  scope text NOT NULL DEFAULT 'all',          -- 'all' | 'tab:<name>' | 'agent:<id>'
+  status text NOT NULL DEFAULT 'collecting',  -- collecting|analyzing|review|executing|done|cancelled|failed
+  real_inventory_summary jsonb,               -- conteggi per tabella
+  desired_inventory_summary jsonb,            -- conteggi per category dalla libreria
+  gap_classification jsonb,                   -- { text_only:N, needs_contract:N, ... }
+  proposals jsonb NOT NULL DEFAULT '[]'::jsonb,
+  uploaded_files jsonb DEFAULT '[]'::jsonb,
+  executed_count int NOT NULL DEFAULT 0,
+  failed_count int NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  updated_by uuid
+  completed_at timestamptz,
+  deleted_at timestamptz
 );
-ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin read" ON public.system_settings FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(),'admin'::app_role));
-CREATE POLICY "admin write" ON public.system_settings FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(),'admin'::app_role))
-  WITH CHECK (public.has_role(auth.uid(),'admin'::app_role));
 
--- RPC che applica/rimuove la pausa
-CREATE OR REPLACE FUNCTION public.set_system_paused(p_paused boolean)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-BEGIN
-  IF NOT public.has_role(auth.uid(),'admin'::app_role) THEN
-    RAISE EXCEPTION 'forbidden';
-  END IF;
-
-  IF p_paused THEN
-    PERFORM cron.unschedule('email_cron_sync_tick');
-    PERFORM cron.unschedule('email-sync-worker');
-    EXECUTE 'ALTER TABLE public.channel_messages DISABLE TRIGGER trg_on_inbound_message';
-  ELSE
-    -- ri-creo i cron con la stessa schedule
-    PERFORM cron.schedule('email_cron_sync_tick','*/5 * * * *', _cron_invoke_edge_sql('email-sync-worker'));
-    PERFORM cron.schedule('email-sync-worker','*/3 * * * *',  _cron_invoke_edge_sql('email-sync-worker'));
-    EXECUTE 'ALTER TABLE public.channel_messages ENABLE TRIGGER trg_on_inbound_message';
-  END IF;
-
-  INSERT INTO public.system_settings(key,value,updated_by)
-  VALUES ('paused', to_jsonb(p_paused), auth.uid())
-  ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now(), updated_by=auth.uid();
-
-  RETURN jsonb_build_object('paused', p_paused);
-END $$;
-
--- RPC pulizia attività fantasma
-CREATE OR REPLACE FUNCTION public.purge_inbound_activities(p_only_orphans boolean DEFAULT false)
-RETURNS int LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE v_count int;
-BEGIN
-  IF NOT public.has_role(auth.uid(),'admin'::app_role) THEN RAISE EXCEPTION 'forbidden'; END IF;
-  IF p_only_orphans THEN
-    DELETE FROM public.activities
-    WHERE activity_type='follow_up'
-      AND title LIKE 'Reply received%'
-      AND (partner_id IS NULL OR NOT EXISTS (SELECT 1 FROM partners p WHERE p.id=activities.partner_id));
-  ELSE
-    DELETE FROM public.activities
-    WHERE activity_type='follow_up' AND title LIKE 'Reply received%' AND status='pending';
-  END IF;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  RETURN v_count;
-END $$;
-```
-Nota: trovo il nome esatto del trigger prima della migration; se diverso da `trg_on_inbound_message` lo correggo.
-
-**Frontend:**
-- `src/v2/ui/components/admin/SystemPauseToggle.tsx` (nuovo) — switch + dialog cleanup
-- Inserito dentro `SystemDiagnosticsBadge.tsx` esistente
-- `src/v2/hooks/useSystemPaused.ts` (nuovo) — read/write via RPC
-- `src/components/outreach/CodaAITab.tsx` — query estesa a `agent_tasks`
-- `src/components/outreach/InUscitaTab.tsx` — opzionale: mappare `queued` → `pending` nel filtro (cleanup pre-emptivo dei record vecchi rende non necessario)
-
-**Cleanup oneshot via insert tool:**
-```sql
-UPDATE public.cockpit_queue SET status='cancelled' WHERE status='queued';
+ALTER TABLE harmonize_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "users manage own harmonize runs"
+  ON harmonize_runs FOR ALL
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 ```
 
-## Cosa NON faccio in questo round
+---
 
-- Non riscrivo la logica del classifier inbound (la blocklist domini per filtrare spam alla fonte è P3.2 dedicato)
-- Non creo missioni autopilot di default
-- Non tocco `outreach_missions` (resta vuoto fino a quando non crei una missione)
+## Tabelle lette e scritte
 
-## Verifica post-deploy
+**Lettura (collector):**
+- `kb_entries` (tutte le category, non solo doctrine)
+- `agents`, `agent_personas`
+- `operative_prompts`, `email_prompts`, `email_address_rules`
+- `commercial_playbooks`
+- `app_settings` (system_prompt_blocks, email_oracle_types)
+- file statico `public/kb-source/libreria-tmwe.md`
 
-1. Badge admin: switch "Sistema in pausa" appare e funziona
-2. Click pausa → cron disattivati (verifico con `SELECT * FROM cron.job WHERE active=true`)
-3. Cleanup: 2.611 → 0 (o N solo da partner)
-4. Coda AI mostra i 220 task agent_tasks
-5. Riapro pausa → cron tornano attivi, sync IMAP riprende
+**Scrittura (executor, solo dopo approvazione):**
+- `kb_entries` (UPDATE / INSERT / soft-DELETE via `is_active=false`)
+- `agents` (INSERT / UPDATE; MAI delete)
+- `agent_personas` (INSERT / UPDATE)
+- `operative_prompts`, `email_prompts`, `email_address_rules`, `commercial_playbooks` (UPDATE / INSERT)
+- `app_settings` (UPDATE)
+- `harmonize_runs` (continuo: append proposals, update status)
+- `supervisor_audit_log` (audit per ogni azione)
+
+**MAI scritte direttamente:**
+- nessuna tabella business reale (contacts, partners, activities, ecc.)
+- nessun hard delete su nessuna tabella (rispetta `mem://constraints/no-physical-delete`)
+
+---
+
+## Prompt Harmonizer (uso esatto della tua controproposta)
+
+Il prompt vive in `src/v2/agent/prompts/core/harmonizer-briefing.ts` ed enforce questa struttura output (tool calling, non testo libero):
+
+```text
+Per ogni proposta:
+- BLOCCO (target tabella + id o "nuovo")
+- DIAGNOSI (cosa non quadra confrontando real vs desired)
+- AZIONE (UPDATE/INSERT/MOVE/DELETE)
+- VERSIONE PROPOSTA (contenuto finale o payload)
+- EVIDENZA (citazione dalla libreria o dal DB)
+- DIPENDENZE (id altre proposte)
+- IMPATTO + TEST
+- DECISIONE (text | contract | code_policy | kb_governance)
+```
+
+L'enforcement è via tool calling con schema JSON (vedi `HarmonizeProposal`). Niente parsing di markdown.
+
+---
+
+## Rischi tecnici
+
+| Rischio | Mitigazione |
+|---|---|
+| **Esplosione proposte** (libreria 23 voci × N blocchi reali = centinaia) | Cap di 50 proposte per run; raggruppamento per `target.table`; classifier di priorità nel collector |
+| **Dipendenze cicliche tra proposte** | Validazione DAG prima dell'execute; se ciclo → run in stato `failed` con report |
+| **DELETE distruttivi** | Solo soft delete (`is_active=false` o `deleted_at`); approvazione manuale obbligatoria per ogni DELETE; bulk approve disabilitato per DELETE |
+| **Context window overflow** del LLM con libreria + DB completo | Chunking per sezione libreria; il Harmonizer vede 1 sezione per call + il sottoinsieme rilevante del DB filtrato per category |
+| **Esecuzione parziale + crash** | Persistenza incrementale su `harmonize_runs.proposals[].status`; resume cancella solo le `executed`, ri-tenta le `failed` |
+| **Conflitto con "Migliora tutto" in corso** | Lock soft: se `findActiveRun` (di `prompt_lab_global_runs`) è attivo, l'avvio Harmonize chiede conferma esplicita |
+| **Costi LLM** | Default `google/gemini-3-flash-preview`; opzione "deep" con `gemini-2.5-pro`; budget guardrail riusa `cost-control-guardrails` esistente |
+| **Confusione utente tra i due bottoni** | Tooltip espliciti + dialog di intro la prima volta; titoli inequivocabili: "Migliora (riscrive testo)" vs "Armonizza (refactor sistema)" |
+| **Tipi Supabase non aggiornati per `harmonize_runs`** | Cast `as never` come fa già `promptLabGlobalRuns.ts`, in attesa che `types.ts` si rigeneri |
+
+---
+
+## Punti che richiedono approvazione manuale
+
+Approvazione obbligatoria, **mai bulk auto-approve**:
+
+1. Ogni proposta `DELETE` (anche se soft)
+2. Ogni proposta `INSERT` su `agents` (nuova figura agente)
+3. Ogni proposta con `resolution_layer = "contract"` o `"code_policy"` → questa NON viene eseguita: viene solo registrata nel run come "follow-up richiesto" (testo per developer / nuovo task)
+4. Ogni proposta con `impact = "high"`
+5. Ogni proposta che modifica `system_prompt_blocks` o `system_doctrine`
+
+Approvazione bulk **consentita** per:
+- UPDATE testuale di `kb_entries` con `impact ≤ medium`
+- UPDATE di `agent_personas.signature_template` / `custom_tone_prompt`
+- UPDATE di prompt operativi con `resolution_layer = "text"`
+
+---
+
+## Comportamento esplicito sul collector tri-partito (tuo vincolo)
+
+Il collector restituisce sempre tre output separati e li persiste in `harmonize_runs`:
+
+```ts
+interface CollectorOutput {
+  real:    InventoryItem[];     // cosa c'è oggi nel DB
+  desired: InventoryItem[];     // cosa dice la libreria + docs
+  gaps: {
+    text_only:        Gap[];    // l'Harmonizer può proporre UPDATE/INSERT testuali
+    needs_contract:   Gap[];    // NON tocca, segnala "serve contract <nome>"
+    needs_code_policy:Gap[];    // NON tocca, segnala "serve hard guard"
+    needs_kb_governance: Gap[]; // MOVE/MERGE/SPLIT entro KB
+  };
+}
+```
+
+L'Harmonizer riceve **solo** `text_only` + `needs_kb_governance` come materiale azionabile. Gli altri due bucket diventano voci read-only nel review panel con etichetta "Richiede intervento sviluppatore" — così non si tenta mai di "scrivere meglio" un problema che è di runtime.
+
+---
+
+## Cosa NON faccio in questa iterazione (out of scope)
+
+- Generazione automatica del codice TypeScript per i nuovi contract backend (resta proposta testuale)
+- Esecuzione automatica delle migrazioni SQL eventualmente necessarie
+- Rollback automatico oltre il marker per-proposta `status=failed` (no transazioni cross-tabella)
+- Modifica del flusso "Migliora tutto" (resta esattamente com'è)
+
+---
+
+## Deliverables finali
+
+- 1 migrazione SQL (`harmonize_runs`)
+- 1 file markdown sorgente (`public/kb-source/libreria-tmwe.md`)
+- 1 DAL (`src/data/harmonizeRuns.ts`)
+- 1 prompt (`src/v2/agent/prompts/core/harmonizer-briefing.ts`)
+- 4 hook in `src/v2/ui/pages/prompt-lab/hooks/`: `harmonizeCollector.ts`, `harmonizeAnalyzer.ts`, `harmonizeExecutor.ts`, `useHarmonizeOrchestrator.ts`
+- 2 componenti UI: `HarmonizeSystemDialog.tsx`, `HarmonizeReviewPanel.tsx`
+- Bottone in `PromptLabPage.tsx`
+
+Stima: ~1500 righe nuove, zero modifiche a file esistenti tranne `PromptLabPage.tsx` (aggiunta bottone).

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
 import { ExportButton } from "./prompt-lab/ExportButton";
 import { GlobalImproverDialog } from "./prompt-lab/GlobalImproverDialog";
+import { HarmonizeSystemDialog } from "./prompt-lab/HarmonizeSystemDialog";
 import { CreateBlockDialog } from "./prompt-lab/CreateBlockDialog";
 import { RunHistoryPanel } from "./prompt-lab/RunHistoryPanel";
 import { MetricsSummaryBadge } from "./prompt-lab/MetricsSummaryBadge";
@@ -53,6 +54,7 @@ import {
   Plus,
   BookmarkPlus,
   Clock,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -85,6 +87,7 @@ export function PromptLabPage() {
   const [activeGroupId, setActiveGroupId] = useState<PromptLabGroupId>("core_ai");
   const [activeTabId, setActiveTabId] = useState<PromptLabTabId>("system_prompt");
   const [globalImproverOpen, setGlobalImproverOpen] = useState(false);
+  const [harmonizeOpen, setHarmonizeOpen] = useState(false);
   const [createBlockOpen, setCreateBlockOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const lab = useLabAgent();
@@ -192,6 +195,16 @@ export function PromptLabPage() {
                   <Sparkles className="h-4 w-4" />
                   Migliora tutto
                 </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-8 gap-1.5 px-4 font-semibold bg-primary/90 hover:bg-primary"
+                  onClick={() => setHarmonizeOpen(true)}
+                  title="Refactor profondo del sistema: confronta DB reale vs libreria desiderata"
+                >
+                  <Layers className="h-4 w-4" />
+                  Armonizza tutto
+                </Button>
                 <ExportButton getSnapshot={handleExport} />
               </div>
             </header>
@@ -257,6 +270,7 @@ export function PromptLabPage() {
         </ResizablePanel>
       </ResizablePanelGroup>
       <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} defaultGrouping="tab" />
+      <HarmonizeSystemDialog open={harmonizeOpen} onOpenChange={setHarmonizeOpen} />
       <CreateBlockDialog open={createBlockOpen} onOpenChange={setCreateBlockOpen} />
 
       {/* Drawer per il storico dei run */}
