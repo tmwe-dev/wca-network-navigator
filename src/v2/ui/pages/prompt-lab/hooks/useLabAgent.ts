@@ -394,6 +394,39 @@ VIOLARE ANCHE UNA DI QUESTE REGOLE invalida l'output e forza un retry.
 === FINE REGOLE OBBLIGATORIE ===`;
 
 /**
+ * buildRetryPrompt — costruisce un prompt retry COMPATTO dopo violazione rubrica.
+ *
+ * Fix A3 (apr 2026): la versione precedente concatenava tutto il `userPrompt`
+ * originale (che già contiene system map, doctrine completa, voice rules,
+ * contract reference, briefing). Su 40+ blocchi con il 20% di retry,
+ * il payload doppio aggravava le FunctionsFetchError sul pool di isolate.
+ *
+ * Il modello, sulla stessa connessione conversazionale, ha già visto il
+ * prompt originale: serve solo ricordargli il blocco da riscrivere e le
+ * violazioni da correggere. Risparmio: ~70-80% del payload retry.
+ */
+function buildRetryPrompt(args: {
+  blockLabel: string;
+  blockContent: string;
+  violations: ReadonlyArray<string>;
+  contextHint?: string;
+}): string {
+  const { blockLabel, blockContent, violations, contextHint } = args;
+  const hint = contextHint ? `Contesto: ${contextHint}\n\n` : "";
+  return `Riscrittura ulteriore necessaria — il tuo primo tentativo per il blocco "${blockLabel}" ha violato la rubrica.
+
+${hint}--- TESTO ORIGINALE DEL BLOCCO ---
+${blockContent}
+--- FINE TESTO ORIGINALE ---
+
+--- VIOLAZIONI DA CORREGGERE ---
+${violations.map((i) => `✗ ${i}`).join("\n")}
+--- FINE VIOLAZIONI ---
+
+Riscrivi il blocco correggendo TUTTE le violazioni sopra, mantenendo coerenza con la rubrica e i vincoli già forniti nel prompt iniziale di questa sessione. Restituisci SOLO il nuovo testo del blocco, niente preamboli, niente commenti.`;
+}
+
+/**
  * Carica la KB doctrine COMPLETA e la filtra per rilevanza al blocco.
  *
  * FIX MIOPIA: la versione precedente caricava solo 5 voci troncate a 220 char,
