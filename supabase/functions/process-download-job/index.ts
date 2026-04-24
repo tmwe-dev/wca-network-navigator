@@ -2,6 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
+
 /**
  * Download job progress tracker.
  * NO HTTP requests to WCA — the frontend + Chrome Extension handle all scraping.
@@ -117,7 +120,8 @@ async function verifyDownloadCompleteness(supabase: SupabaseClient, countryCode:
       const members = cache.members as Array<{ id: number }> | number[]
       if (!members || !Array.isArray(members) || members.length === 0) continue
 
-      const wcaIds: number[] = members.map((m: Record<string, unknown>) => typeof m === 'object' ? m.id : m).filter(Boolean)
+      // deno-lint-ignore no-explicit-any
+      const wcaIds: number[] = (members as any[]).map((m: any) => typeof m === 'object' ? m.id : m).filter(Boolean) as number[]
       if (wcaIds.length === 0) continue
 
       const { data: partners } = await supabase
