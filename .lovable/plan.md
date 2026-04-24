@@ -1,92 +1,191 @@
 
 
-# Piano P0.2 → P1.3 — Sblocchi e diagnosi V2
+# P2 — Esecuzione approvata con correzioni
 
-P0.1 già completato (tabella `email_send_log` + retrofit fire-and-forget). Procediamo con i 5 step rimanenti, ognuno atomico.
+3 step sequenziali con conferma dopo ognuno. Tutte le note utente integrate.
 
-## Stato accertato dalla diagnosi preliminare
+## P2.A — `agent-task-drainer` (NUOVA edge + cron)
 
-- `app_settings` ha **alcune** chiavi WA/LI globali già presenti (`linkedin_send_start_hour`, `linkedin_send_end_hour`, `linkedin_min_delay_seconds`, `linkedin_max_delay_seconds`, `linkedin_daily_limit`, `linkedin_hourly_limit`, `linkedin_bulk_max`) ma **mancano**: `whatsapp_send_*`, `whatsapp_*_limit`, `whatsapp_min/max_delay`, `whatsapp_cadence_days`, `linkedin_max_message_length`, `linkedin_cadence_days`. `ON CONFLICT DO NOTHING` lascerà intatti i valori esistenti.
-- `operative_prompts` **non ha colonna `scope`** (ha `context`). Il codebase NON cerca `scope` su `operative_prompts` (verificato: nessun match). DAL legge correttamente `context`.
-- `email_prompts` **ha `scope`** (CHECK `address|category|global`). Il codebase usa correttamente `scope`. Tabella vuota.
-- Agenti duplicati: solo `1d51961d…` ha 2 attivi con stesso nome (`marco` lowercase + `Luca/Marco/Sara` già disattivati). L'utente `fe1db58a…` ha 4 record disattivi duplicati. Marco user `1d519…` ha **1 attivo + 1 inattivo** stesso nome → niente da fare. **Verifica reale**: nessun gruppo (user_id, name) ha >1 attivo. La dedup è già di fatto fatta, ma puliamo i `name` con suffisso `[DUP]` sui disattivati duplicati e normalizziamo.
-- Cron jobs **già attivi**: `agent_autopilot_worker_tick` ogni 10 min (`succeeded` ultimo run alle 07:00), `agent_autonomous_cycle_tick` ogni 2 min, `outreach_scheduler_tick` ogni minuto, ecc. **Il worker GIRA**. Il problema non è cron.
-- agent_tasks: 1584 pending (era 1539, sale → l'autopilot accoda, l'esecutore non drena), 1582 hanno `agent_id` di agente attivo, solo 2 orfani. Schema agent_tasks **non ha** `locked_at` né `updated_at`.
+**File**: `supabase/functions/agent-task-drainer/index.ts` (~180 righe).
 
-## P0.2 — Settings WhatsApp/LinkedIn mancanti
+### Logica per tick
 
-**Solo INSERT** in `app_settings` (user_id NULL, ON CONFLICT DO NOTHING). Niente schema change.
+```text
+1. Stuck detection (PRIMA del lock batch):
+   UPDATE agent_tasks
+   SET status='failed',
+       completed_at=now(),
+       result_summary='timeout: stuck >10min'
+   WHERE status='running'
+     AND started_at < now() - interval '10 minutes'
+   RETURNING id, user_id;
+   → log count come "stuck_reset"
 
-Chiavi nuove da inserire:
-- WA: `whatsapp_send_start_hour=8`, `whatsapp_send_end_hour=21`, `whatsapp_daily_limit=200`, `whatsapp_hourly_limit=20`, `whatsapp_min_delay_seconds=4`, `whatsapp_max_delay_seconds=12`, `whatsapp_cadence_days=7`
-- LI: `linkedin_max_message_length=300`, `linkedin_cadence_days=7` (le altre 6 esistono già — `ON CONFLICT DO NOTHING` le rispetta)
+2. Carica utenti in pausa:
+   SELECT user_id FROM app_settings
+   WHERE key='ai_automations_paused' AND value::text IN ('true','"true"');
+   → set pausedUsers
 
-Servono unique constraint? Verifico: la tabella ha `id` PK ma non c'è UNIQUE su `(key, user_id)` visibile. Per evitare duplicati uso pattern `INSERT … WHERE NOT EXISTS (SELECT 1 FROM app_settings WHERE key=… AND user_id IS NULL)`.
+3. Lock batch (max 10):
+   UPDATE agent_tasks SET status='running', started_at=now()
+   WHERE id IN (
+     SELECT id FROM agent_tasks
+     WHERE status='pending'
+       AND user_id <> ALL(pausedUsers)
+     ORDER BY created_at ASC
+     LIMIT 10
+     FOR UPDATE SKIP LOCKED
+   )
+   RETURNING id, agent_id, user_id, task_type;
 
-`MultichannelTimingPanel` legge già da `useSettingsV2` → user-scoped settings con fallback ai default hard-coded. Una volta inseriti i globali, il panel continua a usare i suoi default UI ma quando l'utente salva i propri valori vanno nel suo scope.
+4. Esecuzione concorrente (max 3 in parallelo, timeout 15s per task):
+   - Promise.all su chunk di 3
+   - per ogni task: AbortController con setTimeout(15000)
+   - fetch POST /agent-execute body={agent_id, task_id} headers={Authorization: Bearer SERVICE_KEY}
+   - se timeout o !ok: UPDATE agent_tasks SET status='failed',
+                       completed_at=now(),
+                       result_summary='drainer: <reason>'
+   - se ok: agent-execute ha già aggiornato status internamente
+            (riga 122-125 di index.ts → 'running' + started_at;
+            handleGeneralTask completa o fallisce)
+   - SAFETY NET: dopo singola call, se status è ancora 'running' dopo
+                 risposta agent-execute, NON toccare (lascia che agent-execute
+                 finisca async se ha chiamato tool LLM); lo stuck-reset
+                 al tick successivo lo recupera
 
-**Nessuna modifica codice TS in P0.2.** Solo seed DB.
-
-## P0.3 — Rinomina duplicati agenti già disattivati
-
-Stato reale (per (user_id, name) attivo): nessun gruppo con >1 attivo. La dedup logica è OK.
-
-Da fare: per i record `is_active=false` che hanno omonimo attivo nello stesso `user_id`, aggiungere suffisso ` [DUP]` al nome se non già presente. Vincolo `no-physical-delete` rispettato.
-
-UPDATE chirurgico (un solo statement):
-```sql
-UPDATE agents a SET name = a.name || ' [DUP]'
-WHERE a.is_active = false
-  AND name NOT LIKE '% [DUP]'
-  AND EXISTS (SELECT 1 FROM agents b WHERE b.user_id = a.user_id AND b.name = a.name AND b.is_active = true AND b.id <> a.id);
+5. Wall-clock cap: se Date.now() - start > 55_000 → break loop
+6. Return {processed, completed, failed, stuck_reset, paused_users_skipped}
 ```
 
-Per il caso `fe1db58a…` (4 disattivi senza alcun attivo per stesso nome): se non c'è "vincitore attivo", li lasciamo intatti (non sono duplicati di un attivo, sono record morti — cura cosmetica solo se richiesto).
+### Cron schedule (insert non-migration, contiene service key)
 
-**Nessuna modifica codice.** Solo UPDATE DB.
+```sql
+SELECT cron.schedule(
+  'agent_task_drainer_tick',
+  '*/5 * * * *',
+  $$ SELECT net.http_post(
+       url := 'https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/agent-task-drainer',
+       headers := jsonb_build_object(
+         'Content-Type', 'application/json',
+         'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIs...ANON_KEY...'
+       ),
+       body := '{}'::jsonb
+     ) AS request_id; $$
+);
+```
 
-## P1.1 — Fix `operative_prompts.scope` → `.context`
+Drainer accetta anon (verify_jwt=false di default su Lovable). Internamente usa SERVICE_ROLE_KEY da env.
 
-Dopo audit: **nessun file referenzia `scope` su `operative_prompts`**. Tutte le query usano `context` (corretto).
+### Verifica post-deploy
 
-Email_prompts: tutte le query usano `scope` (corretto: la tabella ha `scope`).
+1. Curl manuale `POST /agent-task-drainer` → atteso JSON `{processed: 0..10, completed: N, failed: M, stuck_reset: 0}`.
+2. `SELECT count(*) FROM agent_tasks WHERE status='running' AND started_at < now() - interval '15 min'` → atteso 0 dopo 2 tick.
+3. `SELECT status, count(*) FROM agent_tasks GROUP BY status` → pending deve calare di ~10/tick.
 
-Output P1.1: report di non-azione. **Nessuna modifica.** Documenterò in `docs/audit/AUDIT-FLUSSI-FONDAMENTALI-2026-04-24.md` che la verifica è negativa.
+## P2.B — Bootstrap mission test (con verifica nome agente)
 
-## P1.2 — Diagnostica 1584 agent_tasks pending (read-only)
+### Step 1: discovery (read-only) prima di INSERT
 
-Devo ispezionare:
-1. `supabase/functions/agent-autopilot-worker/index.ts` — verificare: lettura `ai_automations_paused`, finestra oraria, `approval_required`, query SELECT su `agent_tasks` (filtri usati), batch size, gestione `started_at/completed_at` come signal di lock.
-2. `cron_job_status()`: già fatto. Worker schedulato ogni 10 min, ultimo run `succeeded`.
-3. Edge function logs ultimi run worker per capire se trova 0 task o le scarta.
-4. Distribuzione pending per `task_type` e `agent_id` — capire se filtro su tipo le esclude.
-5. `app_settings` rilevanti: `agent_max_actions_per_cycle`, `agent_require_approval`, `agent_work_start_hour/end_hour`, `ai_automations_paused`.
+```sql
+SELECT id, name FROM agents
+WHERE user_id='1d51961d-da81-4914-b229-511cdce43e55'
+  AND is_active=true
+ORDER BY name;
+```
 
-Output: report scritto in `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md` con risposte alle 8 domande del brief. **Nessuna modifica.**
+→ scelgo agente reale dalla lista (gianfranco/Robin/Bruce/Renato/Carlo/Leonardo già confermati esistenti dall'audit precedente).
 
-## P1.3 — Seed `email_prompts`
+### Step 2: INSERT con id agente verificato
 
-User principale = `27b60e53-eab1-4528-9e9c-f19c5c7dae90` (1100 activities, top).
+```sql
+INSERT INTO agent_missions (
+  user_id, agent_id, title, goal_description, goal_type,
+  kpi_target, kpi_current, budget, budget_consumed,
+  approval_only_for, autopilot, status
+) VALUES (
+  '1d51961d-da81-4914-b229-511cdce43e55',
+  '<AGENT_ID_VERIFICATO>',
+  'Mission test autopilot — drain backlog',
+  'Esegui screening dei prospect inbound e proponi follow_up coerenti.',
+  'lead_engagement',
+  '{"emails_sent": 5, "deadline": "2026-05-01T00:00:00Z"}'::jsonb,
+  '{}'::jsonb,
+  '{"max_actions": 20, "max_emails_sent": 10, "max_tokens": 50000}'::jsonb,
+  '{}'::jsonb,
+  ARRAY['email','whatsapp']::text[],
+  true, 'active'
+) RETURNING id;
+```
 
-INSERT 3 prompt globali (`scope='global'`, `is_active=true`, priorità 10/5/5). Pattern `WHERE NOT EXISTS` su `(user_id, scope, title)` per idempotenza (la tabella non ha unique constraint visibile).
+### Verifica post
 
-**Nessuna modifica codice.** Solo seed DB.
+Attesa 12 min, poi:
+```sql
+SELECT event_type, payload, created_at FROM agent_mission_events
+WHERE mission_id='<NEW_MISSION_ID>' ORDER BY created_at DESC;
+```
+Atteso almeno 1 `autopilot_tick` o `tick_completed`.
 
-## Esecuzione
+## P2.C — Diagnosi 7 cron failed (read-only documento)
 
-Esegui i passi nell'ordine: **P0.2 → P0.3 → P1.1 → P1.2 → P1.3**, ciascuno con conferma prima del successivo. Tutti tranne P1.2 sono operazioni DB veloci. P1.2 produce documento.
+Crea `docs/audit/CRON-FAILED-DIAGNOSIS-2026-04-24.md`.
 
-## File toccati
+### Test diagnostici
 
-- DB: 3 INSERT/UPDATE (P0.2, P0.3, P1.3) — niente migration, solo dati.
-- `docs/audit/AUDIT-FLUSSI-FONDAMENTALI-2026-04-24.md` — aggiornato con esito P1.1.
-- `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md` — nuovo, output P1.2.
-- Codice TS/Edge: **zero** modifiche. Tutti gli step rimanenti sono dati o documentazione.
+1. **GUC check**:
+   ```sql
+   SELECT current_setting('app.settings.service_role_key', true) AS srk_value,
+          length(coalesce(current_setting('app.settings.service_role_key', true),'')) AS srk_len;
+   ```
+2. **Curl diretto** delle 7 functions con service-role reale via `supabase--curl_edge_functions` per isolare:
+   - 401 → conferma ipotesi GUC
+   - 500/altro → bug interno function
+3. **Lettura code** delle 7 functions per cercare env-vars mancanti, deps rotte, auth check interno.
+
+### Output documento
+
+| Function | HTTP code | Root cause | Fix proposto |
+|---|---|---|---|
+| cadence-engine | TBD | TBD | TBD |
+| email-sync-worker | TBD | TBD | TBD |
+| smart-scheduler | TBD | TBD | TBD |
+| kb-promoter | TBD | TBD | TBD |
+| memory-promoter | TBD | TBD | TBD |
+| ai-backup | TBD | TBD | TBD |
+| ai-learning-feedback | TBD | TBD | TBD |
+
+**Recommendation finale**: se confermato GUC vuoto, fix per-job:
+```sql
+SELECT cron.unschedule('cadence-engine');
+SELECT cron.schedule('cadence-engine', '0 * * * *',
+  $$ SELECT net.http_post(
+       url := 'https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/cadence-engine',
+       headers := jsonb_build_object(
+         'Content-Type', 'application/json',
+         'Authorization', 'Bearer ANON_KEY_REALE'
+       ),
+       body := '{}'::jsonb) $$);
+```
+× 7. **Da eseguire in P2.D futuro su conferma esplicita** (non in P2.C).
 
 ## Vincoli rispettati
 
-- `no-physical-delete`: solo `is_active=false` + rename suffisso, mai DELETE.
-- `whitelist-email-auth-standard`: nessun cambio auth.
-- DAL pattern: nessuna nuova query Supabase fuori da `src/data/`.
-- Architecture layer rules: nessuna modifica a layer V1/V2.
+- `no-physical-delete`: drainer fa solo UPDATE status, mai DELETE.
+- `agent-execute` invariato.
+- Worker autopilot esistente invariato.
+- Cron via insert (contiene chiavi specifiche utente, non in migration).
+- Architettura V2 invariata, nessuna modifica a `src/v2`.
+- DAL pattern: drainer è edge service-side, esente.
+- `secret-management-standard`: service-role key da env, non hardcoded nell'edge.
+
+## File toccati
+
+- **Nuovo**: `supabase/functions/agent-task-drainer/index.ts`
+- **DB**: 1 cron schedule + 1 mission INSERT + (P2.C: solo SELECT)
+- **Nuovo doc**: `docs/audit/CRON-FAILED-DIAGNOSIS-2026-04-24.md`
+- **Aggiornato**: `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md` (riferimento drainer)
+
+## Ordine
+
+P2.A (deploy + verifica) → conferma → P2.B (verifica nome + insert) → conferma → P2.C (documento). Ogni step si ferma per conferma utente.
 
