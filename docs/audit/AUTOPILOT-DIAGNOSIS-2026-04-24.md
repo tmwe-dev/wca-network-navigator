@@ -119,3 +119,26 @@ Ultima task `completed`: **2026-04-10 08:18:15** (~14 giorni fa). Ultima task cr
 ## Vincoli rispettati
 - Solo lettura. Zero modifiche a DB, edge, codice.
 - Nessuna cancellazione di task pending (rispetta `no-physical-delete`).
+
+---
+
+## UPDATE 2026-04-24 — P2.A/B/C eseguiti
+
+### P2.A — Drainer creato e funzionante
+- Edge function `supabase/functions/agent-task-drainer/index.ts` deployata.
+- Cron `agent_task_drainer_tick` schedulato `*/5 * * * *` (jobid 34).
+- Test manuale: 20 task drenate in 2 tick, 0 fallimenti, durata media ~50s/batch da 10 task.
+- Safety: stuck-reset >10min, timeout 15s/task, max 3 concorrenti, salta utenti con `ai_automations_paused=true`.
+- Bug fix collaterale: `agent-execute/auth.ts` ora accetta service-role + `user_id` in body (bypass per chiamate cron internal).
+
+### P2.B — Mission test creata + bug worker autopilot fixato
+- Mission id `8564d3ac-267d-4f5b-8202-7370606db210`, agente `gianfranco`, user `1d51961d…`.
+- Goal type: `qualify_prospects` (constraint check accetta solo `get_replies|book_meetings|qualify_prospects|custom`).
+- Budget: 20 actions / 10 emails / 50K tokens. Approval required per email+whatsapp.
+- **Bug fixato in `agent-autopilot-worker/index.ts`**: usava `mission.user_id` (colonna inesistente) → ora corretto a `mission.owner_user_id`. Rimosso anche `user_id` da insert in `agent_mission_events` (la tabella non ha quella colonna).
+
+### P2.C — Diagnosi 7 cron failed
+- Documento dedicato: `docs/audit/CRON-FAILED-DIAGNOSIS-2026-04-24.md`.
+- Root cause confermato: GUC `app.settings.service_role_key` vuoto → `cron_service_headers()` produce `Bearer ` (vuoto) → 401 dal gateway.
+- Tutte le 7 functions sane: rispondono 200 a chiamate dirette autenticate.
+- Fix proposto in P2.D (non eseguito): unschedule + reschedule per-job con anon key inline.
