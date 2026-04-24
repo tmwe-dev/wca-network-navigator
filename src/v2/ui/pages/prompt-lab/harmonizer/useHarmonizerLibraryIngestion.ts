@@ -95,8 +95,11 @@ async function bootstrapEntitiesFromDb(userId: string): Promise<EntityCreatedEnt
     const allTargetTables = new Set<string>();
     for (const c of TMWE_CHUNKS) for (const t of c.targetTables) allTargetTables.add(t);
     const real = await collectRealInventory(userId);
+    // Cap a 80 entità preesistenti totali: oltre questa soglia il payload
+    // session.entities_created saturava il prompt del modello in chunk #0.
     return real
       .filter((i) => allTargetTables.has(i.table))
+      .slice(0, 80)
       .map((i) => ({
         table: i.table,
         id: i.id,
