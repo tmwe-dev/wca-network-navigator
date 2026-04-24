@@ -104,6 +104,26 @@ async function makeAiCall(
   if (options.max_tokens !== undefined) fetchBody.max_tokens = options.max_tokens;
   if (options.response_format) fetchBody.response_format = options.response_format;
 
+  // Token-budget visibility: helps diagnose token-explosion empty-response cases
+  try {
+    let userChars = 0;
+    let systemChars = 0;
+    for (const m of options.messages as Array<{ role?: string; content?: string }>) {
+      const c = typeof m?.content === "string" ? m.content.length : 0;
+      if (m?.role === "system") systemChars += c;
+      else userChars += c;
+    }
+    console.log("[AI] call", {
+      model: options.model,
+      systemChars,
+      userChars,
+      totalChars: systemChars + userChars,
+      max_tokens: options.max_tokens,
+      temperature: options.temperature,
+      tools: Array.isArray(options.tools) ? options.tools.length : 0,
+    });
+  } catch { /* ignore log failure */ }
+
   const response = await fetch(provider.url, {
     method: "POST",
     headers: {
@@ -125,6 +145,27 @@ async function makeAiCall(
 
   try {
     const data = await response.json();
+    // Empty-content guard: gateway can return 200 with empty content on
+    // token explosion. Treat as transient so the fallback chain can retry.
+    const choice = (data?.choices as Array<Record<string, unknown>> | undefined)?.[0];
+    const msg = choice?.message as Record<string, unknown> | undefined;
+    const contentVal = msg?.content;
+    const toolCalls = msg?.tool_calls as unknown[] | undefined;
+    const hasContent = typeof contentVal === "string" && contentVal.trim().length > 0;
+    const hasToolCalls = Array.isArray(toolCalls) && toolCalls.length > 0;
+    if (!hasContent && !hasToolCalls) {
+      console.warn("[AI] empty content from model", {
+        model: options.model,
+        finish_reason: choice?.finish_reason,
+        usage: data?.usage,
+      });
+      return {
+        ok: false,
+        status: 599,
+        errorText: "empty_content",
+        triedModel: options.model,
+      };
+    }
     return {
       ok: true,
       data,
@@ -164,6 +205,23 @@ export async function callAiWithFallback(
     ? selectActiveTools(allTools, scope, isConversational)
     : undefined;
 
+  // Pull temperature/max_tokens from scope config so kb-supervisor and other
+  // specialized scopes get their tuned generation parameters even in
+  // conversational mode (fixes empty-content on large prompts).
+  let scopeTemperature: number | undefined;
+  let scopeMaxTokens: number | undefined;
+  if (scope) {
+    try {
+      const sc = getScopeConfig(scope);
+      if (typeof sc.temperature === "number") scopeTemperature = sc.temperature;
+    } catch { /* ignore */ }
+  }
+  // Hard default for kb-supervisor: cap output so token explosion is impossible
+  if (scope === "kb-supervisor") {
+    scopeMaxTokens = 8000;
+    if (scopeTemperature === undefined) scopeTemperature = 0.2;
+  }
+
   for (const tryModel of fallbackModels) {
     
 
@@ -171,6 +229,8 @@ export async function callAiWithFallback(
       model: tryModel,
       messages,
       tools: activeTools,
+      temperature: scopeTemperature,
+      max_tokens: scopeMaxTokens,
     });
 
     if (result.ok && result.data) {
@@ -199,8 +259,9 @@ export async function callAiWithFallback(
       };
     }
 
-    // Permanent errors (not server errors)
-    if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529) {
+    // Permanent errors (not server errors). 599 = our internal "empty_content"
+    // sentinel, treat it like a transient server error so we try the next model.
+    if (errStatus !== 503 && errStatus !== 500 && errStatus !== 529 && errStatus !== 599) {
       return {
         ok: false,
         error: "Errore AI gateway",
