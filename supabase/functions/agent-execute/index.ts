@@ -9,6 +9,14 @@ import { ALL_TOOLS } from "./toolDefs.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 
+type AgentRow = {
+  id: string;
+  name: string;
+  role: string;
+  is_active?: boolean | null;
+  stats?: Record<string, unknown> | null;
+  avatar_emoji?: string | null;
+};
 type ToolDefinition = Record<string, unknown>;
 
 // Modular imports
@@ -55,7 +63,7 @@ serve(async (req) => {
       .from("agents")
       .select("id, name, role, is_active, stats, avatar_emoji")
       .eq("user_id", userId);
-    const allAgents = (allAgentsData ?? []) as Array<Record<string, unknown>>;
+    const allAgents = (allAgentsData ?? []) as AgentRow[];
 
     // Build context blocks
     const contextBlock = await buildContextBlock(supabase, userId, agent_id, allAgents);
