@@ -191,6 +191,7 @@ export function useGlobalPromptImprover(
 
     const systemMap = run.system_map;
     const doctrineFull = run.doctrine_full;
+    const systemMission = await loadSystemMission(userId);
 
     for (let i = startFrom; i < proposals.length; i++) {
       const p = proposals[i];
@@ -213,14 +214,20 @@ export function useGlobalPromptImprover(
           tabActivation: p.tabActivation,
           systemMap: filteredMap,
           doctrineFull: filteredDoctrine,
-          systemMission: SYSTEM_MISSION,
+          systemMission,
           goal: run.goal || undefined,
         });
 
         // LOVABLE-109: Parse outcome_type e architectural note dalla risposta
         const parsed = parseImproveResponse(rawImproved);
+        // Fix A1: delta threshold per evitare salvataggi cosmetici inutili.
         const isSame = parsed.text.trim() === p.before.trim();
-        const newStatus = (isSame || parsed.outcomeType === "no_change") ? "skipped" as const : "ready" as const;
+        const ratio = isSame ? 0 : computeChangeRatio(p.before, parsed.text);
+        const newStatus: GlobalProposal["status"] = (isSame || parsed.outcomeType === "no_change")
+          ? "skipped"
+          : ratio < MINOR_CHANGE_THRESHOLD
+            ? "minor_change"
+            : "ready";
 
         setState((s) => ({
           ...s,
@@ -231,6 +238,7 @@ export function useGlobalPromptImprover(
               status: newStatus,
               outcomeType: parsed.outcomeType,
               architecturalNote: parsed.architecturalNote,
+              changeRatio: ratio,
             } : x,
           ),
         }));
