@@ -22,7 +22,7 @@ export interface AuditEntry {
 }
 
 export async function logSupervisorAudit(
-  supabase: { from: (table: string) => { insert: (data: Record<string, unknown>) => Promise<unknown> } },
+  supabase: { from: (table: string) => { insert: (data: Record<string, unknown>) => unknown } },
   entry: AuditEntry,
 ): Promise<void> {
   try {
@@ -36,7 +36,7 @@ export async function logSupervisorAudit(
 }
 
 export async function logBatchAudit(
-  supabase: { from: (table: string) => { insert: (data: Record<string, unknown>[]) => Promise<unknown> } },
+  supabase: { from: (table: string) => { insert: (data: Record<string, unknown>[]) => unknown } },
   entries: AuditEntry[],
 ): Promise<void> {
   try {
