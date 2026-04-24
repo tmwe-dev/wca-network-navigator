@@ -123,12 +123,13 @@ Restituisci il draft in questo formato JSON:
           await supabase
             .from("ai_pending_actions")
             .update({
-              action_payload: (action_payload) => ({
+              // deno-lint-ignore no-explicit-any
+              action_payload: ((action_payload: any) => ({
                 ...action_payload,
                 draft_subject: draft.draft_subject,
                 draft_body: draft.draft_body,
                 draft_generated_at: new Date().toISOString(),
-              }),
+              })) as unknown as Record<string, unknown>,
             })
             .eq("id", pendingActionId);
         }

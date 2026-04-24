@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (pauseSettings?.value === "true") {
+    // deno-lint-ignore no-explicit-any
+    if ((pauseSettings as any)?.value === "true") {
       return new Response(JSON.stringify({ paused: true, message: "AI automations paused" }), {
         headers: dynCors,
         status: 200,
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
     // ── Fetch UID batch ──
     const imapExec = client as unknown as { executeCommand(cmd: string): Promise<(string | Uint8Array)[]> };
     const batch = await fetchUidBatch(imapExec, lastUid);
-    const { uids, remaining: remainingCount, hasMore } = batch;
+    const { uids, remainingCount, hasMore } = batch;
 
 
     const messages: Record<string, unknown>[] = [];

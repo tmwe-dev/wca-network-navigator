@@ -119,12 +119,12 @@ export async function handleInterested(
       .single();
 
     if (insertedAction?.id) {
-      pendingActionId = insertedAction.id;
+      pendingActionId = insertedAction.id as string;
       result.pendingActionCreated = true;
       result.actionsExecuted.push(`pending_action_${actionType}`);
 
       if (actionType === "reply_interested") {
-        generateReplyDraft(supabase, pendingActionId, {
+        generateReplyDraft(supabase, pendingActionId as string, {
           userId: input.userId,
           partnerId: input.partnerId,
           contactId: null,
