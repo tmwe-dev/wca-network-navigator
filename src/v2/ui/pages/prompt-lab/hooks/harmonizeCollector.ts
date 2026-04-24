@@ -71,13 +71,14 @@ function isPlaceholderSource(cleaned: string): boolean {
   if (!normalized) return false;
 
   const hasPlaceholderCue = /placeholder|sostituire questo file con la libreria reale/.test(normalized);
-  const hasStructuredSections = /^##+\s+/m.test(cleaned) || /^###\s+/m.test(cleaned);
-  const hasMeaningfulLength = normalized.length > 3000 || normalized.split("\n").length > 120;
+  const hasExplicitPlaceholderHeading = /^##+\s*(?:📄\s*)?placeholder\b/im.test(cleaned);
+  const sectionCount = (cleaned.match(/^##+\s+/gm) ?? []).length + (cleaned.match(/^###\s+/gm) ?? []).length;
+  const isShortStub = normalized.length < 4000 && normalized.split("\n").length < 120;
 
-  // Consideriamo "placeholder" solo i file chiaramente stub/istruzioni.
-  // Se il documento è lungo e strutturato, la presenza della parola in un'intro
-  // o in un esempio non deve bloccare l'ingestione reale.
-  return hasPlaceholderCue && !hasStructuredSections && !hasMeaningfulLength;
+  // Blocchiamo solo gli stub espliciti o i file molto corti che contengono
+  // istruzioni di placeholder. Un documento reale grande può citare la parola
+  // "placeholder" in un esempio o in una nota senza essere invalido.
+  return hasExplicitPlaceholderHeading || (hasPlaceholderCue && isShortStub && sectionCount <= 4);
 }
 
 /** Heuristic mapping da "categoria suggerita" della libreria a tabella DB. */
