@@ -5,10 +5,10 @@
  * Applies -20 to +30 point adjustments to base quality scores.
  */
 
-import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { PartnerData, WCAModifierDetails, WCAModifierBonus } from "./qualityTypes.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 /**
  * Scans profile markdown, sherlock findings, and sherlock summary for keywords.
