@@ -21,6 +21,7 @@ import type {
   EntityCreatedEntry,
 } from "@/data/harmonizerSessions";
 import type { TmweChunkDef } from "./tmweChunks";
+import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER } from "./tmweChunks";
 import { buildHarmonizerKbContext } from "./harmonizerKbInjector";
 
 const FactSchema = z.object({
@@ -91,6 +92,29 @@ function buildLibraryUserPrompt(
   const preloadedDups = chunkDef.preloadedDuplicates.map((d) => `- ${d.title} (${d.reason})`).join("\n") || "(nessuno)";
   const preloadedConfs = chunkDef.preloadedConflicts.map((c) => `- ${c.topic}: ${c.notes ?? ""}`).join("\n") || "(nessuno)";
 
+  // Roadmap globale: dove siamo nella sequenza, cosa è già stato processato,
+  // cosa resta. Il modello capisce che è un lavoro multi-step e non deve
+  // "anticipare" chunk futuri o duplicare lavoro già fatto.
+  const totalChunks = TMWE_CHUNKS.length;
+  const positionInOrder = TMWE_EXECUTION_ORDER.indexOf(chunkDef.index);
+  const stepNumber = positionInOrder >= 0 ? positionInOrder + 1 : chunkDef.index + 1;
+  const processedChunkIndexes = positionInOrder > 0
+    ? TMWE_EXECUTION_ORDER.slice(0, positionInOrder)
+    : [];
+  const remainingChunkIndexes = positionInOrder >= 0
+    ? TMWE_EXECUTION_ORDER.slice(positionInOrder + 1)
+    : [];
+  const fmtChunkRef = (i: number) => {
+    const c = TMWE_CHUNKS[i];
+    return c ? `#${c.index} ${c.name} [${c.targetTables.join(",")}]` : `#${i}`;
+  };
+  const processedList = processedChunkIndexes.length > 0
+    ? processedChunkIndexes.map(fmtChunkRef).join("\n  - ")
+    : "(nessuno — questo è il primo chunk)";
+  const remainingList = remainingChunkIndexes.length > 0
+    ? remainingChunkIndexes.map(fmtChunkRef).join("\n  - ")
+    : "(nessuno — questo è l'ultimo chunk)";
+
   const gapsText = chunk.map((g, i) => {
     const matchedInfo = g.matched
       ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")`
@@ -111,8 +135,21 @@ ${matchedInfo}`;
 
   return `=== CONTESTO RUN ===
 goal: ${goal || "(non specificato)"}
-chunk: #${chunkDef.index} — ${chunkDef.name}
+chunk corrente: #${chunkDef.index} — ${chunkDef.name}
+posizione globale: STEP ${stepNumber} di ${totalChunks} (ordine ottimale ingestion)
 target_tables: ${chunkDef.targetTables.join(", ")}
+
+=== ROADMAP GLOBALE INGESTION ===
+Già processati (NON riproporre lavoro già coperto qui):
+  - ${processedList}
+
+Ancora da processare (NON anticipare contenuti di questi chunk: arriveranno):
+  - ${remainingList}
+
+REGOLA SCOPE: in questo step PUOI proporre SOLO modifiche alle tabelle
+[${chunkDef.targetTables.join(", ")}]. Se un gap richiederebbe
+toccare una tabella diversa, segnala come cross_reference o readonly_note,
+non come proposta diretta — sarà coperta nel chunk dedicato.
 
 === CONTRACT GUIDANCE PER QUESTO CHUNK ===
 ${chunkDef.contractGuidance}
