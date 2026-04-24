@@ -146,7 +146,7 @@ async function processMission(
     },
     body: JSON.stringify({
       agent_id: mission.agent_id,
-      user_id: mission.user_id,
+      user_id: mission.owner_user_id,
       mission_id: mission.id,
       autopilot: true,
       goal: mission.goal_description ?? mission.title,
