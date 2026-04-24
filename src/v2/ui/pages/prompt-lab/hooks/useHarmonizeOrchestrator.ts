@@ -10,8 +10,9 @@
  */
 import { useCallback, useState } from "react";
 import { runHarmonizeCollector, type CollectorOutput } from "./harmonizeCollector";
-import { runHarmonizeAnalyzer } from "./harmonizeAnalyzer";
+import { runHarmonizeAnalyzer, type AnalyzerContext } from "./harmonizeAnalyzer";
 import { executeProposal } from "./harmonizeExecutor";
+import { supabase } from "@/integrations/supabase/client";
 import {
   createHarmonizeRun,
   updateHarmonizeRun,
@@ -86,6 +87,12 @@ export function useHarmonizeOrchestrator(userId: string) {
 
         // FASE 2 — ANALYZE (incrementale)
         const proposals: HarmonizeProposal[] = [];
+        const analyzerCtx: AnalyzerContext = {
+          goal: params.goal,
+          operatorId: userId,
+          language: "it",
+          mode: "first_run",
+        };
         await runHarmonizeAnalyzer(
           collector,
           async (p) => {
@@ -94,6 +101,7 @@ export function useHarmonizeOrchestrator(userId: string) {
             setState((s) => ({ ...s, proposals: [...proposals] }));
           },
           (current, total) => setState((s) => ({ ...s, progress: { current, total } })),
+          analyzerCtx,
         );
 
         await updateHarmonizeRun(run.id, { status: "review" });
@@ -110,7 +118,17 @@ export function useHarmonizeOrchestrator(userId: string) {
     setState((s) => {
       const next = new Set(s.approvedIds);
       if (next.has(proposalId)) next.delete(proposalId);
-      else next.add(proposalId);
+      else {
+        // Cabling dipendenze: approvabile solo se TUTTE le dipendenze sono già approvate.
+        const proposal = s.proposals.find((p) => p.id === proposalId);
+        const deps = proposal?.dependencies ?? [];
+        const missing = deps.filter((d) => !next.has(d));
+        if (missing.length > 0) {
+          console.warn("[harmonize] Cannot approve: missing dependency approvals", missing);
+          return s; // no-op
+        }
+        next.add(proposalId);
+      }
       return { ...s, approvedIds: next };
     });
   }, []);
@@ -139,10 +157,25 @@ export function useHarmonizeOrchestrator(userId: string) {
     let failed = 0;
     const approved = state.proposals.filter((p) => state.approvedIds.has(p.id));
     for (const p of approved) {
-      const res = await executeProposal(userId, p);
+      const res = await executeProposal(userId, p, state.runId);
       if (res.ok) {
         executed++;
         await setProposalStatus(state.runId, p.id, "executed").catch(() => {});
+        // Loop di apprendimento: per agents/agent_personas crea verifica post-armonizzazione.
+        if (p.target.table === "agents" && p.target.id) {
+          try {
+            await supabase.from("agent_tasks").insert({
+              agent_id: p.target.id,
+              user_id: userId,
+              task_type: "harmonize_verification",
+              description: `Verifica comportamento post-armonizzazione: ${p.block_label ?? p.reasoning.slice(0, 80)}`,
+              status: "pending",
+              target_filters: { harmonize_run_id: state.runId, proposal_id: p.id } as never,
+            } as never);
+          } catch (e) {
+            console.warn("[harmonize] agent_task creation failed", e);
+          }
+        }
       } else {
         failed++;
         await setProposalStatus(state.runId, p.id, "failed", res.reason).catch(() => {});
