@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
+import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
