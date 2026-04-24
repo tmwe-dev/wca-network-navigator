@@ -232,11 +232,8 @@ async function logMissionEvent(
   eventType: string,
   payload: Record<string, unknown>
 ) {
-  // Get mission user_id for RLS
-  const { data: mission } = await supabase.from("agent_missions").select("user_id").eq("id", missionId).single();
   await supabase.from("agent_mission_events").insert({
     mission_id: missionId,
-    user_id: mission?.user_id,
     event_type: eventType,
     payload,
   });
