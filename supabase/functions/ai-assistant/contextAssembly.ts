@@ -4,8 +4,10 @@
  * Handles user profiles, knowledge base, commercial state, and token budgets.
  */
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 import { getContextBudget, assembleContext, estimateTokens } from "../_shared/tokenBudget.ts";
 import {
   loadUserProfile,
@@ -118,7 +120,7 @@ async function loadContextParallel(
   userId: string,
   isConversational: boolean,
   lastUserMsg: string | undefined,
-  ctxTags: Record<string, unknown>
+  ctxTags: any
 ): Promise<{
   memoryContext: string;
   userProfile: string;
@@ -186,8 +188,9 @@ function injectPageContext(systemPrompt: string, context: Record<string, unknown
     if (context.selectedCount) prompt += ` Partner selezionati: ${context.selectedCount}.`;
   }
 
-  if (context.selectedCountries?.length) {
-    prompt += `\nPaesi selezionati: ${(context.selectedCountries as Record<string, unknown>[]).map((c) => `${c.name} (${c.code})`).join(", ")}.`;
+  const selCountries = context.selectedCountries as Array<Record<string, unknown>> | undefined;
+  if (selCountries?.length) {
+    prompt += `\nPaesi selezionati: ${selCountries.map((c) => `${c.name} (${c.code})`).join(", ")}.`;
   }
 
   if (
@@ -215,8 +218,9 @@ function injectPageContext(systemPrompt: string, context: Record<string, unknown
     }
     if (context.missionData) {
       const md = context.missionData as Record<string, unknown>;
-      if ((md.targets as Record<string, unknown> | undefined)?.countries?.length) {
-        prompt += `\nPaesi già selezionati: ${((md.targets as Record<string, unknown>).countries as string[]).join(", ")}.`;
+      const tgtCountries = ((md.targets as Record<string, unknown> | undefined)?.countries) as string[] | undefined;
+      if (tgtCountries?.length) {
+        prompt += `\nPaesi già selezionati: ${tgtCountries.join(", ")}.`;
       }
       if (md.channel) prompt += `\nCanale scelto: ${md.channel}.`;
       if ((md.deepSearch as Record<string, unknown> | undefined)?.enabled) prompt += `\nDeep Search attivo.`;

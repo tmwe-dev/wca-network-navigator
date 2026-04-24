@@ -9,10 +9,10 @@
  * - System doctrine
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 export async function loadUserProfile(supabase: SupabaseClient, userId: string): Promise<string> {
   if (!userId) return "";
