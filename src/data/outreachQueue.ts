@@ -72,7 +72,7 @@ export async function findPendingOutreachItemsFromView(
   let q = supabase
     .from("outreach_queue")
     .select(
-      "id, user_id, channel, recipient_name, recipient_email, subject, status, attempts, max_attempts, priority, created_at, scheduled_for, partner_id, contact_id, mission_id"
+      "id, user_id, channel, recipient_name, recipient_email, subject, status, attempts, max_attempts, priority, created_at, partner_id, contact_id"
     );
   q = q.eq("status", status ?? "pending");
   const { data, error } = await q
@@ -92,10 +92,8 @@ export async function findPendingOutreachItemsFromView(
     max_attempts: number | null;
     priority: string | null;
     created_at: string | null;
-    scheduled_for: string | null;
     partner_id: string | null;
     contact_id: string | null;
-    mission_id: string | null;
   };
   return ((data ?? []) as Row[]).map((r): OutreachQueueRow => ({
     queue_id: r.id,
@@ -109,13 +107,13 @@ export async function findPendingOutreachItemsFromView(
     max_attempts: r.max_attempts ?? 0,
     priority: r.priority ?? "",
     created_at: r.created_at ?? "",
-    scheduled_for: r.scheduled_for,
+    scheduled_for: null,
     partner_id: r.partner_id,
     contact_id: r.contact_id,
     partner_name: null,
     partner_lead_status: null,
     partner_country: null,
-    mission_id: r.mission_id,
+    mission_id: null,
     mission_name: null,
     last_outbound_at: null,
     last_channel: null,
