@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
+
 
 const BATCH_SIZE = 15;
 
@@ -15,7 +18,7 @@ serve(async (req) => {
   try {
     const { countryCodes, partnerIds, contactIds } = await req.json();
 
-    const supabase = createClient(
+    const supabase = createClient<any>(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
@@ -36,10 +39,10 @@ serve(async (req) => {
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
     return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes);
 
-  } catch (e: Record<string, unknown>) {
+  } catch (e: unknown) {
     console.error("generate-aliases error:", e);
     return new Response(
-      JSON.stringify({ error: e.message || "Unknown error" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   }

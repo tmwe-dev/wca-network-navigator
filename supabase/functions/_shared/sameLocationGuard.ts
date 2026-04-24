@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+// deno-lint-ignore no-explicit-any
+type AnyClient = ReturnType<typeof createClient<any>>;
+
 /**
  * Same-Location Guard — simplified.
  * Uses partner_id to find colleagues (partner_contacts) instead of fuzzy name search.
@@ -26,7 +29,7 @@ interface GuardResult {
  * Uses partner_id (not fuzzy company name) — contacts are already linked.
  */
 export async function checkSameLocationContacts(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnyClient,
   partnerId: string,
   currentContactEmail: string | null,
   userId: string,
