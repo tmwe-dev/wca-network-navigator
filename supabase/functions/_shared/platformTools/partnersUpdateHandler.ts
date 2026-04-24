@@ -4,7 +4,7 @@
  */
 
 import { supabase, escapeLike } from "./supabaseClient.ts";
-import { applyLeadStatusChange } from "./leadStatusGuard.ts";
+import { applyLeadStatusChange } from "../leadStatusGuard.ts";
 
 interface ResolvedPartner {
   id: string;
