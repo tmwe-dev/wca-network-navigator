@@ -257,8 +257,7 @@ export class LeadProcessManager {
 
   /**
    * Handle outbound for business_card — apply new→first_touch_sent.
-   * business_cards table doesn't use the guard (no RLS/audit needed),
-   * so we update directly.
+   * Routes through applyLeadStatusChange guard for audit trail + validation.
    */
   async onBusinessCardOutbound(
     businessCardId: string,
@@ -275,11 +274,17 @@ export class LeadProcessManager {
     const currentStatus = bc.lead_status || "new";
 
     if (currentStatus === "new" || !bc.lead_status) {
-      await this.supabase
-        .from("business_cards")
-        .update({ lead_status: "first_touch_sent" })
-        .eq("id", businessCardId);
-      return { applied: true };
+      const res = await applyLeadStatusChange(this.supabase, {
+        table: "business_cards",
+        recordId: businessCardId,
+        newStatus: "first_touch_sent",
+        userId: "system",
+        actor: { type: "system", name: "LeadProcessManager" },
+        decisionOrigin: "system_trigger",
+        trigger: `Business card outbound (${channel}) via ${source}`,
+        metadata: { channel, source },
+      });
+      return { applied: res.applied };
     }
     return { applied: false };
   }

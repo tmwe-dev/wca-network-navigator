@@ -11,39 +11,28 @@ export async function queryProspects(builder: (q: unknown) => unknown) {
 }
 
 export async function updateProspectLeadStatus(id: string, status: string) {
-  // TODO: Route through apply_lead_status_rpc when RPC supports "prospect" entity type
-  // Currently RPC only guards "partners" and "imported_contacts"
-  // For now, fetch current status, update, and insert audit trail for supervisory tracking
+  // Route through apply_lead_status_rpc — supports prospects since migration 20260424120000
+  const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+    p_table: "prospects",
+    p_record_id: id,
+    p_new_status: status,
+  });
 
-  // Fetch current status for audit trail
-  let oldStatus: string | null = null;
-  try {
-    const { data } = await supabase.from("prospects").select("lead_status").eq("id", id).single();
-    oldStatus = data?.lead_status ?? null;
-  } catch {
-    // If fetch fails, continue with null old status
-  }
+  if (error) throw error;
 
-  const { error: updateError } = await supabase.from("prospects").update({ lead_status: status }).eq("id", id);
-  if (updateError) throw updateError;
-
-  // Create audit log entry for supervisor review
-  try {
-    await supabase.from("supervisor_audit_log").insert({
-      entity_type: "prospect",
-      entity_id: id,
-      old_status: oldStatus,
-      new_status: status,
-      reason: "updateProspectLeadStatus",
-      actor_type: "system",
-    } as unknown as Record<string, unknown>);
-  } catch (auditError) {
-    // Log but don't fail the main operation
-    console.warn("Failed to log prospect status change to audit trail:", auditError);
+  const result = data as { applied: boolean; blocked_reason?: string } | null;
+  if (result && !result.applied) {
+    throw new Error(result.blocked_reason || "Transizione non consentita");
   }
 }
 
 export async function updateProspect(id: string, updates: Record<string, unknown>) {
-  const { error } = await supabase.from("prospects").update(updates as never).eq("id", id);
+  // GUARD: strip lead_status — must go through updateProspectLeadStatus() / RPC
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { lead_status: _stripped, ...safeUpdates } = updates;
+  if (_stripped !== undefined) {
+    console.warn("[updateProspect] lead_status stripped from generic update — use updateProspectLeadStatus() instead");
+  }
+  const { error } = await supabase.from("prospects").update(safeUpdates as never).eq("id", id);
   if (error) throw error;
 }

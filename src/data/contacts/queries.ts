@@ -96,9 +96,15 @@ export async function getContactsByIds(ids: string[], select = "id, name, compan
 }
 
 export async function updateContact(id: string, updates: Record<string, unknown>) {
+  // GUARD: strip lead_status from generic updates — must go through updateLeadStatus() / RPC
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { lead_status: _stripped, ...safeUpdates } = updates;
+  if (_stripped !== undefined) {
+    console.warn("[updateContact] lead_status stripped from generic update — use updateLeadStatus() instead");
+  }
   const { error } = await supabase
     .from("imported_contacts")
-    .update(updates as never)
+    .update(safeUpdates as never)
     .eq("id", id);
   if (error) throw error;
 }

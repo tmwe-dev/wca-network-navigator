@@ -4,6 +4,7 @@
  * to ensure consistent state updates across all sending paths.
  */
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 interface EmailSideEffectParams {
   supabase: SupabaseClient;
@@ -63,15 +64,22 @@ export async function logEmailSideEffects({
     ...(thread_id ? { thread_id } : {}),
   });
 
-  // 3. Update partner: escalate lead_status from 'new' to 'first_touch_sent'
+  // 3. Update partner: escalate lead_status via guard (new→first_touch_sent)
+  await applyLeadStatusChange(supabase, {
+    table: "partners",
+    recordId: partner_id,
+    newStatus: "first_touch_sent",
+    userId: user_id,
+    actor: { type: "system", name: "logEmailSideEffects" },
+    decisionOrigin: "system_trigger",
+    trigger: `Email inviata a ${to}: ${subject}`,
+    metadata: { to, subject },
+  });
+  // Always update last_interaction_at regardless of status transition
   await supabase
     .from("partners")
-    .update({
-      lead_status: "first_touch_sent",
-      last_interaction_at: now,
-    })
-    .eq("id", partner_id)
-    .eq("lead_status", "new");
+    .update({ last_interaction_at: now })
+    .eq("id", partner_id);
 
   // 4. Atomically increment interaction count (avoids race condition)
   await supabase.rpc("increment_partner_interaction", { p_partner_id: partner_id });
