@@ -293,7 +293,8 @@ async function executeAction(
       const partnerId = action.partner_id ?? payload.partner_id;
       if (!partnerId) return { success: false, action_type: action.action_type, detail: "No partner_id" };
       const leadPM = new LeadProcessManager(supabase);
-      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as string, {
+      // deno-lint-ignore no-explicit-any
+      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as any, {
         trigger: `Pending action update_lead_status approvata`,
         actor: { type: "ai_agent", name: "pending-action-executor" },
         decisionOrigin: "ai_approved",
