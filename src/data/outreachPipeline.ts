@@ -142,72 +142,28 @@ export async function fetchOutreachStats() {
   todayStart.setHours(0, 0, 0, 0);
   const now = new Date().toISOString();
 
-  // Query v_outreach_today materialized view for pending/scheduled counts
-  // instead of separate COUNT queries on activities and mission_actions.
-  // View not in generated types — cast to any. Runtime fallback below covers absence.
-  const { data: queueData, error: queueErr } = await (supabase as any)
-    .from("v_outreach_today")
-    .select("status, scheduled_for")
-    .eq("user_id", user.id);
-
-  if (queueErr) {
-    // Fallback to individual queries if view fails
-    const [pendingRes, sentRes, scheduledRes, failedRes] = await Promise.all([
-      supabase.from("activities").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("status", "pending").in("activity_type", ["send_email"]),
-      supabase.from("activities").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email"])
-        .gte("completed_at", todayStart.toISOString()),
-      supabase.from("mission_actions").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).in("status", ["planned", "approved"]).gt("scheduled_at", now),
-      supabase.from("mission_actions").select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("status", "failed"),
-    ]);
-
-    const { count: sentRecent } = await supabase.from("activities")
-      .select("id", { count: "exact", head: true })
+  // P3.7: v_outreach_today non esiste — count diretti su activities/mission_actions.
+  const [pendingRes, sentRes, scheduledRes, failedRes, sentRecentRes] = await Promise.all([
+    supabase.from("activities").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("status", "pending").in("activity_type", ["send_email"]),
+    supabase.from("activities").select("id", { count: "exact", head: true })
       .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email"])
-      .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString());
-
-    return {
-      pending: pendingRes.count ?? 0,
-      sentToday: sentRes.count ?? 0,
-      scheduled: scheduledRes.count ?? 0,
-      awaitingResponse: sentRecent ?? 0,
-      failed: failedRes.count ?? 0,
-    };
-  }
-
-  // Count from materialized view
-  const queue = (queueData ?? []) as Array<{ status: string | null; scheduled_for: string | null }>;
-  const pending = queue.filter((q) => q.status === "pending").length;
-  const sentToday = queue.filter((q) =>
-    q.status === "sent" &&
-    q.scheduled_for &&
-    new Date(q.scheduled_for) >= todayStart
-  ).length;
-  const scheduled = queue.filter((q) =>
-    q.status === "pending" &&
-    q.scheduled_for &&
-    new Date(q.scheduled_for) > new Date(now)
-  ).length;
-
-  // Still need individual query for "failed" since not in outreach_queue
-  const { count: failedCount } = await supabase.from("mission_actions").select("id", { count: "exact", head: true })
-    .eq("user_id", user.id).eq("status", "failed");
-
-  // Awaiting response: completed recently but no classification
-  const { count: sentRecent } = await supabase.from("activities")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email"])
-    .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString());
+      .gte("completed_at", todayStart.toISOString()),
+    supabase.from("mission_actions").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).in("status", ["planned", "approved"]).gt("scheduled_at", now),
+    supabase.from("mission_actions").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("status", "failed"),
+    supabase.from("activities").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("status", "completed").in("activity_type", ["send_email"])
+      .gte("completed_at", new Date(Date.now() - 7 * 86400000).toISOString()),
+  ]);
 
   return {
-    pending,
-    sentToday,
-    scheduled,
-    awaitingResponse: sentRecent ?? 0,
-    failed: failedCount ?? 0,
+    pending: pendingRes.count ?? 0,
+    sentToday: sentRes.count ?? 0,
+    scheduled: scheduledRes.count ?? 0,
+    awaitingResponse: sentRecentRes.count ?? 0,
+    failed: failedRes.count ?? 0,
   };
 }
 
