@@ -213,6 +213,7 @@ async function executeTask(
       body: JSON.stringify({
         agent_id: task.agent_id,
         task_id: task.id,
+        user_id: task.user_id,
       }),
       signal: controller.signal,
     });
