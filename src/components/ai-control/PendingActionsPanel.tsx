@@ -81,13 +81,11 @@ export function PendingActionsPanel() {
       // LOVABLE-93: if draft was edited, update action_payload before approval
       let updatePayload: Record<string, unknown> = { status: "approved", executed_at: new Date().toISOString() };
       if (params.draftSubject !== undefined || params.draftBody !== undefined) {
-        const existingPayload = (action?.action_payload as Record<string, unknown>) || {};
-        updatePayload.action_payload = {
-          ...existingPayload,
+        updatePayload.action_payload = mergeJsonObject(action?.action_payload, {
           ...(params.draftSubject !== undefined && { draft_subject: params.draftSubject }),
           ...(params.draftBody !== undefined && { draft_body: params.draftBody }),
           user_edited: true,
-        };
+        });
       }
 
       const { error } = await supabase
