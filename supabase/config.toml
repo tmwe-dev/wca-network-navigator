@@ -108,3 +108,6 @@ verify_jwt = false
 
 [functions.pending-action-executor]
 verify_jwt = false
+
+[functions.replay-domain-events]
+verify_jwt = false

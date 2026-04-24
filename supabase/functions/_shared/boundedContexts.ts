@@ -17,6 +17,7 @@
 
 export type DomainName =
   | "lead"
+  | "ra"
   | "email"
   | "outreach"
   | "ai_automation"
@@ -76,6 +77,15 @@ export const TABLE_OWNERSHIP: TableOwnership[] = [
 
   // ── VOICE DOMAIN ──
   { table: "voice_call_sessions", domain: "voice", writeAuthority: "voice-brain-bridge", notes: "Call sessions" },
+
+  // ── RA (Report Aziende) DOMAIN ──
+  // Separate bounded context for Italian business data. Own lead_status lifecycle (9-state machine).
+  // Does NOT integrate with partners/imported_contacts lead lifecycle.
+  { table: "ra_prospects", domain: "ra", writeAuthority: "UI/useUpdateRALeadStatus", notes: "Italian business prospects — separate lead lifecycle, audit trail via ra_audit" },
+  { table: "ra_contacts", domain: "ra", writeAuthority: "UI/useUpsertRAProspect", notes: "Prospect contacts" },
+  { table: "ra_interactions", domain: "ra", writeAuthority: "UI/interaction logger", notes: "Interaction history (call/email/meeting/note/pec)" },
+  { table: "ra_scraping_jobs", domain: "ra", writeAuthority: "scrape-aziende-batch", notes: "Data import jobs" },
+  { table: "ra_audit", domain: "ra", writeAuthority: "raAuditLogger", notes: "RA domain audit trail — append-only, tracks lead_status changes" },
 
   // ── AUDIT DOMAIN (read-only from other domains) ──
   { table: "activities", domain: "audit", writeAuthority: "multiple (activityLogger)", notes: "Activity log — append-only" },

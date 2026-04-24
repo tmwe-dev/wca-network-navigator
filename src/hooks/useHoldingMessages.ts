@@ -5,7 +5,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getPartnersByLeadStatus } from "@/data/partners";
+import { getPartnersByLeadStatus, getPartnersByLeadStatusFromView } from "@/data/partners";
+import { getUnifiedInboxStats } from "@/data/channelMessages";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -34,8 +35,9 @@ export function useHoldingMessages(channel: HoldingChannel) {
       if (!userId) return [] as HoldingMessageGroup[];
 
       // Step 1: Get partners AND imported_contacts in holding pattern
+      // Use v_pipeline_lead view for partner queries (faster, pre-computed)
       const [holdingPartners, holdingContactsRes] = await Promise.all([
-        getPartnersByLeadStatus(HOLDING_STATUSES, "id, company_name, email, lead_status"),
+        getPartnersByLeadStatusFromView(HOLDING_STATUSES, "partner_id, company_name, email, lead_status"),
         supabase
           .from("imported_contacts")
           .select("id, name, email, lead_status, company_name")
@@ -43,8 +45,8 @@ export function useHoldingMessages(channel: HoldingChannel) {
           .in("lead_status", HOLDING_STATUSES),
       ]);
 
-      const partnerMap = new Map((holdingPartners || []).map((p) => [p.id, p]));
-      const partnerIds = (holdingPartners || []).map((p) => p.id);
+      const partnerMap = new Map((holdingPartners || []).map((p) => [p.partner_id, p]));
+      const partnerIds = (holdingPartners || []).map((p) => p.partner_id);
 
       const holdingContacts = holdingContactsRes.data || [];
       const contactEmails = holdingContacts
@@ -170,43 +172,13 @@ export function useHoldingUnreadCounts() {
       const userId = user?.id;
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 
-      const partners = await getPartnersByLeadStatus(HOLDING_STATUSES, "id");
-      const partnerIds = (partners || []).map((p) => p.id);
-
-      const { data: holdingContacts } = await supabase
-        .from("imported_contacts")
-        .select("email")
-        .eq("user_id", userId)
-        .in("lead_status", HOLDING_STATUSES);
-
-      const contactEmails = (holdingContacts || [])
-        .map(c => c.email?.toLowerCase())
-        .filter(Boolean) as string[];
-
+      // Use v_inbox_unified materialized view for unified unread counts
+      // This replaces 3 separate COUNT queries with a single aggregated query
       const counts = { email: 0, whatsapp: 0, linkedin: 0 };
 
       for (const ch of ["email", "whatsapp", "linkedin"] as const) {
-        const partnerCount = partnerIds.length > 0
-          ? (await supabase
-              .from("channel_messages")
-              .select("id", { count: "exact", head: true })
-              .eq("channel", ch)
-              .in("partner_id", partnerIds)
-              .is("read_at", null)).count || 0
-          : 0;
-
-        const contactCount = contactEmails.length > 0
-          ? (await supabase
-              .from("channel_messages")
-              .select("id", { count: "exact", head: true })
-              .eq("channel", ch)
-              .eq("user_id", userId)
-              .is("partner_id", null)
-              .in("from_address", contactEmails)
-              .is("read_at", null)).count || 0
-          : 0;
-
-        counts[ch] = partnerCount + contactCount;
+        const stats = await getUnifiedInboxStats(ch);
+        counts[ch] = stats.unread;
       }
 
       return counts;

@@ -13,9 +13,11 @@ import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { queryKeys } from "@/lib/queryKeys";
+import { getPartnersByLeadStatusFromView } from "@/data/partners";
 
 interface PartnerRow {
   id: string;
+  partner_id: string;
   company_name: string;
   city: string;
   country_code: string;
@@ -23,9 +25,12 @@ interface PartnerRow {
   email: string | null;
   phone: string | null;
   lead_status: string;
-  updated_at: string;
-  partner_networks: { network_name: string }[];
-  partner_contacts: { name: string; email: string | null; mobile: string | null }[];
+  updated_at?: string;
+  touch_count?: number;
+  last_outbound_at?: string | null;
+  days_since_last_outbound?: number;
+  partner_networks?: { network_name: string }[];
+  partner_contacts?: { name: string; email: string | null; mobile: string | null }[];
 }
 
 type SortKey = "company_name" | "country_name" | "updated_at";
@@ -38,12 +43,43 @@ export default function AgendaListView() {
   const { data: partners, isLoading } = useQuery({
     queryKey: queryKeys.partners.agendaList(),
     queryFn: async () => {
-      const { data } = await supabase
+      // Use v_pipeline_lead materialized view for faster queries with pre-computed touch_count, last_outbound_at
+      const viewRows = await getPartnersByLeadStatusFromView(
+        ["new", "first_touch_sent", "holding", "engaged", "qualified", "negotiation", "converted"],
+        "partner_id, company_name, city, country_code, country_name, email, phone, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
+      );
+
+      // Enrich with partner relations (networks, contacts) from main table for display
+      if (viewRows.length === 0) return [];
+
+      const partnerIds = viewRows.map(r => r.partner_id);
+      const { data: enrichedData } = await supabase
         .from("partners")
-        .select("id, company_name, city, country_code, country_name, email, phone, lead_status, updated_at, partner_networks(network_name), partner_contacts(name, email, mobile)")
-        .order("updated_at", { ascending: false })
-        .limit(500);
-      return (data || []) as PartnerRow[];
+        .select("id, partner_networks(network_name), partner_contacts(name, email, mobile)")
+        .in("id", partnerIds);
+
+      const enrichmentMap = new Map(
+        (enrichedData || []).map(e => [e.id, { networks: e.partner_networks, contacts: e.partner_contacts }])
+      );
+
+      const result = viewRows.map(row => ({
+        id: row.partner_id,
+        partner_id: row.partner_id,
+        company_name: row.company_name,
+        city: row.city || "",
+        country_code: row.country_code,
+        country_name: row.country_name,
+        email: row.email,
+        phone: row.phone,
+        lead_status: row.lead_status,
+        touch_count: row.touch_count,
+        last_outbound_at: row.last_outbound_at,
+        days_since_last_outbound: row.days_since_last_outbound,
+        partner_networks: (enrichmentMap.get(row.partner_id)?.networks || []) as PartnerRow["partner_networks"],
+        partner_contacts: (enrichmentMap.get(row.partner_id)?.contacts || []) as PartnerRow["partner_contacts"],
+      })) as PartnerRow[];
+
+      return result;
     },
   });
 

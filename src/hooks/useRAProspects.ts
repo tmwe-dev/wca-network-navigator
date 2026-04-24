@@ -161,9 +161,11 @@ export function useUpdateRALeadStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: RALeadStatus }) => {
-      // NOTE: ra_prospects is a separate domain with its own lead lifecycle, distinct from the
-      // partners/imported_contacts domains. It does not route through the RPC guard since it has
-      // its own state machine. This direct write is intentional and not a bypass of lead_status guards.
+      // BOUNDED CONTEXT: ra_prospects owns its own lead_status domain (9-state machine: new→first_touch_sent→holding→engaged→qualified→negotiation→converted/archived/blacklisted).
+      // This is a SEPARATE state machine from partners/imported_contacts (lead domain).
+      // Reason for separation: RA data is sourced from Italian business registry (Report Aziende) with its own acquisition and nurturing workflow.
+      // Changes are logged to ra_audit (not activities table) to maintain context isolation.
+      // Direct update is intentional and NOT a bypass—it's the correct domain authority.
       const { error } = (await untypedFrom("ra_prospects")
         .update({ lead_status: status, updated_at: new Date().toISOString() })
         .eq("id", id)) as {
