@@ -9,6 +9,10 @@
  * La pipeline post-invio reale è runPostSendPipeline in postSendPipeline.ts.
  */
 
+// Local alias to avoid pulling SDK types (and version drift) here.
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
+
 /**
  * WhatsApp gate (Costituzione §4).
  * VIETATO come primo contatto. Consentito SOLO SE:

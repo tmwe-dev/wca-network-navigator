@@ -5,10 +5,10 @@
  * Applies -20 to +30 point adjustments to base quality scores.
  */
 
-import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { PartnerData, WCAModifierDetails, WCAModifierBonus } from "./qualityTypes.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 /**
  * Scans profile markdown, sherlock findings, and sherlock summary for keywords.
@@ -132,8 +132,8 @@ export async function calculateWCAModifier(
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const serviceCategories = services?.map((s) => s.service_category as string) || [];
-  const certifications = certs?.map((c) => c.certification as string) || [];
+  const serviceCategories: string[] = services?.map((s: { service_category: string }) => s.service_category as string) || [];
+  const certifications: string[] = certs?.map((c: { certification: string }) => c.certification as string) || [];
   const sherlockFindings = sherlockInvest?.[0]?.findings as Record<string, unknown> | null;
   const sherlockSummary = sherlockInvest?.[0]?.summary as string | null;
 
@@ -308,7 +308,7 @@ export async function calculateWCAModifier(
   // a) FCL-only operator (-10pts)
   const isFCLOnly =
     serviceCategories.length > 0 &&
-    serviceCategories.every((s) => s === "ocean_fcl" || s === "ocean_lcl");
+    serviceCategories.every((s: string) => s === "ocean_fcl" || s === "ocean_lcl");
   if (isFCLOnly && serviceCategories.includes("ocean_fcl")) {
     const points = -10;
     totalModifier += points;

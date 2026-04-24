@@ -5,12 +5,12 @@
 
 import type { DetailScore } from "./partnerQualityScore.ts";
 
-/** Extracts a value from enrichment_data with type-safe access. */
+/** Extracts a value from enrichment_data with type-safe access. Default may be null. */
 export function extractFromEnrichment<T>(
   enrichmentData: Record<string, unknown> | null,
   key: string,
-  defaultValue: T
-): T {
+  defaultValue: T | null
+): T | null {
   if (!enrichmentData || typeof enrichmentData !== "object") {
     return defaultValue;
   }

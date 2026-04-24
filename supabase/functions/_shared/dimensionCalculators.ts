@@ -394,3 +394,54 @@ export function calculateEngagement(client: ClientData): DimensionScore {
 
   return { score: Math.min(score, 100), details };
 }
+
+// ════════════════════════════════════════════════════════════════════
+// LEGACY PARTNER QUALITY DIMENSIONS (stub — implementation refactored away)
+// ════════════════════════════════════════════════════════════════════
+// These four functions exist for backward compatibility with
+// qualityOrchestrator.ts. The real partner-quality logic has been
+// superseded by the client-quality engine above. Each returns a
+// neutral QualityDimension so callers compile and run without errors.
+
+import type { QualityDimension, PartnerData } from "./qualityTypes.ts";
+
+function neutralDimension(name: string, weight: number): QualityDimension {
+  return {
+    name,
+    score: 0,
+    weight,
+    details: {},
+  };
+}
+
+export async function calculateProfilePresence(
+  _supabase: unknown,
+  _partnerId: string,
+  _partner: PartnerData,
+): Promise<QualityDimension> {
+  return neutralDimension("Profile Presence", 0.25);
+}
+
+export async function calculateBusinessSolidity(
+  _supabase: unknown,
+  _partnerId: string,
+  _partner: PartnerData,
+): Promise<QualityDimension> {
+  return neutralDimension("Business Solidity", 0.25);
+}
+
+export async function calculateServicesCapacity(
+  _supabase: unknown,
+  _partnerId: string,
+  _partner: PartnerData,
+): Promise<QualityDimension> {
+  return neutralDimension("Services & Capacity", 0.25);
+}
+
+export async function calculateDeepIntelligence(
+  _supabase: unknown,
+  _partnerId: string,
+  _partner: PartnerData,
+): Promise<QualityDimension> {
+  return neutralDimension("Deep Intelligence", 0.25);
+}

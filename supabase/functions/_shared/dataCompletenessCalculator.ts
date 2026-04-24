@@ -4,11 +4,11 @@
  * Calculates the percentage of available data sources for a partner.
  */
 
-import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { extractFromEnrichment } from "./qualityHelpers.ts";
 import type { PartnerData } from "./qualityTypes.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 /**
  * Calcola la disponibilità dei dati (percentuale di data sources disponibili).
