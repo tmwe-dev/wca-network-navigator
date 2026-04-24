@@ -155,7 +155,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {state.phase === "idle" && (
-            <div className="p-5 space-y-3">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
               {/* LOVABLE-92: Segnalazioni dal feedback loop */}
               <SignalsBanner
                 state={signals.state}
