@@ -9,6 +9,25 @@
  * La pipeline post-invio reale è runPostSendPipeline in postSendPipeline.ts.
  */
 
+// Local alias to avoid pulling SDK types (and version drift) here.
+type SupabaseClient = {
+  from: (table: string) => {
+    select: (cols: string) => {
+      eq: (col: string, val: unknown) => {
+        eq: (col: string, val: unknown) => {
+          eq: (col: string, val: unknown) => {
+            gte: (col: string, val: unknown) => {
+              order: (col: string, opts: { ascending: boolean }) => {
+                limit: (n: number) => Promise<{ data: unknown; error: unknown }>;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};
+
 /**
  * WhatsApp gate (Costituzione §4).
  * VIETATO come primo contatto. Consentito SOLO SE:
