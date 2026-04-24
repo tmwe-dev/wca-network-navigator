@@ -318,12 +318,17 @@ export function useGlobalPromptImprover(
     // Salva IDs dei suggerimenti consumati per marcarli dopo il save
     consumedSuggestionIds.current = approvedSuggestions.map((s) => s.id);
 
+    // Fix A4: lookup tabActivation in PROMPT_LAB_TABS per propagarlo già al primo run.
     const initial: GlobalProposal[] = collected.map(({ tabLabel, block }) => ({
       block,
       tabLabel,
+      tabActivation: PROMPT_LAB_TABS.find((t) => t.label === tabLabel)?.activation,
       before: block.content,
       status: "pending" as const,
     }));
+
+    // Fix B3: carica la mission corrente da app_settings (con fallback al default).
+    const systemMission = await loadSystemMission(userId);
 
     // ── Crea run DB ──
     let runId: string | undefined;
@@ -334,7 +339,7 @@ export function useGlobalPromptImprover(
         toRunProposals(initial) as unknown as Parameters<typeof createRun>[2],
         systemMap,
         fullContext,
-        SYSTEM_MISSION,
+        systemMission,
       );
       runId = run.id;
     } catch (e) {
@@ -370,16 +375,23 @@ export function useGlobalPromptImprover(
         const rawImproved = await lab.improveBlockGlobal({
           block: p.block,
           tabLabel: p.tabLabel,
+          tabActivation: p.tabActivation,
           systemMap: filteredMap,
           doctrineFull: blockDoctrine,
-          systemMission: SYSTEM_MISSION,
+          systemMission,
           goal: goal.trim() || undefined,
         });
 
         // LOVABLE-109: Parse outcome_type e architectural note dalla risposta
         const parsed = parseImproveResponse(rawImproved);
+        // Fix A1: delta threshold per distinguere riscritture sostanziali da cosmetiche.
         const isSame = parsed.text.trim() === p.before.trim();
-        const newStatus = (isSame || parsed.outcomeType === "no_change") ? "skipped" as const : "ready" as const;
+        const ratio = isSame ? 0 : computeChangeRatio(p.before, parsed.text);
+        const newStatus: GlobalProposal["status"] = (isSame || parsed.outcomeType === "no_change")
+          ? "skipped"
+          : ratio < MINOR_CHANGE_THRESHOLD
+            ? "minor_change"
+            : "ready";
 
         setState((s) => ({
           ...s,
@@ -390,6 +402,7 @@ export function useGlobalPromptImprover(
               status: newStatus,
               outcomeType: parsed.outcomeType,
               architecturalNote: parsed.architecturalNote,
+              changeRatio: ratio,
             } : x,
           ),
         }));
