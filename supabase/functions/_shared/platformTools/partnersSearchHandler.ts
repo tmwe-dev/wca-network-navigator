@@ -36,12 +36,12 @@ export async function handleSearchPartners(
   args: Record<string, unknown>
 ): Promise<unknown> {
   const isCount = !!args.count_only;
-  let query = supabase.from("partners").select(
-    isCount
-      ? "id"
-      : "id, company_name, city, country_code, country_name, email, phone, rating, wca_id, website, profile_description, is_favorite, office_type, lead_status",
-    isCount ? { count: "exact", head: true } : undefined
-  );
+  const selectCols = isCount
+    ? "id"
+    : "*";
+  let query = isCount
+    ? supabase.from("partners").select(selectCols, { count: "exact", head: true })
+    : supabase.from("partners").select(selectCols);
   if (args.country_code)
     query = query.eq("country_code", String(args.country_code).toUpperCase());
   if (args.city) query = query.ilike("city", `%${escapeLike(String(args.city))}%`);
@@ -59,20 +59,21 @@ export async function handleSearchPartners(
   const { data, error, count } = await query;
   if (error) return { error: error.message };
   if (isCount) return { count };
+  type PartnerRow = {
+    id: string;
+    company_name: string;
+    city: string;
+    country_code: string;
+    country_name: string;
+    email: string | null;
+    rating: number | null;
+    profile_description: string | null;
+    lead_status: string | null;
+  };
+  const rows = (data ?? []) as unknown as PartnerRow[];
   return {
-    count: data?.length,
-    partners: (data || []).map(
-      (p: {
-        id: string;
-        company_name: string;
-        city: string;
-        country_code: string;
-        country_name: string;
-        email: string | null;
-        rating: number | null;
-        profile_description: string | null;
-        lead_status: string | null;
-      }) => ({
+    count: rows.length,
+    partners: rows.map((p) => ({
         id: p.id,
         company_name: p.company_name,
         city: p.city,
@@ -82,8 +83,7 @@ export async function handleSearchPartners(
         rating: p.rating,
         has_profile: !!p.profile_description,
         lead_status: p.lead_status,
-      })
-    ),
+    })),
   };
 }
 
