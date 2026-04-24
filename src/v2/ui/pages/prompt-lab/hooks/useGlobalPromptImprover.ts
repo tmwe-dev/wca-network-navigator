@@ -244,7 +244,9 @@ export function useGlobalPromptImprover(
         }));
 
         // Persist to DB
-        await appendProposal(run.id, i, { after: parsed.text, status: newStatus }, i + 1);
+        // DB type non conosce "minor_change" → mappiamo a "ready" preservando l'after.
+        const dbStatus = newStatus === "minor_change" ? "ready" : newStatus;
+        await appendProposal(run.id, i, { after: parsed.text, status: dbStatus }, i + 1);
         setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
@@ -413,7 +415,8 @@ export function useGlobalPromptImprover(
           const isLast = i === initial.length - 1;
           if (isLast || now - lastDbSave.current >= DB_THROTTLE_MS) {
             lastDbSave.current = now;
-            await appendProposal(runId, i, { after: parsed.text, status: newStatus }, i + 1).catch(() => {});
+            const dbStatus = newStatus === "minor_change" ? "ready" : newStatus;
+            await appendProposal(runId, i, { after: parsed.text, status: dbStatus }, i + 1).catch(() => {});
             setState((s) => ({ ...s, dbSaveCount: s.dbSaveCount + 1 }));
           }
         }
