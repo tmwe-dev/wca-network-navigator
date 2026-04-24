@@ -2,11 +2,12 @@
 // TASK EXECUTION MODE - Agent Task Processing
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { executeTool } from "./toolHandlers.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import type { LeadStatus } from "../_shared/domainEvents.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = BaseSupabaseClient<any, "public", any>;
 
 interface AgentTask {
   id: string;
@@ -46,7 +47,7 @@ export async function handleStateTransition(
   // Use LeadProcessManager for transitions (event-driven architecture)
   const { LeadProcessManager } = await import("../_shared/processManagers/leadProcessManager.ts");
   const leadPM = new LeadProcessManager(supabase);
-  const result = await leadPM.requestTransition(partnerId, userId, toState, {
+  const result = await leadPM.requestTransition(partnerId, userId, toState as LeadStatus, {
     trigger,
     actor: { type: "ai_agent", name: "agent-execute/taskMode" },
     decisionOrigin: "ai_approved",
@@ -61,7 +62,7 @@ export async function handleStateTransition(
       : `Transizione fallita per partner ${partnerId}`,
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase, {
+  await logSupervisorAudit(supabase as any, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,
@@ -196,7 +197,7 @@ export async function handleGeneralTask(
     completed_at: new Date().toISOString(),
   }).eq("id", taskId);
 
-  await logSupervisorAudit(supabase, {
+  await logSupervisorAudit(supabase as any, {
     user_id: userId,
     actor_type: "ai_agent",
     actor_id: agentId,

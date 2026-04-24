@@ -89,8 +89,9 @@ export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Prom
     }
     return arr.map((row: Record<string, unknown>) => {
       const v = row?.embedding;
-      if (!Array.isArray(v) || v.length !== EMBEDDING_DIM) {
-        throw new EmbeddingError("invalid_response", `Invalid embedding vector dim ${v?.length}`);
+      const vectorLength = Array.isArray(v) ? v.length : undefined;
+      if (!Array.isArray(v) || vectorLength !== EMBEDDING_DIM) {
+        throw new EmbeddingError("invalid_response", `Invalid embedding vector dim ${vectorLength}`);
       }
       return v as number[];
     });

@@ -2,11 +2,11 @@
 // SYSTEM PROMPT ASSEMBLY - Base Doctrine, Persona, Knowledge
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient as BaseSupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { assembleContext, getContextBudget } from "../_shared/tokenBudget.ts";
 import { loadCommercialDoctrine } from "../_shared/commercialDoctrine.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = BaseSupabaseClient<any, "public", any>;
 
 interface PersonaData {
   tone?: string;

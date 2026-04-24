@@ -1,4 +1,4 @@
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { AgentExecuteSupabaseClient as SupabaseClient } from "../shared.ts";
 import { runPostSendPipeline } from "../../_shared/postSendPipeline.ts";
 import { checkCadenceGate, checkWhatsAppGate } from "../../_shared/postSendHook.ts";
 import { buildEmailContract, validateEmailContract } from "../../_shared/emailContract.ts";

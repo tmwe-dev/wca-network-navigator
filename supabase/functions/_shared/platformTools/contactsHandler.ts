@@ -78,8 +78,8 @@ export async function handleUpdateLeadStatus(
         trigger: "platform_tool_update",
       });
 
-      if (result.error) {
-        lastError = result.error;
+      if (!result.applied) {
+        lastError = result.blockedReason || "Failed to update lead status";
       } else {
         successCount++;
       }

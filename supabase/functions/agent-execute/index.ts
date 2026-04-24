@@ -4,11 +4,20 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight, supabase } from "./shared.ts";
 import { ALL_TOOLS } from "./toolDefs.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+
+type AgentRow = {
+  id: string;
+  name: string;
+  role: string;
+  is_active?: boolean | null;
+  stats?: Record<string, unknown> | null;
+  avatar_emoji?: string | null;
+};
+type ToolDefinition = Record<string, unknown>;
 
 // Modular imports
 import { authenticateRequest, validateAgent, validateRequestBody } from "./auth.ts";
@@ -50,10 +59,11 @@ serve(async (req) => {
 
     // ━━━ CONTEXT ASSEMBLY ━━━
     // Load all agents for team context
-    const { data: allAgents } = await supabase
+    const { data: allAgentsData } = await supabase
       .from("agents")
       .select("id, name, role, is_active, stats, avatar_emoji")
       .eq("user_id", userId);
+    const allAgents = (allAgentsData ?? []) as AgentRow[];
 
     // Build context blocks
     const contextBlock = await buildContextBlock(supabase, userId, agent_id, allAgents);
@@ -78,7 +88,9 @@ serve(async (req) => {
 
     // ━━━ TOOL FILTERING ━━━
     const assignedTools = (agent.assigned_tools as string[]) || [];
-    const agentTools = assignedTools.map((name: string) => ALL_TOOLS[name]).filter(Boolean);
+    const agentTools = assignedTools
+      .map((name: string) => ALL_TOOLS[name] as ToolDefinition | undefined)
+      .filter((tool): tool is ToolDefinition => Boolean(tool));
 
     // ━━━ EXECUTION DISPATCH ━━━
 
@@ -95,7 +107,7 @@ serve(async (req) => {
         authHeader,
         Deno.env.get("LOVABLE_API_KEY") || ""
       );
-      endMetrics(metrics, 200);
+      endMetrics(metrics, true, 200);
       return new Response(response.body, {
         status: response.status,
         headers: { ...dynCors, ...Object.fromEntries(response.headers.entries()) },
@@ -127,8 +139,8 @@ serve(async (req) => {
       try {
         // Handle special task types
         if (task.task_type === "state_transition") {
-          const result = await handleStateTransition(supabase, task, task_id, agent_id, agent.name as string, userId);
-          endMetrics(metrics, 200);
+           const result = await handleStateTransition(supabase, task, task_id, agent_id, agent.name as string, userId);
+           endMetrics(metrics, true, 200);
           return new Response(JSON.stringify(result), {
             headers: { ...dynCors, "Content-Type": "application/json" },
           });
@@ -148,7 +160,7 @@ serve(async (req) => {
           Deno.env.get("LOVABLE_API_KEY") || ""
         );
 
-        endMetrics(metrics, 200);
+        endMetrics(metrics, true, 200);
         return new Response(JSON.stringify({ success: result.success, result: result.result }), {
           headers: { ...dynCors, "Content-Type": "application/json" },
         });
