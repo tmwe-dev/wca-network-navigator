@@ -90,7 +90,7 @@ export async function findPendingOutreachItemsFromView(
     status: string | null;
     attempts: number | null;
     max_attempts: number | null;
-    priority: string | null;
+    priority: number | string | null;
     created_at: string | null;
     partner_id: string | null;
     contact_id: string | null;
@@ -105,7 +105,7 @@ export async function findPendingOutreachItemsFromView(
     status: r.status ?? "",
     attempts: r.attempts ?? 0,
     max_attempts: r.max_attempts ?? 0,
-    priority: r.priority ?? "",
+    priority: String(r.priority ?? ""),
     created_at: r.created_at ?? "",
     scheduled_for: null,
     partner_id: r.partner_id,
