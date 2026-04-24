@@ -12,6 +12,12 @@
 import { PLATFORM_TOOLS } from "./platformTools.ts";
 import { escapeLike } from "./sqlEscape.ts";
 
+// Permissive supabase client type for scope-local handlers.
+// Using `any` here avoids cascading "unknown" errors on .from/.rpc chains
+// without requiring full Database typing for every internal helper.
+// deno-lint-ignore no-explicit-any
+type ScopedSupabase = any;
+
 // ━━━━━━━━━━ CONTACTS SCOPE — extra tools only ━━━━━━━━━━
 
 const CONTACTS_EXTRA_TOOLS = [
@@ -48,7 +54,7 @@ export interface ScopeConfig {
    */
   systemPrompt?: string;
   tools: Array<Record<string, unknown>>;
-  localToolHandler?: (name: string, args: Record<string, unknown>, supabase: Record<string, unknown>) => Promise<unknown | null>;
+  localToolHandler?: (name: string, args: Record<string, unknown>, supabase: ScopedSupabase) => Promise<unknown | null>;
   temperature?: number;
   model?: string;
   creditLabel: string;
@@ -58,7 +64,7 @@ export interface ScopeConfig {
   buildPrompt?: (body: Record<string, unknown>, basePrompt: string) => string;
 }
 
-function buildContactQuery(supabase: SupabaseClient, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
+function buildContactQuery(supabase: ScopedSupabase, args: Record<string, unknown>, selectCols: string, opts?: { count?: boolean }) {
   let q = opts?.count
     ? supabase.from("imported_contacts").select(selectCols, { count: "exact", head: true })
     : supabase.from("imported_contacts").select(selectCols);
@@ -84,7 +90,7 @@ function buildContactQuery(supabase: SupabaseClient, args: Record<string, unknow
   return q;
 }
 
-async function contactsToolHandler(name: string, args: Record<string, unknown>, supabase: Record<string, unknown>): Promise<unknown | null> {
+async function contactsToolHandler(name: string, args: Record<string, unknown>, supabase: ScopedSupabase): Promise<unknown | null> {
   switch (name) {
     case "search_contacts_advanced": {
       const idsOnly = !!args.ids_only;
@@ -113,7 +119,7 @@ async function contactsToolHandler(name: string, args: Record<string, unknown>, 
   }
 }
 
-async function importToolHandler(name: string, args: Record<string, unknown>, supabase: Record<string, unknown>): Promise<unknown | null> {
+async function importToolHandler(name: string, args: Record<string, unknown>, supabase: ScopedSupabase): Promise<unknown | null> {
   switch (name) {
     case "list_imports": {
       let q = supabase.from("import_logs").select("*").order("created_at", { ascending: false }).limit(Number(args.limit) || 10);
@@ -154,13 +160,13 @@ async function importToolHandler(name: string, args: Record<string, unknown>, su
       if (args.import_log_id) {
         const { data, error } = await supabase.from("imported_contacts").select("country, email, phone, is_transferred, is_selected").eq("import_log_id", args.import_log_id);
         if (error) return { error: error.message };
-        const stats: Record<string, unknown> = { total: data?.length || 0, transferred: 0, selected: 0, with_email: 0, with_phone: 0, by_country: {} };
+        const stats: { total: number; transferred: number; selected: number; with_email: number; with_phone: number; by_country: Record<string, number> } = { total: data?.length || 0, transferred: 0, selected: 0, with_email: 0, with_phone: 0, by_country: {} };
         for (const c of (data || []) as Array<Record<string, unknown>>) {
           if (c.is_transferred) stats.transferred++;
           if (c.is_selected) stats.selected++;
           if (c.email) stats.with_email++;
           if (c.phone) stats.with_phone++;
-          const country = c.country || "Sconosciuto";
+          const country = String(c.country || "Sconosciuto");
           stats.by_country[country] = (stats.by_country[country] || 0) + 1;
         }
         return stats;
@@ -184,10 +190,11 @@ export function getScopeConfig(scope: string): ScopeConfig {
         temperature: 0.1,
         creditLabel: "Cockpit Assistant",
         buildPrompt: (body, basePrompt) => {
-          const contacts = body.contacts || [];
-          const _contactSummary = contacts.map((c: Record<string, unknown>) =>
-            `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${(c.channels||[]).join(",")}`
-          ).join("\n");
+          const contacts = (body.contacts as Array<Record<string, unknown>>) || [];
+          const _contactSummary = contacts.map((c) => {
+            const channels = Array.isArray(c.channels) ? (c.channels as unknown[]).join(",") : "";
+            return `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${channels}`;
+          }).join("\n");
           return basePrompt; // System prompt stays the same, user message includes contacts
         },
         postProcess: (content) => {
