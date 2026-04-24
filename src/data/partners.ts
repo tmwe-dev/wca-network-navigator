@@ -171,13 +171,15 @@ export async function updatePartner(id: string, updates: Partial<PartnerRow>) {
 
   if (lead_status) {
     // Route lead_status through RPC to enforce state machine
-    const { data, error: rpcError } = await supabase.rpc("apply_lead_status_rpc", {
+    // RPC not in generated types — cast to any.
+    const { data, error: rpcError } = await (supabase as any).rpc("apply_lead_status_rpc", {
       p_table: "partners",
       p_record_id: id,
       p_new_status: lead_status,
     });
     if (rpcError) throw rpcError;
-    if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+    const result = data as { applied?: boolean; blocked_reason?: string } | null;
+    if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
   }
 
   // Apply remaining non-status updates
@@ -467,7 +469,8 @@ export async function getPartnersByLeadStatusFromView(
   statuses: string[],
   select = "partner_id, company_name, email, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
 ): Promise<PipelineLeadRow[]> {
-  const { data, error } = await supabase
+  // View not in generated types — cast to any.
+  const { data, error } = await (supabase as any)
     .from("v_pipeline_lead")
     .select(select)
     .in("lead_status", statuses);
@@ -504,13 +507,15 @@ export async function getPartnerWebsite(id: string) {
 
 export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
   // Route through server-side guard via RPC to enforce lead_status transitions
-  const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+  // RPC not in generated types — cast to any.
+  const { data, error } = await (supabase as any).rpc("apply_lead_status_rpc", {
     p_table: table,
     p_record_id: id,
     p_new_status: status,
   });
   if (error) throw error;
-  if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+  const result = data as { applied?: boolean; blocked_reason?: string } | null;
+  if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
 }
 
 // ─── Cache Invalidation ────────────────────────────────

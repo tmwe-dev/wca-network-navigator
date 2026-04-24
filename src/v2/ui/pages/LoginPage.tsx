@@ -27,11 +27,6 @@ export function LoginPage(): React.ReactElement {
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
-  // If already authenticated, redirect to intended destination
-  if (isAuthenticated && !authLoading) {
-    return <Navigate to={from} replace />;
-  }
-
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -56,6 +51,12 @@ export function LoginPage(): React.ReactElement {
     setResetSent(true);
     setSubmitting(false);
   }, [email, resetPassword]);
+
+  // If already authenticated, redirect to intended destination.
+  // MUST stay AFTER all hooks to keep hook order stable across renders.
+  if (isAuthenticated && !authLoading) {
+    return <Navigate to={from} replace />;
+  }
 
   const switchMode = (next: "login" | "signup" | "forgot") => {
     clearError();

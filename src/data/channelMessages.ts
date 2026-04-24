@@ -73,7 +73,8 @@ export async function getUnifiedInboxMessages(
   limit = 100,
   offset = 0
 ): Promise<UnifiedInboxRow[]> {
-  let q = supabase.from("v_inbox_unified").select("*").order("message_date", { ascending: false });
+  // View not in generated types — cast to any so TS does not infer `never`.
+  let q = (supabase as any).from("v_inbox_unified").select("*").order("message_date", { ascending: false });
 
   if (channel) q = q.eq("channel", channel);
   if (direction) q = q.eq("direction", direction);
@@ -87,7 +88,7 @@ export async function getUnifiedInboxMessages(
  * Count unread messages from v_inbox_unified view, grouped by channel/sender.
  */
 export async function getUnifiedInboxStats(channel?: string): Promise<{ unread: number; total: number }> {
-  let q = supabase.from("v_inbox_unified").select("message_id, is_read");
+  let q = (supabase as any).from("v_inbox_unified").select("message_id, is_read");
 
   if (channel) q = q.eq("channel", channel);
 

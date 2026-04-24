@@ -95,7 +95,8 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
           break;
         }
         case "operative_prompt": {
-          const { error } = await supabase.from("operative_prompts").insert({
+          // Schema mismatch with generated types — cast to any.
+          const { error } = await (supabase as any).from("operative_prompts").insert({
             name: title.trim(),
             objective: content.trim(),
             procedure: "",
@@ -106,7 +107,7 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
           break;
         }
         case "email_prompt": {
-          const { error } = await supabase.from("email_prompts").insert({
+          const { error } = await (supabase as any).from("email_prompts").insert({
             title: title.trim(),
             instructions: content.trim(),
             is_active: true,
@@ -115,7 +116,7 @@ export function CreateBlockDialog({ open, onOpenChange, defaultType, onCreated }
           break;
         }
         case "playbook": {
-          const { error } = await supabase.from("commercial_playbooks").insert({
+          const { error } = await (supabase as any).from("commercial_playbooks").insert({
             name: title.trim(),
             description: content.trim(),
             prompt_template: "",

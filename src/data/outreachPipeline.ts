@@ -143,8 +143,9 @@ export async function fetchOutreachStats() {
   const now = new Date().toISOString();
 
   // Query v_outreach_today materialized view for pending/scheduled counts
-  // instead of separate COUNT queries on activities and mission_actions
-  const { data: queueData, error: queueErr } = await supabase
+  // instead of separate COUNT queries on activities and mission_actions.
+  // View not in generated types — cast to any. Runtime fallback below covers absence.
+  const { data: queueData, error: queueErr } = await (supabase as any)
     .from("v_outreach_today")
     .select("status, scheduled_for")
     .eq("user_id", user.id);
@@ -178,14 +179,14 @@ export async function fetchOutreachStats() {
   }
 
   // Count from materialized view
-  const queue = queueData ?? [];
-  const pending = queue.filter(q => q.status === "pending").length;
-  const sentToday = queue.filter(q =>
+  const queue = (queueData ?? []) as Array<{ status: string | null; scheduled_for: string | null }>;
+  const pending = queue.filter((q) => q.status === "pending").length;
+  const sentToday = queue.filter((q) =>
     q.status === "sent" &&
     q.scheduled_for &&
     new Date(q.scheduled_for) >= todayStart
   ).length;
-  const scheduled = queue.filter(q =>
+  const scheduled = queue.filter((q) =>
     q.status === "pending" &&
     q.scheduled_for &&
     new Date(q.scheduled_for) > new Date(now)
