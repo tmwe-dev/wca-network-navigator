@@ -148,7 +148,7 @@ ISTRUZIONI:
 }
 
 /** Invoca il modello in modalità conversational con il briefing Harmonizer. */
-async function callHarmonizer(userPrompt: string): Promise<string> {
+export async function callHarmonizer(userPrompt: string, briefing: string = HARMONIZER_BRIEFING): Promise<string> {
   const result = await invokeEdge<UnifiedAssistantResponse>("unified-assistant", {
     body: {
       scope: "kb-supervisor",
@@ -157,7 +157,7 @@ async function callHarmonizer(userPrompt: string): Promise<string> {
       context: {
         currentPage: "prompt-lab",
         page: "prompt-lab",
-        operatorBriefing: HARMONIZER_BRIEFING,
+        operatorBriefing: briefing,
         extra_context: { mode: "harmonize" },
       },
     },
@@ -184,7 +184,7 @@ function extractJsonObject(raw: string): string | null {
 /**
  * Parser robusto con Zod: log visibile su fallimento invece di [] silenzioso.
  */
-function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
+export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
   const jsonStr = extractJsonObject(raw);
   if (!jsonStr) {
     console.warn("[harmonizeAnalyzer] no JSON found in response", { rawPreview: raw.slice(0, 200) });
