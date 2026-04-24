@@ -182,7 +182,7 @@ export interface RelationshipMetrics {
 }
 
 export async function analyzeRelationshipHistory(
-  supabase: ReturnType<typeof createClient>,
+  supabase: AnyClient,
   partnerId: string,
   userId: string,
 ): Promise<{ metrics: RelationshipMetrics; historyText: string }> {

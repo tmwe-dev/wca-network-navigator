@@ -125,7 +125,7 @@ async function callAI(apiKey: string, items: Array<Record<string, unknown>>) {
 
 function ok(data: Record<string, unknown>) {
   return new Response(JSON.stringify(data), {
-    headers: { ...dynCors, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -202,9 +202,10 @@ async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string
 }
 
 async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>) {
-  const eligible = partners.filter((p: Record<string, unknown>) => {
-    const contacts = p.partner_contacts || [];
-    return !p.company_alias || contacts.some((c: Record<string, unknown>) => !c.contact_alias);
+  // deno-lint-ignore no-explicit-any
+  const eligible = partners.filter((p: any) => {
+    const contacts = (p.partner_contacts || []) as any[];
+    return !p.company_alias || contacts.some((c: any) => !c.contact_alias);
   });
 
   if (!eligible.length) return ok({ success: true, processed: 0, message: "Nessun partner da elaborare" });
@@ -255,17 +256,18 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
   for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
     const batch = eligible.slice(i, i + BATCH_SIZE);
 
-    const partnerList = batch.map((p: Record<string, unknown>) => {
-      const contacts = (p.partner_contacts || [])
-        .filter((c: Record<string, unknown>) => !c.contact_alias)
-        .map((c: Record<string, unknown>) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
+    // deno-lint-ignore no-explicit-any
+    const partnerList = batch.map((p: any) => {
+      const contacts = ((p.partner_contacts || []) as any[])
+        .filter((c: any) => !c.contact_alias)
+        .map((c: any) => ({ contact_id: c.id, full_name: c.name, title: c.title || "" }));
       return {
         partner_id: p.id,
         company_name: p.company_name,
         needs_company_alias: !p.company_alias,
         contacts,
       };
-    }).filter((p: Record<string, unknown>) => p.needs_company_alias || p.contacts.length > 0);
+    }).filter((p) => p.needs_company_alias || p.contacts.length > 0);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
