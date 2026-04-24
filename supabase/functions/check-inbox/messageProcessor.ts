@@ -96,7 +96,7 @@ export async function processMessage(
 
       if (rfc822Size > 0 && rfc822Size <= MAX_RAW_FETCH_BYTES) {
         const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
-        rawBytes = extractLiteralBytesFromResponse(rawResponse);
+        rawBytes = new Uint8Array(extractLiteralBytesFromResponse(rawResponse));
         if (!rfc822Size) rfc822Size = rawBytes.length;
         if (rawBytes.length > 0) {
           rawHash = await sha256hex(rawBytes);
@@ -117,7 +117,7 @@ export async function processMessage(
       } else {
         try {
           const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
-          rawBytes = extractLiteralBytesFromResponse(rawResponse);
+          rawBytes = new Uint8Array(extractLiteralBytesFromResponse(rawResponse));
           rfc822Size = rawBytes.length;
           if (rawBytes.length > MAX_RAW_FETCH_BYTES) {
             parseWarnings.push(`raw fetched but too large (${rawBytes.length}B), discarding`);

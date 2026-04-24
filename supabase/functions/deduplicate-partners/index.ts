@@ -32,13 +32,13 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: authError } = await anonClient.auth.getUser(token);
+    if (authError || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "AUTH_INVALID" }), {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
 
     // Rate limit
     const rl = checkRateLimit(`dedup:${userId}`, { maxTokens: 5, refillRate: 0.1 });
@@ -73,7 +73,8 @@ Deno.serve(async (req) => {
 
     for (const [key, members] of duplicateGroups) {
       // Score each member: higher = more complete
-      const scored = members.map((m) => {
+      // deno-lint-ignore no-explicit-any
+      const scored: any[] = members.map((m: Record<string, unknown>) => {
         let score = 0;
         if (m.logo_url) score += 10;
         if (m.enrichment_data) score += 10;
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
         return { ...m, score };
       });
 
-      scored.sort((a, b) => b.score - a.score);
+      scored.sort((a, b) => (b.score as number) - (a.score as number));
       const keeper = scored[0];
       const toDelete = scored.slice(1);
       const deleteIds = toDelete.map((d) => d.id);
@@ -163,9 +164,9 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...dynCors, "Content-Type": "application/json" } },
     );
-  } catch (err: Record<string, unknown>) {
+  } catch (err: unknown) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } },
     );
   }
