@@ -10,23 +10,8 @@
  */
 
 // Local alias to avoid pulling SDK types (and version drift) here.
-type SupabaseClient = {
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: unknown) => {
-        eq: (col: string, val: unknown) => {
-          eq: (col: string, val: unknown) => {
-            gte: (col: string, val: unknown) => {
-              order: (col: string, opts: { ascending: boolean }) => {
-                limit: (n: number) => Promise<{ data: unknown; error: unknown }>;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-};
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 /**
  * WhatsApp gate (Costituzione §4).
