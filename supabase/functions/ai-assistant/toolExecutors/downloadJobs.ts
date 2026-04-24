@@ -5,9 +5,8 @@
 
 import { loadWcaIds } from "./wcaIdResolver.ts";
 
-type SupabaseClient = ReturnType<
-  typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient
->;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
 
 export async function executeCreateDownloadJob(
   supabase: SupabaseClient,

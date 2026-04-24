@@ -10,9 +10,8 @@ import {
   resolveCountryName,
 } from "./partnerLookup.ts";
 
-type SupabaseClient = ReturnType<
-  typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient
->;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
 
 export async function executeDownloadSinglePartner(
   supabase: SupabaseClient,
