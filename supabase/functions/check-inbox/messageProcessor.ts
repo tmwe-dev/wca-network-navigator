@@ -165,8 +165,10 @@ export async function processMessage(
         envelope: true,
         bodyStructure: !oversized,
       } as Record<string, unknown>);
-      const env = (envFetch as Record<string, unknown>[])?.[0]?.envelope as Record<string, unknown> | undefined;
-      bodyStructure = !oversized ? ((envFetch as Record<string, unknown>[])?.[0]?.bodyStructure as Record<string, unknown> || null) : null;
+      // deno-lint-ignore no-explicit-any
+      const env = (envFetch as unknown as any[])?.[0]?.envelope as Record<string, unknown> | undefined;
+      // deno-lint-ignore no-explicit-any
+      bodyStructure = !oversized ? (((envFetch as unknown as any[])?.[0]?.bodyStructure as Record<string, unknown>) || null) : null;
       if (env) {
         fromAddr = envelopeAddr((env.from as Record<string, unknown>[] | undefined)?.[0] ?? null);
         toAddr = envelopeAddrList(env.to as Record<string, unknown>[] | undefined);
