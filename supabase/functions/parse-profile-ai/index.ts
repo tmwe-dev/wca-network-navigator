@@ -282,7 +282,7 @@ ${truncated}`
         .map((n: Record<string, unknown>) => ({
           partner_id: partnerId,
           network_name: n.name,
-          expires: n.expires ? parseDateString(n.expires) : null,
+          expires: n.expires ? parseDateString(n.expires as string) : null,
         }))
 
       if (newNets.length > 0) {

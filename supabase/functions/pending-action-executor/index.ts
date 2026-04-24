@@ -13,6 +13,8 @@
  * Logs every execution to supervisor_audit_log.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+// deno-lint-ignore no-explicit-any
+const _typedCreateClient = createClient<any>;
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
