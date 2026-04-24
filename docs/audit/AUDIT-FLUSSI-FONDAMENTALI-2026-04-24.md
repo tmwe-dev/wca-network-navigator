@@ -189,6 +189,23 @@ Marco ha 2 record `is_active=true` con stesso nome → ambiguo per il routing.
 | **P1.2** | Report diagnostico 1539 task pending | Capire blocco autopilot |
 | **P1.3** | Seed 3 `email_prompts` globali | Composer email |
 
+## 8. Esiti esecuzione 2026-04-24
+
+| Step | Stato | Note |
+|---|---|---|
+| P0.1 | ✅ Completato | Tabella `email_send_log` creata (15 col, RLS append-only, 3 indici). Retrofit fire-and-forget di `send-email` + `process-email-queue`. |
+| P0.2 | ✅ Completato | Aggiunte 9 chiavi globali in `app_settings` (7 WA + 2 LI). 7 chiavi LI già esistenti rispettate via `WHERE NOT EXISTS`. Verificato: 16 chiavi WA/LI globali totali. |
+| P0.3 | ✅ Completato (no-op cosmetico) | Verifica reale: nessun gruppo `(user_id, name)` ha >1 attivo. UPDATE rename `[DUP]` ha matchato 0 righe (i disattivi avevano già nomi distinti dagli attivi). Dedup logica era già OK. |
+| P1.1 | ✅ Verificato (no-op) | Audit completo: nessuna query nel codebase referenzia `operative_prompts.scope`. Tutte le query usano `context` (corretto). `email_prompts` usa correttamente `scope`. Nessuna modifica necessaria. |
+| P1.2 | ✅ Diagnosi completata | Report in `docs/audit/AUTOPILOT-DIAGNOSIS-2026-04-24.md`. **Root cause: 0 missioni autopilot attive + nessun consumer per `agent_tasks`.** Worker schedulato e funzionante, ma legge `agent_missions` non `agent_tasks`. |
+| P1.3 | ✅ Completato | 3 prompt globali seedati per user `27b60e53…` (1100 activities, top user). Verificato: `SELECT * FROM email_prompts WHERE is_active=true` → 3 righe. |
+
+### Scoperte aggiuntive durante l'esecuzione
+
+- **7 cron job ricorrenti in stato `failed`**: `cadence-engine`, `email-sync-worker`, `smart-scheduler`, `kb-promoter`, `memory-promoter`, `ai-backup`, `ai-learning-feedback`. Da indagare separatamente (P2.C).
+- **Disconnect autopilot/task**: `agent-autonomous-cycle` continua a generare task ogni 2 min, ma nessuna edge function le esegue. Servirebbe drainer dedicato (P2.A).
+- Schema `agent_tasks` non ha `updated_at`, `locked_at`, `requires_approval`. Privo di lock e di gate approval. Gestione approval è downstream in `agent-execute`.
+
 ### Vincoli architetturali da rispettare
 - `mem://constraints/no-physical-delete`: mai DELETE su record business → trigger DB lo intercetta. Tutte le dedup via `is_active=false`.
 - `mem://auth/working-auth-config-2026-04-15`: non toccare auth.
