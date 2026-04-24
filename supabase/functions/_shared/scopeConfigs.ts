@@ -191,9 +191,10 @@ export function getScopeConfig(scope: string): ScopeConfig {
         creditLabel: "Cockpit Assistant",
         buildPrompt: (body, basePrompt) => {
           const contacts = (body.contacts as Array<Record<string, unknown>>) || [];
-          const _contactSummary = contacts.map((c) =>
-            `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${(c.channels||[]).join(",")}`
-          ).join("\n");
+          const _contactSummary = contacts.map((c) => {
+            const channels = Array.isArray(c.channels) ? (c.channels as unknown[]).join(",") : "";
+            return `- ${c.name} | ${c.company} | ${c.country} | priority:${c.priority} | lang:${c.language} | channels:${channels}`;
+          }).join("\n");
           return basePrompt; // System prompt stays the same, user message includes contacts
         },
         postProcess: (content) => {
