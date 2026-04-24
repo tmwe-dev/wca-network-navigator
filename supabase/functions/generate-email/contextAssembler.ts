@@ -42,7 +42,8 @@ import { assembleEnrichmentContext, type EnrichmentContext } from "./enrichmentC
 import { assembleDocumentsAndSignature, type DocumentsAndSignature } from "./documentAndSignatureAssembler.ts";
 import { assembleKbAndPlaybook, type KbAndPlaybook } from "./kbAndPlaybookAssembler.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 // ── Context Blocks Type ──
 

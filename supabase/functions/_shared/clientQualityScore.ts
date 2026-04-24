@@ -27,7 +27,8 @@
 
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 // Re-export all public types and functions from sub-modules
 export type { DimensionScore, ClientData } from "./dimensionCalculators.ts";

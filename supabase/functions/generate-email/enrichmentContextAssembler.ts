@@ -10,7 +10,8 @@ import {
   type DeepSearchScoreResult,
 } from "../_shared/deepSearchScore.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 export interface EnrichmentContext {
   cachedEnrichmentContext: string;

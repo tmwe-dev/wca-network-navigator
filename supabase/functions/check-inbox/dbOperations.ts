@@ -7,7 +7,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 // ━━━ Sender matching (domain fallback) ━━━
 

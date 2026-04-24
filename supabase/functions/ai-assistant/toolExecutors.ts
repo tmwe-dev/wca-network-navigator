@@ -44,7 +44,8 @@ import {
 } from "./toolExecutors/agents.ts";
 import { executeRunKbAudit } from "./toolExecutors/system.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 interface ReadHandlers {
   executeSearchPartners: Function;
