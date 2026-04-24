@@ -64,6 +64,8 @@ export interface CollectorOutput {
   classification: GapClassification;
 }
 
+export type CollectorDiagnostics = NonNullable<CollectorOutput["diagnostics"]>;
+
 /** Heuristic mapping da "categoria suggerita" della libreria a tabella DB. */
 const CATEGORY_TO_TABLE: Record<string, string> = {
   doctrine: "kb_entries",
@@ -114,7 +116,7 @@ function inferCategory(title: string, body: string): string {
 
 function parseSingleDesiredSource(content: string): {
   items: InventoryItem[];
-  diagnostics: CollectorOutput["diagnostics"];
+  diagnostics: CollectorDiagnostics;
 } {
   const cleaned = stripFrontmatter(content);
   const source_line_count = cleaned ? cleaned.split("\n").length : 0;
@@ -127,7 +129,7 @@ function parseSingleDesiredSource(content: string): {
     .filter(Boolean);
 
   const items: InventoryItem[] = [];
-  let parseMode: CollectorOutput["diagnostics"]["parse_mode"] = "empty";
+  let parseMode: CollectorDiagnostics["parse_mode"] = "empty";
 
   for (const sec of sections) {
     const titleMatch = sec.match(/^##+\s*(?:📄|📚|🎯|🤖|✉️|📞)?\s*(.+)$/m);
@@ -272,15 +274,44 @@ export async function collectRealInventory(userId: string): Promise<InventoryIte
  *  - **Figura (opzionale):** <name>
  */
 export function parseDesiredInventory(librarySource: string, uploadedDocs: ParsedFile[] = []): InventoryItem[] {
+  return parseDesiredInventoryDetailed(librarySource, uploadedDocs).items;
+}
+
+export function parseDesiredInventoryDetailed(
+  librarySource: string,
+  uploadedDocs: ParsedFile[] = [],
+): { items: InventoryItem[]; diagnostics: CollectorDiagnostics } {
   const sources: Array<{ name: string; content: string }> = [];
   if (librarySource.trim()) sources.push({ name: "libreria-tmwe.md", content: librarySource });
   for (const f of uploadedDocs) sources.push({ name: f.name, content: f.content });
 
   const out: InventoryItem[] = [];
+  const mergedDiagnostics: CollectorDiagnostics = {
+    source_line_count: 0,
+    source_char_count: 0,
+    desired_parsed_count: 0,
+    parse_mode: "empty",
+    placeholder_detected: false,
+  };
+
   for (const src of sources) {
-    out.push(...parseSingleDesiredSource(src.content).items);
+    const parsed = parseSingleDesiredSource(src.content);
+    out.push(...parsed.items);
+    mergedDiagnostics.source_line_count += parsed.diagnostics.source_line_count;
+    mergedDiagnostics.source_char_count += parsed.diagnostics.source_char_count;
+    mergedDiagnostics.desired_parsed_count += parsed.diagnostics.desired_parsed_count;
+    mergedDiagnostics.placeholder_detected ||= parsed.diagnostics.placeholder_detected;
+    if (parsed.diagnostics.parse_mode === "structured") {
+      mergedDiagnostics.parse_mode = "structured";
+    } else if (
+      parsed.diagnostics.parse_mode === "fallback" &&
+      mergedDiagnostics.parse_mode !== "structured"
+    ) {
+      mergedDiagnostics.parse_mode = "fallback";
+    }
   }
-  return out;
+
+  return { items: out, diagnostics: mergedDiagnostics };
 }
 
 /** Confronto fuzzy tra desired e real per matching. */
