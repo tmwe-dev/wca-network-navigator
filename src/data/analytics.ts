@@ -130,8 +130,10 @@ export async function getEmailMetrics(
  */
 export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsData> {
   try {
-    // Fetch pre-aggregated partner counts by status from materialized view
-    const { data: kpiRow } = await supabase
+    // Fetch pre-aggregated partner counts by status from materialized view.
+    // View not in generated types — cast supabase to any to bypass TS narrowing.
+    // Runtime fallback below handles the case where the view does not exist.
+    const { data: kpiRow } = await (supabase as any)
       .from("v_kpi_dashboard")
       .select("total_partners, partners_new, partners_first_touch, partners_holding, partners_engaged, partners_qualified, partners_negotiation, partners_converted, partners_archived, partners_blacklisted")
       .limit(1)

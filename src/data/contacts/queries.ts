@@ -125,14 +125,16 @@ export async function insertContacts(contacts: Record<string, unknown>[]) {
 }
 
 export async function updateContactStatus(id: string, status: string, extra?: Record<string, unknown>) {
-  // Route through LeadProcessManager RPC to enforce lead_status transitions
-  const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+  // Route through LeadProcessManager RPC to enforce lead_status transitions.
+  // RPC not in generated types — cast to any to bypass TS narrowing.
+  const { data, error } = await (supabase as any).rpc("apply_lead_status_rpc", {
     p_table: "imported_contacts",
     p_record_id: id,
     p_new_status: status,
   });
   if (error) throw error;
-  if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+  const result = data as { applied?: boolean; blocked_reason?: string } | null;
+  if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
 
   // Apply additional non-status updates if provided
   if (extra && Object.keys(extra).length > 0) {
@@ -147,13 +149,14 @@ export async function updateContactStatus(id: string, status: string, extra?: Re
 export async function updateLeadStatus(ids: string[], status: LeadStatus) {
   // Route through LeadProcessManager RPC for each contact to enforce lead_status transitions
   for (const id of ids) {
-    const { data, error } = await supabase.rpc("apply_lead_status_rpc", {
+    const { data, error } = await (supabase as any).rpc("apply_lead_status_rpc", {
       p_table: "imported_contacts",
       p_record_id: id,
       p_new_status: status,
     });
     if (error) throw error;
-    if (data && !data.applied) throw new Error(data.blocked_reason || "Lead status transition blocked");
+    const result = data as { applied?: boolean; blocked_reason?: string } | null;
+    if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
   }
 
   // Handle converted_at timestamp if needed
