@@ -21,6 +21,7 @@ import type {
   EntityCreatedEntry,
 } from "@/data/harmonizerSessions";
 import type { TmweChunkDef } from "./tmweChunks";
+import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER } from "./tmweChunks";
 import { buildHarmonizerKbContext } from "./harmonizerKbInjector";
 
 const FactSchema = z.object({
@@ -91,6 +92,29 @@ function buildLibraryUserPrompt(
   const preloadedDups = chunkDef.preloadedDuplicates.map((d) => `- ${d.title} (${d.reason})`).join("\n") || "(nessuno)";
   const preloadedConfs = chunkDef.preloadedConflicts.map((c) => `- ${c.topic}: ${c.notes ?? ""}`).join("\n") || "(nessuno)";
 
+  // Roadmap globale: dove siamo nella sequenza, cosa è già stato processato,
+  // cosa resta. Il modello capisce che è un lavoro multi-step e non deve
+  // "anticipare" chunk futuri o duplicare lavoro già fatto.
+  const totalChunks = TMWE_CHUNKS.length;
+  const positionInOrder = TMWE_EXECUTION_ORDER.indexOf(chunkDef.index);
+  const stepNumber = positionInOrder >= 0 ? positionInOrder + 1 : chunkDef.index + 1;
+  const processedChunkIndexes = positionInOrder > 0
+    ? TMWE_EXECUTION_ORDER.slice(0, positionInOrder)
+    : [];
+  const remainingChunkIndexes = positionInOrder >= 0
+    ? TMWE_EXECUTION_ORDER.slice(positionInOrder + 1)
+    : [];
+  const fmtChunkRef = (i: number) => {
+    const c = TMWE_CHUNKS[i];
+    return c ? `#${c.index} ${c.name} [${c.targetTables.join(",")}]` : `#${i}`;
+  };
+  const processedList = processedChunkIndexes.length > 0
+    ? processedChunkIndexes.map(fmtChunkRef).join("\n  - ")
+    : "(nessuno — questo è il primo chunk)";
+  const remainingList = remainingChunkIndexes.length > 0
+    ? remainingChunkIndexes.map(fmtChunkRef).join("\n  - ")
+    : "(nessuno — questo è l'ultimo chunk)";
+
   const gapsText = chunk.map((g, i) => {
     const matchedInfo = g.matched
       ? `MATCH ESISTENTE (id=${g.matched.id ?? "n/d"}, tabella=${g.matched.table}, titolo="${g.matched.title}")`
@@ -111,8 +135,21 @@ ${matchedInfo}`;
 
   return `=== CONTESTO RUN ===
 goal: ${goal || "(non specificato)"}
-chunk: #${chunkDef.index} — ${chunkDef.name}
+chunk corrente: #${chunkDef.index} — ${chunkDef.name}
+posizione globale: STEP ${stepNumber} di ${totalChunks} (ordine ottimale ingestion)
 target_tables: ${chunkDef.targetTables.join(", ")}
+
+=== ROADMAP GLOBALE INGESTION ===
+Già processati (NON riproporre lavoro già coperto qui):
+  - ${processedList}
+
+Ancora da processare (NON anticipare contenuti di questi chunk: arriveranno):
+  - ${remainingList}
+
+REGOLA SCOPE: in questo step PUOI proporre SOLO modifiche alle tabelle
+[${chunkDef.targetTables.join(", ")}]. Se un gap richiederebbe
+toccare una tabella diversa, segnala come cross_reference o readonly_note,
+non come proposta diretta — sarà coperta nel chunk dedicato.
 
 === CONTRACT GUIDANCE PER QUESTO CHUNK ===
 ${chunkDef.contractGuidance}
@@ -286,16 +323,41 @@ export async function runLibraryChunkAnalyzer(input: {
   const proposals = parseProposalsFromText(raw, cap);
   const extended = parseExtended(raw, chunkDef.index);
 
+  // SCOPE GUARD: scarta proposte fuori dalle target tables del chunk.
+  // Le proposte fuori scope vanno gestite nel chunk dedicato per evitare
+  // doppie modifiche e collisioni di sessione. Loggiamo cosa abbiamo scartato.
+  const inScope: typeof proposals = [];
+  const outOfScope: typeof proposals = [];
+  for (const p of proposals) {
+    if (chunkDef.targetTables.includes(p.target?.table)) {
+      inScope.push(p);
+    } else {
+      outOfScope.push(p);
+    }
+  }
+  if (outOfScope.length > 0) {
+    console.warn(
+      `[libraryAnalyzer] chunk #${chunkDef.index} ${outOfScope.length} proposte fuori scope scartate`,
+      {
+        scope: chunkDef.targetTables,
+        outOfScope: outOfScope.map((p) => ({ table: p.target?.table, label: p.block_label })),
+      },
+    );
+  }
+
   // Parser ha fallito su tutto → ERRORE (invece di marciare a 0 proposte).
-  if (proposals.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
+  if (inScope.length === 0 && extended.facts.length === 0 && extended.conflicts.length === 0) {
+    const outScopeNote = outOfScope.length > 0
+      ? ` (${outOfScope.length} proposte erano fuori scope: ${outOfScope.map((p) => p.target?.table).join(", ")})`
+      : "";
     throw new Error(
-      `Parser non è riuscito a estrarre nulla dalla risposta del modello per chunk #${chunkDef.index}. ` +
+      `Parser non è riuscito a estrarre nulla in scope per chunk #${chunkDef.index}.${outScopeNote} ` +
       `Preview: "${raw.slice(0, 200).replace(/\n/g, " ")}..."`,
     );
   }
 
   // Deriva entities_created dalle proposals INSERT.
-  const entitiesCreated: EntityCreatedEntry[] = proposals
+  const entitiesCreated: EntityCreatedEntry[] = inScope
     .filter((p) => p.action === "INSERT" && p.target?.table)
     .map((p) => ({
       table: p.target.table,
@@ -306,7 +368,7 @@ export async function runLibraryChunkAnalyzer(input: {
     }));
 
   return {
-    proposals,
+    proposals: inScope,
     extractedFacts: extended.facts,
     newConflicts: extended.conflicts,
     newCrossRefs: extended.crossRefs,
