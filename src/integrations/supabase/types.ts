@@ -7717,8 +7717,130 @@ export type Database = {
         }
         Relationships: []
       }
+      v_pipeline_lead: {
+        Row: {
+          partner_id: string
+          user_id: string
+          company_name: string | null
+          company_alias: string | null
+          country_code: string | null
+          country_name: string | null
+          city: string | null
+          email: string | null
+          phone: string | null
+          lead_status: string | null
+          is_active: boolean | null
+          is_favorite: boolean | null
+          rating: number | null
+          interaction_count: number | null
+          last_interaction_at: string | null
+          partner_created_at: string | null
+          enriched_at: string | null
+          converted_at: string | null
+          touch_count: number
+          last_outbound_at: string | null
+          days_since_last_outbound: number
+          last_inbound_at: string | null
+          last_inbound_category: string | null
+          days_since_last_inbound: number | null
+          pending_reminders: number
+          has_deep_search: boolean
+          primary_contact_name: string | null
+          primary_contact_email: string | null
+        }
+        Relationships: []
+      }
+      v_inbox_unified: {
+        Row: {
+          message_id: string
+          user_id: string
+          direction: string | null
+          from_address: string | null
+          to_address: string | null
+          subject: string | null
+          body_text: string | null
+          message_date: string | null
+          channel: string | null
+          thread_id: string | null
+          sender_category: string | null
+          partner_id: string | null
+          source_type: string | null
+          source_id: string | null
+          is_read: boolean | null
+          partner_name: string | null
+          partner_lead_status: string | null
+          partner_country: string | null
+          classification_category: string | null
+          classification_confidence: number | null
+          classification_urgency: string | null
+          classification_sentiment: string | null
+          rule_auto_action: string | null
+          rule_category: string | null
+        }
+        Relationships: []
+      }
+      v_outreach_today: {
+        Row: {
+          queue_id: string
+          user_id: string
+          channel: string | null
+          recipient_name: string | null
+          recipient_email: string | null
+          subject: string | null
+          status: string | null
+          attempts: number | null
+          max_attempts: number | null
+          priority: string | null
+          created_at: string | null
+          scheduled_for: string | null
+          partner_id: string | null
+          contact_id: string | null
+          partner_name: string | null
+          partner_lead_status: string | null
+          partner_country: string | null
+          mission_id: string | null
+          mission_name: string | null
+          last_outbound_at: string | null
+          last_channel: string | null
+        }
+        Relationships: []
+      }
+      v_kpi_dashboard: {
+        Row: {
+          user_id: string
+          total_partners: number
+          partners_new: number
+          partners_first_touch: number
+          partners_holding: number
+          partners_engaged: number
+          partners_qualified: number
+          partners_negotiation: number
+          partners_converted: number
+          partners_archived: number
+          partners_blacklisted: number
+          emails_sent_30d: number
+          whatsapp_sent_30d: number
+          linkedin_sent_30d: number
+          total_outbound_30d: number
+          pending_actions: number
+          pending_high_priority: number
+          unread_messages: number
+          inbound_today: number
+          outreach_queue_pending: number
+          outreach_sent_today: number
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      apply_lead_status_rpc: {
+        Args: {
+          p_table: string
+          p_record_id: string
+          p_new_status: string
+        }
+        Returns: Json
+      }
       _cron_invoke_edge_sql: { Args: { fn_name: string }; Returns: string }
       acquire_mission_slot: {
         Args: {
