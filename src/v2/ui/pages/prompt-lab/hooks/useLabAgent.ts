@@ -731,13 +731,13 @@ ISTRUZIONI:
       const issues = validateAgainstRubric(first, rubric);
       if (issues.length === 0) return first;
 
-      const retryPrompt = `${userPrompt}
-
---- VIOLAZIONI DEL TUO PRIMO TENTATIVO ---
-${issues.map((i) => `✗ ${i}`).join("\n")}
---- FINE VIOLAZIONI ---
-
-Riscrivi correggendo TUTTE le violazioni. SOLO il nuovo testo.`;
+      // Fix A3: retry compatto (no system map / doctrine / contract reference duplicati).
+      const retryPrompt = buildRetryPrompt({
+        blockLabel: block.label,
+        blockContent: block.content,
+        violations: issues,
+        contextHint: `tab=${tabLabel}, sorgente=${block.source.kind}`,
+      });
       const second = await callAgent(retryPrompt, {
         mode: "global_improve_retry",
         block_id: block.id,
