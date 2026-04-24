@@ -5,7 +5,7 @@
 import type { Quality } from "../_shared/kbSlice.ts";
 import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enrichmentAdapter.ts";
 
-type SupabaseClient = ReturnType<typeof (await import("https://esm.sh/@supabase/supabase-js@2.39.3")).createClient>;
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export interface RecipientIntelligence {
   sources_checked: string[];

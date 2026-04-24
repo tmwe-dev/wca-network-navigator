@@ -16,10 +16,9 @@ export interface DashboardCounts {
 
 export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, AppError>> {
   try {
-    // v_kpi_dashboard provides total_partners; other counts still need individual queries
-    const [kpiRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
-      // View not in generated types — cast to any.
-      (supabase as any).from("v_kpi_dashboard").select("total_partners").limit(1).maybeSingle(),
+    // P3.7: v_kpi_dashboard non esiste. Count diretto su partners.
+    const [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes] = await Promise.all([
+      supabase.from("partners").select("id", { count: "exact", head: true }).is("deleted_at", null),
       supabase.from("imported_contacts").select("id", { count: "exact", head: true }),
       supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("agents").select("id", { count: "exact", head: true }).eq("is_active", true),
@@ -27,7 +26,7 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
       supabase.from("email_drafts").select("id", { count: "exact", head: true }).eq("status", "draft"),
     ]);
 
-    const firstError = [kpiRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes]
+    const firstError = [partnersRes, contactsRes, activitiesRes, agentsRes, campaignRes, draftsRes]
       .find((r) => r.error);
 
     if (firstError?.error) {
@@ -37,7 +36,7 @@ export async function fetchDashboardCounts(): Promise<Result<DashboardCounts, Ap
     }
 
     return ok({
-      partners: (kpiRes.data as Record<string, number> | null)?.total_partners ?? 0,
+      partners: partnersRes.count ?? 0,
       contacts: contactsRes.count ?? 0,
       pendingActivities: activitiesRes.count ?? 0,
       activeAgents: agentsRes.count ?? 0,

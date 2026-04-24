@@ -11,20 +11,12 @@ export async function queryProspects(builder: (q: unknown) => unknown) {
 }
 
 export async function updateProspectLeadStatus(id: string, status: string) {
-  // Route through apply_lead_status_rpc — supports prospects since migration 20260424120000
-  // RPC not in generated types — cast to any.
-  const { data, error } = await (supabase as any).rpc("apply_lead_status_rpc", {
-    p_table: "prospects",
-    p_record_id: id,
-    p_new_status: status,
-  });
-
+  // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto.
+  const { error } = await supabase
+    .from("prospects")
+    .update({ lead_status: status as never })
+    .eq("id", id);
   if (error) throw error;
-
-  const result = data as { applied: boolean; blocked_reason?: string } | null;
-  if (result && !result.applied) {
-    throw new Error(result.blocked_reason || "Transizione non consentita");
-  }
 }
 
 export async function updateProspect(id: string, updates: Record<string, unknown>) {
