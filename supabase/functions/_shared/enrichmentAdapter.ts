@@ -95,7 +95,7 @@ export async function readUnifiedEnrichment(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    sherlockRow = data as typeof sherlockRow;
+    sherlockRow = data as unknown as typeof sherlockRow;
   } catch {
     // Sherlock optional — silently ignore
   }
