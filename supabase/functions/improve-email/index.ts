@@ -419,13 +419,22 @@ ${html_body}`;
     let improvedSubject = subject || "";
     let improvedBody = rawText;
 
-    const subjectMatch = rawText.match(/^Subject:\s*(.+?)(?:\n|$)/im);
-    if (subjectMatch) {
-      improvedSubject = subjectMatch[1].trim();
-      improvedBody = rawText.substring(subjectMatch[0].length).trim();
+    try {
+      const subjectMatch = rawText.match(/^Subject:\s*(.+?)(?:\n|$)/im);
+      if (subjectMatch) {
+        improvedSubject = subjectMatch[1].trim();
+        improvedBody = rawText.substring(subjectMatch[0].length).trim();
+      }
+      improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      if (!improvedBody || improvedBody.trim().length === 0) {
+        throw new Error("empty body after parse");
+      }
+    } catch (perr) {
+      const msg = perr instanceof Error ? perr.message : String(perr);
+      console.error(`[PARSE_FAIL] improve-email model=unknown err=${msg} raw="${rawText.slice(0, 200)}"`);
+      improvedSubject = subject || "Follow-up";
+      improvedBody = (html_body || rawText || "").slice(0, 5000);
     }
-
-    improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
     // ── GIORNALISTA AI — Caporedattore Finale ──
     let journalistResult: JournalistReviewOutput | null = null;
