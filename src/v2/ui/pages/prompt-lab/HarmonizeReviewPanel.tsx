@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical } from "lucide-react";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 interface Props {
@@ -37,6 +37,19 @@ const LAYER_META: Record<HarmonizeProposal["resolution_layer"], { label: string;
   contract: { label: "Contratto backend", icon: Wrench, cls: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
   code_policy: { label: "Policy nel codice", icon: Code2, cls: "bg-destructive/10 text-destructive border-destructive/20" },
   kb_governance: { label: "Governance KB", icon: BookOpen, cls: "bg-primary/10 text-primary border-primary/20" },
+};
+
+const SEVERITY_CLS: Record<NonNullable<HarmonizeProposal["severity"]>, string> = {
+  low: "bg-muted text-muted-foreground",
+  medium: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  high: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  critical: "bg-destructive/15 text-destructive border-destructive/30",
+};
+
+const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>, string> = {
+  none: "Nessun test",
+  manual_smoke: "Smoke manuale",
+  regression_full: "Regression completa",
 };
 
 export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe }: Props) {
@@ -69,12 +82,16 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             const isReadOnly = p.resolution_layer === "contract" || p.resolution_layer === "code_policy";
             const layer = LAYER_META[p.resolution_layer];
             const LayerIcon = layer.icon;
+            // Dipendenze cablate: bloccato finché tutte le sue deps non sono approvate.
+            const missingDeps = (p.dependencies ?? []).filter((d) => !approvedIds.has(d));
+            const blockedByDeps = missingDeps.length > 0;
+            const disabled = isReadOnly || blockedByDeps;
             return (
               <Card key={p.id} className="p-3">
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={approvedIds.has(p.id)}
-                    disabled={isReadOnly}
+                    disabled={disabled}
                     onCheckedChange={() => onToggle(p.id)}
                     className="mt-1"
                   />
@@ -86,7 +103,28 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         {layer.label}
                       </Badge>
                       <Badge variant="secondary">{p.target.table}</Badge>
-                      {p.impact === "high" && <Badge variant="destructive">Impatto alto</Badge>}
+                      {p.severity && (
+                        <Badge className={SEVERITY_CLS[p.severity]} variant="outline">
+                          Severità: {p.severity}
+                        </Badge>
+                      )}
+                      {typeof p.impact_score === "number" && (
+                        <Badge variant="outline" title="Impact score (1-10)">
+                          Impatto {p.impact_score}/10
+                        </Badge>
+                      )}
+                      {p.test_urgency && p.test_urgency !== "none" && (
+                        <Badge variant="outline" className="gap-1">
+                          <FlaskConical className="h-3 w-3" />
+                          {TEST_URGENCY_LABEL[p.test_urgency]}
+                        </Badge>
+                      )}
+                      {blockedByDeps && (
+                        <Badge variant="outline" className="gap-1 bg-muted">
+                          <Lock className="h-3 w-3" />
+                          Bloccato: {missingDeps.length} dipendenz{missingDeps.length === 1 ? "a" : "e"}
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
                     </div>
                     <p className="text-sm text-foreground/90 mb-1">{p.reasoning}</p>
@@ -96,6 +134,22 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         Dettagli
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-2 space-y-2">
+                        {(p.current_location || p.proposed_location) && (
+                          <div className="text-xs grid grid-cols-2 gap-2">
+                            {p.current_location && (
+                              <div>
+                                <span className="font-semibold text-muted-foreground">Posizione attuale:</span>
+                                <div className="font-mono text-[10px]">{p.current_location}</div>
+                              </div>
+                            )}
+                            {p.proposed_location && (
+                              <div>
+                                <span className="font-semibold text-muted-foreground">Posizione proposta:</span>
+                                <div className="font-mono text-[10px]">{p.proposed_location}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {p.before != null && (
                           <div>
                             <div className="text-xs font-semibold text-muted-foreground">Prima:</div>
@@ -115,6 +169,23 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         {p.dependencies.length > 0 && (
                           <div className="text-xs">
                             <span className="font-semibold">Dipendenze:</span> {p.dependencies.length}
+                            {blockedByDeps && (
+                              <span className="text-amber-600 ml-1">
+                                ({missingDeps.length} non ancora approvat{missingDeps.length === 1 ? "a" : "e"})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {p.missing_contracts && p.missing_contracts.length > 0 && (
+                          <div className="text-xs">
+                            <div className="font-semibold text-muted-foreground">Contratti mancanti:</div>
+                            <ul className="list-disc list-inside">
+                              {p.missing_contracts.map((c, i) => (
+                                <li key={i} className="font-mono text-[10px]">
+                                  {c.contract_name}{c.field ? `.${c.field}` : ""} — {c.why_needed}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                         {p.tests_required.length > 0 && (
