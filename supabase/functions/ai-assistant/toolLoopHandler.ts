@@ -4,14 +4,15 @@
  * Handles tool result processing, memory tracking, and UI action collection.
  */
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { AnySupabaseClient as SupabaseClient } from "../_shared/supabaseClient.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { executeTool } from "./toolExecutors.ts";
 import type { ToolExecutorDeps } from "./toolExecutors.ts";
 
 export interface ToolLoopState {
-  assistantMessage?: Record<string, unknown>;
+  // deno-lint-ignore no-explicit-any
+  assistantMessage?: any;
   allMessages: Record<string, unknown>[];
   lastPartnerResult?: Record<string, unknown>[];
   uiActions: Record<string, unknown>[];
@@ -94,8 +95,7 @@ async function autoSaveToolMemory(
           decay_rate: 0.02,
           source: "auto_tool",
         })
-        .then(() => {})
-        .catch((_e: unknown) => {
+        .then(() => {}, (_e: unknown) => {
           /* swallow auto-memory write errors */
         });
     }
@@ -273,8 +273,9 @@ export async function executeToolLoop(
       };
     }
 
-    const result = loopResponse.data as Record<string, unknown>;
-    state.assistantMessage = result.choices?.[0]?.message;
+    // deno-lint-ignore no-explicit-any
+    const result = loopResponse.data as any;
+    state.assistantMessage = result?.choices?.[0]?.message;
     if (result.usage) {
       state.totalUsage.prompt_tokens +=
         (result.usage as Record<string, unknown>)?.prompt_tokens as number || 0;

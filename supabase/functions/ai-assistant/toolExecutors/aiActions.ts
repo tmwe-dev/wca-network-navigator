@@ -82,8 +82,7 @@ export async function executeRejectAiAction(
         decay_rate: 0.01,
         source: "user_rejection",
       })
-      .then(() => {})
-      .catch((e: unknown) =>
+      .then(() => {}, (e: unknown) =>
         console.warn("rejection memory save failed:", extractErrorMessage(e))
       );
   }

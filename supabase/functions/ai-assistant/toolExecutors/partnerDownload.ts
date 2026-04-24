@@ -9,6 +9,7 @@ import {
   resolveCountry,
   resolveCountryName,
 } from "./partnerLookup.ts";
+import { escapeLike } from "../../_shared/sqlEscape.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
