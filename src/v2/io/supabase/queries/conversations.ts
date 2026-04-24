@@ -1,6 +1,7 @@
 /**
  * Queries for command conversations (multi-turn memory)
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";

@@ -2,6 +2,7 @@
  * Data Access Layer — Deals & Pipeline Management
  * Single source of truth for all deals table queries.
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
@@ -227,7 +228,7 @@ export async function updateDeal(id: string, updates: Partial<Deal>): Promise<De
  * Delete a deal
  */
 export async function deleteDeal(id: string): Promise<void> {
-  const { error } = await (supabase as any).from("deals").delete().eq("id", id);
+  const { error } = await tFrom("deals").delete().eq("id", id);
   if (error) throw error;
 }
 

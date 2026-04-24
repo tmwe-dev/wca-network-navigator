@@ -6,6 +6,7 @@
  *
  * Persiste su app_settings con chiave prompt_lab_metrics_${runId}.
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertAppSetting, getAppSetting } from "./appSettings";
 import type { GlobalProposal } from "@/v2/ui/pages/prompt-lab/hooks/useProposalProcessing";

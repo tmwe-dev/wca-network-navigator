@@ -2,6 +2,7 @@
  * Analytics Data Layer — Functions to query analytics data from Supabase
  * Provides metrics for: emails, partners, outreach, AI usage, pipeline, activities
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface EmailMetricsData {

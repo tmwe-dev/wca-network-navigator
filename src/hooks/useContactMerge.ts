@@ -2,6 +2,7 @@
  * useContactMerge — Hook for contact deduplication and merging
  * Provides utilities for finding duplicate contacts and merging them
  */
+import { tFrom } from "@/lib/typedSupabase";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
