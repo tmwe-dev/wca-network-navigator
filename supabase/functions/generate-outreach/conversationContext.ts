@@ -2,7 +2,7 @@
  * conversationContext.ts — Conversation intelligence and rules for contacts.
  */
 
-type SupabaseClient = ReturnType<typeof (await import("https://esm.sh/@supabase/supabase-js@2.39.3")).createClient>;
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export async function loadConversationContextOutreach(
   supabase: SupabaseClient, userId: string, emailAddress: string | null,

@@ -3,7 +3,7 @@
  * Fix 3.2: Loads playbook from partner_workflow_state → commercial_workflows → commercial_playbooks.
  */
 
-type SupabaseClient = ReturnType<typeof (await import("https://esm.sh/@supabase/supabase-js@2.39.3")).createClient>;
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export async function loadActivePlaybook(
   supabase: SupabaseClient,

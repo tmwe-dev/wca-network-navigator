@@ -3,7 +3,7 @@
  * Delegates to sameLocationGuard for heavy lifting; orchestrates metrics exposure.
  */
 
-type SupabaseClient = ReturnType<typeof (await import("https://esm.sh/@supabase/supabase-js@2.39.3")).createClient>;
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export interface RelationshipMetrics {
   response_rate: number;
