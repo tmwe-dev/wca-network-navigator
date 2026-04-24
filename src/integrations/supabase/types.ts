@@ -4325,6 +4325,77 @@ export type Database = {
         }
         Relationships: []
       }
+      harmonizer_sessions: {
+        Row: {
+          completed_at: string | null
+          conflicts_found: Json
+          created_at: string
+          cross_references: Json
+          current_chunk: number
+          entities_created: Json
+          errors: Json
+          facts_registry: Json
+          harmonize_run_id: string | null
+          id: string
+          last_chunk_completed_at: string | null
+          source_file: string
+          source_kind: string
+          started_at: string | null
+          status: string
+          total_chunks: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          conflicts_found?: Json
+          created_at?: string
+          cross_references?: Json
+          current_chunk?: number
+          entities_created?: Json
+          errors?: Json
+          facts_registry?: Json
+          harmonize_run_id?: string | null
+          id?: string
+          last_chunk_completed_at?: string | null
+          source_file: string
+          source_kind?: string
+          started_at?: string | null
+          status?: string
+          total_chunks: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          conflicts_found?: Json
+          created_at?: string
+          cross_references?: Json
+          current_chunk?: number
+          entities_created?: Json
+          errors?: Json
+          facts_registry?: Json
+          harmonize_run_id?: string | null
+          id?: string
+          last_chunk_completed_at?: string | null
+          source_file?: string
+          source_kind?: string
+          started_at?: string | null
+          status?: string
+          total_chunks?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "harmonizer_sessions_harmonize_run_id_fkey"
+            columns: ["harmonize_run_id"]
+            isOneToOne: false
+            referencedRelation: "harmonize_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       impersonation_log: {
         Row: {
           action: string

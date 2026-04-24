@@ -1,122 +1,179 @@
 ## Obiettivo
 
-Trasformare l'Harmonizer da "indovinatore con prompt monolitico" a "consultatore di documentazione strutturata", separando in 3 strati nettamente distinti: **prompt** (chi è / come ragiona), **KB dedicata** (cosa sa), **contesto runtime** (cosa gli arriva per questo run). Risolvere in parallelo i 5 buchi sostanziali (goal injection, schema awareness, executor agents, parser robusto, loop di chiusura).
+Due interventi distinti, indipendenti, sullo stesso preview:
 
-## Struttura a 3 strati
+1. **Migliora tutto**: 5 fix mirati che riducono salvataggi inutili, classificazioni sbagliate, payload doppi e missione hardcoded. Il flusso resta identico (raccogli blocchi → riscrivi → review → salva).
+2. **Armonizzatore**: aggiunta di una pipeline di ingestione a sessione persistente per la libreria TMWE (5.708 righe / ~81K token), processata in 7 chunk sequenziali con stato (`facts_registry`, `conflicts`, `cross_references`, `entities_created`) trasportato tra un chunk e l'altro.
 
-```
-┌──────────────────────────────────────────────────┐
-│ STRATO 1 — PROMPT (700-900 token, immutabile)     │
-│ Identità, ragionamento, output schema, routing KB│
-├──────────────────────────────────────────────────┤
-│ STRATO 2 — KB HARMONIZER (10 file .md in RAG)    │
-│ Schema DB, enum, dominio, costituzione, esempi   │
-├──────────────────────────────────────────────────┤
-│ STRATO 3 — CONTESTO RUNTIME (iniettato per run)  │
-│ Goal utente, inventario, gap chunk, KB recuperata│
-└──────────────────────────────────────────────────┘
-```
-
-## Decisione preliminare obbligatoria
-
-**Vocabolario campi**: nel prompt nuovo concordato l'utente usa `action_type`, `impact_score`, `severity`, `test_urgency`, `block_name`. Il codice attuale usa `action`, `impact`, `block_label`. Decisione adottata: **migrazione completa al vocabolario nuovo**, perché più espressivo (impact 1-10 vs low/medium/high, severity separata da impact_score, ecc.). Questo richiede aggiornamento coordinato di prompt + tipo + parser + executor + UI di review.
+Nessuna modifica al motore Lab Agent sottostante. Le due aree restano separate, con UI separate.
 
 ---
 
-## Lavoro 1 — Creare la KB Harmonizer (10 file)
+## PARTE 1 — MIGLIORA TUTTO (fix chirurgici)
 
-Tutti in `public/kb-source/harmonizer/`. Sono `.md` letti dal RAG per nome.
+### Fix A4 — Propagare `tabActivation` nel primo run
+File: `src/v2/ui/pages/prompt-lab/hooks/useGlobalPromptImprover.ts` (riga 285 e 334).
+- In `initial: GlobalProposal[]`, valorizzare `tabActivation` con lookup in `PROMPT_LAB_TABS` (già usato in `useProposalProcessing.ts::activationFor`).
+- Passare `tabActivation: p.tabActivation` nella chiamata `lab.improveBlockGlobal` del primo run (oggi è solo nel resume).
 
-1. `00-context-wca.md` — Cos'è WCA Network Navigator, le 17 reti, ruoli operatori, glossario (partner, contact, mission, outreach, agent, persona, holding pattern), pipeline lead a 9 stati come diagramma testuale.
-2. `10-action-examples.md` — 1 esempio canonico per ciascuna delle 4 azioni + 2-3 anti-esempi ("sembrava UPDATE ma era INSERT").
-3. `20-truth-hierarchy.md` — Gerarchia di verità con casi reali del WCA Network Navigator (esempi presi da `hardGuards.ts`, da `mem://constraints/*`, dai prompt core).
-4. `30-business-constraints.md` — Lista esatta dei 9 stati lead, lista tabelle business protette (contacts, partners, activities, channel_messages, campaigns, missions), tabelle backend riservate, Costituzione commerciale in 10 punti.
-5. `40-agents-schema.md` — Schema completo della tabella `agents` (estratto via query: id, name, role, system_prompt, knowledge_base, assigned_tools, territory_codes, can_send_email, daily_send_limit, ecc.) + relazione con `agent_personas`.
-6. `41-agents-existing.md` — File **generato runtime** dal collector ad ogni run: snapshot agenti attivi con territori, persona, tool. Non scritto a mano.
-7. `50-kb-categories.md` — Enum esatti di `kb_entries.category`, cosa va in ciascuna, convenzioni `chapter`, range `priority`.
-8. `60-code-policies-active.md` — Estratto da `src/v2/agent/policy/hardGuards.ts` + memoria `mem://constraints/*`: lista policy hard già implementate. Per ciascuna: nome, file, vincolo. Regola: se gap richiede una di queste → `resolution_layer = code_policy`.
-9. `70-runtime-contracts.md` — EmailBrief, VoiceBrief, ContactLifecycleBrief, OutreachBrief: schema, dove vivono, contratti mancanti noti. Regola: se gap richiede campo non in nessuno → `resolution_layer = contract`.
-10. `80-resolved-cases.md` — Memoria storica auto-aggiornata: 10-15 gap risolti con before/after/decisione. Ogni proposta approvata aggiunge un caso (loop di apprendimento, implementato in Lavoro 5).
+### Fix A2 — Parsing OUTCOME_TYPE robusto
+File: `src/v2/ui/pages/prompt-lab/hooks/useLabAgent.ts` funzione `parseImproveResponse` (riga 30-53).
+- Sostituire il loop `Math.min(lines.length, 5)` con regex multilinea sull'intera stringa: `/^OUTCOME_TYPE:\s*(\w+)\s*$/m` e `/^ARCHITECTURAL_NOTE:\s*(.+)$/m`.
+- Rimuovere le righe matchate dal testo finale invece di affidarsi a `textStartIdx`.
 
-## Lavoro 2 — Riscrivere il prompt (`harmonizer-briefing.ts`)
+### Fix A1 — Delta threshold su skip
+File: `useGlobalPromptImprover.ts` (riga 194-195 nel resume e 345-346 nel primo run).
+- Aggiungere helper `computeChangeRatio(before, after): number` (Levenshtein normalizzata o ratio word-diff veloce; basta `Math.abs(after.length - before.length) / Math.max(before.length, 1)` + check token-level).
+- Estendere lo stato `GlobalProposal` (in `useProposalProcessing.ts`) con un nuovo status `"minor_change"`.
+- Logica: se `parsed.outcomeType === "no_change"` o `isSame` → `skipped`; se `changeRatio < 0.05` → `minor_change`; altrimenti `ready`.
+- `HarmonizeReviewPanel` / `GlobalImproverDialog` (verifico nome esatto): mostrare badge distinto per `minor_change` e disattivarlo di default nella selezione "salva" (ma lasciare l'utente libero di attivarlo).
 
-Sostituire integralmente con la nuova versione strutturata in 8 sezioni brevi:
-- **A** Identità e missione (5 righe)
-- **B** Le 4 azioni e i 4 resolution_layer (definizioni secche)
-- **C** Gerarchia di verità non negoziabile (4 punti, 1 riga ciascuno)
-- **D** Regole di disambiguazione UPDATE/INSERT/MOVE (dalla v2 concordata)
-- **E** Guard-rail duri (lista, riferimenti a KB per dettagli)
-- **F** Routing alla KB Harmonizer (mappa esplicita: "per X consulta documento Y")
-- **G** Schema di output JSON puro (vocabolario nuovo)
-- **H** Vincolo finale + fallback `{"proposals": []}`
+### Fix A3 — Retry compatto
+File: `useLabAgent.ts` funzioni `improveBlock` (riga 595-607) e `improveBlockGlobal` (riga 692-702).
+- Nuovo helper `buildRetryPrompt(blockContent, violations, contextHint)` che invia: testo originale del blocco + violazioni + un riassunto a 1 riga del briefing (no system map, no doctrine completa, no rubric ripetuta).
+- Sostituire la concatenazione `${userPrompt}\n--- VIOLAZIONI ---` con questo payload compatto. Risparmio atteso: ~70-80% del token retry.
 
-Target: 700-900 token totali. Tutto ciò che è "elenco di valori" o "esempio lungo" rimosso e migrato in KB.
-
-## Lavoro 3 — Allineare tipi, parser, executor al vocabolario nuovo
-
-**File da toccare**:
-- `src/data/harmonizeRuns.ts` — `HarmonizeProposal` riallineato: `action_type`, `target_type` (enum esteso con `system_prompt_block`, `readonly_note`), `severity`, `impact_score: 1-10`, `test_urgency`, `current_location`, `proposed_location`, `current_issue`, `proposed_content`, `evidence: [...]` (array), `required_variables`, `missing_contracts`, `apply_recommended`, `block_name`. Mantenere campo `dependencies` invariato.
-- `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` — Nuovo parser robusto con validazione **Zod** dello schema output. Se il modello sbaglia un campo, errore visibile invece di `[]` silenzioso. Logging visibile dei chunk falliti.
-- `src/v2/ui/pages/prompt-lab/hooks/harmonizeExecutor.ts` — Mappatura `target_type` → tabella DB. Implementazione completa di `agents` (INSERT + UPDATE) e `app_settings` (oggi sono stub). Mappatura `system_prompt_block` → `app_settings`, `readonly_note` → skip + registrazione in nuova tabella `harmonizer_followups`.
-- `src/v2/ui/pages/prompt-lab/HarmonizeReviewPanel.tsx` — Adattamento UI ai campi nuovi (impact_score 1-10, severity badge separato, test_urgency, dependencies cablati: bottone Approva di B disabilitato finché A non approvata).
-
-## Lavoro 4 — Iniezione goal + contesto + KB nel runtime
-
-**File da toccare**: `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` + `harmonizeCollector.ts`
-
-- `buildUserPrompt` riceve e inietta nel system message: **goal utente**, **operatore corrente** (id, ruolo, country), **modalità** (first_run / delta / review_riaperta), **lingua**.
-- Collector arricchito: per ogni chunk fa **retrieval mirato** dei doc KB rilevanti (es: chunk con gap su `agents` → carica `40-agents-schema.md` + `41-agents-existing.md`) e li passa al modello come blocco "REFERENCES" nel user message.
-- Generazione runtime di `41-agents-existing.md` ad ogni run dal collector.
-
-## Lavoro 5 — Loop di chiusura e follow-up
-
-**Migrazione DB**: nuova tabella `harmonizer_followups` per registrare proposte `resolution_layer in ('contract','code_policy')` come note sviluppatore tracciabili (oggi finiscono solo nell'audit log e si perdono).
-
-**Modifiche codice**:
-- Executor: ogni proposta su `agents` o `agent_personas` eseguita genera un `agent_task` di tipo "verifica comportamento post-armonizzazione" assegnato all'operatore corrente.
-- Executor: ogni proposta `executed` con esito `ok` aggiunge un caso a `80-resolved-cases.md` (append automatico via edge function dedicata o via supabase storage, da decidere in implementazione).
-
-## Lavoro 6 — Verifica delle 2 cose segnalate dal commentatore
-
-- **Verifica `dependencies` UI**: oggi `HarmonizeReviewPanel` mostra solo "Dipendenze: N", non disabilita i bottoni in catena. Cablare in `useHarmonizeOrchestrator.toggleApproval` la regola: una proposta con `dependencies` non approvabile finché tutte le sue dipendenze non sono in `approvedIds`.
-- **Verifica `contract_status: missing`**: confermato che oggi `executeProposal` skippa `resolution_layer === "contract"`. Ma `missing_contracts: [...]` viene perso. Lavoro 5 risolve registrandolo in `harmonizer_followups`.
+### Fix B3 — `SYSTEM_MISSION` da `app_settings`
+File: `useGlobalPromptImprover.ts` riga 35-39.
+- Spostare la costante in `app_settings` con chiave `system_mission_text` (default = la stringa attuale come fallback).
+- Helper `loadSystemMission()` async dentro `useGlobalPromptImprover` chiamato all'inizio di `startImprovement` e `resumeRun`.
+- Aggiungere campo readonly nella tab "AI Profile" (`AIProfileTab.tsx`) per modificarlo dal Prompt Lab senza deploy.
 
 ---
 
-## Dettagli tecnici
+## PARTE 2 — ARMONIZZATORE: pipeline ingestione TMWE
 
-**Stack**: invariato. React 18 + Vite + Supabase. Validazione output: Zod.
+### Scopo
+L'Armonizzatore oggi processa gap actionable in chunk da 6 (`harmonizeAnalyzer.ts::CHUNK_SIZE = 6`), ma NON ha:
+- una sessione persistente che accumula fatti tra chunk diversi,
+- la capacità di processare un documento sorgente lungo (5.708 righe) senza riniziare da zero a ogni call,
+- un protocollo per pre-caricare conflitti/duplicati noti.
 
-**Edge function**: nessuna nuova. Riusiamo `unified-assistant` con il briefing aggiornato. Il RAG è già in piedi sui file `public/kb-source/`, basta che i nuovi `.md` rispettino la convenzione di indicizzazione.
+Aggiungiamo una **pipeline parallela** dedicata all'ingestione di sorgenti grandi, che riusa l'attuale executor ma sostituisce collector + analyzer con varianti session-aware.
 
-**Tabella nuova `harmonizer_followups`**: id, run_id, proposal_id, layer (contract|code_policy), title, description, missing_contracts (jsonb), code_policy_needed (text), severity, status (open|in_progress|resolved|wont_fix), assigned_to, created_at, resolved_at. RLS: visibile a tutti gli operatori (i follow-up sono shared, come la KB).
+### 2.1 — Nuova tabella DB: `harmonizer_sessions`
+Migration:
+```sql
+create table public.harmonizer_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  source_file text not null,
+  source_kind text not null default 'library',  -- 'library' | 'mission_output' | 'email_attachment'
+  total_chunks integer not null,
+  current_chunk integer not null default 0,
+  status text not null default 'pending',       -- pending|in_progress|completed|error
+  facts_registry jsonb not null default '{}'::jsonb,
+  conflicts_found jsonb not null default '[]'::jsonb,
+  cross_references jsonb not null default '[]'::jsonb,
+  entities_created jsonb not null default '[]'::jsonb,
+  errors jsonb not null default '[]'::jsonb,
+  harmonize_run_id uuid references public.harmonize_runs(id) on delete set null,
+  started_at timestamptz default now(),
+  last_chunk_completed_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.harmonizer_sessions enable row level security;
+create policy "Users manage own harmonizer sessions"
+  on public.harmonizer_sessions for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
 
-**Backward compatibility**: il vocabolario campi cambia. I run vecchi su `harmonize_runs` con il vecchio schema `proposals` restano leggibili ma non eseguibili (la UI mostra un badge "schema legacy"). Nessuna migrazione retroattiva dei dati.
+Nuovo DAL: `src/data/harmonizerSessions.ts` con `createSession`, `loadSession`, `appendFacts`, `appendConflicts`, `appendEntities`, `advanceChunk`, `markError`, `complete`.
 
-**Ordine di esecuzione obbligato**:
-1. Migrazione DB (tabella `harmonizer_followups`)
-2. Creazione 9 file KB statici (tutti tranne `41-agents-existing.md`)
-3. Riallineamento tipi (`harmonizeRuns.ts`)
-4. Riscrittura prompt (`harmonizer-briefing.ts`)
-5. Riscrittura parser + iniezione goal/contesto (`harmonizeAnalyzer.ts`, `harmonizeCollector.ts`)
-6. Implementazione executor completa (`harmonizeExecutor.ts`) + generazione runtime `41-agents-existing.md`
-7. Adattamento UI review (`HarmonizeReviewPanel.tsx`) con dipendenze cablate
-8. Loop di chiusura (agent_task + append a `80-resolved-cases.md`)
+### 2.2 — Definizione 7 chunk: `src/v2/ui/pages/prompt-lab/harmonizer/tmweChunks.ts`
+File nuovo che dichiara la mappa:
+```ts
+export interface TmweChunkDef {
+  index: number;        // 0..6
+  name: string;         // "KB Core", "Agenti Doer", ...
+  sourceLines: [number, number];
+  preloadedConflicts: ConflictEntry[];
+  preloadedDuplicates: DuplicateEntry[];
+  contractGuidance: string;  // istruzioni dettagliate per il modello
+}
+export const TMWE_CHUNKS: TmweChunkDef[] = [/* i 7 chunk con i confini di riga indicati */];
+export const TMWE_EXECUTION_ORDER = [0, 2, 1, 4, 3, 5, 6]; // 1→3→2→5→4→6→7
+```
 
-## Non fa parte di questo piano (rimandato)
+### 2.3 — Nuovo collector: `harmonizerLibraryCollector.ts`
+Funzione `runLibraryChunkCollector(sourceText, chunkDef, sessionState)`:
+- Estrae le righe del chunk dal sorgente (passato come `string` da `ParsedFile`).
+- Carica inventario reale FILTRATO sulle tabelle target del chunk (es. solo `kb_entries` per chunk 1, solo `operative_prompts` + `commercial_playbooks` per chunk 3).
+- Usa `sessionState.entities_created` per marcare come "già esistente" ciò che chunk precedenti hanno inserito (evita re-INSERT).
+- Applica `preloadedDuplicates` per skip automatico.
+- Restituisce `CollectorOutput` compatibile con l'analyzer.
 
-- Tool calling vero (richiederebbe modifiche a `unified-assistant` per esporre `propose_harmonize_actions` come tool nativo del provider). Continuiamo con JSON puro + parser robusto, come concordato.
-- Migrazione retroattiva dei run vecchi al nuovo schema.
-- UI per gestire la coda `harmonizer_followups` (per ora solo registrazione, gestione manuale via SQL/dashboard).
+### 2.4 — Analyzer session-aware: `harmonizerLibraryAnalyzer.ts`
+Variante di `harmonizeAnalyzer.ts`:
+- Riceve `sessionState` come parametro.
+- Aggiunge al `userPrompt` una sezione `=== STATO SESSIONE PRECEDENTE ===` con: facts_registry compatti (top 30 fatti), conflicts già aperti (titolo+stato), entities_created (lista titoli+id+tabella).
+- Aggiunge sezione `=== CONFLITTI/DUPLICATI PRE-CARICATI PER QUESTO CHUNK ===` da `chunkDef`.
+- Estende lo schema Zod con campi opzionali: `extracted_facts: Record<string,string>`, `new_conflicts: ConflictEntry[]`, `cross_references: CrossRef[]`.
+- Dopo il parse, ritorna sia le `HarmonizeProposal[]` sia il delta di stato sessione da accumulare.
 
-## Risultato atteso
+### 2.5 — Nuovo orchestratore: `useHarmonizerLibraryIngestion.ts`
+Hook separato (NON modifica `useHarmonizeOrchestrator.ts`):
+- Input: `{ sourceFile: ParsedFile, goal: string }`.
+- Crea `harmonizer_sessions` row + un `harmonize_runs` figlio per l'esecuzione finale.
+- Loop su `TMWE_EXECUTION_ORDER`:
+  1. Carica `sessionState`.
+  2. Esegue collector → analyzer (session-aware) per il chunk corrente.
+  3. Persiste proposte in `harmonize_runs.proposals`.
+  4. Aggiorna `sessionState` con nuovi facts/conflicts/cross_refs.
+  5. Avanza `current_chunk`.
+  6. UI: callback `onChunkComplete(chunkIndex, summary)`.
+- Su errore: salva in `errors[]`, NON avanza il chunk, espone `retryChunk()` idempotente.
+- A fine pipeline: passa il controllo all'UI di review esistente (`HarmonizeReviewPanel`) — l'utente approva e l'executor attuale (`harmonizeExecutor.ts`) esegue.
 
-Dopo questo refactor:
-- Il prompt resta a ~800 token e cambia raramente.
-- Aggiungere conoscenza all'Harmonizer = aggiungere/modificare un `.md` in `public/kb-source/harmonizer/`, **senza toccare codice né prompt**.
-- L'Harmonizer riceve davvero il `goal` dell'utente.
-- L'Harmonizer conosce schema colonne, enum, dominio, policy attive, contratti.
-- L'Harmonizer può creare e modificare agenti davvero.
-- Le proposte non eseguibili lasciano traccia (`harmonizer_followups`) invece di sparire.
-- Le proposte approvate generano agent_task e arricchiscono la memoria storica (`80-resolved-cases.md`).
-- L'Harmonizer migliora col tempo invece di ricominciare da zero ad ogni run.
+### 2.6 — UI: pulsante "Ingerisci libreria" in `HarmonizeSystemDialog`
+Aggiungere modalità duale nel dialog esistente:
+- Tab "Modalità classica" → flow attuale (analizza tutto il DB vs libreria breve).
+- Tab "Ingestione documento grande" → carica file (drag&drop), seleziona protocollo (es. "TMWE Library"), avvia pipeline 7-chunk.
+- Progress bar a 7 step con label del chunk corrente + counter facts/conflicts/entities.
+- Banner di sessione ripresabile se esiste una `harmonizer_sessions` con `status='in_progress'` per l'utente.
+
+### 2.7 — Briefing dedicato: `tmwe-ingestion-briefing.ts`
+In `src/v2/agent/prompts/core/`:
+- Riusa `HARMONIZER_BRIEFING` come base.
+- Aggiunge sezioni: gerarchia destinazioni (kb_entries vs operative_prompts vs commercial_playbooks vs agent_personas), regole su `facts_registry` (estrai SOLO fatti numerici e dichiarazioni canoniche), regole su detection conflitti (formato `ConflictEntry`), regole su skip duplicati noti.
+- Spiega il dominio: TMWE = azienda di Luca, libreria = KB interna che alimenta il Brain WCA.
+
+### 2.8 — Report finale
+A fine pipeline, l'orchestratore genera un sommario testuale (rendered in un modal):
+- Chunk completati (X/7), errori per chunk
+- N kb_entries / operative_prompts / playbooks / agent_personas creati
+- N conflitti aperti (con dettaglio top 10)
+- N duplicati skippati
+- Azioni richieste a Luca (lista conflitti `pending`)
+- Pulsante "Vai a review proposte" → apre `HarmonizeReviewPanel` con il `harmonize_run_id` figlio.
+
+---
+
+## Dettagli tecnici (per chi implementa)
+
+- Tutto il codice nuovo in `src/v2/ui/pages/prompt-lab/harmonizer/` (nuova subdir) per non inquinare `hooks/`.
+- `harmonizerLibraryAnalyzer` riusa `callHarmonizer` e `parseProposalsFromText` esportandoli da `harmonizeAnalyzer.ts`.
+- `harmonizer_sessions.facts_registry` cap a ~30KB JSON per evitare blow-up; se supera → consolidamento (top-priority facts).
+- I 7 chunk sono dichiarativi: l'utente carica lo `.md`, il sistema legge `chunkDef.sourceLines` e fa lo slice in client-side. Niente parsing AI per delimitarli.
+- Le 5 fix di "Migliora tutto" sono indipendenti dalla Parte 2 e possono essere committate prima.
+- Nessuna nuova edge function: tutto il flusso passa per `unified-assistant` con briefing diversi.
+
+## Cosa NON viene fatto in questo piano (esplicito)
+
+- Nessuna modifica all'executor (`harmonizeExecutor.ts`): l'esecuzione finale resta identica.
+- Nessuna pipeline universale per documenti generici (mission output, email attachments) — quella resta come piano futuro, qui ci si focalizza solo su TMWE library.
+- Nessuna nuova tabella per `kb_chunks` o storage di chunk parsati: il sorgente vive solo come ParsedFile in memoria + riferimento in `harmonizer_sessions.source_file`.
+- Nessun cambiamento a `useGlobalPromptImprover.saveAccepted` / `useProposalSaver`.
+
+## Ordine di implementazione consigliato
+
+1. Migration `harmonizer_sessions` + DAL.
+2. Tutte le 5 fix di "Migliora tutto" (commit unico, basso rischio).
+3. `tmweChunks.ts` con la mappa dei 7 chunk e conflitti/duplicati pre-caricati.
+4. `tmwe-ingestion-briefing.ts`.
+5. `harmonizerLibraryCollector.ts` + `harmonizerLibraryAnalyzer.ts`.
+6. `useHarmonizerLibraryIngestion.ts`.
+7. UI: estensione di `HarmonizeSystemDialog` con tab dedicato + report finale.
+8. Smoke test: caricare la libreria reale e processare i primi 2 chunk.
