@@ -27,6 +27,41 @@ export async function authenticateRequest(
   let userId: string;
   if (authHeader.startsWith("Bearer ")) {
     const token = authHeader.replace("Bearer ", "");
+
+    // Service-role bypass: internal cron-driven calls (e.g., agent-task-drainer,
+    // agent-autopilot-worker) authenticate as service-role and pass `user_id` in body.
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (serviceRoleKey && token === serviceRoleKey) {
+      let bodyUserId: string | null = null;
+      try {
+        const cloned = req.clone();
+        const parsed = await cloned.json();
+        if (parsed && typeof parsed === "object" && typeof parsed.user_id === "string") {
+          bodyUserId = parsed.user_id;
+        }
+      } catch (_) {
+        // body not JSON or empty
+      }
+      if (!bodyUserId) {
+        return {
+          auth: null as unknown as AuthContext,
+          error: new Response(
+            JSON.stringify({ error: "service-role calls require user_id in body" }),
+            { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } },
+          ),
+        };
+      }
+      // Build a service-role client (full access) for downstream operations.
+      const svcClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        serviceRoleKey,
+        { auth: { persistSession: false } },
+      );
+      return {
+        auth: { userId: bodyUserId, authHeader, authClient: svcClient },
+      };
+    }
+
     const { data: { user: tokenUser }, error: tokenError } = await authClient.auth.getUser(token);
     if (tokenError || !tokenUser) {
       return {

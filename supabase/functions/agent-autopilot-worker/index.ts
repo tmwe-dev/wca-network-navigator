@@ -13,7 +13,7 @@ const MAX_WALL_CLOCK_MS = 55_000;
 interface MissionRow {
   id: string;
   agent_id: string;
-  user_id: string;
+  owner_user_id: string;
   title: string;
   goal_description: string | null;
   goal_type: string;
@@ -146,7 +146,7 @@ async function processMission(
     },
     body: JSON.stringify({
       agent_id: mission.agent_id,
-      user_id: mission.user_id,
+      user_id: mission.owner_user_id,
       mission_id: mission.id,
       autopilot: true,
       goal: mission.goal_description ?? mission.title,
@@ -232,11 +232,8 @@ async function logMissionEvent(
   eventType: string,
   payload: Record<string, unknown>
 ) {
-  // Get mission user_id for RLS
-  const { data: mission } = await supabase.from("agent_missions").select("user_id").eq("id", missionId).single();
   await supabase.from("agent_mission_events").insert({
     mission_id: missionId,
-    user_id: mission?.user_id,
     event_type: eventType,
     payload,
   });
