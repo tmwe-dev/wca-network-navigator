@@ -4,11 +4,11 @@
  * Handles persistence of quality scores and batch processing of multiple partners.
  */
 
-import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { calculatePartnerQuality } from "./qualityOrchestrator.ts";
 import type { PartnerQualityResult } from "./qualityTypes.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 /**
  * Salva il risultato dello score nella tabella partners.
