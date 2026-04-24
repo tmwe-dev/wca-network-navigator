@@ -41,13 +41,13 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const authClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
+    if (userErr || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
 
     const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -162,9 +162,10 @@ serve(async (req) => {
     let ctx;
     try {
       ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id, deep_search, authHeader, email_type_kb_categories });
-    } catch (e: Record<string, unknown>) {
-      if (e.code === "duplicate_branch") {
-        return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string; recentContact?: unknown };
+      if (err.code === "duplicate_branch") {
+        return new Response(JSON.stringify({ error: "duplicate_branch", message: err.message, recent_contact: err.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
       throw e;
     }
@@ -275,7 +276,6 @@ serve(async (req) => {
             last_outcome: ctx.lastOutcome ?? undefined,
             days_since_last_inbound: ctx.daysSinceLastContact ?? undefined,
             has_active_conversation: !!ctx.historyContext,
-            decision_engine: decisionContext || undefined,
           },
           partner: {
             id: partner?.id ?? null,

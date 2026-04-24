@@ -93,11 +93,11 @@ export async function assembleEnrichmentContext(
 
   // Load Partner Quality Score
   try {
-    const { loadAndCalculateQuality, formatQualityForPrompt } = await import(
-      "../_shared/partnerQualityScore.ts"
-    );
+    const { loadAndCalculateQuality } = await import("../_shared/partnerQualityScore.ts");
     const qualityScore = await loadAndCalculateQuality(supabase, partnerId);
-    const qualityBlock = formatQualityForPrompt(qualityScore);
+    const qualityBlock = qualityScore
+      ? `PARTNER QUALITY SCORE: ${qualityScore.total_score ?? "?"}/100 (${qualityScore.star_rating ?? "?"}★) — completeness ${qualityScore.data_completeness_percent ?? "?"}%`
+      : "";
     if (qualityBlock) {
       cachedEnrichmentContext += `\n${qualityBlock}\n`;
     }
@@ -108,7 +108,7 @@ export async function assembleEnrichmentContext(
     );
   }
 
-  sherlockLevel = (unified?.sherlock?.level as number | undefined) ?? 0;
+  sherlockLevel = ((unified?.sherlock as Record<string, unknown> | undefined)?.level as number | undefined) ?? 0;
 
   return {
     cachedEnrichmentContext,

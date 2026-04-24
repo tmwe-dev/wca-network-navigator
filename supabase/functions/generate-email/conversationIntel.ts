@@ -124,16 +124,16 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
       parts.push(`Last ${last5.length} exchanges:\n${last5.join("\n")}`);
     }
     parts.push(
-      `RESPONSE PATTERN: Response rate ${Math.round(convCtx.response_rate ?? 0)}%, avg response time ${convCtx.avg_response_time_hours != null ? `${Math.round(convCtx.avg_response_time_hours)}h` : "N/A"}, dominant sentiment: ${convCtx.dominant_sentiment || "neutral"}`,
+      `RESPONSE PATTERN: Response rate ${Math.round((convCtx.response_rate as number | undefined) ?? 0)}%, avg response time ${convCtx.avg_response_time_hours != null ? `${Math.round(convCtx.avg_response_time_hours as number)}h` : "N/A"}, dominant sentiment: ${(convCtx.dominant_sentiment as string | undefined) || "neutral"}`,
     );
   }
 
   if (rules) {
     const ruleParts: string[] = [];
     if (rules.tone_override) ruleParts.push(`Tone=${rules.tone_override}`);
-    if (rules.topics_to_emphasize?.length)
+    if ((rules.topics_to_emphasize as string[] | undefined)?.length)
       ruleParts.push(`Emphasize=${(rules.topics_to_emphasize as string[]).join(", ")}`);
-    if (rules.topics_to_avoid?.length)
+    if ((rules.topics_to_avoid as string[] | undefined)?.length)
       ruleParts.push(`Avoid=${(rules.topics_to_avoid as string[]).join(", ")}`);
     if (ruleParts.length) parts.push(`SENDER RULES: ${ruleParts.join(", ")}`);
     if ((rules.email_prompts as Record<string, unknown> | undefined)?.instructions) {
@@ -146,7 +146,7 @@ export function buildConversationBlock(intel: ConversationIntelligence): string 
   if (classifications.length) {
     const classLines = classifications.map(
       (c: Record<string, unknown>) =>
-        `  ${c.category} (${Math.round((c.confidence ?? 0) * 100)}%) - ${c.ai_summary || "no summary"}`,
+        `  ${c.category} (${Math.round(((c.confidence as number | undefined) ?? 0) * 100)}%) - ${c.ai_summary || "no summary"}`,
     );
     parts.push(`RECENT CLASSIFICATIONS:\n${classLines.join("\n")}`);
   }

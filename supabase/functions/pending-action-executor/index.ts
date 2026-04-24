@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing pending_action_id" }), { status: 400, headers });
     }
 
-    const supabase = createClient(
+    // deno-lint-ignore no-explicit-any
+    const supabase = createClient<any>(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
@@ -151,7 +152,8 @@ Deno.serve(async (req) => {
 });
 
 async function refreshActionContext(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: ReturnType<typeof createClient<any>>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
@@ -193,7 +195,8 @@ async function refreshActionContext(
 }
 
 async function executeAction(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: ReturnType<typeof createClient<any>>,
   action: PendingAction,
   payload: Record<string, unknown>
 ): Promise<ExecutionResult> {
@@ -290,7 +293,8 @@ async function executeAction(
       const partnerId = action.partner_id ?? payload.partner_id;
       if (!partnerId) return { success: false, action_type: action.action_type, detail: "No partner_id" };
       const leadPM = new LeadProcessManager(supabase);
-      const transResult = await leadPM.requestTransition(partnerId, action.user_id, payload.new_status as string, {
+      // deno-lint-ignore no-explicit-any
+      const transResult = await leadPM.requestTransition(partnerId as string, action.user_id, payload.new_status as any, {
         trigger: `Pending action update_lead_status approvata`,
         actor: { type: "ai_agent", name: "pending-action-executor" },
         decisionOrigin: "ai_approved",

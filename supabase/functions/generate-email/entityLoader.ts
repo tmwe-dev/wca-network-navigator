@@ -38,11 +38,11 @@ export async function loadEntityFromActivity(
     .single();
 
   if (actErr || !actData) throw new Error("Activity not found");
-  const activity = actData as Record<string, unknown>;
-  let partner: PartnerData | null = activity.partners;
-  let contact: ContactData | null = activity.selected_contact;
+  const activity = actData as Record<string, any>;
+  let partner: PartnerData | null = (activity.partners as PartnerData | null) ?? null;
+  let contact: ContactData | null = (activity.selected_contact as ContactData | null) ?? null;
   let contactEmail: string | null = null;
-  const sourceType = activity.source_type || "partner";
+  const sourceType: string = (activity.source_type as string | null) || "partner";
 
   if (sourceType === "contact" && activity.source_id) {
     const { data: ic } = await supabase
@@ -134,7 +134,7 @@ export async function loadEntityFromActivity(
     contactEmail = contact?.email || partner?.email || null;
   }
 
-  return { partner, contact, contactEmail, sourceType, activityPartnerId: activity.partner_id };
+  return { partner, contact, contactEmail, sourceType, activityPartnerId: (activity.partner_id as string | null) ?? null };
 }
 
 export async function loadStandalonePartner(
@@ -167,9 +167,9 @@ export async function loadStandalonePartner(
   if (contacts?.length) {
     const matched = recipientName
       ? contacts.find(
-          (c: Record<string, unknown>) =>
-            c.name?.toLowerCase().includes(recipientName.toLowerCase()) ||
-            c.contact_alias?.toLowerCase().includes(recipientName.toLowerCase()),
+          (c: Record<string, any>) =>
+            (c.name as string | null)?.toLowerCase().includes(recipientName.toLowerCase()) ||
+            (c.contact_alias as string | null)?.toLowerCase().includes(recipientName.toLowerCase()),
         ) || contacts[0]
       : contacts[0];
     contact = matched as ContactData;

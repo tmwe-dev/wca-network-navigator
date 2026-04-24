@@ -3,6 +3,13 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { PartnerData } from "./promptBuilder.ts";
+import {
+  getSameCompanyBranches,
+  analyzeRelationshipHistory,
+  buildInterlocutorTypeBlock,
+  buildBranchCoordinationBlock,
+  buildRelationshipAnalysisBlock,
+} from "../_shared/sameLocationGuard.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -60,14 +67,6 @@ export async function assembleCommercialIntelligence(
 
   if (!partnerId) return defaultResult;
 
-  const {
-    getSameCompanyBranches,
-    analyzeRelationshipHistory,
-    buildInterlocutorTypeBlock,
-    buildBranchCoordinationBlock,
-    buildRelationshipAnalysisBlock,
-  } = await import("../_shared/sameLocationGuard.ts");
-
   const { metrics, historyText } = await analyzeRelationshipHistory(supabase, partnerId, "");
   const historyContext = historyText ? `\n${historyText}\n` : "";
 
@@ -75,7 +74,7 @@ export async function assembleCommercialIntelligence(
   const branches = await getSameCompanyBranches(supabase, partnerId);
   const branchBlock = buildBranchCoordinationBlock(branches, partner.city);
 
-  const m = metrics as Record<string, unknown>;
+  const m = metrics as unknown as Record<string, unknown>;
   const commercialState = (m.commercial_state as string | undefined) ?? (partner.lead_status as string | undefined);
   const touchCount =
     typeof m.total_interactions === "number"
