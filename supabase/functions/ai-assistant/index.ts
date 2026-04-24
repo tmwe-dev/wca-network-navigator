@@ -4,7 +4,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createServiceClient, createUserClient } from "../_shared/supabaseClient.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
@@ -26,10 +26,7 @@ import { executeToolLoop, type ToolLoopState, type ToolLoopResult } from "./tool
 import { appendStructuredData } from "./responseAssembly.ts";
 
 // ━━━ Service-level Supabase client ━━━
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const supabase = createServiceClient();
 
 const readH = createReadHandlers(supabase);
 const writeH = createWriteHandlers(supabase);
@@ -55,16 +52,12 @@ serve(async (req) => {
       return edgeError("AUTH_REQUIRED", "Unauthorized");
     }
     const token = authHeader.replace("Bearer ", "");
-    const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const authClient = createUserClient(authHeader);
+    const { data: userData, error: authError } = await authClient.auth.getUser(token);
+    if (authError || !userData?.user?.id) {
       return edgeError("AUTH_INVALID", "Unauthorized");
     }
-    const userId: string = claimsData.claims.sub as string;
+    const userId: string = userData.user.id;
 
     // ── Rate limiting ──
     const rl = checkRateLimit(`ai-assistant:${userId}`, { maxTokens: 15, refillRate: 0.25 });
@@ -107,7 +100,7 @@ serve(async (req) => {
         userId,
         supabase
       );
-      endMetrics(metrics, 200);
+      endMetrics(metrics, true, 200);
       return result;
     }
 
@@ -131,7 +124,7 @@ serve(async (req) => {
         userId,
         supabase
       );
-      endMetrics(metrics, 200);
+      endMetrics(metrics, true, 200);
       return result;
     }
 
@@ -185,8 +178,7 @@ serve(async (req) => {
               decay_rate: 0.02,
               source: "repetition_detection",
             })
-            .then(() => {})
-            .catch(() => {});
+            .then(() => {}, () => {});
         }
       }
     }
@@ -210,20 +202,21 @@ serve(async (req) => {
       isConversational,
       scope,
       allMessages,
-      isConversational ? undefined : TOOL_DEFINITIONS
+      isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[])
     );
 
     if (!initialResponse.ok) {
       const statusCode = initialResponse.statusCode || 500;
       const msg = initialResponse.error || "Errore AI gateway";
-      endMetrics(metrics, statusCode);
+      endMetrics(metrics, false, statusCode);
       return new Response(JSON.stringify({ error: msg }), {
         status: statusCode,
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
 
-    const initialResult = initialResponse.data as Record<string, unknown>;
+    // deno-lint-ignore no-explicit-any
+    const initialResult = initialResponse.data as any;
 
     // ── Tool calling loop ──
     const toolLoopState: ToolLoopState = {
@@ -248,7 +241,7 @@ serve(async (req) => {
           isConversational,
           scope,
           loopMessages,
-          isConversational ? undefined : TOOL_DEFINITIONS
+          isConversational ? undefined : (TOOL_DEFINITIONS as unknown as Record<string, unknown>[])
         );
         return {
           ok: res.ok,
@@ -259,7 +252,7 @@ serve(async (req) => {
     );
 
     // ── Format final response ──
-    const finalMessage = loopResult.state.assistantMessage?.content || "";
+    const finalMessage = (loopResult.state.assistantMessage?.content as string | undefined) || "";
     let responseContent: string;
 
     if (finalMessage) {
@@ -275,16 +268,19 @@ serve(async (req) => {
       }
     } else {
       // Fallback: one more call without tools
-      loopResult.state.allMessages.push(loopResult.state.assistantMessage);
+      if (loopResult.state.assistantMessage) {
+        loopResult.state.allMessages.push(loopResult.state.assistantMessage);
+      }
       const fallbackResponse = await callAiWithoutTools(provider, loopResult.state.allMessages);
       if (!fallbackResponse.ok) {
-        endMetrics(metrics, 500);
+        endMetrics(metrics, false, 500);
         return new Response(JSON.stringify({ error: "Errore finale" }), {
           status: 500,
           headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
-      const fallbackResult = fallbackResponse.data as Record<string, unknown>;
+      // deno-lint-ignore no-explicit-any
+      const fallbackResult = fallbackResponse.data as any;
       const fallbackText =
         (fallbackResult.choices?.[0]?.message?.content as string) ||
         "Nessuna risposta";
@@ -314,7 +310,7 @@ serve(async (req) => {
       );
     }
 
-    endMetrics(metrics, 200);
+    endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({ content: responseContent }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });

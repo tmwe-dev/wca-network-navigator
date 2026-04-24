@@ -8,7 +8,8 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 // Generate-email / improve-email / generate-outreach / Command tools NON devono più invocarla.
 
 // ── Credit helpers ──
-async function getUserId(req: Request, supabase: Record<string, unknown>): Promise<string | null> {
+// deno-lint-ignore no-explicit-any
+async function getUserId(req: Request, supabase: any): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth) return null;
   const token = auth.replace("Bearer ", "");
@@ -16,7 +17,8 @@ async function getUserId(req: Request, supabase: Record<string, unknown>): Promi
   return data?.user?.id || null;
 }
 
-async function isByok(userId: string, supabase: Record<string, unknown>): Promise<boolean> {
+// deno-lint-ignore no-explicit-any
+async function isByok(userId: string, supabase: any): Promise<boolean> {
   const { data } = await supabase
     .from("user_api_keys")
     .select("api_key")
@@ -27,7 +29,8 @@ async function isByok(userId: string, supabase: Record<string, unknown>): Promis
   return !!data?.api_key;
 }
 
-async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: Record<string, unknown>) {
+// deno-lint-ignore no-explicit-any
+async function consumeCredits(userId: string, usage: { prompt_tokens: number; completion_tokens: number }, supabase: any) {
   const inputCost = Math.ceil(usage.prompt_tokens / 1000 * 1);
   const outputCost = Math.ceil(usage.completion_tokens / 1000 * 2);
   const total = inputCost + outputCost;

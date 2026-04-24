@@ -10,7 +10,8 @@
 import type { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { calculateSeniority, calculateIndustry, calculateGeography, calculateEngagement, type ClientData, type DimensionScore } from "./dimensionCalculators.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 export interface ClientQualityResult {
   totalScore: number; // 0-100

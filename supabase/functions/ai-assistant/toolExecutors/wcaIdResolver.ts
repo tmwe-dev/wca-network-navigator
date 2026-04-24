@@ -3,9 +3,8 @@
  * Shared utility functions for resolving partner IDs from various sources.
  */
 
-type SupabaseClient = ReturnType<
-  typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient
->;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
 
 /**
  * Load partner WCA IDs based on mode (new, no_profile, all).

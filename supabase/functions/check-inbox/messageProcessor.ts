@@ -96,7 +96,7 @@ export async function processMessage(
 
       if (rfc822Size > 0 && rfc822Size <= MAX_RAW_FETCH_BYTES) {
         const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
-        rawBytes = extractLiteralBytesFromResponse(rawResponse);
+        rawBytes = new Uint8Array(extractLiteralBytesFromResponse(rawResponse));
         if (!rfc822Size) rfc822Size = rawBytes.length;
         if (rawBytes.length > 0) {
           rawHash = await sha256hex(rawBytes);
@@ -117,7 +117,7 @@ export async function processMessage(
       } else {
         try {
           const rawResponse = await imapExec.executeCommand(`UID FETCH ${uid} (BODY.PEEK[])`);
-          rawBytes = extractLiteralBytesFromResponse(rawResponse);
+          rawBytes = new Uint8Array(extractLiteralBytesFromResponse(rawResponse));
           rfc822Size = rawBytes.length;
           if (rawBytes.length > MAX_RAW_FETCH_BYTES) {
             parseWarnings.push(`raw fetched but too large (${rawBytes.length}B), discarding`);
@@ -165,8 +165,10 @@ export async function processMessage(
         envelope: true,
         bodyStructure: !oversized,
       } as Record<string, unknown>);
-      const env = (envFetch as Record<string, unknown>[])?.[0]?.envelope as Record<string, unknown> | undefined;
-      bodyStructure = !oversized ? ((envFetch as Record<string, unknown>[])?.[0]?.bodyStructure as Record<string, unknown> || null) : null;
+      // deno-lint-ignore no-explicit-any
+      const env = (envFetch as unknown as any[])?.[0]?.envelope as Record<string, unknown> | undefined;
+      // deno-lint-ignore no-explicit-any
+      bodyStructure = !oversized ? (((envFetch as unknown as any[])?.[0]?.bodyStructure as Record<string, unknown>) || null) : null;
       if (env) {
         fromAddr = envelopeAddr((env.from as Record<string, unknown>[] | undefined)?.[0] ?? null);
         toAddr = envelopeAddrList(env.to as Record<string, unknown>[] | undefined);

@@ -6,7 +6,8 @@ import type { Quality } from "../_shared/kbSlice.ts";
 import { fetchKbEntriesStrategic } from "./kbAssembler.ts";
 import { loadActivePlaybook } from "./playbookLoader.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 export interface KbAndPlaybook {
   salesKBSlice: string;

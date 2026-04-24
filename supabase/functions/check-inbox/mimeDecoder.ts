@@ -79,7 +79,8 @@ export function decodeMimePart(rawBytes: Uint8Array, encoding: string, charset?:
 // ━━━ SHA-256 hash ━━━
 
 export async function sha256hex(data: Uint8Array): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const buf = new Uint8Array(data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buf);
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 

@@ -104,10 +104,12 @@ export async function loadKBContext(
       const matches = await ragSearchKb(supabase, query, {
         matchCount: ragCount, matchThreshold: 0.25, minPriority: 3, onlyActive: true,
       });
-      const filtered = matches.filter((e: Record<string, unknown>) => !seenIds.has(e.id as string));
+      // deno-lint-ignore no-explicit-any
+      const filtered = (matches as any[]).filter((e: any) => !seenIds.has(e.id as string));
       if (filtered.length > 0) {
         const entries = filtered
-          .map((e: Record<string, unknown>) => `### ${e.title} [sim=${(e.similarity as number).toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
+          // deno-lint-ignore no-explicit-any
+          .map((e: any) => `### ${e.title} [sim=${(e.similarity as number).toFixed(2)} · ${(Array.isArray(e.tags) ? e.tags.join(", ") : e.category) || ""}]\n${e.content}`)
           .join("\n\n");
         parts.push(`KNOWLEDGE BASE AZIENDALE (RAG retrieval):\n${entries}`);
       }

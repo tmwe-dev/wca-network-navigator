@@ -13,6 +13,7 @@ interface ImapConfig {
   username: string;
   password: string;
   secure: boolean;
+  tls: boolean;
   connectionTimeout: number;
   tlsOptions: { caCerts: string[] };
 }
@@ -39,6 +40,7 @@ export async function createImapConfig(
     username: imapUser,
     password: imapPassword,
     secure: true,
+    tls: true,
     connectionTimeout: 15000,
     tlsOptions: { caCerts: getCaCertsForHost(imapHost) },
   };
@@ -49,7 +51,8 @@ export async function connectToImap(config: ImapConfig): Promise<ImapClient> {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      client = new ImapClient(config);
+      // deno-lint-ignore no-explicit-any
+      client = new ImapClient(config as any);
       await client.connect();
       await client.authenticate();
       return client;
@@ -69,8 +72,9 @@ export async function selectInbox(client: ImapClient): Promise<{
   uidvalidity: number | null;
 }> {
   const inbox = await client.selectMailbox("INBOX");
-  const uidvalidity = (inbox as Record<string, unknown>).uidValidity as number | null || null;
-  return { exists: inbox.exists, uidvalidity };
+  // deno-lint-ignore no-explicit-any
+  const uidvalidity = ((inbox as any).uidValidity as number | null) || null;
+  return { exists: inbox.exists ?? 0, uidvalidity };
 }
 
 export async function handleUidvalidityChange(

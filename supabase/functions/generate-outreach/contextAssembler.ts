@@ -13,7 +13,8 @@ import { loadActivePlaybook } from "./playbookLoader.ts";
 import { assemblePartnerEnrichmentContext, getEnrichmentMetadata, type RecipientIntelligence } from "./enrichmentAssembler.ts";
 import { analyzePartnerRelationship } from "./relationshipAnalyzer.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 export type { RecipientIntelligence };
 

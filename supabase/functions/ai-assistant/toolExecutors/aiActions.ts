@@ -6,9 +6,8 @@
 
 import { extractErrorMessage } from "../../_shared/handleEdgeError.ts";
 
-type SupabaseClient = ReturnType<
-  typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient
->;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
 
 export async function executeGetPendingActions(
   supabase: SupabaseClient,
@@ -83,8 +82,7 @@ export async function executeRejectAiAction(
         decay_rate: 0.01,
         source: "user_rejection",
       })
-      .then(() => {})
-      .catch((e: unknown) =>
+      .then(() => {}, (e: unknown) =>
         console.warn("rejection memory save failed:", extractErrorMessage(e))
       );
   }

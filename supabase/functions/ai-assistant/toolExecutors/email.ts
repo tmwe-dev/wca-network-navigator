@@ -3,9 +3,8 @@
  * Handles get_email_classifications, get_conversation_context, get_address_rules tools.
  */
 
-type SupabaseClient = ReturnType<
-  typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient
->;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2.39.3").createClient<any>>;
 
 export async function executeGetEmailClassifications(
   supabase: SupabaseClient,

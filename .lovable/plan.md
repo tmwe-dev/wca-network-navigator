@@ -1,57 +1,72 @@
+## Piano definitivo: fix sistemico typing edge functions
 
-# Fix Chunk #0 "Risposta vuota" — Piano definitivo
+### Diagnosi
+Tutti gli errori derivano da **una sola causa**: `createClient()` chiamato senza il generic `<any>`. Senza generic, la libreria infera `data: never[]`, e ogni `.from().select()` propaga `never` fino a tutti i moduli che ricevono il client come parametro. Patchare file per file è un buco senza fondo perché ogni nuovo cast introduce mismatch a catena.
 
-## Diagnosi confermata (riletti i file)
+### Fix sistemica (1 modulo nuovo + sostituzione globale)
 
-`unified-assistant` → `ai-assistant` (scope `kb-supervisor`, `mode=conversational`):
-- `selectFallbackModels` per `isConversational=true` ignora completamente `scope.model`/`scope.temperature` e forza la coppia `["google/gemini-2.5-flash", "openai/gpt-5-mini"]`. Buona notizia: il modello effettivo è già `gemini-2.5-flash`. Cattiva notizia: nessun `max_tokens`, nessuna `temperature`, e se il prompt esplode il modello restituisce stringa vuota → 200 OK ma `content=""` → l'analyzer lancia "risposta vuota".
-- `aiCallHandler.makeAiCall` accetta già `temperature`/`max_tokens` ma `callAiWithFallback` non li propaga.
-- Sul lato frontend: `gapsText` usa `slice(0, 500)` per gap × cap 20 = ~10 KB solo per i gap, + `entitiesList` cap 30, + `factsTop` cap 15, + KB injection (`buildHarmonizerKbContext`) variabile (5–10 KB). Su chunk #0 (Doctrine/Foundation) la KB injection è molto ricca → totale ~25–30 KB → `gemini-2.5-flash` saltuariamente restituisce body vuoto.
-
-## I 5 fix (senza creare nuovi pattern, solo aggiunte minime)
-
-### 1. `supabase/functions/_shared/scopeConfigs.ts`
-Aggiungo a `case "kb-supervisor"`:
+**STEP 1 — Crea `supabase/functions/_shared/supabaseClient.ts`** (nuovo file):
 ```ts
-model: "google/gemini-2.5-flash",
-temperature: 0.2,
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+// deno-lint-ignore no-explicit-any
+export type AnySupabaseClient = ReturnType<typeof createClient<any>>;
+
+export function createServiceClient(): AnySupabaseClient {
+  return createClient<any>(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
 ```
-(così è esplicito anche per chiamate non conversational, ma soprattutto serve come fonte di verità).
 
-### 2. `supabase/functions/ai-assistant/aiCallHandler.ts`
-- `callAiWithFallback`: leggere `scope.temperature` e `scope.max_tokens` da `getScopeConfig(scope)`. Se `scope === "kb-supervisor"` → forzare `max_tokens: 8000` di default.
-- Propagare `temperature` e `max_tokens` a `makeAiCall` per ogni tentativo della catena di fallback.
-- `makeAiCall`: dopo il parse JSON, se `data.choices?.[0]?.message?.content` è una stringa vuota / null → restituire `{ ok: false, status: 599, errorText: "empty_content" }` così la catena di fallback prova il modello successivo invece di restituire silenziosamente `content=""`.
-- Aggiungere log `console.log("[AI]", { model, scope, systemChars, userChars, totalChars, max_tokens })` prima del `fetch`.
+**STEP 2 — Sostituisci in TUTTI i file con `ReturnType<typeof createClient>` o varianti** (~30 file):
+- Rimpiazza ogni `type SupabaseClient = ReturnType<typeof createClient>` (e alias come `AgentExecuteSupabaseClient = any`) con import di `AnySupabaseClient` da `_shared/supabaseClient.ts`.
+- Nessun cast `as Row[]`, nessun `Record<string, unknown>`, nessuna riga di logica toccata.
+- `createClient<any>(...)` fa sì che `.from().select()` ritorni `any`, eliminando in cascata tutti i `TS2339`, `TS18046`, `TS2538`, `TS7053`, `TS2345`.
 
-### 3. `src/v2/ui/pages/prompt-lab/harmonizer/harmonizerLibraryAnalyzer.ts`
-- Ridurre i cap nel prompt:
-  - `factsTop`: 15 → 10
-  - `conflictsList`: 10 → 5
-  - `entitiesList`: 30 → 15
-  - aggiornare le label dei titoli sezione (`top 30/20/50`) coerentemente.
-- **Compressione adattiva `gapsText`**: budget di 12 000 caratteri totale per la sezione gap. Allocazione = `floor(12000 / cap.length)` per gap; il `desired.content` viene troncato dinamicamente a `max(150, allocPerGap - 250)` invece del fisso `slice(0, 500)`.
-- **`callWithRetry` a 3 livelli**:
-  1. Full prompt + KB context.
-  2. Empty → retry senza KB context (`TMWE_INGESTION_BRIEFING` da solo).
-  3. Ancora empty → riprovare con `gapsText` ricompresso a budget `6000` (50 %) e senza KB.
-- Tutti i livelli loggano `[libraryAnalyzer] retry level=N reason=empty`.
+**STEP 3 — Fix puntuali in `ai-assistant/index.ts`** (errori indipendenti dal client):
+1. `getClaims(token)` → non esiste → `auth.getUser(token)` e leggi `data.user.id`.
+2. `endMetrics(metrics, 200)` → manca arg `success` → `endMetrics(metrics, true, 200)` (5 occorrenze).
+3. `(...).catch(() => {})` su `PromiseLike` → wrappa con `Promise.resolve(...).catch(() => {})`.
+4. `initialResult`/`fallbackResult` → tipa come `any` per accesso a `.choices[0].message`.
+5. `TOOL_DEFINITIONS` → cast `as unknown as Record<string, unknown>[]` nelle 2 chiamate.
+6. `finalMessage`/`responseContent` → cast `as string`.
+7. `loopResult.state.assistantMessage` → guard prima di `push`.
 
-### 4. `src/v2/ui/pages/prompt-lab/harmonizer/useHarmonizerLibraryIngestion.ts`
-`bootstrapEntitiesFromDb`:
-- Limitare il risultato a 80 record totali (top 80 per `created_at` desc se disponibile, altrimenti `slice(0, 80)` dopo il filter).
-- Il limite riduce il payload `bootstrap_entities` salvato in `harmonizer_sessions` e quindi il body `session.entities_created` che il prompt costruisce.
+**STEP 4 — Revert dei cast inutili introdotti nei tentativi precedenti**:
+In questi file rimuovo i `Record<string, unknown>`, `as Row[]`, `as never`, non-null assertion superflui aggiunti nei giri scorsi. Ridiventano inutili perché il client ora ritorna `any`:
+- `_shared/toolHandlersRead.ts`
+- `_shared/toolHandlersEnterprise.ts`
+- `_shared/scopeConfigs.ts`
+- `_shared/platformTools/partnersSearchHandler.ts`
+- `ai-assistant/contextAssembly.ts`
+- `ai-assistant/contextLoaders.ts`
+- `ai-assistant/memoryContextLoader.ts`
+- `ai-assistant/emailContextLoader.ts`
+- `ai-assistant/kbContextLoader.ts`
+- `ai-assistant/aiProviderResolver.ts`
+- `ai-assistant/toolExecutors.ts`
+- `agent-execute/shared.ts`, `chatMode.ts`, `systemPrompt.ts`, `taskMode.ts`, `index.ts`, `toolHandlers/*.ts`
 
-### 5. Deploy
-Ridepoyare `unified-assistant` e `ai-assistant` dopo gli edit.
+Mantengo solo le correzioni di **logica reale** già fatte (es. `partnersUpdateHandler.ts` che usa `!statusResult.applied` invece dell'inesistente `.error`).
 
-## Cosa NON tocco
-- Nessuna modifica a `harmonizerLibraryCollector.ts`, `tmweChunks.ts`, `tmwe-ingestion-briefing`, `harmonizerKbInjector`. La parte di parsing/scoping è già corretta.
-- Nessuna modifica al test esistente (`harmonizeCollector.test.ts`) perché il placeholder detector è ortogonale a questo fix.
+### Risultato atteso
+- ~150 errori TS chiusi in un colpo solo.
+- Zero modifiche di logica funzionale.
+- Nessuna nuova fragilità: `any` qui è esplicitamente accettato perché Deno non ha i tipi `Database` generati per le edge functions.
+- Build verde, edge functions deployabili.
 
-## Verifica post-deploy
-1. Guardare i log di `ai-assistant` cercando `[AI]` con `totalChars`. Atteso < 18 000 per chunk #0 dopo i fix (vs ~30 000 attuali).
-2. Rilanciare "Armonizza tutto → Ingestione documento grande" sul file reale.
-3. In caso di empty residuo: il log mostrerà `retry level=2` o `level=3`; se anche il livello 3 fallisce → è un vero rate limit / outage AI gateway, non più un problema di prompt size.
+### Perché funziona
+`createClient<any>()` istruisce il SDK Supabase a trattare lo schema come `any`, quindi:
+- `.from("table").select()` → `data: any[]` (non più `never[]`)
+- `.rpc("fn", args)` → `data: any` (non più richiede 0 args)
+- Property access su risultati DB → permesso
+- I cast manuali aggiunti nei giri precedenti diventano rumore da rimuovere
 
-Confermi e procedo?
+### Stima file toccati
+- **Nuovo**: 1 file (`_shared/supabaseClient.ts`)
+- **Sostituzione typing**: ~30 file (1-2 righe meccaniche ciascuno)
+- **Fix puntuali**: 1 file (`ai-assistant/index.ts`, 7 micro-edit)
+- **Pulizia cast**: ~15 file
+
+Approvi e procedo end-to-end senza ulteriori conferme.

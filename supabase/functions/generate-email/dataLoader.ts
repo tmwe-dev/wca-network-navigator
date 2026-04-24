@@ -6,7 +6,8 @@ import type { Quality } from "../_shared/kbSlice.ts";
 import type { NetworkRow, ServiceRow, SocialLinkRow } from "./promptBuilder.ts";
 import type { PartnerData } from "./promptBuilder.ts";
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = ReturnType<typeof createClient<any>>;
 
 export interface LoadedMetadata {
   networks: NetworkRow[];
