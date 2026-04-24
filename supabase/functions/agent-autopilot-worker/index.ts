@@ -13,7 +13,7 @@ const MAX_WALL_CLOCK_MS = 55_000;
 interface MissionRow {
   id: string;
   agent_id: string;
-  user_id: string;
+  owner_user_id: string;
   title: string;
   goal_description: string | null;
   goal_type: string;
