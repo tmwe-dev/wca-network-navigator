@@ -13,19 +13,42 @@ import { updateEmailPrompt } from "@/data/emailPrompts";
 import { updateEmailAddressRule } from "@/data/emailAddressRules";
 import { updateCommercialPlaybook } from "@/data/commercialPlaybooks";
 import { updateAgentPersona } from "@/data/agentPersonas";
+import { createAgent, updateAgent, type AgentInsert, type AgentUpdate } from "@/data/agents";
+import { upsertAppSetting } from "@/data/appSettings";
+import { createHarmonizerFollowup, followupFromProposal } from "@/data/harmonizerFollowups";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 export interface ExecuteResult {
   ok: boolean;
   reason?: string;
+  followup_id?: string;
 }
 
 /** Esegue una singola proposta. Ritorna esito (no throw). */
-export async function executeProposal(userId: string, p: HarmonizeProposal): Promise<ExecuteResult> {
-  // 1. Skip read-only
+export async function executeProposal(
+  userId: string,
+  p: HarmonizeProposal,
+  runId?: string,
+): Promise<ExecuteResult> {
+  // 1. Read-only → registra come followup sviluppatore (se runId noto) e termina.
   if (p.resolution_layer === "contract" || p.resolution_layer === "code_policy") {
-    return { ok: false, reason: "Proposta read-only: richiede intervento sviluppatore." };
+    let followupId: string | undefined;
+    if (runId) {
+      const followup = followupFromProposal(runId, userId, p);
+      if (followup) {
+        try {
+          followupId = await createHarmonizerFollowup(followup);
+        } catch (e) {
+          console.warn("[harmonizeExecutor] followup creation failed", e);
+        }
+      }
+    }
+    return {
+      ok: false,
+      reason: "Proposta read-only: registrata come follow-up sviluppatore.",
+      followup_id: followupId,
+    };
   }
 
   // 2. Vincolo: niente delete su agents/agent_personas
@@ -48,8 +71,9 @@ export async function executeProposal(userId: string, p: HarmonizeProposal): Pro
       case "agent_personas":
         return await execAgentPersona(p);
       case "agents":
+        return await execAgent(p);
       case "app_settings":
-        return { ok: false, reason: `Esecuzione su ${p.target.table} non ancora supportata in questa versione.` };
+        return await execAppSetting(userId, p);
       default:
         return { ok: false, reason: `Tabella sconosciuta: ${p.target.table}.` };
     }
@@ -157,5 +181,65 @@ async function execAgentPersona(p: HarmonizeProposal): Promise<ExecuteResult> {
     return { ok: false, reason: "agent_personas supporta solo UPDATE con field." };
   }
   await updateAgentPersona(p.target.id, { [p.target.field]: p.after ?? "" });
+  return { ok: true };
+}
+
+async function execAgent(p: HarmonizeProposal): Promise<ExecuteResult> {
+  if (p.action === "DELETE") return { ok: false, reason: "DELETE su agents non consentito." };
+  if (p.action === "MOVE") return { ok: false, reason: "MOVE non applicabile a agents." };
+  const payload = (p.payload ?? {}) as Record<string, unknown>;
+
+  if (p.action === "INSERT") {
+    // Campi minimi richiesti: name, role
+    const name = String(payload.name ?? p.block_label ?? "").trim();
+    const role = String(payload.role ?? "").trim();
+    if (!name || !role) {
+      return { ok: false, reason: "INSERT agents richiede payload.name e payload.role." };
+    }
+    const insert: AgentInsert = {
+      name,
+      role,
+      system_prompt: String(payload.system_prompt ?? p.after ?? ""),
+      avatar_emoji: payload.avatar_emoji ? String(payload.avatar_emoji) : undefined,
+      knowledge_base: Array.isArray(payload.knowledge_base) ? (payload.knowledge_base as never) : undefined,
+      assigned_tools: Array.isArray(payload.assigned_tools) ? (payload.assigned_tools as string[]) : undefined,
+      territory_codes: Array.isArray(payload.territory_codes) ? (payload.territory_codes as string[]) : undefined,
+      is_active: typeof payload.is_active === "boolean" ? (payload.is_active as boolean) : true,
+    };
+    await createAgent(insert);
+    return { ok: true };
+  }
+
+  // UPDATE
+  if (!p.target.id) return { ok: false, reason: "UPDATE agents richiede target.id." };
+  const updates: AgentUpdate = {};
+  if (p.target.field) {
+    (updates as Record<string, unknown>)[p.target.field] = p.after ?? payload[p.target.field] ?? "";
+  } else {
+    // update di più campi via payload
+    for (const [k, v] of Object.entries(payload)) {
+      (updates as Record<string, unknown>)[k] = v;
+    }
+    if (p.after && !("system_prompt" in updates)) {
+      (updates as Record<string, unknown>).system_prompt = p.after;
+    }
+  }
+  if (Object.keys(updates).length === 0) {
+    return { ok: false, reason: "UPDATE agents senza campi da modificare." };
+  }
+  await updateAgent(p.target.id, updates);
+  return { ok: true };
+}
+
+async function execAppSetting(userId: string, p: HarmonizeProposal): Promise<ExecuteResult> {
+  if (p.action === "DELETE" || p.action === "MOVE") {
+    return { ok: false, reason: `${p.action} non supportato su app_settings.` };
+  }
+  const payload = (p.payload ?? {}) as Record<string, unknown>;
+  const key = String(payload.key ?? p.target.field ?? p.block_label ?? "").trim();
+  if (!key) return { ok: false, reason: "app_settings richiede payload.key." };
+  const value = String(payload.value ?? p.after ?? "");
+  if (!value) return { ok: false, reason: "app_settings richiede un valore (after o payload.value)." };
+  await upsertAppSetting(userId, key, value);
   return { ok: true };
 }
