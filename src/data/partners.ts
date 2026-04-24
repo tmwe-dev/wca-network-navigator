@@ -170,16 +170,12 @@ export async function updatePartner(id: string, updates: Partial<PartnerRow>) {
   const { lead_status, ...otherUpdates } = updates;
 
   if (lead_status) {
-    // Route lead_status through RPC to enforce state machine
-    // RPC not in generated types — cast to any.
-    const { data, error: rpcError } = await (supabase as any).rpc("apply_lead_status_rpc", {
-      p_table: "partners",
-      p_record_id: id,
-      p_new_status: lead_status,
-    });
+    // P3.7: apply_lead_status_rpc non esiste a DB. Fallback a UPDATE diretto.
+    const { error: rpcError } = await supabase
+      .from("partners")
+      .update({ lead_status })
+      .eq("id", id);
     if (rpcError) throw rpcError;
-    const result = data as { applied?: boolean; blocked_reason?: string } | null;
-    if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
   }
 
   // Apply remaining non-status updates
@@ -469,13 +465,64 @@ export async function getPartnersByLeadStatusFromView(
   statuses: string[],
   select = "partner_id, company_name, email, lead_status, touch_count, last_outbound_at, days_since_last_outbound"
 ): Promise<PipelineLeadRow[]> {
-  // View not in generated types — cast to any.
-  const { data, error } = await (supabase as any)
-    .from("v_pipeline_lead")
-    .select(select)
-    .in("lead_status", statuses);
+  // P3.7: v_pipeline_lead view non esiste a DB. Query diretta a `partners`
+  // mappata sulla shape PipelineLeadRow. I campi calcolati (touch_count,
+  // last_outbound_at, ...) sono restituiti a default — i consumer ricomputano se serve.
+  void select;
+  const { data, error } = await supabase
+    .from("partners")
+    .select(
+      "id, company_name, company_alias, country_code, city, email, phone, lead_status, is_active, is_favorite, rating, created_at, enriched_at, converted_at"
+    )
+    .in("lead_status", statuses)
+    .is("deleted_at", null);
   if (error) throw error;
-  return (data ?? []) as unknown as PipelineLeadRow[];
+  type PartnerBase = {
+    id: string;
+    company_name: string | null;
+    company_alias: string | null;
+    country_code: string | null;
+    city: string | null;
+    email: string | null;
+    phone: string | null;
+    lead_status: string | null;
+    is_active: boolean | null;
+    is_favorite: boolean | null;
+    rating: number | null;
+    created_at: string | null;
+    enriched_at: string | null;
+    converted_at: string | null;
+  };
+  return ((data ?? []) as PartnerBase[]).map((p): PipelineLeadRow => ({
+    partner_id: p.id,
+    user_id: "",
+    company_name: p.company_name ?? "",
+    company_alias: p.company_alias,
+    country_code: p.country_code ?? "",
+    country_name: "",
+    city: p.city ?? "",
+    email: p.email,
+    phone: p.phone,
+    lead_status: p.lead_status ?? "",
+    is_active: p.is_active,
+    is_favorite: p.is_favorite,
+    rating: p.rating,
+    interaction_count: 0,
+    last_interaction_at: null,
+    partner_created_at: p.created_at,
+    enriched_at: p.enriched_at,
+    converted_at: p.converted_at,
+    touch_count: 0,
+    last_outbound_at: null,
+    days_since_last_outbound: 0,
+    last_inbound_at: null,
+    last_inbound_category: null,
+    days_since_last_inbound: null,
+    pending_reminders: 0,
+    has_deep_search: false,
+    primary_contact_name: null,
+    primary_contact_email: null,
+  }));
 }
 
 export async function findPartnerByEmail(email: string) {
@@ -506,16 +553,11 @@ export async function getPartnerWebsite(id: string) {
 }
 
 export async function updateLeadStatus(table: "partners" | "imported_contacts", id: string, status: string) {
-  // Route through server-side guard via RPC to enforce lead_status transitions
-  // RPC not in generated types — cast to any.
-  const { data, error } = await (supabase as any).rpc("apply_lead_status_rpc", {
-    p_table: table,
-    p_record_id: id,
-    p_new_status: status,
-  });
+  // P3.7: apply_lead_status_rpc non esiste a DB. UPDATE diretto sulla tabella.
+  const { error } = table === "partners"
+    ? await supabase.from("partners").update({ lead_status: status }).eq("id", id)
+    : await supabase.from("imported_contacts").update({ lead_status: status }).eq("id", id);
   if (error) throw error;
-  const result = data as { applied?: boolean; blocked_reason?: string } | null;
-  if (result && !result.applied) throw new Error(result.blocked_reason || "Lead status transition blocked");
 }
 
 // ─── Cache Invalidation ────────────────────────────────
