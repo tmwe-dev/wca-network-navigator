@@ -1,10 +1,10 @@
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 export { getCorsHeaders, corsPreflight };
 
-export type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
+export type AgentExecuteSupabaseClient = any;
 
 export const supabase: AgentExecuteSupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -13,6 +13,7 @@ export const supabase: AgentExecuteSupabaseClient = createClient(
 
 export interface ExecuteContext {
   agent_id?: string;
+  agentId?: string;
 }
 
 export { escapeLike };
