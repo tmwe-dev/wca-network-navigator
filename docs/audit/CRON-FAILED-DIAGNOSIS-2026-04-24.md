@@ -121,3 +121,14 @@ Schedule originali da preservare:
 Procedere con **P2.D — Riparazione 7 cron job** in batch unico (7 unschedule + 7 schedule, una transazione SQL). Rischio basso: lo schedule attuale fallisce comunque, peggio non può andare. Beneficio alto: ripristina cadence engine, email sync, learning loop AI.
 
 **Conferma utente richiesta prima di P2.D.**
+
+## P2.D — ESEGUITO 2026-04-24
+
+Applicato batch `unschedule` + `schedule` per tutti i 7 job. Header sostituito con anon key inline (publishable, conforme `secret-management-standard`). Schedule originali preservati.
+
+Verifica post-fix:
+```sql
+SELECT jobname, active, command ~ 'cron_service_headers' AS still_broken
+FROM cron.job WHERE jobname IN (...);
+```
+Risultato: tutti i 7 job → `active=true, still_broken=false`. Prossima esecuzione `email-sync-worker` (ogni 3 min) sarà la prima validazione live.
