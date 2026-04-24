@@ -85,7 +85,8 @@ export async function readUnifiedEnrichment(
     console.warn("[enrichmentAdapter] partner read failed:", e instanceof Error ? e.message : e);
   }
 
-  let sherlockRow: { summary: string | null; created_at: string | null; findings: unknown } | null = null;
+  type SherlockRow = { summary: string | null; created_at: string | null; findings: unknown };
+  let sherlockRow: SherlockRow | null = null;
   try {
     const { data } = await supabase
       .from("sherlock_investigations")
@@ -95,7 +96,7 @@ export async function readUnifiedEnrichment(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    sherlockRow = data as unknown as typeof sherlockRow;
+    sherlockRow = (data ?? null) as unknown as SherlockRow | null;
   } catch {
     // Sherlock optional — silently ignore
   }
@@ -123,10 +124,11 @@ export async function readUnifiedEnrichment(
     ? ed.base_enriched_at
     : (typeof ed.website_scraped_at === "string" ? ed.website_scraped_at : null);
 
+  const sr: SherlockRow | null = sherlockRow;
   const has_any = !!(
     baseLinkedinUrl || websiteExcerpt || contactProfiles?.length ||
     websiteSummary || linkedinSummary || deepSearchSummary ||
-    sherlockRow?.summary
+    sr?.summary
   );
 
   return {
@@ -150,16 +152,16 @@ export async function readUnifiedEnrichment(
       deep_search_summary: deepSearchSummary,
     },
     sherlock: {
-      summary: sherlockRow?.summary ?? null,
-      last_run_at: sherlockRow?.created_at ?? null,
-      findings: sherlockRow?.findings ?? null,
+      summary: sr?.summary ?? null,
+      last_run_at: sr?.created_at ?? null,
+      findings: sr?.findings ?? null,
     },
     logo_url: baseLogoUrl,
     has_any,
     freshness: {
       base_age_days: daysSince(baseEnrichedAt),
       deep_age_days: daysSince(deepSearchAt),
-      sherlock_age_days: daysSince(sherlockRow?.created_at ?? null),
+      sherlock_age_days: daysSince(sr?.created_at ?? null),
     },
   };
 }
