@@ -70,6 +70,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
     [state.proposals],
   );
   const skippedCount = state.proposals.filter((p) => p.status === "skipped").length;
+  const minorChangeCount = state.proposals.filter((p) => p.status === "minor_change").length;
   const errorCount = state.proposals.filter((p) => p.status === "error").length;
   // LOVABLE-109: conteggi outcome_type per segnalazioni architetturali
   const contractNeededCount = state.proposals.filter((p) => p.outcomeType === "contract_needed").length;
