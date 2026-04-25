@@ -540,6 +540,25 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
               </p>
             </div>
 
+            {/* Banner ripristino dopo refresh: stato in cache, lavoro precedente recuperato. */}
+            {(agentic.state.phase === "cancelled" || agentic.state.phase === "done") && agentic.state.entities.length > 0 && !agenticFile && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold flex items-center gap-1">
+                    <RotateCw className="h-3.5 w-3.5" /> Sessione ripristinata da cache
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    Lavoro precedente recuperato: {agentic.state.entities.length} entità processate
+                    {agentic.state.output ? <> (run id <code>{agentic.state.output.runId.slice(0, 8)}…</code>)</> : null}.
+                    {lastAgenticFileName ? <> Per ripartire ricarica <code>{lastAgenticFileName}</code>.</> : null}
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={agentic.reset}>
+                  <X className="h-3 w-3 mr-1" /> Pulisci
+                </Button>
+              </div>
+            )}
+
             {agentic.state.phase === "idle" && (
               <div className="space-y-4">
                 <div>
@@ -558,6 +577,11 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                       <Badge variant="outline">{agenticFile.sizeKb}KB</Badge>
                       <Badge variant="outline">{agenticFile.content.split("\n").length} righe</Badge>
                     </div>
+                  )}
+                  {!agenticFile && lastAgenticFileName && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Ultimo file usato: <code>{lastAgenticFileName}</code>
+                    </p>
                   )}
                 </div>
                 <Button onClick={handleAgenticStart} disabled={!userId || !agenticFile} className="w-full">
