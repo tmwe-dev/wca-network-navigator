@@ -46,6 +46,18 @@ export interface AiChatOptions {
   functionName?: string;
   /** Supabase client for token logging (optional). */
   supabase?: SupabaseClient;
+  /** Operator id (for multi-operator scoping). */
+  operatorId?: string;
+  /** Logical scope: e.g. "outreach", "email-sync", "agent". */
+  scope?: string;
+  /** Specific action within scope, e.g. "generate", "classify". */
+  action?: string;
+  /** Coarse category: "user" | "cron" | "agent" | "system". */
+  groupCategory?: string;
+  /** True if invoked by a scheduled job. */
+  isCron?: boolean;
+  /** Cron job name (when isCron=true). */
+  cronJobName?: string;
 }
 
 export interface AiChatResult {
