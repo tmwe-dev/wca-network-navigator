@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
 
 /**
@@ -22,6 +23,20 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // ━━━ Cron Guard ━━━
+  const guard = await cronGuardCheck(supabase, {
+    jobName: "email_sync",
+    enabledKey: "cron_email_sync_enabled",
+    intervalKey: "cron_email_sync_interval_min",
+    defaultIntervalMin: 15,
+  });
+  if (guard.skip) {
+    return new Response(
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     // Find all users with sync state (they have IMAP configured)
     const { data: syncUsers, error: syncErr } = await supabase
@@ -32,6 +47,7 @@ Deno.serve(async (req: Request) => {
 
     if (syncErr) throw syncErr;
     if (!syncUsers || syncUsers.length === 0) {
+      await cronGuardLogRun(supabase, "email_sync", { processed: 0, message: "No users with IMAP configured" });
       return new Response(JSON.stringify({ message: "No users with IMAP configured" }), {
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
@@ -84,10 +100,12 @@ Deno.serve(async (req: Request) => {
     }
 
 
+    await cronGuardLogRun(supabase, "email_sync", { processed: results.length });
     return new Response(JSON.stringify({ processed: results.length, results }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (err: Record<string, unknown>) {
+    await cronGuardLogRun(supabase, "email_sync", {}, String(err.message ?? err));
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...dynCors, "Content-Type": "application/json" },

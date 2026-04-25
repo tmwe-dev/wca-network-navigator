@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -31,6 +31,7 @@ import { TokenSettingsPanel } from "@/components/ai-control/TokenSettingsPanel";
 import RoleManagementPanel from "@/components/settings/RoleManagementPanel";
 import UserRolesPanel from "@/components/settings/UserRolesPanel";
 import TeamManagementPanel from "@/components/settings/TeamManagementPanel";
+import AutomatedProcessesPanel from "@/components/settings/AutomatedProcessesPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function SettingsPage() {
@@ -75,6 +76,7 @@ export function SettingsPage() {
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "timing", label: "Timing & Schedule", icon: Clock },
     { value: "token-ai", label: "Token AI", icon: Coins },
+    { value: "processi-automatici", label: "Processi Automatici", icon: Power },
     { value: "notifiche", label: "Notifiche", icon: Bell },
     { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
     { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
@@ -154,6 +156,11 @@ export function SettingsPage() {
             {tab === "token-ai" && (
               <div className="float-panel p-5">
                 <TokenSettingsPanel />
+              </div>
+            )}
+            {tab === "processi-automatici" && (
+              <div className="float-panel p-5">
+                <AutomatedProcessesPanel />
               </div>
             )}
             {tab === "notifiche" && (
