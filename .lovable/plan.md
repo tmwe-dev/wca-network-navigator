@@ -1,72 +1,202 @@
-## Piano definitivo: fix sistemico typing edge functions
+# Fix Token Explosion + Resilienza Parser TMWE
 
-### Diagnosi
-Tutti gli errori derivano da **una sola causa**: `createClient()` chiamato senza il generic `<any>`. Senza generic, la libreria infera `data: never[]`, e ogni `.from().select()` propaga `never` fino a tutti i moduli che ricevono il client come parametro. Patchare file per file è un buco senza fondo perché ogni nuovo cast introduce mismatch a catena.
+Risolve l'errore "Parser non è riuscito a estrarre nulla in scope per chunk #0" causato da:
+1. Cap hardcoded `max_tokens=8000` su scope `kb-supervisor` → output JSON troncato a metà stringa.
+2. `ResponseSchema.safeParse` all-or-nothing su Zod → una proposta malformata fa scartare TUTTE le 20.
 
-### Fix sistemica (1 modulo nuovo + sostituzione globale)
+## Modifiche (5 file)
 
-**STEP 1 — Crea `supabase/functions/_shared/supabaseClient.ts`** (nuovo file):
+### File 1 — `supabase/functions/_shared/scopeConfigs.ts`
+Aggiungere campo opzionale `maxTokens?: number` all'interface `ScopeConfig` e settarlo a `32000` sullo scope `kb-supervisor`:
+
 ```ts
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-// deno-lint-ignore no-explicit-any
-export type AnySupabaseClient = ReturnType<typeof createClient<any>>;
+export interface ScopeConfig {
+  // ...esistenti
+  maxTokens?: number;
+}
 
-export function createServiceClient(): AnySupabaseClient {
-  return createClient<any>(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+case "kb-supervisor":
+  return {
+    systemPrompt: `...`,
+    tools: PLATFORM_TOOLS,
+    model: "google/gemini-2.5-flash",
+    temperature: 0.2,
+    maxTokens: 32000,        // ← NEW: budget output ampio per JSON TMWE densi
+    creditLabel: "KB Supervisor",
+  };
+```
+
+### File 2 — `supabase/functions/ai-assistant/aiCallHandler.ts`
+Rimuovere il cap hardcoded `8000` e leggere il budget dallo scope config. Propagare `finish_reason` al chiamante per loggarlo.
+
+```ts
+// PRIMA (linee 211-223): hardcoded 8000 per kb-supervisor
+// DOPO: leggi maxTokens dalla scope config, fallback undefined
+let scopeTemperature: number | undefined;
+let scopeMaxTokens: number | undefined;
+if (scope) {
+  try {
+    const sc = getScopeConfig(scope);
+    if (typeof sc.temperature === "number") scopeTemperature = sc.temperature;
+    if (typeof sc.maxTokens === "number") scopeMaxTokens = sc.maxTokens;
+  } catch { /* ignore */ }
+}
+// Fallback di sicurezza solo se scope non l'ha dichiarato
+if (scope === "kb-supervisor" && scopeMaxTokens === undefined) {
+  scopeMaxTokens = 32000;
+}
+if (scope === "kb-supervisor" && scopeTemperature === undefined) {
+  scopeTemperature = 0.2;
 }
 ```
 
-**STEP 2 — Sostituisci in TUTTI i file con `ReturnType<typeof createClient>` o varianti** (~30 file):
-- Rimpiazza ogni `type SupabaseClient = ReturnType<typeof createClient>` (e alias come `AgentExecuteSupabaseClient = any`) con import di `AnySupabaseClient` da `_shared/supabaseClient.ts`.
-- Nessun cast `as Row[]`, nessun `Record<string, unknown>`, nessuna riga di logica toccata.
-- `createClient<any>(...)` fa sì che `.from().select()` ritorni `any`, eliminando in cascata tutti i `TS2339`, `TS18046`, `TS2538`, `TS7053`, `TS2345`.
+Inoltre, in `makeAiCall` (linee 156-168) loggare esplicitamente `finish_reason === "length"` come truncation symptom:
 
-**STEP 3 — Fix puntuali in `ai-assistant/index.ts`** (errori indipendenti dal client):
-1. `getClaims(token)` → non esiste → `auth.getUser(token)` e leggi `data.user.id`.
-2. `endMetrics(metrics, 200)` → manca arg `success` → `endMetrics(metrics, true, 200)` (5 occorrenze).
-3. `(...).catch(() => {})` su `PromiseLike` → wrappa con `Promise.resolve(...).catch(() => {})`.
-4. `initialResult`/`fallbackResult` → tipa come `any` per accesso a `.choices[0].message`.
-5. `TOOL_DEFINITIONS` → cast `as unknown as Record<string, unknown>[]` nelle 2 chiamate.
-6. `finalMessage`/`responseContent` → cast `as string`.
-7. `loopResult.state.assistantMessage` → guard prima di `push`.
+```ts
+if (!hasContent && !hasToolCalls) {
+  const fr = choice?.finish_reason;
+  console.warn("[AI] empty content from model", {
+    model: options.model,
+    finish_reason: fr,
+    truncated: fr === "length",
+    usage: data?.usage,
+  });
+  // ...
+}
+```
 
-**STEP 4 — Revert dei cast inutili introdotti nei tentativi precedenti**:
-In questi file rimuovo i `Record<string, unknown>`, `as Row[]`, `as never`, non-null assertion superflui aggiunti nei giri scorsi. Ridiventano inutili perché il client ora ritorna `any`:
-- `_shared/toolHandlersRead.ts`
-- `_shared/toolHandlersEnterprise.ts`
-- `_shared/scopeConfigs.ts`
-- `_shared/platformTools/partnersSearchHandler.ts`
-- `ai-assistant/contextAssembly.ts`
-- `ai-assistant/contextLoaders.ts`
-- `ai-assistant/memoryContextLoader.ts`
-- `ai-assistant/emailContextLoader.ts`
-- `ai-assistant/kbContextLoader.ts`
-- `ai-assistant/aiProviderResolver.ts`
-- `ai-assistant/toolExecutors.ts`
-- `agent-execute/shared.ts`, `chatMode.ts`, `systemPrompt.ts`, `taskMode.ts`, `index.ts`, `toolHandlers/*.ts`
+### File 3 — `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts`
 
-Mantengo solo le correzioni di **logica reale** già fatte (es. `partnersUpdateHandler.ts` che usa `!statusResult.applied` invece dell'inesistente `.error`).
+**3a. Auto-repair JSON troncato.** Aggiungere helper `repairTruncatedJson` che chiude stringhe/array/oggetti aperti:
 
-### Risultato atteso
-- ~150 errori TS chiusi in un colpo solo.
-- Zero modifiche di logica funzionale.
-- Nessuna nuova fragilità: `any` qui è esplicitamente accettato perché Deno non ha i tipi `Database` generati per le edge functions.
-- Build verde, edge functions deployabili.
+```ts
+function repairTruncatedJson(s: string): string {
+  let out = s;
+  // Conta apici non escapati
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < out.length; i++) {
+    const ch = out[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') inString = !inString;
+  }
+  if (inString) out += '"';
+  // Bilancia parentesi
+  let openObj = 0, openArr = 0;
+  inString = false; escape = false;
+  for (const ch of out) {
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") openObj++;
+    else if (ch === "}") openObj--;
+    else if (ch === "[") openArr++;
+    else if (ch === "]") openArr--;
+  }
+  // Rimuovi virgola finale prima della chiusura, se presente
+  out = out.replace(/,\s*$/, "");
+  while (openArr-- > 0) out += "]";
+  while (openObj-- > 0) out += "}";
+  return out;
+}
+```
 
-### Perché funziona
-`createClient<any>()` istruisce il SDK Supabase a trattare lo schema come `any`, quindi:
-- `.from("table").select()` → `data: any[]` (non più `never[]`)
-- `.rpc("fn", args)` → `data: any` (non più richiede 0 args)
-- Property access su risultati DB → permesso
-- I cast manuali aggiunti nei giri precedenti diventano rumore da rimuovere
+**3b. Validazione Zod individuale per proposta** (richiesta esplicita utente). Sostituire `parseProposalsFromText` (linee 187-250):
 
-### Stima file toccati
-- **Nuovo**: 1 file (`_shared/supabaseClient.ts`)
-- **Sostituzione typing**: ~30 file (1-2 righe meccaniche ciascuno)
-- **Fix puntuali**: 1 file (`ai-assistant/index.ts`, 7 micro-edit)
-- **Pulizia cast**: ~15 file
+```ts
+export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
+  const jsonStr = extractJsonObject(raw);
+  if (!jsonStr) {
+    console.warn("[harmonizeAnalyzer] no JSON found", { rawPreview: raw.slice(0, 200) });
+    return [];
+  }
+  let parsedRaw: unknown;
+  try {
+    parsedRaw = JSON.parse(jsonStr);
+  } catch (e1) {
+    // Tentativo 2: repair JSON troncato
+    try {
+      parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
+      console.warn("[harmonizeAnalyzer] JSON repaired after truncation");
+    } catch (e2) {
+      console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
+        err: String(e1), preview: jsonStr.slice(0, 200),
+      });
+      return [];
+    }
+  }
 
-Approvi e procedo end-to-end senza ulteriori conferme.
+  // Validazione INDIVIDUALE per proposta (resilienza all-or-nothing)
+  const rawObj = parsedRaw as Record<string, unknown>;
+  const rawProposals = Array.isArray(rawObj?.proposals) ? rawObj.proposals : [];
+  const validProposals: z.infer<typeof ProposalSchema>[] = [];
+  let skipped = 0;
+  for (const [i, rawP] of rawProposals.entries()) {
+    const r = ProposalSchema.safeParse(rawP);
+    if (r.success) {
+      validProposals.push(r.data);
+    } else {
+      skipped++;
+      console.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
+        firstIssue: r.error.issues[0],
+        rawProposal: typeof rawP === "object" ? Object.keys(rawP as object) : typeof rawP,
+      });
+    }
+  }
+  if (skipped > 0) {
+    console.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate, ${validProposals.length} valide recuperate`);
+  }
+
+  return validProposals.map((p, idx): HarmonizeProposal => {
+    // mapping invariato (linee 209-249 originali)
+    // ...
+  });
+}
+```
+
+### File 4 — `src/v2/ui/pages/prompt-lab/harmonizer/harmonizerLibraryAnalyzer.ts`
+Stessa logica `repairTruncatedJson` applicata a `parseExtended` (linee 205-243):
+
+```ts
+function parseExtended(raw: string, chunkIndex: number): {...} {
+  const empty = { facts: [], conflicts: [], crossRefs: [] };
+  const json = extractJsonObject(raw);
+  if (!json) return empty;
+  let parsedRaw: unknown;
+  try { parsedRaw = JSON.parse(json); }
+  catch {
+    try { parsedRaw = JSON.parse(repairTruncatedJson(json)); }
+    catch { return empty; }
+  }
+  // ... resto invariato
+}
+```
+
+(Importare `repairTruncatedJson` da `harmonizeAnalyzer.ts` o duplicare localmente; preferibile esportarla.)
+
+### File 5 — UI feedback toast su truncation
+In `useHarmonizerLibraryIngestion.ts` (o equivalente), quando un chunk completa con N proposte recuperate dopo skip, mostrare toast informativo:
+- Truncation detected → "Output AI troncato sul chunk #N: recuperate X proposte parziali"
+- Skip Zod → "Y proposte scartate per validazione, Z accettate"
+
+(Verifico hook esistente al momento dell'implementazione e aggiungo solo il logging side-effect dove c'è già infra toast.)
+
+## Deploy
+
+Edge function da ridistribuire: **`unified-assistant`** (consuma scopeConfigs + aiCallHandler).
+
+## Verifica
+
+Dopo il deploy, il prossimo run TMWE su Chunk #0 dovrebbe:
+- Generare output completo (non più troncato a "fatti_canonici", "cu...")
+- Anche se 1-2 proposte hanno enum sbagliati, le restanti 18-20 vengono salvate
+- Log `[AI] empty content from model` con `truncated: true` se ricapita (segnale per alzare ulteriormente budget)
+
+## Effetti collaterali
+
+- Costo AI per chiamata kb-supervisor sale (output max 32K vs 8K). Accettato: le chunk TMWE sono dense, alternativa è split aggiuntivo lato collector che è più invasivo.
+- Nessun impatto su altri scope (cockpit/contacts/import/extension/strategic): `maxTokens` resta `undefined` per loro e l'AI gateway userà il default del modello.
+
+Approvi e procedo end-to-end?

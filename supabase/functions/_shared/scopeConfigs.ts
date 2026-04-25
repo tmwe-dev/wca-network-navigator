@@ -57,6 +57,8 @@ export interface ScopeConfig {
   localToolHandler?: (name: string, args: Record<string, unknown>, supabase: ScopedSupabase) => Promise<unknown | null>;
   temperature?: number;
   model?: string;
+  /** Optional max output tokens. Used by aiCallHandler to size generation budget. */
+  maxTokens?: number;
   creditLabel: string;
   /** Post-process the content before returning */
   postProcess?: (content: string) => unknown;
@@ -314,6 +316,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         tools: PLATFORM_TOOLS,
         model: "google/gemini-2.5-flash",
         temperature: 0.2,
+        maxTokens: 32000,
         creditLabel: "KB Supervisor",
       };
 

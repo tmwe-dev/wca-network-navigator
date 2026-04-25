@@ -154,9 +154,11 @@ async function makeAiCall(
     const hasContent = typeof contentVal === "string" && contentVal.trim().length > 0;
     const hasToolCalls = Array.isArray(toolCalls) && toolCalls.length > 0;
     if (!hasContent && !hasToolCalls) {
+      const fr = choice?.finish_reason;
       console.warn("[AI] empty content from model", {
         model: options.model,
-        finish_reason: choice?.finish_reason,
+        finish_reason: fr,
+        truncated: fr === "length",
         usage: data?.usage,
       });
       return {
@@ -214,12 +216,16 @@ export async function callAiWithFallback(
     try {
       const sc = getScopeConfig(scope);
       if (typeof sc.temperature === "number") scopeTemperature = sc.temperature;
+      if (typeof sc.maxTokens === "number") scopeMaxTokens = sc.maxTokens;
     } catch { /* ignore */ }
   }
-  // Hard default for kb-supervisor: cap output so token explosion is impossible
-  if (scope === "kb-supervisor") {
-    scopeMaxTokens = 8000;
-    if (scopeTemperature === undefined) scopeTemperature = 0.2;
+  // Safety fallback per kb-supervisor: 32K output budget consente JSON TMWE densi
+  // (cap 8000 precedente troncava a metà la prima stringa di un chunk denso).
+  if (scope === "kb-supervisor" && scopeMaxTokens === undefined) {
+    scopeMaxTokens = 32000;
+  }
+  if (scope === "kb-supervisor" && scopeTemperature === undefined) {
+    scopeTemperature = 0.2;
   }
 
   for (const tryModel of fallbackModels) {
