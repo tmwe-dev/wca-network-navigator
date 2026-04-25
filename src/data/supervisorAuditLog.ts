@@ -14,14 +14,19 @@ export interface AuditLogEntry {
 }
 
 export async function logSupervisorAudit(entry: AuditLogEntry): Promise<void> {
+  // Schema reale: action_category + action_detail (non `action`).
+  // Manteniamo l'API esterna stabile e mappiamo internamente.
+  const [category, ...rest] = (entry.action ?? "").split(":");
+  const detail = rest.length > 0 ? rest.join(":") : entry.action;
   const { error } = await supabase.from("supervisor_audit_log").insert({
     actor_type: entry.actor_type ?? "user",
     actor_id: entry.actor_id ?? null,
     actor_name: entry.actor_name ?? null,
-    action: entry.action,
-    target_table: entry.target_table ?? null,
+    action_category: category || "general",
+    action_detail: detail || entry.action,
+    target_type: entry.target_table ?? null,
     target_id: entry.target_id ?? null,
-    payload: entry.payload ?? {},
+    metadata: entry.payload ?? {},
   } as never);
   if (error) {
     // Audit failure must not block UX
