@@ -121,7 +121,8 @@ async function loadContextParallel(
   userId: string,
   isConversational: boolean,
   lastUserMsg: string | undefined,
-  ctxTags: any
+  ctxTags: any,
+  requiredKeys?: string[]
 ): Promise<{
   memoryContext: string;
   userProfile: string;
@@ -131,14 +132,18 @@ async function loadContextParallel(
   doctrineContext: string;
   emailContext: string;
 }> {
+  // Helper: se requiredKeys è definito e NON include la chiave → skip loader
+  const need = (key: string): boolean =>
+    !requiredKeys || requiredKeys.includes(key);
+
   if (isConversational) {
     // Lightweight context for voice mode
     const [memoryContext, userProfile, kbContext, doctrineContext, emailContext] = await Promise.all([
-      loadMemoryContext(supabase, userId, lastUserMsg),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId, ctxTags),
-      loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
+      need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
+      need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
+      need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
+      need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
+      need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
     ]);
     return {
       memoryContext,
@@ -152,13 +157,13 @@ async function loadContextParallel(
   } else {
     // Full context for operational mode
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext, emailContext] = await Promise.all([
-      loadMemoryContext(supabase, userId, lastUserMsg),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId, ctxTags),
-      loadOperativePrompts(supabase, userId),
-      loadMissionHistory(supabase, userId),
-      loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
+      need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
+      need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
+      need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
+      need("operative_prompts") ? loadOperativePrompts(supabase, userId) : Promise.resolve(""),
+      need("mission_history") ? loadMissionHistory(supabase, userId) : Promise.resolve(""),
+      need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
+      need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
     ]);
     return {
       memoryContext,
