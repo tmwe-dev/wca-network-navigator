@@ -81,6 +81,10 @@ export interface HarmonizeProposal {
   missing_contracts?: MissingContract[];
   /** True se il modello considera safe applicarla in batch "approva tutte le sicure". */
   apply_recommended?: boolean;
+  /** True quando il testo AI è stato corretto manualmente in review. */
+  edited_by_user?: boolean;
+  /** Timestamp ISO dell'ultima correzione manuale. */
+  edited_at?: string;
 }
 
 export interface InventorySummary {
@@ -149,6 +153,36 @@ export async function appendHarmonizeProposal(runId: string, proposal: Harmonize
     .update({ proposals: next } as never)
     .eq("id" as never, runId as never);
   if (error) throw error;
+}
+
+export async function updateHarmonizeProposal(
+  runId: string,
+  proposalId: string,
+  patch: Partial<HarmonizeProposal>,
+): Promise<HarmonizeProposal[]> {
+  const { data, error: readErr } = await supabase
+    .from("harmonize_runs" as never)
+    .select("proposals" as never)
+    .eq("id" as never, runId as never)
+    .single();
+  if (readErr) throw readErr;
+
+  const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
+  let found = false;
+  const next = current.map((proposal) => {
+    if (proposal.id !== proposalId) return proposal;
+    found = true;
+    return { ...proposal, ...patch };
+  });
+
+  if (!found) throw new Error("Proposta non trovata nel run salvato");
+
+  const { error } = await supabase
+    .from("harmonize_runs" as never)
+    .update({ proposals: next } as never)
+    .eq("id" as never, runId as never);
+  if (error) throw error;
+  return next;
 }
 
 export async function setProposalStatus(

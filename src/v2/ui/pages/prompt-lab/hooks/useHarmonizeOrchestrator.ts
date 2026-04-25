@@ -21,6 +21,7 @@ import {
   createHarmonizeRun,
   updateHarmonizeRun,
   appendHarmonizeProposal,
+  updateHarmonizeProposal,
   setProposalStatus,
   cancelHarmonizeRun,
   type HarmonizeRun,
@@ -215,25 +216,24 @@ export function useHarmonizeOrchestrator(userId: string) {
    * L'edit viene anche persistito sul run salvato così sopravvive a refresh.
    */
   const editProposalAfter = useCallback(
-    (proposalId: string, newAfter: string) => {
-      setState((s) => {
-        const proposals = s.proposals.map((p) =>
-          p.id === proposalId ? { ...p, after: newAfter, edited_by_user: true } : p,
-        );
-        // Persistenza best-effort sul run DB (non bloccante).
-        if (s.runId) {
-          void supabase
-            .from("harmonize_runs")
-            .update({ proposals: proposals as never })
-            .eq("id", s.runId)
-            .then(({ error }) => {
-              if (error) console.warn("[harmonize] persist edit failed", error.message);
-            });
-        }
-        return { ...s, proposals };
-      });
+    async (proposalId: string, newAfter: string): Promise<{ ok: boolean; reason?: string }> => {
+      if (!state.runId) return { ok: false, reason: "run mancante" };
+      const editedAt = new Date().toISOString();
+      try {
+        const proposals = await updateHarmonizeProposal(state.runId, proposalId, {
+          after: newAfter,
+          edited_by_user: true,
+          edited_at: editedAt,
+        });
+        setState((s) => ({ ...s, proposals }));
+        return { ok: true };
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : "salvataggio fallito";
+        console.warn("[harmonize] persist edit failed", reason);
+        return { ok: false, reason };
+      }
     },
-    [],
+    [state.runId],
   );
 
   const loadRunForReview = useCallback((run: HarmonizeRun) => {
