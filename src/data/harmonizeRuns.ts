@@ -140,7 +140,10 @@ export async function appendHarmonizeProposal(runId: string, proposal: Harmonize
     .single();
   if (readErr) throw readErr;
   const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
-  const next = [...current, proposal];
+  const existingIndex = current.findIndex((p) => p.id === proposal.id);
+  const next = existingIndex >= 0
+    ? current.map((p, index) => (index === existingIndex ? proposal : p))
+    : [...current, proposal];
   const { error } = await supabase
     .from("harmonize_runs" as never)
     .update({ proposals: next } as never)
