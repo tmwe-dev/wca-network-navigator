@@ -160,7 +160,6 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
     );
   }
 
-  const actionable = proposals.filter((p) => p.resolution_layer === "text" || p.resolution_layer === "kb_governance");
   const readOnly = proposals.filter((p) => p.resolution_layer === "contract" || p.resolution_layer === "code_policy");
 
   // Una proposta è "sicura" se è solo testo, non DELETE, non INSERT su agents, e impatto non alto.
