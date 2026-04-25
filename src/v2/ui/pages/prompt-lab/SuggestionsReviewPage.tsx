@@ -366,8 +366,23 @@ export default function SuggestionsReviewPage() {
                   <p className="text-xs text-muted-foreground">
                     Sessione del {harmonizeState.runId ? new Date(runs.find((r) => r.id === harmonizeState.runId)?.created_at ?? Date.now()).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "—"}
                     {" · "}{harmonizeState.proposals.length} proposte totali
-                    {" · "}{harmonizeState.executedCount} già applicate
                   </p>
+                  {/* Barra di progresso live: gestite vs totali */}
+                  <div className="mt-2 flex items-center gap-2 max-w-md">
+                    <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.round((harmonizeState.executedCount / Math.max(1, harmonizeState.proposals.length)) * 100))}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-medium text-foreground whitespace-nowrap">
+                      {harmonizeState.executedCount} di {harmonizeState.proposals.length} gestite
+                      {" "}
+                      <span className="text-muted-foreground">
+                        ({harmonizeState.proposals.length - harmonizeState.executedCount} rimanenti)
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex rounded-md border overflow-hidden">
