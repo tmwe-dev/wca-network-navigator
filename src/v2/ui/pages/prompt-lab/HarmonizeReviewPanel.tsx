@@ -246,7 +246,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         <EditableAfter
                           value={p.after}
                           editable={!!onEditAfter && !isReadOnly}
-                          onSave={(v) => onEditAfter?.(p.id, v)}
+                          onSave={(v) => onEditAfter ? onEditAfter(p.id, v) : Promise.resolve({ ok: false, reason: "modifica non disponibile" })}
                         />
                       </div>
                     )}
