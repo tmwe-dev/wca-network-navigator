@@ -400,23 +400,42 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         </Badge>
                       )}
                        <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
-                       {onApplySingle && !isReadOnly && (
-                         <Button
-                           size="sm"
-                           variant="outline"
-                           className="h-6 px-2 text-xs ml-auto"
-                           disabled={applyingId === p.id || blockedByDeps}
-                           onClick={() => handleApplySingle(p.id)}
-                           title="Applica questa proposta al DB e rimuovila dalla lista"
-                         >
-                           {applyingId === p.id ? (
-                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                           ) : (
-                             <Send className="h-3 w-3 mr-1" />
-                           )}
-                           Applica
-                         </Button>
-                       )}
+                       <div className="ml-auto flex items-center gap-1.5">
+                         {onApplySingle && !isReadOnly && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="h-6 px-2 text-xs"
+                             disabled={applyingId === p.id || discardingId === p.id || blockedByDeps}
+                             onClick={() => handleApplySingle(p.id)}
+                             title="Applica questa proposta al DB e rimuovila dalla lista"
+                           >
+                             {applyingId === p.id ? (
+                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                             ) : (
+                               <Send className="h-3 w-3 mr-1" />
+                             )}
+                             Applica
+                           </Button>
+                         )}
+                         {onDiscardSingle && (
+                           <Button
+                             size="sm"
+                             variant="ghost"
+                             className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                             disabled={applyingId === p.id || discardingId === p.id}
+                             onClick={() => handleDiscardSingle(p.id)}
+                             title="Scarta questa proposta: non verrà applicata al DB e sparirà dalla lista"
+                           >
+                             {discardingId === p.id ? (
+                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                             ) : (
+                               <Trash2 className="h-3 w-3 mr-1" />
+                             )}
+                             Scarta
+                           </Button>
+                         )}
+                       </div>
                      </div>
                     {p.after != null && (
                       <div className="mb-2">
