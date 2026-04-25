@@ -9,6 +9,7 @@
  *  - bucket needs_contract / needs_code_policy → proposte READ-ONLY auto-generate
  */
 import { z } from "zod";
+import { jsonrepair } from "jsonrepair";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { HARMONIZER_BRIEFING } from "@/v2/agent/prompts/core/harmonizer-briefing";
 import type {
@@ -44,22 +45,22 @@ const ProposalSchema = z.object({
   ]),
   target_id: z.string().nullable().optional(),
   target_field: z.string().nullable().optional(),
-  block_name: z.string().optional(),
-  current_location: z.string().optional(),
-  proposed_location: z.string().optional(),
-  current_issue: z.string().optional(),
-  proposed_content: z.string().optional(),
+  block_name: z.string().nullable().optional(),
+  current_location: z.string().nullable().optional(),
+  proposed_location: z.string().nullable().optional(),
+  current_issue: z.string().nullable().optional(),
+  proposed_content: z.string().nullable().optional(),
   before: z.string().nullable().optional(),
   after: z.string().nullable().optional(),
   payload: z.record(z.string(), z.unknown()).optional(),
   evidence_source: z.enum(["library", "real_db", "uploaded_doc"]).default("library"),
-  evidence_excerpt: z.string().default(""),
+  evidence_excerpt: z.string().nullable().default(""),
   evidence_location: z.string().nullable().optional(),
-  dependencies: z.array(z.string()).default([]),
+  dependencies: z.array(z.string()).nullable().default([]),
   impact_score: z.number().min(1).max(10).optional(),
   severity: z.enum(["low", "medium", "high", "critical"]).optional(),
   test_urgency: z.enum(["none", "manual_smoke", "regression_full"]).optional(),
-  tests_required: z.array(z.string()).default([]),
+  tests_required: z.array(z.string()).nullable().default([]),
   resolution_layer: z.enum(["text", "kb_governance", "contract", "code_policy"]).default("text"),
   missing_contracts: z
     .array(z.object({
@@ -67,9 +68,10 @@ const ProposalSchema = z.object({
       field: z.string().optional(),
       why_needed: z.string(),
     }))
+    .nullable()
     .optional(),
   apply_recommended: z.boolean().optional(),
-  reasoning: z.string().default(""),
+  reasoning: z.string().nullable().default(""),
 });
 
 const ResponseSchema = z.object({
@@ -247,19 +249,29 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
   try {
     parsedRaw = JSON.parse(jsonStr);
   } catch (e1) {
-    // Tentativo di recupero: JSON troncato per token explosion.
+    // Tentativo 2: chiusura semplice di stringhe/parentesi (JSON troncato).
     try {
       parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
-      console.warn("[harmonizeAnalyzer] JSON repaired after truncation", {
+      console.warn("[harmonizeAnalyzer] JSON repaired (truncation closer)", {
         originalEnd: jsonStr.slice(-80),
       });
     } catch (e2) {
-      console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
-        err: String(e1),
-        repairErr: String(e2),
-        preview: jsonStr.slice(0, 200),
-      });
-      return [];
+      // Tentativo 3: jsonrepair (libreria robusta — gestisce stringhe non
+      // terminate, virgole pendenti, escape rotti, fence rimasti, ecc.).
+      try {
+        parsedRaw = JSON.parse(jsonrepair(jsonStr));
+        console.warn("[harmonizeAnalyzer] JSON recovered via jsonrepair", {
+          originalEnd: jsonStr.slice(-80),
+        });
+      } catch (e3) {
+        console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
+          err: String(e1),
+          repairErr: String(e2),
+          jsonrepairErr: String(e3),
+          preview: jsonStr.slice(0, 200),
+        });
+        return [];
+      }
     }
   }
 
@@ -312,23 +324,23 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
       payload: p.payload ?? undefined,
       evidence: {
         source: p.evidence_source,
-        excerpt: p.evidence_excerpt || desired?.content?.slice(0, 200) || "",
+        excerpt: (p.evidence_excerpt ?? "") || desired?.content?.slice(0, 200) || "",
         location: p.evidence_location ?? undefined,
       },
-      dependencies: p.dependencies,
+      dependencies: p.dependencies ?? [],
       impact,
-      tests_required: p.tests_required,
+      tests_required: p.tests_required ?? [],
       resolution_layer: layer,
-      reasoning: p.reasoning,
+      reasoning: p.reasoning ?? "",
       block_label: p.block_name ?? desired?.title ?? "Proposta",
       status: "pending",
       // Vocabolario nuovo (passa-attraverso)
       severity,
       impact_score: p.impact_score,
       test_urgency: testUrgency,
-      current_location: p.current_location,
-      proposed_location: p.proposed_location,
-      missing_contracts: p.missing_contracts as MissingContract[] | undefined,
+      current_location: p.current_location ?? undefined,
+      proposed_location: p.proposed_location ?? undefined,
+      missing_contracts: (p.missing_contracts ?? undefined) as MissingContract[] | undefined,
       apply_recommended: p.apply_recommended,
     };
   });
