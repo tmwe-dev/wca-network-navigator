@@ -85,6 +85,12 @@ export interface HarmonizeProposal {
   edited_by_user?: boolean;
   /** Timestamp ISO dell'ultima correzione manuale. */
   edited_at?: string;
+  /** Cronologia chat tra l'operatore e Gordon (curatore) su questa proposta. */
+  chat?: Array<{ role: "user" | "assistant"; content: string; ts: string }>;
+  /** Nota libera dell'operatore sul perché la proposta originale era sbagliata. */
+  user_correction_note?: string;
+  /** Ultimo "after" rigenerato da Gordon (preview prima dell'approvazione). */
+  regenerated_after?: string;
 }
 
 export interface InventorySummary {
