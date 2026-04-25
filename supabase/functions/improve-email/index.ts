@@ -30,10 +30,14 @@ async function fetchKbEntriesForImprove(
     .from("kb_entries").select("title, content, category, chapter, tags")
     .eq("user_id", userId).eq("is_active", true)
     .in("category", [...new Set(categories)])
-    .order("priority", { ascending: false }).order("sort_order").limit(15);
+    .order("priority", { ascending: false }).order("sort_order").limit(5);
   if (!entries || entries.length === 0) return { text: "", sections: [] };
   const sections = [...new Set((entries as KbEntry[]).map((e) => e.category))];
-  const text = (entries as KbEntry[]).map((e) => `### ${e.title} [${e.chapter}]\n${e.content}`).join("\n\n---\n\n");
+  // Budget hard sul content per entry: evita context explosion su KB grandi
+  const MAX_KB_ENTRY_CHARS = 1_000;
+  const text = (entries as KbEntry[])
+    .map((e) => `### ${e.title} [${e.chapter}]\n${(e.content || "").slice(0, MAX_KB_ENTRY_CHARS)}`)
+    .join("\n\n---\n\n");
   return { text, sections };
 }
 
