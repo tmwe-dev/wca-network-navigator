@@ -9,7 +9,10 @@ import { AGENT_TOOLS } from "./tools";
 import { isForbidden } from "./safety";
 
 export const MAX_STEPS = 80;
-const MAX_CONTEXT_MESSAGES = 30;
+/** Numero di messaggi recenti mantenuti integri nel contesto. */
+const RECENT_MESSAGES_KEEP = 10;
+/** Quando comprimere: se la history supera questa soglia, i messaggi più vecchi vengono riassunti. */
+const COMPRESS_THRESHOLD = 20;
 const LOOP_DETECTION_THRESHOLD = 3;
 
 export interface AgentMessage {
@@ -41,13 +44,41 @@ export type AgentStepCallback = (state: AgentState) => void;
 export type ApprovalCallback = (toolName: string, args: Record<string, unknown>) => Promise<boolean>;
 
 /**
- * Trims conversation context to last N messages, keeping system prompt.
+ * Riassume in una sola riga ogni messaggio "vecchio".
+ * Per i tool result, conserva solo nome + esito + primi 80 char del payload.
+ */
+function summarizeOlderMessages(older: AgentMessage[]): string {
+  if (older.length === 0) return "";
+  const lines = older.map((m, idx) => {
+    const content = (m.content || "").replace(/\s+/g, " ").trim();
+    if (m.role === "tool") {
+      return `${idx + 1}. [tool:${m.name || "?"}] → ${content.slice(0, 80)}`;
+    }
+    if (m.role === "assistant") {
+      return `${idx + 1}. [assistant] ${content.slice(0, 120)}`;
+    }
+    if (m.role === "user") {
+      return `${idx + 1}. [user] ${content.slice(0, 120)}`;
+    }
+    return `${idx + 1}. [${m.role}] ${content.slice(0, 80)}`;
+  });
+  return `RIASSUNTO STEP PRECEDENTI (${older.length} messaggi compressi):\n${lines.join("\n")}`;
+}
+
+/**
+ * Mantiene system prompt + RIASSUNTO_PRECEDENTI + ultimi RECENT_MESSAGES_KEEP messaggi integri.
+ * Riduce drasticamente i token consumati nei loop lunghi pur preservando memoria operativa.
  */
 function trimContext(messages: AgentMessage[]): AgentMessage[] {
-  if (messages.length <= MAX_CONTEXT_MESSAGES) return messages;
+  if (messages.length <= COMPRESS_THRESHOLD) return messages;
   const system = messages.filter((m) => m.role === "system");
   const rest = messages.filter((m) => m.role !== "system");
-  return [...system, ...rest.slice(-MAX_CONTEXT_MESSAGES)];
+  if (rest.length <= RECENT_MESSAGES_KEEP) return [...system, ...rest];
+  const recent = rest.slice(-RECENT_MESSAGES_KEEP);
+  const older = rest.slice(0, rest.length - RECENT_MESSAGES_KEEP);
+  const summary = summarizeOlderMessages(older);
+  const summaryMsg: AgentMessage = { role: "system", content: summary };
+  return [...system, summaryMsg, ...recent];
 }
 
 /**
