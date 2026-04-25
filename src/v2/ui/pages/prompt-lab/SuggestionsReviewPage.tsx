@@ -23,6 +23,8 @@ import {
   Wrench,
   User,
   AlertTriangle,
+  List,
+  UserSquare2,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
@@ -30,6 +32,8 @@ import type { SuggestedImprovement, SuggestionPriority } from "@/data/suggestedI
 import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
+import { SingleProposalReview } from "./components/SingleProposalReview";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 function priorityColor(p: SuggestionPriority): string {
@@ -250,6 +254,32 @@ export default function SuggestionsReviewPage() {
   } = useHarmonizeOrchestrator(userId);
   const [runs, setRuns] = useState<HarmonizeRun[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "single">(() => {
+    if (typeof window === "undefined") return "list";
+    const saved = window.localStorage.getItem("harmonize.viewMode");
+    return saved === "single" ? "single" : "list";
+  });
+  const [gordon, setGordon] = useState<{ id: string; voiceId: string | null } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("harmonize.viewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("agents")
+        .select("id, elevenlabs_voice_id")
+        .eq("name", "Gordon")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setGordon({ id: data.id as string, voiceId: (data.elevenlabs_voice_id as string | null) ?? null });
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const refreshRuns = useCallback(async () => {
     if (!userId) return;
@@ -325,7 +355,27 @@ export default function SuggestionsReviewPage() {
                     Run {harmonizeState.runId?.slice(0, 8)}… · {harmonizeState.proposals.length} proposte · applicate {harmonizeState.executedCount}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex rounded-md border overflow-hidden">
+                    <Button
+                      size="sm"
+                      variant={viewMode === "list" ? "default" : "ghost"}
+                      className="h-7 rounded-none gap-1.5 px-3"
+                      onClick={() => setViewMode("list")}
+                      title="Vista a elenco completo"
+                    >
+                      <List className="h-3.5 w-3.5" /> Lista
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === "single" ? "default" : "ghost"}
+                      className="h-7 rounded-none gap-1.5 px-3"
+                      onClick={() => setViewMode("single")}
+                      title="Una proposta alla volta + chat con Gordon"
+                    >
+                      <UserSquare2 className="h-3.5 w-3.5" /> Singola con Gordon 🧑‍🏫
+                    </Button>
+                  </div>
                   {runs.map((run) => (
                     <Button key={run.id} size="sm" variant={run.id === harmonizeState.runId ? "default" : "outline"} onClick={() => loadRunForReview(run)}>
                       {run.proposals.length} · {run.id.slice(0, 4)}
@@ -333,14 +383,28 @@ export default function SuggestionsReviewPage() {
                   ))}
                 </div>
               </div>
-              <HarmonizeReviewPanel
-                proposals={harmonizeState.proposals}
-                approvedIds={harmonizeState.approvedIds}
-                onToggle={toggleApproval}
-                onApproveAllSafe={approveAllSafe}
-                onEditAfter={editProposalAfter}
-                onApplySingle={executeSingle}
-              />
+              {viewMode === "list" ? (
+                <HarmonizeReviewPanel
+                  proposals={harmonizeState.proposals}
+                  approvedIds={harmonizeState.approvedIds}
+                  onToggle={toggleApproval}
+                  onApproveAllSafe={approveAllSafe}
+                  onEditAfter={editProposalAfter}
+                  onApplySingle={executeSingle}
+                />
+              ) : (
+                <SingleProposalReview
+                  runId={harmonizeState.runId ?? ""}
+                  proposals={harmonizeState.proposals}
+                  approvedIds={harmonizeState.approvedIds}
+                  userId={userId}
+                  gordonAgentId={gordon?.id ?? null}
+                  gordonVoiceId={gordon?.voiceId ?? null}
+                  onToggle={toggleApproval}
+                  onEditAfter={editProposalAfter}
+                  onApplySingle={executeSingle}
+                />
+              )}
               <div className="flex items-center justify-between border-t pt-3">
                 <span className="text-xs text-muted-foreground">{harmonizeState.approvedIds.size} proposte selezionate</span>
                 <Button onClick={execute} disabled={harmonizeState.approvedIds.size === 0 || harmonizeState.loading}>
