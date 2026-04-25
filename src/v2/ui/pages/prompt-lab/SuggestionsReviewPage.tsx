@@ -376,6 +376,15 @@ export default function SuggestionsReviewPage() {
                       <UserSquare2 className="h-3.5 w-3.5" /> Singola con Gordon 🧑‍🏫
                     </Button>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7"
+                    onClick={approveAllSafe}
+                    title="Seleziona tutte le proposte text/non-DELETE/non-INSERT-agents/non-high-impact"
+                  >
+                    Approva tutte le sicure
+                  </Button>
                   {runs.map((run) => (
                     <Button key={run.id} size="sm" variant={run.id === harmonizeState.runId ? "default" : "outline"} onClick={() => loadRunForReview(run)}>
                       {run.proposals.length} · {run.id.slice(0, 4)}
