@@ -114,11 +114,30 @@ export function useGroupingData() {
             .range(from, to),
       );
 
-      const senderList: SenderAnalysis[] = rules.map((r) => ({
+      // Dedup by email_address: rules can exist per-user (shared visibility),
+      // so the same address may appear N times. Keep the row with the
+      // highest email_count and sum counts across owners for accurate volume.
+      const dedupMap = new Map<string, typeof rules[number] & { _summed: number }>();
+      for (const r of rules) {
+        const key = r.email_address.toLowerCase();
+        const existing = dedupMap.get(key);
+        const incoming = r.email_count ?? 0;
+        if (!existing) {
+          dedupMap.set(key, { ...r, _summed: incoming });
+        } else {
+          existing._summed += incoming;
+          // Prefer the row with the higher individual count as the "canonical" id
+          if (incoming > (existing.email_count ?? 0)) {
+            dedupMap.set(key, { ...r, _summed: existing._summed });
+          }
+        }
+      }
+
+      const senderList: SenderAnalysis[] = Array.from(dedupMap.values()).map((r) => ({
         email: r.email_address,
         domain: r.domain || r.email_address.split("@")[1] || "",
         companyName: r.company_name || r.display_name || deriveSenderDisplayName(r.email_address),
-        emailCount: r.email_count ?? 0,
+        emailCount: r._summed,
         firstSeen: "",
         lastSeen: r.last_email_at || "",
         isClassified: false,
