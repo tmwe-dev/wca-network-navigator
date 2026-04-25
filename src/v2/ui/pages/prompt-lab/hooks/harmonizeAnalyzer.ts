@@ -249,19 +249,29 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
   try {
     parsedRaw = JSON.parse(jsonStr);
   } catch (e1) {
-    // Tentativo di recupero: JSON troncato per token explosion.
+    // Tentativo 2: chiusura semplice di stringhe/parentesi (JSON troncato).
     try {
       parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
-      console.warn("[harmonizeAnalyzer] JSON repaired after truncation", {
+      console.warn("[harmonizeAnalyzer] JSON repaired (truncation closer)", {
         originalEnd: jsonStr.slice(-80),
       });
     } catch (e2) {
-      console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
-        err: String(e1),
-        repairErr: String(e2),
-        preview: jsonStr.slice(0, 200),
-      });
-      return [];
+      // Tentativo 3: jsonrepair (libreria robusta — gestisce stringhe non
+      // terminate, virgole pendenti, escape rotti, fence rimasti, ecc.).
+      try {
+        parsedRaw = JSON.parse(jsonrepair(jsonStr));
+        console.warn("[harmonizeAnalyzer] JSON recovered via jsonrepair", {
+          originalEnd: jsonStr.slice(-80),
+        });
+      } catch (e3) {
+        console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
+          err: String(e1),
+          repairErr: String(e2),
+          jsonrepairErr: String(e3),
+          preview: jsonStr.slice(0, 200),
+        });
+        return [];
+      }
     }
   }
 
