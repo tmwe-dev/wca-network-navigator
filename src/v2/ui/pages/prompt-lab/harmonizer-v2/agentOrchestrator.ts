@@ -122,9 +122,15 @@ export async function runAgenticHarmonizer(input: {
   sourceText: string;
   sourceFileName: string;
   goal: string;
+  resume?: {
+    runId?: string;
+    sessionId?: string;
+    skipEntityIds: string[];
+    previousEntities: EntityProgress[];
+  };
   callbacks?: OrchestratorCallbacks;
 }): Promise<OrchestratorOutput> {
-  const { userId, sourceText, sourceFileName, goal, callbacks } = input;
+  const { userId, sourceText, sourceFileName, goal, callbacks, resume } = input;
   const cb = callbacks ?? {};
 
   // 0. Parse
@@ -140,8 +146,8 @@ export async function runAgenticHarmonizer(input: {
   cb.onIndexBuilt?.(index);
 
   // Crea run + sessione (agentic_mode = true via campo; per ora usa colonna esistente).
-  const run = await createHarmonizeRun(userId, goal, "library_agentic_v2");
-  const session = await createHarmonizerSession({
+  const run = resume?.runId ? { id: resume.runId } : await createHarmonizeRun(userId, goal, "library_agentic_v2");
+  const session = resume?.sessionId ? { id: resume.sessionId } : await createHarmonizerSession({
     userId,
     sourceFile: sourceFileName,
     sourceKind: "library",
@@ -154,7 +160,9 @@ export async function runAgenticHarmonizer(input: {
   // 2. Loop processing
   cb.onPhaseChange?.("processing");
   const cache = createRetrieverCache(userId);
-  const progress: EntityProgress[] = entities.map((e) => ({
+  const previousById = new Map((resume?.previousEntities ?? []).map((e) => [e.id, e]));
+  const skipIds = new Set(resume?.skipEntityIds ?? []);
+  const progress: EntityProgress[] = entities.map((e) => previousById.get(e.id) ?? ({
     id: e.id,
     title: e.title,
     inferredTable: e.inferredTable,
@@ -173,6 +181,10 @@ export async function runAgenticHarmonizer(input: {
   const processOne = async (i: number): Promise<void> => {
     if (cb.shouldAbort?.()) return;
     const entity = entities[i];
+    if (skipIds.has(entity.id)) {
+      cb.onEntityProgress?.(progress[i], i, entities.length);
+      return;
+    }
     progress[i].status = "processing";
     cb.onEntityProgress?.(progress[i], i, entities.length);
 
