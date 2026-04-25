@@ -108,6 +108,14 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     void agentic.start({ sourceFile: agenticFile, goal: agenticGoal });
   }, [agenticFile, agenticGoal, agentic]);
 
+  const handleAgenticResume = useCallback(() => {
+    if (!agenticFile) {
+      toast.error("Ricarica il file sorgente per riprendere dal checkpoint.");
+      return;
+    }
+    void agentic.resume({ sourceFile: agenticFile, goal: agenticGoal });
+  }, [agenticFile, agenticGoal, agentic]);
+
   // Carica la libreria di default da public/kb-source/libreria-tmwe.md
   useEffect(() => {
     if (!open) return;
@@ -541,7 +549,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
             </div>
 
             {/* Banner ripristino dopo refresh: stato in cache, lavoro precedente recuperato. */}
-            {(agentic.state.phase === "cancelled" || agentic.state.phase === "done") && agentic.state.entities.length > 0 && !agenticFile && (
+            {(agentic.state.phase === "cancelled" || agentic.state.phase === "done") && agentic.state.entities.length > 0 && (
               <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold flex items-center gap-1">
@@ -553,9 +561,14 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                     {lastAgenticFileName ? <> Per ripartire ricarica <code>{lastAgenticFileName}</code>.</> : null}
                   </p>
                 </div>
-                <Button size="sm" variant="ghost" onClick={agentic.reset}>
-                  <X className="h-3 w-3 mr-1" /> Pulisci
-                </Button>
+                <div className="flex flex-shrink-0 gap-2">
+                  <Button size="sm" variant="outline" onClick={handleAgenticResume} disabled={!agenticFile}>
+                    <Play className="h-3 w-3 mr-1" /> Riprendi
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={agentic.reset}>
+                    <X className="h-3 w-3 mr-1" /> Pulisci
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -584,9 +597,16 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                     </p>
                   )}
                 </div>
-                <Button onClick={handleAgenticStart} disabled={!userId || !agenticFile} className="w-full">
-                  <Play className="h-4 w-4 mr-2" /> Avvia pipeline agentica
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button onClick={handleAgenticStart} disabled={!userId || !agenticFile} className="w-full">
+                    <Play className="h-4 w-4 mr-2" /> Avvia pipeline agentica
+                  </Button>
+                  {agentic.state.entities.length > 0 && (
+                    <Button onClick={handleAgenticResume} disabled={!userId || !agenticFile} variant="outline" className="w-full">
+                      <RotateCw className="h-4 w-4 mr-2" /> Riprendi dal checkpoint
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
