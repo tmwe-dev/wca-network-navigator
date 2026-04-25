@@ -180,10 +180,21 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
             }
           }
 
-          // Granular log on ai_prompt_log (parallel to ai_token_usage for backward compat)
-          if (opts.supabase && opts.functionName) {
+          // Granular log on ai_prompt_log (auto-instrumenting: creates a service-role
+          // client if none provided, so EVERY aiChat call is tracked).
+          if (opts.functionName ?? opts.context) {
             try {
               const { logAiPrompt } = await import("./tokenLogger.ts");
+              let supa = opts.supabase;
+              if (!supa) {
+                const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.3");
+                const url = Deno.env.get("SUPABASE_URL");
+                const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+                if (url && serviceKey) {
+                  supa = createClient(url, serviceKey, { auth: { persistSession: false } });
+                }
+              }
+              if (!supa) throw new Error("no supabase client available for logging");
               const sysChars = opts.messages
                 .filter((m) => m.role === "system")
                 .reduce((s, m) => s + (m.content?.length ?? 0), 0);
@@ -193,12 +204,12 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
               const otherChars = opts.messages
                 .filter((m) => m.role !== "system" && m.role !== "user")
                 .reduce((s, m) => s + (m.content?.length ?? 0), 0);
-              // Rough cost estimate (Gemini Flash pricing as default)
-              const costUsd = (usage.promptTokens * 0.075 + usage.completionTokens * 0.30) / 1_000_000;
-              await logAiPrompt(opts.supabase, {
+              const { estimateCostUsd } = await import("./llmPricing.ts");
+              const costUsd = estimateCostUsd(nativeModel, usage.promptTokens, usage.completionTokens);
+              await logAiPrompt(supa, {
                 userId: opts.userId ?? null,
                 operatorId: opts.operatorId ?? null,
-                functionName: opts.functionName,
+                functionName: opts.functionName ?? opts.context ?? "unknown",
                 provider,
                 model: nativeModel,
                 scope: opts.scope ?? null,
