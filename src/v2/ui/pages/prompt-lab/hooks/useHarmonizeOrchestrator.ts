@@ -199,13 +199,34 @@ export function useHarmonizeOrchestrator(userId: string) {
   const approveAllSafe = useCallback(() => {
     setState((s) => {
       const next = new Set(s.approvedIds);
+      let added = 0;
+      let skippedDeps = 0;
       for (const p of s.proposals) {
+        if (next.has(p.id)) continue;
         const safe =
           p.resolution_layer === "text" &&
           p.action !== "DELETE" &&
           p.impact !== "high" &&
           !(p.action === "INSERT" && p.target.table === "agents");
-        if (safe) next.add(p.id);
+        if (!safe) continue;
+        const deps = p.dependencies ?? [];
+        const missing = deps.filter((d) => !next.has(d));
+        if (missing.length > 0) {
+          skippedDeps += 1;
+          continue;
+        }
+        next.add(p.id);
+        added += 1;
+      }
+      const total = next.size;
+      if (added === 0 && skippedDeps === 0) {
+        toast.info(`Tutte le proposte sicure sono già selezionate (${total}).`);
+      } else if (added === 0 && skippedDeps > 0) {
+        toast.warning(`${skippedDeps} proposte sicure attendono che le loro dipendenze vengano approvate prima.`);
+      } else {
+        toast.success(
+          `Aggiunte ${added} proposte sicure (totale selezionate: ${total})${skippedDeps > 0 ? ` · ${skippedDeps} in attesa di dipendenze` : ""}.`,
+        );
       }
       return { ...s, approvedIds: next };
     });
