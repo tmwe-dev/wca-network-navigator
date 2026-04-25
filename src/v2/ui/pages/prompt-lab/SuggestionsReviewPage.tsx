@@ -321,15 +321,25 @@ export default function SuggestionsReviewPage() {
           </Button>
           <span className="text-muted-foreground text-xs">/</span>
           <h1 className="text-sm font-semibold">Suggerimenti da approvare</h1>
-          <Badge variant="default" className="ml-2">
-            {counts.pending} pending
+          {/* Badge sincronizzati: armonizzazione corrente + suggerimenti utente */}
+          {harmonizeState.proposals.length > 0 && (
+            <Badge variant="default" className="ml-2 gap-1" title="Proposte di questa sessione di armonizzazione">
+              Armonizzazione: {harmonizeState.executedCount}/{harmonizeState.proposals.length} gestite
+            </Badge>
+          )}
+          <Badge variant="secondary" className="ml-1" title="Suggerimenti da operatori in attesa di approvazione">
+            {counts.pending} da approvare
           </Badge>
-          <Badge variant="secondary" className="ml-1">
-            {counts.approved} approvati
-          </Badge>
-          <Badge variant="outline" className="ml-1">
-            {counts.applied} applicati
-          </Badge>
+          {counts.approved > 0 && (
+            <Badge variant="outline" className="ml-1" title="Approvati ma non ancora consumati dall'Architect">
+              {counts.approved} pronti
+            </Badge>
+          )}
+          {counts.applied > 0 && (
+            <Badge variant="outline" className="ml-1 bg-emerald-500/10 text-emerald-700 border-emerald-500/30" title="Già applicati al sistema">
+              {counts.applied} applicati
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="h-7 gap-1" onClick={handleRefreshAll} disabled={loading || runsLoading}>
