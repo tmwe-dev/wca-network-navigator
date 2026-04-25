@@ -275,18 +275,16 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           <h3 className="text-sm font-semibold leading-tight">Gordon</h3>
           <p className="text-[10px] text-muted-foreground leading-tight">Curatore — chat su questa proposta</p>
         </div>
-        {voiceId && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={toggleAutoVoice}
-            title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
-            aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
-          >
-            {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
-          </Button>
-        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={toggleAutoVoice}
+          title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
+          aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
+        >
+          {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+        </Button>
       </div>
 
       {/* Messages */}
@@ -307,16 +305,17 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
               {m.role === "assistant" ? (
                 <div className="flex items-start gap-2">
                   <div className="whitespace-pre-wrap flex-1">{m.content}</div>
-                  {voiceId && (
-                    <button
-                      onClick={() => playTTS(m.content)}
-                      className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-foreground"
-                      aria-label="Ascolta"
-                      title="Ascolta con la voce di Gordon"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      unlockAudioPlayback();
+                      void playTTS(cleanReplyForSpeech(m.content) || m.content);
+                    }}
+                    className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                    aria-label="Ascolta"
+                    title="Ascolta con la voce di Gordon"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ) : (
                 <div className="whitespace-pre-wrap">{m.content}</div>
