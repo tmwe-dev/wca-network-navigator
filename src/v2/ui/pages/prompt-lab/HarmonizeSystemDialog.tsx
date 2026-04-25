@@ -20,6 +20,8 @@ import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileP
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { useHarmonizerLibraryIngestion } from "./harmonizer/useHarmonizerLibraryIngestion";
 import { TMWE_CHUNKS } from "./harmonizer/tmweChunks";
+import { useAgenticHarmonizer } from "./harmonizer-v2/useAgenticHarmonizer";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -43,6 +45,35 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [ingestionGoal, setIngestionGoal] = useState(
     "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
   );
+
+  // ── Agentic V2 (entity-by-entity) ──
+  const agentic = useAgenticHarmonizer(userId);
+  const agenticFileRef = useRef<HTMLInputElement>(null);
+  const [agenticFile, setAgenticFile] = useState<ParsedFile | null>(null);
+  const [agenticGoal, setAgenticGoal] = useState(
+    "Armonizza entity-by-entity con micro-call AI dedicate.",
+  );
+
+  const handleAgenticUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseUploadedFile(file);
+      setAgenticFile(parsed);
+      toast.success(`File caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
+    }
+    if (agenticFileRef.current) agenticFileRef.current.value = "";
+  }, []);
+
+  const handleAgenticStart = useCallback(() => {
+    if (!agenticFile) {
+      toast.error("Carica prima il file della libreria.");
+      return;
+    }
+    void agentic.start({ sourceFile: agenticFile, goal: agenticGoal });
+  }, [agenticFile, agenticGoal, agentic]);
 
   // Carica la libreria di default da public/kb-source/libreria-tmwe.md
   useEffect(() => {
@@ -136,6 +167,9 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
             </TabsTrigger>
             <TabsTrigger value="ingestion">
               <BookOpen className="h-4 w-4 mr-1" /> Ingestione documento grande
+            </TabsTrigger>
+            <TabsTrigger value="agentic">
+              <Sparkles className="h-4 w-4 mr-1" /> Agentic V2
             </TabsTrigger>
           </TabsList>
 
