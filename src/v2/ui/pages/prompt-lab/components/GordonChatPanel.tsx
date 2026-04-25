@@ -41,6 +41,22 @@ interface PendingRegeneration {
   ruleSuggestion: { title: string; content: string } | null;
 }
 
+const DEFAULT_GORDON_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
+const SILENT_AUDIO_SRC = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQQAAAAAAA==";
+
+function cleanReplyForSpeech(content: string) {
+  const withoutTechnicalBlocks = content
+    .replace(/\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/g, "Ho preparato una nuova versione del testo. Dimmi se la accetti o cosa vuoi cambiare.")
+    .replace(/\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/g, "Posso anche salvare questa come regola per le prossime armonizzazioni.");
+
+  return withoutTechnicalBlocks
+    .replace(/_\(([^)]*)\)_/g, "$1")
+    .replace(/[#*`~\[\]>|]/g, "")
+    .replace(/\n{2,}/g, ". ")
+    .replace(/\n/g, " ")
+    .trim();
+}
+
 export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, voiceId, agentId }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>(proposal.chat ?? []);
   const [input, setInput] = useState("");
@@ -53,11 +69,30 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioActivationRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenIdxRef = useRef<number>(-1);
+  const resolvedVoiceId = voiceId || DEFAULT_GORDON_VOICE_ID;
 
   const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
+
+  const unlockAudioPlayback = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const audio = audioActivationRef.current ?? new Audio(SILENT_AUDIO_SRC);
+    audioActivationRef.current = audio;
+    audio.muted = true;
+    audio.src = SILENT_AUDIO_SRC;
+    void audio.play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+      })
+      .catch(() => {
+        audio.muted = false;
+      });
+  }, []);
 
   // Reset SOLO quando cambia la proposta (non quando la chat si aggiorna server-side,
   // altrimenti lastSpokenIdxRef si reincrementa e l'autoplay TTS viene saltato).
@@ -80,6 +115,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (autoVoice) unlockAudioPlayback();
     // Stoppa la dettatura vocale se attiva, così l'input torna pulito
     if (speech.listening) speech.toggle();
     setInput("");
@@ -129,13 +165,9 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     } finally {
       setLoading(false);
     }
-  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated, speech]);
+  }, [input, loading, autoVoice, unlockAudioPlayback, runId, proposal.id, agentId, speech]);
 
   const playTTS = async (text: string) => {
-    if (!voiceId) {
-      toast.info("Voce non configurata per Gordon");
-      return;
-    }
     try {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       const sessionRes = await supabase.auth.getSession();
@@ -149,7 +181,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId }),
+          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: resolvedVoiceId, language: "it" }),
         }
       );
       if (!res.ok) {
@@ -169,9 +201,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   };
 
   // Autoplay: quando arriva un nuovo messaggio assistant e autoVoice è ON, lo legge.
-  // Pulisce markdown/punteggiatura tecnica come fa Mission/useAiVoice.
   useEffect(() => {
-    if (!autoVoice || !voiceId) return;
+    if (!autoVoice) return;
     if (loading) return;
     if (messages.length === 0) return;
     const lastIdx = messages.length - 1;
@@ -180,14 +211,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     if (lastIdx <= lastSpokenIdxRef.current) return;
     lastSpokenIdxRef.current = lastIdx;
     if (last.content.startsWith("⚠️")) return;
-    // Tieni il marker _( ... )_ come testo parlato (è già una frase naturale di Gordon),
-    // togli solo le sottolineature che lo delimitano.
-    let cleanText = last.content
-      .replace(/_\(([^)]*)\)_/g, "$1")
-      .replace(/[#*`~\[\]>|]/g, "")
-      .replace(/\n{2,}/g, ". ")
-      .replace(/\n/g, " ")
-      .trim();
+    let cleanText = cleanReplyForSpeech(last.content);
     // Fallback: se Gordon ha emesso solo blocchi tecnici e non resta nulla di parlabile,
     // leggi almeno una frase guida così l'operatore sa che c'è una nuova proposta pronta.
     if (cleanText.length < 5) {
@@ -195,7 +219,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     }
     void playTTS(cleanText);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, loading, autoVoice, voiceId]);
+  }, [messages, loading, autoVoice, resolvedVoiceId]);
 
   const toggleAutoVoice = () => {
     setAutoVoice((v) => {
@@ -251,18 +275,16 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           <h3 className="text-sm font-semibold leading-tight">Gordon</h3>
           <p className="text-[10px] text-muted-foreground leading-tight">Curatore — chat su questa proposta</p>
         </div>
-        {voiceId && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={toggleAutoVoice}
-            title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
-            aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
-          >
-            {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
-          </Button>
-        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={toggleAutoVoice}
+          title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
+          aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
+        >
+          {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+        </Button>
       </div>
 
       {/* Messages */}
@@ -283,16 +305,17 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
               {m.role === "assistant" ? (
                 <div className="flex items-start gap-2">
                   <div className="whitespace-pre-wrap flex-1">{m.content}</div>
-                  {voiceId && (
-                    <button
-                      onClick={() => playTTS(m.content)}
-                      className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-foreground"
-                      aria-label="Ascolta"
-                      title="Ascolta con la voce di Gordon"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      unlockAudioPlayback();
+                      void playTTS(cleanReplyForSpeech(m.content) || m.content);
+                    }}
+                    className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                    aria-label="Ascolta"
+                    title="Ascolta con la voce di Gordon"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ) : (
                 <div className="whitespace-pre-wrap">{m.content}</div>
