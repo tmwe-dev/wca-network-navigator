@@ -190,13 +190,19 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     if (lastIdx <= lastSpokenIdxRef.current) return;
     lastSpokenIdxRef.current = lastIdx;
     if (last.content.startsWith("⚠️")) return;
-    const cleanText = last.content
-      .replace(/_\([^)]*\)_/g, "") // rimuove i marker tipo "(ho preparato un nuovo testo, vedi sotto ↓)"
-      .replace(/[#*_`~\[\]()>|]/g, "")
+    // Tieni il marker _( ... )_ come testo parlato (è già una frase naturale di Gordon),
+    // togli solo le sottolineature che lo delimitano.
+    let cleanText = last.content
+      .replace(/_\(([^)]*)\)_/g, "$1")
+      .replace(/[#*`~\[\]>|]/g, "")
       .replace(/\n{2,}/g, ". ")
       .replace(/\n/g, " ")
       .trim();
-    if (cleanText.length < 5) return;
+    // Fallback: se Gordon ha emesso solo blocchi tecnici e non resta nulla di parlabile,
+    // leggi almeno una frase guida così l'operatore sa che c'è una nuova proposta pronta.
+    if (cleanText.length < 5) {
+      cleanText = "Ho preparato una nuova versione del testo. Dimmi se la applico o cosa vuoi cambiare.";
+    }
     void playTTS(cleanText);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, loading, autoVoice, voiceId]);
