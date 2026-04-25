@@ -13,6 +13,7 @@
  * generate dall'analyzer e le selezioni dell'utente.
  */
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { runHarmonizeCollector, type CollectorOutput } from "./harmonizeCollector";
 import { runHarmonizeAnalyzer, type AnalyzerContext } from "./harmonizeAnalyzer";
 import { executeProposal } from "./harmonizeExecutor";
