@@ -20,7 +20,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { createSuggestion } from "@/data/suggestedImprovements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+import { appendProposalChat, type HarmonizeProposal } from "@/data/harmonizeRuns";
 
 interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
 
@@ -102,6 +102,16 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       } else if (data.suggested_rule) {
         // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
         setPending({ text: "", ruleSuggestion: data.suggested_rule });
+      }
+
+      // Persistenza chat: salva sia il messaggio utente che la risposta dell'assistente
+      try {
+        await appendProposalChat(runId, proposal.id, [
+          { role: "user", content: text },
+          { role: "assistant", content: data.reply },
+        ]);
+      } catch (persistErr) {
+        console.warn("[GordonChatPanel] persist chat failed", persistErr);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "errore di rete";
