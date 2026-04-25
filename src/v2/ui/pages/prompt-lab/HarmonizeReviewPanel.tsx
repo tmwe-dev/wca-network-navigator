@@ -229,13 +229,25 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                          </Button>
                        )}
                      </div>
-                    <p className="text-sm text-foreground/90 mb-1">{p.reasoning}</p>
+                    {p.after != null && (
+                      <div className="mb-2">
+                        <EditableAfter
+                          value={p.after}
+                          editable={!!onEditAfter && !isReadOnly}
+                          onSave={(v) => onEditAfter?.(p.id, v)}
+                        />
+                      </div>
+                    )}
                     <Collapsible>
                       <CollapsibleTrigger className="text-xs text-primary hover:underline flex items-center gap-1">
                         <ChevronDown className="h-3 w-3" />
-                        Dettagli
+                        Spiegazione e dettagli
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-2 space-y-2">
+                        <div>
+                          <div className="text-xs font-semibold text-muted-foreground">Perché:</div>
+                          <p className="text-sm text-foreground/90">{p.reasoning}</p>
+                        </div>
                         {(p.current_location || p.proposed_location) && (
                           <div className="text-xs grid grid-cols-2 gap-2">
                             {p.current_location && (
@@ -257,13 +269,6 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                             <div className="text-xs font-semibold text-muted-foreground">Prima:</div>
                             <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-32 overflow-auto">{p.before}</pre>
                           </div>
-                        )}
-                        {p.after != null && (
-                          <EditableAfter
-                            value={p.after}
-                            editable={!!onEditAfter && !isReadOnly}
-                            onSave={(v) => onEditAfter?.(p.id, v)}
-                          />
                         )}
                         <div>
                           <div className="text-xs font-semibold text-muted-foreground">Evidenza ({p.evidence.source}):</div>
