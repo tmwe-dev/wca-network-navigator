@@ -67,10 +67,10 @@ export function selectFallbackModels(
     return [provider.model];
   }
 
-  if (isConversational) {
-    return ["google/gemini-2.5-flash", "openai/gpt-5-mini"];
-  }
-
+  // Scope config ha priorità SEMPRE (anche in conversational): scope
+  // specializzati come kb-supervisor o mission-builder hanno modelli
+  // tarati esplicitamente. Hardcodare flash/gpt-5-mini in conversational
+  // ignorava la scelta del scope → output sotto-tono o vuoto.
   let scopeModel: string | undefined;
   if (scope && scope !== "partner_hub") {
     try {
@@ -83,6 +83,10 @@ export function selectFallbackModels(
 
   if (scopeModel) {
     return [scopeModel, provider.model, "openai/gpt-5-mini"];
+  }
+
+  if (isConversational) {
+    return ["google/gemini-2.5-flash", "openai/gpt-5-mini"];
   }
 
   return [provider.model, "google/gemini-2.5-flash", "openai/gpt-5-mini"];

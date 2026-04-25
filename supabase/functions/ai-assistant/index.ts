@@ -150,7 +150,8 @@ serve(async (req) => {
       userId,
       isConversational,
       context,
-      messages
+      messages,
+      scope
     );
 
     // ── Detect conversational repetitions ──
@@ -184,13 +185,17 @@ serve(async (req) => {
     }
 
     // ── Message compression ──
+    // Bypass per scope ingestion (kb-supervisor): è single-shot, niente
+    // conversazione storica → niente riassunti/scritture su ai_memory.
     const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || provider.apiKey;
-    const compressedMessages = await compressMessages(
-      supabase,
-      messages,
-      LOVABLE_KEY,
-      userId
-    );
+    const compressedMessages = scope === "kb-supervisor"
+      ? messages
+      : await compressMessages(
+          supabase,
+          messages,
+          LOVABLE_KEY,
+          userId
+        );
     const allMessages: Record<string, unknown>[] = [
       { role: "system", content: finalSystemPrompt },
       ...compressedMessages,
@@ -311,7 +316,17 @@ serve(async (req) => {
     }
 
     endMetrics(metrics, true, 200);
-    return new Response(JSON.stringify({ content: responseContent }), {
+    // Surface usage + finish_reason al chiamante. Permette al frontend
+    // (Harmonizer ecc.) di distinguere tra errore modello e troncamento per
+    // max_tokens (finish_reason=length).
+    const lastMsg = loopResult.state.assistantMessage as Record<string, unknown> | undefined;
+    const finishReason = (lastMsg as { finish_reason?: string } | undefined)?.finish_reason
+      ?? (initialResult.choices?.[0]?.finish_reason as string | undefined);
+    return new Response(JSON.stringify({
+      content: responseContent,
+      usage: loopResult.state.totalUsage,
+      finish_reason: finishReason,
+    }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {

@@ -240,13 +240,16 @@ export async function assembleSystemPrompt(
   userId: string,
   isConversational: boolean,
   context: Record<string, unknown> | undefined,
-  messages: Record<string, unknown>[] | undefined
+  messages: Record<string, unknown>[] | undefined,
+  scopeArg?: string
 ): Promise<ContextAssemblyResult> {
   // kb-supervisor: scope funzionale (Harmonizer ecc.). Il briefing operatore
   // è già self-contained e definisce un contratto JSON rigido. Iniettare
   // doctrine/memorie/KB/profile/email satura la context window e fa
   // "esplodere" il chunk #0 (output vuoto). Bypass totale del context dinamico.
-  const scope = (context?.scope as string | undefined) || undefined;
+  // FIX: scope arriva come field top-level del body (non dentro context),
+  // quindi va passato esplicitamente; fallback a context.scope per back-compat.
+  const scope = scopeArg || (context?.scope as string | undefined) || undefined;
   if (scope === "kb-supervisor") {
     let prompt = baseSystemPrompt;
     if (context) prompt = injectPageContext(prompt, context);
