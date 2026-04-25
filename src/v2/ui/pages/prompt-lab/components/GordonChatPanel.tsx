@@ -109,7 +109,20 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
 
       if (data.regenerated_after) {
-        setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule ?? null });
+        // Applica IMMEDIATAMENTE il nuovo "after" alla proposta, così la sezione
+        // di sinistra (editor After) si aggiorna in tempo reale e il bottone
+        // "Applica subito" userà il testo rigenerato.
+        const applyRes = await onApplyRegenerated(proposal.id, data.regenerated_after);
+        if (applyRes.ok) {
+          toast.success("Sezione aggiornata con il nuovo testo di Gordon");
+        } else {
+          toast.warning(applyRes.reason ?? "Aggiornamento sezione fallito — testo disponibile sotto");
+        }
+        // Mostriamo comunque il pending solo se Gordon ha proposto anche una regola
+        // permanente da salvare in KB.
+        if (data.suggested_rule) {
+          setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule });
+        }
       } else if (data.suggested_rule) {
         // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
         setPending({ text: "", ruleSuggestion: data.suggested_rule });
@@ -122,7 +135,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     } finally {
       setLoading(false);
     }
-  }, [input, loading, runId, proposal.id, agentId]);
+  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated]);
 
   const playTTS = async (text: string) => {
     if (!voiceId) {
