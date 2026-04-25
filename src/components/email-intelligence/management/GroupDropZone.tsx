@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2, ZoomIn } from 'lucide-react';
+import { Trash2, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -103,7 +103,15 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
             <div className="flex gap-1">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ingrandisci"><ZoomIn className="h-4 w-4" /></Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Vedi tutte le aziende"
+                    title="Vedi e gestisci tutte le aziende associate"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
@@ -168,11 +176,18 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
             </div>
           )}
           {rules.length > 0 ? (
-            <div className="text-left w-full px-2">
-              <div className="font-bold text-base leading-tight truncate">
-                {rules[0].display_name || extractCompany(rules[0].email_address)}
-              </div>
-              <div className="text-xs text-muted-foreground truncate">{rules[0].email_address}</div>
+            <div className="text-left w-full px-2 space-y-0.5 overflow-hidden">
+              {rules.slice(0, 3).map((r) => (
+                <div key={r.id} className="leading-tight truncate">
+                  <span className="font-semibold text-xs">{r.display_name || extractCompany(r.email_address)}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1 truncate">{r.email_address}</span>
+                </div>
+              ))}
+              {rules.length > 3 && (
+                <div className="text-[10px] text-primary font-medium pt-0.5">
+                  +{rules.length - 3} altre — clicca <List className="inline h-2.5 w-2.5" /> per vederle
+                </div>
+              )}
             </div>
           ) : (
             !isHovered && <p className="text-xs text-muted-foreground">Trascina sender qui</p>
