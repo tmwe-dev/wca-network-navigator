@@ -168,10 +168,6 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   }, [input, loading, autoVoice, unlockAudioPlayback, runId, proposal.id, agentId, speech]);
 
   const playTTS = async (text: string) => {
-    if (!voiceId) {
-      toast.info("Voce non configurata per Gordon");
-      return;
-    }
     try {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       const sessionRes = await supabase.auth.getSession();
@@ -185,7 +181,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: text.slice(0, 3000), voiceId }),
+          body: JSON.stringify({ text: text.slice(0, 3000), voiceId: resolvedVoiceId, language: "it" }),
         }
       );
       if (!res.ok) {
@@ -205,9 +201,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   };
 
   // Autoplay: quando arriva un nuovo messaggio assistant e autoVoice è ON, lo legge.
-  // Pulisce markdown/punteggiatura tecnica come fa Mission/useAiVoice.
   useEffect(() => {
-    if (!autoVoice || !voiceId) return;
+    if (!autoVoice) return;
     if (loading) return;
     if (messages.length === 0) return;
     const lastIdx = messages.length - 1;
@@ -216,14 +211,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     if (lastIdx <= lastSpokenIdxRef.current) return;
     lastSpokenIdxRef.current = lastIdx;
     if (last.content.startsWith("⚠️")) return;
-    // Tieni il marker _( ... )_ come testo parlato (è già una frase naturale di Gordon),
-    // togli solo le sottolineature che lo delimitano.
-    let cleanText = last.content
-      .replace(/_\(([^)]*)\)_/g, "$1")
-      .replace(/[#*`~\[\]>|]/g, "")
-      .replace(/\n{2,}/g, ". ")
-      .replace(/\n/g, " ")
-      .trim();
+    let cleanText = cleanReplyForSpeech(last.content);
     // Fallback: se Gordon ha emesso solo blocchi tecnici e non resta nulla di parlabile,
     // leggi almeno una frase guida così l'operatore sa che c'è una nuova proposta pronta.
     if (cleanText.length < 5) {
@@ -231,7 +219,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     }
     void playTTS(cleanText);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, loading, autoVoice, voiceId]);
+  }, [messages, loading, autoVoice, resolvedVoiceId]);
 
   const toggleAutoVoice = () => {
     setAutoVoice((v) => {
