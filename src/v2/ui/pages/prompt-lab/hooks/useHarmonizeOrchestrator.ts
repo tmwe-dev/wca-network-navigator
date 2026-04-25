@@ -7,8 +7,12 @@
  *  3. review      → utente approva/modifica/rifiuta
  *  4. executing   → esegue solo le approved
  *  5. done | failed | cancelled
+ *
+ * PERSISTENZA: lo state viene salvato in localStorage dopo ogni transizione,
+ * così un refresh accidentale non perde l'inventario raccolto, le proposte
+ * generate dall'analyzer e le selezioni dell'utente.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { runHarmonizeCollector, type CollectorOutput } from "./harmonizeCollector";
 import { runHarmonizeAnalyzer, type AnalyzerContext } from "./harmonizeAnalyzer";
 import { executeProposal } from "./harmonizeExecutor";
@@ -57,8 +61,66 @@ const INITIAL: HarmonizeOrchestratorState = {
   failedCount: 0,
 };
 
+const STORAGE_PREFIX = "harmonizerV2:classic:state:";
+const STORAGE_VERSION = 1;
+
+function storageKey(userId: string): string {
+  return `${STORAGE_PREFIX}${userId}`;
+}
+
+function loadPersistedState(userId: string): HarmonizeOrchestratorState | null {
+  if (!userId || typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(storageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { v: number; state: Omit<HarmonizeOrchestratorState, "approvedIds"> & { approvedIds: string[] } };
+    if (parsed.v !== STORAGE_VERSION || !parsed.state) return null;
+    const restored: HarmonizeOrchestratorState = {
+      ...parsed.state,
+      approvedIds: new Set(parsed.state.approvedIds ?? []),
+      loading: false,
+    };
+    // Le fasi "in volo" non possono riprendere il loop: degradiamo in modo sicuro.
+    if (restored.phase === "collecting" || restored.phase === "analyzing") {
+      restored.phase = restored.proposals.length > 0 ? "review" : "cancelled";
+    }
+    if (restored.phase === "executing") {
+      restored.phase = "review";
+    }
+    return restored;
+  } catch {
+    return null;
+  }
+}
+
+function persistState(userId: string, state: HarmonizeOrchestratorState): void {
+  if (!userId || typeof window === "undefined") return;
+  try {
+    if (state.phase === "idle" && state.proposals.length === 0) {
+      window.localStorage.removeItem(storageKey(userId));
+      return;
+    }
+    const payload = {
+      v: STORAGE_VERSION,
+      state: { ...state, approvedIds: Array.from(state.approvedIds) },
+    };
+    window.localStorage.setItem(storageKey(userId), JSON.stringify(payload));
+  } catch {
+    // localStorage pieno o disabilitato.
+  }
+}
+
 export function useHarmonizeOrchestrator(userId: string) {
-  const [state, setState] = useState<HarmonizeOrchestratorState>(INITIAL);
+  const [state, setState] = useState<HarmonizeOrchestratorState>(() => loadPersistedState(userId) ?? INITIAL);
+
+  useEffect(() => {
+    const restored = loadPersistedState(userId);
+    if (restored) setState(restored);
+  }, [userId]);
+
+  useEffect(() => {
+    persistState(userId, state);
+  }, [userId, state]);
 
   const start = useCallback(
     async (params: { goal: string; librarySource: string; uploadedFiles: ParsedFile[] }) => {
@@ -195,7 +257,12 @@ export function useHarmonizeOrchestrator(userId: string) {
     setState({ ...INITIAL, phase: "cancelled" });
   }, [state.runId]);
 
-  const reset = useCallback(() => setState(INITIAL), []);
+  const reset = useCallback(() => {
+    setState(INITIAL);
+    if (userId && typeof window !== "undefined") {
+      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* noop */ }
+    }
+  }, [userId]);
 
   return { state, start, toggleApproval, approveAllSafe, execute, cancel, reset };
 }
