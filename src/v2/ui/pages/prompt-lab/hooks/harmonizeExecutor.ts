@@ -190,11 +190,20 @@ async function execAgent(userId: string, p: HarmonizeProposal): Promise<ExecuteR
   const payload = (p.payload ?? {}) as Record<string, unknown>;
 
   if (p.action === "INSERT") {
-    // Campi minimi richiesti: name, role
-    const name = String(payload.name ?? p.block_label ?? "").trim();
-    const role = String(payload.role ?? "").trim();
-    if (!name || !role) {
-      return { ok: false, reason: "INSERT agents richiede payload.name e payload.role." };
+    // Derivazione robusta dei campi minimi: il modello spesso popola solo block_label
+    // e/o after. Usiamo fallback ragionevoli per evitare di bloccare l'applicazione
+    // di proposte INSERT con metadati incompleti.
+    const name = String(
+      payload.name ?? p.block_label ?? p.target.field ?? "",
+    ).trim();
+    const role = String(
+      payload.role ?? payload.agent_role ?? p.target.field ?? "assistant",
+    ).trim() || "assistant";
+    if (!name) {
+      return {
+        ok: false,
+        reason: "INSERT agents richiede un nome (payload.name o block_label).",
+      };
     }
     const insert: AgentInsert = {
       name,
