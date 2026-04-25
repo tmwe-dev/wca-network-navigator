@@ -272,7 +272,12 @@ serve(async (req) => {
         if (unified.has_any) {
           // FIX 3b-G: usa quality param (allineato con generate-email)
           const block = formatEnrichmentForPrompt(unified, quality);
-          if (block) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${block}\n`;
+          // Budget hard: enrichment può crescere senza limiti su partner attivi
+          const MAX_ENRICHMENT_CHARS = 3_000;
+          const safeBlock = block && block.length > MAX_ENRICHMENT_CHARS
+            ? block.slice(0, MAX_ENRICHMENT_CHARS) + "\n[...enrichment troncato per stabilità]"
+            : block;
+          if (safeBlock) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${safeBlock}\n`;
         }
       } catch (e) {
         console.warn("[improve-email] enrichment read failed:", e instanceof Error ? e.message : e);
