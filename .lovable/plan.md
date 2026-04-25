@@ -1,128 +1,143 @@
 
-# Piano: PWA Cache Fix + AI Cost Tracking Coverage
+# 🧑‍🏫 Gordon — Curatore Prompt-Lab
 
-Risolve due problemi paralleli in un'unica iterazione:
-
-1. **Bug published**: dopo Publish/Update il menu mostra ancora la versione vecchia (cache PWA stale).
-2. **Tracking AI incompleto**: 19 edge function su 30 chiamano LLM senza loggare → dashboard `ai_prompt_log` quasi vuota.
+Implemento end-to-end la vista Singola con chat persistente per ogni proposta, agente Gordon dedicato con voce, e loop di apprendimento opzionale.
 
 ---
 
-## Parte 1 — Fix Cache PWA Stale (15 min)
+## Step 1 — Creazione agente Gordon (migration DB)
 
-### Problema
-La config attuale di `vite.config.ts` cachezza `index.html` come parte di `globPatterns: ["**/*.{js,css,html,...}"]`. Workbox precachea l'HTML e lo serve dalla cache anche se è arrivata una nuova build, finché il SW non si aggiorna (cosa che richiede 2+ reload o unregister manuale).
+INSERT in `agents`:
+- `name`: Gordon
+- `role`: curator
+- `avatar_emoji`: 🧑‍🏫
+- `is_active`: true
+- `elevenlabs_voice_id`: `JBFqnCBsd6RMkjVDRZzb` (George — voce maschile autorevole, ottima resa IT)
+- `system_prompt`: persona di Curatore che:
+  - legge `HarmonizeProposal` (target_table, target_id, before, after, reasoning)
+  - spiega in italiano semplice il *perché* della proposta
+  - accetta correzioni dall'utente (es. "la sede è Peschiera, non Segrate")
+  - rigenera l'`after` quando richiesto, emettendo blocco delimitato `[REGENERATED_AFTER]…[/REGENERATED_AFTER]`
+  - quando individua un pattern generalizzabile, propone una regola permanente con `[SUGGEST_KB_RULE]…[/SUGGEST_KB_RULE]`
+  - tono didascalico, breve, mai gergo tecnico se non richiesto
 
-### Modifiche
-
-**A1. `vite.config.ts`** — config Workbox più aggressiva sull'auto-update
-- Aggiungere `skipWaiting: true` e `clientsClaim: true` nel blocco `workbox` → il nuovo SW prende il controllo immediatamente al primo reload.
-- Rimuovere `html` da `globPatterns` per evitare precache di `index.html` (resta in NetworkFirst tramite `navigateFallback`).
-- Aggiungere runtime cache `NetworkFirst` esplicita per la navigazione HTML con `networkTimeoutSeconds: 3`, così online prende sempre la nuova versione.
-- Aggiungere `cleanupOutdatedCaches: true` per pulire le cache vecchie.
-
-**A2. Nuovo componente `src/components/system/PWAUpdatePrompt.tsx`**
-- Hook `useRegisterSW` da `virtual:pwa-register/react`.
-- Quando rileva `needRefresh`, mostra un toast persistente "Nuova versione disponibile — Aggiorna ora" con bottone che chiama `updateServiceWorker(true)`.
-- Mounted come singleton in `src/App.tsx` accanto a `ViteChunkRecovery` (rispettando memoria `global-singleton-infrastructure`).
-
-**A3. `src/App.tsx`** — montare `<PWAUpdatePrompt />` nel singleton stack.
-
-**A4. Mini-sezione nella `/v2/guida`** — "Se la versione published mostra contenuti vecchi": istruzioni per hard refresh / unregister SW (3 righe).
-
-### Verifica
-- `bun run build` per assicurarmi che la config Workbox sia valida.
-- `tsc --noEmit` per il nuovo componente.
+Conforme a memoria `agents/persona-system` e `agents/global-visibility` (visibile a tutti gli operatori).
 
 ---
 
-## Parte 2 — AI Cost Tracking Coverage (45 min)
+## Step 2 — Estensione dati (no schema change)
 
-### Stato reale (verificato ora)
-- **30 edge function** chiamano LLM (`LOVABLE_API_KEY` / `gateway.lovable` / `openai` / `anthropic`).
-- **11 strumentate** via `aiGateway.ts` o `aiChat`/`tokenLogger`.
-- **19 ribelli** che bypassano il tracking — popolare elenco interno, non lo mostro perché hai detto "non voglio vedere niente":
-  - Top-cost: `agent-execute` (chatMode + taskMode + analysisTools), `ai-assistant`, `parse-business-card`, `parse-profile-ai`, `process-ai-import`, `enrich-partner-website`, `analyze-partner`, `sherlock-extract`.
-  - Tool calls: `agent-loop`, `agent-prompt-refiner`, `agentic-decide`, `ai-match-business-cards`, `ai-query-planner`, `analyze-import-structure`, `batch-enrichment-worker`, `categorize-content`, `classify-inbound-message`, `generate-aliases`, `linkedin-ai-extract`, `optimus-analyze`, `reply-classifier`, `suggest-email-groups`, `whatsapp-ai-extract`.
-- **Tabelle disponibili**: `ai_prompt_log`, `ai_token_usage`, `ai_request_log` esistono già — vanno solo popolate. NON creo nuove tabelle.
-
-### Modifiche
-
-**B1. Nuovo wrapper `supabase/functions/_shared/callLLM.ts`** (~150 LOC)
-- Funzione `callLLM({ provider, model, messages, tools?, response_format?, ctx, userId? })` che:
-  - Chiama il gateway LLM (Lovable/OpenAI/Anthropic) con `fetch` + `AbortController` (timeout 30s).
-  - Misura `latencyMs`, estrae `prompt_tokens` / `completion_tokens` / `total_tokens` dalla risposta.
-  - Calcola `costUsd` usando una pricing table interna (cents per 1k tokens per modello).
-  - Inserisce riga in `ai_prompt_log` con `function_name`, `model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `latency_ms`, `user_id`, `success`, `error_message?`.
-  - Logga anche in formato JSON strutturato (rispetto memoria `observability-alerting-and-monitoring`).
-  - Restituisce `{ content, toolCalls, usage, raw }` con shape unificata.
-- Esporta una versione "thin" `callLLMRaw()` per casi che hanno bisogno della risposta cruda (streaming, ecc.).
-
-**B2. Pricing table `supabase/functions/_shared/llmPricing.ts`** (~40 LOC)
-- Mappa `model → { promptUsdPer1k, completionUsdPer1k }` per i ~10 modelli usati (gemini-2.5-flash-lite, gemini-2.5-pro, gpt-5, gpt-5-mini, gpt-5-nano, ecc.).
-- Fallback a `0` con warning se modello sconosciuto (così il log avviene comunque).
-
-**B3. Migrazione delle 19 funzioni ribelli a `callLLM`**
-Strategia chirurgica: in ogni funzione sostituisco solo il blocco `fetch(...)` verso il gateway con `await callLLM({...})`, lasciando intatta tutta la business logic. Niente refactor architetturale.
-
-Suddivisione in 2 batch per limitare rischio:
-- **Batch 1 (top-cost, 8 funzioni)**: `agent-execute/chatMode.ts`, `agent-execute/taskMode.ts`, `agent-execute/toolHandlers/analysisTools.ts`, `ai-assistant/index.ts`, `parse-business-card`, `parse-profile-ai`, `process-ai-import`, `enrich-partner-website`.
-- **Batch 2 (resto, 11 funzioni)**: `analyze-partner`, `sherlock-extract`, `agent-loop`, `agent-prompt-refiner`, `agentic-decide`, `ai-match-business-cards`, `ai-query-planner`, `analyze-import-structure`, `batch-enrichment-worker`, `categorize-content`, `classify-inbound-message`, `generate-aliases`, `linkedin-ai-extract`, `optimus-analyze`, `reply-classifier`, `suggest-email-groups`, `whatsapp-ai-extract`.
-
-NB: rispetto vincolo `email-download-integrity` — non tocco `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (in ogni caso non chiamano LLM).
-
-**B4. Aggiornare `aiGateway.ts`** affinché le 11 funzioni già strumentate usino il nuovo `callLLM` come backend (zero rotture: stessa firma esposta). Così il logging diventa uniforme su tutte e 30.
-
-**B5. Nuovo edge function `ai-tracking-healthcheck`**
-- GET: ritorna JSON `{ totalLLMCalls24h, instrumentedCount, missingFunctions: [], coveragePct }`.
-- Confronta `ai_prompt_log` distinct(`function_name`) ultimi 7gg vs lista hardcoded delle 30 funzioni LLM.
-- Esposto nella dashboard AI Monitor come banner "Coverage: 100% ✓" o "Missing: [...]".
-
-**B6. UI dashboard — `src/v2/ui/pages/ai-monitor/AICostDashboard.tsx`**
-- Aggiungere sezione "Coverage tracking" che chiama `ai-tracking-healthcheck` ogni 60s.
-- Aggiungere filtro per `function_name` e grafico costi/giorno per funzione (recharts, già nel bundle).
-
-### Verifica
-- `bun run tsc --noEmit` su tutto il progetto.
-- Deploy delle 19 funzioni + healthcheck.
-- Curl di sanity check: chiamata test a `agent-execute` → query `SELECT * FROM ai_prompt_log ORDER BY created_at DESC LIMIT 5` per confermare che il log viene scritto.
-- Healthcheck deve ritornare `coveragePct: 100`.
+`src/data/harmonizeRuns.ts`:
+- estendo tipo `HarmonizeProposal` (JSONB in `harmonize_runs.proposals`):
+  ```ts
+  chat?: Array<{ role: 'user'|'assistant'; content: string; ts: string }>
+  user_correction_note?: string
+  regenerated_after?: string
+  ```
+- nuova funzione `appendProposalChat(runId, proposalId, message)` con read-modify-write atomico (stesso pattern di `updateHarmonizeProposal` già esistente)
 
 ---
 
-## Parte 3 — Documentazione (5 min)
+## Step 3 — Edge function `harmonize-proposal-chat`
 
-**C1. Aggiornare `mem://tech/cost-control-guardrails`**
-- Documentare il nuovo wrapper `callLLM` come standard obbligatorio per nuove edge function LLM.
-- Rimando a `_shared/callLLM.ts` come unico entrypoint.
+`supabase/functions/harmonize-proposal-chat/index.ts`
 
-**C2. Aggiornare `mem://architecture/ai-gateway-and-budgeting`**
-- Riflettere copertura 100% e tabella `ai_prompt_log` come fonte di verità.
+Struttura standard (vedi `docs/EDGE-FUNCTIONS.md`): CORS dinamico whitelisted, `requireAuth`, security headers, monitoring, validazione Zod input, sotto 200 LOC.
 
-**C3. Mini-changelog in `/v2/guida`** (1 paragrafo)
-- "Cache PWA: ora si auto-aggiorna al primo reload con banner."
-- "AI Cost Dashboard: copertura completa di tutte le funzioni AI."
+Input:
+```ts
+{ run_id: string, proposal_id: string, agent_id: string, user_message: string }
+```
+
+Logica:
+1. Carica `agents.system_prompt` di Gordon (via service role)
+2. Carica proposta dal JSONB `harmonize_runs.proposals`
+3. Costruisce `messages = [system + contesto_proposta_serializzato, ...chat_history, user_message]`
+4. Chiama Lovable AI Gateway → `google/gemini-3-flash-preview` (default consigliato)
+5. Estrae eventuali blocchi `[REGENERATED_AFTER]` e `[SUGGEST_KB_RULE]`
+6. Persiste user_message + assistant_reply nel `chat[]` della proposta
+7. Risponde `{ reply, regenerated_after?, suggested_rule? }`
+
+Gestione 429/402 con messaggi user-friendly (memoria `architecture/ai-gateway-and-budgeting`).
 
 ---
 
-## Out of scope (non tocco)
-- Stripe/billing → già rimosso, kill-switch attivo.
-- Sistema auth/whitelist → snapshot funzionante, non si tocca.
-- `check-inbox` / `email-imap-proxy` / `mark-imap-seen` → vincolo integrità email.
-- V1 routes → deprecato, non si tocca.
-- Schema DB → nessuna nuova tabella, uso quelle esistenti.
+## Step 4 — Riuso TTS esistente
+
+Verifico se `supabase/functions/elevenlabs-tts/index.ts` è già presente (lo è — già usato in `AgentChat.tsx`). Lo riuso per la voce di Gordon, nessuna nuova edge function.
 
 ---
 
-## Stima totale
-- Parte 1 (PWA): ~15 min, 4 file modificati/creati.
-- Parte 2 (Tracking): ~45 min, 22 file (19 funzioni + 3 nuovi `_shared`/healthcheck) + 1 UI.
-- Parte 3 (Docs): ~5 min, 3 file memoria/guida.
-- **Totale**: ~65 min, 30 file toccati, 0 modifiche DB, 0 nuove dipendenze.
+## Step 5 — UI: toggle Lista ↔ Singola
 
-## Rischio
-- **Basso** sulla Parte 1: PWA config è isolata, fallback graceful.
-- **Medio** sulla Parte 2: 19 funzioni toccate. Mitigazione: 2 batch separati, deploy progressivo, test curl dopo ogni batch, mantengo intatta business logic (sostituisco solo il blocco `fetch` LLM).
+### 5.1 — `SuggestionsReviewPage.tsx` (modifica)
+Aggiungo in alto:
+- Toggle 📋 Lista / 🧑‍🏫 Singola con Gordon
+- Stato `viewMode` salvato in localStorage
 
-## Approvazione richiesta
-Approva il piano per passare in Build mode. Procedo end-to-end senza ulteriori conferme come da tua preferenza utente.
+La vista Lista resta intoccata (l'inversione layout fatta nello step precedente è preservata).
+
+### 5.2 — `SingleProposalReview.tsx` (nuovo)
+Layout 2 colonne (stack su mobile <768px):
+- **Sinistra**: navigatore (◀ idx/total ▶) + AZIONE/TARGET + `EditableAfter` (riusa componente esistente) + collapsible "Spiegazione e dettagli" + bottoni Applica/Salta/Rifiuta
+- **Destra**: `GordonChatPanel`
+
+### 5.3 — `GordonChatPanel.tsx` (nuovo)
+- Bolle chat con `ReactMarkdown` per Gordon
+- Bottone 🔊 su ogni risposta Gordon → POST a `elevenlabs-tts` → autoplay
+- Input con `useContinuousSpeech` (riuso da `AgentChat`) per dettatura vocale
+- Quando arriva `regenerated_after`: mostra preview + 2 bottoni:
+  - **✓ Usa solo qui** → chiama `editProposalAfter()` esistente
+  - **✓ Usa qui + salva come regola permanente** → editProposal + insert in `suggested_improvements` (kb_rule, status=approved)
+- Quando arriva `suggested_rule` da Gordon proattivamente: mostra card "Vuoi salvare questa regola permanente?" con conferma
+
+### 5.4 — `ProposalNavigator.tsx` (nuovo)
+Componente atomico con frecce ◀ ▶, contatore "12 di 154", skip non distruttivo.
+
+### 5.5 — Hook `useGordonChat.ts` (nuovo)
+- Gestisce conversazione, invocazione edge function, persistenza locale + remota
+- Pattern Resilienza Async (memoria `tech/async-hook-resilience-pattern`): `AbortController` + `mountedRef`
+
+---
+
+## Step 6 — Loop di apprendimento ("Chiedi ogni volta")
+
+In `useHarmonizeOrchestrator.ts`:
+- Nuova API `applyRegeneratedAfter(proposalId, newAfter, saveAsRule: boolean)`
+- Se `saveAsRule = true` → INSERT in `suggested_improvements` (categoria `kb_rule`, fonte `gordon-feedback`)
+
+In `harmonizeAnalyzer.ts`:
+- Prima di chiamare l'analyzer, fetch delle `suggested_improvements` approvate (categoria `kb_rule`)
+- Inietta come "VINCOLI APPRESI DAGLI OPERATORI" nel prompt → Marco le rispetta nei prossimi run
+
+---
+
+## 📁 File toccati
+
+**Nuovi**:
+- `supabase/functions/harmonize-proposal-chat/index.ts`
+- `src/v2/ui/pages/prompt-lab/components/SingleProposalReview.tsx`
+- `src/v2/ui/pages/prompt-lab/components/GordonChatPanel.tsx`
+- `src/v2/ui/pages/prompt-lab/components/ProposalNavigator.tsx`
+- `src/v2/ui/pages/prompt-lab/hooks/useGordonChat.ts`
+
+**Modificati**:
+- `src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx` (toggle Lista/Singola)
+- `src/data/harmonizeRuns.ts` (tipo esteso + `appendProposalChat`)
+- `src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts` (`applyRegeneratedAfter`)
+- `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` (iniezione regole apprese)
+
+**Migration DB**: 1 INSERT (creazione Gordon)
+
+---
+
+## ✅ Esecuzione
+
+Una volta approvato, eseguo tutto monoliticamente in autonomia (rispettando la tua preferenza "no step-by-step"). Al termine del run avrai:
+- toggle vista Lista/Singola sulla pagina suggerimenti
+- chat persistente per ogni proposta con Gordon
+- voce George attivabile su ogni risposta Gordon
+- conferma esplicita per salvare correzioni come regole permanenti
+- prossimi run di armonizzazione che rispettano le regole apprese
+
+Confermi e parto?
