@@ -27,7 +27,7 @@ import { useSelectionState } from "./manual-grouping/useSelectionState";
 
 export default function ManualGroupingTab() {
   // Data management
-  const { senders, setSenders, groups, setGroups, isLoading, isPopulating, loadData, populateAddressRules } =
+  const { senders, setSenders, groups, setGroups, isLoading, isPopulating, loadData, populateAddressRules, assignedByGroup, reloadAssignedRules } =
     useGroupingData();
 
   // Filtering and sorting
@@ -290,7 +290,14 @@ export default function ManualGroupingTab() {
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-4 flex flex-wrap gap-4 content-start">
               {sortedGroups.map((group) => (
-                <GroupDropZone key={group.id} group={group} onRefresh={loadData} isHovered={hoveredGroupId === group.id} />
+                <GroupDropZone
+                  key={group.id}
+                  group={group}
+                  onRefresh={loadData}
+                  isHovered={hoveredGroupId === group.id}
+                  rules={assignedByGroup.get(group.nome_gruppo) || []}
+                  onRulesChanged={reloadAssignedRules}
+                />
               ))}
               {groups.length === 0 && (
                 <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>

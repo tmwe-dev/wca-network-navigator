@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Trash2, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { EmailSenderGroup } from '@/types/email-management';
@@ -16,6 +15,13 @@ interface GroupDropZoneProps {
   group: EmailSenderGroup;
   onRefresh: () => void;
   isHovered?: boolean;
+  /**
+   * Rules assigned to this group, provided by the parent.
+   * Lifted out of this component to avoid N parallel queries +
+   * N realtime channels (one per group) — see useGroupingData.
+   */
+  rules?: AssignedRule[];
+  onRulesChanged?: () => void;
 }
 
 interface AssignedRule {
@@ -24,29 +30,7 @@ interface AssignedRule {
   display_name?: string | null;
 }
 
-export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDropZoneProps) {
-  const [rules, setRules] = useState<AssignedRule[]>([]);
-  const [_loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadRules();
-    const channel = supabase
-      .channel(`group-rules-${group.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_address_rules' }, () => loadRules())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [group.nome_gruppo]);
-
-  const loadRules = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('email_address_rules')
-      .select('id, email_address, display_name')
-      .eq('group_name', group.nome_gruppo)
-      .order('created_at', { ascending: false });
-    setRules((data || []) as AssignedRule[]);
-    setLoading(false);
-  };
+export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [], onRulesChanged }: GroupDropZoneProps) {
 
   const extractCompany = (email: string): string => {
     const match = email.match(/@([^.]+)\./);
@@ -60,7 +44,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
       .eq('id', ruleId);
     if (!error) {
       toast.success(`${extractCompany(email)} rimosso da ${group.nome_gruppo}`);
-      loadRules();
+      onRulesChanged?.();
     } else {
       toast.error('Errore rimozione');
     }
@@ -94,8 +78,8 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
     >
       <Card
         className={cn(
-          "h-full transition-all border-2 flex flex-col overflow-hidden",
-          isHovered && "border-primary bg-primary/5 shadow-2xl scale-105 ring-4 ring-primary/20"
+          "h-full transition-colors duration-150 border-2 flex flex-col overflow-hidden",
+          isHovered && "border-primary bg-primary/5 ring-2 ring-primary/30"
         )}
         style={{
           borderColor: isHovered ? group.colore : undefined,
@@ -172,21 +156,26 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 flex-1 overflow-hidden flex flex-col items-center justify-center">
-          {isHovered && rules.length === 0 && (
-            <div className="text-center py-12 animate-pulse">
-              <div className="text-5xl mb-3">👇</div>
-              <p className="text-sm font-medium text-primary">Rilascia qui per classificare</p>
+        <CardContent className="pt-2 pb-2 flex-1 overflow-hidden flex flex-col items-center justify-center relative">
+          {/* Drop hint — compact pill that fits the 20vh card height
+              and sits above the preview text without clipping behind the header. */}
+          {isHovered && (
+            <div className="absolute inset-x-2 top-1 z-10 flex items-center justify-center pointer-events-none animate-pulse">
+              <div className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold shadow flex items-center gap-1">
+                <span>👇</span>
+                <span>Rilascia qui</span>
+              </div>
             </div>
           )}
-          {!isHovered && rules.length > 0 && (
+          {rules.length > 0 ? (
             <div className="text-left w-full px-2">
-              <div className="font-bold text-xl mb-1">{rules[0].display_name || extractCompany(rules[0].email_address)}</div>
-              <div className="text-sm text-muted-foreground truncate">{rules[0].email_address}</div>
+              <div className="font-bold text-base leading-tight truncate">
+                {rules[0].display_name || extractCompany(rules[0].email_address)}
+              </div>
+              <div className="text-xs text-muted-foreground truncate">{rules[0].email_address}</div>
             </div>
-          )}
-          {!isHovered && rules.length === 0 && (
-            <p className="text-xs text-muted-foreground">Trascina sender qui</p>
+          ) : (
+            !isHovered && <p className="text-xs text-muted-foreground">Trascina sender qui</p>
           )}
         </CardContent>
       </Card>

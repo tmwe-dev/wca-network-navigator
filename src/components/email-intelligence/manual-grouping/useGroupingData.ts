@@ -17,6 +17,12 @@ export function useGroupingData() {
   const [groups, setGroups] = useState<EmailSenderGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPopulating, setIsPopulating] = useState(false);
+  // Map: group_name -> assigned rules (preview list).
+  // Lifted out of GroupDropZone so we open ONE channel + ONE query
+  // instead of N (one per group) → big perf win when filtering/dragging.
+  const [assignedByGroup, setAssignedByGroup] = useState<
+    Map<string, Array<{ id: string; email_address: string; display_name: string | null }>>
+  >(new Map());
 
   /**
    * Fetch ALL rows from a query, paginating in chunks of 1000
@@ -48,6 +54,36 @@ export function useGroupingData() {
       .select("*")
       .order("sort_order", { ascending: true });
     setGroups((data || []) as EmailSenderGroup[]);
+  };
+
+  /**
+   * Load all assigned rules at once, grouped by group_name.
+   * Replaces the per-GroupDropZone query that ran N times.
+   */
+  const loadAssignedRules = async () => {
+    const rows = await fetchAllRows<{
+      id: string;
+      email_address: string;
+      display_name: string | null;
+      group_name: string | null;
+      created_at: string | null;
+    }>(
+      (from, to) =>
+        supabase
+          .from("email_address_rules")
+          .select("id, email_address, display_name, group_name, created_at")
+          .not("group_name", "is", null)
+          .order("created_at", { ascending: false })
+          .range(from, to),
+    );
+    const map = new Map<string, Array<{ id: string; email_address: string; display_name: string | null }>>();
+    for (const r of rows) {
+      if (!r.group_name) continue;
+      const arr = map.get(r.group_name) || [];
+      arr.push({ id: r.id, email_address: r.email_address, display_name: r.display_name });
+      map.set(r.group_name, arr);
+    }
+    setAssignedByGroup(map);
   };
 
   const loadData = async () => {
@@ -145,6 +181,8 @@ export function useGroupingData() {
       }));
 
       setSenders(senderList);
+      // After loading uncategorized senders, also refresh assigned-rules map.
+      await loadAssignedRules();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Errore caricamento");
     } finally {
@@ -275,6 +313,10 @@ export function useGroupingData() {
     const ch = supabase
       .channel("manual-grouping-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "email_sender_groups" }, () => loadGroups())
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_address_rules" }, () => {
+        // Single subscription replaces N per-zone channels.
+        loadAssignedRules();
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -295,5 +337,7 @@ export function useGroupingData() {
     isPopulating,
     loadData,
     populateAddressRules,
+    assignedByGroup,
+    reloadAssignedRules: loadAssignedRules,
   };
 }
