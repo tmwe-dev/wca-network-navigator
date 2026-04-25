@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
@@ -208,52 +209,41 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar: filtri + selezione massiva */}
+      {/* Tabs orizzontali: 3 categorie già pronte */}
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "safe" | "review")}>
+        <TabsList className="w-full grid grid-cols-3 h-auto">
+          <TabsTrigger value="all" className="gap-1.5 py-2">
+            Tutte
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{proposals.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="safe" className="gap-1.5 py-2 data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Sicure
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30">{safeAll.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="review" className="gap-1.5 py-2 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-700">
+            <Eye className="h-3.5 w-3.5" />
+            Da rivedere
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30">{reviewAll.length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Sub-toolbar: selettore master sul tab attivo */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 px-3 py-2">
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-            <Checkbox
-              checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
-              onCheckedChange={toggleAllVisible}
-              aria-label="Seleziona tutte le visibili"
-            />
-            <span className="font-medium">
-              {allVisibleSelected ? "Deseleziona tutte" : "Seleziona tutte le visibili"}
-              <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
-            </span>
-          </label>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex rounded-md border overflow-hidden">
-            <Button
-              size="sm"
-              variant={filter === "all" ? "default" : "ghost"}
-              className="h-7 rounded-none px-2 text-xs"
-              onClick={() => setFilter("all")}
-            >
-              Tutte ({proposals.length})
-            </Button>
-            <Button
-              size="sm"
-              variant={filter === "safe" ? "default" : "ghost"}
-              className="h-7 rounded-none gap-1 px-2 text-xs"
-              onClick={() => setFilter("safe")}
-            >
-              <ShieldCheck className="h-3 w-3" />
-              Sicure ({safeAll.length})
-            </Button>
-            <Button
-              size="sm"
-              variant={filter === "review" ? "default" : "ghost"}
-              className="h-7 rounded-none gap-1 px-2 text-xs"
-              onClick={() => setFilter("review")}
-            >
-              <Eye className="h-3 w-3" />
-              Da rivedere ({reviewAll.length})
-            </Button>
-          </div>
-        </div>
+        <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+          <Checkbox
+            checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+            onCheckedChange={toggleAllVisible}
+            aria-label="Seleziona tutte le visibili"
+          />
+          <span className="font-medium">
+            {allVisibleSelected ? "Deseleziona tutte in questa scheda" : "Seleziona tutte in questa scheda"}
+            <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
+          </span>
+        </label>
         <div className="text-xs text-muted-foreground">
-          {readOnly.length > 0 && <>{readOnly.length} read-only</>}
+          {readOnly.length > 0 && <>{readOnly.length} read-only nel totale</>}
         </div>
       </div>
 
