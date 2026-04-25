@@ -143,15 +143,32 @@ serve(async (req) => {
     });
 
     // ── Assemble full system prompt with context ──
-    const { systemPrompt, budgetStats } = await assembleSystemPrompt(
-      supabase,
-      systemPromptBase,
-      provider,
-      userId,
-      isConversational,
-      context,
-      messages
-    );
+    // Quando è presente un operatorBriefing self-contained (Harmonizer,
+    // TMWE ingestion, Migliora tutto), saltiamo l'assembly pesante: il
+    // briefing è già un system prompt completo e l'iniezione di doctrine,
+    // memoria, KB, ecc. (20-30KB) lo inquinerebbe saturando il modello.
+    const hasSelfContainedBriefing =
+      typeof (context as Record<string, unknown> | undefined)?.operatorBriefing === "string" &&
+      ((context as Record<string, unknown>).operatorBriefing as string).trim().length > 0;
+
+    let systemPrompt: string;
+    let budgetStats: Record<string, unknown>;
+    if (hasSelfContainedBriefing) {
+      systemPrompt = systemPromptBase;
+      budgetStats = { used: 0, dropped: [], truncated: [], skipped: "self_contained_briefing" };
+    } else {
+      const assembled = await assembleSystemPrompt(
+        supabase,
+        systemPromptBase,
+        provider,
+        userId,
+        isConversational,
+        context,
+        messages
+      );
+      systemPrompt = assembled.systemPrompt;
+      budgetStats = assembled.budgetStats as unknown as Record<string, unknown>;
+    }
 
     // ── Detect conversational repetitions ──
     let finalSystemPrompt = systemPrompt;
