@@ -210,6 +210,32 @@ export function useHarmonizeOrchestrator(userId: string) {
     });
   }, []);
 
+  /**
+   * Modifica inline il payload di una proposta (campo `after` per UPDATE/INSERT).
+   * L'edit viene anche persistito sul run salvato così sopravvive a refresh.
+   */
+  const editProposalAfter = useCallback(
+    (proposalId: string, newAfter: string) => {
+      setState((s) => {
+        const proposals = s.proposals.map((p) =>
+          p.id === proposalId ? { ...p, after: newAfter, edited_by_user: true } : p,
+        );
+        // Persistenza best-effort sul run DB (non bloccante).
+        if (s.runId) {
+          void supabase
+            .from("harmonize_runs")
+            .update({ proposals: proposals as never })
+            .eq("id", s.runId)
+            .then(({ error }) => {
+              if (error) console.warn("[harmonize] persist edit failed", error.message);
+            });
+        }
+        return { ...s, proposals };
+      });
+    },
+    [],
+  );
+
   const loadRunForReview = useCallback((run: HarmonizeRun) => {
     const proposals = run.proposals ?? [];
     const approvedIds = new Set(
@@ -287,5 +313,5 @@ export function useHarmonizeOrchestrator(userId: string) {
     }
   }, [userId]);
 
-  return { state, start, toggleApproval, approveAllSafe, loadRunForReview, execute, cancel, reset };
+  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, cancel, reset };
 }
