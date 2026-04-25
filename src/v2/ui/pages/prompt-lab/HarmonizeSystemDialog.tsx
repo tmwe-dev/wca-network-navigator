@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Layers, Upload, Trash2, Play, X, CheckCircle2, AlertCircle, BookOpen, RotateCw } from "lucide-react";
+import { Loader2, Layers, Upload, Trash2, Play, X, CheckCircle2, AlertCircle, BookOpen, RotateCw, FileText } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileParser";
@@ -200,6 +200,16 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
             Confronta lo stato reale del DB con lo stato desiderato della libreria TMWE e propone
             azioni tipizzate (UPDATE / INSERT / MOVE / DELETE) con evidenza e classificazione del gap.
           </DialogDescription>
+          <div className="pt-2">
+            <a
+              href="/docs/guida-formato-documenti-ai.md"
+              download="guida-formato-documenti-ai.md"
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Scarica la guida “Come preparare i documenti per l’AI” (.md)
+            </a>
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue="classic" className="flex-1 flex flex-col overflow-hidden">
