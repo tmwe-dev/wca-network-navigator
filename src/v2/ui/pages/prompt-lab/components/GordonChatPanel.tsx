@@ -325,11 +325,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
             {pending.text && (
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <Sparkles className="w-3 h-3" /> Nuovo "after" da Gordon
+                  <Sparkles className="w-3 h-3" /> Nuovo "after" già applicato
                 </div>
                 <pre className="text-[11px] bg-background/70 p-2 rounded border whitespace-pre-wrap max-h-40 overflow-auto">
                   {pending.text}
                 </pre>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Il testo è stato salvato nel campo "Dopo" a sinistra. Premi "Applica subito" per scriverlo nel DB.
+                </p>
               </div>
             )}
             {pending.ruleSuggestion && (
@@ -342,17 +345,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              {pending.text && (
-                <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleApplyHereOnly} disabled={savingRule}>
-                  <Check className="w-3 h-3 mr-1" /> Usa solo qui
+              {pending.ruleSuggestion && (
+                <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
+                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+                  Salva come regola permanente
                 </Button>
               )}
-              <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
-                {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
-                {pending.text ? "Usa qui + salva regola" : "Salva come regola permanente"}
-              </Button>
               <Button size="sm" variant="ghost" className="h-7 text-[11px] ml-auto" onClick={() => setPending(null)} disabled={savingRule}>
-                Ignora
+                Chiudi
               </Button>
             </div>
           </Card>
