@@ -249,6 +249,18 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           <h3 className="text-sm font-semibold leading-tight">Gordon</h3>
           <p className="text-[10px] text-muted-foreground leading-tight">Curatore — chat su questa proposta</p>
         </div>
+        {voiceId && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={toggleAutoVoice}
+            title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
+            aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
+          >
+            {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
