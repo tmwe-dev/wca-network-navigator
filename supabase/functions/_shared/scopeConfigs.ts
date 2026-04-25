@@ -206,6 +206,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: PLATFORM_TOOLS,
         temperature: 0.1,
         creditLabel: "Cockpit Assistant",
+        contextRequirements: ["profile", "memory", "kb", "doctrine", "holding_state", "active_workflow"],
         buildPrompt: (body, basePrompt) => {
           const contacts = (body.contacts as Array<Record<string, unknown>>) || [];
           const _contactSummary = contacts.map((c) => {
@@ -231,6 +232,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: [...PLATFORM_TOOLS, ...CONTACTS_EXTRA_TOOLS],
         creditLabel: "Contacts Assistant",
         localToolHandler: contactsToolHandler,
+        contextRequirements: ["profile", "kb"],
       };
 
     case "import":
@@ -239,6 +241,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: [...PLATFORM_TOOLS, ...IMPORT_EXTRA_TOOLS],
         creditLabel: "Import Assistant",
         localToolHandler: importToolHandler,
+        contextRequirements: ["profile"],
       };
 
     case "extension":
@@ -246,6 +249,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         // systemPrompt: provided by composeSystemPrompt({ scope: "extension" })
         tools: PLATFORM_TOOLS,
         creditLabel: "", // No credits for extension
+        contextRequirements: ["profile", "memory"],
       };
 
     case "strategic":
@@ -255,6 +259,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
         creditLabel: "", // No credits for strategic
+        contextRequirements: ["profile", "kb", "doctrine"],
       };
 
     case "kb-supervisor":
