@@ -15,7 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 interface Props {
@@ -23,6 +25,7 @@ interface Props {
   approvedIds: Set<string>;
   onToggle: (id: string) => void;
   onApproveAllSafe: () => void;
+  onEditAfter?: (proposalId: string, newAfter: string) => void;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -52,7 +55,7 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
   regression_full: "Regression completa",
 };
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter }: Props) {
   if (proposals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
