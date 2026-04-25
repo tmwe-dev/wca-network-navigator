@@ -61,7 +61,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [librarySource, setLibrarySource] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { state, start, toggleApproval, approveAllSafe, execute, cancel, reset } = useHarmonizeOrchestrator(userId);
+  const { state, start, toggleApproval, approveAllSafe, loadRunForReview, execute, cancel, reset } = useHarmonizeOrchestrator(userId);
 
   // ── Ingestion pipeline (tab "Documento grande") ──
   const ingestion = useHarmonizerLibraryIngestion(userId);
@@ -118,6 +118,11 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     }
     void agentic.resume(agenticFile ? { sourceFile: agenticFile, goal: agenticGoal } : { goal: agenticGoal });
   }, [agenticFile, agenticGoal, agentic]);
+
+  const handleOpenAgenticReview = useCallback(() => {
+    if (!agentic.state.reviewRun) return;
+    loadRunForReview(agentic.state.reviewRun);
+  }, [agentic.state.reviewRun, loadRunForReview]);
 
   // Il resume è abilitato se c'è un file appena caricato OPPURE se nello stato
   // persistito è disponibile il testo sorgente originale.
@@ -688,12 +693,17 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                     ))}
                   </div>
                 )}
-                {agentic.state.output && (
+                {(agentic.state.output || agentic.state.reviewRun) && (
                   <p className="text-xs text-muted-foreground">
-                    Run id: <code>{agentic.state.output.runId.slice(0, 8)}…</code> · Apri "Modalità classica" per review.
+                    Run id: <code>{(agentic.state.output?.runId ?? agentic.state.reviewRun?.id ?? "").slice(0, 8)}…</code> · Proposte salvate: {agentic.state.reviewRun?.proposals.length ?? 0}
                   </p>
                 )}
-                <Button variant="outline" size="sm" onClick={agentic.reset}>Nuova pipeline</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={handleOpenAgenticReview} disabled={!agentic.state.reviewRun || agentic.state.reviewRun.proposals.length === 0}>
+                    Apri review e salva nel DB
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={agentic.reset}>Nuova pipeline</Button>
+                </div>
               </div>
             )}
 

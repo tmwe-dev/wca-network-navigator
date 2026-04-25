@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { runAgenticHarmonizer, type EntityProgress, type OrchestratorOutput, type OrchestratorStats, type OrchestratorWarning } from "./agentOrchestrator";
 import { parseEntities } from "./entityParser";
 import type { ParsedFile } from "../utils/fileParser";
+import { findActiveHarmonizeRun, type HarmonizeRun } from "@/data/harmonizeRuns";
 
 export type AgenticPhase = "idle" | "parsing" | "indexing" | "processing" | "reviewing" | "done" | "error" | "cancelled";
 
@@ -28,6 +29,8 @@ export interface AgenticState {
   sourceFileName?: string;
   /** Goal dell'ultima esecuzione, persistito per il resume. */
   lastGoal?: string;
+  /** Run salvata lato DB pronta per review/esecuzione anche dopo refresh. */
+  reviewRun?: HarmonizeRun | null;
 }
 
 const INITIAL: AgenticState = {
@@ -90,6 +93,19 @@ export function useAgenticHarmonizer(userId: string) {
     if (restored) setState(restored);
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    findActiveHarmonizeRun(userId)
+      .then((run) => {
+        if (!cancelled && run?.scope === "library_agentic_v2" && run.proposals.length > 0) {
+          setState((s) => ({ ...s, reviewRun: run }));
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [userId]);
+
   // Persisti ad ogni transizione di stato.
   useEffect(() => {
     persistState(userId, state);
@@ -124,7 +140,8 @@ export function useAgenticHarmonizer(userId: string) {
         },
       });
       const processedEntityIds = output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id);
-      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds, stats: output.stats, warnings: output.warnings, output, total: output.entities.length }));
+      const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
+      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds, stats: output.stats, warnings: output.warnings, output, total: output.entities.length, reviewRun }));
     } catch (err) {
       setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
     }
@@ -180,7 +197,8 @@ export function useAgenticHarmonizer(userId: string) {
           shouldAbort: () => abortRef.current,
         },
       });
-      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds: output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id), stats: output.stats, warnings: output.warnings, output, total: output.entities.length, sourceText, sourceFileName, lastGoal: goal }));
+      const reviewRun = await findActiveHarmonizeRun(userId).catch(() => null);
+      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds: output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id), stats: output.stats, warnings: output.warnings, output, total: output.entities.length, sourceText, sourceFileName, lastGoal: goal, reviewRun }));
     } catch (err) {
       setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
     }

@@ -1,4 +1,3 @@
-import "../_shared/llmFetchInterceptor.ts";
 /**
  * ai-gateway-micro — Endpoint minimale per micro-call AI dell'Armonizzatore V2.
  *
