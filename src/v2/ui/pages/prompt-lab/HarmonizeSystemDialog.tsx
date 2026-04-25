@@ -29,10 +29,35 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+// ── Persistenza UI (goal + ultimo file usato) ──
+// I file caricati non sono persistibili (sono Blob in memoria), ma persistiamo
+// il loro nome così che la UI possa ricordare all'utente cosa ricaricare.
+const UI_STORAGE_KEY = "harmonizerV2:dialog:ui";
+interface PersistedUi {
+  goal?: string;
+  agenticGoal?: string;
+  ingestionGoal?: string;
+  agenticFileName?: string;
+  ingestionFileName?: string;
+}
+function loadUi(): PersistedUi {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(window.localStorage.getItem(UI_STORAGE_KEY) ?? "{}") as PersistedUi; }
+  catch { return {}; }
+}
+function saveUi(patch: Partial<PersistedUi>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const next = { ...loadUi(), ...patch };
+    window.localStorage.setItem(UI_STORAGE_KEY, JSON.stringify(next));
+  } catch { /* noop */ }
+}
+
 export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const userId = user?.id ?? "";
-  const [goal, setGoal] = useState("Armonizza l'intero sistema con la libreria TMWE.");
+  const persistedUi = loadUi();
+  const [goal, setGoal] = useState(persistedUi.goal ?? "Armonizza l'intero sistema con la libreria TMWE.");
   const [librarySource, setLibrarySource] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,16 +68,23 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const ingestionFileRef = useRef<HTMLInputElement>(null);
   const [ingestionFile, setIngestionFile] = useState<ParsedFile | null>(null);
   const [ingestionGoal, setIngestionGoal] = useState(
-    "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
+    persistedUi.ingestionGoal ?? "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
   );
+  const lastIngestionFileName = persistedUi.ingestionFileName;
 
   // ── Agentic V2 (entity-by-entity) ──
   const agentic = useAgenticHarmonizer(userId);
   const agenticFileRef = useRef<HTMLInputElement>(null);
   const [agenticFile, setAgenticFile] = useState<ParsedFile | null>(null);
   const [agenticGoal, setAgenticGoal] = useState(
-    "Armonizza entity-by-entity con micro-call AI dedicate.",
+    persistedUi.agenticGoal ?? "Armonizza entity-by-entity con micro-call AI dedicate.",
   );
+  const lastAgenticFileName = persistedUi.agenticFileName;
+
+  // Persisti i goal a ogni cambio (debounce-less: scrittura veloce su localStorage).
+  useEffect(() => { saveUi({ goal }); }, [goal]);
+  useEffect(() => { saveUi({ agenticGoal }); }, [agenticGoal]);
+  useEffect(() => { saveUi({ ingestionGoal }); }, [ingestionGoal]);
 
   const handleAgenticUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,6 +92,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     try {
       const parsed = await parseUploadedFile(file);
       setAgenticFile(parsed);
+      saveUi({ agenticFileName: parsed.name });
       toast.success(`File caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
@@ -117,6 +150,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
     try {
       const parsed = await parseUploadedFile(file);
       setIngestionFile(parsed);
+      saveUi({ ingestionFileName: parsed.name });
       toast.success(`File caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
