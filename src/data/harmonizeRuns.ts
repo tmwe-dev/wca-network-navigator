@@ -253,3 +253,38 @@ export async function findRecentHarmonizeRuns(userId: string, limit = 5): Promis
   if (error) throw error;
   return (data as unknown as HarmonizeRun[]) ?? [];
 }
+
+/**
+ * Appende uno o più messaggi alla chat persistente di una specifica proposta.
+ * Read-modify-write atomico (stesso pattern di updateHarmonizeProposal).
+ */
+export async function appendProposalChat(
+  runId: string,
+  proposalId: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<HarmonizeProposal[]> {
+  const { data, error: readErr } = await supabase
+    .from("harmonize_runs" as never)
+    .select("proposals" as never)
+    .eq("id" as never, runId as never)
+    .single();
+  if (readErr) throw readErr;
+
+  const current = ((data as unknown as { proposals: HarmonizeProposal[] })?.proposals ?? []);
+  const ts = new Date().toISOString();
+  const stamped = messages.map((m) => ({ ...m, ts }));
+  let found = false;
+  const next = current.map((proposal) => {
+    if (proposal.id !== proposalId) return proposal;
+    found = true;
+    return { ...proposal, chat: [...(proposal.chat ?? []), ...stamped] };
+  });
+  if (!found) throw new Error("Proposta non trovata nel run salvato");
+
+  const { error } = await supabase
+    .from("harmonize_runs" as never)
+    .update({ proposals: next } as never)
+    .eq("id" as never, runId as never);
+  if (error) throw error;
+  return next;
+}
