@@ -210,6 +210,29 @@ export function useHarmonizeOrchestrator(userId: string) {
     });
   }, []);
 
+  const loadRunForReview = useCallback((run: HarmonizeRun) => {
+    const proposals = run.proposals ?? [];
+    const approvedIds = new Set(
+      proposals
+        .filter((p) =>
+          p.resolution_layer === "text" &&
+          p.action !== "DELETE" &&
+          p.impact !== "high" &&
+          !(p.action === "INSERT" && p.target.table === "agents"),
+        )
+        .map((p) => p.id),
+    );
+    setState({
+      ...INITIAL,
+      phase: "review",
+      runId: run.id,
+      proposals,
+      approvedIds,
+      executedCount: run.executed_count ?? 0,
+      failedCount: run.failed_count ?? 0,
+    });
+  }, []);
+
   const execute = useCallback(async () => {
     if (!state.runId) return;
     setState((s) => ({ ...s, phase: "executing", loading: true }));
@@ -264,5 +287,5 @@ export function useHarmonizeOrchestrator(userId: string) {
     }
   }, [userId]);
 
-  return { state, start, toggleApproval, approveAllSafe, execute, cancel, reset };
+  return { state, start, toggleApproval, approveAllSafe, loadRunForReview, execute, cancel, reset };
 }
