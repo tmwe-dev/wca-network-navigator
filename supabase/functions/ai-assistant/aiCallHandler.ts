@@ -219,8 +219,10 @@ export async function callAiWithFallback(
       if (typeof sc.maxTokens === "number") scopeMaxTokens = sc.maxTokens;
     } catch { /* ignore */ }
   }
-  // Safety fallback per kb-supervisor: 32K output budget consente JSON TMWE densi
-  // (cap 8000 precedente troncava a metà la prima stringa di un chunk denso).
+  // kb-supervisor: prima del fix, max_tokens non veniva propagato affatto al
+  // gateway → output troncato dal default del modello. Ora 32K esplicito per
+  // accomodare JSON TMWE densi (proposals + extracted_facts + new_conflicts).
+  // Modello scelto: google/gemini-2.5-flash (vedi scopeConfigs).
   if (scope === "kb-supervisor" && scopeMaxTokens === undefined) {
     scopeMaxTokens = 32000;
   }
