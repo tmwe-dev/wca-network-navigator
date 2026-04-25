@@ -81,12 +81,15 @@ export async function buildHarmonizerKbContext(
     for (const f of files) fileSet.add(f);
   }
 
-  // 2. Fetch parallelo, ordinato per nome (per determinismo del prompt).
-  // ALWAYS_INJECT mantiene il proprio ordine (priorità), poi tabelle in ordine.
+  // 2. Priorità INVERTITA: i file table-specific vanno PRIMA, perché
+  // contengono lo schema vincolante delle tabelle target del chunk
+  // (la cosa più rilevante per la generazione corretta del JSON).
+  // ALWAYS_INJECT (policy/constraints) viene aggiunto come complemento e
+  // sarà il primo a essere scartato se il budget si esaurisce.
   const tableFiles = Array.from(fileSet)
     .filter((f) => !ALWAYS_INJECT.includes(f))
     .sort();
-  const fileList = [...ALWAYS_INJECT.filter((f) => fileSet.has(f)), ...tableFiles];
+  const fileList = [...tableFiles, ...ALWAYS_INJECT.filter((f) => fileSet.has(f))];
   const contents = await Promise.all(
     fileList.map(async (f) => ({ name: f, body: await fetchKbFile(f) })),
   );
