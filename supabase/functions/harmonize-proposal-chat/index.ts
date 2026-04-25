@@ -54,6 +54,74 @@ function buildContextMessage(p: Proposal): string {
   ].join("\n");
 }
 
+/**
+ * VOICE-AWARE PREAMBLE
+ * Gordon parla a voce via ElevenLabs TTS dentro Atlas/PromptLab.
+ * Deve evitare markdown, liste, code-blocks (fonosintesi li legge male).
+ * I marker [REGENERATED_AFTER] e [SUGGEST_KB_RULE] sono filtrati prima del TTS.
+ */
+const VOICE_PREAMBLE = [
+  "## CONTESTO CANALE",
+  "Stai parlando A VOCE all'operatore tramite sintesi vocale ElevenLabs.",
+  "Regole obbligatorie per la voce:",
+  "- Frasi brevi (max ~25 parole), tono naturale, parlato umano.",
+  "- NIENTE markdown, NIENTE elenchi puntati, NIENTE code-blocks.",
+  "- NIENTE numeri di paragrafo o riferimenti tipo 'come visto al punto 3'.",
+  "- I marker tecnici [REGENERATED_AFTER]…[/REGENERATED_AFTER] e [SUGGEST_KB_RULE]…[/SUGGEST_KB_RULE] vanno emessi SOLO quando servono e SEPARATAMENTE dalla risposta parlata.",
+  "- Nella parte parlata, accenna che hai preparato un nuovo testo o una regola con frasi naturali tipo 'ti propongo questa nuova versione' o 'salviamola come regola'.",
+].join("\n");
+
+/**
+ * Carica i file .md chiave della KB harmonizer servendoli direttamente
+ * dal bucket public via SUPABASE_URL. In edge function NON abbiamo accesso a
+ * `/public`, quindi li leggiamo via fetch dall'origin del progetto.
+ */
+const HARMONIZER_KB_FILES = [
+  "00-context-wca.md",
+  "30-business-constraints.md",
+  "40-agents-schema.md",
+] as const;
+
+const HARMONIZER_KB_CHAR_BUDGET = 6_000;
+
+async function loadHarmonizerKbContext(): Promise<string> {
+  // Origin pubblico del progetto (i file sono in /public/kb-source/harmonizer/).
+  // In edge function preferiamo l'host del Lovable preview / production.
+  const publicOrigin = Deno.env.get("PUBLIC_APP_ORIGIN") ?? "https://wca-network-navigator.lovable.app";
+  const parts: string[] = [];
+  let used = 0;
+  for (const f of HARMONIZER_KB_FILES) {
+    try {
+      const resp = await fetch(`${publicOrigin}/kb-source/harmonizer/${f}`);
+      if (!resp.ok) continue;
+      const body = (await resp.text()).trim();
+      const block = `\n\n--- ${f} ---\n${body}`;
+      if (used + block.length > HARMONIZER_KB_CHAR_BUDGET) break;
+      parts.push(block);
+      used += block.length;
+    } catch (_e) { /* tolleriamo 404 */ }
+  }
+  if (parts.length === 0) return "";
+  return [
+    "## KB HARMONIZER — FONTI VINCOLANTI (usa questi contenuti per giustificare le risposte)",
+    parts.join("\n"),
+  ].join("\n");
+}
+
+/** Glossario operativo: usa kb_entries category='doctrine' come dizionario base. */
+async function loadGlossaryFromKb(supabase: ReturnType<typeof createClient>): Promise<string> {
+  const { data } = await supabase
+    .from("kb_entries")
+    .select("title, content")
+    .eq("category", "doctrine")
+    .eq("is_active", true)
+    .order("priority", { ascending: false })
+    .limit(8);
+  if (!data || data.length === 0) return "";
+  const blocks = data.map((r) => `### ${r.title}\n${String(r.content || "").slice(0, 800)}`);
+  return ["## GLOSSARIO / DOTTRINA (riferimento di linguaggio)", ...blocks].join("\n\n");
+}
+
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -119,15 +187,28 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "PROPOSAL_NOT_FOUND" }), { status: 404, headers });
     }
 
-    // 3) Costruisci messaggi
+    // 3) Carica KB (harmonizer .md + glossario doctrine) in parallelo
+    const [harmonizerKb, glossary] = await Promise.all([
+      loadHarmonizerKbContext(),
+      loadGlossaryFromKb(supabase),
+    ]);
+
+    // 4) Costruisci messaggi
     const history: ChatRow[] = proposal.chat ?? [];
+    const fullSystem = [
+      systemPrompt,
+      VOICE_PREAMBLE,
+      glossary,
+      harmonizerKb,
+      buildContextMessage(proposal),
+    ].filter(Boolean).join("\n\n");
     const messages = [
-      { role: "system", content: `${systemPrompt}\n\n${buildContextMessage(proposal)}` },
+      { role: "system", content: fullSystem },
       ...history.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: String(user_message) },
     ];
 
-    // 4) Chiama Lovable AI Gateway
+    // 5) Chiama Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI_NOT_CONFIGURED" }), { status: 500, headers });
