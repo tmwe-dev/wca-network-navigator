@@ -41,6 +41,22 @@ interface PendingRegeneration {
   ruleSuggestion: { title: string; content: string } | null;
 }
 
+const DEFAULT_GORDON_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
+const SILENT_AUDIO_SRC = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQQAAAAAAA==";
+
+function cleanReplyForSpeech(content: string) {
+  const withoutTechnicalBlocks = content
+    .replace(/\[REGENERATED_AFTER\][\s\S]*?\[\/REGENERATED_AFTER\]/g, "Ho preparato una nuova versione del testo. Dimmi se la accetti o cosa vuoi cambiare.")
+    .replace(/\[SUGGEST_KB_RULE\][\s\S]*?\[\/SUGGEST_KB_RULE\]/g, "Posso anche salvare questa come regola per le prossime armonizzazioni.");
+
+  return withoutTechnicalBlocks
+    .replace(/_\(([^)]*)\)_/g, "$1")
+    .replace(/[#*`~\[\]>|]/g, "")
+    .replace(/\n{2,}/g, ". ")
+    .replace(/\n/g, " ")
+    .trim();
+}
+
 export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, voiceId, agentId }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>(proposal.chat ?? []);
   const [input, setInput] = useState("");
@@ -53,11 +69,30 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioActivationRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenIdxRef = useRef<number>(-1);
+  const resolvedVoiceId = voiceId || DEFAULT_GORDON_VOICE_ID;
 
   const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
+
+  const unlockAudioPlayback = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const audio = audioActivationRef.current ?? new Audio(SILENT_AUDIO_SRC);
+    audioActivationRef.current = audio;
+    audio.muted = true;
+    audio.src = SILENT_AUDIO_SRC;
+    void audio.play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+      })
+      .catch(() => {
+        audio.muted = false;
+      });
+  }, []);
 
   // Reset SOLO quando cambia la proposta (non quando la chat si aggiorna server-side,
   // altrimenti lastSpokenIdxRef si reincrementa e l'autoplay TTS viene saltato).
@@ -80,6 +115,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (autoVoice) unlockAudioPlayback();
     // Stoppa la dettatura vocale se attiva, così l'input torna pulito
     if (speech.listening) speech.toggle();
     setInput("");
@@ -129,7 +165,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     } finally {
       setLoading(false);
     }
-  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated, speech]);
+  }, [input, loading, autoVoice, unlockAudioPlayback, runId, proposal.id, agentId, speech]);
 
   const playTTS = async (text: string) => {
     if (!voiceId) {
