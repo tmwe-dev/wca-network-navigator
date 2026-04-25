@@ -23,6 +23,8 @@ import {
   Wrench,
   User,
   AlertTriangle,
+  List,
+  UserSquare2,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
@@ -30,6 +32,8 @@ import type { SuggestedImprovement, SuggestionPriority } from "@/data/suggestedI
 import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns";
 import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
+import { SingleProposalReview } from "./components/SingleProposalReview";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 function priorityColor(p: SuggestionPriority): string {
