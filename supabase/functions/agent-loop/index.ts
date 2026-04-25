@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * agent-loop edge function — One iteration of the agent loop.
  * Receives goal + history, returns AI decision with tool_calls.

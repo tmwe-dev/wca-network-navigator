@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // AGENT EXECUTE - Main Edge Function Entry Point
 // Orchestrates auth, context, prompt assembly, execution modes

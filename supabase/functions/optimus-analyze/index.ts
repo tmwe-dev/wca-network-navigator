@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * optimus-analyze — Optimus Scraper Agent
  * Analizza il DOM di pagine WhatsApp/LinkedIn e genera un piano di estrazione

@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * ai-deep-search-helper — server-side wrapper per chiamate AI Gateway leggere
  * usate dal Deep Search client (useDeepSearchLocal).

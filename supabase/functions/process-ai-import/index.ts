@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * process-ai-import — AI-powered contact import enrichment Edge Function.
  *

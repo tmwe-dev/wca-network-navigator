@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * sherlock-extract — Edge function che usa Lovable AI (gemini-3-flash-preview)
  * per estrarre findings strutturati da un markdown già scrapato.

@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * ai-arena-suggest/index.ts — Suggests never-contacted partners for the AI Arena.
  */

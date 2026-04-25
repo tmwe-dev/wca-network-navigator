@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * generate-email/index.ts — Orchestrator (~120 LOC).
  * Delegates to contextAssembler, promptBuilder, responseParser.

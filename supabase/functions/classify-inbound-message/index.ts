@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * classify-inbound-message — Universal inbound message classifier (email, whatsapp, linkedin).
  * Invoked by pg_net from on_inbound_message trigger.
