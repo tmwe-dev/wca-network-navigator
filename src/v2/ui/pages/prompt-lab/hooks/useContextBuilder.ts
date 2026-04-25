@@ -24,12 +24,12 @@ const MAX_FILES = 6;
 const MAX_FILE_CHARS = 6_000;
 const MAX_TOTAL_FILE_CHARS = 20_000;
 
-// Limiti per contesto — il Lab Agent deve avere piena visione di tutto
-// Dottrina e system map passate INTEGRALMENTE (non troncate)
-const MAX_RELEVANT_DOCTRINE_CHARS = 100_000; // praticamente illimitato
+// Limiti REALI per stabilità AI: il modello non può ragionare su 3M token.
+// Per "Migliora tutto" su KB grande, il contesto per blocco resta <15K chars.
+const MAX_RELEVANT_DOCTRINE_CHARS = 10_000;  // budget reale per call
 const MAX_RELEVANT_FILE_CHARS = 20_000;
-const MAX_NEARBY_BLOCKS = 50;  // tutti i blocchi dello stesso tab
-const MAX_INDEX_BLOCKS = 200;  // tutti i blocchi di altri tab
+const MAX_NEARBY_BLOCKS = 5;                  // top blocchi vicini con contenuto completo
+const MAX_INDEX_BLOCKS = 100;                 // indice compatto per gli altri
 
 function compactText(text: string, maxChars: number, label: string): string {
   const normalized = text.replace(/\u0000/g, "").replace(/\s{3,}/g, "  ").trim();
@@ -68,61 +68,61 @@ function relevanceScore(block: Block, tabLabel: string, referenceText: string): 
 }
 
 /**
- * Passa la dottrina COMPLETA al Lab Agent.
+ * Passa la dottrina al Lab Agent, troncata a max 10K chars per call.
  *
- * Il Lab Agent deve avere piena visione di tutta la dottrina per:
- * - verificare duplicazioni tra blocchi
- * - individuare contraddizioni
- * - proporre centralizzazione di regole ripetute
- * - rispettare la gerarchia di verità
- *
- * Le sezioni rilevanti al blocco corrente vengono evidenziate per contesto,
- * ma NIENTE viene tagliato.
+ * Strategia: split per sezioni `### `, score per rilevanza al blocco, prendi
+ * le top sezioni fino a esaurire il budget. Le sezioni omesse vengono
+ * dichiarate nell'header per trasparenza.
  */
 export function filterDoctrineForBlock(
   fullDoctrine: string,
   block: Block,
   tabLabel: string,
 ): string {
-  // Se la dottrina è breve, passala così com'è
   if (fullDoctrine.length <= MAX_RELEVANT_DOCTRINE_CHARS) {
-    return `--- KB DOCTRINE COMPLETA ---\n${fullDoctrine}\n--- FINE KB DOCTRINE ---`;
+    return `--- KB DOCTRINE (rilevante per "${block.label}") ---\n${fullDoctrine}\n--- FINE KB DOCTRINE ---`;
   }
 
-  // Per dottrine molto grandi, splitta per sezioni e ordina per rilevanza
-  // ma includi TUTTE le sezioni — quelle rilevanti prima, le altre dopo
   const sections = fullDoctrine.split(/(?=^### )/m).filter((s) => s.trim());
-  if (sections.length === 0) return fullDoctrine;
+  if (sections.length === 0) {
+    return fullDoctrine.slice(0, MAX_RELEVANT_DOCTRINE_CHARS);
+  }
 
   const scored = sections.map((section) => ({
     section,
     score: relevanceScore(block, tabLabel, section),
     title: section.split("\n")[0]?.replace(/^###\s*/, "").trim() || "(senza titolo)",
   }));
-
-  // Ordina: sezioni più rilevanti prima, ma TUTTE incluse
   scored.sort((a, b) => b.score - a.score);
 
   const parts: string[] = [];
-  parts.push(`--- KB DOCTRINE COMPLETA (${sections.length} sezioni, ordinate per rilevanza al blocco "${block.label}") ---`);
+  let budget = MAX_RELEVANT_DOCTRINE_CHARS;
+  let included = 0;
   for (const s of scored) {
-    parts.push(s.section);
+    if (budget <= 0) break;
+    const chunk = s.section.slice(0, budget);
+    parts.push(chunk);
+    budget -= chunk.length;
+    included++;
   }
+  const omitted = sections.length - included;
+  const header = `--- KB DOCTRINE (top ${included} su ${sections.length} sezioni, ordinate per rilevanza a "${block.label}"${omitted > 0 ? ` — ${omitted} omesse per budget` : ""}) ---`;
+  parts.unshift(header);
   parts.push("--- FINE KB DOCTRINE ---");
 
   return parts.join("\n");
 }
 
 /**
- * Costruisce la system map COMPLETA per il Lab Agent.
+ * Costruisce la system map per il Lab Agent come compact index.
  *
- * Il Lab Agent deve vedere TUTTI i blocchi del sistema per:
- * - verificare duplicazioni cross-tab
- * - individuare contraddizioni tra prompt diversi
- * - capire il contesto completo del blocco corrente
+ * Strategia (token-aware):
+ * - Top 5 blocchi dello stesso tab (per relevanceScore) → contenuto COMPLETO
+ *   per coerenza diretta con i vicini.
+ * - Tutti gli altri (stesso tab residui + altri tab) → INDICE COMPATTO:
+ *   solo `[tab] label`, niente più snippet da 800 chars.
  *
- * Blocchi dello stesso tab: contenuto integrale (sono i "vicini" diretti).
- * Blocchi di altri tab: contenuto sintetico ma con label + snippet significativo.
+ * Risultato: contesto da ~250×800 = 200K chars → ~5×3K + 100×40 = ~19K chars.
  */
 export function filterSystemMapForBlock(
   allBlocks: ReadonlyArray<{ tabLabel: string; block: Block }>,
@@ -144,27 +144,46 @@ export function filterSystemMapForBlock(
 
   const parts: string[] = [];
 
-  // Blocchi dello stesso tab: contenuto INTEGRALE
-  parts.push(`\n--- BLOCCHI VICINI (stesso tab: ${currentTabLabel}) — NON contraddirli ---`);
-  for (const item of sameTab.slice(0, MAX_NEARBY_BLOCKS)) {
-    parts.push(`\n### ${item.block.label}\n${item.block.content}`);
-  }
-  parts.push("--- FINE BLOCCHI VICINI ---");
+  // Top N blocchi dello stesso tab: contenuto completo (per coerenza diretta)
+  const nearbyScored = sameTab
+    .map((item) => ({
+      item,
+      score: relevanceScore(item.block, currentTabLabel, currentBlock.content),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_NEARBY_BLOCKS);
 
-  // Altri tab: label + snippet esteso per piena visibilità
-  parts.push("\n--- ALTRI TAB DEL SISTEMA (per coerenza globale) ---");
+  if (nearbyScored.length > 0) {
+    parts.push(`--- BLOCCHI VICINI (top ${nearbyScored.length} dello stesso tab: ${currentTabLabel} — NON contraddirli) ---`);
+    for (const { item } of nearbyScored) {
+      parts.push(`### ${item.block.label}\n${item.block.content}`);
+    }
+    parts.push("--- FINE BLOCCHI VICINI ---");
+  }
+
+  // Indice compatto per TUTTI gli altri (solo label + tab — awareness)
+  parts.push("\n--- INDICE SISTEMA (tutti gli altri blocchi — solo titoli per awareness) ---");
   let indexCount = 0;
+
+  // Prima i restanti dello stesso tab (esclusi i top N)
+  const nearbyIds = new Set(nearbyScored.map((n) => n.item.block.id));
+  for (const item of sameTab) {
+    if (nearbyIds.has(item.block.id)) continue;
+    if (indexCount >= MAX_INDEX_BLOCKS) break;
+    parts.push(`  [${currentTabLabel}] ${item.block.label}`);
+    indexCount++;
+  }
+
+  // Poi gli altri tab
   for (const [tab, blocks] of otherTabs) {
     if (indexCount >= MAX_INDEX_BLOCKS) break;
-    parts.push(`\n## ${tab} (${blocks.length} blocchi)`);
     for (const { block } of blocks) {
       if (indexCount >= MAX_INDEX_BLOCKS) break;
-      const snippet = block.content.slice(0, 800).replace(/\s+/g, " ").trim();
-      parts.push(`  • ${block.label}: ${snippet}${block.content.length > 800 ? "…" : ""}`);
+      parts.push(`  [${tab}] ${block.label}`);
       indexCount++;
     }
   }
-  parts.push("--- FINE ALTRI TAB ---");
+  parts.push("--- FINE INDICE SISTEMA ---");
 
   return parts.join("\n");
 }
