@@ -91,6 +91,15 @@ export interface HarmonizeProposal {
   user_correction_note?: string;
   /** Ultimo "after" rigenerato da Gordon (preview prima dell'approvazione). */
   regenerated_after?: string;
+  /**
+   * True se l'AI ha riconosciuto questo blocco come una NOTA DOCUMENTALE
+   * (riferimenti interni, indici, "vedi pag. X", commenti dell'autore, paginazione,
+   * meta-istruzioni di redazione) e NON come un contenuto canonico da inserire in KB/prompt.
+   * Le note documentali vengono mostrate in un tab dedicato e pre-flaggate "scarta".
+   */
+  is_document_note?: boolean;
+  /** Spiegazione breve del perché l'AI l'ha classificato come nota documentale. */
+  document_note_reason?: string;
 }
 
 export interface InventorySummary {
