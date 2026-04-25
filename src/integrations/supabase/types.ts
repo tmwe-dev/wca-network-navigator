@@ -2819,6 +2819,30 @@ export type Database = {
           },
         ]
       }
+      cron_run_log: {
+        Row: {
+          error: string | null
+          id: string
+          job_name: string
+          ran_at: string
+          result: Json | null
+        }
+        Insert: {
+          error?: string | null
+          id?: string
+          job_name: string
+          ran_at?: string
+          result?: Json | null
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          job_name?: string
+          ran_at?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       cron_runs: {
         Row: {
           created_at: string
