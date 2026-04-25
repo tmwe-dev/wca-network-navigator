@@ -21,15 +21,15 @@ Rispondi in 3-4 frasi MAX (TTS), niente markdown/tabelle/emoji.
 Discuti strategie e priorità. NON leggere email/messaggi ad alta voce. NON eseguire tool di scrittura.`;
 
 export async function composeSystemPrompt(opts: ComposeSystemPromptOptions): Promise<string> {
-  // kb-supervisor è uno scope funzionale (es. Harmonizer): il briefing operatore
-  // contiene il contratto di output (JSON puro). Non possiamo applicare il
-  // CONVERSATIONAL_CORE LUCA, altrimenti il modello risponde in stile voce
-  // ignorando il contratto → parser fallisce → "token explosion" apparente.
-  if (opts.conversational && opts.scope !== "kb-supervisor") {
+  // Se un briefing operatore è presente in modalità conversational, è un system
+  // prompt self-contained (Harmonizer, ingestion TMWE, Prompt Lab): non va
+  // contaminato dal core voce LUCA né dalla dottrina generalista.
+  if (opts.conversational && opts.operatorBriefing?.trim()) {
+    return opts.operatorBriefing.trim();
+  }
+
+  if (opts.conversational) {
     const parts: string[] = [CONVERSATIONAL_CORE];
-    if (opts.operatorBriefing?.trim()) {
-      parts.push(`⚡ BRIEFING OPERATORE (PRIORITÀ MASSIMA)\n\n${opts.operatorBriefing.trim()}`);
-    }
     return parts.join("\n\n---\n\n");
   }
 
