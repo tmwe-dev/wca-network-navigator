@@ -231,7 +231,7 @@ export default function AutomatedProcessesPanel() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Power className={`w-4 h-4 ${st.enabled ? "text-green-600" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${st.enabled ? "text-success" : "text-muted-foreground"}`} />
                   <h3 className="font-semibold">{cfg.label}</h3>
                   {!st.enabled && <Badge variant="secondary">OFF</Badge>}
                 </div>
@@ -280,7 +280,7 @@ export default function AutomatedProcessesPanel() {
                 <Clock className="w-3 h-3 text-muted-foreground" />
                 <span className="text-muted-foreground">Ultimo run:</span>
                 <span className="font-medium">{formatRelative(st.lastRun)}</span>
-                {st.lastRun && !st.lastError && <CheckCircle2 className="w-3 h-3 text-green-600" />}
+                {st.lastRun && !st.lastError && <CheckCircle2 className="w-3 h-3 text-success" />}
               </div>
               {st.enabled && nextInMin !== null && (
                 <div className="flex items-center gap-1">
