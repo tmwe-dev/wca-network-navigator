@@ -244,6 +244,7 @@ export default function SuggestionsReviewPage() {
     loadRunForReview,
     toggleApproval,
     approveAllSafe,
+    editProposalAfter,
     execute,
   } = useHarmonizeOrchestrator(userId);
   const [runs, setRuns] = useState<HarmonizeRun[]>([]);
@@ -336,6 +337,7 @@ export default function SuggestionsReviewPage() {
                 approvedIds={harmonizeState.approvedIds}
                 onToggle={toggleApproval}
                 onApproveAllSafe={approveAllSafe}
+                onEditAfter={editProposalAfter}
               />
               <div className="flex items-center justify-between border-t pt-3">
                 <span className="text-xs text-muted-foreground">{harmonizeState.approvedIds.size} proposte selezionate</span>

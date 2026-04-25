@@ -15,14 +15,83 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
+
+function EditableAfter({
+  value,
+  editable,
+  onSave,
+}: {
+  value: string;
+  editable: boolean;
+  onSave: (next: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (!editing) {
+    return (
+      <div>
+        <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+          <span>Dopo:</span>
+          {editable && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={() => {
+                setDraft(value);
+                setEditing(true);
+              }}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Modifica
+            </Button>
+          )}
+        </div>
+        <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-48 overflow-auto">{value}</pre>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="text-xs font-semibold text-muted-foreground mb-1">Dopo (in modifica):</div>
+      <Textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="text-xs font-mono min-h-[120px]"
+      />
+      <div className="flex justify-end gap-2 mt-1">
+        <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditing(false)}>
+          <X className="h-3 w-3 mr-1" />
+          Annulla
+        </Button>
+        <Button
+          size="sm"
+          className="h-7"
+          onClick={() => {
+            onSave(draft);
+            setEditing(false);
+          }}
+        >
+          <Check className="h-3 w-3 mr-1" />
+          Salva modifica
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   proposals: HarmonizeProposal[];
   approvedIds: Set<string>;
   onToggle: (id: string) => void;
   onApproveAllSafe: () => void;
+  onEditAfter?: (proposalId: string, newAfter: string) => void;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -52,7 +121,7 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
   regression_full: "Regression completa",
 };
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter }: Props) {
   if (proposals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
@@ -157,10 +226,11 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                           </div>
                         )}
                         {p.after != null && (
-                          <div>
-                            <div className="text-xs font-semibold text-muted-foreground">Dopo:</div>
-                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-32 overflow-auto">{p.after}</pre>
-                          </div>
+                          <EditableAfter
+                            value={p.after}
+                            editable={!!onEditAfter && !isReadOnly}
+                            onSave={(v) => onEditAfter?.(p.id, v)}
+                          />
                         )}
                         <div>
                           <div className="text-xs font-semibold text-muted-foreground">Evidenza ({p.evidence.source}):</div>
