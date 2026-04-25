@@ -81,16 +81,19 @@ async function loadHistoryStats(
   partnerId: string | null,
 ): Promise<{ touchCount: number; daysSince: number | null; lastChannel: string | null }> {
   if (!partnerId) return { touchCount: 0, daysSince: null, lastChannel: null };
-  const { data } = await supabase.from("activities")
-    .select("activity_type, sent_at, created_at")
+  // Compact: ci servono solo l'ultima interazione + un count totale.
+  // Limite 5 sufficiente: consumo token minimo, ridotto da 20.
+  const { data, count } = await supabase.from("activities")
+    .select("activity_type, sent_at, created_at", { count: "exact" })
     .eq("partner_id", partnerId)
     .in("activity_type", ["email", "whatsapp", "linkedin"])
-    .order("created_at", { ascending: false }).limit(20);
+    .order("created_at", { ascending: false }).limit(5);
   const rows = (data || []) as Array<{ activity_type: string; sent_at: string | null; created_at: string }>;
+  const touchCount = count ?? rows.length;
   if (!rows.length) return { touchCount: 0, daysSince: null, lastChannel: null };
   const lastTs = rows[0].sent_at || rows[0].created_at;
   const daysSince = lastTs ? Math.floor((Date.now() - new Date(lastTs).getTime()) / 86400000) : null;
-  return { touchCount: rows.length, daysSince, lastChannel: rows[0].activity_type };
+  return { touchCount, daysSince, lastChannel: rows[0].activity_type };
 }
 
 serve(async (req) => {
