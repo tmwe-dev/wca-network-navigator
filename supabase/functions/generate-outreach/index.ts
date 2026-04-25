@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * generate-outreach/index.ts — Orchestrator (~100 LOC).
  * Delegates to contextAssembler, promptBuilder, responseParser.

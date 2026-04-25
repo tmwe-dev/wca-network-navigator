@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * Batch Enrichment Worker — arricchisce automaticamente i partner senza enrichment_data.
  *

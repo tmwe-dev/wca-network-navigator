@@ -16,6 +16,7 @@ const RuntimeDiagnosticPanel = lazyRetry(() => import("@/components/system/Runti
 import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
+import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
 
@@ -100,6 +101,7 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
               <ViteChunkRecovery />
+              <PWAUpdatePrompt />
               <BackgroundSyncIndicator />
               <ConnectionBanner />
               <RuntimeDiagnosticPanel />

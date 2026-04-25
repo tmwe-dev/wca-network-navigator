@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * agentic-decide — l'AI legge il contesto attuale dell'indagine e decide:
  *   - quali URL visitare nei prossimi step (max 3 alla volta)

@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -1,159 +1,128 @@
 
-# Implementazione Fix Context Explosion — Fasi 1, 2, 4, 5, 6
+# Piano: PWA Cache Fix + AI Cost Tracking Coverage
 
-Stato verificato:
-- **Fase 0 GIÀ FATTA**: `aiCallHandler.ts` riga 217-246 propaga `temperature` + `maxTokens`. `kb-supervisor` ha `maxTokens: 32000`. Bug `operatorBriefing` già fixato in fix precedente.
-- **Fase 3 GIÀ FATTA**: directory `harmonizer-v2/` completa con `ai-gateway-micro` deployato.
-- **Nota nomenclatura**: il campo nello scope config è `maxTokens` (camelCase) **non** `max_tokens` come nel doc. Mantengo `maxTokens` per coerenza col codice esistente; aggiungo `contextRequirements`.
+Risolve due problemi paralleli in un'unica iterazione:
 
----
-
-## FASE 1 — Context Assembly selettivo per scope
-
-**Obiettivo**: ogni scope dichiara quali blocchi di contesto carica; gli altri vengono saltati.
-
-### 1A — `supabase/functions/_shared/scopeConfigs.ts`
-1. Aggiungere campo opzionale `contextRequirements?: string[]` all'interfaccia `ScopeConfig`.
-2. Per ogni scope nel `getScopeConfig()` aggiungere il campo:
-   - `cockpit`: `["profile", "memory", "kb", "doctrine"]`
-   - `contacts`: `["profile", "kb"]`
-   - `import`: `["profile"]`
-   - `extension`: `["profile", "memory"]`
-   - `strategic`: `["profile", "kb", "doctrine"]`
-   - `kb-supervisor`: `[]` (nessun contesto — già bypassato esplicitamente in contextAssembly, lo formalizziamo qui)
-   - `deep-search`: `["profile", "kb"]`
-   - `chat`: `["profile", "memory", "kb"]`
-   - `mission-builder`: `["profile", "mission_history"]`
-
-### 1B — `supabase/functions/ai-assistant/contextAssembly.ts`
-1. Aggiungere import `import { getScopeConfig } from "../_shared/scopeConfigs.ts";`
-2. Dopo la costruzione di `contextBlocks` (riga 310-320), prima di `assembleContext`, inserire il filtro per `contextRequirements`:
-   - Se lo scope ha `contextRequirements: []` → svuotare `contextBlocks`.
-   - Se ha `contextRequirements` con elementi → filtrare solo i blocchi con `key` incluso.
-   - Se è `undefined` → comportamento legacy (carica tutto).
-3. Mantenere il bypass speciale per `kb-supervisor` già esistente (riga 252-260): è una scorciatoia che evita anche il caricamento. Aggiungere bypass simile (early-return prima di `loadContextParallel`) anche quando `contextRequirements: []` per evitare query DB inutili.
-
-### 1C — Optimization (opzionale): in `loadContextParallel`
-- Aggiungere parametro `requiredKeys?: string[]` e wrappare ciascun loader (`loadMemoryContext`, `loadKBContext`, `loadOperativePrompts`, `loadMissionHistory`, `loadSystemDoctrine`, `loadRecentEmailContext`) con check `requiredKeys.includes(...)` → ritorna `""` invece di caricare.
-- Ridurrà query Supabase su scope con pochi requirements (es. `import` carica solo profile).
-
-### Test
-- Scope `import`: nessun blocco doctrine/memory/kb nei log.
-- Scope `kb-supervisor`: prompt minimale come oggi.
-- Scope `cockpit`: contiene tutti i 4 blocchi.
+1. **Bug published**: dopo Publish/Update il menu mostra ancora la versione vecchia (cache PWA stale).
+2. **Tracking AI incompleto**: 19 edge function su 30 chiamano LLM senza loggare → dashboard `ai_prompt_log` quasi vuota.
 
 ---
 
-## FASE 2 — "Migliora tutto": ridurre contesto per blocco
+## Parte 1 — Fix Cache PWA Stale (15 min)
 
-**File**: `src/v2/ui/pages/prompt-lab/hooks/useContextBuilder.ts`
+### Problema
+La config attuale di `vite.config.ts` cachezza `index.html` come parte di `globPatterns: ["**/*.{js,css,html,...}"]`. Workbox precachea l'HTML e lo serve dalla cache anche se è arrivata una nuova build, finché il SW non si aggiorna (cosa che richiede 2+ reload o unregister manuale).
 
-### 2A — Aggiornare costanti (riga 27-33)
-- `MAX_RELEVANT_DOCTRINE_CHARS = 10_000` (era 100_000)
-- `MAX_NEARBY_BLOCKS = 5` (era 50)
-- `MAX_INDEX_BLOCKS = 100` (era 200)
+### Modifiche
 
-### 2B — Riscrivere `filterDoctrineForBlock` (riga 82-114)
-- Se doctrine ≤ 10K chars → passala intera con header "rilevante".
-- Altrimenti: split per `### `, score per rilevanza, prendi top sezioni fino a esaurire il budget di 10K chars. Header indica quante sezioni omesse.
+**A1. `vite.config.ts`** — config Workbox più aggressiva sull'auto-update
+- Aggiungere `skipWaiting: true` e `clientsClaim: true` nel blocco `workbox` → il nuovo SW prende il controllo immediatamente al primo reload.
+- Rimuovere `html` da `globPatterns` per evitare precache di `index.html` (resta in NetworkFirst tramite `navigateFallback`).
+- Aggiungere runtime cache `NetworkFirst` esplicita per la navigazione HTML con `networkTimeoutSeconds: 3`, così online prende sempre la nuova versione.
+- Aggiungere `cleanupOutdatedCaches: true` per pulire le cache vecchie.
 
-### 2C — Riscrivere `filterSystemMapForBlock` (riga 127-170)
-- Top 5 blocchi dello stesso tab (per relevanceScore) con contenuto **completo**.
-- Tutti gli altri (stesso tab residui + altri tab) → indice compatto: solo `[tab] label`, fino a `MAX_INDEX_BLOCKS` (100).
-- Niente più snippet da 800 chars per ogni blocco.
+**A2. Nuovo componente `src/components/system/PWAUpdatePrompt.tsx`**
+- Hook `useRegisterSW` da `virtual:pwa-register/react`.
+- Quando rileva `needRefresh`, mostra un toast persistente "Nuova versione disponibile — Aggiorna ora" con bottone che chiama `updateServiceWorker(true)`.
+- Mounted come singleton in `src/App.tsx` accanto a `ViteChunkRecovery` (rispettando memoria `global-singleton-infrastructure`).
 
-### Test
-- "Migliora tutto" su KB grande: contesto per blocco <15K chars.
-- Tempo per blocco scende da ~15-30s a ~5-10s.
+**A3. `src/App.tsx`** — montare `<PWAUpdatePrompt />` nel singleton stack.
 
----
+**A4. Mini-sezione nella `/v2/guida`** — "Se la versione published mostra contenuti vecchi": istruzioni per hard refresh / unregister SW (3 righe).
 
-## FASE 4 — Sherlock: compattare findings e markdown
-
-**File**: `src/v2/services/sherlock/sherlockEngine.ts` + `aiIntegrations.ts`
-
-### 4A — Truncate markdown intelligente
-1. In `sherlockEngine.ts`: aggiungere helper `truncateMarkdownSmart(markdown, targetFields)`:
-   - Limit 8K chars.
-   - Splitta su `\n\n`, score paragrafi per overlap con keyword da `targetFields`, mantiene i più rilevanti fino al budget.
-2. Trovare nei due punti di chiamata (`callExtractAI` riga ~76 e `callDecideAI` riga ~99) dove viene passato `markdown` → applicare `truncateMarkdownSmart(markdown, targetFields)` prima.
-   - Stessa modifica eventualmente in `aiIntegrations.ts` se duplicato (riga 25, 33).
-
-### 4B — Compattare prior_findings
-1. Aggiungere helper `compactFindings(findings)` in `sherlockEngine.ts` o `aiIntegrations.ts`:
-   - Output: lista `field: value(150 chars)`, max 2K chars totali.
-2. Applicare nei due punti dove `prior_findings` / `findings_so_far` viene serializzato (riga ~102 e `aiIntegrations.ts:39, 103`).
-
-### Test
-- Sherlock su sito grande: markdown ≤ 8K, findings_so_far ≤ 2K, info chiave ancora estratte.
+### Verifica
+- `bun run build` per assicurarmi che la config Workbox sia valida.
+- `tsc --noEmit` per il nuovo componente.
 
 ---
 
-## FASE 5 — Email generation: contesto mirato
+## Parte 2 — AI Cost Tracking Coverage (45 min)
 
-**File**: `supabase/functions/improve-email/index.ts`
+### Stato reale (verificato ora)
+- **30 edge function** chiamano LLM (`LOVABLE_API_KEY` / `gateway.lovable` / `openai` / `anthropic`).
+- **11 strumentate** via `aiGateway.ts` o `aiChat`/`tokenLogger`.
+- **19 ribelli** che bypassano il tracking — popolare elenco interno, non lo mostro perché hai detto "non voglio vedere niente":
+  - Top-cost: `agent-execute` (chatMode + taskMode + analysisTools), `ai-assistant`, `parse-business-card`, `parse-profile-ai`, `process-ai-import`, `enrich-partner-website`, `analyze-partner`, `sherlock-extract`.
+  - Tool calls: `agent-loop`, `agent-prompt-refiner`, `agentic-decide`, `ai-match-business-cards`, `ai-query-planner`, `analyze-import-structure`, `batch-enrichment-worker`, `categorize-content`, `classify-inbound-message`, `generate-aliases`, `linkedin-ai-extract`, `optimus-analyze`, `reply-classifier`, `suggest-email-groups`, `whatsapp-ai-extract`.
+- **Tabelle disponibili**: `ai_prompt_log`, `ai_token_usage`, `ai_request_log` esistono già — vanno solo popolate. NON creo nuove tabelle.
 
-### 5A — Budget hard sulle sorgenti
-1. Aggiungere costanti `IMPROVE_EMAIL_BUDGETS = { enrichment: 3_000, kb: 5_000, history: 3_000, partner: 2_000 }`.
-2. Trovare i punti dove enrichment/KB/history/partner data vengono serializzati per il prompt → `.slice(0, budget)` su ognuno.
-3. Aggiungere helper `compactHistory(activities, maxChars)`:
-   - Solo ultime 5 entries (non 20).
-   - Format: `[type] YYYY-MM-DD: summary(150 chars)`.
-   - Slice finale a maxChars.
+### Modifiche
 
-### 5B — Filtrare KB per categoria email
-1. Al loader KB di `improve-email`: derivare `relevantCategories` da `email_type`:
-   - commercial → `["email", "doctrine", "commercial", "playbook"]`
-   - operational → `["procedures", "guidelines", "operational"]`
-   - default (se mancante) → mantenere comportamento attuale.
-2. Aggiungere `.in("category", relevantCategories).limit(5)` (se la query attuale carica 15+).
-3. Verificare prima la struttura attuale del loader (potrebbe già esistere un filtro diverso).
+**B1. Nuovo wrapper `supabase/functions/_shared/callLLM.ts`** (~150 LOC)
+- Funzione `callLLM({ provider, model, messages, tools?, response_format?, ctx, userId? })` che:
+  - Chiama il gateway LLM (Lovable/OpenAI/Anthropic) con `fetch` + `AbortController` (timeout 30s).
+  - Misura `latencyMs`, estrae `prompt_tokens` / `completion_tokens` / `total_tokens` dalla risposta.
+  - Calcola `costUsd` usando una pricing table interna (cents per 1k tokens per modello).
+  - Inserisce riga in `ai_prompt_log` con `function_name`, `model`, `provider`, `tokens_in`, `tokens_out`, `cost_usd`, `latency_ms`, `user_id`, `success`, `error_message?`.
+  - Logga anche in formato JSON strutturato (rispetto memoria `observability-alerting-and-monitoring`).
+  - Restituisce `{ content, toolCalls, usage, raw }` con shape unificata.
+- Esporta una versione "thin" `callLLMRaw()` per casi che hanno bisogno della risposta cruda (streaming, ecc.).
 
-### Test
-- Generare/migliorare email: prompt totale <15K chars.
-- Qualità output invariata.
+**B2. Pricing table `supabase/functions/_shared/llmPricing.ts`** (~40 LOC)
+- Mappa `model → { promptUsdPer1k, completionUsdPer1k }` per i ~10 modelli usati (gemini-2.5-flash-lite, gemini-2.5-pro, gpt-5, gpt-5-mini, gpt-5-nano, ecc.).
+- Fallback a `0` con warning se modello sconosciuto (così il log avviene comunque).
 
----
+**B3. Migrazione delle 19 funzioni ribelli a `callLLM`**
+Strategia chirurgica: in ogni funzione sostituisco solo il blocco `fetch(...)` verso il gateway con `await callLLM({...})`, lasciando intatta tutta la business logic. Niente refactor architetturale.
 
-## FASE 6 — Agent loop + voice context loader
+Suddivisione in 2 batch per limitare rischio:
+- **Batch 1 (top-cost, 8 funzioni)**: `agent-execute/chatMode.ts`, `agent-execute/taskMode.ts`, `agent-execute/toolHandlers/analysisTools.ts`, `ai-assistant/index.ts`, `parse-business-card`, `parse-profile-ai`, `process-ai-import`, `enrich-partner-website`.
+- **Batch 2 (resto, 11 funzioni)**: `analyze-partner`, `sherlock-extract`, `agent-loop`, `agent-prompt-refiner`, `agentic-decide`, `ai-match-business-cards`, `ai-query-planner`, `analyze-import-structure`, `batch-enrichment-worker`, `categorize-content`, `classify-inbound-message`, `generate-aliases`, `linkedin-ai-extract`, `optimus-analyze`, `reply-classifier`, `suggest-email-groups`, `whatsapp-ai-extract`.
 
-### 6A — `src/v2/agent/runtime/agentLoop.ts`
-1. Riscrivere `trimContext` (riga 46):
-   - Default `maxRecent = 10` (non 30).
-   - Ultimi 10 messaggi integrali + summary dei vecchi (role assistant/tool, contenuto a 100 chars/msg, totale max 2K chars) come system message in cima.
-2. Verificare che il chiamante (riga 86) passi parametri compatibili.
+NB: rispetto vincolo `email-download-integrity` — non tocco `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (in ogni caso non chiamano LLM).
 
-### 6B — `supabase/functions/voice-brain-bridge/index.ts`
-1. Aggiungere helper `extractPartnerMention(userMessage)`:
-   - Regex per nomi azienda significativi (parole capitalizzate ≥3 char, escludendo stopwords italiane comuni).
-   - Limitarsi a un singolo match per evitare query multiple.
-2. Dopo aver ricevuto user message, prima di chiamare il modello: query Supabase per `partners` con `ilike` su company_name.
-3. Se trovato → push messaggio system con `[CONTESTO PARTNER] {company} ({country}) — Status: {lead_status}, Interazioni: {n}, Ultimo contatto: {date}`.
-4. Verificare che la struttura attuale della funzione consenta l'iniezione (potrebbe essere già un orchestratore con messaggi gestiti).
+**B4. Aggiornare `aiGateway.ts`** affinché le 11 funzioni già strumentate usino il nuovo `callLLM` come backend (zero rotture: stessa firma esposta). Così il logging diventa uniforme su tutte e 30.
 
-### Test
-- Agent loop con 20+ step: history serializzata <3K chars.
-- Voice agent menziona partner: contesto partner appare nella risposta.
+**B5. Nuovo edge function `ai-tracking-healthcheck`**
+- GET: ritorna JSON `{ totalLLMCalls24h, instrumentedCount, missingFunctions: [], coveragePct }`.
+- Confronta `ai_prompt_log` distinct(`function_name`) ultimi 7gg vs lista hardcoded delle 30 funzioni LLM.
+- Esposto nella dashboard AI Monitor come banner "Coverage: 100% ✓" o "Missing: [...]".
 
----
+**B6. UI dashboard — `src/v2/ui/pages/ai-monitor/AICostDashboard.tsx`**
+- Aggiungere sezione "Coverage tracking" che chiama `ai-tracking-healthcheck` ogni 60s.
+- Aggiungere filtro per `function_name` e grafico costi/giorno per funzione (recharts, già nel bundle).
 
-## ORDINE DI DEPLOY
-
-1. **Fase 1** → deploy `ai-assistant` + `unified-assistant` → smoke test ogni scope.
-2. **Fase 2** → frontend rebuild → test "Migliora tutto" su KB grande.
-3. **Fase 4** → frontend rebuild → test Sherlock su un partner.
-4. **Fase 5** → deploy `improve-email` → test generate/improve email.
-5. **Fase 6** → frontend rebuild + deploy `voice-brain-bridge` → test agent loop e voice.
-
-## NOTE / RISCHI
-
-- **Fase 1**: il bypass `kb-supervisor` esistente in contextAssembly resta come fast-path; il filtro generale `contextRequirements: []` produce lo stesso effetto ma più tardi nella pipeline. Va bene mantenerli entrambi (il bypass evita anche il loadContextParallel).
-- **Fase 5**: l'attuale `improve-email/index.ts` potrebbe avere già qualche filtro KB; lo verificherò leggendo il file completo prima di modificare.
-- **Fase 6B**: il regex partner è euristico — limito a 1 match per non fare 5 query DB. Se `voice-brain-bridge` è uno streaming SSE, l'iniezione system va fatta prima di aprire lo stream.
-- **Nessuna modifica al DB**: tutte le fasi sono code-only.
-- **Backward compatibility**: scope senza `contextRequirements` mantengono il comportamento attuale (carica tutto).
-- **Tempo stimato**: 8-10h totali (Fase 1: 2h, Fase 2: 2h, Fase 4: 2h, Fase 5: 2h, Fase 6: 2h).
+### Verifica
+- `bun run tsc --noEmit` su tutto il progetto.
+- Deploy delle 19 funzioni + healthcheck.
+- Curl di sanity check: chiamata test a `agent-execute` → query `SELECT * FROM ai_prompt_log ORDER BY created_at DESC LIMIT 5` per confermare che il log viene scritto.
+- Healthcheck deve ritornare `coveragePct: 100`.
 
 ---
 
-Confermi e procedo in default mode? Oppure vuoi che modifichi qualche scelta (es. valori di soglia diversi, ordine fasi, skip di una fase)?
+## Parte 3 — Documentazione (5 min)
+
+**C1. Aggiornare `mem://tech/cost-control-guardrails`**
+- Documentare il nuovo wrapper `callLLM` come standard obbligatorio per nuove edge function LLM.
+- Rimando a `_shared/callLLM.ts` come unico entrypoint.
+
+**C2. Aggiornare `mem://architecture/ai-gateway-and-budgeting`**
+- Riflettere copertura 100% e tabella `ai_prompt_log` come fonte di verità.
+
+**C3. Mini-changelog in `/v2/guida`** (1 paragrafo)
+- "Cache PWA: ora si auto-aggiorna al primo reload con banner."
+- "AI Cost Dashboard: copertura completa di tutte le funzioni AI."
+
+---
+
+## Out of scope (non tocco)
+- Stripe/billing → già rimosso, kill-switch attivo.
+- Sistema auth/whitelist → snapshot funzionante, non si tocca.
+- `check-inbox` / `email-imap-proxy` / `mark-imap-seen` → vincolo integrità email.
+- V1 routes → deprecato, non si tocca.
+- Schema DB → nessuna nuova tabella, uso quelle esistenti.
+
+---
+
+## Stima totale
+- Parte 1 (PWA): ~15 min, 4 file modificati/creati.
+- Parte 2 (Tracking): ~45 min, 22 file (19 funzioni + 3 nuovi `_shared`/healthcheck) + 1 UI.
+- Parte 3 (Docs): ~5 min, 3 file memoria/guida.
+- **Totale**: ~65 min, 30 file toccati, 0 modifiche DB, 0 nuove dipendenze.
+
+## Rischio
+- **Basso** sulla Parte 1: PWA config è isolata, fallback graceful.
+- **Medio** sulla Parte 2: 19 funzioni toccate. Mitigazione: 2 batch separati, deploy progressivo, test curl dopo ogni batch, mantengo intatta business logic (sostituisco solo il blocco `fetch` LLM).
+
+## Approvazione richiesta
+Approva il piano per passare in Build mode. Procedo end-to-end senza ulteriori conferme come da tua preferenza utente.

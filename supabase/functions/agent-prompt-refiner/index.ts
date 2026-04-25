@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * agent-prompt-refiner — Weekly cron that analyzes feedback and proposes
  * prompt improvements for active agents. Suggestions go to ai_pending_actions

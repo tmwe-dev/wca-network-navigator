@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * voice-brain-bridge — Webhook ElevenLabs ↔ Brain WCA
  *

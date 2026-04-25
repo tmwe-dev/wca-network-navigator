@@ -23,8 +23,20 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
       maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-      globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+      cleanupOutdatedCaches: true,
+      skipWaiting: true,
+      clientsClaim: true,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-pages",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
           {
             urlPattern: /^https:\/\/zrbditqddhjkutzjycgi\.supabase\.co\/functions\/v1\//,
             handler: "NetworkFirst",

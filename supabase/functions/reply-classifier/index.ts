@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * reply-classifier — Classifies inbound email replies using LLM.
  * Invoked by pg_net from on_inbound_message_received trigger.

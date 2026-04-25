@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * ai-assistant/index.ts — Main orchestrator
  * Coordinates: auth → mode dispatch → context assembly → AI calls → tool loops → response

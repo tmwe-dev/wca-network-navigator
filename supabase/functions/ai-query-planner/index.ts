@@ -1,3 +1,4 @@
+import "../_shared/llmFetchInterceptor.ts";
 /**
  * ai-query-planner — Genera un QueryPlan strutturato da un prompt utente.
  *
