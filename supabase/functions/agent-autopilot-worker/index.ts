@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
 const BATCH_SIZE = 5;
 const MAX_WALL_CLOCK_MS = 55_000;
@@ -47,6 +48,21 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // ━━━ Cron Guard ━━━
+    const guard = await cronGuardCheck(supabase, {
+      jobName: "autopilot_worker",
+      enabledKey: "cron_autopilot_worker_enabled",
+      intervalKey: "cron_autopilot_worker_interval_min",
+      defaultIntervalMin: 30,
+    });
+    if (guard.skip) {
+      endMetrics(metrics, true, 200);
+      return new Response(
+        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+        { status: 200, headers }
+      );
+    }
+
     const startTime = Date.now();
 
     // Fetch active autopilot missions
@@ -60,6 +76,7 @@ Deno.serve(async (req) => {
     if (fetchErr) throw fetchErr;
     if (!missions || missions.length === 0) {
       endMetrics(metrics, true, 200);
+      await cronGuardLogRun(supabase, "autopilot_worker", { processed: 0 });
       return new Response(JSON.stringify({ processed: 0, results: [] }), { status: 200, headers });
     }
 
@@ -79,6 +96,7 @@ Deno.serve(async (req) => {
     }
 
     endMetrics(metrics, true, 200);
+    await cronGuardLogRun(supabase, "autopilot_worker", { processed: results.length });
     return new Response(JSON.stringify({
       processed: results.length,
       results,
@@ -88,6 +106,14 @@ Deno.serve(async (req) => {
     logEdgeError("agent-autopilot-worker", error);
     endMetrics(metrics, false, 500);
     const message = error instanceof Error ? error.message : String(error);
+    try {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
+      await cronGuardLogRun(sb, "autopilot_worker", {}, message);
+    } catch (_) { /* ignore */ }
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });
