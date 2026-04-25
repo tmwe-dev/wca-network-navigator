@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   List,
   UserSquare2,
+  History,
+  Info,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
@@ -350,9 +352,11 @@ export default function SuggestionsReviewPage() {
             <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-sm font-semibold">Armonizzazione salvata nel DB</h2>
+                  <h2 className="text-sm font-semibold">Proposte di miglioramento generate dall'AI</h2>
                   <p className="text-xs text-muted-foreground">
-                    Run {harmonizeState.runId?.slice(0, 8)}… · {harmonizeState.proposals.length} proposte · applicate {harmonizeState.executedCount}
+                    Sessione del {harmonizeState.runId ? new Date(runs.find((r) => r.id === harmonizeState.runId)?.created_at ?? Date.now()).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "—"}
+                    {" · "}{harmonizeState.proposals.length} proposte totali
+                    {" · "}{harmonizeState.executedCount} già applicate
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -381,17 +385,59 @@ export default function SuggestionsReviewPage() {
                     variant="outline"
                     className="h-7"
                     onClick={approveAllSafe}
-                    title="Seleziona tutte le proposte text/non-DELETE/non-INSERT-agents/non-high-impact"
+                    title="Seleziona automaticamente tutte le proposte a basso rischio (modifiche di testo, impatto non alto, non eliminazioni)"
                   >
                     Approva tutte le sicure
                   </Button>
-                  {runs.map((run) => (
-                    <Button key={run.id} size="sm" variant={run.id === harmonizeState.runId ? "default" : "outline"} onClick={() => loadRunForReview(run)}>
-                      {run.proposals.length} · {run.id.slice(0, 4)}
-                    </Button>
-                  ))}
                 </div>
               </div>
+
+              {/* Legenda — spiega cosa significa "sicura" e i badge */}
+              <div className="rounded-md border border-border/60 bg-background/40 p-3 text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <Info className="h-3.5 w-3.5 text-primary" />
+                  Come leggere questa pagina
+                </div>
+                <ul className="space-y-1 text-muted-foreground leading-snug pl-5 list-disc">
+                  <li><span className="font-medium text-foreground">Proposta</span>: una modifica suggerita dall'AI a un prompt, una regola o una scheda KB.</li>
+                  <li><span className="font-medium text-emerald-600">Sicura ✓</span> = modifica di solo testo, basso impatto, reversibile. Si può approvare in massa.</li>
+                  <li><span className="font-medium text-amber-600">Da rivedere</span> = inserimenti nuovi, eliminazioni, agenti, o impatto alto. Vanno lette una a una.</li>
+                  <li><span className="font-medium text-foreground">"Approva tutte le sicure"</span>: spunta solo le proposte verdi. Quelle gialle restano da approvare a mano.</li>
+                  <li>Per applicare davvero le modifiche selezionate al database, premi <span className="font-medium text-foreground">"Salva nel DB"</span> in basso.</li>
+                </ul>
+              </div>
+
+              {/* Storico run — leggibile, non sigle */}
+              {runs.length > 1 && (
+                <details className="rounded-md border bg-background/30">
+                  <summary className="cursor-pointer px-3 py-2 text-xs font-medium flex items-center gap-2 hover:bg-muted/40">
+                    <History className="h-3.5 w-3.5" />
+                    Sessioni precedenti ({runs.length})
+                  </summary>
+                  <div className="px-3 py-2 space-y-1">
+                    {runs.map((run) => {
+                      const isCurrent = run.id === harmonizeState.runId;
+                      const when = new Date(run.created_at).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+                      return (
+                        <button
+                          key={run.id}
+                          onClick={() => loadRunForReview(run)}
+                          className={`w-full text-left text-xs rounded px-2 py-1.5 flex items-center justify-between gap-2 transition-colors ${isCurrent ? "bg-primary/15 text-primary font-medium" : "hover:bg-muted/60"}`}
+                        >
+                          <span className="truncate">
+                            {when} {isCurrent && "· in revisione"}
+                          </span>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {run.proposals.length} propost{run.proposals.length === 1 ? "a" : "e"}
+                            {run.executed_count > 0 && ` · ${run.executed_count} applicate`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </details>
+              )}
+
               {viewMode === "list" ? (
                 <HarmonizeReviewPanel
                   proposals={harmonizeState.proposals}
