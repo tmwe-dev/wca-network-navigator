@@ -160,10 +160,11 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                           </div>
                         )}
                         {p.after != null && (
-                          <div>
-                            <div className="text-xs font-semibold text-muted-foreground">Dopo:</div>
-                            <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-32 overflow-auto">{p.after}</pre>
-                          </div>
+                          <EditableAfter
+                            value={p.after}
+                            editable={!!onEditAfter && !isReadOnly}
+                            onSave={(v) => onEditAfter?.(p.id, v)}
+                          />
                         )}
                         <div>
                           <div className="text-xs font-semibold text-muted-foreground">Evidenza ({p.evidence.source}):</div>
