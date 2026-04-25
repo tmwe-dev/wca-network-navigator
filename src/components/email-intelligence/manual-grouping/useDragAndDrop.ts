@@ -7,8 +7,7 @@
  * on macOS). The drop target is whichever drop-zone the cursor is over
  * at the moment of `dragend` — independent of where the card sits.
  */
-import { useState, useEffect } from "react";
-import { useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { SenderAnalysis } from "@/types/email-management";
 
 export function useDragAndDrop() {
