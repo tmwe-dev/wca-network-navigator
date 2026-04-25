@@ -254,6 +254,32 @@ export default function SuggestionsReviewPage() {
   } = useHarmonizeOrchestrator(userId);
   const [runs, setRuns] = useState<HarmonizeRun[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "single">(() => {
+    if (typeof window === "undefined") return "list";
+    const saved = window.localStorage.getItem("harmonize.viewMode");
+    return saved === "single" ? "single" : "list";
+  });
+  const [gordon, setGordon] = useState<{ id: string; voiceId: string | null } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("harmonize.viewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("agents")
+        .select("id, elevenlabs_voice_id")
+        .eq("name", "Gordon")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && data) setGordon({ id: data.id as string, voiceId: (data.elevenlabs_voice_id as string | null) ?? null });
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const refreshRuns = useCallback(async () => {
     if (!userId) return;
