@@ -220,33 +220,22 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     }
   };
 
-  const handleApplyAndSaveRule = async () => {
+  const handleSaveRule = async () => {
     setSavingRule(true);
     try {
-      // 1) Applica il nuovo after (se presente)
-      if (pending?.text) {
-        const res = await onApplyRegenerated(proposal.id, pending.text);
-        if (!res.ok) {
-          toast.error(res.reason ?? "Salvataggio testo fallito");
-          return;
-        }
-      }
-      // 2) Salva la regola permanente in suggested_improvements
       const rule = pending?.ruleSuggestion;
-      if (rule) {
-        await createSuggestion(userId, {
-          source_context: "manual_correction",
-          suggestion_type: "kb_rule",
-          title: rule.title,
-          content: rule.content,
-          reasoning: `Suggerita da Gordon durante revisione proposta ${proposal.id} (${proposal.target.table})`,
-          priority: "medium",
-        });
-        toast.success("Regola salvata — visibile in Suggerimenti da approvare");
-      } else {
-        toast.success("Testo applicato (nessuna regola da salvare)");
-      }
-      setPending(null);
+      if (!rule) return;
+      await createSuggestion(userId, {
+        source_context: "manual_correction",
+        suggestion_type: "kb_rule",
+        title: rule.title,
+        content: rule.content,
+        reasoning: `Suggerita da Gordon durante revisione proposta ${proposal.id} (${proposal.target.table})`,
+        priority: "medium",
+      });
+      toast.success("Regola salvata — visibile in Suggerimenti da approvare");
+      // Rimuovi solo la regola, lascia l'eventuale testo pending finché l'utente non lo gestisce
+      setPending((prev) => (prev ? { ...prev, ruleSuggestion: null } : prev));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "errore");
     } finally {
