@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Trash2, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { EmailSenderGroup } from '@/types/email-management';
@@ -16,6 +15,13 @@ interface GroupDropZoneProps {
   group: EmailSenderGroup;
   onRefresh: () => void;
   isHovered?: boolean;
+  /**
+   * Rules assigned to this group, provided by the parent.
+   * Lifted out of this component to avoid N parallel queries +
+   * N realtime channels (one per group) — see useGroupingData.
+   */
+  rules?: AssignedRule[];
+  onRulesChanged?: () => void;
 }
 
 interface AssignedRule {
@@ -24,29 +30,7 @@ interface AssignedRule {
   display_name?: string | null;
 }
 
-export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDropZoneProps) {
-  const [rules, setRules] = useState<AssignedRule[]>([]);
-  const [_loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadRules();
-    const channel = supabase
-      .channel(`group-rules-${group.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_address_rules' }, () => loadRules())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [group.nome_gruppo]);
-
-  const loadRules = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('email_address_rules')
-      .select('id, email_address, display_name')
-      .eq('group_name', group.nome_gruppo)
-      .order('created_at', { ascending: false });
-    setRules((data || []) as AssignedRule[]);
-    setLoading(false);
-  };
+export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [], onRulesChanged }: GroupDropZoneProps) {
 
   const extractCompany = (email: string): string => {
     const match = email.match(/@([^.]+)\./);
@@ -60,7 +44,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false }: GroupDrop
       .eq('id', ruleId);
     if (!error) {
       toast.success(`${extractCompany(email)} rimosso da ${group.nome_gruppo}`);
-      loadRules();
+      onRulesChanged?.();
     } else {
       toast.error('Errore rimozione');
     }
