@@ -14,13 +14,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Mic, MicOff, Volume2, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { createSuggestion } from "@/data/suggestedImprovements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { appendProposalChat, type HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
 
@@ -47,7 +47,13 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingRegeneration | null>(null);
   const [savingRule, setSavingRule] = useState(false);
+  const [autoVoice, setAutoVoice] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("gordon-auto-voice") !== "0";
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastSpokenIdxRef = useRef<number>(-1);
 
   const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
@@ -58,6 +64,11 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     setMessages(proposal.chat ?? []);
     setPending(null);
     setInput("");
+    lastSpokenIdxRef.current = (proposal.chat ?? []).length - 1; // non rileggere il pregresso
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
   }, [proposal.id, proposal.chat]);
 
   useEffect(() => {
@@ -98,21 +109,25 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
 
       if (data.regenerated_after) {
-        setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule ?? null });
+        // Applica IMMEDIATAMENTE il nuovo "after" alla proposta, così la sezione
+        // di sinistra (editor After) si aggiorna in tempo reale e il bottone
+        // "Applica subito" userà il testo rigenerato.
+        const applyRes = await onApplyRegenerated(proposal.id, data.regenerated_after);
+        if (applyRes.ok) {
+          toast.success("Sezione aggiornata con il nuovo testo di Gordon");
+        } else {
+          toast.warning(applyRes.reason ?? "Aggiornamento sezione fallito — testo disponibile sotto");
+        }
+        // Mostriamo comunque il pending solo se Gordon ha proposto anche una regola
+        // permanente da salvare in KB.
+        if (data.suggested_rule) {
+          setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule });
+        }
       } else if (data.suggested_rule) {
         // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
         setPending({ text: "", ruleSuggestion: data.suggested_rule });
       }
-
-      // Persistenza chat: salva sia il messaggio utente che la risposta dell'assistente
-      try {
-        await appendProposalChat(runId, proposal.id, [
-          { role: "user", content: text },
-          { role: "assistant", content: data.reply },
-        ]);
-      } catch (persistErr) {
-        console.warn("[GordonChatPanel] persist chat failed", persistErr);
-      }
+      // La persistenza chat è già gestita dalla edge function harmonize-proposal-chat.
     } catch (e) {
       const msg = e instanceof Error ? e.message : "errore di rete";
       toast.error(msg);
@@ -120,7 +135,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     } finally {
       setLoading(false);
     }
-  }, [input, loading, runId, proposal.id, agentId]);
+  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated]);
 
   const playTTS = async (text: string) => {
     if (!voiceId) {
@@ -128,6 +143,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       return;
     }
     try {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       const sessionRes = await supabase.auth.getSession();
       const token = sessionRes.data.session?.access_token ?? "";
       const res = await fetch(
@@ -147,10 +163,50 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
         return;
       }
       const blob = await res.blob();
-      new Audio(URL.createObjectURL(blob)).play();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
+      await audio.play();
     } catch {
       toast.error("Errore riproduzione voce");
     }
+  };
+
+  // Autoplay: quando arriva un nuovo messaggio assistant e autoVoice è ON, lo legge.
+  // Pulisce markdown/punteggiatura tecnica come fa Mission/useAiVoice.
+  useEffect(() => {
+    if (!autoVoice || !voiceId) return;
+    if (loading) return;
+    if (messages.length === 0) return;
+    const lastIdx = messages.length - 1;
+    const last = messages[lastIdx];
+    if (last.role !== "assistant") return;
+    if (lastIdx <= lastSpokenIdxRef.current) return;
+    lastSpokenIdxRef.current = lastIdx;
+    if (last.content.startsWith("⚠️")) return;
+    const cleanText = last.content
+      .replace(/_\([^)]*\)_/g, "") // rimuove i marker tipo "(ho preparato un nuovo testo, vedi sotto ↓)"
+      .replace(/[#*_`~\[\]()>|]/g, "")
+      .replace(/\n{2,}/g, ". ")
+      .replace(/\n/g, " ")
+      .trim();
+    if (cleanText.length < 5) return;
+    void playTTS(cleanText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, loading, autoVoice, voiceId]);
+
+  const toggleAutoVoice = () => {
+    setAutoVoice((v) => {
+      const next = !v;
+      localStorage.setItem("gordon-auto-voice", next ? "1" : "0");
+      if (!next && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      return next;
+    });
   };
 
   const handleApplyHereOnly = async () => {
@@ -206,6 +262,18 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           <h3 className="text-sm font-semibold leading-tight">Gordon</h3>
           <p className="text-[10px] text-muted-foreground leading-tight">Curatore — chat su questa proposta</p>
         </div>
+        {voiceId && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={toggleAutoVoice}
+            title={autoVoice ? "Voce automatica attiva — disattiva" : "Voce automatica off — attiva"}
+            aria-label={autoVoice ? "Disattiva voce automatica" : "Attiva voce automatica"}
+          >
+            {autoVoice ? <Volume2 className="w-4 h-4 text-primary" /> : <VolumeX className="w-4 h-4 text-muted-foreground" />}
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -257,11 +325,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
             {pending.text && (
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <Sparkles className="w-3 h-3" /> Nuovo "after" da Gordon
+                  <Sparkles className="w-3 h-3" /> Nuovo "after" già applicato
                 </div>
                 <pre className="text-[11px] bg-background/70 p-2 rounded border whitespace-pre-wrap max-h-40 overflow-auto">
                   {pending.text}
                 </pre>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Il testo è stato salvato nel campo "Dopo" a sinistra. Premi "Applica subito" per scriverlo nel DB.
+                </p>
               </div>
             )}
             {pending.ruleSuggestion && (
@@ -274,17 +345,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              {pending.text && (
-                <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleApplyHereOnly} disabled={savingRule}>
-                  <Check className="w-3 h-3 mr-1" /> Usa solo qui
+              {pending.ruleSuggestion && (
+                <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
+                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+                  Salva come regola permanente
                 </Button>
               )}
-              <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
-                {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
-                {pending.text ? "Usa qui + salva regola" : "Salva come regola permanente"}
-              </Button>
               <Button size="sm" variant="ghost" className="h-7 text-[11px] ml-auto" onClick={() => setPending(null)} disabled={savingRule}>
-                Ignora
+                Chiudi
               </Button>
             </div>
           </Card>
