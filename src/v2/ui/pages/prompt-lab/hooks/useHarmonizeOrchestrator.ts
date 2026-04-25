@@ -301,6 +301,53 @@ export function useHarmonizeOrchestrator(userId: string) {
     setState((s) => ({ ...s, phase: "done", loading: false }));
   }, [state.runId, state.proposals, state.approvedIds, userId]);
 
+  /**
+   * Applica UNA singola proposta al DB e la rimuove dalla lista visibile,
+   * così l'utente può continuare con le altre senza toccare le selezioni.
+   */
+  const executeSingle = useCallback(
+    async (proposalId: string): Promise<{ ok: boolean; reason?: string }> => {
+      if (!state.runId) return { ok: false, reason: "missing run" };
+      const proposal = state.proposals.find((p) => p.id === proposalId);
+      if (!proposal) return { ok: false, reason: "proposal not found" };
+
+      const res = await executeProposal(userId, proposal, state.runId);
+      if (res.ok) {
+        await setProposalStatus(state.runId, proposal.id, "executed").catch(() => {});
+        if (proposal.target.table === "agents" && proposal.target.id) {
+          try {
+            await supabase.from("agent_tasks").insert({
+              agent_id: proposal.target.id,
+              user_id: userId,
+              task_type: "harmonize_verification",
+              description: `Verifica comportamento post-armonizzazione: ${proposal.block_label ?? proposal.reasoning.slice(0, 80)}`,
+              status: "pending",
+              target_filters: { harmonize_run_id: state.runId, proposal_id: proposal.id } as never,
+            } as never);
+          } catch (e) {
+            console.warn("[harmonize] agent_task creation failed", e);
+          }
+        }
+        setState((s) => {
+          const proposals = s.proposals.filter((p) => p.id !== proposalId);
+          const approvedIds = new Set(s.approvedIds);
+          approvedIds.delete(proposalId);
+          return {
+            ...s,
+            proposals,
+            approvedIds,
+            executedCount: s.executedCount + 1,
+          };
+        });
+      } else {
+        await setProposalStatus(state.runId, proposal.id, "failed", res.reason).catch(() => {});
+        setState((s) => ({ ...s, failedCount: s.failedCount + 1 }));
+      }
+      return res;
+    },
+    [state.runId, state.proposals, userId],
+  );
+
   const cancel = useCallback(async () => {
     if (state.runId) await cancelHarmonizeRun(state.runId).catch(() => {});
     setState({ ...INITIAL, phase: "cancelled" });
@@ -313,5 +360,5 @@ export function useHarmonizeOrchestrator(userId: string) {
     }
   }, [userId]);
 
-  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, cancel, reset };
+  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, executeSingle, cancel, reset };
 }
