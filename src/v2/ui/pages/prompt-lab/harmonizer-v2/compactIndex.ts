@@ -46,18 +46,38 @@ function len(s?: string | null): number {
   return s ? s.length : 0;
 }
 
+function isTransientFetchError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /failed to fetch|networkerror|load failed|fetch/i.test(message);
+}
+
+async function withFetchRetry<T>(label: string, operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientFetchError(error) || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+    }
+  }
+  console.warn(`[compactIndex] ${label} failed after retry`, lastError);
+  throw lastError;
+}
+
 /**
  * Carica tutti i metadati delle 6 tabelle target in parallelo.
  * Errori per-tabella vengono loggati e bypassati (resilienza).
  */
 export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
   const settled = await Promise.allSettled([
-    findKbEntries(),
-    findOperativePromptsFull(userId),
-    findEmailPromptsByScope(userId, "global"),
-    findEmailAddressRules(userId),
-    findCommercialPlaybooks(userId),
-    findAgentPersonas(userId),
+    withFetchRetry("kb_entries", () => findKbEntries()),
+    withFetchRetry("operative_prompts", () => findOperativePromptsFull(userId)),
+    withFetchRetry("email_prompts", () => findEmailPromptsByScope(userId, "global")),
+    withFetchRetry("email_address_rules", () => findEmailAddressRules(userId)),
+    withFetchRetry("commercial_playbooks", () => findCommercialPlaybooks(userId)),
+    withFetchRetry("agent_personas", () => findAgentPersonas(userId)),
   ]);
 
   const entries: IndexEntry[] = [];

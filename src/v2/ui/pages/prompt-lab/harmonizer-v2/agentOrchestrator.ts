@@ -28,6 +28,14 @@ import {
   type HarmonizeActionType,
 } from "@/data/harmonizeRuns";
 
+async function persistBestEffort(label: string, operation: () => Promise<void>): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    console.warn(`[orchestrator] ${label} failed`, error);
+  }
+}
+
 export type EntityStatus = "pending" | "processing" | "done" | "skipped" | "needs_review" | "error";
 
 export interface EntityProgress {
@@ -155,7 +163,7 @@ export async function runAgenticHarmonizer(input: {
     harmonizeRunId: run.id,
     bootstrapEntities: indexToBootstrapEntities(index).slice(0, 200) as EntityCreatedEntry[],
   });
-  await updateHarmonizeRun(run.id, { status: "analyzing" }).catch(() => {});
+  await persistBestEffort("mark analyzing", () => updateHarmonizeRun(run.id, { status: "analyzing" }));
 
   // 2. Loop processing
   cb.onPhaseChange?.("processing");
@@ -243,9 +251,7 @@ export async function runAgenticHarmonizer(input: {
           block_label: d.proposal.title,
           apply_recommended: d.confidence > 0.85 && action === "UPDATE",
         };
-        await appendHarmonizeProposal(run.id, proposal).catch((e) => {
-          console.warn("[orchestrator] persist proposal failed", e);
-        });
+        await persistBestEffort("persist proposal", () => appendHarmonizeProposal(run.id, proposal));
       }
 
       // Estrai facts.
@@ -258,16 +264,17 @@ export async function runAgenticHarmonizer(input: {
         }));
         recentFacts.push(...facts);
         factsExtracted += facts.length;
-        await appendFacts(session.id, facts).catch(() => {});
+        await persistBestEffort("append facts", () => appendFacts(session.id, facts));
       }
 
       // Append to session.entities_created se INSERT.
       if (d.decision === "INSERT" && d.proposal) {
-        await appendEntities(session.id, [{
-          table: d.proposal.table,
-          title: d.proposal.title,
+        const createdProposal = d.proposal;
+        await persistBestEffort("append entities", () => appendEntities(session.id, [{
+          table: createdProposal.table,
+          title: createdProposal.title,
           created_in_chunk: i,
-        }]).catch(() => {});
+        }]));
       }
 
       recentDecisions.push({ entityTitle: entity.title, decision: d.decision });
