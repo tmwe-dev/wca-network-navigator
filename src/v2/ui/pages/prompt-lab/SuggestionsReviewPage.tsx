@@ -253,6 +253,7 @@ export default function SuggestionsReviewPage() {
     editProposalAfter,
     execute,
     executeSingle,
+    discardSingle,
   } = useHarmonizeOrchestrator(userId);
   const [runs, setRuns] = useState<HarmonizeRun[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
@@ -471,6 +472,9 @@ export default function SuggestionsReviewPage() {
                   onApproveAllSafe={approveAllSafe}
                   onEditAfter={editProposalAfter}
                   onApplySingle={executeSingle}
+                  onDiscardSingle={discardSingle}
+                  onApplySelected={execute}
+                  applyingSelected={harmonizeState.loading}
                 />
               ) : (
                 <SingleProposalReview
@@ -483,6 +487,7 @@ export default function SuggestionsReviewPage() {
                   onToggle={toggleApproval}
                   onEditAfter={editProposalAfter}
                   onApplySingle={executeSingle}
+                  onDiscardSingle={discardSingle}
                 />
               )}
               <div className="flex items-center justify-between border-t pt-3">

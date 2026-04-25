@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,6 +109,9 @@ interface Props {
   onApproveAllSafe: () => void;
   onEditAfter?: (proposalId: string, newAfter: string) => Promise<{ ok: boolean; reason?: string }>;
   onApplySingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
+  onDiscardSingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
+  onApplySelected?: () => void;
+  applyingSelected?: boolean;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -138,8 +141,9 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
   regression_full: "Regression completa",
 };
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [discardingId, setDiscardingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "safe" | "review" | "notes" | "done">("all");
   const [hideManaged, setHideManaged] = useState(true);
 
@@ -152,6 +156,18 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
       else toast.error(`Applicazione fallita: ${res.reason ?? "errore sconosciuto"}`);
     } finally {
       setApplyingId(null);
+    }
+  };
+
+  const handleDiscardSingle = async (id: string) => {
+    if (!onDiscardSingle) return;
+    setDiscardingId(id);
+    try {
+      const res = await onDiscardSingle(id);
+      if (res.ok) toast.success("Proposta scartata");
+      else toast.error(`Eliminazione fallita: ${res.reason ?? "errore sconosciuto"}`);
+    } finally {
+      setDiscardingId(null);
     }
   };
 
@@ -278,7 +294,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
         </TabsList>
       </Tabs>
 
-      {/* Sub-toolbar: selettore master sul tab attivo */}
+      {/* Sub-toolbar: selettore master + azioni di massa sul tab attivo */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 px-3 py-2">
         <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
           <Checkbox
@@ -291,9 +307,21 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
           </span>
         </label>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onApplySelected && approvedIds.size > 0 && (
+            <Button
+              size="sm"
+              className="h-7 gap-1.5 px-3"
+              onClick={onApplySelected}
+              disabled={applyingSelected}
+              title="Applica al database tutte le proposte attualmente selezionate"
+            >
+              {applyingSelected ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              Applica selezionate ({approvedIds.size})
+            </Button>
+          )}
           {filter !== "done" && (
-            <div className="flex items-center gap-1.5" title="Nasconde le proposte già applicate o fallite">
+            <div className="flex items-center gap-1.5" title="Nasconde le proposte già applicate, scartate o fallite">
               <Switch id="hide-managed" checked={hideManaged} onCheckedChange={setHideManaged} className="scale-75" />
               <Label htmlFor="hide-managed" className="cursor-pointer text-xs flex items-center gap-1">
                 {hideManaged ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -301,7 +329,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
               </Label>
             </div>
           )}
-          {readOnly.length > 0 && <span>{readOnly.length} read-only nel totale</span>}
+          {readOnly.length > 0 && <span className="text-xs text-muted-foreground">{readOnly.length} read-only nel totale</span>}
         </div>
       </div>
 
@@ -372,23 +400,42 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                         </Badge>
                       )}
                        <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
-                       {onApplySingle && !isReadOnly && (
-                         <Button
-                           size="sm"
-                           variant="outline"
-                           className="h-6 px-2 text-xs ml-auto"
-                           disabled={applyingId === p.id || blockedByDeps}
-                           onClick={() => handleApplySingle(p.id)}
-                           title="Applica questa proposta al DB e rimuovila dalla lista"
-                         >
-                           {applyingId === p.id ? (
-                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                           ) : (
-                             <Send className="h-3 w-3 mr-1" />
-                           )}
-                           Applica
-                         </Button>
-                       )}
+                       <div className="ml-auto flex items-center gap-1.5">
+                         {onApplySingle && !isReadOnly && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="h-6 px-2 text-xs"
+                             disabled={applyingId === p.id || discardingId === p.id || blockedByDeps}
+                             onClick={() => handleApplySingle(p.id)}
+                             title="Applica questa proposta al DB e rimuovila dalla lista"
+                           >
+                             {applyingId === p.id ? (
+                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                             ) : (
+                               <Send className="h-3 w-3 mr-1" />
+                             )}
+                             Applica
+                           </Button>
+                         )}
+                         {onDiscardSingle && (
+                           <Button
+                             size="sm"
+                             variant="ghost"
+                             className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                             disabled={applyingId === p.id || discardingId === p.id}
+                             onClick={() => handleDiscardSingle(p.id)}
+                             title="Scarta questa proposta: non verrà applicata al DB e sparirà dalla lista"
+                           >
+                             {discardingId === p.id ? (
+                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                             ) : (
+                               <Trash2 className="h-3 w-3 mr-1" />
+                             )}
+                             Scarta
+                           </Button>
+                         )}
+                       </div>
                      </div>
                     {p.after != null && (
                       <div className="mb-2">

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Check, X, Loader2, Send, AlertTriangle, ShieldCheck, Eye, FileQuestion, CheckCircle2, Database, BookOpen, Wrench, Mail, Settings, Users } from "lucide-react";
+import { ChevronDown, Pencil, Check, X, Loader2, Send, AlertTriangle, ShieldCheck, Eye, FileQuestion, CheckCircle2, Database, BookOpen, Wrench, Mail, Settings, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 import { ProposalNavigator } from "./ProposalNavigator";
@@ -28,6 +28,7 @@ interface Props {
   onToggle: (id: string) => void;
   onEditAfter: (proposalId: string, newAfter: string) => Promise<{ ok: boolean; reason?: string }>;
   onApplySingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
+  onDiscardSingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -146,9 +147,11 @@ export function SingleProposalReview({
   onToggle,
   onEditAfter,
   onApplySingle,
+  onDiscardSingle,
 }: Props) {
   const [index, setIndex] = useState(0);
   const [applying, setApplying] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
 
   // Bound index quando la lista cambia
   useEffect(() => {
@@ -187,6 +190,22 @@ export function SingleProposalReview({
       }
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleDiscard = async () => {
+    if (!onDiscardSingle) return;
+    setDiscarding(true);
+    try {
+      const res = await onDiscardSingle(proposal.id);
+      if (res.ok) {
+        toast.success("Proposta scartata");
+        if (index < proposals.length - 1) setIndex(index + 1);
+      } else {
+        toast.error(res.reason ?? "Eliminazione fallita");
+      }
+    } finally {
+      setDiscarding(false);
     }
   };
 
@@ -278,6 +297,19 @@ export function SingleProposalReview({
               <Button size="sm" className="h-8" onClick={handleApply} disabled={applying}>
                 {applying ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Send className="w-3.5 h-3.5 mr-1" />}
                 Applica subito
+              </Button>
+            )}
+            {onDiscardSingle && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleDiscard}
+                disabled={discarding || applying}
+                title="Scarta questa proposta: non verrà applicata al DB"
+              >
+                {discarding ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+                Scarta
               </Button>
             )}
             <Button size="sm" variant="ghost" className="h-8 ml-auto" onClick={() => setIndex(Math.min(proposals.length - 1, index + 1))} disabled={index >= proposals.length - 1}>
