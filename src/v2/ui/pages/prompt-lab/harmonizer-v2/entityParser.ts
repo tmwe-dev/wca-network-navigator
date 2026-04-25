@@ -28,7 +28,9 @@ export interface EntityToParse {
   sourceLineEnd: number;
 }
 
-const MIN_BODY_CHARS = 50;
+const MIN_BODY_CHARS = 100;
+/** Massimo livello di heading che genera una nuova entità. H3+ vengono inglobati nel body. */
+const MAX_ENTITY_HEADING_LEVEL = 2;
 
 function stripFrontmatter(text: string): string {
   return text.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
@@ -75,8 +77,9 @@ function splitFenceAware(source: string): RawSection[] {
     }
 
     if (!inFence) {
-      const match = line.match(/^(#{1,3})\s+(.+)$/);
-      if (match) {
+      // Splittiamo SOLO su H1/H2. H3+ rimangono parte del body dell'entità H2 corrente.
+      const match = line.match(/^(#{1,6})\s+(.+)$/);
+      if (match && match[1].length <= MAX_ENTITY_HEADING_LEVEL) {
         // Chiudi sezione corrente.
         if (current) {
           current.lineEnd = i; // riga precedente (0-based i ↔ 1-based i)
@@ -106,7 +109,7 @@ function splitFenceAware(source: string): RawSection[] {
 
 /** Estrae il titolo "pulito" rimuovendo emoji decorative comuni. */
 function extractTitle(headerLine: string): string {
-  const m = headerLine.match(/^#{1,3}\s*(?:📄|📚|🎯|🤖|✉️|📞|📊|⚙️|🔧)?\s*(.+?)\s*$/);
+  const m = headerLine.match(/^#{1,6}\s*(?:📄|📚|🎯|🤖|✉️|📞|📊|⚙️|🔧)?\s*(.+?)\s*$/);
   return m ? m[1].trim() : headerLine.replace(/^#+\s*/, "").trim();
 }
 
