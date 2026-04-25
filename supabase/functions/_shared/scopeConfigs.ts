@@ -338,6 +338,9 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         temperature: 0.2,
         maxTokens: 32000,
         creditLabel: "KB Supervisor",
+        // Briefing operatore self-contained: nessun contesto aggiuntivo
+        // (doctrine/memory/kb/email satura la window e fa esplodere il chunk).
+        contextRequirements: [],
       };
 
     case "deep-search":
@@ -345,6 +348,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         systemPrompt: "Sei un assistente di ricerca approfondita. Usa i tool di search e enrichment per trovare informazioni dettagliate sui partner WCA. Rispondi sempre in italiano, conciso e basato su dati reali.",
         tools: PLATFORM_TOOLS,
         creditLabel: "Deep Search V2",
+        contextRequirements: ["profile", "kb"],
       };
 
     case "chat":
@@ -352,6 +356,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         systemPrompt: "Sei un assistente conversazionale per agenti autonomi. Rispondi in modo conciso e operativo, in italiano. Usa i tool quando servono dati reali dal database.",
         tools: PLATFORM_TOOLS,
         creditLabel: "Agent Chat V2",
+        contextRequirements: ["profile", "memory", "kb"],
       };
 
     case "mission-builder":
@@ -360,6 +365,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         tools: [],
         temperature: 0.5,
         creditLabel: "Mission Builder V2",
+        contextRequirements: ["profile", "mission_history"],
       };
 
     default:
