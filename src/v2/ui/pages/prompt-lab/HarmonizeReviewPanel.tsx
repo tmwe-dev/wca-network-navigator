@@ -210,8 +210,25 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                           Bloccato: {missingDeps.length} dipendenz{missingDeps.length === 1 ? "a" : "e"}
                         </Badge>
                       )}
-                      <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
-                    </div>
+                       <span className="text-xs text-muted-foreground truncate">{p.block_label}</span>
+                       {onApplySingle && !isReadOnly && (
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           className="h-6 px-2 text-xs ml-auto"
+                           disabled={applyingId === p.id || blockedByDeps}
+                           onClick={() => handleApplySingle(p.id)}
+                           title="Applica questa proposta al DB e rimuovila dalla lista"
+                         >
+                           {applyingId === p.id ? (
+                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                           ) : (
+                             <Send className="h-3 w-3 mr-1" />
+                           )}
+                           Applica
+                         </Button>
+                       )}
+                     </div>
                     <p className="text-sm text-foreground/90 mb-1">{p.reasoning}</p>
                     <Collapsible>
                       <CollapsibleTrigger className="text-xs text-primary hover:underline flex items-center gap-1">
