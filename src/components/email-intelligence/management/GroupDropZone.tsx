@@ -78,8 +78,8 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
     >
       <Card
         className={cn(
-          "h-full transition-all border-2 flex flex-col overflow-hidden",
-          isHovered && "border-primary bg-primary/5 shadow-2xl scale-105 ring-4 ring-primary/20"
+          "h-full transition-colors duration-150 border-2 flex flex-col overflow-hidden",
+          isHovered && "border-primary bg-primary/5 ring-2 ring-primary/30"
         )}
         style={{
           borderColor: isHovered ? group.colore : undefined,
