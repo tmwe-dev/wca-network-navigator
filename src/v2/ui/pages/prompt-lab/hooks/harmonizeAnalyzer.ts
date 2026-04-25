@@ -182,7 +182,48 @@ function extractJsonObject(raw: string): string | null {
 }
 
 /**
+ * Auto-repair di JSON troncato (causa tipica: cap max_tokens raggiunto).
+ * Bilancia stringhe aperte e parentesi {}/[] in coda e rimuove la virgola
+ * pendente. NON corregge sintassi interna malformata: solo troncamento.
+ */
+export function repairTruncatedJson(s: string): string {
+  let out = s;
+  // 1. Stringa aperta? Conta apici non escapati.
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < out.length; i++) {
+    const ch = out[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') inString = !inString;
+  }
+  if (inString) out += '"';
+  // 2. Conta {} e [] non in stringa.
+  let openObj = 0;
+  let openArr = 0;
+  inString = false;
+  escape = false;
+  for (const ch of out) {
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") openObj++;
+    else if (ch === "}") openObj--;
+    else if (ch === "[") openArr++;
+    else if (ch === "]") openArr--;
+  }
+  // 3. Rimuovi virgola pendente prima delle chiusure aggiunte.
+  out = out.replace(/,\s*$/, "");
+  while (openArr-- > 0) out += "]";
+  while (openObj-- > 0) out += "}";
+  return out;
+}
+
+/**
  * Parser robusto con Zod: log visibile su fallimento invece di [] silenzioso.
+ * Validazione INDIVIDUALE per proposta: se 18/20 sono valide e 2 hanno
+ * enum sbagliato, recupera le 18 invece di scartare tutto.
  */
 export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
   const jsonStr = extractJsonObject(raw);
@@ -193,19 +234,51 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
   let parsedRaw: unknown;
   try {
     parsedRaw = JSON.parse(jsonStr);
-  } catch (e) {
-    console.warn("[harmonizeAnalyzer] JSON.parse failed", { err: String(e), preview: jsonStr.slice(0, 200) });
-    return [];
-  }
-  const result = ResponseSchema.safeParse(parsedRaw);
-  if (!result.success) {
-    console.warn("[harmonizeAnalyzer] Zod validation failed", {
-      issues: result.error.issues.slice(0, 5),
-    });
-    return [];
+  } catch (e1) {
+    // Tentativo di recupero: JSON troncato per token explosion.
+    try {
+      parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
+      console.warn("[harmonizeAnalyzer] JSON repaired after truncation", {
+        originalEnd: jsonStr.slice(-80),
+      });
+    } catch (e2) {
+      console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
+        err: String(e1),
+        repairErr: String(e2),
+        preview: jsonStr.slice(0, 200),
+      });
+      return [];
+    }
   }
 
-  return result.data.proposals.map((p, idx): HarmonizeProposal => {
+  // Validazione INDIVIDUALE per proposta (resilienza all-or-nothing Zod).
+  const rawObj = (parsedRaw && typeof parsedRaw === "object")
+    ? (parsedRaw as Record<string, unknown>)
+    : {};
+  const rawProposals = Array.isArray(rawObj.proposals) ? rawObj.proposals : [];
+  const validProposals: z.infer<typeof ProposalSchema>[] = [];
+  let skipped = 0;
+  for (let i = 0; i < rawProposals.length; i++) {
+    const r = ProposalSchema.safeParse(rawProposals[i]);
+    if (r.success) {
+      validProposals.push(r.data);
+    } else {
+      skipped++;
+      console.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
+        firstIssue: r.error.issues[0],
+        proposalKeys: typeof rawProposals[i] === "object" && rawProposals[i] !== null
+          ? Object.keys(rawProposals[i] as object)
+          : typeof rawProposals[i],
+      });
+    }
+  }
+  if (skipped > 0) {
+    console.warn(
+      `[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`,
+    );
+  }
+
+  return validProposals.map((p, idx): HarmonizeProposal => {
     const matched = chunk[idx]?.matched;
     const desired = chunk[idx]?.desired;
     const action = p.action_type as HarmonizeActionType;
