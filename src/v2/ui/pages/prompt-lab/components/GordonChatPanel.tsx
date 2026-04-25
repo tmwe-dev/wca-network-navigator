@@ -14,13 +14,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Mic, MicOff, Volume2, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, Check, BookmarkPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { createSuggestion } from "@/data/suggestedImprovements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { appendProposalChat, type HarmonizeProposal } from "@/data/harmonizeRuns";
+import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
 
@@ -47,7 +47,13 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingRegeneration | null>(null);
   const [savingRule, setSavingRule] = useState(false);
+  const [autoVoice, setAutoVoice] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("gordon-auto-voice") !== "0";
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastSpokenIdxRef = useRef<number>(-1);
 
   const speech = useContinuousSpeech((text) => {
     setInput((prev) => (prev ? prev + " " + text : text));
@@ -58,6 +64,11 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     setMessages(proposal.chat ?? []);
     setPending(null);
     setInput("");
+    lastSpokenIdxRef.current = (proposal.chat ?? []).length - 1; // non rileggere il pregresso
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
   }, [proposal.id, proposal.chat]);
 
   useEffect(() => {
@@ -103,16 +114,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
         // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
         setPending({ text: "", ruleSuggestion: data.suggested_rule });
       }
-
-      // Persistenza chat: salva sia il messaggio utente che la risposta dell'assistente
-      try {
-        await appendProposalChat(runId, proposal.id, [
-          { role: "user", content: text },
-          { role: "assistant", content: data.reply },
-        ]);
-      } catch (persistErr) {
-        console.warn("[GordonChatPanel] persist chat failed", persistErr);
-      }
+      // La persistenza chat è già gestita dalla edge function harmonize-proposal-chat.
     } catch (e) {
       const msg = e instanceof Error ? e.message : "errore di rete";
       toast.error(msg);
@@ -128,6 +130,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       return;
     }
     try {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       const sessionRes = await supabase.auth.getSession();
       const token = sessionRes.data.session?.access_token ?? "";
       const res = await fetch(
@@ -147,10 +150,50 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
         return;
       }
       const blob = await res.blob();
-      new Audio(URL.createObjectURL(blob)).play();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (audioRef.current === audio) audioRef.current = null; };
+      await audio.play();
     } catch {
       toast.error("Errore riproduzione voce");
     }
+  };
+
+  // Autoplay: quando arriva un nuovo messaggio assistant e autoVoice è ON, lo legge.
+  // Pulisce markdown/punteggiatura tecnica come fa Mission/useAiVoice.
+  useEffect(() => {
+    if (!autoVoice || !voiceId) return;
+    if (loading) return;
+    if (messages.length === 0) return;
+    const lastIdx = messages.length - 1;
+    const last = messages[lastIdx];
+    if (last.role !== "assistant") return;
+    if (lastIdx <= lastSpokenIdxRef.current) return;
+    lastSpokenIdxRef.current = lastIdx;
+    if (last.content.startsWith("⚠️")) return;
+    const cleanText = last.content
+      .replace(/_\([^)]*\)_/g, "") // rimuove i marker tipo "(ho preparato un nuovo testo, vedi sotto ↓)"
+      .replace(/[#*_`~\[\]()>|]/g, "")
+      .replace(/\n{2,}/g, ". ")
+      .replace(/\n/g, " ")
+      .trim();
+    if (cleanText.length < 5) return;
+    void playTTS(cleanText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, loading, autoVoice, voiceId]);
+
+  const toggleAutoVoice = () => {
+    setAutoVoice((v) => {
+      const next = !v;
+      localStorage.setItem("gordon-auto-voice", next ? "1" : "0");
+      if (!next && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      return next;
+    });
   };
 
   const handleApplyHereOnly = async () => {
