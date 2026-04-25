@@ -6,6 +6,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { forwardToFunction } from "../_shared/proxyUtils.ts";
+// jsonrepair: recupera JSON troncati o malformati nel content del modello
+// (causa tipica: cap max_tokens raggiunto durante l'ingestion Harmonizer).
+import { jsonrepair } from "https://esm.sh/jsonrepair@3.12.0";
 
 const VALID_SCOPES = new Set([
   "partner_hub", "cockpit", "contacts", "import", "extension", "strategic",
@@ -79,13 +82,23 @@ serve(async (req) => {
         if (upstreamBody && typeof upstreamBody.content === "string" && !upstreamBody.structured) {
           const match = upstreamBody.content.match(/```json\s*([\s\S]*?)\s*```/);
           if (match) {
+            const raw = match[1];
+            let parsed: unknown = null;
             try {
-              const parsed = JSON.parse(match[1]);
+              parsed = JSON.parse(raw);
+            } catch {
+              // Fallback: prova a riparare JSON troncato/malformato
+              try {
+                parsed = JSON.parse(jsonrepair(raw));
+                console.warn("kb-supervisor: JSON recuperato via jsonrepair");
+              } catch (repairErr) {
+                console.warn("kb-supervisor: failed to parse/repair inline JSON block:", repairErr);
+              }
+            }
+            if (parsed !== null) {
               upstreamBody.structured = parsed;
               // Strip JSON block from displayed content
               upstreamBody.content = upstreamBody.content.replace(/```json\s*[\s\S]*?\s*```/, "").trim();
-            } catch (parseErr) {
-              console.warn("kb-supervisor: failed to parse inline JSON block:", parseErr);
             }
           }
           return new Response(JSON.stringify(upstreamBody), {
