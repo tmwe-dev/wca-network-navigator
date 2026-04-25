@@ -382,5 +382,35 @@ export function useHarmonizeOrchestrator(userId: string) {
     }
   }, [userId]);
 
-  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, executeSingle, cancel, reset };
+  /**
+   * Scarta UNA singola proposta (non viene applicata al DB).
+   * Marca lo status come "rejected" così conta come gestita e sparisce dalla lista.
+   */
+  const discardSingle = useCallback(
+    async (proposalId: string): Promise<{ ok: boolean; reason?: string }> => {
+      if (!state.runId) return { ok: false, reason: "missing run" };
+      const proposal = state.proposals.find((p) => p.id === proposalId);
+      if (!proposal) return { ok: false, reason: "proposal not found" };
+      try {
+        await setProposalStatus(state.runId, proposal.id, "rejected");
+      } catch (e) {
+        return { ok: false, reason: e instanceof Error ? e.message : "errore" };
+      }
+      setState((s) => {
+        const proposals = s.proposals.filter((p) => p.id !== proposalId);
+        const approvedIds = new Set(s.approvedIds);
+        approvedIds.delete(proposalId);
+        return {
+          ...s,
+          proposals,
+          approvedIds,
+          executedCount: s.executedCount + 1, // conta come "gestita" nella barra di progresso
+        };
+      });
+      return { ok: true };
+    },
+    [state.runId, state.proposals],
+  );
+
+  return { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, executeSingle, discardSingle, cancel, reset };
 }
