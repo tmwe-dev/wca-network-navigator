@@ -9,7 +9,7 @@
  *  - entities_created (derivati dalle proposals INSERT) → session.entities_created
  */
 import { z } from "zod";
-import { callHarmonizer, parseProposalsFromText } from "../hooks/harmonizeAnalyzer";
+import { callHarmonizer, parseProposalsFromText, repairTruncatedJson } from "../hooks/harmonizeAnalyzer";
 import { TMWE_INGESTION_BRIEFING } from "@/v2/agent/prompts/core/tmwe-ingestion-briefing";
 import type { CollectorOutput, GapCandidate } from "../hooks/harmonizeCollector";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
@@ -211,7 +211,17 @@ function parseExtended(raw: string, chunkIndex: number): {
   const json = extractJsonObject(raw);
   if (!json) return empty;
   let parsedRaw: unknown;
-  try { parsedRaw = JSON.parse(json); } catch { return empty; }
+  try {
+    parsedRaw = JSON.parse(json);
+  } catch {
+    // Fallback: JSON troncato per token explosion.
+    try {
+      parsedRaw = JSON.parse(repairTruncatedJson(json));
+      console.warn("[libraryAnalyzer] extended JSON repaired after truncation", { chunkIndex });
+    } catch {
+      return empty;
+    }
+  }
   const result = ExtendedResponseSchema.safeParse(parsedRaw);
   if (!result.success) return empty;
 
