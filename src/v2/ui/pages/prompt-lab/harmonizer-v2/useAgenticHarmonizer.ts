@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { runAgenticHarmonizer, type EntityProgress, type OrchestratorOutput, type OrchestratorStats, type OrchestratorWarning } from "./agentOrchestrator";
+import { parseEntities } from "./entityParser";
 import type { ParsedFile } from "../utils/fileParser";
 
 export type AgenticPhase = "idle" | "parsing" | "indexing" | "processing" | "reviewing" | "done" | "error" | "cancelled";
@@ -14,6 +15,7 @@ export type AgenticPhase = "idle" | "parsing" | "indexing" | "processing" | "rev
 export interface AgenticState {
   phase: AgenticPhase;
   entities: EntityProgress[];
+  processedEntityIds: string[];
   currentIndex: number;
   total: number;
   stats?: OrchestratorStats;
@@ -25,6 +27,7 @@ export interface AgenticState {
 const INITIAL: AgenticState = {
   phase: "idle",
   entities: [],
+  processedEntityIds: [],
   currentIndex: 0,
   total: 0,
   warnings: [],
@@ -113,9 +116,55 @@ export function useAgenticHarmonizer(userId: string) {
     }
   }, [userId]);
 
+  const resume = useCallback(async (input: { sourceFile: ParsedFile; goal: string }) => {
+    if (!userId) return;
+    const restored = state;
+    const processedEntityIds = new Set(restored.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id));
+    if (processedEntityIds.size === 0) {
+      await start(input);
+      return;
+    }
+    abortRef.current = false;
+    try {
+      const parsed = await parseEntities(input.sourceFile.content);
+      const remainingIds = new Set(parsed.filter((e) => !processedEntityIds.has(e.id)).map((e) => e.id));
+      if (remainingIds.size === 0) {
+        setState((s) => ({ ...s, phase: "done" }));
+        return;
+      }
+      const output = await runAgenticHarmonizer({
+        userId,
+        sourceText: input.sourceFile.content,
+        sourceFileName: input.sourceFile.name,
+        goal: input.goal,
+        resume: {
+          runId: restored.output?.runId,
+          sessionId: restored.output?.sessionId,
+          skipEntityIds: Array.from(processedEntityIds),
+          previousEntities: restored.entities,
+        },
+        callbacks: {
+          onPhaseChange: (phase) => setState((s) => ({ ...s, phase })),
+          onEntityProgress: (entity, idx, total) => {
+            setState((s) => {
+              const existingById = new Map(s.entities.map((e) => [e.id, e]));
+              const entities = Array.from({ length: total }, (_, i) => s.entities[i] ?? existingById.get(entity.id) ?? entity);
+              entities[idx] = entity;
+              return { ...s, entities, currentIndex: idx, total };
+            });
+          },
+          shouldAbort: () => abortRef.current,
+        },
+      });
+      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds: output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id), stats: output.stats, warnings: output.warnings, output, total: output.entities.length }));
+    } catch (err) {
+      setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
+    }
+  }, [state, start, userId]);
+
   const cancel = useCallback(() => {
     abortRef.current = true;
-    setState((s) => ({ ...s, phase: "cancelled" }));
+    setState((s) => ({ ...s, phase: "cancelled", processedEntityIds: s.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id) }));
   }, []);
 
   const reset = useCallback(() => {
@@ -126,5 +175,5 @@ export function useAgenticHarmonizer(userId: string) {
     }
   }, [userId]);
 
-  return { state, start, cancel, reset };
+  return { state, start, resume, cancel, reset };
 }
