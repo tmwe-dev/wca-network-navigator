@@ -165,8 +165,13 @@ export async function runAgenticHarmonizer(input: {
   const recentFacts: FactEntry[] = [];
   let factsExtracted = 0;
 
-  for (let i = 0; i < entities.length; i++) {
-    if (cb.shouldAbort?.()) break;
+  // Process N entità in parallelo per batch. Aumenta throughput ~5x.
+  // I "recentDecisions"/"recentFacts" sono hint best-effort: in batch concorrenti
+  // alcune entità non li vedranno aggiornati, ma è accettabile.
+  const CONCURRENCY = 5;
+
+  const processOne = async (i: number): Promise<void> => {
+    if (cb.shouldAbort?.()) return;
     const entity = entities[i];
     progress[i].status = "processing";
     cb.onEntityProgress?.(progress[i], i, entities.length);
@@ -261,6 +266,15 @@ export async function runAgenticHarmonizer(input: {
     }
 
     cb.onEntityProgress?.(progress[i], i, entities.length);
+  };
+
+  for (let i = 0; i < entities.length; i += CONCURRENCY) {
+    if (cb.shouldAbort?.()) break;
+    const batchIndices: number[] = [];
+    for (let j = i; j < Math.min(i + CONCURRENCY, entities.length); j++) {
+      batchIndices.push(j);
+    }
+    await Promise.all(batchIndices.map((idx) => processOne(idx)));
   }
 
   // 3. Self-review
