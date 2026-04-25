@@ -20,6 +20,72 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
+function EditableAfter({
+  value,
+  editable,
+  onSave,
+}: {
+  value: string;
+  editable: boolean;
+  onSave: (next: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (!editing) {
+    return (
+      <div>
+        <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+          <span>Dopo:</span>
+          {editable && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs"
+              onClick={() => {
+                setDraft(value);
+                setEditing(true);
+              }}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Modifica
+            </Button>
+          )}
+        </div>
+        <pre className="text-xs bg-muted p-2 rounded whitespace-pre-wrap max-h-48 overflow-auto">{value}</pre>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="text-xs font-semibold text-muted-foreground mb-1">Dopo (in modifica):</div>
+      <Textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="text-xs font-mono min-h-[120px]"
+      />
+      <div className="flex justify-end gap-2 mt-1">
+        <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditing(false)}>
+          <X className="h-3 w-3 mr-1" />
+          Annulla
+        </Button>
+        <Button
+          size="sm"
+          className="h-7"
+          onClick={() => {
+            onSave(draft);
+            setEditing(false);
+          }}
+        >
+          <Check className="h-3 w-3 mr-1" />
+          Salva modifica
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   proposals: HarmonizeProposal[];
   approvedIds: Set<string>;
