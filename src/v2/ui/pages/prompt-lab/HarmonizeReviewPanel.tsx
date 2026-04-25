@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2 } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -162,6 +162,13 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
   const actionable = proposals.filter((p) => p.resolution_layer === "text" || p.resolution_layer === "kb_governance");
   const readOnly = proposals.filter((p) => p.resolution_layer === "contract" || p.resolution_layer === "code_policy");
 
+  // Una proposta è "sicura" se è solo testo, non DELETE, non INSERT su agents, e impatto non alto.
+  const isSafe = (p: HarmonizeProposal) =>
+    p.resolution_layer === "text" &&
+    p.action !== "DELETE" &&
+    p.impact !== "high" &&
+    !(p.action === "INSERT" && p.target.table === "agents");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -179,12 +186,13 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             const isReadOnly = p.resolution_layer === "contract" || p.resolution_layer === "code_policy";
             const layer = LAYER_META[p.resolution_layer];
             const LayerIcon = layer.icon;
+            const safe = isSafe(p);
             // Dipendenze cablate: bloccato finché tutte le sue deps non sono approvate.
             const missingDeps = (p.dependencies ?? []).filter((d) => !approvedIds.has(d));
             const blockedByDeps = missingDeps.length > 0;
             const disabled = isReadOnly || blockedByDeps;
             return (
-              <Card key={p.id} className="p-3">
+              <Card key={p.id} className={`p-3 ${safe ? "border-l-4 border-l-emerald-500/70" : "border-l-4 border-l-amber-500/70"}`}>
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={approvedIds.has(p.id)}
@@ -194,6 +202,17 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
+                      {safe ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1" title="Modifica di solo testo, basso impatto, reversibile">
+                          <ShieldCheck className="h-3 w-3" />
+                          Sicura
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30 gap-1" title="Da rivedere a mano: inserimento, eliminazione o impatto alto">
+                          <Eye className="h-3 w-3" />
+                          Da rivedere
+                        </Badge>
+                      )}
                       <Badge className={ACTION_VARIANT[p.action]} variant="outline">{p.action}</Badge>
                       <Badge className={layer.cls} variant="outline">
                         <LayerIcon className="h-3 w-3 mr-1" />
