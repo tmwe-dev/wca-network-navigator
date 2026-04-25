@@ -61,7 +61,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [librarySource, setLibrarySource] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<ParsedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, cancel, reset } = useHarmonizeOrchestrator(userId);
+  const { state, start, toggleApproval, approveAllSafe, editProposalAfter, loadRunForReview, execute, executeSingle, cancel, reset } = useHarmonizeOrchestrator(userId);
 
   // ── Ingestion pipeline (tab "Documento grande") ──
   const ingestion = useHarmonizerLibraryIngestion(userId);
@@ -321,6 +321,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
               onToggle={toggleApproval}
               onApproveAllSafe={approveAllSafe}
               onEditAfter={editProposalAfter}
+              onApplySingle={executeSingle}
             />
           )}
 
