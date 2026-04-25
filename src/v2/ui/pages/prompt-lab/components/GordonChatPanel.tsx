@@ -308,45 +308,71 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           </div>
         )}
 
-        {/* Pending regenerated_after / rule */}
-        {pending && (
-          <Card className="p-3 border-primary/40 bg-primary/5 space-y-2">
-            {pending.text && (
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <Sparkles className="w-3 h-3" /> Nuovo "after" già applicato
-                </div>
-                <pre className="text-[11px] bg-background/70 p-2 rounded border whitespace-pre-wrap max-h-40 overflow-auto">
-                  {pending.text}
-                </pre>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Il testo è stato salvato nel campo "Dopo" a sinistra. Premi "Applica subito" per scriverlo nel DB.
-                </p>
-              </div>
-            )}
-            {pending.ruleSuggestion && (
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <BookmarkPlus className="w-3 h-3" /> Regola permanente proposta
-                </div>
-                <p className="text-[11px] font-medium">{pending.ruleSuggestion.title}</p>
-                <p className="text-[10px] text-muted-foreground italic">{pending.ruleSuggestion.content}</p>
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
-              {pending.ruleSuggestion && (
-                <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
-                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
-                  Salva come regola permanente
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" className="h-7 text-[11px] ml-auto" onClick={() => setPending(null)} disabled={savingRule}>
-                Chiudi
-              </Button>
-            </div>
-          </Card>
-        )}
       </div>
+
+      {/* PENDING — sticky sopra l'input bar, sempre visibile finché c'è una proposta da decidere */}
+      {pending && (pending.text || pending.ruleSuggestion) && (
+        <div className="border-t border-primary/30 bg-primary/5 p-2.5 space-y-2">
+          {pending.text && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Nuovo testo proposto da Gordon
+              </div>
+              <pre className="text-[11px] bg-background p-2 rounded border whitespace-pre-wrap max-h-32 overflow-auto">
+                {pending.text}
+              </pre>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px] flex-1"
+                  onClick={handleApplyHereOnly}
+                  disabled={savingRule}
+                >
+                  <Check className="w-3 h-3 mr-1" /> Accetta nuovo testo
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={() => setPending((p) => (p ? { ...p, text: "" } : null))}
+                  disabled={savingRule}
+                >
+                  Rifiuta
+                </Button>
+              </div>
+            </div>
+          )}
+          {pending.ruleSuggestion && (
+            <div className="space-y-1.5 pt-1.5 border-t border-primary/20">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                <BookmarkPlus className="w-3 h-3" /> Regola permanente proposta
+              </div>
+              <p className="text-[11px] font-medium">{pending.ruleSuggestion.title}</p>
+              <p className="text-[10px] text-muted-foreground italic">{pending.ruleSuggestion.content}</p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px] flex-1"
+                  onClick={handleSaveRule}
+                  disabled={savingRule}
+                >
+                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+                  Salva regola
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={() => setPending((p) => (p ? { ...p, ruleSuggestion: null } : null))}
+                  disabled={savingRule}
+                >
+                  Scarta
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Input */}
       <div className="flex gap-1.5 p-2 border-t border-border/30">
