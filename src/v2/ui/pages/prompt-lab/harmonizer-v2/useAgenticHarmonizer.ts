@@ -1,7 +1,11 @@
 /**
  * useAgenticHarmonizer — Hook React per la pipeline Armonizzatore V2.
+ *
+ * PERSISTENZA: lo state viene salvato in localStorage dopo ogni transizione,
+ * così un refresh accidentale della pagina non perde il lavoro fatto
+ * (entità processate, stats, runId del DB su cui sono già salvate le proposte).
  */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { runAgenticHarmonizer, type EntityProgress, type OrchestratorOutput, type OrchestratorStats, type OrchestratorWarning } from "./agentOrchestrator";
 import type { ParsedFile } from "../utils/fileParser";
 
@@ -26,9 +30,60 @@ const INITIAL: AgenticState = {
   warnings: [],
 };
 
+const STORAGE_PREFIX = "harmonizerV2:agentic:state:";
+const STORAGE_VERSION = 1;
+
+function storageKey(userId: string): string {
+  return `${STORAGE_PREFIX}${userId}`;
+}
+
+function loadPersistedState(userId: string): AgenticState | null {
+  if (!userId || typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(storageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { v: number; state: AgenticState };
+    if (parsed.v !== STORAGE_VERSION || !parsed.state) return null;
+    // Se al refresh era ancora "in corso", normalizziamo a cancelled (non possiamo
+    // riprendere il loop AI: i risultati parziali restano visibili).
+    const inFlight = ["parsing", "indexing", "processing", "reviewing"].includes(parsed.state.phase);
+    return inFlight ? { ...parsed.state, phase: "cancelled" } : parsed.state;
+  } catch {
+    return null;
+  }
+}
+
+function persistState(userId: string, state: AgenticState): void {
+  if (!userId || typeof window === "undefined") return;
+  try {
+    // Non persistere lo stato idle vuoto (è il default).
+    if (state.phase === "idle" && state.entities.length === 0) {
+      window.localStorage.removeItem(storageKey(userId));
+      return;
+    }
+    window.localStorage.setItem(
+      storageKey(userId),
+      JSON.stringify({ v: STORAGE_VERSION, state }),
+    );
+  } catch {
+    // localStorage pieno o disabilitato: ignora silenziosamente.
+  }
+}
+
 export function useAgenticHarmonizer(userId: string) {
-  const [state, setState] = useState<AgenticState>(INITIAL);
+  const [state, setState] = useState<AgenticState>(() => loadPersistedState(userId) ?? INITIAL);
   const abortRef = useRef(false);
+
+  // Se l'userId cambia (login/logout), prova a ricaricare lo stato per quel utente.
+  useEffect(() => {
+    const restored = loadPersistedState(userId);
+    if (restored) setState(restored);
+  }, [userId]);
+
+  // Persisti ad ogni transizione di stato.
+  useEffect(() => {
+    persistState(userId, state);
+  }, [userId, state]);
 
   const start = useCallback(async (input: { sourceFile: ParsedFile; goal: string }) => {
     if (!userId) return;
@@ -66,7 +121,10 @@ export function useAgenticHarmonizer(userId: string) {
   const reset = useCallback(() => {
     abortRef.current = false;
     setState(INITIAL);
-  }, []);
+    if (userId && typeof window !== "undefined") {
+      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* noop */ }
+    }
+  }, [userId]);
 
   return { state, start, cancel, reset };
 }
