@@ -112,24 +112,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
 
-      if (data.regenerated_after) {
-        // Applica IMMEDIATAMENTE il nuovo "after" alla proposta, così la sezione
-        // di sinistra (editor After) si aggiorna in tempo reale e il bottone
-        // "Applica subito" userà il testo rigenerato.
-        const applyRes = await onApplyRegenerated(proposal.id, data.regenerated_after);
-        if (applyRes.ok) {
-          toast.success("Sezione aggiornata con il nuovo testo di Gordon");
-        } else {
-          toast.warning(applyRes.reason ?? "Aggiornamento sezione fallito — testo disponibile sotto");
-        }
-        // Mostriamo comunque il pending solo se Gordon ha proposto anche una regola
-        // permanente da salvare in KB.
-        if (data.suggested_rule) {
-          setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule });
-        }
-      } else if (data.suggested_rule) {
-        // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
-        setPending({ text: "", ruleSuggestion: data.suggested_rule });
+      // CRITICO: NON applicare nulla in autonomia. Mostra SEMPRE la card pending
+      // con i bottoni Accetta/Rifiuta quando Gordon ha prodotto un nuovo testo
+      // o una regola, così l'operatore decide esplicitamente.
+      if (data.regenerated_after || data.suggested_rule) {
+        setPending({
+          text: data.regenerated_after ?? "",
+          ruleSuggestion: data.suggested_rule ?? null,
+        });
       }
       // La persistenza chat è già gestita dalla edge function harmonize-proposal-chat.
     } catch (e) {
@@ -230,33 +220,22 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     }
   };
 
-  const handleApplyAndSaveRule = async () => {
+  const handleSaveRule = async () => {
     setSavingRule(true);
     try {
-      // 1) Applica il nuovo after (se presente)
-      if (pending?.text) {
-        const res = await onApplyRegenerated(proposal.id, pending.text);
-        if (!res.ok) {
-          toast.error(res.reason ?? "Salvataggio testo fallito");
-          return;
-        }
-      }
-      // 2) Salva la regola permanente in suggested_improvements
       const rule = pending?.ruleSuggestion;
-      if (rule) {
-        await createSuggestion(userId, {
-          source_context: "manual_correction",
-          suggestion_type: "kb_rule",
-          title: rule.title,
-          content: rule.content,
-          reasoning: `Suggerita da Gordon durante revisione proposta ${proposal.id} (${proposal.target.table})`,
-          priority: "medium",
-        });
-        toast.success("Regola salvata — visibile in Suggerimenti da approvare");
-      } else {
-        toast.success("Testo applicato (nessuna regola da salvare)");
-      }
-      setPending(null);
+      if (!rule) return;
+      await createSuggestion(userId, {
+        source_context: "manual_correction",
+        suggestion_type: "kb_rule",
+        title: rule.title,
+        content: rule.content,
+        reasoning: `Suggerita da Gordon durante revisione proposta ${proposal.id} (${proposal.target.table})`,
+        priority: "medium",
+      });
+      toast.success("Regola salvata — visibile in Suggerimenti da approvare");
+      // Rimuovi solo la regola, lascia l'eventuale testo pending finché l'utente non lo gestisce
+      setPending((prev) => (prev ? { ...prev, ruleSuggestion: null } : prev));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "errore");
     } finally {
@@ -329,45 +308,71 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
           </div>
         )}
 
-        {/* Pending regenerated_after / rule */}
-        {pending && (
-          <Card className="p-3 border-primary/40 bg-primary/5 space-y-2">
-            {pending.text && (
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <Sparkles className="w-3 h-3" /> Nuovo "after" già applicato
-                </div>
-                <pre className="text-[11px] bg-background/70 p-2 rounded border whitespace-pre-wrap max-h-40 overflow-auto">
-                  {pending.text}
-                </pre>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Il testo è stato salvato nel campo "Dopo" a sinistra. Premi "Applica subito" per scriverlo nel DB.
-                </p>
-              </div>
-            )}
-            {pending.ruleSuggestion && (
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1 mb-1">
-                  <BookmarkPlus className="w-3 h-3" /> Regola permanente proposta
-                </div>
-                <p className="text-[11px] font-medium">{pending.ruleSuggestion.title}</p>
-                <p className="text-[10px] text-muted-foreground italic">{pending.ruleSuggestion.content}</p>
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
-              {pending.ruleSuggestion && (
-                <Button size="sm" className="h-7 text-[11px]" onClick={handleApplyAndSaveRule} disabled={savingRule}>
-                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
-                  Salva come regola permanente
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" className="h-7 text-[11px] ml-auto" onClick={() => setPending(null)} disabled={savingRule}>
-                Chiudi
-              </Button>
-            </div>
-          </Card>
-        )}
       </div>
+
+      {/* PENDING — sticky sopra l'input bar, sempre visibile finché c'è una proposta da decidere */}
+      {pending && (pending.text || pending.ruleSuggestion) && (
+        <div className="border-t border-primary/30 bg-primary/5 p-2.5 space-y-2">
+          {pending.text && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Nuovo testo proposto da Gordon
+              </div>
+              <pre className="text-[11px] bg-background p-2 rounded border whitespace-pre-wrap max-h-32 overflow-auto">
+                {pending.text}
+              </pre>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px] flex-1"
+                  onClick={handleApplyHereOnly}
+                  disabled={savingRule}
+                >
+                  <Check className="w-3 h-3 mr-1" /> Accetta nuovo testo
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={() => setPending((p) => (p ? { ...p, text: "" } : null))}
+                  disabled={savingRule}
+                >
+                  Rifiuta
+                </Button>
+              </div>
+            </div>
+          )}
+          {pending.ruleSuggestion && (
+            <div className="space-y-1.5 pt-1.5 border-t border-primary/20">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1">
+                <BookmarkPlus className="w-3 h-3" /> Regola permanente proposta
+              </div>
+              <p className="text-[11px] font-medium">{pending.ruleSuggestion.title}</p>
+              <p className="text-[10px] text-muted-foreground italic">{pending.ruleSuggestion.content}</p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px] flex-1"
+                  onClick={handleSaveRule}
+                  disabled={savingRule}
+                >
+                  {savingRule ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+                  Salva regola
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  onClick={() => setPending((p) => (p ? { ...p, ruleSuggestion: null } : null))}
+                  disabled={savingRule}
+                >
+                  Scarta
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Input */}
       <div className="flex gap-1.5 p-2 border-t border-border/30">
