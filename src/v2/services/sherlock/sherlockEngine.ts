@@ -94,12 +94,15 @@ async function callExtractAI(args: {
   priorFindings: Record<string, unknown>;
   signal: AbortSignal;
 }): Promise<{ findings: Record<string, unknown>; confidence: number; suggestedNextUrl: string | null; summary: string }> {
+  const { truncateMarkdownSmart, compactFindings } = await import("./aiIntegrations.ts");
+  const safeMarkdown = truncateMarkdownSmart(args.markdown, args.targetFields);
+  const compactPrior = compactFindings(args.priorFindings);
   const { data, error } = await supabase.functions.invoke("sherlock-extract", {
     body: {
-      markdown: args.markdown,
+      markdown: safeMarkdown,
       extract_prompt: args.step.ai_extract_prompt,
       target_fields: args.targetFields,
-      prior_findings: args.priorFindings,
+      prior_findings: compactPrior,
       label: args.step.label,
     },
   });
