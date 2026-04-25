@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { evaluateTransitions, applyTransition } from "../_shared/stateTransitions.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
+import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
 
 const supabase = createClient(
@@ -164,10 +165,25 @@ serve(async (req) => {
   const origin = req.headers.get("origin");
   const dynCors = getCorsHeaders(origin);
 
+  // ━━━ Cron Guard ━━━
+  const guard = await cronGuardCheck(supabase, {
+    jobName: "agent_autonomous",
+    enabledKey: "cron_agent_autonomous_enabled",
+    intervalKey: "cron_agent_autonomous_interval_min",
+    defaultIntervalMin: 10,
+  });
+  if (guard.skip) {
+    return new Response(
+      JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+      { headers: { ...dynCors, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     // Get all users with active agents
     const { data: allAgents } = await supabase.from("agents").select("id, user_id, name, role, territory_codes, is_active").eq("is_active", true);
     if (!allAgents || allAgents.length === 0) {
+      await cronGuardLogRun(supabase, "agent_autonomous", { processed: 0, message: "No active agents" });
       return new Response(JSON.stringify({ message: "No active agents" }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
@@ -432,11 +448,13 @@ serve(async (req) => {
       }
     }
 
+    await cronGuardLogRun(supabase, "agent_autonomous", { results_count: results.length });
     return new Response(JSON.stringify({ success: true, cycle: new Date().toISOString(), results }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
 
   } catch (err) {
+    await cronGuardLogRun(supabase, "agent_autonomous", {}, err instanceof Error ? err.message : String(err));
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Errore" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
