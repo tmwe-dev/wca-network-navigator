@@ -110,7 +110,8 @@ export function useAgenticHarmonizer(userId: string) {
           shouldAbort: () => abortRef.current,
         },
       });
-      setState((s) => ({ ...s, phase: "done", entities: output.entities, stats: output.stats, warnings: output.warnings, output, total: output.entities.length }));
+      const processedEntityIds = output.entities.filter((e) => e.status !== "pending" && e.status !== "processing").map((e) => e.id);
+      setState((s) => ({ ...s, phase: "done", entities: output.entities, processedEntityIds, stats: output.stats, warnings: output.warnings, output, total: output.entities.length }));
     } catch (err) {
       setState((s) => ({ ...s, phase: "error", error: err instanceof Error ? err.message : String(err) }));
     }
@@ -126,6 +127,7 @@ export function useAgenticHarmonizer(userId: string) {
     }
     abortRef.current = false;
     try {
+      setState((s) => ({ ...s, phase: "parsing" }));
       const parsed = await parseEntities(input.sourceFile.content);
       const remainingIds = new Set(parsed.filter((e) => !processedEntityIds.has(e.id)).map((e) => e.id));
       if (remainingIds.size === 0) {
