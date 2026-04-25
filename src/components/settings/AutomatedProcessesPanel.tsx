@@ -308,7 +308,7 @@ export default function AutomatedProcessesPanel() {
             <div className="text-sm font-medium text-muted-foreground">
               💰 Costo totale stimato processi automatici
             </div>
-            <div className="text-2xl font-bold mt-1">~${totalCost.toFixed(2)}/mese</div>
+            <div className="text-2xl font-bold mt-1 text-foreground">~${totalCost.toFixed(2)}/mese</div>
             <div className="text-xs text-muted-foreground mt-1">
               Modello: Gemini 2.5 Flash · Non include azioni manuali (chat, email composte, ecc.)
             </div>
