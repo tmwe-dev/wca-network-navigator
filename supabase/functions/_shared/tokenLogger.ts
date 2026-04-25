@@ -307,31 +307,26 @@ export async function logAiPrompt(
   input: LogAiPromptInput,
 ): Promise<void> {
   try {
-    const tokensTotal = input.tokensIn + input.tokensOut;
-    const totalChars =
-      (input.systemPromptChars ?? 0) + (input.userPromptChars ?? 0) + (input.contextChars ?? 0);
     const { error } = await supabase.rpc("log_ai_prompt", {
       p_user_id: input.userId,
-      p_operator_id: input.operatorId ?? null,
       p_function_name: input.functionName,
-      p_provider: input.provider ?? "lovable",
-      p_model: input.model,
       p_scope: input.scope ?? null,
       p_action: input.action ?? null,
-      p_group_category: input.groupCategory ?? "user",
-      p_is_cron: input.isCron ?? false,
-      p_cron_job_name: input.cronJobName ?? null,
-      p_tokens_in: input.tokensIn,
-      p_tokens_out: input.tokensOut,
-      p_tokens_total: tokensTotal,
-      p_cost_usd: input.costUsd ?? 0,
-      p_latency_ms: input.latencyMs ?? null,
+      p_group_category: input.groupCategory ?? "altro",
+      p_provider: input.provider ?? "google",
+      p_model: input.model,
       p_system_prompt_chars: input.systemPromptChars ?? 0,
       p_user_prompt_chars: input.userPromptChars ?? 0,
       p_context_chars: input.contextChars ?? 0,
-      p_total_input_chars: totalChars,
+      p_tokens_in: input.tokensIn,
+      p_tokens_out: input.tokensOut,
+      p_cost_usd: input.costUsd ?? 0,
+      p_latency_ms: input.latencyMs ?? null,
       p_success: input.success ?? true,
       p_error_message: input.errorMessage ?? null,
+      p_is_cron: input.isCron ?? false,
+      p_cron_job_name: input.cronJobName ?? null,
+      p_operator_id: input.operatorId ?? null,
       p_metadata: input.metadata ?? {},
     });
     if (error) {
