@@ -219,13 +219,6 @@ export function useHarmonizeOrchestrator(userId: string) {
     async (proposalId: string, newAfter: string): Promise<{ ok: boolean; reason?: string }> => {
       if (!state.runId) return { ok: false, reason: "run mancante" };
       const editedAt = new Date().toISOString();
-      setState((s) => ({
-        ...s,
-        proposals: s.proposals.map((p) =>
-          p.id === proposalId ? { ...p, after: newAfter, edited_by_user: true, edited_at: editedAt } : p,
-        ),
-      }));
-
       try {
         const proposals = await updateHarmonizeProposal(state.runId, proposalId, {
           after: newAfter,
