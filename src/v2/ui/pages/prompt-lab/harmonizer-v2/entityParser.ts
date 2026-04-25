@@ -109,7 +109,7 @@ function splitFenceAware(source: string): RawSection[] {
 
 /** Estrae il titolo "pulito" rimuovendo emoji decorative comuni. */
 function extractTitle(headerLine: string): string {
-  const m = headerLine.match(/^#{1,3}\s*(?:📄|📚|🎯|🤖|✉️|📞|📊|⚙️|🔧)?\s*(.+?)\s*$/);
+  const m = headerLine.match(/^#{1,6}\s*(?:📄|📚|🎯|🤖|✉️|📞|📊|⚙️|🔧)?\s*(.+?)\s*$/);
   return m ? m[1].trim() : headerLine.replace(/^#+\s*/, "").trim();
 }
 
