@@ -112,24 +112,14 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
 
-      if (data.regenerated_after) {
-        // Applica IMMEDIATAMENTE il nuovo "after" alla proposta, così la sezione
-        // di sinistra (editor After) si aggiorna in tempo reale e il bottone
-        // "Applica subito" userà il testo rigenerato.
-        const applyRes = await onApplyRegenerated(proposal.id, data.regenerated_after);
-        if (applyRes.ok) {
-          toast.success("Sezione aggiornata con il nuovo testo di Gordon");
-        } else {
-          toast.warning(applyRes.reason ?? "Aggiornamento sezione fallito — testo disponibile sotto");
-        }
-        // Mostriamo comunque il pending solo se Gordon ha proposto anche una regola
-        // permanente da salvare in KB.
-        if (data.suggested_rule) {
-          setPending({ text: data.regenerated_after, ruleSuggestion: data.suggested_rule });
-        }
-      } else if (data.suggested_rule) {
-        // Solo regola, senza nuovo testo: la mostriamo come "pending" senza testo rigenerato
-        setPending({ text: "", ruleSuggestion: data.suggested_rule });
+      // CRITICO: NON applicare nulla in autonomia. Mostra SEMPRE la card pending
+      // con i bottoni Accetta/Rifiuta quando Gordon ha prodotto un nuovo testo
+      // o una regola, così l'operatore decide esplicitamente.
+      if (data.regenerated_after || data.suggested_rule) {
+        setPending({
+          text: data.regenerated_after ?? "",
+          ruleSuggestion: data.suggested_rule ?? null,
+        });
       }
       // La persistenza chat è già gestita dalla edge function harmonize-proposal-chat.
     } catch (e) {
