@@ -156,21 +156,26 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 flex-1 overflow-hidden flex flex-col items-center justify-center">
-          {isHovered && rules.length === 0 && (
-            <div className="text-center py-12 animate-pulse">
-              <div className="text-5xl mb-3">👇</div>
-              <p className="text-sm font-medium text-primary">Rilascia qui per classificare</p>
+        <CardContent className="pt-2 pb-2 flex-1 overflow-hidden flex flex-col items-center justify-center relative">
+          {/* Drop hint — compact pill that fits the 20vh card height
+              and sits above the preview text without clipping behind the header. */}
+          {isHovered && (
+            <div className="absolute inset-x-2 top-1 z-10 flex items-center justify-center pointer-events-none animate-pulse">
+              <div className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold shadow flex items-center gap-1">
+                <span>👇</span>
+                <span>Rilascia qui</span>
+              </div>
             </div>
           )}
-          {!isHovered && rules.length > 0 && (
+          {rules.length > 0 ? (
             <div className="text-left w-full px-2">
-              <div className="font-bold text-xl mb-1">{rules[0].display_name || extractCompany(rules[0].email_address)}</div>
-              <div className="text-sm text-muted-foreground truncate">{rules[0].email_address}</div>
+              <div className="font-bold text-base leading-tight truncate">
+                {rules[0].display_name || extractCompany(rules[0].email_address)}
+              </div>
+              <div className="text-xs text-muted-foreground truncate">{rules[0].email_address}</div>
             </div>
-          )}
-          {!isHovered && rules.length === 0 && (
-            <p className="text-xs text-muted-foreground">Trascina sender qui</p>
+          ) : (
+            !isHovered && <p className="text-xs text-muted-foreground">Trascina sender qui</p>
           )}
         </CardContent>
       </Card>
