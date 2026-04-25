@@ -145,7 +145,10 @@ export function useGroupingData() {
           supabase
             .from("email_address_rules")
             .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
+            // Coerenza: una riga è "non classificata" solo se NESSUNO dei due
+            // campi (group_id legacy + group_name) è valorizzato.
             .is("group_id", null)
+            .is("group_name", null)
             .order("email_count", { ascending: false })
             .range(from, to),
       );
