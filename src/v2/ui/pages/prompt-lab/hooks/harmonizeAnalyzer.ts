@@ -163,7 +163,19 @@ export async function callHarmonizer(userPrompt: string, briefing: string = HARM
     },
     context: "harmonizeAnalyzer",
   });
-  return (result.content ?? "").trim();
+  // unified-assistant per scope=kb-supervisor estrae il blocco ```json ... ```
+  // dal content e lo sposta in `structured`, lasciando content vuoto. Il
+  // parser a valle si aspetta JSON puro: ricomponi qui se serve.
+  const content = (result.content ?? "").trim();
+  if (content.length > 0) return content;
+  if (result.structured && typeof result.structured === "object") {
+    try {
+      return JSON.stringify(result.structured);
+    } catch {
+      /* fallthrough → empty string */
+    }
+  }
+  return "";
 }
 
 /**
