@@ -15,9 +15,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { toast } from "sonner";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
 function EditableAfter({
@@ -92,6 +93,7 @@ interface Props {
   onToggle: (id: string) => void;
   onApproveAllSafe: () => void;
   onEditAfter?: (proposalId: string, newAfter: string) => void;
+  onApplySingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -121,7 +123,21 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
   regression_full: "Regression completa",
 };
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle }: Props) {
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  const handleApplySingle = async (id: string) => {
+    if (!onApplySingle) return;
+    setApplyingId(id);
+    try {
+      const res = await onApplySingle(id);
+      if (res.ok) toast.success("Proposta applicata al DB");
+      else toast.error(`Applicazione fallita: ${res.reason ?? "errore sconosciuto"}`);
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
   if (proposals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
