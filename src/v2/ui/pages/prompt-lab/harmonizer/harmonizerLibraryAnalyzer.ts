@@ -284,10 +284,17 @@ export async function runLibraryChunkAnalyzer(input: {
     return { proposals: [], extractedFacts: [], newConflicts: [], newCrossRefs: [], entitiesCreated: [] };
   }
 
-  // Cap a 20 gap per chunk: il modello a 60 con KB+briefing+stato saturava
-  // la context window e restituiva output vuoto. Per chunk densi (Doctrine,
-  // Email) si fa retry/resume per processare i restanti.
-  const cap = actionable.slice(0, 20);
+  // Cap adattivo: i chunk che toccano kb_entries producono proposte molto
+  // verbose (proposed_content lungo + reasoning), saturano facilmente il
+  // budget output → cap=10. Per gli altri (agents/personas/prompts) cap=20.
+  // I gap in eccesso vengono ripresi al retry/resume del chunk.
+  const maxGaps = chunkDef.targetTables.includes("kb_entries") ? 10 : 20;
+  const cap = actionable.slice(0, maxGaps);
+  if (actionable.length > maxGaps) {
+    console.info(
+      `[libraryAnalyzer] chunk #${chunkDef.index} cap=${maxGaps}, ${actionable.length - maxGaps} gap rinviati a retry`,
+    );
+  }
 
   // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
   // chunk. Senza questa iniezione il modello "vede" solo i nomi dei file
