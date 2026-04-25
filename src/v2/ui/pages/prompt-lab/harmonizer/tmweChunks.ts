@@ -165,9 +165,9 @@ export const TMWE_CHUNKS: TmweChunkDef[] = [
       ),
     ],
     preloadedDuplicates: [],
-    targetTables: ["kb_entries", "commercial_playbooks"],
+    targetTables: ["kb_entries", "commercial_playbooks", "operative_prompts"],
     contractGuidance:
-      "Claim commerciali e KPI vanno in kb_entries category=marketing. Verifica conflitti con dottrina già caricata (es. percentuali supplementi, frequenze monitoraggio): se diverso, NON sovrascrivere — registra come ConflictEntry per Luca.",
+      "Claim commerciali e KPI vanno in kb_entries category=marketing. Roadmap, test bridge, rollout e procedure esecutive FindAIr vanno in operative_prompts. Sequenze commerciali multi-step vanno in commercial_playbooks. Verifica conflitti con dottrina già caricata (es. percentuali supplementi, frequenze monitoraggio): se diverso, NON sovrascrivere — registra come ConflictEntry per Luca.",
   },
 ];
 
