@@ -1,202 +1,95 @@
-# Fix Token Explosion + Resilienza Parser TMWE
+# Armonizzatore V2 — Implementazione
 
-Risolve l'errore "Parser non è riuscito a estrarre nulla in scope per chunk #0" causato da:
-1. Cap hardcoded `max_tokens=8000` su scope `kb-supervisor` → output JSON troncato a metà stringa.
-2. `ResponseSchema.safeParse` all-or-nothing su Zod → una proposta malformata fa scartare TUTTE le 20.
+Pipeline agentica entity-by-entity che sostituisce il sistema a chunk fisso. Risolve token overflow, perdita di proposte, duplicati cross-chunk e fragilità dei retry.
 
-## Modifiche (5 file)
+## Architettura
 
-### File 1 — `supabase/functions/_shared/scopeConfigs.ts`
-Aggiungere campo opzionale `maxTokens?: number` all'interface `ScopeConfig` e settarlo a `32000` sullo scope `kb-supervisor`:
+5 stadi: **Parse** (client) → **Compact Index** (DB metadati) → **Agent Loop** (Match → Retrieve → Reason → Validate → Retry) → **Orchestrator** → **Self-Review**.
 
-```ts
-export interface ScopeConfig {
-  // ...esistenti
-  maxTokens?: number;
-}
+Ogni entità = una micro-call AI (~2K input / ~300 output token). Impossibile overflow. Failure granulare per entità invece che per chunk intero.
 
-case "kb-supervisor":
-  return {
-    systemPrompt: `...`,
-    tools: PLATFORM_TOOLS,
-    model: "google/gemini-2.5-flash",
-    temperature: 0.2,
-    maxTokens: 32000,        // ← NEW: budget output ampio per JSON TMWE densi
-    creditLabel: "KB Supervisor",
-  };
+## Fase 0 — Fix bloccanti (preliminari)
+
+1. **Verifica `systemPrompt.ts` riga 14-22**: il branch `conversational + operatorBriefing` esiste già da fix precedente. Confermare via log che il payload da `callHarmonizer` includa `operatorBriefing`. Se manca, fix lato chiamante.
+2. **`scopeConfigs.ts`**: aggiungere `max_tokens?: number` all'interfaccia `ScopeConfig`. Impostare `max_tokens: 16000` nel case `kb-supervisor`.
+3. **`aiCallHandler.ts`**: propagare `max_tokens` e `temperature` da scope config a `makeAiCall`.
+4. Deploy `ai-assistant`.
+
+## Fase 1 — Infrastruttura (nuova directory `harmonizer-v2/`)
+
+**`entityParser.ts`** — Splitta il documento su heading markdown (#, ##, ###).
+- **Fence-aware**: skip righe dentro code block ```` ``` ```` (condizione bloccante).
+- Riusa `inferCategory` e `readMeta` da `harmonizeCollector.ts`.
+- Output: `EntityToParse[]` con `id` (hash sha256 troncato di title+table), `title`, `content`, `inferredTable`, `sourceLineStart/End`.
+- Ignora sezioni con body < 50 char.
+
+**`compactIndex.ts`** — Query DB parallele su 6 tabelle target (`kb_entries`, `operative_prompts`, `email_prompts`, `email_address_rules`, `commercial_playbooks`, `agent_personas`).
+- Solo metadati: `id`, `title/name`, `category`, `contentLength`. Zero contenuti.
+- Output: `CompactIndex` con `entries[]`, `byTable: Map`, `byTitle: Map` (lowercase normalizzato).
+- Dimensione attesa: ~5KB per ~200 entry.
+
+## Fase 2 — Agent core
+
+**`entityMatcher.ts`** — Scoring multi-candidato (zero AI):
+- Match esatto titolo (100/60 same-table/cross-table)
+- Match parziale contenimento (70/40)
+- Match per parole chiave ≥4 char, ≥2 in comune (50/30)
+- Top 3 candidati ordinati per score.
+
+**`entityRetriever.ts`** — Fetch on-demand del contenuto completo solo per i match selezionati. Query raggruppate per tabella. Cache in-memory dentro l'orchestrator (suggerimento approvato: dedup tra entità che matchano stessi entry).
+
+**`agentRules.ts`** — System prompt compatto (~400 token). Output JSON strutturato con: `decision`, `confidence`, `reasoning`, `proposal`, `extracted_facts`, `conflict`.
+
+**`agentReasoner.ts`** — Build prompt per entità + retry adattivo:
+- Validazione Zod + coherence check (UPDATE senza match → invalid; INSERT con match esatto → invalid; confidence <0.3 con non-SKIP → invalid).
+- 3 strategie retry: `simplify` → `explicit_match` → `decompose`. Dopo fallimento: SKIP graceful con `needsHumanReview: true`.
+
+**`ai-gateway-micro` (nuova edge function)** — Endpoint minimale che bypassa context assembly, doctrine, memoria.
+- Input: `{ model, system, user, max_tokens, temperature }`.
+- **Sicurezza non negoziabile**: JWT verify (`requireAuth` da `_shared/authGuard.ts`), CORS dinamico (`getCorsHeaders` da `_shared/cors.ts`), security headers.
+- Modello default: `google/gemini-2.5-flash`.
+
+## Fase 3 — Orchestratore + UI
+
+**`agentOrchestrator.ts`** — `runAgenticHarmonizer(input)`:
+- Stadio 0+1 → crea `HarmonizerSession` con bootstrap entities dall'index.
+- Loop entità: Match → Retrieve (con cache) → Reason+Retry → Commit (proposal + facts + conflicts) → aggiorna `sessionState.recentDecisions` (ultimi 5) e `entitiesCreated`.
+- **Persistenza progress** (suggerimento approvato): salvare `last_processed_entity_index` in `harmonizer_sessions` per resume after crash. Richiede colonna nuova (migration).
+- Stadio 4: `selfReview` → warnings (duplicate inserts, insert rate >80%, items needing review).
+
+**`useAgenticHarmonizer.ts`** — Hook React con stato `AgenticProgress` (phase, current/total, lista entità con status individuali, stats, warnings).
+
+**`HarmonizeSystemDialog.tsx`** — Switch del tab "Ingestione documento" al nuovo hook. UI: progress bar globale + lista scrollabile per entità con badge colore (UPDATE verde, INSERT blu, SKIP grigio, NEEDS REVIEW giallo) + stats finali.
+
+## Fase 4 — Cleanup
+
+File deprecati (rimossi solo dopo verifica end-to-end v2):
+- `tmweChunks.ts`, `harmonizerLibraryCollector.ts`, `harmonizerLibraryAnalyzer.ts`, `harmonizerKbInjector.ts`, `useHarmonizerLibraryIngestion.ts`.
+
+File preservati (usati da "Migliora tutto"):
+- `harmonizeAnalyzer.ts`, `harmonizeCollector.ts` (per `inferCategory` e `parseDesiredInventoryDetailed`).
+
+## Migration DB
+
+Una sola migration:
+```sql
+ALTER TABLE harmonizer_sessions
+  ADD COLUMN last_processed_entity_index integer DEFAULT 0;
 ```
 
-### File 2 — `supabase/functions/ai-assistant/aiCallHandler.ts`
-Rimuovere il cap hardcoded `8000` e leggere il budget dallo scope config. Propagare `finish_reason` al chiamante per loggarlo.
+## Test di accettazione
 
-```ts
-// PRIMA (linee 211-223): hardcoded 8000 per kb-supervisor
-// DOPO: leggi maxTokens dalla scope config, fallback undefined
-let scopeTemperature: number | undefined;
-let scopeMaxTokens: number | undefined;
-if (scope) {
-  try {
-    const sc = getScopeConfig(scope);
-    if (typeof sc.temperature === "number") scopeTemperature = sc.temperature;
-    if (typeof sc.maxTokens === "number") scopeMaxTokens = sc.maxTokens;
-  } catch { /* ignore */ }
-}
-// Fallback di sicurezza solo se scope non l'ha dichiarato
-if (scope === "kb-supervisor" && scopeMaxTokens === undefined) {
-  scopeMaxTokens = 32000;
-}
-if (scope === "kb-supervisor" && scopeTemperature === undefined) {
-  scopeTemperature = 0.2;
-}
-```
+1. Parser su TMWE → 60-100 entità, zero crash, zero entità con body vuoto, code block ignorati correttamente.
+2. Compact Index → ~200 entry, tutte le 6 tabelle presenti, dimensione <10KB.
+3. 10 entità di test → zero "UPDATE senza match", zero "INSERT con match esatto".
+4. Pipeline completa TMWE → insert rate <80%, warning self-review se sopra.
+5. Retry: entità con JSON invalido viene ritentata e supera con strategia diversa.
+6. Resume: kill browser a entità #45 → restart riprende da #45.
 
-Inoltre, in `makeAiCall` (linee 156-168) loggare esplicitamente `finish_reason === "length"` come truncation symptom:
+## Stima realistica
 
-```ts
-if (!hasContent && !hasToolCalls) {
-  const fr = choice?.finish_reason;
-  console.warn("[AI] empty content from model", {
-    model: options.model,
-    finish_reason: fr,
-    truncated: fr === "length",
-    usage: data?.usage,
-  });
-  // ...
-}
-```
+14-18h di lavoro distribuite nelle 4 fasi (Fase 0: 30min, Fase 1: 2-3h, Fase 2: 4-5h, Fase 3: 4-5h, Fase 4: 1h, test e fix: 2-3h).
 
-### File 3 — `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts`
+## Rischio regressione
 
-**3a. Auto-repair JSON troncato.** Aggiungere helper `repairTruncatedJson` che chiude stringhe/array/oggetti aperti:
-
-```ts
-function repairTruncatedJson(s: string): string {
-  let out = s;
-  // Conta apici non escapati
-  let inString = false;
-  let escape = false;
-  for (let i = 0; i < out.length; i++) {
-    const ch = out[i];
-    if (escape) { escape = false; continue; }
-    if (ch === "\\") { escape = true; continue; }
-    if (ch === '"') inString = !inString;
-  }
-  if (inString) out += '"';
-  // Bilancia parentesi
-  let openObj = 0, openArr = 0;
-  inString = false; escape = false;
-  for (const ch of out) {
-    if (escape) { escape = false; continue; }
-    if (ch === "\\") { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
-    if (inString) continue;
-    if (ch === "{") openObj++;
-    else if (ch === "}") openObj--;
-    else if (ch === "[") openArr++;
-    else if (ch === "]") openArr--;
-  }
-  // Rimuovi virgola finale prima della chiusura, se presente
-  out = out.replace(/,\s*$/, "");
-  while (openArr-- > 0) out += "]";
-  while (openObj-- > 0) out += "}";
-  return out;
-}
-```
-
-**3b. Validazione Zod individuale per proposta** (richiesta esplicita utente). Sostituire `parseProposalsFromText` (linee 187-250):
-
-```ts
-export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
-  const jsonStr = extractJsonObject(raw);
-  if (!jsonStr) {
-    console.warn("[harmonizeAnalyzer] no JSON found", { rawPreview: raw.slice(0, 200) });
-    return [];
-  }
-  let parsedRaw: unknown;
-  try {
-    parsedRaw = JSON.parse(jsonStr);
-  } catch (e1) {
-    // Tentativo 2: repair JSON troncato
-    try {
-      parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
-      console.warn("[harmonizeAnalyzer] JSON repaired after truncation");
-    } catch (e2) {
-      console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
-        err: String(e1), preview: jsonStr.slice(0, 200),
-      });
-      return [];
-    }
-  }
-
-  // Validazione INDIVIDUALE per proposta (resilienza all-or-nothing)
-  const rawObj = parsedRaw as Record<string, unknown>;
-  const rawProposals = Array.isArray(rawObj?.proposals) ? rawObj.proposals : [];
-  const validProposals: z.infer<typeof ProposalSchema>[] = [];
-  let skipped = 0;
-  for (const [i, rawP] of rawProposals.entries()) {
-    const r = ProposalSchema.safeParse(rawP);
-    if (r.success) {
-      validProposals.push(r.data);
-    } else {
-      skipped++;
-      console.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
-        firstIssue: r.error.issues[0],
-        rawProposal: typeof rawP === "object" ? Object.keys(rawP as object) : typeof rawP,
-      });
-    }
-  }
-  if (skipped > 0) {
-    console.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate, ${validProposals.length} valide recuperate`);
-  }
-
-  return validProposals.map((p, idx): HarmonizeProposal => {
-    // mapping invariato (linee 209-249 originali)
-    // ...
-  });
-}
-```
-
-### File 4 — `src/v2/ui/pages/prompt-lab/harmonizer/harmonizerLibraryAnalyzer.ts`
-Stessa logica `repairTruncatedJson` applicata a `parseExtended` (linee 205-243):
-
-```ts
-function parseExtended(raw: string, chunkIndex: number): {...} {
-  const empty = { facts: [], conflicts: [], crossRefs: [] };
-  const json = extractJsonObject(raw);
-  if (!json) return empty;
-  let parsedRaw: unknown;
-  try { parsedRaw = JSON.parse(json); }
-  catch {
-    try { parsedRaw = JSON.parse(repairTruncatedJson(json)); }
-    catch { return empty; }
-  }
-  // ... resto invariato
-}
-```
-
-(Importare `repairTruncatedJson` da `harmonizeAnalyzer.ts` o duplicare localmente; preferibile esportarla.)
-
-### File 5 — UI feedback toast su truncation
-In `useHarmonizerLibraryIngestion.ts` (o equivalente), quando un chunk completa con N proposte recuperate dopo skip, mostrare toast informativo:
-- Truncation detected → "Output AI troncato sul chunk #N: recuperate X proposte parziali"
-- Skip Zod → "Y proposte scartate per validazione, Z accettate"
-
-(Verifico hook esistente al momento dell'implementazione e aggiungo solo il logging side-effect dove c'è già infra toast.)
-
-## Deploy
-
-Edge function da ridistribuire: **`unified-assistant`** (consuma scopeConfigs + aiCallHandler).
-
-## Verifica
-
-Dopo il deploy, il prossimo run TMWE su Chunk #0 dovrebbe:
-- Generare output completo (non più troncato a "fatti_canonici", "cu...")
-- Anche se 1-2 proposte hanno enum sbagliati, le restanti 18-20 vengono salvate
-- Log `[AI] empty content from model` con `truncated: true` se ricapita (segnale per alzare ulteriormente budget)
-
-## Effetti collaterali
-
-- Costo AI per chiamata kb-supervisor sale (output max 32K vs 8K). Accettato: le chunk TMWE sono dense, alternativa è split aggiuntivo lato collector che è più invasivo.
-- Nessun impatto su altri scope (cockpit/contacts/import/extension/strategic): `maxTokens` resta `undefined` per loro e l'AI gateway userà il default del modello.
-
-Approvi e procedo end-to-end?
+**Zero**. Tutti i nuovi file in directory separata `harmonizer-v2/`. "Migliora tutto" intatto. Unico file esistente toccato: `HarmonizeSystemDialog.tsx` per switchare hook.

@@ -20,6 +20,8 @@ import { parseUploadedFile, ACCEPT_STRING, type ParsedFile } from "./utils/fileP
 import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { useHarmonizerLibraryIngestion } from "./harmonizer/useHarmonizerLibraryIngestion";
 import { TMWE_CHUNKS } from "./harmonizer/tmweChunks";
+import { useAgenticHarmonizer } from "./harmonizer-v2/useAgenticHarmonizer";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -43,6 +45,35 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   const [ingestionGoal, setIngestionGoal] = useState(
     "Ingerisci la libreria TMWE in 7 chunk con sessione persistente.",
   );
+
+  // ── Agentic V2 (entity-by-entity) ──
+  const agentic = useAgenticHarmonizer(userId);
+  const agenticFileRef = useRef<HTMLInputElement>(null);
+  const [agenticFile, setAgenticFile] = useState<ParsedFile | null>(null);
+  const [agenticGoal, setAgenticGoal] = useState(
+    "Armonizza entity-by-entity con micro-call AI dedicate.",
+  );
+
+  const handleAgenticUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseUploadedFile(file);
+      setAgenticFile(parsed);
+      toast.success(`File caricato: ${parsed.name} (${parsed.sizeKb}KB)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Errore caricamento ${file.name}`);
+    }
+    if (agenticFileRef.current) agenticFileRef.current.value = "";
+  }, []);
+
+  const handleAgenticStart = useCallback(() => {
+    if (!agenticFile) {
+      toast.error("Carica prima il file della libreria.");
+      return;
+    }
+    void agentic.start({ sourceFile: agenticFile, goal: agenticGoal });
+  }, [agenticFile, agenticGoal, agentic]);
 
   // Carica la libreria di default da public/kb-source/libreria-tmwe.md
   useEffect(() => {
@@ -136,6 +167,9 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
             </TabsTrigger>
             <TabsTrigger value="ingestion">
               <BookOpen className="h-4 w-4 mr-1" /> Ingestione documento grande
+            </TabsTrigger>
+            <TabsTrigger value="agentic">
+              <Sparkles className="h-4 w-4 mr-1" /> Agentic V2
             </TabsTrigger>
           </TabsList>
 
@@ -459,6 +493,121 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
 
             {ingestion.state.phase === "cancelled" && (
               <p className="text-sm text-muted-foreground py-8 text-center">Sessione annullata.</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="agentic" className="flex-1 overflow-auto pr-2 mt-4">
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs mb-4">
+              <p className="font-semibold mb-1 flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Pipeline V2 — Entity by Entity</p>
+              <p className="text-muted-foreground">
+                Splitta il documento per heading, costruisce un Compact Index del DB (~5KB),
+                processa ogni entità con una micro-call AI dedicata (~2K token).
+                Token overflow impossibile, retry granulare per entità.
+              </p>
+            </div>
+
+            {agentic.state.phase === "idle" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">Obiettivo</label>
+                  <Textarea value={agenticGoal} onChange={(e) => setAgenticGoal(e.target.value)} rows={2} />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">Documento sorgente</label>
+                  <input ref={agenticFileRef} type="file" accept={ACCEPT_STRING} onChange={handleAgenticUpload} className="hidden" />
+                  <Button variant="outline" size="sm" onClick={() => agenticFileRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-2" /> {agenticFile ? "Sostituisci file" : "Carica libreria"}
+                  </Button>
+                  {agenticFile && (
+                    <div className="mt-2 flex items-center gap-2 text-xs bg-muted px-2 py-1 rounded">
+                      <span className="font-mono">{agenticFile.name}</span>
+                      <Badge variant="outline">{agenticFile.sizeKb}KB</Badge>
+                      <Badge variant="outline">{agenticFile.content.split("\n").length} righe</Badge>
+                    </div>
+                  )}
+                </div>
+                <Button onClick={handleAgenticStart} disabled={!userId || !agenticFile} className="w-full">
+                  <Play className="h-4 w-4 mr-2" /> Avvia pipeline agentica
+                </Button>
+              </div>
+            )}
+
+            {(agentic.state.phase === "parsing" || agentic.state.phase === "indexing") && (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-semibold">
+                  {agentic.state.phase === "parsing" ? "Parsing entità..." : "Costruzione Compact Index..."}
+                </p>
+              </div>
+            )}
+
+            {agentic.state.phase === "processing" && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <p className="text-sm font-semibold">
+                    Elaborazione {agentic.state.currentIndex + 1} / {agentic.state.total}
+                  </p>
+                </div>
+                <div className="space-y-1 max-h-[400px] overflow-auto">
+                  {agentic.state.entities.slice(0, agentic.state.currentIndex + 5).map((e, i) => (
+                    <div key={e.id ?? i} className="flex items-center gap-2 text-xs border border-border rounded p-1.5">
+                      {e.status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                      {e.status === "done" && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                      {e.status === "skipped" && <X className="h-3 w-3 text-muted-foreground" />}
+                      {e.status === "needs_review" && <AlertCircle className="h-3 w-3 text-amber-500" />}
+                      {e.status === "error" && <AlertCircle className="h-3 w-3 text-destructive" />}
+                      <Badge variant="outline" className="text-[10px]">{e.inferredTable}</Badge>
+                      <span className="flex-1 truncate">{e.title}</span>
+                      {e.decision && <Badge variant="secondary" className="text-[10px]">{e.decision}</Badge>}
+                    </div>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" onClick={agentic.cancel}>
+                  <X className="h-4 w-4 mr-1" /> Annulla
+                </Button>
+              </div>
+            )}
+
+            {agentic.state.phase === "done" && agentic.state.stats && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <p className="text-sm font-semibold">Pipeline completata</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.total}</strong> totali</div>
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.inserts}</strong> INSERT</div>
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.updates}</strong> UPDATE</div>
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.skips}</strong> SKIP</div>
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.needsReview}</strong> REVIEW</div>
+                  <div className="rounded border p-2"><strong>{agentic.state.stats.errors}</strong> errori</div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Insert rate: {(agentic.state.stats.insertRate * 100).toFixed(0)}% · Fatti estratti: {agentic.state.stats.factsExtracted}
+                </div>
+                {agentic.state.warnings.length > 0 && (
+                  <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2 text-xs space-y-1">
+                    {agentic.state.warnings.map((w, i) => (
+                      <p key={i}><Badge variant="outline" className="text-[10px] mr-1">{w.level}</Badge>{w.message}</p>
+                    ))}
+                  </div>
+                )}
+                {agentic.state.output && (
+                  <p className="text-xs text-muted-foreground">
+                    Run id: <code>{agentic.state.output.runId.slice(0, 8)}…</code> · Apri "Modalità classica" per review.
+                  </p>
+                )}
+                <Button variant="outline" size="sm" onClick={agentic.reset}>Nuova pipeline</Button>
+              </div>
+            )}
+
+            {agentic.state.phase === "error" && (
+              <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                <AlertCircle className="h-10 w-10 text-destructive" />
+                <p className="text-sm">{agentic.state.error}</p>
+                <Button variant="outline" size="sm" onClick={agentic.reset}>Riprova</Button>
+              </div>
             )}
           </TabsContent>
         </Tabs>

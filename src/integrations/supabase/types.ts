@@ -4327,6 +4327,7 @@ export type Database = {
       }
       harmonizer_sessions: {
         Row: {
+          agentic_mode: boolean
           completed_at: string | null
           conflicts_found: Json
           created_at: string
@@ -4338,6 +4339,7 @@ export type Database = {
           harmonize_run_id: string | null
           id: string
           last_chunk_completed_at: string | null
+          last_processed_entity_index: number
           source_file: string
           source_kind: string
           started_at: string | null
@@ -4347,6 +4349,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agentic_mode?: boolean
           completed_at?: string | null
           conflicts_found?: Json
           created_at?: string
@@ -4358,6 +4361,7 @@ export type Database = {
           harmonize_run_id?: string | null
           id?: string
           last_chunk_completed_at?: string | null
+          last_processed_entity_index?: number
           source_file: string
           source_kind?: string
           started_at?: string | null
@@ -4367,6 +4371,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agentic_mode?: boolean
           completed_at?: string | null
           conflicts_found?: Json
           created_at?: string
@@ -4378,6 +4383,7 @@ export type Database = {
           harmonize_run_id?: string | null
           id?: string
           last_chunk_completed_at?: string | null
+          last_processed_entity_index?: number
           source_file?: string
           source_kind?: string
           started_at?: string | null
