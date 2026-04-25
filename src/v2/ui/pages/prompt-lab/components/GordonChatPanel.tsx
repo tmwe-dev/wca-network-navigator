@@ -59,7 +59,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     setInput((prev) => (prev ? prev + " " + text : text));
   });
 
-  // Reset quando cambia proposta
+  // Reset SOLO quando cambia la proposta (non quando la chat si aggiorna server-side,
+  // altrimenti lastSpokenIdxRef si reincrementa e l'autoplay TTS viene saltato).
   useEffect(() => {
     setMessages(proposal.chat ?? []);
     setPending(null);
@@ -69,7 +70,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
       audioRef.current.pause();
       audioRef.current = null;
     }
-  }, [proposal.id, proposal.chat]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposal.id]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -78,6 +80,8 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+    // Stoppa la dettatura vocale se attiva, così l'input torna pulito
+    if (speech.listening) speech.toggle();
     setInput("");
     setLoading(true);
     const userMsg: ChatMsg = { role: "user", content: text };
@@ -135,7 +139,7 @@ export function GordonChatPanel({ runId, proposal, userId, onApplyRegenerated, v
     } finally {
       setLoading(false);
     }
-  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated]);
+  }, [input, loading, runId, proposal.id, agentId, onApplyRegenerated, speech]);
 
   const playTTS = async (text: string) => {
     if (!voiceId) {
