@@ -26,11 +26,15 @@ export async function composeSystemPrompt(opts: ComposeSystemPromptOptions): Pro
   // CONVERSATIONAL_CORE LUCA, altrimenti il modello risponde in stile voce
   // ignorando il contratto → parser fallisce → "token explosion" apparente.
   if (opts.conversational && opts.scope !== "kb-supervisor") {
-    const parts: string[] = [CONVERSATIONAL_CORE];
+    // Operator briefing ha precedenza assoluta: è un system prompt completo
+    // (es. Harmonizer, Migliora tutto, TMWE ingestion) che NON deve essere
+    // sovrascritto dal core conversazionale LUCA — altrimenti il modello
+    // riceve istruzioni contraddittorie ("rispondi in 3-4 frasi") e ignora
+    // lo schema JSON richiesto dal briefing.
     if (opts.operatorBriefing?.trim()) {
-      parts.push(`⚡ BRIEFING OPERATORE (PRIORITÀ MASSIMA)\n\n${opts.operatorBriefing.trim()}`);
+      return opts.operatorBriefing.trim();
     }
-    return parts.join("\n\n---\n\n");
+    return CONVERSATIONAL_CORE;
   }
 
   const base = await assemblePrompt({
