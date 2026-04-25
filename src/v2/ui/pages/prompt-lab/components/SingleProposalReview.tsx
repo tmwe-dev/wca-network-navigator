@@ -299,6 +299,19 @@ export function SingleProposalReview({
                 Applica subito
               </Button>
             )}
+            {onDiscardSingle && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleDiscard}
+                disabled={discarding || applying}
+                title="Scarta questa proposta: non verrà applicata al DB"
+              >
+                {discarding ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
+                Scarta
+              </Button>
+            )}
             <Button size="sm" variant="ghost" className="h-8 ml-auto" onClick={() => setIndex(Math.min(proposals.length - 1, index + 1))} disabled={index >= proposals.length - 1}>
               Salta →
             </Button>
