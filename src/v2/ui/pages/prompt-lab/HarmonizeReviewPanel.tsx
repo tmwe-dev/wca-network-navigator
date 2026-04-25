@@ -28,10 +28,11 @@ function EditableAfter({
 }: {
   value: string;
   editable: boolean;
-  onSave: (next: string) => void;
+  onSave: (next: string) => Promise<{ ok: boolean; reason?: string }>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [saving, setSaving] = useState(false);
 
   if (!editing) {
     return (
@@ -74,12 +75,23 @@ function EditableAfter({
         <Button
           size="sm"
           className="h-7"
-          onClick={() => {
-            onSave(draft);
-            setEditing(false);
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              const res = await onSave(draft);
+              if (res.ok) {
+                toast.success("Modifica salvata nel DB");
+                setEditing(false);
+              } else {
+                toast.error(`Salvataggio fallito: ${res.reason ?? "errore sconosciuto"}`);
+              }
+            } finally {
+              setSaving(false);
+            }
           }}
         >
-          <Check className="h-3 w-3 mr-1" />
+          {saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
           Salva modifica
         </Button>
       </div>
@@ -92,7 +104,7 @@ interface Props {
   approvedIds: Set<string>;
   onToggle: (id: string) => void;
   onApproveAllSafe: () => void;
-  onEditAfter?: (proposalId: string, newAfter: string) => void;
+  onEditAfter?: (proposalId: string, newAfter: string) => Promise<{ ok: boolean; reason?: string }>;
   onApplySingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
 }
 
