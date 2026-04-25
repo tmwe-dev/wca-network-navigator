@@ -5,7 +5,7 @@
  * L'admin può: approvare, rifiutare, modificare il testo e approvare.
  * I suggerimenti approvati vengono consumati dall'Architect nel prossimo "Migliora tutto".
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,9 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useSuggestedImprovements } from "./hooks/useSuggestedImprovements";
 import type { SuggestedImprovement, SuggestionPriority } from "@/data/suggestedImprovements";
+import { findRecentHarmonizeRuns, type HarmonizeRun } from "@/data/harmonizeRuns";
+import { useHarmonizeOrchestrator } from "./hooks/useHarmonizeOrchestrator";
+import { HarmonizeReviewPanel } from "./HarmonizeReviewPanel";
 import { toast } from "sonner";
 
 function priorityColor(p: SuggestionPriority): string {
@@ -236,6 +239,34 @@ export default function SuggestionsReviewPage() {
   const userId = user?.id ?? "";
   const { pending, approved, counts, loading, approve, reject, editApprove, refresh } =
     useSuggestedImprovements(userId, true);
+  const harmonize = useHarmonizeOrchestrator(userId);
+  const [runs, setRuns] = useState<HarmonizeRun[]>([]);
+  const [runsLoading, setRunsLoading] = useState(false);
+
+  const refreshRuns = useCallback(async () => {
+    if (!userId) return;
+    setRunsLoading(true);
+    try {
+      const recent = await findRecentHarmonizeRuns(userId, 10);
+      const withProposals = recent.filter((run) => run.proposals.length > 0);
+      setRuns(withProposals);
+      const selected = withProposals.find((run) => run.status === "review") ?? withProposals[0];
+      if (selected && harmonize.state.phase !== "review") harmonize.loadRunForReview(selected);
+    } catch {
+      toast.error("Non riesco a caricare le armonizzazioni salvate.");
+    } finally {
+      setRunsLoading(false);
+    }
+  }, [userId, harmonize]);
+
+  useEffect(() => {
+    void refreshRuns();
+  }, [refreshRuns]);
+
+  const handleRefreshAll = useCallback(() => {
+    refresh();
+    void refreshRuns();
+  }, [refresh, refreshRuns]);
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -261,8 +292,8 @@ export default function SuggestionsReviewPage() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-7 gap-1" onClick={refresh} disabled={loading}>
-            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+          <Button size="sm" variant="outline" className="h-7 gap-1" onClick={handleRefreshAll} disabled={loading || runsLoading}>
+            {loading || runsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             Aggiorna
           </Button>
           <Button asChild size="sm" variant="default" className="h-8 gap-1.5 px-4 font-semibold">
@@ -277,8 +308,41 @@ export default function SuggestionsReviewPage() {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 max-w-4xl mx-auto">
+          {harmonize.state.proposals.length > 0 && (
+            <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold">Armonizzazione salvata nel DB</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Run {harmonize.state.runId?.slice(0, 8)}… · {harmonize.state.proposals.length} proposte · applicate {harmonize.state.executedCount}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {runs.map((run) => (
+                    <Button key={run.id} size="sm" variant={run.id === harmonize.state.runId ? "default" : "outline"} onClick={() => harmonize.loadRunForReview(run)}>
+                      {run.proposals.length} · {run.id.slice(0, 4)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <HarmonizeReviewPanel
+                proposals={harmonize.state.proposals}
+                approvedIds={harmonize.state.approvedIds}
+                onToggle={harmonize.toggleApproval}
+                onApproveAllSafe={harmonize.approveAllSafe}
+              />
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="text-xs text-muted-foreground">{harmonize.state.approvedIds.size} proposte selezionate</span>
+                <Button onClick={harmonize.execute} disabled={harmonize.state.approvedIds.size === 0 || harmonize.state.loading}>
+                  {harmonize.state.loading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className="mr-1 h-3 w-3" />}
+                  Salva nel DB
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Info box */}
-          {pending.length === 0 && approved.length === 0 && !loading && (
+          {pending.length === 0 && approved.length === 0 && harmonize.state.proposals.length === 0 && !loading && !runsLoading && (
             <div className="rounded-lg border bg-muted/20 p-6 text-center">
               <BookmarkPlus className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Nessun suggerimento in attesa</p>
