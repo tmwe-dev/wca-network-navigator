@@ -106,7 +106,7 @@ export function AiMonitorPanel() {
       </div>
 
       {/* Budget mese */}
-      <Card className={overBudget ? "border-destructive" : nearAlert ? "border-amber-500" : ""}>
+      <Card className={overBudget ? "border-destructive" : nearAlert ? "border-warning" : ""}>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             {overBudget && <AlertTriangle className="w-4 h-4 text-destructive" />}
@@ -122,7 +122,7 @@ export function AiMonitorPanel() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{budget.budgetPercentage.toFixed(1)}% utilizzato</span>
             {nearAlert && !overBudget && (
-              <Badge variant="outline" className="border-amber-500 text-amber-600">
+              <Badge variant="outline" className="border-warning text-warning">
                 Soglia alert {budget.alertThresholdPercent}% superata
               </Badge>
             )}
