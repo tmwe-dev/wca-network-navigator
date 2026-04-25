@@ -27,6 +27,8 @@ const CHUNK_SIZE = 6;
 interface UnifiedAssistantResponse {
   content?: string;
   structured?: Record<string, unknown>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  finish_reason?: string;
 }
 
 export interface AnalyzerContext {
@@ -165,6 +167,14 @@ export async function callHarmonizer(userPrompt: string, briefing: string = HARM
     },
     context: "harmonizeAnalyzer",
   });
+  // Diagnostica esplicita: se il modello tronca per max_tokens, lo segnaliamo
+  // al log così l'operatore in Prompt Lab sa che il chunk va spezzato.
+  if (result.finish_reason === "length") {
+    console.warn("[harmonizer] output troncato (finish_reason=length)", {
+      usage: result.usage,
+      contentLen: result.content?.length ?? 0,
+    });
+  }
   // unified-assistant per scope=kb-supervisor estrae il blocco ```json ... ```
   // dal content e lo sposta in `structured`, lasciando content vuoto. Il
   // parser a valle si aspetta JSON puro: ricomponi qui se serve.

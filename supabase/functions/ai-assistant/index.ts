@@ -316,7 +316,17 @@ serve(async (req) => {
     }
 
     endMetrics(metrics, true, 200);
-    return new Response(JSON.stringify({ content: responseContent }), {
+    // Surface usage + finish_reason al chiamante. Permette al frontend
+    // (Harmonizer ecc.) di distinguere tra errore modello e troncamento per
+    // max_tokens (finish_reason=length).
+    const lastMsg = loopResult.state.assistantMessage as Record<string, unknown> | undefined;
+    const finishReason = (lastMsg as { finish_reason?: string } | undefined)?.finish_reason
+      ?? (initialResult.choices?.[0]?.finish_reason as string | undefined);
+    return new Response(JSON.stringify({
+      content: responseContent,
+      usage: loopResult.state.totalUsage,
+      finish_reason: finishReason,
+    }), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {
