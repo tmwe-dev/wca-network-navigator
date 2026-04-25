@@ -8,8 +8,6 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("PWAUpdatePrompt");
 
-type RegisterSWModule = typeof import("virtual:pwa-register");
-
 export function PWAUpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [updateSW, setUpdateSW] = useState<((reload?: boolean) => Promise<void>) | null>(null);
@@ -37,7 +35,7 @@ export function PWAUpdatePrompt() {
 
     (async () => {
       try {
-        const mod = (await import(/* @vite-ignore */ "virtual:pwa-register")) as RegisterSWModule;
+        const mod = await import("virtual:pwa-register");
         if (cancelled) return;
         const update = mod.registerSW({
           immediate: true,
@@ -45,14 +43,13 @@ export function PWAUpdatePrompt() {
             log.info("new version available");
             setNeedRefresh(true);
           },
-          onRegisteredSW(_swUrl, registration) {
-            // Polling ogni 60s per check update
+          onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
             if (!registration) return;
             intervalId = setInterval(() => {
               registration.update().catch(() => undefined);
             }, 60_000);
           },
-          onRegisterError(error) {
+          onRegisterError(error: unknown) {
             log.warn("SW register failed", { message: error instanceof Error ? error.message : String(error) });
           },
         });
