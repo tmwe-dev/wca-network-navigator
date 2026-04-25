@@ -59,6 +59,21 @@ export interface ScopeConfig {
   model?: string;
   /** Optional max output tokens. Used by aiCallHandler to size generation budget. */
   maxTokens?: number;
+  /**
+   * Lista dei context blocks da caricare e iniettare in assembleSystemPrompt.
+   * Possibili valori: "profile", "memory", "kb", "doctrine", "email_context",
+   * "operative_prompts", "mission_history", "holding_state", "active_workflow".
+   *
+   * - undefined  → comportamento legacy (carica TUTTO).
+   * - []         → NESSUN contesto aggiuntivo (es. kb-supervisor che ha già un
+   *                briefing self-contained).
+   * - [...]      → solo i blocchi elencati vengono caricati e iniettati.
+   *
+   * Riduce token waste e latenza: scope come "import" non hanno bisogno di
+   * doctrine/memory/kb, ma prima venivano comunque caricati e troncati dal
+   * budget assembler.
+   */
+  contextRequirements?: string[];
   creditLabel: string;
   /** Post-process the content before returning */
   postProcess?: (content: string) => unknown;
