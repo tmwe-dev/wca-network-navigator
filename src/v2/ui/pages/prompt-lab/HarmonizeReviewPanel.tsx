@@ -294,7 +294,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
         </TabsList>
       </Tabs>
 
-      {/* Sub-toolbar: selettore master sul tab attivo */}
+      {/* Sub-toolbar: selettore master + azioni di massa sul tab attivo */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 px-3 py-2">
         <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
           <Checkbox
@@ -307,9 +307,21 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
           </span>
         </label>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onApplySelected && approvedIds.size > 0 && (
+            <Button
+              size="sm"
+              className="h-7 gap-1.5 px-3"
+              onClick={onApplySelected}
+              disabled={applyingSelected}
+              title="Applica al database tutte le proposte attualmente selezionate"
+            >
+              {applyingSelected ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              Applica selezionate ({approvedIds.size})
+            </Button>
+          )}
           {filter !== "done" && (
-            <div className="flex items-center gap-1.5" title="Nasconde le proposte già applicate o fallite">
+            <div className="flex items-center gap-1.5" title="Nasconde le proposte già applicate, scartate o fallite">
               <Switch id="hide-managed" checked={hideManaged} onCheckedChange={setHideManaged} className="scale-75" />
               <Label htmlFor="hide-managed" className="cursor-pointer text-xs flex items-center gap-1">
                 {hideManaged ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -317,7 +329,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
               </Label>
             </div>
           )}
-          {readOnly.length > 0 && <span>{readOnly.length} read-only nel totale</span>}
+          {readOnly.length > 0 && <span className="text-xs text-muted-foreground">{readOnly.length} read-only nel totale</span>}
         </div>
       </div>
 
