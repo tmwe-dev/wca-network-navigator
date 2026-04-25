@@ -664,6 +664,39 @@ export type Database = {
           },
         ]
       }
+      ai_budget_config: {
+        Row: {
+          alert_threshold_percent: number
+          created_at: string
+          id: string
+          monthly_budget_usd: number
+          subscription_end: string | null
+          subscription_start: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_threshold_percent?: number
+          created_at?: string
+          id?: string
+          monthly_budget_usd?: number
+          subscription_end?: string | null
+          subscription_start?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_threshold_percent?: number
+          created_at?: string
+          id?: string
+          monthly_budget_usd?: number
+          subscription_end?: string | null
+          subscription_start?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -1245,6 +1278,95 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ai_plan_templates_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_prompt_log: {
+        Row: {
+          action: string | null
+          context_chars: number
+          cost_usd: number
+          created_at: string
+          cron_job_name: string | null
+          error_message: string | null
+          function_name: string
+          group_category: string
+          id: string
+          is_cron: boolean
+          latency_ms: number | null
+          metadata: Json
+          model: string
+          operator_id: string | null
+          provider: string
+          scope: string | null
+          success: boolean
+          system_prompt_chars: number
+          tokens_in: number
+          tokens_out: number
+          tokens_total: number
+          total_input_chars: number
+          user_id: string | null
+          user_prompt_chars: number
+        }
+        Insert: {
+          action?: string | null
+          context_chars?: number
+          cost_usd?: number
+          created_at?: string
+          cron_job_name?: string | null
+          error_message?: string | null
+          function_name: string
+          group_category?: string
+          id?: string
+          is_cron?: boolean
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string
+          operator_id?: string | null
+          provider?: string
+          scope?: string | null
+          success?: boolean
+          system_prompt_chars?: number
+          tokens_in?: number
+          tokens_out?: number
+          tokens_total?: number
+          total_input_chars?: number
+          user_id?: string | null
+          user_prompt_chars?: number
+        }
+        Update: {
+          action?: string | null
+          context_chars?: number
+          cost_usd?: number
+          created_at?: string
+          cron_job_name?: string | null
+          error_message?: string | null
+          function_name?: string
+          group_category?: string
+          id?: string
+          is_cron?: boolean
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string
+          operator_id?: string | null
+          provider?: string
+          scope?: string | null
+          success?: boolean
+          system_prompt_chars?: number
+          tokens_in?: number
+          tokens_out?: number
+          tokens_total?: number
+          total_input_chars?: number
+          user_id?: string | null
+          user_prompt_chars?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prompt_log_operator_id_fkey"
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
@@ -7977,6 +8099,20 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_reconciliation: {
+        Row: {
+          api_usage_calls: number | null
+          api_usage_cost: number | null
+          api_usage_tokens_in: number | null
+          day: string | null
+          prompt_log_calls: number | null
+          prompt_log_cost: number | null
+          prompt_log_tokens_in: number | null
+          provider: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       vw_partner_quality_scores: {
         Row: {
           calculated_at: string | null
@@ -8130,7 +8266,27 @@ export type Database = {
           without_profile: number
         }[]
       }
+      get_cron_vs_user: {
+        Args: { p_user_id: string }
+        Returns: {
+          calls: number
+          source: string
+          top_function: string
+          total_cost: number
+          total_tokens: number
+        }[]
+      }
       get_current_operator_id: { Args: never; Returns: string }
+      get_daily_history: {
+        Args: { p_days?: number; p_user_id: string }
+        Returns: {
+          call_count: number
+          daily_cost: number
+          daily_tokens: number
+          day: string
+          group_category: string
+        }[]
+      }
       get_dashboard_snapshot: { Args: never; Returns: Json }
       get_directory_counts: {
         Args: never
@@ -8145,8 +8301,48 @@ export type Database = {
         Args: { p_channel: string; p_identifier: string }
         Returns: string
       }
+      get_period_total: {
+        Args: { p_period_start: string; p_user_id: string }
+        Returns: {
+          calls_today: number
+          cost_today: number
+          total_calls: number
+          total_cost: number
+          total_tokens_in: number
+          total_tokens_out: number
+        }[]
+      }
+      get_prompt_size_distribution: {
+        Args: { p_days?: number; p_user_id: string }
+        Returns: {
+          avg_cost: number
+          avg_latency: number
+          count: number
+          size_order: number
+          size_range: string
+        }[]
+      }
       get_system_diagnostics: { Args: never; Returns: Json }
       get_system_paused: { Args: never; Returns: boolean }
+      get_today_by_group: {
+        Args: { p_user_id: string }
+        Returns: {
+          calls: number
+          group_category: string
+          total_cost: number
+          total_tokens_in: number
+          total_tokens_out: number
+        }[]
+      }
+      get_top_functions: {
+        Args: { p_limit?: number; p_since: string; p_user_id: string }
+        Returns: {
+          calls: number
+          function_name: string
+          total_cost: number
+          total_tokens: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -8188,6 +8384,31 @@ export type Database = {
           p_response_time_hours?: number
         }
         Returns: boolean
+      }
+      log_ai_prompt: {
+        Args: {
+          p_action?: string
+          p_context_chars?: number
+          p_cost_usd?: number
+          p_cron_job_name?: string
+          p_error_message?: string
+          p_function_name: string
+          p_group_category?: string
+          p_is_cron?: boolean
+          p_latency_ms?: number
+          p_metadata?: Json
+          p_model?: string
+          p_operator_id?: string
+          p_provider?: string
+          p_scope?: string
+          p_success?: boolean
+          p_system_prompt_chars?: number
+          p_tokens_in?: number
+          p_tokens_out?: number
+          p_user_id: string
+          p_user_prompt_chars?: number
+        }
+        Returns: string
       }
       match_ai_memory_enhanced: {
         Args: {
