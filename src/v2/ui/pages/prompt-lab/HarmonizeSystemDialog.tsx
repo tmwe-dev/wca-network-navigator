@@ -109,12 +109,19 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
   }, [agenticFile, agenticGoal, agentic]);
 
   const handleAgenticResume = useCallback(() => {
-    if (!agenticFile) {
-      toast.error("Ricarica il file sorgente per riprendere dal checkpoint.");
+    // Il resume usa il file appena ricaricato se disponibile, altrimenti
+    // il sourceText persistito in localStorage dalla sessione precedente.
+    const hasPersistedSource = Boolean(agentic.state.sourceText);
+    if (!agenticFile && !hasPersistedSource) {
+      toast.error("Nessun sorgente disponibile: ricarica il file per riprendere.");
       return;
     }
-    void agentic.resume({ sourceFile: agenticFile, goal: agenticGoal });
+    void agentic.resume(agenticFile ? { sourceFile: agenticFile, goal: agenticGoal } : { goal: agenticGoal });
   }, [agenticFile, agenticGoal, agentic]);
+
+  // Il resume è abilitato se c'è un file appena caricato OPPURE se nello stato
+  // persistito è disponibile il testo sorgente originale.
+  const canResumeAgentic = Boolean(agenticFile) || Boolean(agentic.state.sourceText);
 
   // Carica la libreria di default da public/kb-source/libreria-tmwe.md
   useEffect(() => {
@@ -572,7 +579,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                   </p>
                 </div>
                 <div className="flex flex-shrink-0 gap-2">
-                  <Button size="sm" variant="outline" onClick={handleAgenticResume} disabled={!agenticFile}>
+                  <Button size="sm" variant="outline" onClick={handleAgenticResume} disabled={!canResumeAgentic}>
                     <Play className="h-3 w-3 mr-1" /> Riprendi
                   </Button>
                   <Button size="sm" variant="ghost" onClick={agentic.reset}>
@@ -612,7 +619,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                     <Play className="h-4 w-4 mr-2" /> Avvia pipeline agentica
                   </Button>
                   {agentic.state.entities.length > 0 && (
-                    <Button onClick={handleAgenticResume} disabled={!userId || !agenticFile} variant="outline" className="w-full">
+                    <Button onClick={handleAgenticResume} disabled={!userId || !canResumeAgentic} variant="outline" className="w-full">
                       <RotateCw className="h-4 w-4 mr-2" /> Riprendi dal checkpoint
                     </Button>
                   )}
