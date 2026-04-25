@@ -65,6 +65,9 @@ export function useGroupingData() {
       const loadedGroups = (groupsData || []) as EmailSenderGroup[];
 
       if (loadedGroups.length === 0) {
+        // Seed predefined groups only when the table is globally empty.
+        // Use upsert on lower(nome_gruppo) unique index to be idempotent
+        // across multiple users/operators (groups are shared org-wide).
         const inserts = PREDEFINED_GROUPS.map((g, i) => ({
           nome_gruppo: g.name,
           descrizione: g.description,
@@ -73,10 +76,20 @@ export function useGroupingData() {
           user_id: user.id,
           sort_order: i,
         }));
-        const { data: created } = await supabase.from("email_sender_groups").insert(inserts).select();
-        if (created) {
+        const { data: created } = await supabase
+          .from("email_sender_groups")
+          .upsert(inserts, { onConflict: "nome_gruppo", ignoreDuplicates: true })
+          .select();
+        if (created && created.length > 0) {
           setGroups(created as EmailSenderGroup[]);
           toast.success(`${created.length} gruppi predefiniti creati`);
+        } else {
+          // Fallback re-read in case upsert returned nothing
+          const { data: reread } = await supabase
+            .from("email_sender_groups")
+            .select("*")
+            .order("sort_order", { ascending: true });
+          setGroups((reread || []) as EmailSenderGroup[]);
         }
       } else {
         setGroups(loadedGroups);
