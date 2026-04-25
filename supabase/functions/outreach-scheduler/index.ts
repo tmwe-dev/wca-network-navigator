@@ -55,6 +55,7 @@ serve(async (req) => {
 
     if (!batch || batch.length === 0) {
       endMetrics(metrics, true, 200);
+      await cronGuardLogRun(supabase, "outreach_scheduler", { processed: 0, message: "No pending schedules" });
       return new Response(JSON.stringify({ processed: 0, failed: 0, skipped: 0, message: "No pending schedules" }), {
         headers: { ...dynCors, "Content-Type": "application/json" },
       });
