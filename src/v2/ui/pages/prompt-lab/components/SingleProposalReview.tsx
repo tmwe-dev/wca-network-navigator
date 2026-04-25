@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Check, X, Loader2, Send, AlertTriangle } from "lucide-react";
+import { ChevronDown, Pencil, Check, X, Loader2, Send, AlertTriangle, ShieldCheck, Eye, FileQuestion, CheckCircle2, Database, BookOpen, Wrench, Mail, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 import { ProposalNavigator } from "./ProposalNavigator";
@@ -36,6 +36,46 @@ const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
   MOVE: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   DELETE: "bg-destructive/10 text-destructive border-destructive/20",
 };
+
+/** Etichetta umana per la tabella di destinazione (categoria leggibile). */
+const TABLE_META: Record<HarmonizeProposal["target"]["table"], { label: string; icon: typeof Database }> = {
+  kb_entries:           { label: "Knowledge Base",    icon: BookOpen },
+  agents:               { label: "Agente AI",         icon: Users },
+  agent_personas:       { label: "Persona agente",    icon: Users },
+  operative_prompts:    { label: "Prompt operativo",  icon: Wrench },
+  email_prompts:        { label: "Template email",    icon: Mail },
+  email_address_rules:  { label: "Regola email",      icon: Mail },
+  commercial_playbooks: { label: "Playbook vendita",  icon: BookOpen },
+  app_settings:         { label: "Impostazione app",  icon: Settings },
+};
+
+/** Classifica una proposta per il badge di stato in cima. */
+function getProposalStatus(p: HarmonizeProposal): {
+  kind: "done" | "failed" | "note" | "safe" | "review";
+  label: string;
+  cls: string;
+  Icon: typeof ShieldCheck;
+  tip: string;
+} {
+  if (p.status === "executed") {
+    return { kind: "done", label: "Già applicata", cls: "bg-primary/15 text-primary border-primary/40", Icon: CheckCircle2, tip: "Questa proposta è già stata salvata nel database." };
+  }
+  if (p.status === "failed") {
+    return { kind: "failed", label: "Applicazione fallita", cls: "bg-destructive/15 text-destructive border-destructive/40", Icon: AlertTriangle, tip: p.failure_reason ?? "Tentativo di salvataggio fallito." };
+  }
+  if (p.is_document_note) {
+    return { kind: "note", label: "Nota documento — scarta", cls: "bg-muted text-muted-foreground border-border", Icon: FileQuestion, tip: p.document_note_reason ?? "Riferimento interno al documento, non contenuto KB." };
+  }
+  const isSafe =
+    p.resolution_layer === "text" &&
+    p.action !== "DELETE" &&
+    p.impact !== "high" &&
+    !(p.action === "INSERT" && p.target.table === "agents");
+  if (isSafe) {
+    return { kind: "safe", label: "Sicura", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40", Icon: ShieldCheck, tip: "Modifica di solo testo, basso impatto, reversibile." };
+  }
+  return { kind: "review", label: "Da rivedere", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40", Icon: Eye, tip: "Inserimento, eliminazione o impatto alto: leggi attentamente prima di approvare." };
+}
 
 function EditableAfterInline({
   value,
@@ -128,6 +168,10 @@ export function SingleProposalReview({
   }
 
   const isReadOnly = proposal.resolution_layer === "contract" || proposal.resolution_layer === "code_policy";
+  const statusBadge = getProposalStatus(proposal);
+  const tableMeta = TABLE_META[proposal.target.table];
+  const TableIcon = tableMeta?.icon ?? Database;
+  const StatusIcon = statusBadge.Icon;
 
   const handleApply = async () => {
     if (!onApplySingle) return;
@@ -148,6 +192,21 @@ export function SingleProposalReview({
 
   return (
     <div className="space-y-3">
+      {/* Striscia di stato in cima — sempre visibile, dice subito cos'è questa proposta */}
+      <div className={`rounded-md border px-3 py-2 flex flex-wrap items-center gap-2 text-xs ${statusBadge.cls}`} title={statusBadge.tip}>
+        <StatusIcon className="h-4 w-4 shrink-0" />
+        <span className="font-semibold">{statusBadge.label}</span>
+        <span className="opacity-50">·</span>
+        <TableIcon className="h-3.5 w-3.5 shrink-0" />
+        <span>Destinazione: <span className="font-medium">{tableMeta?.label ?? proposal.target.table}</span></span>
+        {proposal.is_document_note && proposal.document_note_reason && (
+          <span className="opacity-75 italic ml-1 truncate">— {proposal.document_note_reason}</span>
+        )}
+        {statusBadge.kind === "failed" && proposal.failure_reason && (
+          <span className="opacity-75 italic ml-1 truncate">— {proposal.failure_reason}</span>
+        )}
+      </div>
+
       <ProposalNavigator
         index={index}
         total={proposals.length}

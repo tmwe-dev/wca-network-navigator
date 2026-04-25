@@ -85,7 +85,30 @@ Non duplicare entità: usa l'ID già creato (target.id = id esistente da entitie
   (titolo+tabella) esiste, OMETTI la proposta o trasformala in UPDATE.
 - Rispetta la lista preloadedDuplicates passata nel chunk: skip silenzioso.
 
-## Z.7 — Output JSON esteso
+## Z.7 — Note documentali (NON sono contenuto KB)
+Il documento sorgente contiene spesso BLOCCHI DI SERVIZIO che NON sono dottrina,
+procedure o knowledge: sono note interne al documento stesso. Esempi tipici:
+- Riferimenti incrociati: "vedi paragrafo 3.2", "cfr. capitolo precedente", "pag. 12".
+- Numerazioni di pagina, header/footer, indici, sommari.
+- Commenti dell'autore: "[NOTA: rivedere prima della pubblicazione]", "TODO".
+- Meta-istruzioni di redazione: "questa sezione va spostata", "esempio da verificare".
+- Riferimenti a versioni precedenti del documento: "nella v1 si diceva...", "ex sezione 4".
+- Citazioni di fonti esterne usate solo come bibliografia (URL, ISBN nudi senza claim).
+- Annotazioni manuali tipo "Luca da rivedere", "domanda aperta", iniziali tra parentesi.
+
+REGOLA: NON ignorarli silenziosamente. Producili come proposta normale ma:
+1. \`is_document_note: true\`
+2. \`document_note_reason\`: motivo breve (es. "riferimento interno al documento",
+   "commento dell'autore", "indice/paginazione", "meta-istruzione redazionale").
+3. \`apply_recommended: false\` (non vanno mai approvate in batch).
+4. \`reasoning\`: aggiungi prefisso "[NOTA DOC] " in modo che l'operatore lo veda subito.
+5. \`target.table\`: usa la tabella che SAREBBE stata coinvolta se fosse contenuto reale,
+   ma il sistema le filtrerà in un tab separato "Note documento".
+
+Solo i contenuti CANONICI (definizioni, procedure, claim, identità, regole) finiscono
+in KB/prompt/playbook. Tutto il resto è metadato del documento.
+
+## Z.8 — Output JSON esteso
 Rispondi SOLO con JSON puro:
 \`\`\`
 {

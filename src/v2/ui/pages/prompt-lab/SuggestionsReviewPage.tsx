@@ -321,15 +321,25 @@ export default function SuggestionsReviewPage() {
           </Button>
           <span className="text-muted-foreground text-xs">/</span>
           <h1 className="text-sm font-semibold">Suggerimenti da approvare</h1>
-          <Badge variant="default" className="ml-2">
-            {counts.pending} pending
+          {/* Badge sincronizzati: armonizzazione corrente + suggerimenti utente */}
+          {harmonizeState.proposals.length > 0 && (
+            <Badge variant="default" className="ml-2 gap-1" title="Proposte di questa sessione di armonizzazione">
+              Armonizzazione: {harmonizeState.executedCount}/{harmonizeState.proposals.length} gestite
+            </Badge>
+          )}
+          <Badge variant="secondary" className="ml-1" title="Suggerimenti da operatori in attesa di approvazione">
+            {counts.pending} da approvare
           </Badge>
-          <Badge variant="secondary" className="ml-1">
-            {counts.approved} approvati
-          </Badge>
-          <Badge variant="outline" className="ml-1">
-            {counts.applied} applicati
-          </Badge>
+          {counts.approved > 0 && (
+            <Badge variant="outline" className="ml-1" title="Approvati ma non ancora consumati dall'Architect">
+              {counts.approved} pronti
+            </Badge>
+          )}
+          {counts.applied > 0 && (
+            <Badge variant="outline" className="ml-1 bg-emerald-500/10 text-emerald-700 border-emerald-500/30" title="Già applicati al sistema">
+              {counts.applied} applicati
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="h-7 gap-1" onClick={handleRefreshAll} disabled={loading || runsLoading}>
@@ -356,8 +366,23 @@ export default function SuggestionsReviewPage() {
                   <p className="text-xs text-muted-foreground">
                     Sessione del {harmonizeState.runId ? new Date(runs.find((r) => r.id === harmonizeState.runId)?.created_at ?? Date.now()).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" }) : "—"}
                     {" · "}{harmonizeState.proposals.length} proposte totali
-                    {" · "}{harmonizeState.executedCount} già applicate
                   </p>
+                  {/* Barra di progresso live: gestite vs totali */}
+                  <div className="mt-2 flex items-center gap-2 max-w-md">
+                    <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.round((harmonizeState.executedCount / Math.max(1, harmonizeState.proposals.length)) * 100))}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-medium text-foreground whitespace-nowrap">
+                      {harmonizeState.executedCount} di {harmonizeState.proposals.length} gestite
+                      {" "}
+                      <span className="text-muted-foreground">
+                        ({harmonizeState.proposals.length - harmonizeState.executedCount} rimanenti)
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex rounded-md border overflow-hidden">

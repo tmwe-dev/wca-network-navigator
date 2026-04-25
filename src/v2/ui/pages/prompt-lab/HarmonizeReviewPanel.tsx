@@ -16,7 +16,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -138,7 +140,8 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
 
 export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "safe" | "review">("all");
+  const [filter, setFilter] = useState<"all" | "safe" | "review" | "notes" | "done">("all");
+  const [hideManaged, setHideManaged] = useState(true);
 
   const handleApplySingle = async (id: string) => {
     if (!onApplySingle) return;
@@ -163,16 +166,42 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
 
   const readOnly = proposals.filter((p) => p.resolution_layer === "contract" || p.resolution_layer === "code_policy");
 
+  // Una proposta è "nota documentale" se l'AI l'ha marcata come tale.
+  const isDocNote = (p: HarmonizeProposal) => p.is_document_note === true;
+  // "Gestita" = già applicata al DB (executed) o fallita.
+  const isManaged = (p: HarmonizeProposal) => p.status === "executed" || p.status === "failed";
+
   // Una proposta è "sicura" se è solo testo, non DELETE, non INSERT su agents, e impatto non alto.
   const isSafe = (p: HarmonizeProposal) =>
+    !isDocNote(p) &&
     p.resolution_layer === "text" &&
     p.action !== "DELETE" &&
     p.impact !== "high" &&
     !(p.action === "INSERT" && p.target.table === "agents");
 
-  const safeAll = proposals.filter(isSafe);
-  const reviewAll = proposals.filter((p) => !isSafe(p));
-  const visible = filter === "safe" ? safeAll : filter === "review" ? reviewAll : proposals;
+  // Conteggi per i tab — sempre escludendo le note doc dai gruppi sicure/da rivedere
+  // (le note doc hanno il loro tab dedicato).
+  const notesAll = proposals.filter(isDocNote);
+  const managedAll = proposals.filter(isManaged);
+  const safeAll = proposals.filter((p) => !isDocNote(p) && isSafe(p));
+  const reviewAll = proposals.filter((p) => !isDocNote(p) && !isSafe(p));
+
+  // Helper: conta solo le rimanenti (non gestite) per il badge "X di Y"
+  const remaining = (arr: HarmonizeProposal[]) => arr.filter((p) => !isManaged(p)).length;
+
+  // Lista visibile nel tab attivo
+  let baseList: HarmonizeProposal[];
+  switch (filter) {
+    case "safe":   baseList = safeAll;    break;
+    case "review": baseList = reviewAll;  break;
+    case "notes":  baseList = notesAll;   break;
+    case "done":   baseList = managedAll; break;
+    default:       baseList = proposals;  break;
+  }
+  // Filtro "nascondi gestite": attivo ovunque tranne nel tab "Gestite".
+  const visible = (hideManaged && filter !== "done")
+    ? baseList.filter((p) => !isManaged(p))
+    : baseList;
 
   // Selezione "tutte le visibili" — toggle massivo che rispetta dipendenze e read-only.
   const visibleSelectableIds = visible
@@ -209,22 +238,42 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Tabs orizzontali: 3 categorie già pronte */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "safe" | "review")}>
-        <TabsList className="w-full grid grid-cols-3 h-auto">
-          <TabsTrigger value="all" className="gap-1.5 py-2">
-            Tutte
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{proposals.length}</Badge>
+      {/* Tabs orizzontali: 5 categorie con contatori "rimanenti / totali" */}
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+        <TabsList className="w-full grid grid-cols-5 h-auto">
+          <TabsTrigger value="all" className="gap-1.5 py-2 flex-col sm:flex-row">
+            <span>Tutte</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]" title={`${remaining(proposals)} da gestire su ${proposals.length} totali`}>
+              {remaining(proposals)}/{proposals.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="safe" className="gap-1.5 py-2 data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700">
+          <TabsTrigger value="safe" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Sicure
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30">{safeAll.length}</Badge>
+            <span>Sicure</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30" title={`${remaining(safeAll)} da gestire su ${safeAll.length} sicure`}>
+              {remaining(safeAll)}/{safeAll.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1.5 py-2 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-700">
+          <TabsTrigger value="review" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-700">
             <Eye className="h-3.5 w-3.5" />
-            Da rivedere
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30">{reviewAll.length}</Badge>
+            <span>Da rivedere</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30" title={`${remaining(reviewAll)} da gestire su ${reviewAll.length} da rivedere`}>
+              {remaining(reviewAll)}/{reviewAll.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-muted data-[state=active]:text-foreground" title="Riferimenti, indici, commenti dell'autore: non sono contenuto KB">
+            <FileQuestion className="h-3.5 w-3.5" />
+            <span>Note doc</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+              {remaining(notesAll)}/{notesAll.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="done" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-primary/10 data-[state=active]:text-primary" title="Già applicate al database o fallite">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Gestite</span>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-primary/10 text-primary border-primary/30">
+              {managedAll.length}
+            </Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -242,8 +291,17 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
             <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
           </span>
         </label>
-        <div className="text-xs text-muted-foreground">
-          {readOnly.length > 0 && <>{readOnly.length} read-only nel totale</>}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {filter !== "done" && (
+            <div className="flex items-center gap-1.5" title="Nasconde le proposte già applicate o fallite">
+              <Switch id="hide-managed" checked={hideManaged} onCheckedChange={setHideManaged} className="scale-75" />
+              <Label htmlFor="hide-managed" className="cursor-pointer text-xs flex items-center gap-1">
+                {hideManaged ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                Nascondi gestite
+              </Label>
+            </div>
+          )}
+          {readOnly.length > 0 && <span>{readOnly.length} read-only nel totale</span>}
         </div>
       </div>
 
