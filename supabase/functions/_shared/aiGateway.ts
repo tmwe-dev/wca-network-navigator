@@ -180,6 +180,49 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
             }
           }
 
+          // Granular log on ai_prompt_log (parallel to ai_token_usage for backward compat)
+          if (opts.supabase && opts.functionName) {
+            try {
+              const { logAiPrompt } = await import("./tokenLogger.ts");
+              const sysChars = opts.messages
+                .filter((m) => m.role === "system")
+                .reduce((s, m) => s + (m.content?.length ?? 0), 0);
+              const userChars = opts.messages
+                .filter((m) => m.role === "user")
+                .reduce((s, m) => s + (m.content?.length ?? 0), 0);
+              const otherChars = opts.messages
+                .filter((m) => m.role !== "system" && m.role !== "user")
+                .reduce((s, m) => s + (m.content?.length ?? 0), 0);
+              // Rough cost estimate (Gemini Flash pricing as default)
+              const costUsd = (usage.promptTokens * 0.075 + usage.completionTokens * 0.30) / 1_000_000;
+              await logAiPrompt(opts.supabase, {
+                userId: opts.userId ?? null,
+                operatorId: opts.operatorId ?? null,
+                functionName: opts.functionName,
+                provider,
+                model: nativeModel,
+                scope: opts.scope ?? null,
+                action: opts.action ?? null,
+                groupCategory: opts.groupCategory ?? (opts.isCron ? "cron" : "user"),
+                isCron: opts.isCron ?? false,
+                cronJobName: opts.cronJobName ?? null,
+                tokensIn: usage.promptTokens,
+                tokensOut: usage.completionTokens,
+                costUsd,
+                latencyMs: Date.now() - startedAt,
+                systemPromptChars: sysChars,
+                userPromptChars: userChars,
+                contextChars: otherChars,
+                success: true,
+              });
+            } catch (e) {
+              logLine("warn", "ai_gateway.prompt_log_failed", {
+                ctx,
+                error: e instanceof Error ? e.message : String(e),
+              });
+            }
+          }
+
           return {
             content,
             toolCalls,
