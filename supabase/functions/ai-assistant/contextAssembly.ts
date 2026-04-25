@@ -19,6 +19,7 @@ import {
   loadRecentEmailContext,
 } from "./contextLoader.ts";
 import { extractContextTags, type ConversationContext } from "../_shared/contextTagExtractor.ts";
+import { getScopeConfig } from "../_shared/scopeConfigs.ts";
 
 export interface ContextAssemblyResult {
   systemPrompt: string;
@@ -120,7 +121,8 @@ async function loadContextParallel(
   userId: string,
   isConversational: boolean,
   lastUserMsg: string | undefined,
-  ctxTags: any
+  ctxTags: any,
+  requiredKeys?: string[]
 ): Promise<{
   memoryContext: string;
   userProfile: string;
@@ -130,14 +132,18 @@ async function loadContextParallel(
   doctrineContext: string;
   emailContext: string;
 }> {
+  // Helper: se requiredKeys è definito e NON include la chiave → skip loader
+  const need = (key: string): boolean =>
+    !requiredKeys || requiredKeys.includes(key);
+
   if (isConversational) {
     // Lightweight context for voice mode
     const [memoryContext, userProfile, kbContext, doctrineContext, emailContext] = await Promise.all([
-      loadMemoryContext(supabase, userId, lastUserMsg),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId, ctxTags),
-      loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
+      need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
+      need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
+      need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
+      need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
+      need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
     ]);
     return {
       memoryContext,
@@ -151,13 +157,13 @@ async function loadContextParallel(
   } else {
     // Full context for operational mode
     const [memoryContext, userProfile, kbContext, opPrompts, missionHistory, doctrineContext, emailContext] = await Promise.all([
-      loadMemoryContext(supabase, userId, lastUserMsg),
-      loadUserProfile(supabase, userId),
-      loadKBContext(supabase, lastUserMsg, userId, ctxTags),
-      loadOperativePrompts(supabase, userId),
-      loadMissionHistory(supabase, userId),
-      loadSystemDoctrine(supabase),
-      loadRecentEmailContext(supabase, userId, lastUserMsg ?? ""),
+      need("memory") ? loadMemoryContext(supabase, userId, lastUserMsg) : Promise.resolve(""),
+      need("profile") ? loadUserProfile(supabase, userId) : Promise.resolve(""),
+      need("kb") ? loadKBContext(supabase, lastUserMsg, userId, ctxTags) : Promise.resolve(""),
+      need("operative_prompts") ? loadOperativePrompts(supabase, userId) : Promise.resolve(""),
+      need("mission_history") ? loadMissionHistory(supabase, userId) : Promise.resolve(""),
+      need("doctrine") ? loadSystemDoctrine(supabase) : Promise.resolve(""),
+      need("email_context") ? loadRecentEmailContext(supabase, userId, lastUserMsg ?? "") : Promise.resolve(""),
     ]);
     return {
       memoryContext,
@@ -250,7 +256,23 @@ export async function assembleSystemPrompt(
   // FIX: scope arriva come field top-level del body (non dentro context),
   // quindi va passato esplicitamente; fallback a context.scope per back-compat.
   const scope = scopeArg || (context?.scope as string | undefined) || undefined;
-  if (scope === "kb-supervisor") {
+
+  // ═══ Resolve scope-level context requirements ═══
+  // contextRequirements:
+  //   - undefined → comportamento legacy (carica TUTTO).
+  //   - []        → NESSUN contesto aggiuntivo (es. kb-supervisor: briefing self-contained).
+  //   - [...]     → solo i blocchi elencati vengono caricati e iniettati.
+  let scopeRequirements: string[] | undefined;
+  if (scope) {
+    try {
+      scopeRequirements = getScopeConfig(scope).contextRequirements;
+    } catch {
+      // Scope sconosciuto → comportamento legacy
+    }
+  }
+
+  // Fast-path: nessun contesto aggiuntivo richiesto → skip totale dei loader DB.
+  if (scopeRequirements && scopeRequirements.length === 0) {
     let prompt = baseSystemPrompt;
     if (context) prompt = injectPageContext(prompt, context);
     return {
@@ -293,13 +315,14 @@ export async function assembleSystemPrompt(
     loadHoldingState(supabase, conversationContext.partner_id),
   ]);
 
-  // Load all context
+  // Load all context (loader-level skip via requiredKeys riduce query DB)
   const contextData = await loadContextParallel(
     supabase,
     userId,
     isConversational,
     lastUserMsg,
-    ctxTags
+    ctxTags,
+    scopeRequirements
   );
 
   // Assemble context blocks with priority
@@ -307,7 +330,7 @@ export async function assembleSystemPrompt(
   const basePromptTokens = estimateTokens(baseSystemPrompt);
   const availableBudget = Math.max(2000, contextBudget - basePromptTokens);
 
-  const contextBlocks = [
+  let contextBlocks = [
     { key: "doctrine", content: contextData.doctrineContext, priority: 100, minTokens: 0 },
     { key: "holding_state", content: holdingState, priority: 95, minTokens: 0 },
     { key: "active_workflow", content: activeWorkflow, priority: 92, minTokens: 0 },
@@ -318,6 +341,11 @@ export async function assembleSystemPrompt(
     { key: "operative_prompts", content: contextData.opPrompts, priority: 60, minTokens: 100 },
     { key: "mission_history", content: contextData.missionHistory, priority: 50, minTokens: 0 },
   ].filter((b) => b.content?.trim());
+
+  // Filtra per contextRequirements dello scope (se definito)
+  if (scopeRequirements && scopeRequirements.length > 0) {
+    contextBlocks = contextBlocks.filter((b) => scopeRequirements!.includes(b.key));
+  }
 
   const { text: assembledContext, stats: budgetStats } = assembleContext(
     contextBlocks,

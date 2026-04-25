@@ -59,6 +59,21 @@ export interface ScopeConfig {
   model?: string;
   /** Optional max output tokens. Used by aiCallHandler to size generation budget. */
   maxTokens?: number;
+  /**
+   * Lista dei context blocks da caricare e iniettare in assembleSystemPrompt.
+   * Possibili valori: "profile", "memory", "kb", "doctrine", "email_context",
+   * "operative_prompts", "mission_history", "holding_state", "active_workflow".
+   *
+   * - undefined  → comportamento legacy (carica TUTTO).
+   * - []         → NESSUN contesto aggiuntivo (es. kb-supervisor che ha già un
+   *                briefing self-contained).
+   * - [...]      → solo i blocchi elencati vengono caricati e iniettati.
+   *
+   * Riduce token waste e latenza: scope come "import" non hanno bisogno di
+   * doctrine/memory/kb, ma prima venivano comunque caricati e troncati dal
+   * budget assembler.
+   */
+  contextRequirements?: string[];
   creditLabel: string;
   /** Post-process the content before returning */
   postProcess?: (content: string) => unknown;
@@ -191,6 +206,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: PLATFORM_TOOLS,
         temperature: 0.1,
         creditLabel: "Cockpit Assistant",
+        contextRequirements: ["profile", "memory", "kb", "doctrine", "holding_state", "active_workflow"],
         buildPrompt: (body, basePrompt) => {
           const contacts = (body.contacts as Array<Record<string, unknown>>) || [];
           const _contactSummary = contacts.map((c) => {
@@ -216,6 +232,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: [...PLATFORM_TOOLS, ...CONTACTS_EXTRA_TOOLS],
         creditLabel: "Contacts Assistant",
         localToolHandler: contactsToolHandler,
+        contextRequirements: ["profile", "kb"],
       };
 
     case "import":
@@ -224,6 +241,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         tools: [...PLATFORM_TOOLS, ...IMPORT_EXTRA_TOOLS],
         creditLabel: "Import Assistant",
         localToolHandler: importToolHandler,
+        contextRequirements: ["profile"],
       };
 
     case "extension":
@@ -231,6 +249,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         // systemPrompt: provided by composeSystemPrompt({ scope: "extension" })
         tools: PLATFORM_TOOLS,
         creditLabel: "", // No credits for extension
+        contextRequirements: ["profile", "memory"],
       };
 
     case "strategic":
@@ -240,6 +259,7 @@ export function getScopeConfig(scope: string): ScopeConfig {
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
         creditLabel: "", // No credits for strategic
+        contextRequirements: ["profile", "kb", "doctrine"],
       };
 
     case "kb-supervisor":
@@ -318,6 +338,9 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         temperature: 0.2,
         maxTokens: 32000,
         creditLabel: "KB Supervisor",
+        // Briefing operatore self-contained: nessun contesto aggiuntivo
+        // (doctrine/memory/kb/email satura la window e fa esplodere il chunk).
+        contextRequirements: [],
       };
 
     case "deep-search":
@@ -325,6 +348,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         systemPrompt: "Sei un assistente di ricerca approfondita. Usa i tool di search e enrichment per trovare informazioni dettagliate sui partner WCA. Rispondi sempre in italiano, conciso e basato su dati reali.",
         tools: PLATFORM_TOOLS,
         creditLabel: "Deep Search V2",
+        contextRequirements: ["profile", "kb"],
       };
 
     case "chat":
@@ -332,6 +356,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         systemPrompt: "Sei un assistente conversazionale per agenti autonomi. Rispondi in modo conciso e operativo, in italiano. Usa i tool quando servono dati reali dal database.",
         tools: PLATFORM_TOOLS,
         creditLabel: "Agent Chat V2",
+        contextRequirements: ["profile", "memory", "kb"],
       };
 
     case "mission-builder":
@@ -340,6 +365,7 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         tools: [],
         temperature: 0.5,
         creditLabel: "Mission Builder V2",
+        contextRequirements: ["profile", "mission_history"],
       };
 
     default:
