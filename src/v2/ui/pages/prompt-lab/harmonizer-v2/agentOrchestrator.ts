@@ -269,9 +269,10 @@ export async function runAgenticHarmonizer(input: {
 
       // Append to session.entities_created se INSERT.
       if (d.decision === "INSERT" && d.proposal) {
+        const createdProposal = d.proposal;
         await persistBestEffort("append entities", () => appendEntities(session.id, [{
-          table: d.proposal.table,
-          title: d.proposal.title,
+          table: createdProposal.table,
+          title: createdProposal.title,
           created_in_chunk: i,
         }]));
       }
