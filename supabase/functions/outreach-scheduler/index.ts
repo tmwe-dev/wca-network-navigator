@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
+import { cronGuardCheck, cronGuardLogRun } from "../_shared/cronGuard.ts";
 
 const MAX_WALL_CLOCK_MS = 50_000;
 const BATCH_SIZE = 20;
@@ -24,6 +25,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
+
+    // ━━━ Cron Guard: toggle on/off + throttle utente ━━━
+    const guard = await cronGuardCheck(supabase, {
+      jobName: "outreach_scheduler",
+      enabledKey: "cron_outreach_scheduler_enabled",
+      intervalKey: "cron_outreach_scheduler_interval_min",
+      defaultIntervalMin: 5,
+    });
+    if (guard.skip) {
+      endMetrics(metrics, true, 200);
+      return new Response(
+        JSON.stringify({ skipped: true, reason: guard.reason, next_in_min: (guard as any).nextInMin }),
+        { headers: { ...dynCors, "Content-Type": "application/json" } }
+      );
+    }
 
     const startTime = Date.now();
 
@@ -122,6 +138,8 @@ serve(async (req) => {
     const summary = { processed, failed, skipped, batch_size: batch.length };
     endMetrics(metrics, true, 200);
 
+    await cronGuardLogRun(supabase, "outreach_scheduler", summary);
+
     return new Response(JSON.stringify(summary), {
       headers: { ...dynCors, "Content-Type": "application/json" },
     });
@@ -129,6 +147,14 @@ serve(async (req) => {
   } catch (err) {
     logEdgeError("outreach-scheduler", err);
     endMetrics(metrics, false, 500);
+    try {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false } }
+      );
+      await cronGuardLogRun(sb, "outreach_scheduler", {}, err instanceof Error ? err.message : String(err));
+    } catch (_) { /* ignore */ }
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
       status: 500, headers: { ...dynCors, "Content-Type": "application/json" },
     });
