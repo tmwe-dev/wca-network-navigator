@@ -137,6 +137,7 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
 
 export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "safe" | "review">("all");
 
   const handleApplySingle = async (id: string) => {
     if (!onApplySingle) return;
@@ -169,20 +170,102 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
     p.impact !== "high" &&
     !(p.action === "INSERT" && p.target.table === "agents");
 
+  const safeAll = proposals.filter(isSafe);
+  const reviewAll = proposals.filter((p) => !isSafe(p));
+  const visible = filter === "safe" ? safeAll : filter === "review" ? reviewAll : proposals;
+
+  // Selezione "tutte le visibili" — toggle massivo che rispetta dipendenze e read-only.
+  const visibleSelectableIds = visible
+    .filter((p) => p.resolution_layer !== "contract" && p.resolution_layer !== "code_policy")
+    .map((p) => p.id);
+  const allVisibleSelected =
+    visibleSelectableIds.length > 0 && visibleSelectableIds.every((id) => approvedIds.has(id));
+  const someVisibleSelected = visibleSelectableIds.some((id) => approvedIds.has(id));
+
+  const toggleAllVisible = () => {
+    if (allVisibleSelected) {
+      // deseleziona solo le visibili
+      for (const id of visibleSelectableIds) if (approvedIds.has(id)) onToggle(id);
+    } else {
+      // seleziona tutte le visibili (rispettando dipendenze: passa più volte se servono cascate)
+      const tryAdd = (remaining: string[], guard: number): void => {
+        if (remaining.length === 0 || guard <= 0) return;
+        const stillMissing: string[] = [];
+        for (const id of remaining) {
+          if (approvedIds.has(id)) continue;
+          const p = proposals.find((x) => x.id === id);
+          const deps = p?.dependencies ?? [];
+          const depsOk = deps.every((d) => approvedIds.has(d));
+          if (depsOk) onToggle(id);
+          else stillMissing.push(id);
+        }
+        if (stillMissing.length > 0 && stillMissing.length < remaining.length) {
+          tryAdd(stillMissing, guard - 1);
+        }
+      };
+      tryAdd(visibleSelectableIds.filter((id) => !approvedIds.has(id)), 5);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {proposals.length} proposte totali · {actionable.length} eseguibili · {readOnly.length} read-only (richiedono sviluppatore)
+      {/* Toolbar: filtri + selezione massiva */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 px-3 py-2">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <Checkbox
+              checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+              onCheckedChange={toggleAllVisible}
+              aria-label="Seleziona tutte le visibili"
+            />
+            <span className="font-medium">
+              {allVisibleSelected ? "Deseleziona tutte" : "Seleziona tutte le visibili"}
+              <span className="text-muted-foreground ml-1">({visibleSelectableIds.length})</span>
+            </span>
+          </label>
+          <div className="h-4 w-px bg-border" />
+          <div className="flex rounded-md border overflow-hidden">
+            <Button
+              size="sm"
+              variant={filter === "all" ? "default" : "ghost"}
+              className="h-7 rounded-none px-2 text-xs"
+              onClick={() => setFilter("all")}
+            >
+              Tutte ({proposals.length})
+            </Button>
+            <Button
+              size="sm"
+              variant={filter === "safe" ? "default" : "ghost"}
+              className="h-7 rounded-none gap-1 px-2 text-xs"
+              onClick={() => setFilter("safe")}
+            >
+              <ShieldCheck className="h-3 w-3" />
+              Sicure ({safeAll.length})
+            </Button>
+            <Button
+              size="sm"
+              variant={filter === "review" ? "default" : "ghost"}
+              className="h-7 rounded-none gap-1 px-2 text-xs"
+              onClick={() => setFilter("review")}
+            >
+              <Eye className="h-3 w-3" />
+              Da rivedere ({reviewAll.length})
+            </Button>
+          </div>
         </div>
-        <Button size="sm" variant="outline" onClick={onApproveAllSafe}>
-          Approva tutte le sicure
-        </Button>
+        <div className="text-xs text-muted-foreground">
+          {readOnly.length > 0 && <>{readOnly.length} read-only</>}
+        </div>
       </div>
 
       <ScrollArea className="h-[420px] pr-2">
         <div className="space-y-2">
-          {proposals.map((p) => {
+          {visible.length === 0 && (
+            <div className="text-center text-xs text-muted-foreground py-8">
+              Nessuna proposta in questa categoria.
+            </div>
+          )}
+          {visible.map((p) => {
             const isReadOnly = p.resolution_layer === "contract" || p.resolution_layer === "code_policy";
             const layer = LAYER_META[p.resolution_layer];
             const LayerIcon = layer.icon;
