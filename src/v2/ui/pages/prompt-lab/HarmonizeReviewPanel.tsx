@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff } from "lucide-react";
+import { ChevronDown, AlertTriangle, Wrench, Code2, BookOpen, FileText, Lock, FlaskConical, Pencil, Check, X, Send, Loader2, ShieldCheck, Eye, FileQuestion, CheckCircle2, EyeOff, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,6 +109,9 @@ interface Props {
   onApproveAllSafe: () => void;
   onEditAfter?: (proposalId: string, newAfter: string) => Promise<{ ok: boolean; reason?: string }>;
   onApplySingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
+  onDiscardSingle?: (proposalId: string) => Promise<{ ok: boolean; reason?: string }>;
+  onApplySelected?: () => void;
+  applyingSelected?: boolean;
 }
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
@@ -138,8 +141,9 @@ const TEST_URGENCY_LABEL: Record<NonNullable<HarmonizeProposal["test_urgency"]>,
   regression_full: "Regression completa",
 };
 
-export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle }: Props) {
+export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onApproveAllSafe, onEditAfter, onApplySingle, onDiscardSingle, onApplySelected, applyingSelected }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [discardingId, setDiscardingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "safe" | "review" | "notes" | "done">("all");
   const [hideManaged, setHideManaged] = useState(true);
 
@@ -152,6 +156,18 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
       else toast.error(`Applicazione fallita: ${res.reason ?? "errore sconosciuto"}`);
     } finally {
       setApplyingId(null);
+    }
+  };
+
+  const handleDiscardSingle = async (id: string) => {
+    if (!onDiscardSingle) return;
+    setDiscardingId(id);
+    try {
+      const res = await onDiscardSingle(id);
+      if (res.ok) toast.success("Proposta scartata");
+      else toast.error(`Eliminazione fallita: ${res.reason ?? "errore sconosciuto"}`);
+    } finally {
+      setDiscardingId(null);
     }
   };
 
