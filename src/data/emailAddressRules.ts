@@ -18,6 +18,7 @@ export interface EmailAddressRule {
   auto_action_params: Record<string, unknown> | null;
   applied_count: number | null;
   last_applied_at: string | null;
+  is_blocked: boolean | null;
 }
 
 export async function findEmailAddressRules(userId: string): Promise<EmailAddressRule[]> {
@@ -35,5 +36,55 @@ export async function updateEmailAddressRule(id: string, patch: Partial<EmailAdd
   // generato di Supabase è `Json` (ricorsivo). Sono compatibili a runtime.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase.from("email_address_rules").update(patch as any).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Bulk update auto_action (+ optional params) per la lista di email indicata,
+ * per il SOLO user corrente (evita di toccare regole di altri operatori).
+ * Usato dalle azioni batch della SenderActionBar (Segna lette, Elimina, Spam, etc.).
+ */
+export async function bulkUpdateAutoAction(
+  userId: string,
+  emails: string[],
+  action: string,
+  params: Record<string, unknown> = {},
+): Promise<void> {
+  if (emails.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const { error } = await sb
+    .from("email_address_rules")
+    .update({
+      auto_action: action,
+      auto_action_params: params,
+      auto_execute: action !== "none",
+    })
+    .eq("user_id", userId)
+    .in("email_address", emails);
+  if (error) throw error;
+}
+
+/**
+ * Bulk set is_blocked + auto_action='spam' atomicamente.
+ * Quando blocked=true: imposta spam IMAP + flag user-blocked.
+ * Quando blocked=false: rimuove solo il flag (non tocca auto_action).
+ */
+export async function bulkSetBlocked(
+  userId: string,
+  emails: string[],
+  blocked: boolean,
+): Promise<void> {
+  if (emails.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const patch = blocked
+    ? { is_blocked: true, auto_action: "spam", auto_execute: true }
+    : { is_blocked: false };
+  const { error } = await sb
+    .from("email_address_rules")
+    .update(patch)
+    .eq("user_id", userId)
+    .in("email_address", emails);
   if (error) throw error;
 }

@@ -3500,6 +3500,7 @@ export type Database = {
           id: string
           interaction_count: number | null
           is_active: boolean | null
+          is_blocked: boolean
           last_applied_at: string | null
           last_email_at: string | null
           last_interaction_at: string | null
@@ -3548,6 +3549,7 @@ export type Database = {
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          is_blocked?: boolean
           last_applied_at?: string | null
           last_email_at?: string | null
           last_interaction_at?: string | null
@@ -3596,6 +3598,7 @@ export type Database = {
           id?: string
           interaction_count?: number | null
           is_active?: boolean | null
+          is_blocked?: boolean
           last_applied_at?: string | null
           last_email_at?: string | null
           last_interaction_at?: string | null

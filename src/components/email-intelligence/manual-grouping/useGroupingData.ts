@@ -14,6 +14,7 @@ import { DEFAULT_GROUPS as PREDEFINED_GROUPS } from "@/types/email-management";
 export function useGroupingData() {
   const qc = useQueryClient();
   const [senders, setSenders] = useState<SenderAnalysis[]>([]);
+  const [classifiedSenders, setClassifiedSenders] = useState<SenderAnalysis[]>([]);
   const [groups, setGroups] = useState<EmailSenderGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPopulating, setIsPopulating] = useState(false);
@@ -142,11 +143,15 @@ export function useGroupingData() {
         last_email_at: string | null;
         domain: string | null;
         company_name: string | null;
+        ai_suggested_group: string | null;
+        ai_suggestion_confidence: number | null;
+        ai_suggestion_accepted: boolean | null;
+        is_blocked: boolean | null;
       }>(
         (from, to) =>
           supabase
             .from("email_address_rules")
-            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name")
+            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked")
             // Coerenza: una riga è "non classificata" solo se NESSUNO dei due
             // campi (group_id legacy + group_name) è valorizzato.
             .is("group_id", null)
@@ -183,9 +188,75 @@ export function useGroupingData() {
         lastSeen: r.last_email_at || "",
         isClassified: false,
         ruleId: r.id,
+        aiSuggestion: r.ai_suggested_group
+          ? {
+              group_name: r.ai_suggested_group,
+              confidence: r.ai_suggestion_confidence ?? 0,
+              accepted: r.ai_suggestion_accepted,
+            }
+          : undefined,
+        isBlocked: r.is_blocked === true,
       }));
 
       setSenders(senderList);
+
+      // Load classified senders (have group_id OR group_name) → mostrati nel rail con opacità ridotta.
+      const classifiedRules = await fetchAllRows<{
+        id: string;
+        email_address: string;
+        display_name: string | null;
+        email_count: number | null;
+        last_email_at: string | null;
+        domain: string | null;
+        company_name: string | null;
+        ai_suggested_group: string | null;
+        ai_suggestion_confidence: number | null;
+        ai_suggestion_accepted: boolean | null;
+        is_blocked: boolean | null;
+        group_id: string | null;
+        group_name: string | null;
+      }>(
+        (from, to) =>
+          supabase
+            .from("email_address_rules")
+            .select("id, email_address, display_name, email_count, last_email_at, domain, company_name, ai_suggested_group, ai_suggestion_confidence, ai_suggestion_accepted, is_blocked, group_id, group_name")
+            .or("group_id.not.is.null,group_name.not.is.null")
+            .order("email_count", { ascending: false })
+            .range(from, to),
+      );
+      const classifiedDedup = new Map<string, typeof classifiedRules[number] & { _summed: number }>();
+      for (const r of classifiedRules) {
+        const key = r.email_address.toLowerCase();
+        const existing = classifiedDedup.get(key);
+        const incoming = r.email_count ?? 0;
+        if (!existing) classifiedDedup.set(key, { ...r, _summed: incoming });
+        else {
+          existing._summed += incoming;
+          if (incoming > (existing.email_count ?? 0)) {
+            classifiedDedup.set(key, { ...r, _summed: existing._summed });
+          }
+        }
+      }
+      const classifiedList: SenderAnalysis[] = Array.from(classifiedDedup.values()).map((r) => ({
+        email: r.email_address,
+        domain: r.domain || r.email_address.split("@")[1] || "",
+        companyName: r.company_name || r.display_name || deriveSenderDisplayName(r.email_address),
+        emailCount: r._summed,
+        firstSeen: "",
+        lastSeen: r.last_email_at || "",
+        isClassified: true,
+        ruleId: r.id,
+        aiSuggestion: r.ai_suggested_group
+          ? {
+              group_name: r.ai_suggested_group,
+              confidence: r.ai_suggestion_confidence ?? 0,
+              accepted: r.ai_suggestion_accepted,
+            }
+          : undefined,
+        isBlocked: r.is_blocked === true,
+      }));
+      setClassifiedSenders(classifiedList);
+
       // After loading uncategorized senders, also refresh assigned-rules map.
       await loadAssignedRules();
     } catch (err: unknown) {
@@ -336,6 +407,7 @@ export function useGroupingData() {
   return {
     senders,
     setSenders,
+    classifiedSenders,
     groups,
     setGroups,
     isLoading,
