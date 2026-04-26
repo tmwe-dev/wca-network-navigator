@@ -25,6 +25,10 @@ export interface SenderAnalysis {
   customPrompt?: string;
   autoAction?: string;
   ruleId?: string;
+  /** Suggerimento AI dal campo email_address_rules.ai_suggested_group (solo HINT visivo). */
+  aiSuggestion?: { group_name: string; confidence: number; accepted: boolean | null };
+  /** Flag is_blocked su email_address_rules. */
+  isBlocked?: boolean;
 }
 
 export type GroupType =
@@ -57,4 +61,4 @@ export const DEFAULT_GROUPS: Array<{
   { name: 'Offerte', type: 'offerte', color: '#14B8A6', icon: '💰', description: 'Quotazioni, preventivi' },
 ];
 
-export type SortOption = 'count-desc' | 'count-asc' | 'name-asc' | 'name-desc';
+export type SortOption = 'count-desc' | 'count-asc' | 'name-asc' | 'name-desc' | 'ai_group';
