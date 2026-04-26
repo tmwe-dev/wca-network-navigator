@@ -24,23 +24,25 @@ export interface BackfillReport {
 }
 
 export async function backfillForAddress(
-  operatorId: string,
+  userId: string,
   address: string,
   dryRun = false,
+  operatorId?: string,
 ): Promise<BackfillReport> {
   return invokeEdge<BackfillReport>("backfill-email-rules", {
-    body: { operator_id: operatorId, scope: "address", target: address, dry_run: dryRun },
+    body: { user_id: userId, operator_id: operatorId, scope: "address", target: address, dry_run: dryRun },
     context: "backfillForAddress",
   });
 }
 
 export async function backfillForGroup(
-  operatorId: string,
+  userId: string,
   groupName: string,
   dryRun = false,
+  operatorId?: string,
 ): Promise<BackfillReport> {
   return invokeEdge<BackfillReport>("backfill-email-rules", {
-    body: { operator_id: operatorId, scope: "group", target: groupName, dry_run: dryRun },
+    body: { user_id: userId, operator_id: operatorId, scope: "group", target: groupName, dry_run: dryRun },
     context: "backfillForGroup",
   });
 }
