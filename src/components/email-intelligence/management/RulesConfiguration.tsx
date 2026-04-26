@@ -1,147 +1,174 @@
 /**
- * RulesConfiguration — Checkboxes for IMAP/SMTP rules applied to an email address
+ * RulesConfiguration — Configura UNA azione IMAP principale + toggle "segna anche come letto".
+ *
+ * Le checkbox precedenti permettevano selezioni multiple incoerenti (es. archive+delete),
+ * e mappavano su un campo `applied_rules` che NON esiste nello schema reale di
+ * email_address_rules. La pipeline `apply-email-rules` legge solo `auto_action`
+ * (singola azione) + `auto_action_params` (JSONB), quindi le selezioni precedenti
+ * non venivano mai eseguite.
+ *
+ * Le azioni `delete`, `mark_important`, `forward_to`, `auto_reply`, `skip_inbox`
+ * non sono ancora implementate nel worker e sono mostrate come "in arrivo" disabilitate.
  */
 import { useState, useEffect } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Inbox } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
-interface RuleConfig {
-  id: string;
-  label: string;
-  description: string;
+export type ImapAction = 'none' | 'mark_read' | 'archive' | 'move_to_folder' | 'spam' | 'hide';
+
+export interface RulesConfigValue {
+  auto_action: ImapAction;
+  auto_action_params: {
+    target_folder?: string;
+    also_mark_read?: boolean;
+    backfill_cap?: number;
+  };
 }
 
 interface RulesConfigurationProps {
-  appliedRules: string[];
-  onRulesChange: (rules: string[]) => void;
+  value: RulesConfigValue;
+  onChange: (next: RulesConfigValue) => void;
   isSaving?: boolean;
 }
 
-// Define available IMAP/SMTP rules
-const AVAILABLE_RULES: RuleConfig[] = [
-  {
-    id: 'move_to_folder',
-    label: 'Sposta in cartella',
-    description: 'Sposta automaticamente in una cartella specifica'
-  },
-  {
-    id: 'archive',
-    label: 'Archivia',
-    description: 'Archivia automaticamente le email'
-  },
-  {
-    id: 'mark_read',
-    label: 'Segna come letto',
-    description: 'Marca automaticamente come letto'
-  },
-  {
-    id: 'mark_important',
-    label: 'Segna come importante',
-    description: 'Contrassegna come importante'
-  },
-  {
-    id: 'delete',
-    label: 'Elimina',
-    description: 'Elimina automaticamente le email'
-  },
-  {
-    id: 'forward_to',
-    label: 'Inoltra a',
-    description: 'Inoltra automaticamente a un indirizzo'
-  },
-  {
-    id: 'auto_reply',
-    label: 'Rispondi automaticamente',
-    description: 'Invia una risposta automatica'
-  },
-  {
-    id: 'skip_inbox',
-    label: 'Salta inbox',
-    description: 'Impedisce che le email appiano nella inbox'
-  }
+const ACTION_OPTIONS: Array<{ value: ImapAction; label: string; description: string }> = [
+  { value: 'none', label: 'Nessuna azione automatica', description: 'Le email arrivano in inbox normalmente' },
+  { value: 'mark_read', label: 'Segna come letto', description: 'Imposta il flag \\Seen senza spostare' },
+  { value: 'archive', label: 'Archivia', description: 'Sposta nella cartella Archive (o quella indicata)' },
+  { value: 'spam', label: 'Sposta in Spam/Junk', description: 'Sposta nella cartella Junk (o quella indicata)' },
+  { value: 'move_to_folder', label: 'Sposta in cartella…', description: 'Sposta in una cartella IMAP a tua scelta' },
+  { value: 'hide', label: 'Nascondi (solo nel nostro DB)', description: 'Non tocca IMAP, nasconde dal nostro inbox' },
 ];
 
-export function RulesConfiguration({
-  appliedRules,
-  onRulesChange,
-  isSaving = false
-}: RulesConfigurationProps) {
-  const [selectedRules, setSelectedRules] = useState<string[]>(appliedRules);
+const COMING_SOON: Array<{ id: string; label: string }> = [
+  { id: 'delete', label: 'Elimina (cestino)' },
+  { id: 'mark_important', label: 'Segna come importante' },
+  { id: 'forward_to', label: 'Inoltra a…' },
+  { id: 'auto_reply', label: 'Risposta automatica' },
+];
+
+export function RulesConfiguration({ value, onChange, isSaving = false }: RulesConfigurationProps) {
+  const [draft, setDraft] = useState<RulesConfigValue>(value);
 
   useEffect(() => {
-    setSelectedRules(appliedRules);
-  }, [appliedRules]);
+    setDraft(value);
+  }, [value]);
 
-  const toggleRule = (ruleId: string) => {
-    setSelectedRules(prev => {
-      const isSelected = prev.includes(ruleId);
-      return isSelected
-        ? prev.filter(r => r !== ruleId)
-        : [...prev, ruleId];
-    });
+  const dirty = JSON.stringify(draft) !== JSON.stringify(value);
+
+  const setAction = (action: ImapAction) => {
+    setDraft((d) => ({
+      ...d,
+      auto_action: action,
+      auto_action_params: {
+        ...d.auto_action_params,
+        // Reset target_folder se non più rilevante
+        target_folder: ['archive', 'spam', 'move_to_folder'].includes(action)
+          ? d.auto_action_params.target_folder
+          : undefined,
+      },
+    }));
   };
 
-  const handleSave = () => {
-    onRulesChange(selectedRules);
+  const setTargetFolder = (folder: string) => {
+    setDraft((d) => ({
+      ...d,
+      auto_action_params: { ...d.auto_action_params, target_folder: folder || undefined },
+    }));
   };
 
-  const hasChanges = JSON.stringify(selectedRules) !== JSON.stringify(appliedRules);
+  const setAlsoMarkRead = (checked: boolean) => {
+    setDraft((d) => ({
+      ...d,
+      auto_action_params: { ...d.auto_action_params, also_mark_read: checked || undefined },
+    }));
+  };
+
+  const needsTargetFolder = ['archive', 'spam', 'move_to_folder'].includes(draft.auto_action);
+  const allowsAlsoMarkRead = ['archive', 'spam', 'move_to_folder'].includes(draft.auto_action);
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Rules checkboxes */}
-      <div className="grid grid-cols-1 gap-2">
-        {AVAILABLE_RULES.map(rule => (
-          <div key={rule.id} className="flex items-start gap-2">
-            <Checkbox
-              id={rule.id}
-              checked={selectedRules.includes(rule.id)}
-              onCheckedChange={() => toggleRule(rule.id)}
-              disabled={isSaving}
-              className="mt-1"
-            />
-            <Label
-              htmlFor={rule.id}
-              className="flex flex-col gap-0.5 cursor-pointer flex-1"
-            >
-              <span className="text-sm font-medium">{rule.label}</span>
-              <span className="text-xs text-muted-foreground">{rule.description}</span>
-            </Label>
-          </div>
-        ))}
+      {/* Azione principale */}
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs font-semibold text-muted-foreground">Azione automatica all'arrivo</Label>
+        <Select value={draft.auto_action} onValueChange={(v) => setAction(v as ImapAction)} disabled={isSaving}>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ACTION_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{opt.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{opt.description}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
+      {/* Cartella target (se applicabile) */}
+      {needsTargetFolder && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="target-folder" className="text-xs font-semibold text-muted-foreground">
+            Cartella di destinazione
+          </Label>
+          <Input
+            id="target-folder"
+            placeholder={
+              draft.auto_action === 'archive' ? 'Archive (default)'
+              : draft.auto_action === 'spam' ? 'Junk (default)'
+              : 'es. INBOX/LinkedIn'
+            }
+            value={draft.auto_action_params.target_folder ?? ''}
+            onChange={(e) => setTargetFolder(e.target.value)}
+            disabled={isSaving}
+            className="h-8 text-sm"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Lascia vuoto per usare il default. La cartella viene creata se non esiste.
+          </p>
+        </div>
+      )}
+
+      {/* Toggle "anche segna come letto" */}
+      {allowsAlsoMarkRead && (
+        <div className="flex items-center justify-between gap-2 rounded border border-muted bg-muted/20 px-2 py-1.5">
+          <Label htmlFor="also-mark-read" className="text-xs cursor-pointer">
+            Segna anche come letto durante lo spostamento
+          </Label>
+          <Switch
+            id="also-mark-read"
+            checked={draft.auto_action_params.also_mark_read === true}
+            onCheckedChange={setAlsoMarkRead}
+            disabled={isSaving}
+          />
+        </div>
+      )}
+
       {/* Save button */}
-      {hasChanges && (
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full"
-        >
-          {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Salva regole
+      {dirty && (
+        <Button size="sm" onClick={() => onChange(draft)} disabled={isSaving} className="w-full">
+          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Inbox className="h-4 w-4 mr-2" />}
+          Salva regola
         </Button>
       )}
 
-      {/* Active rules summary */}
-      {selectedRules.length > 0 && (
-        <div className="bg-muted/30 p-2 rounded text-sm border border-muted">
-          <div className="text-xs font-semibold mb-1">Regole attive:</div>
-          <div className="flex flex-wrap gap-1">
-            {selectedRules.map(ruleId => {
-              const rule = AVAILABLE_RULES.find(r => r.id === ruleId);
-              return (
-                <span key={ruleId} className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">
-                  {rule?.label}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Coming-soon */}
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer hover:text-foreground">Azioni in arrivo (non ancora attive)</summary>
+        <ul className="list-disc pl-5 mt-1 space-y-0.5">
+          {COMING_SOON.map((c) => <li key={c.id}>{c.label}</li>)}
+        </ul>
+      </details>
     </div>
   );
 }
