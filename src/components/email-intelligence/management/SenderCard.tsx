@@ -98,13 +98,20 @@ export function SenderCard({
   const loadAddressRule = async () => {
     try {
       setIsLoadingRule(true);
+      // LOVABLE-FIX user_id required (DB NOT NULL) + multi-row safety
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Sessione scaduta');
+        return;
+      }
       const { data, error } = await sb
         .from('email_address_rules')
         .select('id, custom_prompt, applied_rules, prompt_template_id')
         .eq('email_address', sender.email)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
 
@@ -120,6 +127,7 @@ export function SenderCard({
         const { data: newRule, error: createError } = await sb
           .from('email_address_rules')
           .insert({
+            user_id: user.id,
             email_address: sender.email,
             custom_prompt: null,
             applied_rules: [],
@@ -259,11 +267,11 @@ export function SenderCard({
               <div className="text-[11px] text-muted-foreground truncate">{sender.email}</div>
             </div>
 
-            {/* Email count + flag column */}
-            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-              <span className="text-lg font-bold text-primary">{sender.emailCount}</span>
+            {/* Email count + flag (compact inline row, vertically aligned to name) */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span className="text-lg font-bold text-primary leading-none">{sender.emailCount}</span>
               {flag && (
-                <span className="text-xl leading-none" title={sender.domain}>
+                <span className="text-base leading-none" title={sender.domain}>
                   {flag}
                 </span>
               )}
@@ -273,7 +281,7 @@ export function SenderCard({
             {onViewEmails && (
               <button
                 onClick={(e) => { e.stopPropagation(); onViewEmails(sender); }}
-                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors flex-shrink-0 ml-1"
                 title="Visualizza email"
                 draggable={false}
               >

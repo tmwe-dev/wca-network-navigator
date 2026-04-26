@@ -21,7 +21,7 @@ export function useGroupingData() {
   // Lifted out of GroupDropZone so we open ONE channel + ONE query
   // instead of N (one per group) → big perf win when filtering/dragging.
   const [assignedByGroup, setAssignedByGroup] = useState<
-    Map<string, Array<{ id: string; email_address: string; display_name: string | null }>>
+    Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>
   >(new Map());
 
   /**
@@ -67,20 +67,22 @@ export function useGroupingData() {
       display_name: string | null;
       group_name: string | null;
       created_at: string | null;
+      company_name: string | null;
+      domain: string | null;
     }>(
       (from, to) =>
         supabase
           .from("email_address_rules")
-          .select("id, email_address, display_name, group_name, created_at")
+          .select("id, email_address, display_name, group_name, created_at, company_name, domain")
           .not("group_name", "is", null)
           .order("created_at", { ascending: false })
           .range(from, to),
     );
-    const map = new Map<string, Array<{ id: string; email_address: string; display_name: string | null }>>();
+    const map = new Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>();
     for (const r of rows) {
       if (!r.group_name) continue;
       const arr = map.get(r.group_name) || [];
-      arr.push({ id: r.id, email_address: r.email_address, display_name: r.display_name });
+      arr.push({ id: r.id, email_address: r.email_address, display_name: r.display_name, company_name: r.company_name, domain: r.domain });
       map.set(r.group_name, arr);
     }
     setAssignedByGroup(map);
