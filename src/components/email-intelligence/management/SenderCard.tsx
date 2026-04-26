@@ -19,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
 import { PromptTemplateSelector } from './PromptTemplateSelector';
-import { RulesConfiguration } from './RulesConfiguration';
+import { RulesConfiguration, type RulesConfigValue } from './RulesConfiguration';
 import { BulkEmailActions } from './BulkEmailActions';
 import { BackfillButton } from './BackfillButton';
 
@@ -39,8 +39,8 @@ interface SenderCardProps {
 interface AddressRule {
   id: string;
   custom_prompt: string | null;
-  applied_rules: string[];
-  prompt_template_id: string | null;
+  auto_action: string | null;
+  auto_action_params: Record<string, unknown> | null;
 }
 
 export function SenderCard({
@@ -107,7 +107,7 @@ export function SenderCard({
       }
       const { data, error } = await sb
         .from('email_address_rules')
-        .select('id, custom_prompt, applied_rules, prompt_template_id')
+        .select('id, custom_prompt, auto_action, auto_action_params')
         .eq('email_address', sender.email)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -120,8 +120,8 @@ export function SenderCard({
         setAddressRule({
           id: data.id,
           custom_prompt: data.custom_prompt,
-          applied_rules: Array.isArray(data.applied_rules) ? data.applied_rules : [],
-          prompt_template_id: data.prompt_template_id
+          auto_action: data.auto_action ?? null,
+          auto_action_params: (data.auto_action_params ?? null) as Record<string, unknown> | null,
         });
       } else {
         // Create a new rule if it doesn't exist
@@ -131,10 +131,10 @@ export function SenderCard({
             user_id: user.id,
             email_address: sender.email,
             custom_prompt: null,
-            applied_rules: [],
-            prompt_template_id: null
+            auto_action: 'none',
+            auto_action_params: {},
           })
-          .select('id, custom_prompt, applied_rules, prompt_template_id')
+          .select('id, custom_prompt, auto_action, auto_action_params')
           .single();
 
         if (createError) throw createError;
@@ -142,8 +142,8 @@ export function SenderCard({
           setAddressRule({
             id: newRule.id,
             custom_prompt: newRule.custom_prompt,
-            applied_rules: [],
-            prompt_template_id: newRule.prompt_template_id
+            auto_action: newRule.auto_action ?? 'none',
+            auto_action_params: (newRule.auto_action_params ?? {}) as Record<string, unknown>,
           });
         }
       }
@@ -172,13 +172,12 @@ export function SenderCard({
         .from('email_address_rules')
         .update({
           custom_prompt: prompt || null,
-          prompt_template_id: null
         })
         .eq('id', addressRule.id);
 
       if (error) throw error;
 
-      setAddressRule({ ...addressRule, custom_prompt: prompt, prompt_template_id: null });
+      setAddressRule({ ...addressRule, custom_prompt: prompt });
       toast.success('Prompt salvato');
       onAddressRuleUpdated?.();
     } catch (err) {
@@ -189,19 +188,28 @@ export function SenderCard({
     }
   };
 
-  const handleRulesChange = async (rules: string[]) => {
+  const handleRulesChange = async (next: RulesConfigValue) => {
     if (!addressRule) return;
 
     try {
       setIsSavingRule(true);
       const { error } = await sb
         .from('email_address_rules')
-        .update({ applied_rules: rules })
+        .update({
+          auto_action: next.auto_action,
+          auto_action_params: next.auto_action_params,
+          // Auto-execute solo se l'azione è "concreta" (non none/hide gestita lato DB)
+          auto_execute: next.auto_action !== 'none',
+        })
         .eq('id', addressRule.id);
 
       if (error) throw error;
 
-      setAddressRule({ ...addressRule, applied_rules: rules });
+      setAddressRule({
+        ...addressRule,
+        auto_action: next.auto_action,
+        auto_action_params: next.auto_action_params,
+      });
       toast.success('Regole salvate');
       onAddressRuleUpdated?.();
     } catch (err) {
@@ -358,14 +366,15 @@ export function SenderCard({
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-muted-foreground">Regole IMAP/SMTP</label>
               <RulesConfiguration
-                appliedRules={addressRule.applied_rules}
-                onRulesChange={handleRulesChange}
+                value={{
+                  auto_action: (addressRule.auto_action ?? 'none') as RulesConfigValue['auto_action'],
+                  auto_action_params: (addressRule.auto_action_params ?? {}) as RulesConfigValue['auto_action_params'],
+                }}
+                onChange={handleRulesChange}
                 isSaving={isSavingRule}
               />
               {/* Backfill: applica le regole IMAP ai messaggi storici di questo address */}
-              {addressRule.applied_rules.some((r) =>
-                ["mark_read", "archive", "move_to_folder", "spam"].includes(r),
-              ) && (
+              {["mark_read", "archive", "move_to_folder", "spam"].includes(addressRule.auto_action ?? "") && (
                 <div className="pt-1">
                   <BackfillButton scope="address" target={sender.email} variant="button" />
                 </div>
