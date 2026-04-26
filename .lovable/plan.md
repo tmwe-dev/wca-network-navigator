@@ -1,125 +1,116 @@
-## Diagnosi (analisi riga per riga)
+# Backfill IMAP manuale per regole su address/gruppo
 
-### 1. Bug "Errore caricamento configurazione" — CAUSA CONFERMATA
+## Obiettivo
+Permettere di applicare le regole IMAP esistenti (`mark_read`, `archive`, `move_to_folder`, `spam`) ai messaggi STORICI presenti nella inbox del server, in modo **manuale** tramite un pulsante dedicato, **sequenziale per address**, su **tutti i messaggi storici**, **senza ereditarietà automatica** dello storico per nuovi membri di gruppo.
 
-File: `src/components/email-intelligence/management/SenderCard.tsx`, funzione `loadAddressRule` (righe 98-147).
+## Comportamento atteso
 
+1. **Ogni address con regola IMAP attiva** mostra un pulsante "📥 Applica allo storico". Al click il sistema cerca nella inbox IMAP tutti i messaggi `FROM` quell'indirizzo (senza limite temporale) e applica l'`auto_action` configurata.
+2. **Ogni gruppo** mostra un pulsante "Applica allo storico al gruppo" che processa **sequenzialmente address per address** (50 address = 50 sessioni IMAP separate, una per address per evitare timeout su sessioni lunghe).
+3. **Nessuna esecuzione automatica** al salvataggio della regola: l'utente sceglie quando lanciare il backfill.
+4. **Nessuna ereditarietà automatica**: nuovo address aggiunto a un gruppo con regole già attive → le regole valgono solo sui futuri messaggi (comportamento attuale di check-inbox). Per lo storico serve click manuale.
+5. **Feedback**: dialog di conferma che mostra "verranno processati N address", spinner durante l'esecuzione, toast finale con report `{ matched, applied, errors }`.
+
+## Modifiche tecniche
+
+### 1. Nuova edge function `backfill-email-rules`
+File: `supabase/functions/backfill-email-rules/index.ts`
+
+**Input**:
 ```ts
-// riga 101-105 — query SBAGLIATA
-const { data, error } = await sb
-  .from('email_address_rules')
-  .select('id, custom_prompt, applied_rules, prompt_template_id')
-  .eq('email_address', sender.email)   // ❌ manca .eq('user_id', user.id)
-  .single();                            // ❌ deve essere .maybeSingle() (regola di progetto)
-
-// riga 120-127 — INSERT che CAUSA L'ERRORE 23502
-.insert({
-  email_address: sender.email,
-  custom_prompt: null,
-  applied_rules: [],
-  prompt_template_id: null
-  // ❌ MANCA user_id → la colonna è NOT NULL nel DB
-})
+{
+  operator_id: string,
+  scope: "address" | "group",
+  target: string,           // email_address oppure group_name
+  dry_run?: boolean         // se true conta soltanto, non esegue
+}
 ```
 
-**Catena dell'errore**:
-1. Non si filtra per `user_id` → quando la stessa email ha rule di altri utenti, `.single()` ritorna error multi-row.
-2. Si entra nel ramo "crea nuova rule".
-3. L'INSERT non include `user_id` (NOT NULL) → Postgres risponde **23502**.
-4. Catch → toast `Errore caricamento configurazione` (esattamente quello che vedi).
+**Logica**:
+1. Carica regole `email_address_rules` filtrate per operator + scope (singolo address o tutti gli address del gruppo).
+2. Per ogni address con regola attiva (`auto_action` impostata):
+   - Apre **una connessione IMAP** dedicata (riusa la classe ImapConn estesa con `searchByFrom(address)` che fa `UID SEARCH FROM "..."`).
+   - `SELECT INBOX`, recupera tutti gli UID storici per quell'address.
+   - Per ogni UID applica l'azione (`mark_read` / `archive` / `move_to_folder` / `spam`).
+   - Aggiorna `channel_messages` (folder/read_at/hidden_by_rule) **solo se il messaggio esiste in DB** (lookup per `imap_uid` + `from_address`); altrimenti aggiorna solo IMAP (storici mai scaricati).
+   - Logout, passa al prossimo address.
+3. Aggiorna `email_address_rules.applied_count` e `last_applied_at`.
+4. Restituisce report `{ addresses_processed, messages_matched, messages_applied, errors[] }`.
 
-Conferma dai log console: `null value in column "user_id" of relation "email_address_rules" violates not-null constraint at loadAddressRule (SenderCard.tsx:114)`.
+**Sicurezza**:
+- Verifica auth utente (no service-role-only) per impedire backfill massivi non autorizzati.
+- Cap di sicurezza: max 5.000 messaggi per address (override via `auto_action_params.backfill_cap`).
+- Niente azione `delete` (coerente con `apply-email-rules` attuale che non la implementa).
 
-**Perché prima funzionava e adesso no**: per gli indirizzi che avevi già configurato manualmente, la riga esisteva già e veniva trovata. Per gli indirizzi nuovi (apparsi dopo l'ultima ondata di email scaricate o dopo la migrazione di dedup gruppi), la rule personale non c'è → si tenta l'INSERT → 23502.
+### 2. Strategia di condivisione codice — DUPLICA, non refactora
+`apply-email-rules` è nella lista delle edge function "non toccare senza autorizzazione" (vincolo memory). Quindi:
 
-**Note correlate**: il file usa colonne fantasma (`applied_rules`, `prompt_template_id`) che NON esistono nello schema reale (vedi DEBT-EMAIL-INTEL-COLUMNS già annotato nel commento del file). Il `select` di `applied_rules` ritorna sempre undefined; al primo update con quel campo Postgres risponderà 42703. Va segnalato ma è fuori scope di questo fix puntuale (lo evidenzio).
+**Decisione**: duplichiamo `ImapConn` (con metodo aggiuntivo `searchByFrom`), `findMatchingRule` e `caCerts.ts` dentro `backfill-email-rules/`. Costo: ~200 LOC duplicati. Beneficio: zero rischio di regressione su `check-inbox` → `apply-email-rules`.
 
-### 2. Layout cards "incasinato" (destra/sinistra)
+L'unica modifica a `apply-email-rules/index.ts` è l'aggiunta del supporto a `auto_action_params.also_mark_read` (vedi punto 5), modifica isolata e minimale (~10 LOC).
 
-File: `src/components/email-intelligence/management/SenderCard.tsx` riga 229-283.
+### 3. DAL: `src/data/emailRulesBackfill.ts`
+```ts
+export interface BackfillReport {
+  addresses_processed: number;
+  messages_matched: number;
+  messages_applied: number;
+  errors: Array<{ address: string; error: string }>;
+}
 
-Riga horizontale: `[checkbox] [grip] [favicon] [nome+email flex-1] [count+flag colonna] [Mail btn]`.
+export async function backfillForAddress(operatorId: string, address: string, dryRun?: boolean): Promise<BackfillReport>;
+export async function backfillForGroup(operatorId: string, groupName: string, dryRun?: boolean): Promise<BackfillReport>;
+```
+Usa `invokeEdge` (wrapper centralizzato).
 
-Problemi:
-- Il blocco `count+flag` (riga 263-270) è una **colonna a 2 righe** (number `text-lg` sopra, flag `text-xl` sotto) → forza la card ad essere più alta del blocco testo a sinistra (2 righe `text-sm`/`text-[11px]`). Visivamente i due lati non sono allineati: il numero "galleggia" più in alto del nome, il flag è sotto la mail.
-- Nessun gap visivo tra il blocco count e il pulsante Mail; con favicon presente, su viewport stretto il nome viene troncato troppo presto.
-- `Mail` button non ha `flex-shrink-0` esplicito sul wrapper (lo ha solo l'icona) — funziona ma rende meno prevedibile lo shrink.
+### 4. UI
+- **`SenderCard`**: dopo "Regole attive" appare pulsante "📥 Applica allo storico" — visibile solo se l'address ha `auto_action` IMAP impostata.
+- **`GroupDropZone`**: header del gruppo ottiene icona piccola (📥) accanto al contatore. Click → dialog di conferma con numero di address che verranno processati.
+- **`BackfillConfirmDialog`** (nuovo): "Verranno cercati nella inbox IMAP tutti i messaggi storici dei {N} address di '{group}' e applicate le regole. L'operazione può richiedere alcuni minuti. Continuare?" + checkbox opzionale "Esegui prima un dry-run per contare i messaggi".
+- **Progress**: spinner + toast finale con report. In v1 niente progress granulare; mitigato dal cap di 20 address per chiamata.
 
-### 3. Layout `GroupDropZone` — preview oggetti collegati
+### 5. Bridge schema vs UI — fix collaterale necessario
+**Discovery critico**: `RulesConfiguration.tsx` salva in `applied_rules` (JSON array), ma il vero schema di `email_address_rules` ha `auto_action` (string singola) + `auto_action_params` (JSONB). La pipeline `apply-email-rules` legge solo `auto_action`.
 
-File: `src/components/email-intelligence/management/GroupDropZone.tsx`.
+**Conseguenza attuale**: le checkbox dello UI **non vengono mai eseguite** dall'IMAP. Il backfill sarebbe inutile senza fixare anche questo.
 
-- Riga 98: il counter `rules.length` è renderizzato in `text-destructive` (rosso) → sembra un errore/contatore negativo. Va portato a `text-muted-foreground` o badge neutro.
-- Riga 35-38 `extractCompany`: regex `/@([^.]+)\./` cattura solo il **primo segmento** dopo `@`. Per `info@mail.everok.eu` ottieni "Mail" invece di "Everok". Per `noreply@eu.amazon.com` ottieni "Eu". Da qui i nomi strani che vedi nelle preview.
-- Riga 180-185: la lista preview mostra `display_name || extractCompany(email)`. Quando `display_name` è null (caso comune) ricade sulla regex bacata → preview confusa.
+**Fix**:
+- Restringere le checkbox a **una sola azione principale** (radio/select) tra: `archive`, `move_to_folder`, `spam`, `mark_read`, `hide`.
+- Aggiungere un toggle ausiliario "Segna anche come letto" (combinabile con archive/move/spam).
+- Mappa al salvataggio: `auto_action = '<azione principale>'` + `auto_action_params = { also_mark_read: true, target_folder?: string }`.
+- In `apply-email-rules/index.ts` (modifica isolata, ~10 LOC): nel branch `archive/spam/move_to_folder`, dopo il `moveTo` riuscito, se `auto_action_params.also_mark_read === true` chiama anche `markSeen` sull'UID nella nuova cartella.
+- Le azioni `forward_to`, `auto_reply`, `delete`, `mark_important`, `skip_inbox` (presenti nello UI ma non implementate nel worker) vengono **rimosse o marcate "🚧 in arrivo"** disabilitate, per non promettere comportamenti inesistenti.
 
----
+## File toccati
 
-## Piano di intervento
+**Nuovi**:
+- `supabase/functions/backfill-email-rules/index.ts` (~280 LOC)
+- `supabase/functions/backfill-email-rules/caCerts.ts` (copia)
+- `src/data/emailRulesBackfill.ts` (~40 LOC)
+- `src/components/email-intelligence/management/BackfillButton.tsx`
+- `src/components/email-intelligence/management/BackfillConfirmDialog.tsx`
 
-### A. Fix bug bloccante "Errore caricamento configurazione" (PRIORITÀ 1)
+**Modificati**:
+- `src/components/email-intelligence/management/SenderCard.tsx` — integra `BackfillButton` per address.
+- `src/components/email-intelligence/management/GroupDropZone.tsx` — integra icona backfill + dialog su gruppo.
+- `src/components/email-intelligence/management/RulesConfiguration.tsx` — restringe a una azione principale + toggle "anche segna come letto", rimuove le azioni non implementate.
+- `src/components/email-intelligence/manual-grouping/useGroupingData.ts` — esponi `auto_action`, `applied_count`, `last_applied_at` per badge "applicato N volte".
+- `src/data/emailAddressRules.ts` — aggiungi campi `auto_action`, `auto_action_params`, `applied_count`, `last_applied_at` all'interfaccia `EmailAddressRule`.
+- `supabase/functions/apply-email-rules/index.ts` — supporto `auto_action_params.also_mark_read` (modifica isolata ~10 LOC).
 
-In `SenderCard.tsx` → `loadAddressRule`:
+**NON toccati** (vincoli memory):
+- `check-inbox/*`
+- `email-imap-proxy`, `mark-imap-seen`
+- Schema DB: nessuna migration — usiamo campi esistenti.
 
-1. Recuperare `user_id` da `supabase.auth.getUser()` all'inizio della funzione; se assente → toast "Sessione scaduta" e return.
-2. Cambiare la SELECT in:
-   ```ts
-   .eq('email_address', sender.email)
-   .eq('user_id', user.id)
-   .maybeSingle()
-   ```
-   Rimuovere il branch `error.code !== 'PGRST116'` (con `.maybeSingle()` non serve).
-3. Nell'INSERT aggiungere `user_id: user.id`.
-4. Lasciare un commento `// LOVABLE-FIX user_id required (DB NOT NULL)` per traccia.
+## Limiti e debito tecnico
+- **Senza queue persistente**: se l'edge function va in timeout a metà address, gli UID già processati restano spostati senza ripresa automatica. Mitigazione: cap 20 address per chiamata + idempotenza naturale (un `UID MOVE` su messaggio già spostato fallisce in modo benigno).
+- **Niente progress realtime granulare**: l'UI mostra solo spinner. Per progress fine serve `backfill_jobs` table + polling — fuori scope v1.
+- **Cap 5.000 messaggi per address**: protegge mailbox storiche enormi. Override via `auto_action_params.backfill_cap`.
+- **`UID SEARCH FROM`** può essere lento su provider senza indici full-text — accettato, operazione manuale.
 
-### B. Pulizia visiva `SenderCard` (PRIORITÀ 2)
-
-Rifare il blocco header della card per allineare meglio i due lati:
-
-- Sostituire la colonna verticale `count+flag` con una **riga compatta** allineata al testo: `<span class="text-lg font-bold leading-none">{count}</span><span class="text-base leading-none">{flag}</span>` dentro un wrapper `flex items-center gap-1 flex-shrink-0`.
-- Aggiungere `gap-1` tra blocco count e pulsante Mail.
-- Aggiungere `flex-shrink-0` esplicito al wrapper del Mail button.
-- Verificare con viewport 1011px che i nomi non vengano troncati prematuramente.
-
-Nessun cambiamento di logica; solo classi Tailwind.
-
-### C. Fix preview oggetti collegati in `GroupDropZone` (PRIORITÀ 2)
-
-1. Sostituire `extractCompany` con una versione che estrae il **dominio root** (penultimo segmento prima del TLD) o, se `domain` è disponibile sulla rule, usare direttamente `rule.domain`. Per estrarlo dall'email:
-   ```ts
-   const host = email.split('@')[1] ?? '';
-   const parts = host.split('.').filter(Boolean);
-   const root = parts.length >= 2 ? parts[parts.length - 2] : parts[0] ?? email;
-   return root.charAt(0).toUpperCase() + root.slice(1);
-   ```
-2. Estendere l'interfaccia `AssignedRule` per includere opzionalmente `domain` e `company_name`, e propagarli da `useGroupingData` (già selezionati per altri usi). Preferenza per il display: `display_name → company_name → root domain`.
-3. Cambiare il counter in header (riga 98) da `text-destructive` → `text-muted-foreground` (oppure un piccolo `Badge variant="secondary"`), così non sembra un errore.
-
-### D. Nota di debito (NON fixato in questo round)
-
-Aggiungere un TODO nel file `SenderCard.tsx` (già parzialmente commentato a riga 16-19) che ricorda: le colonne `applied_rules` e `prompt_template_id` non esistono nello schema reale. Le UPDATE su questi campi (handlePromptChange, handleRulesChange) **falliranno silenziosamente o con 42703** appena l'utente prova a salvare. Da decidere in un round dedicato se:
-- (a) creare le colonne mancanti via migration, oppure
-- (b) mappare le funzionalità sulle colonne esistenti (`custom_prompt`, `auto_action_params`, `prompt_id`).
-
-Lo segnalo qui per visibilità: non lo tocco senza tua decisione.
-
----
-
-## File modificati
-
-- `src/components/email-intelligence/management/SenderCard.tsx` — fix `loadAddressRule` (user_id + maybeSingle) + ritocchi layout header.
-- `src/components/email-intelligence/management/GroupDropZone.tsx` — `extractCompany` corretto, counter neutro, fallback `company_name`.
-- `src/components/email-intelligence/manual-grouping/useGroupingData.ts` — aggiungere `domain`, `company_name` al select delle rules per la mappa `assignedByGroup`.
-
-## Cosa NON tocco
-
-- check-inbox / email-imap-proxy / mark-imap-seen (vincolo di progetto).
-- Schema DB: nessuna migration (solo lettura/insert su colonne già esistenti).
-- Logica drag&drop (già sistemata negli scorsi round).
-
-## Verifica post-fix
-
-1. Aprire una card di un sender mai configurato → click "Più opzioni" → niente toast errore, sezione si espande.
-2. Riaprire una card già configurata → recupera la rule esistente (non ne crea una nuova).
-3. Header card: numero email + flag sulla stessa riga, allineati al nome.
-4. Card gruppo: contatore non più rosso; preview aziende mostra il nome corretto del dominio (es. "Everok" non "Mail").
+## Cosa resta fuori (v2 potenziale)
+- Dry-run con preview interattivo dei messaggi candidati.
+- Backfill asincrono in coda con worker pg_cron (per gruppi >100 address).
+- Ereditarietà regole sui nuovi membri di gruppo (esclusa per scelta).
+- Azione `delete/trash` nativa con autodetection cartella cestino del provider.
