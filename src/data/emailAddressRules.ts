@@ -31,6 +31,9 @@ export async function findEmailAddressRules(userId: string): Promise<EmailAddres
 }
 
 export async function updateEmailAddressRule(id: string, patch: Partial<EmailAddressRule>): Promise<void> {
-  const { error } = await supabase.from("email_address_rules").update(patch).eq("id", id);
+  // Cast controllato: `auto_action_params` qui è Record<string, unknown> ma il tipo
+  // generato di Supabase è `Json` (ricorsivo). Sono compatibili a runtime.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await supabase.from("email_address_rules").update(patch as any).eq("id", id);
   if (error) throw error;
 }
