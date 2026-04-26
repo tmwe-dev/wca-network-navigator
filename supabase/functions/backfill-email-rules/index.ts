@@ -169,6 +169,7 @@ async function backfillAddress(
   rule: RuleRow,
   address: string,
   dryRun: boolean,
+  userId: string,
 ): Promise<AddressReport> {
   const action = rule.auto_action ?? "";
   if (!action || action === "none") {
@@ -234,21 +235,23 @@ async function backfillAddress(
       // Aggiorna DB se la riga esiste (storici scaricati)
       // deno-lint-ignore no-explicit-any
       const sb = supabase as any;
+      // Filtri DB: imap_uid + user_id (NON from_address — può essere
+      // "Name <addr>" o solo "addr", il match fallirebbe).
       if (action === "mark_read") {
         await sb.from("channel_messages")
           .update({ read_at: new Date().toISOString() })
           .eq("imap_uid", uid)
-          .eq("from_address", address);
+          .eq("user_id", userId);
       } else if (action === "archive" || action === "spam" || action === "move_to_folder") {
         await sb.from("channel_messages")
           .update({ folder: target, ...(alsoMarkRead ? { read_at: new Date().toISOString() } : {}) })
           .eq("imap_uid", uid)
-          .eq("from_address", address);
+          .eq("user_id", userId);
       } else if (action === "hide") {
         await sb.from("channel_messages")
           .update({ hidden_by_rule: true })
           .eq("imap_uid", uid)
-          .eq("from_address", address);
+          .eq("user_id", userId);
       }
     } catch (_perUidErr) {
       // continua con i prossimi UID
