@@ -20,6 +20,13 @@ export function useGroupAssignment(
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);
+      // operator_id opzionale: alcuni utenti non hanno record in `operators`.
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const operatorId = opRow?.id ?? null;
 
       // Update or insert rule
       if (sender.ruleId) {
@@ -36,6 +43,7 @@ export function useGroupAssignment(
         await supabase.from("email_address_rules").insert({
           email_address: sender.email,
           user_id: user.id,
+          operator_id: operatorId,
           group_id: groupId,
           group_name: groupName,
           group_color: group?.colore,
@@ -108,6 +116,12 @@ export function useGroupAssignment(
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const operatorId = opRow?.id ?? null;
 
       for (const sender of senders) {
         if (sender.ruleId) {
@@ -124,6 +138,7 @@ export function useGroupAssignment(
           await supabase.from("email_address_rules").insert({
             email_address: sender.email,
             user_id: user.id,
+            operator_id: operatorId,
             group_id: groupId,
             group_name: groupName,
             group_color: group?.colore,
