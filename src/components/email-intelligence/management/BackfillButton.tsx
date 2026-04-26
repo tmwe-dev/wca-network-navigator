@@ -52,21 +52,18 @@ export function BackfillButton({
         toast.error("Sessione scaduta");
         return;
       }
-      // operator_id = id del record `operators` per questo user
+      // operator_id è opzionale (regole legacy hanno operator_id NULL).
+      // Restringiamo se disponibile, altrimenti filtriamo solo per user.
       const { data: opRow } = await supabase
         .from("operators")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
-      const operatorId = opRow?.id;
-      if (!operatorId) {
-        toast.error("Operatore non trovato per l'utente corrente");
-        return;
-      }
+      const operatorId = opRow?.id ?? undefined;
 
       const report = scope === "address"
-        ? await backfillForAddress(operatorId, target)
-        : await backfillForGroup(operatorId, target);
+        ? await backfillForAddress(user.id, target, false, operatorId)
+        : await backfillForGroup(user.id, target, false, operatorId);
 
       const errCount = report.errors.length;
       const truncatedNote = report.truncated ? " (lista troncata: rilancia per processare i restanti)" : "";
