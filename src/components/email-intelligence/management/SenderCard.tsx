@@ -124,11 +124,19 @@ export function SenderCard({
           auto_action_params: (data.auto_action_params ?? null) as Record<string, unknown> | null,
         });
       } else {
+        // operator_id opzionale (alcuni utenti non hanno operators row).
+        const { data: opRow } = await sb
+          .from('operators')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const operatorId = opRow?.id ?? null;
         // Create a new rule if it doesn't exist
         const { data: newRule, error: createError } = await sb
           .from('email_address_rules')
           .insert({
             user_id: user.id,
+            operator_id: operatorId,
             email_address: sender.email,
             custom_prompt: null,
             auto_action: 'none',
