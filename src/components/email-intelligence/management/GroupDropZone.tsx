@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2, List } from 'lucide-react';
+import { Trash2, List, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -16,6 +16,8 @@ interface GroupDropZoneProps {
   group: EmailSenderGroup;
   onRefresh: () => void;
   isHovered?: boolean;
+  /** Highlight temporaneo (es. dopo click su chip AI in SenderCard). */
+  isHighlighted?: boolean;
   /**
    * Rules assigned to this group, provided by the parent.
    * Lifted out of this component to avoid N parallel queries +
@@ -23,6 +25,10 @@ interface GroupDropZoneProps {
    */
   rules?: AssignedRule[];
   onRulesChanged?: () => void;
+  /** Numero di sender attualmente selezionati nel rail (abilita "+ Associa"). */
+  selectedCount?: number;
+  /** Callback quando l'utente clicca "+ Associa" (parent gestisce il bulk). */
+  onBulkAssign?: (group: EmailSenderGroup) => void;
 }
 
 interface AssignedRule {
@@ -33,7 +39,16 @@ interface AssignedRule {
   domain?: string | null;
 }
 
-export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [], onRulesChanged }: GroupDropZoneProps) {
+export function GroupDropZone({
+  group,
+  onRefresh,
+  isHovered = false,
+  isHighlighted = false,
+  rules = [],
+  onRulesChanged,
+  selectedCount = 0,
+  onBulkAssign,
+}: GroupDropZoneProps) {
 
   // Estrae il dominio "root" (penultimo segmento prima del TLD) da un'email.
   // Per "info@mail.everok.eu" → "Everok" (non "Mail" come faceva la vecchia regex).
@@ -80,7 +95,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
 
   return (
     <div
-      className="h-[20vh] w-[15vw] min-w-[260px] max-w-[360px]"
+      className="h-[20vh] w-full min-w-[240px] max-w-[420px]"
       data-drop-zone="true"
       data-group-id={group.id}
       data-group-name={group.nome_gruppo}
@@ -88,7 +103,9 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
       <Card
         className={cn(
           "h-full transition-colors duration-150 border-2 flex flex-col overflow-hidden",
-          isHovered && "border-primary bg-primary/5 ring-2 ring-primary/30"
+          isHovered && "border-primary bg-primary/5 ring-2 ring-primary/30",
+          // Glow animato quando il gruppo è "highlighted" (es. via chip AI).
+          isHighlighted && "ring-4 ring-primary/50 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] animate-pulse",
         )}
         style={{
           borderColor: isHovered ? group.colore : undefined,
@@ -110,6 +127,22 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
               </div>
             </div>
             <div className="flex gap-1">
+              {/* Bulk associate: visibile solo se ci sono sender selezionati */}
+              {selectedCount > 0 && onBulkAssign && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBulkAssign(group);
+                  }}
+                  title={`Associa ${selectedCount} mittenti a ${group.nome_gruppo}`}
+                >
+                  <Plus className="h-3 w-3 mr-0.5" />
+                  Associa {selectedCount}
+                </Button>
+              )}
               {/* Backfill IMAP del gruppo: applica le regole agli storici sequenzialmente per address */}
               <BackfillButton
                 scope="group"
