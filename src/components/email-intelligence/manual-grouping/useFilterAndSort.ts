@@ -46,6 +46,16 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
         return sorted.sort((a, b) => a.emailCount - b.emailCount);
       case "count-desc":
         return sorted.sort((a, b) => b.emailCount - a.emailCount);
+      case "ai_group":
+        // Alfabetico per gruppo suggerito dall'AI; sender senza suggerimento in fondo.
+        return sorted.sort((a, b) => {
+          const ag = a.aiSuggestion?.group_name ?? "";
+          const bg = b.aiSuggestion?.group_name ?? "";
+          if (!ag && !bg) return 0;
+          if (!ag) return 1;
+          if (!bg) return -1;
+          return ag.localeCompare(bg);
+        });
       default:
         return sorted;
     }
