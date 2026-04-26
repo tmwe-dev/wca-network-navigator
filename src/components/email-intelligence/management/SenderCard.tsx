@@ -21,6 +21,7 @@ const sb = supabase as any;
 import { PromptTemplateSelector } from './PromptTemplateSelector';
 import { RulesConfiguration } from './RulesConfiguration';
 import { BulkEmailActions } from './BulkEmailActions';
+import { BackfillButton } from './BackfillButton';
 
 interface SenderCardProps {
   sender: SenderAnalysis;
@@ -361,6 +362,14 @@ export function SenderCard({
                 onRulesChange={handleRulesChange}
                 isSaving={isSavingRule}
               />
+              {/* Backfill: applica le regole IMAP ai messaggi storici di questo address */}
+              {addressRule.applied_rules.some((r) =>
+                ["mark_read", "archive", "move_to_folder", "spam"].includes(r),
+              ) && (
+                <div className="pt-1">
+                  <BackfillButton scope="address" target={sender.email} variant="button" />
+                </div>
+              )}
             </div>
 
             {/* Bulk email actions section */}
