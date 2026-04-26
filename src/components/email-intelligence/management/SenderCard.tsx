@@ -5,10 +5,9 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GripVertical, Mail, Settings2, Loader2 } from 'lucide-react';
+import { GripVertical, Mail, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
@@ -57,8 +56,9 @@ export function SenderCard({
 }: SenderCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [addressRule, setAddressRule] = useState<AddressRule | null>(null);
   const [isLoadingRule, setIsLoadingRule] = useState(false);
   const [isSavingRule, setIsSavingRule] = useState(false);
@@ -79,15 +79,15 @@ export function SenderCard({
     onDragEnd?.(e.clientX, e.clientY);
   };
 
-  // Direct assignment on Select change — no separate confirm button.
-  const handleGroupSelection = async (groupId: string) => {
-    if (!groupId || !onAssignGroup) return;
-    const group = groups.find(g => g.id === groupId);
+  const handleGroupSelection = async () => {
+    if (!selectedGroupId || !onAssignGroup) return;
+    const group = groups.find(g => g.id === selectedGroupId);
     if (!group) return;
 
     setIsAssigning(true);
     try {
       await onAssignGroup(sender, group.nome_gruppo, group.id);
+      setSelectedGroupId("");
     } catch (err) {
       toast.error("Errore assegnazione");
     } finally {
@@ -146,11 +146,12 @@ export function SenderCard({
     }
   };
 
-  const openOptionsDialog = async () => {
-    if (!addressRule) {
+  const toggleExpanded = async () => {
+    if (!isExpanded && !addressRule) {
+      // Load rule when expanding if not already loaded
       await loadAddressRule();
     }
-    setOptionsOpen(true);
+    setIsExpanded(!isExpanded);
   };
 
   const handlePromptChange = async (prompt: string) => {
@@ -224,8 +225,8 @@ export function SenderCard({
           isDragging && "cursor-grabbing"
         )}
       >
-        <CardContent className="p-2.5 flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
+        <CardContent className="p-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             {onToggleSelect && (
               <Checkbox
                 checked={isSelected}
@@ -233,7 +234,7 @@ export function SenderCard({
                 className="h-4 w-4 flex-shrink-0"
               />
             )}
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
             {/* Favicon */}
             {faviconUrl && !faviconError ? (
@@ -254,113 +255,119 @@ export function SenderCard({
 
             {/* Name + email */}
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm truncate leading-tight">{sender.companyName}</div>
+              <div className="font-semibold text-sm truncate">{sender.companyName}</div>
               <div className="text-[11px] text-muted-foreground truncate">{sender.email}</div>
             </div>
 
-            {/* Email count + flag — compact column */}
-            <div className="flex flex-col items-center gap-0 flex-shrink-0 min-w-[28px]">
-              <span className="text-base font-bold text-primary leading-none">{sender.emailCount}</span>
+            {/* Email count + flag column */}
+            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+              <span className="text-lg font-bold text-primary">{sender.emailCount}</span>
               {flag && (
-                <span className="text-sm leading-none mt-0.5" title={sender.domain}>
+                <span className="text-xl leading-none" title={sender.domain}>
                   {flag}
                 </span>
               )}
             </div>
 
-            {/* Action icons — stacked compact */}
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              {onViewEmails && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onViewEmails(sender); }}
-                  className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                  title="Visualizza email"
-                  draggable={false}
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                </button>
-              )}
+            {/* View emails button */}
+            {onViewEmails && (
               <button
-                onClick={(e) => { e.stopPropagation(); openOptionsDialog(); }}
-                disabled={isLoadingRule}
-                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                title="Opzioni avanzate (prompt, regole, azioni bulk)"
+                onClick={(e) => { e.stopPropagation(); onViewEmails(sender); }}
+                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                title="Visualizza email"
                 draggable={false}
               >
-                {isLoadingRule
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <Settings2 className="h-3.5 w-3.5" />}
+                <Mail className="h-4 w-4" />
               </button>
-            </div>
+            )}
           </div>
 
-          {/* Group assignment dropdown — direct assign on selection, no extra confirm row */}
+          {/* Group assignment dropdown */}
           {groups && groups.length > 0 && onAssignGroup && (
-            <Select value="" onValueChange={handleGroupSelection} disabled={isAssigning}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue placeholder={isAssigning ? "Assegnazione…" : "Assegna gruppo…"} />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id} className="text-xs">
-                    <span className="mr-2">{group.icon || '📁'}</span>
-                    {group.nome_gruppo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1.5">
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="Assegna gruppo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      <span className="mr-2">{group.icon || '📁'}</span>
+                      {group.nome_gruppo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedGroupId && (
+                <Button
+                  size="icon"
+                  variant="default"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={(e) => { e.stopPropagation(); handleGroupSelection(); }}
+                  disabled={isAssigning}
+                  title="Conferma assegnazione"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           )}
+
+          {/* Expand/collapse button for advanced options */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
+            disabled={isLoadingRule}
+            className="w-full h-8 text-xs"
+          >
+            {isLoadingRule ? (
+              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+            ) : (
+              <>
+                {isExpanded ? <ChevronUp className="h-3.5 w-3.5 mr-2" /> : <ChevronDown className="h-3.5 w-3.5 mr-2" />}
+              </>
+            )}
+            {isExpanded ? 'Meno opzioni' : 'Più opzioni'}
+          </Button>
         </CardContent>
+
+        {/* Expandable advanced options section */}
+        {isExpanded && addressRule && (
+          <div className="border-t px-3 py-3 bg-muted/20 flex flex-col gap-4 text-sm">
+            {/* Prompt section */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-muted-foreground">Prompt personalizzato</label>
+              <PromptTemplateSelector
+                customPrompt={addressRule.custom_prompt}
+                onPromptChange={handlePromptChange}
+                isEditing={isSavingRule}
+              />
+            </div>
+
+            {/* Rules section */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-muted-foreground">Regole IMAP/SMTP</label>
+              <RulesConfiguration
+                appliedRules={addressRule.applied_rules}
+                onRulesChange={handleRulesChange}
+                isSaving={isSavingRule}
+              />
+            </div>
+
+            {/* Bulk email actions section */}
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              <label className="text-xs font-semibold text-muted-foreground">Azioni bulk</label>
+              <BulkEmailActions
+                senderEmail={sender.email}
+                onActionsComplete={() => {
+                  toast.success('Operazione completata');
+                }}
+              />
+            </div>
+          </div>
+        )}
       </Card>
-
-      {/* Advanced options modal — opened from the Settings icon */}
-      <Dialog open={optionsOpen} onOpenChange={setOptionsOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Settings2 className="h-4 w-4" />
-              Opzioni avanzate · {sender.companyName}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground truncate">{sender.email}</p>
-          </DialogHeader>
-
-          {addressRule ? (
-            <div className="flex flex-col gap-5 mt-2">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-muted-foreground">Prompt personalizzato</label>
-                <PromptTemplateSelector
-                  customPrompt={addressRule.custom_prompt}
-                  onPromptChange={handlePromptChange}
-                  isEditing={isSavingRule}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-muted-foreground">Regole IMAP/SMTP</label>
-                <RulesConfiguration
-                  appliedRules={addressRule.applied_rules}
-                  onRulesChange={handleRulesChange}
-                  isSaving={isSavingRule}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 pt-3 border-t">
-                <label className="text-xs font-semibold text-muted-foreground">Azioni bulk</label>
-                <BulkEmailActions
-                  senderEmail={sender.email}
-                  onActionsComplete={() => {
-                    toast.success('Operazione completata');
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

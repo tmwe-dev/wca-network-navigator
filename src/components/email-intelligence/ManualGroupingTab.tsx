@@ -128,69 +128,63 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-4">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant="outline" className="text-xs">
+          {sortedSenders.length} da categorizzare su {senders.length} totali
+        </Badge>
+        <Badge variant="outline" className="text-xs gap-1">
+          <Mail className="h-3 w-3" />
+          {totalEmailCount.toLocaleString("it-IT")} email totali
+        </Badge>
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9 h-9"
+            placeholder="Cerca mittente…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Select value={volumeFilter} onValueChange={setVolumeFilter}>
+          <SelectTrigger className="w-[130px] h-9">
+            <Filter className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {VOLUME_FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortOption} onValueChange={(v) => setSortOption(v as any)}>
+          <SelectTrigger className="w-[140px] h-9">
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="count-desc">Più email</SelectItem>
+            <SelectItem value="count-asc">Meno email</SelectItem>
+            <SelectItem value="name-asc">A → Z</SelectItem>
+            <SelectItem value="name-desc">Z → A</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" onClick={populateAddressRules} disabled={isPopulating}>
+          {isPopulating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          Popola Address
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Nuovo gruppo
+        </Button>
+      </div>
+
       {/* Main layout — fixed height, no page scroll */}
       <div className="flex flex-1 gap-4 min-h-0 overflow-hidden">
         {/* Sender list — LEFT PANEL */}
-        <div className="w-[340px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
-          {/* Filters block — moved here from page-level toolbar */}
-          <div className="px-3 py-3 border-b bg-muted/40 flex-shrink-0 flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Badge variant="outline" className="text-[10px] py-0 h-5">
-                {sortedSenders.length} / {senders.length} da categorizzare
-              </Badge>
-              <Badge variant="outline" className="text-[10px] py-0 h-5 gap-1">
-                <Mail className="h-2.5 w-2.5" />
-                {totalEmailCount.toLocaleString("it-IT")} email
-              </Badge>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                className="pl-8 h-8 text-xs"
-                placeholder="Cerca mittente…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Select value={volumeFilter} onValueChange={setVolumeFilter}>
-                <SelectTrigger className="h-8 text-xs">
-                  <Filter className="h-3 w-3 mr-1" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VOLUME_FILTERS.map((f) => (
-                    <SelectItem key={f.value} value={f.value} className="text-xs">
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortOption} onValueChange={(v) => setSortOption(v as any)}>
-                <SelectTrigger className="h-8 text-xs">
-                  <ArrowUpDown className="h-3 w-3 mr-1" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="count-desc" className="text-xs">Più email</SelectItem>
-                  <SelectItem value="count-asc" className="text-xs">Meno email</SelectItem>
-                  <SelectItem value="name-asc" className="text-xs">A → Z</SelectItem>
-                  <SelectItem value="name-desc" className="text-xs">Z → A</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={populateAddressRules} disabled={isPopulating}>
-                {isPopulating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                Popola
-              </Button>
-              <Button variant="default" size="sm" className="h-8 text-xs" onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-3 w-3 mr-1" /> Nuovo gruppo
-              </Button>
-            </div>
-          </div>
-
-          <div className="px-3 py-1.5 border-b bg-muted/20 flex-shrink-0 flex items-center justify-between gap-2">
+        <div className="w-[320px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
               Non classificati ({sortedSenders.length})
               {selectedSenders.size > 0 && (
