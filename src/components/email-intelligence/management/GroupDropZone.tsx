@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { EmailSenderGroup } from '@/types/email-management';
+import { BackfillButton } from './BackfillButton';
 
 interface GroupDropZoneProps {
   group: EmailSenderGroup;
@@ -109,6 +110,13 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
               </div>
             </div>
             <div className="flex gap-1">
+              {/* Backfill IMAP del gruppo: applica le regole agli storici sequenzialmente per address */}
+              <BackfillButton
+                scope="group"
+                target={group.nome_gruppo}
+                addressCount={rules.length}
+                variant="icon"
+              />
               <Dialog>
                 <DialogTrigger asChild>
                   <Button
