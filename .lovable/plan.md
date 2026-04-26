@@ -1,143 +1,125 @@
+## Diagnosi (analisi riga per riga)
 
-# 🧑‍🏫 Gordon — Curatore Prompt-Lab
+### 1. Bug "Errore caricamento configurazione" — CAUSA CONFERMATA
 
-Implemento end-to-end la vista Singola con chat persistente per ogni proposta, agente Gordon dedicato con voce, e loop di apprendimento opzionale.
+File: `src/components/email-intelligence/management/SenderCard.tsx`, funzione `loadAddressRule` (righe 98-147).
 
----
-
-## Step 1 — Creazione agente Gordon (migration DB)
-
-INSERT in `agents`:
-- `name`: Gordon
-- `role`: curator
-- `avatar_emoji`: 🧑‍🏫
-- `is_active`: true
-- `elevenlabs_voice_id`: `JBFqnCBsd6RMkjVDRZzb` (George — voce maschile autorevole, ottima resa IT)
-- `system_prompt`: persona di Curatore che:
-  - legge `HarmonizeProposal` (target_table, target_id, before, after, reasoning)
-  - spiega in italiano semplice il *perché* della proposta
-  - accetta correzioni dall'utente (es. "la sede è Peschiera, non Segrate")
-  - rigenera l'`after` quando richiesto, emettendo blocco delimitato `[REGENERATED_AFTER]…[/REGENERATED_AFTER]`
-  - quando individua un pattern generalizzabile, propone una regola permanente con `[SUGGEST_KB_RULE]…[/SUGGEST_KB_RULE]`
-  - tono didascalico, breve, mai gergo tecnico se non richiesto
-
-Conforme a memoria `agents/persona-system` e `agents/global-visibility` (visibile a tutti gli operatori).
-
----
-
-## Step 2 — Estensione dati (no schema change)
-
-`src/data/harmonizeRuns.ts`:
-- estendo tipo `HarmonizeProposal` (JSONB in `harmonize_runs.proposals`):
-  ```ts
-  chat?: Array<{ role: 'user'|'assistant'; content: string; ts: string }>
-  user_correction_note?: string
-  regenerated_after?: string
-  ```
-- nuova funzione `appendProposalChat(runId, proposalId, message)` con read-modify-write atomico (stesso pattern di `updateHarmonizeProposal` già esistente)
-
----
-
-## Step 3 — Edge function `harmonize-proposal-chat`
-
-`supabase/functions/harmonize-proposal-chat/index.ts`
-
-Struttura standard (vedi `docs/EDGE-FUNCTIONS.md`): CORS dinamico whitelisted, `requireAuth`, security headers, monitoring, validazione Zod input, sotto 200 LOC.
-
-Input:
 ```ts
-{ run_id: string, proposal_id: string, agent_id: string, user_message: string }
+// riga 101-105 — query SBAGLIATA
+const { data, error } = await sb
+  .from('email_address_rules')
+  .select('id, custom_prompt, applied_rules, prompt_template_id')
+  .eq('email_address', sender.email)   // ❌ manca .eq('user_id', user.id)
+  .single();                            // ❌ deve essere .maybeSingle() (regola di progetto)
+
+// riga 120-127 — INSERT che CAUSA L'ERRORE 23502
+.insert({
+  email_address: sender.email,
+  custom_prompt: null,
+  applied_rules: [],
+  prompt_template_id: null
+  // ❌ MANCA user_id → la colonna è NOT NULL nel DB
+})
 ```
 
-Logica:
-1. Carica `agents.system_prompt` di Gordon (via service role)
-2. Carica proposta dal JSONB `harmonize_runs.proposals`
-3. Costruisce `messages = [system + contesto_proposta_serializzato, ...chat_history, user_message]`
-4. Chiama Lovable AI Gateway → `google/gemini-3-flash-preview` (default consigliato)
-5. Estrae eventuali blocchi `[REGENERATED_AFTER]` e `[SUGGEST_KB_RULE]`
-6. Persiste user_message + assistant_reply nel `chat[]` della proposta
-7. Risponde `{ reply, regenerated_after?, suggested_rule? }`
+**Catena dell'errore**:
+1. Non si filtra per `user_id` → quando la stessa email ha rule di altri utenti, `.single()` ritorna error multi-row.
+2. Si entra nel ramo "crea nuova rule".
+3. L'INSERT non include `user_id` (NOT NULL) → Postgres risponde **23502**.
+4. Catch → toast `Errore caricamento configurazione` (esattamente quello che vedi).
 
-Gestione 429/402 con messaggi user-friendly (memoria `architecture/ai-gateway-and-budgeting`).
+Conferma dai log console: `null value in column "user_id" of relation "email_address_rules" violates not-null constraint at loadAddressRule (SenderCard.tsx:114)`.
 
----
+**Perché prima funzionava e adesso no**: per gli indirizzi che avevi già configurato manualmente, la riga esisteva già e veniva trovata. Per gli indirizzi nuovi (apparsi dopo l'ultima ondata di email scaricate o dopo la migrazione di dedup gruppi), la rule personale non c'è → si tenta l'INSERT → 23502.
 
-## Step 4 — Riuso TTS esistente
+**Note correlate**: il file usa colonne fantasma (`applied_rules`, `prompt_template_id`) che NON esistono nello schema reale (vedi DEBT-EMAIL-INTEL-COLUMNS già annotato nel commento del file). Il `select` di `applied_rules` ritorna sempre undefined; al primo update con quel campo Postgres risponderà 42703. Va segnalato ma è fuori scope di questo fix puntuale (lo evidenzio).
 
-Verifico se `supabase/functions/elevenlabs-tts/index.ts` è già presente (lo è — già usato in `AgentChat.tsx`). Lo riuso per la voce di Gordon, nessuna nuova edge function.
+### 2. Layout cards "incasinato" (destra/sinistra)
 
----
+File: `src/components/email-intelligence/management/SenderCard.tsx` riga 229-283.
 
-## Step 5 — UI: toggle Lista ↔ Singola
+Riga horizontale: `[checkbox] [grip] [favicon] [nome+email flex-1] [count+flag colonna] [Mail btn]`.
 
-### 5.1 — `SuggestionsReviewPage.tsx` (modifica)
-Aggiungo in alto:
-- Toggle 📋 Lista / 🧑‍🏫 Singola con Gordon
-- Stato `viewMode` salvato in localStorage
+Problemi:
+- Il blocco `count+flag` (riga 263-270) è una **colonna a 2 righe** (number `text-lg` sopra, flag `text-xl` sotto) → forza la card ad essere più alta del blocco testo a sinistra (2 righe `text-sm`/`text-[11px]`). Visivamente i due lati non sono allineati: il numero "galleggia" più in alto del nome, il flag è sotto la mail.
+- Nessun gap visivo tra il blocco count e il pulsante Mail; con favicon presente, su viewport stretto il nome viene troncato troppo presto.
+- `Mail` button non ha `flex-shrink-0` esplicito sul wrapper (lo ha solo l'icona) — funziona ma rende meno prevedibile lo shrink.
 
-La vista Lista resta intoccata (l'inversione layout fatta nello step precedente è preservata).
+### 3. Layout `GroupDropZone` — preview oggetti collegati
 
-### 5.2 — `SingleProposalReview.tsx` (nuovo)
-Layout 2 colonne (stack su mobile <768px):
-- **Sinistra**: navigatore (◀ idx/total ▶) + AZIONE/TARGET + `EditableAfter` (riusa componente esistente) + collapsible "Spiegazione e dettagli" + bottoni Applica/Salta/Rifiuta
-- **Destra**: `GordonChatPanel`
+File: `src/components/email-intelligence/management/GroupDropZone.tsx`.
 
-### 5.3 — `GordonChatPanel.tsx` (nuovo)
-- Bolle chat con `ReactMarkdown` per Gordon
-- Bottone 🔊 su ogni risposta Gordon → POST a `elevenlabs-tts` → autoplay
-- Input con `useContinuousSpeech` (riuso da `AgentChat`) per dettatura vocale
-- Quando arriva `regenerated_after`: mostra preview + 2 bottoni:
-  - **✓ Usa solo qui** → chiama `editProposalAfter()` esistente
-  - **✓ Usa qui + salva come regola permanente** → editProposal + insert in `suggested_improvements` (kb_rule, status=approved)
-- Quando arriva `suggested_rule` da Gordon proattivamente: mostra card "Vuoi salvare questa regola permanente?" con conferma
-
-### 5.4 — `ProposalNavigator.tsx` (nuovo)
-Componente atomico con frecce ◀ ▶, contatore "12 di 154", skip non distruttivo.
-
-### 5.5 — Hook `useGordonChat.ts` (nuovo)
-- Gestisce conversazione, invocazione edge function, persistenza locale + remota
-- Pattern Resilienza Async (memoria `tech/async-hook-resilience-pattern`): `AbortController` + `mountedRef`
+- Riga 98: il counter `rules.length` è renderizzato in `text-destructive` (rosso) → sembra un errore/contatore negativo. Va portato a `text-muted-foreground` o badge neutro.
+- Riga 35-38 `extractCompany`: regex `/@([^.]+)\./` cattura solo il **primo segmento** dopo `@`. Per `info@mail.everok.eu` ottieni "Mail" invece di "Everok". Per `noreply@eu.amazon.com` ottieni "Eu". Da qui i nomi strani che vedi nelle preview.
+- Riga 180-185: la lista preview mostra `display_name || extractCompany(email)`. Quando `display_name` è null (caso comune) ricade sulla regex bacata → preview confusa.
 
 ---
 
-## Step 6 — Loop di apprendimento ("Chiedi ogni volta")
+## Piano di intervento
 
-In `useHarmonizeOrchestrator.ts`:
-- Nuova API `applyRegeneratedAfter(proposalId, newAfter, saveAsRule: boolean)`
-- Se `saveAsRule = true` → INSERT in `suggested_improvements` (categoria `kb_rule`, fonte `gordon-feedback`)
+### A. Fix bug bloccante "Errore caricamento configurazione" (PRIORITÀ 1)
 
-In `harmonizeAnalyzer.ts`:
-- Prima di chiamare l'analyzer, fetch delle `suggested_improvements` approvate (categoria `kb_rule`)
-- Inietta come "VINCOLI APPRESI DAGLI OPERATORI" nel prompt → Marco le rispetta nei prossimi run
+In `SenderCard.tsx` → `loadAddressRule`:
+
+1. Recuperare `user_id` da `supabase.auth.getUser()` all'inizio della funzione; se assente → toast "Sessione scaduta" e return.
+2. Cambiare la SELECT in:
+   ```ts
+   .eq('email_address', sender.email)
+   .eq('user_id', user.id)
+   .maybeSingle()
+   ```
+   Rimuovere il branch `error.code !== 'PGRST116'` (con `.maybeSingle()` non serve).
+3. Nell'INSERT aggiungere `user_id: user.id`.
+4. Lasciare un commento `// LOVABLE-FIX user_id required (DB NOT NULL)` per traccia.
+
+### B. Pulizia visiva `SenderCard` (PRIORITÀ 2)
+
+Rifare il blocco header della card per allineare meglio i due lati:
+
+- Sostituire la colonna verticale `count+flag` con una **riga compatta** allineata al testo: `<span class="text-lg font-bold leading-none">{count}</span><span class="text-base leading-none">{flag}</span>` dentro un wrapper `flex items-center gap-1 flex-shrink-0`.
+- Aggiungere `gap-1` tra blocco count e pulsante Mail.
+- Aggiungere `flex-shrink-0` esplicito al wrapper del Mail button.
+- Verificare con viewport 1011px che i nomi non vengano troncati prematuramente.
+
+Nessun cambiamento di logica; solo classi Tailwind.
+
+### C. Fix preview oggetti collegati in `GroupDropZone` (PRIORITÀ 2)
+
+1. Sostituire `extractCompany` con una versione che estrae il **dominio root** (penultimo segmento prima del TLD) o, se `domain` è disponibile sulla rule, usare direttamente `rule.domain`. Per estrarlo dall'email:
+   ```ts
+   const host = email.split('@')[1] ?? '';
+   const parts = host.split('.').filter(Boolean);
+   const root = parts.length >= 2 ? parts[parts.length - 2] : parts[0] ?? email;
+   return root.charAt(0).toUpperCase() + root.slice(1);
+   ```
+2. Estendere l'interfaccia `AssignedRule` per includere opzionalmente `domain` e `company_name`, e propagarli da `useGroupingData` (già selezionati per altri usi). Preferenza per il display: `display_name → company_name → root domain`.
+3. Cambiare il counter in header (riga 98) da `text-destructive` → `text-muted-foreground` (oppure un piccolo `Badge variant="secondary"`), così non sembra un errore.
+
+### D. Nota di debito (NON fixato in questo round)
+
+Aggiungere un TODO nel file `SenderCard.tsx` (già parzialmente commentato a riga 16-19) che ricorda: le colonne `applied_rules` e `prompt_template_id` non esistono nello schema reale. Le UPDATE su questi campi (handlePromptChange, handleRulesChange) **falliranno silenziosamente o con 42703** appena l'utente prova a salvare. Da decidere in un round dedicato se:
+- (a) creare le colonne mancanti via migration, oppure
+- (b) mappare le funzionalità sulle colonne esistenti (`custom_prompt`, `auto_action_params`, `prompt_id`).
+
+Lo segnalo qui per visibilità: non lo tocco senza tua decisione.
 
 ---
 
-## 📁 File toccati
+## File modificati
 
-**Nuovi**:
-- `supabase/functions/harmonize-proposal-chat/index.ts`
-- `src/v2/ui/pages/prompt-lab/components/SingleProposalReview.tsx`
-- `src/v2/ui/pages/prompt-lab/components/GordonChatPanel.tsx`
-- `src/v2/ui/pages/prompt-lab/components/ProposalNavigator.tsx`
-- `src/v2/ui/pages/prompt-lab/hooks/useGordonChat.ts`
+- `src/components/email-intelligence/management/SenderCard.tsx` — fix `loadAddressRule` (user_id + maybeSingle) + ritocchi layout header.
+- `src/components/email-intelligence/management/GroupDropZone.tsx` — `extractCompany` corretto, counter neutro, fallback `company_name`.
+- `src/components/email-intelligence/manual-grouping/useGroupingData.ts` — aggiungere `domain`, `company_name` al select delle rules per la mappa `assignedByGroup`.
 
-**Modificati**:
-- `src/v2/ui/pages/prompt-lab/SuggestionsReviewPage.tsx` (toggle Lista/Singola)
-- `src/data/harmonizeRuns.ts` (tipo esteso + `appendProposalChat`)
-- `src/v2/ui/pages/prompt-lab/hooks/useHarmonizeOrchestrator.ts` (`applyRegeneratedAfter`)
-- `src/v2/ui/pages/prompt-lab/hooks/harmonizeAnalyzer.ts` (iniezione regole apprese)
+## Cosa NON tocco
 
-**Migration DB**: 1 INSERT (creazione Gordon)
+- check-inbox / email-imap-proxy / mark-imap-seen (vincolo di progetto).
+- Schema DB: nessuna migration (solo lettura/insert su colonne già esistenti).
+- Logica drag&drop (già sistemata negli scorsi round).
 
----
+## Verifica post-fix
 
-## ✅ Esecuzione
-
-Una volta approvato, eseguo tutto monoliticamente in autonomia (rispettando la tua preferenza "no step-by-step"). Al termine del run avrai:
-- toggle vista Lista/Singola sulla pagina suggerimenti
-- chat persistente per ogni proposta con Gordon
-- voce George attivabile su ogni risposta Gordon
-- conferma esplicita per salvare correzioni come regole permanenti
-- prossimi run di armonizzazione che rispettano le regole apprese
-
-Confermi e parto?
+1. Aprire una card di un sender mai configurato → click "Più opzioni" → niente toast errore, sezione si espande.
+2. Riaprire una card già configurata → recupera la rule esistente (non ne crea una nuova).
+3. Header card: numero email + flag sulla stessa riga, allineati al nome.
+4. Card gruppo: contatore non più rosso; preview aziende mostra il nome corretto del dominio (es. "Everok" non "Mail").
