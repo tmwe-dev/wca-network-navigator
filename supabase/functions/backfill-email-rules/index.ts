@@ -29,6 +29,7 @@ const MAX_ADDRESSES_PER_CALL = 20;
 interface RuleRow {
   id: string;
   operator_id: string | null;
+  user_id: string | null;
   email_address: string | null;
   address: string | null;
   domain: string | null;
@@ -113,16 +114,18 @@ class ImapConn {
     const safe = address.replace(/"/g, '\\"');
     const r = await this.send(`UID SEARCH FROM "${safe}"`);
     if (!r.includes("OK")) return [];
-    // Risposta tipica:  "* SEARCH 12 34 56\r\nB1 OK SEARCH completed"
+    // Risposta tipica (può essere multi-riga su mailbox grandi):
+    //   "* SEARCH 12 34 56 78 ...\r\nBn OK SEARCH completed"
     const uids: number[] = [];
-    for (const line of r.split("\n")) {
-      const m = line.match(/^\*\s+SEARCH\s+(.+?)$/);
-      if (m) {
-        for (const t of m[1].trim().split(/\s+/)) {
-          const n = Number.parseInt(t, 10);
-          if (Number.isFinite(n) && n > 0) uids.push(n);
-        }
-      }
+    // Concatena tutte le righe `* SEARCH ...` (alcuni server le spezzano).
+    const searchLines = r
+      .split(/\r?\n/)
+      .filter((l) => /^\*\s+SEARCH\b/.test(l))
+      .map((l) => l.replace(/^\*\s+SEARCH\s*/, "").trim())
+      .join(" ");
+    for (const t of searchLines.split(/\s+/)) {
+      const n = Number.parseInt(t, 10);
+      if (Number.isFinite(n) && n > 0) uids.push(n);
     }
     // Cap protezione mailbox enormi: prendi i più recenti (ordine descrescente).
     uids.sort((a, b) => b - a);
@@ -289,13 +292,17 @@ Deno.serve(async (req) => {
     });
 
     const body = await req.json();
-    const operatorId: string = body.operator_id;
+    const operatorId: string | undefined = body.operator_id;
+    const userIdInput: string | undefined = body.user_id;
     const scope: "address" | "group" = body.scope;
     const target: string = (body.target ?? "").toString().trim();
     const dryRun: boolean = body.dry_run === true;
 
-    if (!operatorId || !scope || !target) {
-      return new Response(JSON.stringify({ error: "missing operator_id/scope/target" }), {
+    // user_id è SEMPRE richiesto perché la regola è scoped per utente.
+    // operator_id è opzionale: se assente filtra solo per user_id.
+    const effectiveUserId = userIdInput ?? user.id;
+    if (!effectiveUserId || !scope || !target) {
+      return new Response(JSON.stringify({ error: "missing user_id/scope/target" }), {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
@@ -305,13 +312,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Carica regole filtrate per operator + scope
+    // Carica regole filtrate per USER + (eventuale operator) + scope.
+    // Le regole storiche hanno operator_id = NULL: filtriamo per user_id che
+    // è sempre presente (NOT NULL nel DB).
     let q = supabase
       .from("email_address_rules")
-      .select("id, operator_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, is_active, group_name")
-      .eq("operator_id", operatorId)
+      .select("id, operator_id, user_id, email_address, address, domain, domain_pattern, auto_action, auto_action_params, is_active, group_name")
+      .eq("user_id", effectiveUserId)
       .eq("is_active", true)
       .not("auto_action", "is", null);
+
+    if (operatorId) {
+      // Restringe ulteriormente all'operatore (regole sia operator-specific
+      // sia legacy senza operator_id).
+      q = q.or(`operator_id.eq.${operatorId},operator_id.is.null`);
+    }
 
     if (scope === "address") {
       q = q.eq("email_address", target);
@@ -366,7 +381,7 @@ Deno.serve(async (req) => {
       try {
         await imap.connect(host, imapUser, imapPass);
         await imap.selectInbox();
-        const report = await backfillAddress(supabase, imap, rule, addr, dryRun);
+        const report = await backfillAddress(supabase, imap, rule, addr, dryRun, effectiveUserId);
         reports.push(report);
         totalMatched += report.matched;
         totalApplied += report.applied;
