@@ -28,13 +28,21 @@ interface AssignedRule {
   id: string;
   email_address: string;
   display_name?: string | null;
+  company_name?: string | null;
+  domain?: string | null;
 }
 
 export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [], onRulesChanged }: GroupDropZoneProps) {
 
-  const extractCompany = (email: string): string => {
-    const match = email.match(/@([^.]+)\./);
-    return match ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : email;
+  // Estrae il dominio "root" (penultimo segmento prima del TLD) da un'email.
+  // Per "info@mail.everok.eu" → "Everok" (non "Mail" come faceva la vecchia regex).
+  const extractCompany = (email: string, domain?: string | null, companyName?: string | null): string => {
+    if (companyName && companyName.trim()) return companyName.trim();
+    const host = (domain || email.split('@')[1] || '').toLowerCase();
+    const parts = host.split('.').filter(Boolean);
+    if (parts.length === 0) return email;
+    const root = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    return root.charAt(0).toUpperCase() + root.slice(1);
   };
 
   const handleRemoveRule = async (ruleId: string, email: string) => {
@@ -95,7 +103,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
               <span className="text-2xl">{group.icon || '📁'}</span>
               <div>
                 <CardTitle className="text-base">
-                  {group.nome_gruppo} <span className="text-destructive ml-1.5">{rules.length}</span>
+                  {group.nome_gruppo} <span className="text-muted-foreground ml-1.5 font-normal">({rules.length})</span>
                 </CardTitle>
                 {group.descrizione && <CardDescription className="text-xs mt-1">{group.descrizione}</CardDescription>}
               </div>
@@ -126,7 +134,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
                       rules.map(rule => (
                         <div key={rule.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-md hover:bg-muted/60 transition-colors group">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address)}</div>
+                            <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}</div>
                             <div className="text-sm text-muted-foreground">{rule.email_address}</div>
                           </div>
                           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
@@ -179,7 +187,7 @@ export function GroupDropZone({ group, onRefresh, isHovered = false, rules = [],
             <div className="text-left w-full px-2 space-y-0.5 overflow-hidden">
               {rules.slice(0, 3).map((r) => (
                 <div key={r.id} className="leading-tight truncate">
-                  <span className="font-semibold text-xs">{r.display_name || extractCompany(r.email_address)}</span>
+                  <span className="font-semibold text-xs">{r.display_name || extractCompany(r.email_address, r.domain, r.company_name)}</span>
                   <span className="text-[10px] text-muted-foreground ml-1 truncate">{r.email_address}</span>
                 </div>
               ))}
