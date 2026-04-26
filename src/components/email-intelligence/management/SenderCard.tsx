@@ -8,6 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { GripVertical, Mail, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
@@ -34,6 +36,8 @@ interface SenderCardProps {
   onAddressRuleUpdated?: () => void;
   isSelected?: boolean;
   onToggleSelect?: (email: string) => void;
+  /** Click sul chip AI suggerimento → segnala il group_name al parent (highlight). */
+  onAiChipClick?: (groupName: string) => void;
 }
 
 interface AddressRule {
@@ -53,7 +57,8 @@ export function SenderCard({
   onAssignGroup,
   onAddressRuleUpdated,
   isSelected = false,
-  onToggleSelect
+  onToggleSelect,
+  onAiChipClick,
 }: SenderCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
@@ -67,6 +72,17 @@ export function SenderCard({
 
   const flag = getFlagFromDomain(sender.domain);
   const faviconUrl = getDomainFaviconUrl(sender.domain);
+
+  // Iniziali fallback: 2 lettere uppercase del companyName (parole multiple → prime 2 iniziali).
+  const initials = (() => {
+    const parts = (sender.companyName || sender.email || "?")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (parts.length === 0) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  })();
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -234,7 +250,12 @@ export function SenderCard({
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={cn("snap-start", isDragging && "opacity-30")}
+      className={cn(
+        "snap-start",
+        isDragging && "opacity-30",
+        // Sender già classificato → mostrato con opacità ridotta nel rail.
+        sender.isClassified && !isSelected && "opacity-45",
+      )}
     >
       <Card
         onDoubleClick={() => onDoubleClick?.(sender)}
@@ -261,7 +282,7 @@ export function SenderCard({
             )}
             <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
-            {/* Favicon */}
+            {/* Avatar: favicon → fallback iniziali (2 lettere) */}
             {faviconUrl && !faviconError ? (
               <img
                 src={faviconUrl}
@@ -271,10 +292,8 @@ export function SenderCard({
                 onError={() => setFaviconError(true)}
               />
             ) : (
-              <div className="h-5 w-5 rounded-sm bg-muted flex items-center justify-center flex-shrink-0">
-                <span className="text-[10px] font-bold text-muted-foreground">
-                  {sender.domain?.charAt(0)?.toUpperCase() || "?"}
-                </span>
+              <div className="h-5 w-5 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <span className="text-[9px] font-bold text-primary leading-none">{initials}</span>
               </div>
             )}
 
@@ -306,6 +325,29 @@ export function SenderCard({
               </button>
             )}
           </div>
+
+          {/* AI suggestion chip — hint visivo, NON azione automatica.
+              Click → highlight del gruppo nella griglia sotto. */}
+          {sender.aiSuggestion?.group_name && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAiChipClick?.(sender.aiSuggestion!.group_name);
+              }}
+              draggable={false}
+              className="self-start"
+              title={`Suggerimento AI (confidenza ${Math.round((sender.aiSuggestion.confidence ?? 0) * 100)}%)`}
+            >
+              <Badge
+                variant="outline"
+                className="gap-1 text-[10px] py-0 h-5 border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors"
+              >
+                <Sparkles className="h-2.5 w-2.5 text-primary" />
+                <span className="text-primary font-medium">AI: {sender.aiSuggestion.group_name}</span>
+              </Badge>
+            </button>
+          )}
 
           {/* Group assignment dropdown */}
           {groups && groups.length > 0 && onAssignGroup && (
