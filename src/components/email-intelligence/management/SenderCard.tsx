@@ -1,39 +1,32 @@
 /**
- * SenderCard — Card sender VERTICALE leggibile (v3, 2026-04-27).
+ * SenderCard — Card sender VERTICALE leggibile (v4, 2026-04-27).
  *
- * Pensata per essere mostrata in colonna verticale stretta (~260-320px)
- * con tutto lo spazio verticale necessario. Niente più troncamenti
- * brutali sul nome azienda e niente più grigio chiaro su scuro per
- * informazioni importanti.
+ * v4 (richiesta utente): card più corta e ordinata.
+ *  - Logo a sinistra, nome azienda + email subito a destra (in colonna).
+ *  - "Ultima: …" sotto.
+ *  - Suggerimento AI (se presente).
+ *  - Footer in basso: checkbox + grip a sinistra, contatore al centro,
+ *    bottoni "Azioni & regole" (apre dialog) + "AI" a destra.
  *
- * Layout verticale (full width della colonna):
- *  - Header: ☑ + logo grande + N° email a destra
- *  - Nome azienda su 2 righe, font sm/base, text-foreground
- *  - Email + bandiera, text-foreground/80
- *  - "Ultima: …" con label esplicita
- *  - Chip AI suggerimento (se presente) con CTA "Associa"
- *  - Badge classificato (se presente)
- *  - Riga azioni primarie con LABEL accanto a ogni icona
- *  - Menu più piccolo per azioni distruttive
+ * In questa fase NON mostriamo "Elimina" e "Blocca" sulla card: sono azioni
+ * distruttive che faremo in batch dal server in una fase successiva.
+ * Tutte le azioni di organizzazione (mark-read, archive, sposta in cartella,
+ * spam, esporta, prompt regola custom) sono raccolte nella popup
+ * `SenderActionsDialog` aperta dal bottone "Azioni & regole".
  */
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
-  GripVertical, Sparkles, Check, Clock, ArrowRight,
-  Settings2, MailCheck, Trash2, Download, Ban, Loader2,
+  GripVertical, Sparkles, Check, Clock, ArrowRight, Wand2, Loader2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
 import type { SenderAnalysis } from '@/types/email-management';
+import { SenderActionsDialog } from './SenderActionsDialog';
 
 interface SenderCardProps {
   sender: SenderAnalysis;
@@ -47,7 +40,10 @@ interface SenderCardProps {
   isFocused?: boolean;
   /** Click sulla card → focus per preview email. */
   onFocusRequest?: (sender: SenderAnalysis) => void;
-  /** 6 azioni rapide (parent gestisce business logic). */
+  /**
+   * Callback opzionali (compat back). Le 4 destructive non sono più
+   * mostrate sulla card; restano disponibili per la dialog/parent se servono.
+   */
   onOpenRules?: (sender: SenderAnalysis) => void;
   onMarkRead?: (sender: SenderAnalysis) => Promise<void> | void;
   onDelete?: (sender: SenderAnalysis) => Promise<void> | void;
@@ -56,6 +52,8 @@ interface SenderCardProps {
   onAnalyzeAI?: (sender: SenderAnalysis) => void;
   /** "Associa subito al gruppo suggerito dall'AI". */
   onAcceptAiSuggestion?: (sender: SenderAnalysis, groupName: string) => Promise<void> | void;
+  /** Notifica al parent che è stata applicata una regola dalla dialog. */
+  onActionComplete?: () => void;
 }
 
 export function SenderCard({
@@ -67,17 +65,14 @@ export function SenderCard({
   onAiChipClick,
   isFocused = false,
   onFocusRequest,
-  onOpenRules,
-  onMarkRead,
-  onDelete,
-  onExport,
-  onBlock,
   onAnalyzeAI,
   onAcceptAiSuggestion,
+  onActionComplete,
 }: SenderCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const flag = getFlagFromDomain(sender.domain);
@@ -147,73 +142,50 @@ export function SenderCard({
             sender.emailCount > 100
               ? "border-l-destructive"
               : sender.emailCount > 50
-                ? "border-l-orange-500"
+                ? "border-l-primary"
                 : "border-l-primary/40",
             isDragging && "cursor-grabbing"
           )}
         >
-          <CardContent className="p-3 flex flex-col gap-2.5">
-            {/* HEADER: checkbox + grip + logo + counter */}
-            <div className="flex items-start gap-2">
-              {onToggleSelect && (
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleSelect(sender.email)}
-                  onClick={stop}
-                  className="h-4 w-4 flex-shrink-0 mt-0.5"
-                  aria-label="Seleziona mittente"
-                />
-              )}
-              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-
+          <CardContent className="p-3 flex flex-col gap-2">
+            {/* HEADER: logo + (nome azienda / email + bandiera) */}
+            <div className="flex items-start gap-2.5">
               {faviconUrl && !faviconError ? (
                 <img
                   src={faviconUrl}
                   alt=""
-                  className="h-8 w-8 rounded-sm flex-shrink-0 object-contain bg-background"
+                  className="h-10 w-10 rounded-md flex-shrink-0 object-contain bg-background border border-border/50"
                   loading="lazy"
                   onError={() => setFaviconError(true)}
                 />
               ) : (
-                <div className="h-8 w-8 rounded-md bg-primary/15 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-primary leading-none">{initials}</span>
+                <div className="h-10 w-10 rounded-md bg-primary/15 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-primary leading-none">{initials}</span>
                 </div>
               )}
 
-              <div className="flex-1 min-w-0" />
-
-              <div className="flex flex-col items-end leading-tight flex-shrink-0">
-                <span className="text-xl font-bold text-primary leading-none">
-                  {sender.emailCount}
-                </span>
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground mt-0.5">
-                  email
-                </span>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-semibold text-sm text-foreground leading-snug break-words"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                  title={sender.companyName}
+                >
+                  {sender.companyName}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-foreground/70 mt-0.5">
+                  {flag && (
+                    <span className="text-sm leading-none flex-shrink-0" title={sender.domain}>
+                      {flag}
+                    </span>
+                  )}
+                  <span className="truncate" title={sender.email}>{sender.email}</span>
+                </div>
               </div>
-            </div>
-
-            {/* NOME AZIENDA — full, max 2 righe, font leggibile */}
-            <div
-              className="font-semibold text-sm text-foreground leading-snug break-words"
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-              title={sender.companyName}
-            >
-              {sender.companyName}
-            </div>
-
-            {/* EMAIL + bandiera */}
-            <div className="flex items-center gap-1.5 text-xs text-foreground/70">
-              {flag && (
-                <span className="text-sm leading-none flex-shrink-0" title={sender.domain}>
-                  {flag}
-                </span>
-              )}
-              <span className="truncate" title={sender.email}>{sender.email}</span>
             </div>
 
             {/* ULTIMA email — label esplicita, leggibile */}
@@ -297,106 +269,76 @@ export function SenderCard({
               </Badge>
             )}
 
-            {/* AZIONI — icone con LABEL leggibili */}
-            <div className="grid grid-cols-3 gap-1 pt-2 border-t border-border/40">
-              <ActionButton
-                icon={<Settings2 className="h-3.5 w-3.5" />}
-                label="Regole"
-                onClick={(e) => { stop(e); onOpenRules?.(sender); }}
-              />
-              <ActionButton
-                icon={busy === "mark_read" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MailCheck className="h-3.5 w-3.5" />}
-                label="Letta"
-                onClick={(e) => { stop(e); runAction("mark_read", onMarkRead); }}
-                disabled={busy !== null}
-              />
-              <ActionButton
-                icon={<Sparkles className="h-3.5 w-3.5" />}
-                label="AI"
-                onClick={(e) => { stop(e); onAnalyzeAI?.(sender); }}
-                accent
-              />
-              <ActionButton
-                icon={<Download className="h-3.5 w-3.5" />}
-                label="Esporta"
-                onClick={(e) => { stop(e); onExport?.(sender); }}
-              />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={stop}
-                    disabled={busy !== null}
+            {/* FOOTER: select + grip + counter + bottoni primari */}
+            <div className="flex items-center gap-2 pt-2 mt-1 border-t border-border/40">
+              {onToggleSelect && (
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleSelect(sender.email)}
+                  onClick={stop}
+                  className="h-4 w-4 flex-shrink-0"
+                  aria-label="Seleziona mittente"
+                />
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab" />
+                </TooltipTrigger>
+                <TooltipContent>Trascina per assegnare a un gruppo</TooltipContent>
+              </Tooltip>
+
+              <div className="flex items-baseline gap-1 flex-1 min-w-0">
+                <span className="text-base font-bold text-primary leading-none">
+                  {sender.emailCount}
+                </span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  email
+                </span>
+              </div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 px-2.5 gap-1"
+                    onClick={(e) => { stop(e); setActionsOpen(true); }}
                     draggable={false}
-                    className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 rounded-md hover:bg-destructive/15 hover:text-destructive transition-colors disabled:opacity-50"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-medium leading-none">Elimina</span>
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent onClick={stop}>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Impostare regola di eliminazione?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Per <strong>{sender.companyName}</strong> l'azione automatica diventerà
-                      <strong> "elimina"</strong>. Le mail future verranno spostate nel cestino al
-                      prossimo ciclo di sincronizzazione.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annulla</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={(e) => { e.preventDefault(); runAction("delete", onDelete); }}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Conferma
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <ActionButton
-                icon={busy === "block" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
-                label="Blocca"
-                onClick={(e) => { stop(e); runAction("block", onBlock); }}
-                disabled={busy !== null}
-                destructive
-              />
+                    <Wand2 className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Azioni</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Azioni e regole (mark, sposta, spam, prompt…)</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                    onClick={(e) => { stop(e); onAnalyzeAI?.(sender); }}
+                    draggable={false}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">AI</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Suggerimento AI per questo sender</TooltipContent>
+              </Tooltip>
             </div>
           </CardContent>
         </Card>
+
+        <SenderActionsDialog
+          sender={actionsOpen ? sender : null}
+          open={actionsOpen}
+          onOpenChange={setActionsOpen}
+          onActionDone={onActionComplete}
+        />
       </div>
     </TooltipProvider>
   );
 }
 
-// Bottone azione standardizzato: icona + label leggibile sotto.
-function ActionButton({
-  icon, label, onClick, disabled, accent, destructive,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: (e: React.MouseEvent) => void;
-  disabled?: boolean;
-  accent?: boolean;
-  destructive?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      draggable={false}
-      className={cn(
-        "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 rounded-md transition-colors disabled:opacity-50",
-        accent
-          ? "text-primary hover:bg-primary/15"
-          : destructive
-            ? "hover:bg-destructive/15 hover:text-destructive"
-            : "hover:bg-muted text-foreground/80 hover:text-foreground",
-      )}
-    >
-      {icon}
-      <span className="text-[9px] font-medium leading-none">{label}</span>
-    </button>
-  );
-}
