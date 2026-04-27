@@ -301,10 +301,10 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   </div>
                 )}
 
-                {/* Corpo — niente line-clamp: l'area è scrollabile e ridimensionabile */}
-                <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap pt-1">
-                  {previewText || "(corpo email non disponibile)"}
-                </p>
+                {/* Corpo email renderizzato come in Outreach (HTML sanitizzato + iframe). */}
+                <div className="pt-1">
+                  <EmailBody message={current} compact />
+                </div>
                 </div>
               </div>
             </ResizablePanel>
@@ -364,9 +364,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   </div>
                 </div>
 
-                {/* Corpo full */}
-                <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap pt-1">
-                  {fullViewEmail.body_text?.trim() || "(corpo email non disponibile)"}
+                {/* Corpo full — stesso renderer di Outreach. */}
+                <div className="pt-1">
+                  <EmailBody message={fullViewEmail} />
                 </div>
               </div>
             </div>
