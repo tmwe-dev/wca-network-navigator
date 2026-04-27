@@ -244,12 +244,9 @@ export default function ManualGroupingTab() {
   );
 
   const {
-    searchQuery, setSearchQuery,
-    sortOption, setSortOption,
+    searchQuery,
     groupSortOption, setGroupSortOption,
     sortedSenders, sortedGroups,
-    volumeFilter, setVolumeFilter, VOLUME_FILTERS,
-    hideClassified, setHideClassified,
   } = useFilterAndSort(allSenders, groups);
 
   const { activeDrag, setActiveDrag, hoveredGroupId, handleDragEnd } = useDragAndDrop();
