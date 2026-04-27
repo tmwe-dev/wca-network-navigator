@@ -16,6 +16,7 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("count-desc");
   const [volumeFilter, setVolumeFilter] = useState("all");
+  const [hideClassified, setHideClassified] = useState(true);
   const [groupSortOption, setGroupSortOption] = useState<"alpha" | "count">("alpha");
   const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
 
@@ -25,6 +26,7 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
   const filteredSenders = useMemo(() => {
     const minVolume = volumeFilter === "all" ? 0 : parseInt(volumeFilter);
     return senders.filter((s) => {
+      if (hideClassified && s.isClassified) return false;
       if (s.emailCount < minVolume) return false;
       if (!searchQuery) return true;
       return (
@@ -32,7 +34,7 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
         s.companyName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     });
-  }, [senders, volumeFilter, searchQuery]);
+  }, [senders, volumeFilter, searchQuery, hideClassified]);
 
   // Sort senders
   const sortedSenders = useMemo(() => {
@@ -108,6 +110,8 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
     setSortOption,
     volumeFilter,
     setVolumeFilter,
+    hideClassified,
+    setHideClassified,
     groupSortOption,
     setGroupSortOption,
     activeLetterFilter,
