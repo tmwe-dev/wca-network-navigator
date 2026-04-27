@@ -10,7 +10,7 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GripVertical, Mail, Sparkles, Check, Clock } from 'lucide-react';
+import { GripVertical, Sparkles, Check, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
@@ -21,7 +21,6 @@ interface SenderCardProps {
   onDragStart?: (sender: SenderAnalysis) => void;
   onDragEnd?: (clientX: number, clientY: number) => void;
   onDoubleClick?: (sender: SenderAnalysis) => void;
-  onViewEmails?: (sender: SenderAnalysis) => void;
   isSelected?: boolean;
   /** Se true mostra checkbox di multi-selezione. */
   multiSelectMode?: boolean;
@@ -37,7 +36,6 @@ export function SenderCard({
   onDragStart,
   onDragEnd,
   onDoubleClick,
-  onViewEmails,
   isSelected = false,
   multiSelectMode = false,
   onToggleSelect,
@@ -188,16 +186,6 @@ export function SenderCard({
                   {sender.currentGroup?.nome_gruppo || "Classificato"}
                 </span>
               </Badge>
-            )}
-            {onViewEmails && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onViewEmails(sender); }}
-                className="ml-auto p-0.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
-                title="Visualizza email"
-                draggable={false}
-              >
-                <Mail className="h-3.5 w-3.5" />
-              </button>
             )}
           </div>
 

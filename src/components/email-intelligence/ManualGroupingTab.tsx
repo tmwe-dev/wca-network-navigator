@@ -1,14 +1,13 @@
 /**
- * ManualGroupingTab — Fase 1 Email Intelligence (refactored).
+ * ManualGroupingTab — Fase 1 Email Intelligence (orchestrator).
  *
- * Layout:
- *  • EmailIntelligenceHeader: search + counter + "Nuovo gruppo"
- *  • SenderActionBar (solo se selectedSenders.size > 0)
- *  • SortBar: ToggleGroup [A-Z | N. email | AI smart] + Multi-selezione + counter
- *  • Rail orizzontale di SenderCard compatte (200px) con auto-focus primo
- *  • Split inferiore: 35% SenderEmailPreviewPanel + 65% griglia gruppi
- *      con pill range alfabetico [Tutti | A-D | E-L | M-P | Q-Z]
- *  • Prompt AI bar in fondo (stub)
+ * Composizione:
+ *  - EmailIntelligenceHeader: search + refresh + "+ Nuovo gruppo"
+ *  - SenderActionBar: visibile su sender in focus (singolo o multi)
+ *  - SortBar (locale): A-Z / N. email / AI smart + multi-sel + counter
+ *  - Rail orizzontale di SenderCard
+ *  - Split inferiore 35/65: SenderEmailPreviewPanel + GroupGridPanel
+ *  - Prompt AI bar (stub)
  */
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,13 +19,12 @@ import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
-import { SenderEmailsDialog } from "./management/SenderEmailsDialog";
 import { EmailIntelligenceHeader } from "./management/EmailIntelligenceHeader";
 import { SenderActionBar } from "./management/SenderActionBar";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { SenderAnalysis } from "@/types/email-management";
+import type { SenderAnalysis, EmailSenderGroup, SortOption } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +33,10 @@ import { useFilterAndSort } from "./manual-grouping/useFilterAndSort";
 import { useDragAndDrop } from "./manual-grouping/useDragAndDrop";
 import { useGroupAssignment } from "./manual-grouping/useGroupAssignment";
 import { useSelectionState } from "./manual-grouping/useSelectionState";
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Local sub-components (kept in-file to stay below 200 lines for orchestrator)
+// ──────────────────────────────────────────────────────────────────────────────
 
 type LetterRange = "all" | "A-D" | "E-L" | "M-P" | "Q-Z";
 const LETTER_RANGES: { value: LetterRange; label: string }[] = [
@@ -53,12 +55,146 @@ function inLetterRange(name: string, range: LetterRange): boolean {
   return first >= a && first <= b;
 }
 
+interface SortBarProps {
+  sortOption: SortOption;
+  onSortChange: (s: SortOption) => void;
+  multiSelectMode: boolean;
+  onToggleMultiSelect: (v: boolean) => void;
+  selectedCount: number;
+  pendingCount: number;
+  classifiedCount: number;
+}
+
+function SortBar(props: SortBarProps) {
+  const { sortOption, onSortChange, multiSelectMode, onToggleMultiSelect,
+    selectedCount, pendingCount, classifiedCount } = props;
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <ToggleGroup
+        type="single"
+        value={sortOption}
+        onValueChange={(v) => { if (v) onSortChange(v as SortOption); }}
+        variant="outline"
+        size="sm"
+      >
+        <ToggleGroupItem value="name-asc" className="text-xs h-8 px-2.5">A-Z</ToggleGroupItem>
+        <ToggleGroupItem value="count-desc" className="text-xs h-8 px-2.5">N. email</ToggleGroupItem>
+        <ToggleGroupItem value="ai_group" className="text-xs h-8 px-2.5 gap-1">
+          <Sparkles className="h-3 w-3" /> AI smart
+        </ToggleGroupItem>
+      </ToggleGroup>
+
+      <div className="flex items-center gap-1.5 px-2 h-8 border rounded-md text-xs">
+        <Checkbox
+          id="multiSel"
+          checked={multiSelectMode}
+          onCheckedChange={(v) => onToggleMultiSelect(v === true)}
+          className="h-3.5 w-3.5"
+        />
+        <label htmlFor="multiSel" className="cursor-pointer select-none">
+          Multi-selezione{selectedCount > 0 && ` (${selectedCount})`}
+        </label>
+      </div>
+
+      <span className="text-xs text-muted-foreground ml-auto">
+        {pendingCount} da smistare · {classifiedCount} classificati
+      </span>
+    </div>
+  );
+}
+
+interface GroupGridPanelProps {
+  groups: EmailSenderGroup[];
+  visibleGroups: EmailSenderGroup[];
+  groupSortOption: "alpha" | "count";
+  onGroupSortChange: (s: "alpha" | "count") => void;
+  letterRange: LetterRange;
+  onLetterRangeChange: (r: LetterRange) => void;
+  hoveredGroupId: string | null;
+  highlightedGroupName: string | null;
+  assignedByGroup: Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>;
+  reloadAssignedRules: () => void;
+  loadData: () => void;
+  selectedCount: number;
+  onBulkAssign: (group: { id: string; nome_gruppo: string }) => void;
+}
+
+function GroupGridPanel(props: GroupGridPanelProps) {
+  const { groups, visibleGroups, groupSortOption, onGroupSortChange,
+    letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
+    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign } = props;
+  return (
+    <div className="flex-1 min-w-0 flex flex-col border rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">
+          Gruppi ({visibleGroups.length}{letterRange !== "all" ? `/${groups.length}` : ""})
+        </span>
+        <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
+          <SelectTrigger className="w-[140px] h-8">
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="alpha">A → Z</SelectItem>
+            <SelectItem value="count">Per contatti</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
+        {LETTER_RANGES.map((r) => (
+          <button
+            key={r.value}
+            onClick={() => onLetterRangeChange(r.value)}
+            className={cn(
+              "px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors",
+              letterRange === r.value
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+            )}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="p-3 grid gap-3 content-start grid-cols-1 md:grid-cols-2">
+          {visibleGroups.map((group) => (
+            <GroupDropZone
+              key={group.id}
+              group={group}
+              onRefresh={loadData}
+              isHovered={hoveredGroupId === group.id}
+              isHighlighted={highlightedGroupName === group.nome_gruppo}
+              rules={assignedByGroup.get(group.nome_gruppo) || []}
+              onRulesChanged={reloadAssignedRules}
+              selectedCount={selectedCount}
+              onBulkAssign={onBulkAssign}
+            />
+          ))}
+          {groups.length === 0 && (
+            <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>
+          )}
+          {groups.length > 0 && visibleGroups.length === 0 && (
+            <p className="text-muted-foreground text-center w-full py-12 col-span-full">
+              Nessun gruppo nel range selezionato
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Orchestrator
+// ──────────────────────────────────────────────────────────────────────────────
+
 export default function ManualGroupingTab() {
-  // Data
   const {
     senders, setSenders, classifiedSenders,
-    groups, setGroups, isLoading,
-    isPopulating,
+    groups, setGroups, isLoading, isPopulating,
     loadData, populateAddressRules,
     assignedByGroup, reloadAssignedRules,
   } = useGroupingData();
@@ -68,26 +204,19 @@ export default function ManualGroupingTab() {
     [senders, classifiedSenders],
   );
 
-  // Filter & sort
   const {
     searchQuery, setSearchQuery,
     sortOption, setSortOption,
     groupSortOption, setGroupSortOption,
-    sortedSenders,
-    sortedGroups,
+    sortedSenders, sortedGroups,
   } = useFilterAndSort(allSenders, groups);
 
-  // Drag & drop, group assignment
   const { activeDrag, setActiveDrag, hoveredGroupId, handleDragEnd } = useDragAndDrop();
   const { assignToGroup, bulkAssignGroup } = useGroupAssignment(groups, setSenders);
-
-  // Selection
   const { selectedSenders, setSelectedSenders, toggleSenderSelection, getSelectedSenderObjects } =
     useSelectionState();
 
-  // Local UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [emailPreviewSender, setEmailPreviewSender] = useState<SenderAnalysis | null>(null);
   const [previewSender, setPreviewSender] = useState<SenderAnalysis | null>(null);
   const [highlightedGroupName, setHighlightedGroupName] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -102,20 +231,12 @@ export default function ManualGroupingTab() {
       return;
     }
     const stillVisible = previewSender && sortedSenders.some((s) => s.email === previewSender.email);
-    if (!stillVisible) {
-      setPreviewSender(sortedSenders[0]);
-    }
+    if (!stillVisible) setPreviewSender(sortedSenders[0]);
   }, [sortedSenders, previewSender]);
 
-  // Filtra gruppi per range alfabetico (lato consumer per non toccare hook).
   const visibleGroups = useMemo(
     () => sortedGroups.filter((g) => inLetterRange(g.nome_gruppo, letterRange)),
     [sortedGroups, letterRange],
-  );
-
-  const countLabel = useMemo(
-    () => `${senders.length} da smistare · ${classifiedSenders.length} classificati`,
-    [senders.length, classifiedSenders.length],
   );
 
   const handleAiChipClick = useCallback((groupName: string) => {
@@ -168,29 +289,20 @@ export default function ManualGroupingTab() {
     const targetGroupId = handleDragEnd(clientX, clientY);
     if (!targetGroupId || !activeDrag) return;
     const group = groups.find((g) => g.id === targetGroupId);
-    if (group) {
-      await assignToGroup(activeDrag, group.nome_gruppo, targetGroupId);
-    }
+    if (group) await assignToGroup(activeDrag, group.nome_gruppo, targetGroupId);
   };
 
-  // Click su una card del rail.
   const handleSenderCardClick = (sender: SenderAnalysis) => {
     setPreviewSender(sender);
-    if (multiSelectMode) {
-      toggleSenderSelection(sender.email);
-    }
+    if (multiSelectMode) toggleSenderSelection(sender.email);
   };
 
-  // Toggle multi-selezione: se la disattivo svuoto la selezione.
   const handleToggleMultiSelect = (checked: boolean) => {
     setMultiSelectMode(checked);
     if (!checked) setSelectedSenders(new Set());
   };
 
   const selectedEmails = Array.from(selectedSenders);
-  const selectionContextLabel = selectedSenders.size === 1
-    ? (allSenders.find((s) => selectedSenders.has(s.email))?.companyName || selectedEmails[0])
-    : `${selectedSenders.size} mittenti selezionati`;
 
   if (isLoading) {
     return (
@@ -205,7 +317,6 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-3">
-      {/* Header: search + counter + nuovo gruppo */}
       <EmailIntelligenceHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -214,8 +325,6 @@ export default function ManualGroupingTab() {
         isRefreshing={isPopulating}
       />
 
-      {/* Action bar contestuale: visibile sempre quando c'è un sender in focus
-          (singolo via preview, oppure ≥1 in multi-selezione). */}
       {(selectedSenders.size > 0 || previewSender) && (
         <SenderActionBar
           selectedSenders={
@@ -228,13 +337,7 @@ export default function ManualGroupingTab() {
                 ? (allSenders.find((s) => selectedSenders.has(s.email))?.companyName || selectedEmails[0])
                 : (previewSender?.companyName || previewSender?.email || "")
           }
-          onOpenRules={() => {
-            const first = selectedSenders.size > 0
-              ? allSenders.find((s) => selectedSenders.has(s.email))
-              : previewSender;
-            if (first) setEmailPreviewSender(first);
-            else toast.info("Seleziona un mittente per configurare le regole");
-          }}
+          onOpenRules={() => toast.info("Apri pannello regole — in arrivo")}
           onOpenExport={() => setShowExportDialog(true)}
           onActionComplete={() => {
             setSelectedSenders(new Set());
@@ -243,50 +346,18 @@ export default function ManualGroupingTab() {
         />
       )}
 
-      {/* SortBar: segmented + multi-select + counter */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <ToggleGroup
-          type="single"
-          value={sortOption}
-          onValueChange={(v) => {
-            if (v) setSortOption(v as typeof sortOption);
-          }}
-          variant="outline"
-          size="sm"
-        >
-          <ToggleGroupItem value="name-asc" className="text-xs h-8 px-2.5">A-Z</ToggleGroupItem>
-          <ToggleGroupItem value="count-desc" className="text-xs h-8 px-2.5">N. email</ToggleGroupItem>
-          <ToggleGroupItem value="ai_group" className="text-xs h-8 px-2.5 gap-1">
-            <Sparkles className="h-3 w-3" />
-            AI smart
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <SortBar
+        sortOption={sortOption}
+        onSortChange={setSortOption}
+        multiSelectMode={multiSelectMode}
+        onToggleMultiSelect={handleToggleMultiSelect}
+        selectedCount={selectedSenders.size}
+        pendingCount={senders.length}
+        classifiedCount={classifiedSenders.length}
+      />
 
-        <div className="flex items-center gap-1.5 px-2 h-8 border rounded-md text-xs">
-          <Checkbox
-            id="multiSel"
-            checked={multiSelectMode}
-            onCheckedChange={(v) => handleToggleMultiSelect(v === true)}
-            className="h-3.5 w-3.5"
-          />
-          <label htmlFor="multiSel" className="cursor-pointer select-none">
-            Multi-selezione{selectedSenders.size > 0 && ` (${selectedSenders.size})`}
-          </label>
-        </div>
-
-        <span className="text-xs text-muted-foreground ml-auto">{countLabel}</span>
-      </div>
-
-      {/* Rail orizzontale di sender cards */}
-      <div className="border rounded-lg flex-shrink-0">
-        <div className="px-3 py-1.5 border-b bg-muted/30 flex items-center justify-between">
-          <span className="text-[11px] font-medium text-muted-foreground">
-            Mittenti ({sortedSenders.length})
-          </span>
-          <span className="text-[10px] text-muted-foreground italic">
-            Trascina su un gruppo · click per anteprima · click chip AI per evidenziare
-          </span>
-        </div>
+      {/* Rail orizzontale: niente header verboso, solo le card */}
+      <div className="border rounded-lg flex-shrink-0 overflow-hidden">
         {sortedSenders.length === 0 ? (
           <p className="text-center py-6 text-sm text-muted-foreground">
             {searchQuery ? "Nessun risultato" : "Nessun mittente"}
@@ -306,7 +377,6 @@ export default function ManualGroupingTab() {
                     sender={sender}
                     onDragStart={handleDragStartLocal}
                     onDragEnd={handleDragEndLocal}
-                    onViewEmails={(s) => setEmailPreviewSender(s)}
                     isSelected={selectedSenders.has(sender.email)}
                     multiSelectMode={multiSelectMode}
                     onToggleSelect={toggleSenderSelection}
@@ -320,9 +390,7 @@ export default function ManualGroupingTab() {
         )}
       </div>
 
-      {/* Area inferiore: split 35/65 */}
       <div className="flex flex-1 gap-3 min-h-0 overflow-hidden">
-        {/* Preview panel */}
         <div className="w-[35%] min-w-[260px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
           <SenderEmailPreviewPanel
             senderEmail={previewSender?.email ?? null}
@@ -330,69 +398,21 @@ export default function ManualGroupingTab() {
           />
         </div>
 
-        {/* Griglia gruppi */}
-        <div className="flex-1 min-w-0 flex flex-col border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Gruppi ({visibleGroups.length}
-              {letterRange !== "all" ? `/${groups.length}` : ""})
-            </span>
-            <Select value={groupSortOption} onValueChange={(v) => setGroupSortOption(v as "alpha" | "count")}>
-              <SelectTrigger className="w-[140px] h-8">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alpha">A → Z</SelectItem>
-                <SelectItem value="count">Per contatti</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Pill range alfabetico */}
-          <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
-            {LETTER_RANGES.map((r) => (
-              <button
-                key={r.value}
-                onClick={() => setLetterRange(r.value)}
-                className={cn(
-                  "px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors",
-                  letterRange === r.value
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="p-3 grid gap-3 content-start grid-cols-1 md:grid-cols-2">
-              {visibleGroups.map((group) => (
-                <GroupDropZone
-                  key={group.id}
-                  group={group}
-                  onRefresh={loadData}
-                  isHovered={hoveredGroupId === group.id}
-                  isHighlighted={highlightedGroupName === group.nome_gruppo}
-                  rules={assignedByGroup.get(group.nome_gruppo) || []}
-                  onRulesChanged={reloadAssignedRules}
-                  selectedCount={selectedSenders.size}
-                  onBulkAssign={handleBulkAssignFromGroup}
-                />
-              ))}
-              {groups.length === 0 && (
-                <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>
-              )}
-              {groups.length > 0 && visibleGroups.length === 0 && (
-                <p className="text-muted-foreground text-center w-full py-12 col-span-full">
-                  Nessun gruppo nel range selezionato
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <GroupGridPanel
+          groups={groups}
+          visibleGroups={visibleGroups}
+          groupSortOption={groupSortOption}
+          onGroupSortChange={setGroupSortOption}
+          letterRange={letterRange}
+          onLetterRangeChange={setLetterRange}
+          hoveredGroupId={hoveredGroupId}
+          highlightedGroupName={highlightedGroupName}
+          assignedByGroup={assignedByGroup}
+          reloadAssignedRules={reloadAssignedRules}
+          loadData={loadData}
+          selectedCount={selectedSenders.size}
+          onBulkAssign={handleBulkAssignFromGroup}
+        />
       </div>
 
       {/* Prompt AI bar (stub) */}
@@ -413,10 +433,7 @@ export default function ManualGroupingTab() {
         <Button
           size="sm"
           disabled={!aiPromptDraft.trim()}
-          onClick={() => {
-            toast.info("Funzionalità in arrivo");
-            setAiPromptDraft("");
-          }}
+          onClick={() => { toast.info("Funzionalità in arrivo"); setAiPromptDraft(""); }}
         >
           Analizza
         </Button>
@@ -427,15 +444,6 @@ export default function ManualGroupingTab() {
         onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateCategory}
         existingNames={groups.map((g) => g.nome_gruppo)}
-      />
-
-      <SenderEmailsDialog
-        open={!!emailPreviewSender}
-        onOpenChange={(open) => {
-          if (!open) setEmailPreviewSender(null);
-        }}
-        emailAddress={emailPreviewSender?.email || ""}
-        companyName={emailPreviewSender?.companyName || ""}
       />
 
       <ExportSendersDialog

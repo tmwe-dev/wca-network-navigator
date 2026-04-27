@@ -1,82 +1,96 @@
-# Reset "Gestione Manuale" — allineamento 1:1 al design ASCII
 
-## Cosa vedi tu nello screenshot vs cosa manca
+# Fase 1 "Gestione Manuale" — Allineamento finale al documento
 
-Il layout c'è già (rail orizzontale + split 35/65 + pill alfabetiche). Quello che **manca o è sbagliato** rispetto al design ASCII che mi hai dato:
+## Stato attuale verificato
 
-| Problema | Causa tecnica | Fix |
-|---|---|---|
-| **Header pagina "Email Intelligence + Flusso completo…" occupa 80px inutili** | `EmailIntelligencePage.tsx` ha titolo + sottotitolo sopra i tab | Rimuovere il titolo della pagina (resta solo nei tab) o ridurlo a una riga |
-| **Counter "1199 da smistare · 9 classificati" duplicato** (header + sortbar) | `EmailIntelligenceHeader` mostra `countLabel` E la sortbar lo rimostra a destra | Tenerlo solo nella sortbar |
-| **SenderActionBar invisibile** ("non vedo le icone delle azioni") | Si attiva solo con `selectedSenders.size > 0`, ma l'auto-focus della prima card aggiorna solo `previewSender` | **Mostrarla sempre** quando c'è un `previewSender` (il sender corrente) — etichetta "Azioni per {nome}:" |
-| **Chip AI invisibili sulle card visibili** (Airlogisticsgroup, Agorafreight, TMWE…) | Nel DB quei sender NON hanno `ai_suggested_group` popolato | È **dato reale**, non bug. Però devo: (a) rendere il chip più visibile quando c'è, (b) mostrare un placeholder discreto "Nessun suggerimento AI" così sai che il sistema non li ha ancora analizzati |
-| **Manca badge "Selezionato" sopra la card** (come nel mockup precedente) | Mai implementato | Aggiungere small ribbon "● selezionato" sopra la card con `isFocused` |
-| **Card sender un po' "spoglia"** | Solo riga avatar+nome+conteggio + chip AI | Aggiungere sotto: ultima email ricevuta (data), e icona canale (📧/💬/💼) — info utili |
-| **Pannello opzioni "Più opzioni" rimasto da qualche parte?** | Già rimosso da `SenderCard` nel refactor precedente | ✅ niente da fare, era già fatto |
+L'impalcatura del documento Claude è **già in piedi al 90%**:
+- ✅ Orchestrator `ManualGroupingTab` (448 righe — sopra il target 200, da snellire)
+- ✅ `EmailIntelligenceHeader` (search + counter + "+ Nuovo gruppo")
+- ✅ `SenderActionBar` (6 azioni, già funzionanti via DAL `bulkUpdateAutoAction` / `bulkSetBlocked`)
+- ✅ `SenderCard` compatta 200px con avatar iniziali, chip AI, ribbon "Selezionato", riga "Ultima"
+- ✅ `SenderEmailPreviewPanel` 35% inline
+- ✅ `GroupDropZone` con `isHighlighted`, "+ Associa", drag/drop, conteggio regole
+- ✅ Sort bar A-Z / N. email / AI smart + Multi-selezione + counter
+- ✅ Pill range alfabetico (Tutti / A-D / E-L / M-P / Q-Z) sopra la griglia
+- ✅ Prompt AI bar in fondo (stub toast)
+- ✅ `useGroupingData` carica `ai_suggested_group` + `is_blocked` + classifiedSenders separati
+- ✅ DAL `bulkSetBlocked` con `is_blocked + auto_action='spam'` come da documento
 
-## Modifiche puntuali (5 file, ~150 LOC modificate)
+**DB verificato**: `is_blocked`, `ai_suggested_group`, `ai_suggestion_confidence`, `ai_suggestion_accepted` esistono già (no migration necessaria). Su 1311 sender, **0 hanno suggerimenti AI popolati** → i chip AI sono vuoti perché la Fase 2 non ha ancora scritto la colonna.
 
-### 1. `src/v2/ui/pages/EmailIntelligencePage.tsx`
-- Compattare l'header: rimuovere il sottotitolo "Flusso completo…" (ridondante con i tab)
-- Ridurre l'icona Brain da `h-9 w-9` a `h-7 w-7`, titolo `text-base` invece di `text-xl`
-- Risparmio: ~50px verticali → più spazio per le card
+## Le 5 discrepanze residue dal documento
 
-### 2. `src/components/email-intelligence/management/EmailIntelligenceHeader.tsx`
-- Rimuovere il `countLabel` dall'header (resta nella sortbar)
-- Aggiungere icona "Refresh" / pulsante "Aggiorna mittenti" (popolamento) accanto a "Nuovo gruppo" — utile quando il counter sembra fermo
+### 1. `GroupDropZone` ha ancora altezza/larghezza fisse "vecchio stile"
+Riga 98: `h-[20vh] w-full min-w-[240px] max-w-[420px]` → blocca il layout 2-colonne responsive del documento. Il documento chiede griglia fluida. Va sostituito con dimensione naturale che riempia la cella della grid `md:grid-cols-2` del parent.
 
-### 3. `src/components/email-intelligence/ManualGroupingTab.tsx`
-- **SenderActionBar SEMPRE visibile** quando esiste `previewSender` (anche senza multi-select). 
-  - Se 0 selezionati ma c'è preview: agisce sul singolo `previewSender.email`
-  - Se ≥1 selezionati: agisce sui selezionati (comportamento attuale)
-- Etichetta dinamica: "Azioni per **{nome azienda}**" (singolo) o "Azioni per **N mittenti selezionati**" (multi)
+### 2. Rail orizzontale: header del rail è verboso e ruba spazio
+Le righe 281-289 di `ManualGroupingTab` mostrano "Mittenti (N) · Trascina su un gruppo · click per anteprima · click chip AI per evidenziare". Il documento mostra solo le card. Va rimosso o ridotto a una sola riga di hint compatta.
 
-### 4. `src/components/email-intelligence/management/SenderCard.tsx`
-- Aggiungere **ribbon "Selezionato"** sopra la card quando `isFocused === true` (chip primary piccolo che sporge)
-- Rendere il **chip AI più prominente** quando esiste: padding maggiore, sfondo pieno (non outline), animazione hover
-- Quando NON c'è `aiSuggestion`: mostrare un mini-placeholder testo `"Nessun suggerimento AI"` in `text-[9px] text-muted-foreground/60` (così l'utente capisce perché)
-- Aggiungere riga 3 con: data ultima email + canale (📧 inbound count)
+### 3. Header pagina V2: l'icona+titolo è ridondante con il tab "Gestione Manuale"
+`EmailIntelligencePage.tsx` righe 77-82 hanno ancora "Email Intelligence" con icona. Il documento lo ammette nello shell, ma serve recuperare verticale: ridurre padding orizzontale o spostare il titolo sulla stessa riga dei tab. Lascio la struttura ma riduco i margini per recuperare ~30px.
 
-### 5. `src/components/email-intelligence/manual-grouping/useGroupingData.ts`
-- Esporre anche `lastSeen` formattato (già caricato da `last_email_at`) per la nuova riga della card
+### 4. `SenderEmailsDialog` ancora aperto al click su `<Mail>` icon nelle card
+La card ha `onViewEmails` che apre un Dialog modale (`emailPreviewSender`). Ridondante: ora il preview panel inline a sinistra mostra le stesse email. Va rimosso il Dialog e l'icona Mail (o l'icona deve solo focalizzare il preview panel, non aprire un modale).
 
-## File NON toccati
-- `GroupDropZone.tsx` — già conforme al design (icona, conteggio, "+ Associa", azioni edit/list/trash)
-- `SenderEmailPreviewPanel.tsx` — già conforme (frecce ‹ ›, lista email, dettaglio)
-- `ExportSendersDialog.tsx`, `SenderActionBar.tsx` (logica) — già conformi
-- `useFilterAndSort.ts`, `useDragAndDrop.ts`, `useGroupAssignment.ts` — invariati
+### 5. Snellire `ManualGroupingTab` (target ≤200 righe)
+448 righe attualmente. Estrarre in 2 piccoli sub-componenti dello stesso file di pagina:
+- `<SortBar />` — toggle sort + multi-select + counter (~35 righe)
+- `<GroupGridPanel />` — header + pill range + griglia gruppi (~60 righe)
+Restano ~180 righe nel file orchestrator.
 
-## Risultato atteso (verticale, dall'alto al basso)
+## Piano di esecuzione
+
+### File da MODIFICARE (4)
+
+| File | Modifica |
+|---|---|
+| `src/components/email-intelligence/management/GroupDropZone.tsx` | Rimuovere `h-[20vh] w-full min-w-[240px] max-w-[420px]` dal wrapper. Sostituire con `h-full` per riempire la cella grid. Adattare `CardContent` per altezza dinamica. |
+| `src/components/email-intelligence/ManualGroupingTab.tsx` | (a) Estrarre `SortBar` e `GroupGridPanel` come componenti locali nel file. (b) Rimuovere header verboso del rail (righe 281-289), tenere solo "Mittenti (N)" sottile. (c) Rimuovere `emailPreviewSender` state + `SenderEmailsDialog` import e JSX (righe 432-439). (d) Rimuovere `onViewEmails` dalla SenderCard. |
+| `src/components/email-intelligence/management/SenderCard.tsx` | Rimuovere prop `onViewEmails` e icona `<Mail>` button (righe 192-201). Il preview panel inline gestisce la visualizzazione email del sender focalizzato. |
+| `src/v2/ui/pages/EmailIntelligencePage.tsx` | Ridurre padding pagina da `p-3 md:p-4 gap-3` a `p-2 md:p-3 gap-2`. Compattare l'header (rimuovere il box icona, ridurre h1 a `text-sm`). |
+
+### File da NON toccare (già conformi al documento)
+- `EmailIntelligenceHeader.tsx`, `SenderActionBar.tsx`, `SenderEmailPreviewPanel.tsx`
+- `useGroupingData.ts`, `useFilterAndSort.ts`, `useDragAndDrop.ts`, `useGroupAssignment.ts`, `useSelectionState.ts`
+- `data/emailAddressRules.ts` (DAL `bulkSetBlocked` + `bulkUpdateAutoAction` già conformi)
+- `ExportSendersDialog.tsx`, `CreateCategoryDialog.tsx`, `BulkEmailActions.tsx`, `RulesConfiguration.tsx`
+- `AISuggestionsTab`, `SmartInboxView`, `RulesAndActionsTab` (Fase 2/3)
+
+### File da NON creare
+- ~~SenderAIPromptBar.tsx separato~~ → resta inline nell'orchestrator come stub (decisione del documento, opzione "a")
+- ~~Nuove migration~~ → DB già conforme
+
+## Risultato atteso visivo
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│ 🧠 Email Intelligence                          ← compatto │  (-50px)
-├────────────────────────────────────────────────────────────┤
-│ [Tab Gestione] [AI] [Auto-class] [Regole]                 │
-├────────────────────────────────────────────────────────────┤
-│ 🔍 Cerca…    [↻ Aggiorna] [+ Nuovo gruppo]                │  ← header
-├────────────────────────────────────────────────────────────┤
-│ Azioni per Airlogisticsgroup: ✏Regole ☑Lette 🗑 ↑ ⊘ 💬   │  ← SEMPRE visibile
-├────────────────────────────────────────────────────────────┤
-│ [A-Z] [N. email] [AI smart] ☐ Multi-sel  1199·9 classif. │
-├────────────────────────────────────────────────────────────┤
-│ ┌─[●Selezionato]──┐ ┌────────┐ ┌────────┐ →scroll        │
-│ │ 🟢 Airlog.   35 │ │ Agora  │ │  TMWE  │                │
-│ │ ✨ AI: Operativo│ │ no AI  │ │ no AI  │                │
-│ │ 📧 21 apr · 35 │ │ 21 apr │ │ 19 apr │                │
-│ └─────────────────┘ └────────┘ └────────┘                │
-├──────────────────────┬─────────────────────────────────────┤
-│ Email da Airlog.     │ Gruppi (14)        [A→Z ▾]         │
-│ ‹ 1/20 ›             │ Tutti A-D E-L M-P Q-Z             │
-│ ▸ Subject…       21  │ ┌─Amministrativo─┐ ┌─Commerciale─┐│
-│ ▸ Subject…       19  │ │📊 (0)         │ │💼 (0)        ││
-│ Da: …                │ │Trascina sender│ │Trascina sender││
-│ A: …                 │ └───────────────┘ └──────────────┘│
-└──────────────────────┴─────────────────────────────────────┘
-[🤖 Chiedi all'AI…                              [Analizza]]
+┌──────────────────────────────────────────────────────────────────┐
+│ Email Intelligence │ [Gestione Manuale|Suggerimenti AI|Auto|Regole] │  ← compattato
+├──────────────────────────────────────────────────────────────────┤
+│ [🔍 Cerca]                                          [+ Nuovo]    │
+│ Azioni per MSC: [Regole][Lette][Elimina][Esporta][Blocca][Prompt]│
+│ [A-Z][N.email][AI smart] ☐Multi  ·  N da smistare · M classificati│
+├──────────────────────────────────────────────────────────────────┤
+│ ┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐┌──┐ ← rail orizzontale, no header verboso│
+│ └──┘└──┘└──┘└──┘└──┘└──┘└──┘                                      │
+├──────────────┬───────────────────────────────────────────────────┤
+│ Email da MSC │ Gruppi (N)              [A→Z ▾]                   │
+│ ▸ Booking…   │ [Tutti][A-D][E-L][M-P][Q-Z]                       │
+│ ▸ Rate…      │ ┌──────────┐ ┌──────────┐                          │
+│              │ │Operativo │ │Commerc.  │  ← griglia 2 col fluida  │
+│              │ │  18      │ │  24      │                          │
+│              │ └──────────┘ └──────────┘                          │
+│              │ ┌──────────┐ ┌──────────┐                          │
+│              │ │Amminis.  │ │Dogana    │                          │
+│              │ │  12      │ │  8       │                          │
+│              │ └──────────┘ └──────────┘                          │
+├──────────────────────────────────────────────────────────────────┤
+│ ✨ Chiedi all'AI di analizzare un mittente…       [Analizza]    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Note importanti
-- **Il chip AI mancante NON è un bug** — è dato vuoto in `email_address_rules.ai_suggested_group` per quei sender. Il tab "Suggerimenti AI" (fase 2) è quello che genera i suggerimenti tramite AI; finché non lo lanci, i chip restano vuoti. Aggiungerò un pulsante "✨ Genera suggerimenti AI" nell'header che reindirizza al tab giusto.
-- **No nuove dipendenze**, no nuove tabelle DB, no edge function. Solo refactor UI.
-- Build TS già clean (l'errore segnalato era cache stale).
+
+- **I chip AI restano vuoti finché la Fase 2 non popola `ai_suggested_group`**. Verificato sul DB: 0/1311 sender hanno suggerimento. La label "Nessun suggerimento AI" è il comportamento corretto attuale.
+- **Niente nuove tabelle, niente migration, niente edge function**.
+- **Nessuna modifica a `EmailIntelligencePage` oltre a compattazione visuale** — i 4 tab restano.
+- Verifica finale con `tsc --noEmit` prima di chiudere.

@@ -95,7 +95,7 @@ export function GroupDropZone({
 
   return (
     <div
-      className="h-[20vh] w-full min-w-[240px] max-w-[420px]"
+      className="h-full w-full min-h-[160px]"
       data-drop-zone="true"
       data-group-id={group.id}
       data-group-name={group.nome_gruppo}
