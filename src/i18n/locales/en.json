@@ -1,6 +1,11 @@
 {
   "nav": {
     "home": "Home",
+    "explore": "Explore",
+    "pipeline": "Pipeline",
+    "communicate": "Communicate",
+    "intelligence": "Intelligence",
+    "config": "Config",
     "dashboard": "Dashboard",
     "globe": "Globe",
     "search": "Search",
