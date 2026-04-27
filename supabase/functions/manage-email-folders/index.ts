@@ -52,7 +52,7 @@ serve(async (req) => {
     const { action, uids, target_folder } = body;
 
     // Validate action
-    const VALID_ACTIONS = ["move", "archive", "spam", "list_folders", "create_folder"];
+    const VALID_ACTIONS = ["move", "archive", "spam", "delete", "list_folders", "create_folder"];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "Invalid action. Must be one of: " + VALID_ACTIONS.join(", ") }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
@@ -83,12 +83,17 @@ serve(async (req) => {
       await conn.write(encoder.encode(fullCmd));
 
       let response = "";
-      const buf = new Uint8Array(8192);
+      // 64KB chunk per evitare troncamenti su LIST grandi
+      const buf = new Uint8Array(65536);
       while (true) {
         const n = await conn.read(buf);
         if (n === null) break;
         response += decoder.decode(buf.subarray(0, n));
-        if (response.includes(`${tag} OK`) || response.includes(`${tag} NO`) || response.includes(`${tag} BAD`)) break;
+        if (
+          response.includes(`\n${tag} OK`) || response.startsWith(`${tag} OK`) ||
+          response.includes(`\n${tag} NO`) || response.startsWith(`${tag} NO`) ||
+          response.includes(`\n${tag} BAD`) || response.startsWith(`${tag} BAD`)
+        ) break;
       }
       return response;
     };
@@ -130,6 +135,7 @@ serve(async (req) => {
 
       case "archive":
       case "spam":
+      case "delete":
       case "move": {
         if (!uids || uids.length === 0) { result = { error: "uids required" }; break; }
 
@@ -156,6 +162,18 @@ serve(async (req) => {
           else {
             await sendCommand('CREATE "Junk"');
             folder = "Junk";
+          }
+        } else if (action === "delete") {
+          // Risolve la cartella Trash effettiva (Gmail/IMAP standard/cPanel)
+          const listResp = await sendCommand('LIST "" "*"');
+          if (listResp.includes("Trash")) folder = "Trash";
+          else if (listResp.includes("INBOX.Trash")) folder = "INBOX.Trash";
+          else if (listResp.includes("[Gmail]/Trash")) folder = "[Gmail]/Trash";
+          else if (listResp.includes("Deleted Items")) folder = "Deleted Items";
+          else if (listResp.includes("Deleted Messages")) folder = "Deleted Messages";
+          else {
+            await sendCommand('CREATE "Trash"');
+            folder = "Trash";
           }
         }
 
@@ -187,10 +205,20 @@ serve(async (req) => {
           if (action === "archive") { metaUpdate.archived = true; metaUpdate.archived_at = new Date().toISOString(); }
           if (action === "spam") { metaUpdate.spam = true; }
           if (action === "move") { metaUpdate.moved_to = folder; }
+          if (action === "delete") { metaUpdate.deleted = true; }
+
+          const updatePayload: Record<string, unknown> = {
+            category:
+              action === "spam" ? "spam" :
+              action === "archive" ? "archived" :
+              action === "delete" ? "deleted" : "moved",
+            folder,
+          };
+          if (action === "delete") updatePayload.hidden_by_rule = true;
 
           await supabaseService
             .from("channel_messages")
-            .update({ category: action === "spam" ? "spam" : action === "archive" ? "archived" : "moved" })
+            .update(updatePayload)
             .eq("imap_uid", parseInt(uid))
             .eq("user_id", user.id);
         }
