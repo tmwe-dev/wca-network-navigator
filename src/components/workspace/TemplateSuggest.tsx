@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { forwardRef } from "react";
 import { Bookmark } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,29 +11,33 @@ interface TemplateSuggestProps {
   onSave?: () => void;
 }
 
-const TemplateSuggest = ({ visible, label = "Salva come template", onSave }: TemplateSuggestProps) => {
-  if (!visible) return null;
+const TemplateSuggest = forwardRef<HTMLButtonElement, TemplateSuggestProps>(
+  ({ visible, label = "Salva come template", onSave }, ref) => {
+    if (!visible) return null;
 
-  const handleSave = () => {
+    const handleSave = () => {
     onSave?.();
     toast("Template salvato", {
       description: "Disponibile in Template Library · Audit log aggiornato",
       duration: 3000,
     });
-  };
+    };
 
-  return (
-    <motion.button
+    return (
+      <motion.button
+        ref={ref}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6, ease }}
       onClick={handleSave}
       className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground/88 hover:text-primary/92 transition-all duration-700 group"
-    >
-      <Bookmark className="w-3 h-3 group-hover:text-primary/65 transition-colors duration-500" />
-      <span className="font-light tracking-wide">{label}</span>
-    </motion.button>
-  );
-};
+      >
+        <Bookmark className="w-3 h-3 group-hover:text-primary/65 transition-colors duration-500" />
+        <span className="font-light tracking-wide">{label}</span>
+      </motion.button>
+    );
+  },
+);
+TemplateSuggest.displayName = "TemplateSuggest";
 
 export default TemplateSuggest;

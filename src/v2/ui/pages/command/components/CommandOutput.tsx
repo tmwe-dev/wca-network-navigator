@@ -11,6 +11,7 @@ import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
+import LiveTableCanvas from "../canvas/LiveTableCanvas";
 
 interface CommandOutputProps {
   canvas: CanvasType;
@@ -52,27 +53,16 @@ export function CommandOutput({
             <ResultCanvas onClose={onClose} scenarioKey={activeScenarioKey || undefined} />
           )}
           {canvas === "live-table" && liveResult && (
-            <TableCanvas
-              data={
-                liveResult.kind === "table"
-                  ? liveResult.rows.map(
-                      (r: Record<string, string | number | null>) => ({
-                        name: String(r["companyName"] ?? r["name"] ?? ""),
-                        sector: String(
-                          r["countryName"] ?? r["country"] ?? ""
-                        ),
-                        revenue: String(r["email"] ?? "—"),
-                        days: String(r["city"] ?? "—"),
-                        churn: Number(r["rating"] ?? 0),
-                      })
-                    )
-                  : []
-              }
-              onClose={onClose}
-              title={`LIVE · ${liveResult.meta?.count ?? 0} partner · ${
-                liveResult.meta?.sourceLabel ?? "Supabase"
-              }`}
-            />
+            liveResult.kind === "table" ? (
+              <LiveTableCanvas
+                title={liveResult.title}
+                columns={[...liveResult.columns]}
+                rows={[...liveResult.rows]}
+                sourceLabel={liveResult.meta?.sourceLabel}
+                count={liveResult.meta?.count}
+                onClose={onClose}
+              />
+            ) : null
           )}
           {canvas === "live-card-grid" &&
             liveResult &&

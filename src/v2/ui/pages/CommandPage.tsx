@@ -16,6 +16,7 @@ import { useCommandPageState } from "./command/hooks/useCommandPageState";
 import { useToolExecution } from "./command/hooks/useToolExecution";
 import { useScenarioFlow } from "./command/hooks/useScenarioFlow";
 import { useApprovalFlow } from "./command/hooks/useApprovalFlow";
+import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
 import { CommandHistory } from "./command/components/CommandHistory";
 import { CommandInput } from "./command/components/CommandInput";
 import { CommandOutput } from "./command/components/CommandOutput";
@@ -46,6 +47,9 @@ const CommandPage = () => {
     lang: "it-IT",
   });
 
+  // Voice output (ElevenLabs TTS) — speaks every assistant reply unless muted.
+  const voiceOut = useVoiceOutput();
+
   const conv = useConversation();
   const governance = useGovernance(pageState.activeScenarioKey ?? undefined);
   const isEmpty = pageState.messages.length === 0 && conv.messages.length === 0;
@@ -60,6 +64,20 @@ const CommandPage = () => {
   useEffect(() => {
     pageState.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [pageState.messages]);
+
+  // Speak the latest assistant message via ElevenLabs (skips thinking placeholders).
+  useEffect(() => {
+    const last = pageState.messages[pageState.messages.length - 1];
+    if (!last || last.role !== "assistant" || last.thinking) return;
+    if (!last.content || !last.content.trim()) return;
+    // Strip markdown for cleaner speech.
+    const clean = last.content
+      .replace(/[*_`#>]/g, "")
+      .replace(/\n+/g, ". ")
+      .trim();
+    voiceOut.speak(clean);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageState.messages.length]);
 
   const runLiveTool = useToolExecution(pageState, governance);
   const runFlow = useScenarioFlow(pageState);
@@ -194,9 +212,9 @@ const CommandPage = () => {
           )}
 
           <VoicePresence
-            active={pageState.voiceSpeaking || voice.listening}
+            active={voiceOut.speaking || voice.listening}
             listening={voice.listening && !voice.speaking}
-            speaking={voice.speaking || pageState.voiceSpeaking}
+            speaking={voice.speaking || voiceOut.speaking}
           />
 
           <CommandInput
@@ -204,11 +222,11 @@ const CommandPage = () => {
             onInputChange={pageState.setInput}
             onSend={() => sendMessage()}
             onVoiceToggle={() => voice.toggle()}
-            onVolumeMute={() => pageState.setVoiceSpeaking(!pageState.voiceSpeaking)}
+            onVolumeMute={() => voiceOut.toggleMute()}
             inputFocused={pageState.inputFocused}
             onFocus={() => pageState.setInputFocused(true)}
             onBlur={() => pageState.setInputFocused(false)}
-            voiceSpeaking={pageState.voiceSpeaking}
+            voiceSpeaking={voiceOut.speaking}
             voiceListening={voice.listening}
             voiceSupported={voice.supported}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
