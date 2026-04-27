@@ -18,7 +18,7 @@ export const dashboardSnapshotTool: Tool = {
     return {
       kind: "table",
       title: "Dashboard · Snapshot",
-      meta: { count: 1, sourceLabel: "Supabase · multi-table" },
+      meta: { count: 6, sourceLabel: "Dati live del tuo sistema" },
       columns: [
         { key: "metric", label: "Metrica" },
         { key: "value", label: "Valore" },
