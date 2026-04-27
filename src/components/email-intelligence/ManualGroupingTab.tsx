@@ -172,10 +172,10 @@ function GroupGridPanel(props: {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         {/* Una card per riga: layout più leggibile, niente confusione tra
          *  due colonne quando si trascinano mittenti. */}
-        <div className="p-3 grid gap-3 content-start grid-cols-1">
+        <div className="p-3 grid gap-3 content-start grid-cols-1 auto-rows-min">
           {visibleGroups.map((group) => (
             <GroupDropZone
               key={group.id}
@@ -590,7 +590,7 @@ export default function ManualGroupingTab() {
 
         {/* COL 3 — Griglia gruppi (resizable, supporta 2 colonne quando largo) */}
         <ResizablePanel defaultSize={showPreview ? 38 : 60} minSize={25}>
-          <div className="h-full flex flex-col overflow-hidden p-2">
+          <div className="h-full min-h-0 flex flex-col overflow-hidden p-2">
             <GroupGridPanel
               groups={groups}
               visibleGroups={visibleGroups}
