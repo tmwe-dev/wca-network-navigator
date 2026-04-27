@@ -16,6 +16,8 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ResizablePanelGroup,
@@ -64,83 +66,131 @@ function inLetterRange(name: string, range: LetterRange): boolean {
 }
 
 /**
- * UnifiedToolbar — tutta l'interazione top in una riga unica:
- *   [↻] [Cerca…] [A-Z | N.email | AI smart] [+ Nuovo gruppo]   · counter
+ * UnifiedToolbar — 2 righe, divisa SX (mittenti) / DX (gruppi):
+ *   Riga 1: [↻] [Cerca mittente…] [min email ▾] [☐ nascondi classificati]   |   [+ Nuovo gruppo]
+ *   Riga 2: [A-Z | N. email | AI smart]                                      |   counter mittenti
  */
 function UnifiedToolbar({
   searchQuery, onSearchChange,
   sortOption, onSortChange,
+  volumeFilter, onVolumeChange, volumeOptions,
+  hideClassified, onHideClassifiedChange,
   onRefresh, isRefreshing,
   onCreateGroup,
-  pendingCount, classifiedCount, selectedCount,
+  visibleCount, totalCount, classifiedCount, selectedCount,
 }: {
   searchQuery: string;
   onSearchChange: (v: string) => void;
   sortOption: SortOption;
   onSortChange: (s: SortOption) => void;
+  volumeFilter: string;
+  onVolumeChange: (v: string) => void;
+  volumeOptions: { value: string; label: string }[];
+  hideClassified: boolean;
+  onHideClassifiedChange: (v: boolean) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onCreateGroup: () => void;
-  pendingCount: number;
+  visibleCount: number;
+  totalCount: number;
   classifiedCount: number;
   selectedCount: number;
 }) {
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-        {onRefresh && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                aria-label="Aggiorna mittenti"
-                className="h-8 w-8 flex-shrink-0"
-              >
-                {isRefreshing
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <RefreshCw className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Aggiorna mittenti</TooltipContent>
-          </Tooltip>
-        )}
+      <div className="flex flex-col gap-2 flex-shrink-0">
+        {/* Riga 1: search + filtri | nuovo gruppo */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {onRefresh && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  aria-label="Aggiorna mittenti"
+                  className="h-8 w-8 flex-shrink-0"
+                >
+                  {isRefreshing
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <RefreshCw className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Aggiorna mittenti</TooltipContent>
+            </Tooltip>
+          )}
 
-        <div className="relative flex-1 min-w-[180px] max-w-[360px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Cerca mittente…"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 h-8 text-xs"
-          />
+          <div className="relative flex-1 min-w-[180px] max-w-[320px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Cerca mittente…"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
+          </div>
+
+          <Select value={volumeFilter} onValueChange={onVolumeChange}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue placeholder="Min email" />
+            </SelectTrigger>
+            <SelectContent>
+              {volumeOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-1.5">
+            <Switch
+              id="hide-classified"
+              checked={hideClassified}
+              onCheckedChange={onHideClassifiedChange}
+              className="scale-75"
+            />
+            <Label htmlFor="hide-classified" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Nascondi classificati
+            </Label>
+          </div>
+
+          <div className="flex-1" />
+
+          <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8 flex-shrink-0">
+            <Plus className="h-4 w-4 mr-1" />
+            Nuovo gruppo
+          </Button>
         </div>
 
-        <ToggleGroup
-          type="single"
-          value={sortOption}
-          onValueChange={(v) => { if (v) onSortChange(v as SortOption); }}
-          variant="outline"
-          size="sm"
-        >
-          <ToggleGroupItem value="name-asc" className="text-xs h-8 px-2.5">A-Z</ToggleGroupItem>
-          <ToggleGroupItem value="count-desc" className="text-xs h-8 px-2.5">N. email</ToggleGroupItem>
-          <ToggleGroupItem value="ai_group" className="text-xs h-8 px-2.5 gap-1">
-            <Sparkles className="h-3 w-3" /> AI smart
-          </ToggleGroupItem>
-        </ToggleGroup>
+        {/* Riga 2: ordina + counter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <ToggleGroup
+            type="single"
+            value={sortOption}
+            onValueChange={(v) => { if (v) onSortChange(v as SortOption); }}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="name-asc" className="text-xs h-7 px-2.5">A-Z</ToggleGroupItem>
+            <ToggleGroupItem value="count-desc" className="text-xs h-7 px-2.5">N. email</ToggleGroupItem>
+            <ToggleGroupItem value="ai_group" className="text-xs h-7 px-2.5 gap-1">
+              <Sparkles className="h-3 w-3" /> AI smart
+            </ToggleGroupItem>
+          </ToggleGroup>
 
-        <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8 flex-shrink-0">
-          <Plus className="h-4 w-4 mr-1" />
-          Nuovo gruppo
-        </Button>
-
-        <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
-          {pendingCount} da smistare · {classifiedCount} classificati
-          {selectedCount > 0 && <span className="ml-2 text-primary font-semibold">· {selectedCount} selezionati</span>}
-        </span>
+          <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+            <span className="font-semibold text-foreground">{visibleCount}</span>
+            <span> / {totalCount} mittenti</span>
+            <span className="mx-1.5 opacity-50">·</span>
+            {classifiedCount} classificati
+            {selectedCount > 0 && (
+              <>
+                <span className="mx-1.5 opacity-50">·</span>
+                <span className="text-primary font-semibold">{selectedCount} selezionati</span>
+              </>
+            )}
+          </span>
+        </div>
       </div>
     </TooltipProvider>
   );
@@ -250,6 +300,8 @@ export default function ManualGroupingTab() {
     sortOption, setSortOption,
     groupSortOption, setGroupSortOption,
     sortedSenders, sortedGroups,
+    volumeFilter, setVolumeFilter, VOLUME_FILTERS,
+    hideClassified, setHideClassified,
   } = useFilterAndSort(allSenders, groups);
 
   const { activeDrag, setActiveDrag, hoveredGroupId, handleDragEnd } = useDragAndDrop();
@@ -438,10 +490,16 @@ export default function ManualGroupingTab() {
         onSearchChange={setSearchQuery}
         sortOption={sortOption}
         onSortChange={setSortOption}
+        volumeFilter={volumeFilter}
+        onVolumeChange={setVolumeFilter}
+        volumeOptions={VOLUME_FILTERS}
+        hideClassified={hideClassified}
+        onHideClassifiedChange={setHideClassified}
         onRefresh={populateAddressRules}
         isRefreshing={isPopulating}
         onCreateGroup={() => setShowCreateDialog(true)}
-        pendingCount={senders.length}
+        visibleCount={sortedSenders.length}
+        totalCount={allSenders.length}
         classifiedCount={classifiedSenders.length}
         selectedCount={selectedSenders.size}
       />
