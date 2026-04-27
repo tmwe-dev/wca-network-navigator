@@ -27,7 +27,7 @@ import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
-import { RulesConfigurationDialog } from "./management/RulesConfigurationDialog";
+import { SenderActionsDialog } from "./management/SenderActionsDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
@@ -210,10 +210,9 @@ export default function ManualGroupingTab() {
   const [highlightedGroupName, setHighlightedGroupName] = useState<string | null>(null);
   const [exportSenderEmails, setExportSenderEmails] = useState<string[]>([]);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  /** Quando valorizzato, apre RulesConfigurationDialog per questi mittenti.
-   *  Setato (a) dall'icona Regole sulla card (b) automaticamente dopo un drop su gruppo. */
-  const [rulesDialogSenders, setRulesDialogSenders] = useState<string[] | null>(null);
-  const [rulesDialogContext, setRulesDialogContext] = useState<string>("");
+  /** Quando valorizzato, apre SenderActionsDialog per questo mittente.
+   *  Setato (a) dall'icona Azioni sulla card (b) automaticamente dopo un drop su gruppo. */
+  const [actionsDialogSender, setActionsDialogSender] = useState<SenderAnalysis | null>(null);
   const [letterRange, setLetterRange] = useState<LetterRange>("all");
   const [showPreview, setShowPreview] = useState(true);
 
@@ -239,9 +238,8 @@ export default function ManualGroupingTab() {
     }, 2500);
   }, []);
 
-  const openRulesDialog = useCallback((emails: string[], contextLabel: string) => {
-    setRulesDialogSenders(emails);
-    setRulesDialogContext(contextLabel);
+  const openActionsDialog = useCallback((sender: SenderAnalysis) => {
+    setActionsDialogSender(sender);
   }, []);
 
   const handleBulkAssignFromGroup = useCallback(
@@ -250,16 +248,15 @@ export default function ManualGroupingTab() {
       if (selObjs.length === 0) return;
       try {
         await bulkAssignGroup(selObjs, group.nome_gruppo, group.id);
-        const emails = selObjs.map((s) => s.email);
         setSelectedSenders(new Set());
         await loadData();
-        // Auto-apertura dialog regole per i mittenti appena associati.
-        openRulesDialog(emails, `${emails.length} mittenti → ${group.nome_gruppo}`);
+        // Auto-apertura dialog azioni per il primo mittente associato.
+        openActionsDialog(selObjs[0]);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore associazione");
       }
     },
-    [allSenders, getSelectedSenderObjects, bulkAssignGroup, setSelectedSenders, loadData, openRulesDialog],
+    [allSenders, getSelectedSenderObjects, bulkAssignGroup, setSelectedSenders, loadData, openActionsDialog],
   );
 
   const handleCreateCategory = async (data: {
@@ -290,8 +287,8 @@ export default function ManualGroupingTab() {
     if (!group) return;
     try {
       await assignToGroup(activeDrag, group.nome_gruppo, targetGroupId);
-      // Auto-apertura del dialog regole per il mittente appena trascinato.
-      openRulesDialog([activeDrag.email], `${activeDrag.companyName} → ${group.nome_gruppo}`);
+      // Auto-apertura della popup azioni per il mittente appena trascinato.
+      openActionsDialog(activeDrag);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore associazione");
     }
@@ -305,8 +302,8 @@ export default function ManualGroupingTab() {
   };
 
   const onCardOpenRules = useCallback((s: SenderAnalysis) => {
-    openRulesDialog([s.email], s.companyName);
-  }, [openRulesDialog]);
+    openActionsDialog(s);
+  }, [openActionsDialog]);
 
   const onCardMarkRead = useCallback(async (s: SenderAnalysis) => {
     try {
@@ -360,12 +357,12 @@ export default function ManualGroupingTab() {
         await assignToGroup(s, target.nome_gruppo, target.id);
         toast.success(`${s.companyName} associato a ${target.nome_gruppo}`);
         await loadData();
-        openRulesDialog([s.email], `${s.companyName} → ${target.nome_gruppo}`);
+        openActionsDialog(s);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore associazione");
       }
     },
-    [groups, assignToGroup, loadData, openRulesDialog],
+    [groups, assignToGroup, loadData, openActionsDialog],
   );
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -515,17 +512,13 @@ export default function ManualGroupingTab() {
         senderEmails={exportSenderEmails}
       />
 
-      <RulesConfigurationDialog
-        open={rulesDialogSenders !== null}
+      <SenderActionsDialog
+        sender={actionsDialogSender}
+        open={actionsDialogSender !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setRulesDialogSenders(null);
-            setRulesDialogContext("");
-          }
+          if (!open) setActionsDialogSender(null);
         }}
-        senderEmails={rulesDialogSenders ?? []}
-        contextLabel={rulesDialogContext}
-        onSaved={() => loadData()}
+        onActionDone={() => loadData()}
       />
     </div>
   );
