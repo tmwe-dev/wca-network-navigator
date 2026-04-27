@@ -182,18 +182,21 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverTimerRight = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleEdgeEnter = (side: "left" | "right") => {
-    const timer = setTimeout(() => {
-      if (side === "left") setFiltersOpen(true); else setMissionOpen(true);
-    }, 150);
-    if (side === "left") hoverTimerLeft.current = timer; else hoverTimerRight.current = timer;
-  };
-  const handleEdgeLeave = (side: "left" | "right") => {
-    const t = side === "left" ? hoverTimerLeft.current : hoverTimerRight.current;
-    if (t) clearTimeout(t);
-  };
+  useEffect(() => {
+    const blockHorizontalWheelNavigation = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 1) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
+    document.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
+    return () => {
+      window.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
+      document.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
+    };
+  }, []);
 
   if (isLoading || !sessionReady) {
     return (
@@ -235,7 +238,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Toaster />
                       <LiveRegion message="" />
 
-                    <div className="flex h-screen bg-background">
+                    <div className="flex h-screen overflow-hidden overscroll-none bg-background">
                       {/* Skip navigation link for accessibility */}
                       <a
                         href="#main-content"
@@ -310,11 +313,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                      {/* Edge hover triggers */}
+                      {/* Apertura drawer solo con click esplicito: nessun hover/trackpad trigger. */}
                       <button
                         onClick={() => setFiltersOpen(true)}
-                        onMouseEnter={() => handleEdgeEnter("left")}
-                        onMouseLeave={() => handleEdgeLeave("left")}
                         className={cn(
                           `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
                           filtersOpen && "opacity-0 pointer-events-none"
@@ -326,8 +327,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </button>
                       <button
                         onClick={() => setMissionOpen(true)}
-                        onMouseEnter={() => handleEdgeEnter("right")}
-                        onMouseLeave={() => handleEdgeLeave("right")}
                         className={cn(
                           "hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-l-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
                           missionOpen && "opacity-0 pointer-events-none"
@@ -354,7 +353,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             />
                           )}
                         </BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto md:mt-0 mt-12 pb-16 md:pb-0">
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-none md:mt-0 mt-12 pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
                             <Outlet />

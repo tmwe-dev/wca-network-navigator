@@ -2,7 +2,7 @@
  * EmailIntelligencePage V2 — 4-tab flow: Manual → AI Suggestions → Auto-Classify → Rules
  */
 import * as React from "react";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrainCircuit, HandMetal, Sparkles, Settings2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +20,23 @@ function TabFallback() {
 }
 
 export function EmailIntelligencePage(): React.ReactElement {
+  useEffect(() => {
+    let restoringFromBrowserGesture = false;
+    const blockBrowserHistoryGesture = () => {
+      if (restoringFromBrowserGesture) {
+        restoringFromBrowserGesture = false;
+        return;
+      }
+      if (!window.location.pathname.startsWith("/v2/email-intelligence")) {
+        restoringFromBrowserGesture = true;
+        window.history.forward();
+      }
+    };
+
+    window.addEventListener("popstate", blockBrowserHistoryGesture);
+    return () => window.removeEventListener("popstate", blockBrowserHistoryGesture);
+  }, []);
+
   // Badge counts
   const { data: uncategorizedCount = 0 } = useQuery({
     queryKey: queryKeys.emailIntel.uncategorizedCount,
@@ -73,7 +90,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-2 md:p-3 gap-2">
+    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden p-2 md:p-3 gap-2">
       <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-shrink-0">
         <BrainCircuit className="h-4 w-4 text-primary" />
         Email Intelligence
