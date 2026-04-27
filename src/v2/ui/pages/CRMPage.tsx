@@ -2,6 +2,7 @@
  * CRMPage V2 — Standalone V1 content migration (NO wrapper)
  */
 import { lazy, Suspense, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
@@ -26,7 +27,9 @@ function TabFallback() {
 }
 
 export function CRMPage(): React.ReactElement {
-  const [tab, setTab] = useUrlState<string>("tab", "contatti");
+  const { pathname } = useLocation();
+  const defaultTab = pathname.includes("/pipeline/kanban") ? "pipeline" : "contatti";
+  const [tab, setTab] = useUrlState<string>("tab", defaultTab);
   const [showAIMatch, setShowAIMatch] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const { setCrmActiveTab } = useGlobalFilters();

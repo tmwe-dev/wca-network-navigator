@@ -175,16 +175,16 @@ export function V2Routes(): React.ReactElement {
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
 
           {/* CRM + figli */}
-          <Route path="crm" element={guardedPage(CRMPage, "CRM")} />
-          <Route path="crm/contacts" element={guardedPage(ContactsPage, "Contacts")} />
+          <Route path="crm" element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
           <Route path="crm/prospects" element={guardedPage(ProspectPage, "Prospects")} />
           <Route path="crm/acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="contacts" element={<Navigate to="/v2/crm/contacts" replace />} />
+          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
 
           {/* Deals & Pipeline */}
-          <Route path="deals" element={guardedPage(DealsPage, "Deals")} />
+          <Route path="deals" element={<Navigate to="/v2/pipeline/deals" replace />} />
 
           {/* Calendar */}
           <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
@@ -194,7 +194,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="outreach/composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
           <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
           <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposerAlias")} />
-          <Route path="agenda" element={<Navigate to="/v2/outreach/agenda" replace />} />
+          <Route path="agenda" element={<Navigate to="/v2/pipeline/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
 
           <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />

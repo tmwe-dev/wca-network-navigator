@@ -3,7 +3,6 @@
  * Full page with KPI bar, Kanban view, and deal management
  */
 import React, { useState } from "react";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,13 +61,7 @@ export function DealsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Pipeline Affari"
-        description="Gestisci gli affari e le opportunità commerciali con i tuoi partner"
-        icon="pipeline"
-      />
-
+    <div className="space-y-6 p-4 overflow-auto h-full">
       {/* KPI Stats Bar */}
       <div className="bg-card rounded-lg border border-border p-6">
         <DealStatsBar />
