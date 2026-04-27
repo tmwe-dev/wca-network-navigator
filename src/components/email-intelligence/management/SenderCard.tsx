@@ -1,17 +1,20 @@
 /**
- * SenderCard — Card sender ampliata e card-centrica.
+ * SenderCard — Card sender VERTICALE leggibile (v3, 2026-04-27).
  *
- * Tutte le azioni (Regole, Segna lette, Elimina, Esporta, Blocca, AI)
- * sono dentro la card come icon-button con tooltip. Niente più barra
- * azioni esterna. Multi-selezione tramite checkbox sempre visibile.
+ * Pensata per essere mostrata in colonna verticale stretta (~260-320px)
+ * con tutto lo spazio verticale necessario. Niente più troncamenti
+ * brutali sul nome azienda e niente più grigio chiaro su scuro per
+ * informazioni importanti.
  *
- * Layout (240px × ~190px):
- *  Riga 1: ☑ + logo + nome + count
- *  Riga 2: bandiera + email
- *  Riga 3: chip AI suggerimento (con bottone "associa subito")
- *  Riga 4: badge classificato (se applicabile)
- *  Riga 5: ultima email
- *  Riga 6: 6 icone azioni rapide
+ * Layout verticale (full width della colonna):
+ *  - Header: ☑ + logo grande + N° email a destra
+ *  - Nome azienda su 2 righe, font sm/base, text-foreground
+ *  - Email + bandiera, text-foreground/80
+ *  - "Ultima: …" con label esplicita
+ *  - Chip AI suggerimento (se presente) con CTA "Associa"
+ *  - Badge classificato (se presente)
+ *  - Riga azioni primarie con LABEL accanto a ogni icona
+ *  - Menu più piccolo per azioni distruttive
  */
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
