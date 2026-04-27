@@ -85,6 +85,14 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
       if (doc.body) resizeObserver.observe(doc.body);
       recalcHeight();
 
+      const blockHorizontalWheelNavigation = (event: WheelEvent) => {
+        if (Math.abs(event.deltaX) > 1) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      };
+      doc.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
+
       // Attach load handlers to all images for re-resize
       const imgs = doc.querySelectorAll("img");
       imgs.forEach(img => {
@@ -103,6 +111,12 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
 
     return () => {
       resizeObserver.disconnect();
+      doc.removeEventListener("wheel", (event: WheelEvent) => {
+        if (Math.abs(event.deltaX) > 1) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, { capture: true });
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
