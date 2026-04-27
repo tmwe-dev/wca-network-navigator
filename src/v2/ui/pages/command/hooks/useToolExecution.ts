@@ -24,6 +24,9 @@ function getToolLabels(toolId: string): ToolLabel {
   const isFlow = toolId === "campaign-status";
   const isTimeline = toolId === "agent-report";
   const isCardGrid = toolId === "followup-batch";
+  const isDashboard = toolId === "dashboard-snapshot";
+  const isKb = toolId === "search-kb";
+  const isContacts = toolId === "deep-search-contact";
 
   return {
     isComposer,
@@ -38,7 +41,13 @@ function getToolLabels(toolId: string): ToolLabel {
           ? "Resoconto attività"
           : isCardGrid
             ? "Promemoria contatti"
-            : "Ricerca partner",
+            : isDashboard
+              ? "Panoramica sistema"
+              : isKb
+                ? "Guida e documentazione"
+                : isContacts
+                  ? "Ricerca contatti"
+                  : "Ricerca partner",
     queryLabel: isComposer
       ? "Preparo l'email"
       : isFlow
@@ -47,7 +56,13 @@ function getToolLabels(toolId: string): ToolLabel {
           ? "Riepilogo le ultime attività"
           : isCardGrid
             ? "Cerco i contatti da risentire"
-            : "Cerco nel database",
+            : isDashboard
+              ? "Raccolgo i dati principali"
+              : isKb
+                ? "Cerco nelle guide"
+                : isContacts
+                  ? "Cerco tra i contatti"
+                  : "Cerco tra i partner WCA",
   };
 }
 
