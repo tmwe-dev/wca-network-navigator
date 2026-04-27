@@ -15,6 +15,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { getCaCertsForHost } from "./caCerts.ts";
 
 /**
  * manage-email-folders — IMAP folder operations (move, archive, spam, list)
@@ -64,8 +65,14 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "IMAP not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    // Connect to IMAP
-    const conn = await Deno.connectTls({ hostname: IMAP_HOST, port: 993 });
+    // Connect to IMAP (caCerts evita "invalid peer certificate: UnknownIssuer"
+    // sui server con catena Sectigo/USERTrust che il truststore di edge-runtime
+    // non riconosce by default)
+    const conn = await Deno.connectTls({
+      hostname: IMAP_HOST,
+      port: 993,
+      caCerts: getCaCertsForHost(IMAP_HOST),
+    });
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let tagCounter = 0;
