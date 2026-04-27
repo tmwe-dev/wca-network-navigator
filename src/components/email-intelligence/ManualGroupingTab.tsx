@@ -15,12 +15,18 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Loader2, Sparkles, ArrowUpDown, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import { Loader2, Sparkles, ArrowUpDown, Search, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
-import { EmailIntelligenceHeader } from "./management/EmailIntelligenceHeader";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { RulesConfigurationDialog } from "./management/RulesConfigurationDialog";
@@ -57,35 +63,86 @@ function inLetterRange(name: string, range: LetterRange): boolean {
   return first >= a && first <= b;
 }
 
-function SortBar({
-  sortOption, onSortChange, pendingCount, classifiedCount, selectedCount,
+/**
+ * UnifiedToolbar — tutta l'interazione top in una riga unica:
+ *   [↻] [Cerca…] [A-Z | N.email | AI smart] [+ Nuovo gruppo]   · counter
+ */
+function UnifiedToolbar({
+  searchQuery, onSearchChange,
+  sortOption, onSortChange,
+  onRefresh, isRefreshing,
+  onCreateGroup,
+  pendingCount, classifiedCount, selectedCount,
 }: {
+  searchQuery: string;
+  onSearchChange: (v: string) => void;
   sortOption: SortOption;
   onSortChange: (s: SortOption) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  onCreateGroup: () => void;
   pendingCount: number;
   classifiedCount: number;
   selectedCount: number;
 }) {
   return (
-    <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
-      <ToggleGroup
-        type="single"
-        value={sortOption}
-        onValueChange={(v) => { if (v) onSortChange(v as SortOption); }}
-        variant="outline"
-        size="sm"
-      >
-        <ToggleGroupItem value="name-asc" className="text-xs h-8 px-2.5">A-Z</ToggleGroupItem>
-        <ToggleGroupItem value="count-desc" className="text-xs h-8 px-2.5">N. email</ToggleGroupItem>
-        <ToggleGroupItem value="ai_group" className="text-xs h-8 px-2.5 gap-1">
-          <Sparkles className="h-3 w-3" /> AI smart
-        </ToggleGroupItem>
-      </ToggleGroup>
-      <span className="text-xs text-muted-foreground ml-auto">
-        {pendingCount} da smistare · {classifiedCount} classificati
-        {selectedCount > 0 && <span className="ml-2 text-primary font-semibold">· {selectedCount} selezionati</span>}
-      </span>
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+        {onRefresh && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                aria-label="Aggiorna mittenti"
+                className="h-8 w-8 flex-shrink-0"
+              >
+                {isRefreshing
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <RefreshCw className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Aggiorna mittenti</TooltipContent>
+          </Tooltip>
+        )}
+
+        <div className="relative flex-1 min-w-[180px] max-w-[360px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Cerca mittente…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
+
+        <ToggleGroup
+          type="single"
+          value={sortOption}
+          onValueChange={(v) => { if (v) onSortChange(v as SortOption); }}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="name-asc" className="text-xs h-8 px-2.5">A-Z</ToggleGroupItem>
+          <ToggleGroupItem value="count-desc" className="text-xs h-8 px-2.5">N. email</ToggleGroupItem>
+          <ToggleGroupItem value="ai_group" className="text-xs h-8 px-2.5 gap-1">
+            <Sparkles className="h-3 w-3" /> AI smart
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8 flex-shrink-0">
+          <Plus className="h-4 w-4 mr-1" />
+          Nuovo gruppo
+        </Button>
+
+        <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+          {pendingCount} da smistare · {classifiedCount} classificati
+          {selectedCount > 0 && <span className="ml-2 text-primary font-semibold">· {selectedCount} selezionati</span>}
+        </span>
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -376,45 +433,41 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-2">
-      <EmailIntelligenceHeader
-        onCreateGroup={() => setShowCreateDialog(true)}
-        onRefresh={populateAddressRules}
-        isRefreshing={isPopulating}
-      />
-
-      <SortBar
+      <UnifiedToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         sortOption={sortOption}
         onSortChange={setSortOption}
+        onRefresh={populateAddressRules}
+        isRefreshing={isPopulating}
+        onCreateGroup={() => setShowCreateDialog(true)}
         pendingCount={senders.length}
         classifiedCount={classifiedSenders.length}
         selectedCount={selectedSenders.size}
       />
 
-      {/* Layout asimmetrico: SX full-height preview / DX search+rail+grid */}
-      <div className="flex flex-1 gap-3 min-h-0 overflow-hidden">
-        {/* COLONNA SX */}
-        <div className="w-[35%] min-w-[280px] flex-shrink-0 flex flex-col border rounded-lg overflow-hidden">
-          <SenderEmailPreviewPanel
-            senderEmail={previewSender?.email ?? null}
-            companyName={previewSender?.companyName ?? null}
-          />
-        </div>
-
-        {/* COLONNA DX */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2 overflow-hidden">
-          {/* Search inline sopra il rail */}
-          <div className="relative flex-shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Cerca mittente…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs"
+      {/* Layout asimmetrico ridimensionabile: SX preview / DX rail+grid */}
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 min-h-0 rounded-lg border"
+      >
+        {/* COLONNA SX — preview email full-height */}
+        <ResizablePanel defaultSize={38} minSize={22} maxSize={65}>
+          <div className="h-full flex flex-col overflow-hidden">
+            <SenderEmailPreviewPanel
+              senderEmail={previewSender?.email ?? null}
+              companyName={previewSender?.companyName ?? null}
             />
           </div>
+        </ResizablePanel>
 
-          {/* Rail orizzontale card */}
-          <div className="border rounded-lg flex-shrink-0 overflow-hidden">
+        <ResizableHandle withHandle />
+
+        {/* COLONNA DX — rail card + griglia gruppi */}
+        <ResizablePanel defaultSize={62} minSize={35}>
+          <div className="h-full flex flex-col gap-2 overflow-hidden p-2">
+            {/* Rail orizzontale card */}
+            <div className="border rounded-lg flex-shrink-0 overflow-hidden">
             {sortedSenders.length === 0 ? (
               <p className="text-center py-6 text-sm text-muted-foreground">
                 {searchQuery ? "Nessun risultato" : "Nessun mittente"}
@@ -446,10 +499,10 @@ export default function ManualGroupingTab() {
                 </div>
               </div>
             )}
-          </div>
+            </div>
 
-          {/* Griglia gruppi (occupa il resto verticale) */}
-          <GroupGridPanel
+            {/* Griglia gruppi (occupa il resto verticale) */}
+            <GroupGridPanel
             groups={groups}
             visibleGroups={visibleGroups}
             groupSortOption={groupSortOption}
@@ -463,9 +516,10 @@ export default function ManualGroupingTab() {
             loadData={loadData}
             selectedCount={selectedSenders.size}
             onBulkAssign={handleBulkAssignFromGroup}
-          />
-        </div>
-      </div>
+            />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <CreateCategoryDialog
         open={showCreateDialog}
