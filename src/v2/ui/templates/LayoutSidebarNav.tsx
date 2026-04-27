@@ -10,7 +10,7 @@ import {
   LogOut, Command, Wifi, WifiOff, Sun, Moon,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
-import { navGroupsDef } from "./navConfig";
+import { navItemsDef, navGroupsDef } from "./navConfig";
 
 /** Backward-compatible export for any code referencing navGroups */
 export const navGroups = navGroupsDef.map((g) => ({
@@ -59,39 +59,41 @@ export function LayoutSidebarNav({
         </div>
       </div>
       <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
-        {navGroupsDef.map((group, groupIdx) => (
-          <div key={group.titleKey}>
-            <div className="mb-3">
-              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                {t(group.titleKey)}
-              </p>
-              {group.items.map((navItem) => {
-                const navId = navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") || "dashboard";
-                return (
-                <button
-                  key={navItem.path}
-                  data-testid={`nav-${navId}`}
-                  onMouseEnter={() => prefetchRoute(navItem.path)}
-                  onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive(navItem.path)
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
-                  )}
-                >
-                  {navItem.icon}
-                  {t(navItem.labelKey)}
-                  {navItem.path === "/v2/command" && (
-                    <span className="ml-auto text-[9px] font-bold uppercase bg-primary/15 text-primary px-1.5 py-0.5 rounded">NEW</span>
-                  )}
-                </button>
-                );
-              })}
-            </div>
-            {groupIdx === 0 && <div className="mx-3 mb-3 border-b border-border/50" />}
-          </div>
-        ))}
+        <div className="space-y-1" aria-label="Navigazione principale">
+          {navItemsDef.map((navItem) => {
+            const navId =
+              navItem.path.replace("/v2/", "").replace("/v2", "dashboard").replace(/\//g, "-") ||
+              "dashboard";
+            const translated = t(navItem.labelKey);
+            // Fallback: when the i18n key is not registered yet, show a humanized stem.
+            const label =
+              translated === navItem.labelKey
+                ? navItem.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
+                : translated;
+            return (
+              <button
+                key={navItem.path}
+                data-testid={`nav-${navId}`}
+                onMouseEnter={() => prefetchRoute(navItem.path)}
+                onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors capitalize",
+                  isActive(navItem.path)
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                )}
+              >
+                {navItem.icon}
+                {label}
+                {navItem.badge && (
+                  <span className="ml-auto text-[9px] font-bold uppercase bg-primary/15 text-primary px-1.5 py-0.5 rounded">
+                    {navItem.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </nav>
       <div className="p-2 border-t border-border/50 space-y-1">
         <button

@@ -83,6 +83,13 @@ const NotificationsPage = lazy(() => import("./ui/pages/NotificationsPage"));
 const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((m) => ({ default: m.TokenCockpitPage })));
 const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
+// ── New Section pages (UX Redesign Phase 1) ──────────────────────────
+const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
+const CommunicateSection  = lazy(() => import("./ui/pages/sections/CommunicateSection"));
+const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
+const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
+const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
+
 /** Wraps a lazy page with error boundary and suspense skeleton */
 function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name: string): React.ReactElement {
   return (
@@ -156,6 +163,13 @@ export function V2Routes(): React.ReactElement {
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
+
+          {/* ── UX Redesign Phase 1: 6-destination sections ── */}
+          <Route path="pipeline/*"     element={guardedPage(PipelineSection,     "Pipeline")} />
+          <Route path="communicate/*"  element={guardedPage(CommunicateSection,  "Communicate")} />
+          <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
+          <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
+
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
