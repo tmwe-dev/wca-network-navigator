@@ -4,31 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Blocco totale dei gesti di navigazione del trackpad/touchscreen.
- * - overscroll-behavior: none su entrambi gli assi → no swipe-back/forward,
- *   no pull-to-refresh.
- * - touch-action: pan-y pinch-zoom su html → permette solo lo scroll
- *   verticale e il pinch-to-zoom; blocca pan orizzontale a livello browser.
- * - Applicato anche a tutti i discendenti per evitare che container
- *   con overflow inneschino la chain di overscroll del browser. */
+/* Protezione minimale: impedisce solo lo swipe-back/forward orizzontale
+ * del browser, senza interferire con lo scroll verticale o con i container
+ * scrollabili interni. NON applicare overscroll-behavior né touch-action
+ * globalmente: rompe il trackpad e gli scroll annidati. */
 html, body {
-  overscroll-behavior: none;
   overscroll-behavior-x: none;
-  overscroll-behavior-y: none;
-}
-html {
-  touch-action: pan-y pinch-zoom;
-}
-@supports (-webkit-overflow-scrolling: touch) {
-  html { touch-action: pan-y pinch-zoom; }
 }
 
 @layer base {
-  *, *::before, *::after {
-    overscroll-behavior: none;
-    overscroll-behavior-x: none;
-  }
-
   :root {
     --background: 210 40% 98%;
     --foreground: 215 25% 15%;
