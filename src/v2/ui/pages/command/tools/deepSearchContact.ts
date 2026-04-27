@@ -35,7 +35,7 @@ export const deepSearchContactTool: Tool = {
       title: "Stato Deep Search Contatti (read-only)",
       meta: {
         count: results.length,
-        sourceLabel: "DB · imported_contacts — il Deep Search si esegue da Email Forge / Partner Connect",
+        sourceLabel: "Contatti CRM (il Deep Search si avvia da Email Forge / Partner Connect)",
       },
       columns: [
         { key: "name", label: "Nome" },
