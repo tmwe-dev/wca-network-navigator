@@ -73,15 +73,12 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-4 md:p-6 gap-4">
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-          <BrainCircuit className="h-5 w-5 text-primary" />
+    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-3 md:p-4 gap-3">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+          <BrainCircuit className="h-4 w-4 text-primary" />
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Email Intelligence</h1>
-          <p className="text-xs text-muted-foreground">Flusso completo: categorizza → suggerimenti AI → classificazione → regole</p>
-        </div>
+        <h1 className="text-base font-semibold text-foreground">Email Intelligence</h1>
       </div>
 
       <Tabs defaultValue="manual" className="flex-1 flex flex-col overflow-hidden">
