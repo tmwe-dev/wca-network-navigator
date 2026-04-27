@@ -39,6 +39,7 @@ import { useFilterAndSort } from "./manual-grouping/useFilterAndSort";
 import { useDragAndDrop } from "./manual-grouping/useDragAndDrop";
 import { useGroupAssignment } from "./manual-grouping/useGroupAssignment";
 import { useSelectionState } from "./manual-grouping/useSelectionState";
+import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Sub-componenti locali
@@ -497,6 +498,10 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-2">
+      {/* Barra filtri attivi: visibile fuori dal drawer, chip rimovibili.
+       *  I filtri sono persistiti nel GlobalFiltersContext e sopravvivono ai cambi tab. */}
+      <ActiveFiltersBar />
+
       {/* Layout 3 colonne resizable: [Preview opzionale] | [Sender cards verticali] | [Gruppi] */}
       <ResizablePanelGroup
         direction="horizontal"
