@@ -487,28 +487,26 @@ export default function ManualGroupingTab() {
   return (
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Tooltip>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0"
-                  onClick={() => setShowPreview((v) => !v)}
-                  aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
-                >
-                  {showPreview
-                    ? <PanelLeftClose className="h-4 w-4" />
-                    : <PanelLeftOpen className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </Tooltip>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => setShowPreview((v) => !v)}
+                aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
+              >
+                {showPreview
+                  ? <PanelLeftClose className="h-4 w-4" />
+                  : <PanelLeftOpen className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <div className="flex-1 min-w-0">
           <UnifiedToolbar
         searchQuery={searchQuery}
