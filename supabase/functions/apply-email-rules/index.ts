@@ -46,6 +46,7 @@ class ImapConn {
   private decoder = new TextDecoder();
   private tag = 0;
   private folders: string[] | null = null;
+  private trashFolder: string | null = null;
 
   async connect(host: string, user: string, pass: string): Promise<void> {
     this.conn = await Deno.connectTls({
@@ -53,27 +54,33 @@ class ImapConn {
       port: 993,
       caCerts: getCaCertsForHost(host),
     });
-    // Greeting
-    const buf = new Uint8Array(4096);
-    await this.conn.read(buf);
+    // Greeting — leggi una sola raffica, è sempre brevissima
+    await this.readGreeting();
     // Login
     const r = await this.send(`LOGIN "${user}" "${pass}"`);
     if (!r.includes("OK")) throw new Error("IMAP login failed");
+  }
+
+  private async readGreeting(): Promise<void> {
+    const buf = new Uint8Array(4096);
+    await this.conn.read(buf);
   }
 
   async send(cmd: string): Promise<string> {
     const tag = `A${++this.tag}`;
     await this.conn.write(this.encoder.encode(`${tag} ${cmd}\r\n`));
     let response = "";
-    const buf = new Uint8Array(8192);
+    // 64KB chunk: gestisce LIST con centinaia di cartelle senza troncare
+    const buf = new Uint8Array(65536);
     while (true) {
       const n = await this.conn.read(buf);
       if (n === null) break;
       response += this.decoder.decode(buf.subarray(0, n));
+      // Match della completion line per tag: deve essere a inizio riga
       if (
-        response.includes(`${tag} OK`) ||
-        response.includes(`${tag} NO`) ||
-        response.includes(`${tag} BAD`)
+        response.includes(`\n${tag} OK`) || response.startsWith(`${tag} OK`) ||
+        response.includes(`\n${tag} NO`) || response.startsWith(`${tag} NO`) ||
+        response.includes(`\n${tag} BAD`) || response.startsWith(`${tag} BAD`)
       ) break;
     }
     return response;
@@ -98,6 +105,24 @@ class ImapConn {
     this.folders = null; // invalidate cache
   }
 
+  /**
+   * Risolve la cartella Trash effettiva del server (Gmail/IMAP standard/cPanel).
+   * Cache nella connessione per evitare LIST ripetute.
+   */
+  async resolveTrashFolder(): Promise<string> {
+    if (this.trashFolder) return this.trashFolder;
+    const folders = await this.listFolders();
+    const candidates = ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items", "Deleted Messages"];
+    for (const c of candidates) {
+      if (folders.includes(c)) { this.trashFolder = c; return c; }
+    }
+    // Fallback: crea Trash
+    await this.send('CREATE "Trash"');
+    this.folders = null;
+    this.trashFolder = "Trash";
+    return "Trash";
+  }
+
   async selectInbox(): Promise<void> {
     await this.send("SELECT INBOX");
   }
@@ -116,6 +141,16 @@ class ImapConn {
     await this.send(`UID STORE ${uid} +FLAGS (\\Deleted)`);
     await this.send("EXPUNGE");
     return true;
+  }
+
+  /**
+   * Cestina (sposta in Trash + expunge). Non è eliminazione fisica
+   * irreversibile: il server di posta cancellerà definitivamente il
+   * messaggio secondo la sua retention policy del Trash.
+   */
+  async deleteToTrash(uid: number): Promise<boolean> {
+    const trash = await this.resolveTrashFolder();
+    return this.moveTo(uid, trash);
   }
 
   async logout(): Promise<void> {
@@ -241,7 +276,7 @@ Deno.serve(async (req) => {
 
     // Determina se serve IMAP (mark_read / archive / move_to_folder sì; hide no)
     const needsImap = plan.some(p =>
-      ["mark_read", "archive", "move_to_folder", "spam"].includes(p.rule.auto_action ?? "")
+      ["mark_read", "archive", "move_to_folder", "spam", "delete"].includes(p.rule.auto_action ?? "")
     );
 
     let imap: ImapConn | null = null;
@@ -281,6 +316,20 @@ Deno.serve(async (req) => {
           } else if (action === "hide") {
             await supabase.from("channel_messages")
               .update({ hidden_by_rule: true })
+              .eq("id", msg.id);
+
+          } else if (action === "delete") {
+            // Cestino (move su Trash + expunge). NON è hard delete:
+            // il server applicherà la sua retention policy.
+            if (msg.imap_uid && imap) {
+              const ok = await imap.deleteToTrash(msg.imap_uid);
+              if (!ok) {
+                errors.push({ message_id: msg.id, error: "IMAP delete failed" });
+                continue;
+              }
+            }
+            await supabase.from("channel_messages")
+              .update({ folder: "Trash", hidden_by_rule: true })
               .eq("id", msg.id);
 
           } else if (action === "archive" || action === "spam" || action === "move_to_folder") {
