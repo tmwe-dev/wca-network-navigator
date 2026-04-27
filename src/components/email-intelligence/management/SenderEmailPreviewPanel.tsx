@@ -6,6 +6,7 @@
  *  • dettaglio in basso: from/to + badge canale/direzione + corpo 6 righe
  */
 import { useState, useEffect, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,9 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
+import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
+import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 
 interface PreviewEmail {
   id: string;
@@ -31,6 +35,7 @@ interface PreviewEmail {
   from_address: string | null;
   to_address: string | null;
   body_text: string | null;
+  body_html: string | null;
 }
 
 interface SenderEmailPreviewPanelProps {
@@ -65,7 +70,7 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
       try {
         const { data, error } = await supabase
           .from("channel_messages")
-          .select("id, subject, email_date, direction, channel, from_address, to_address, body_text")
+          .select("id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html")
           .eq("channel", "email")
           .or(`from_address.ilike.%${senderEmail}%,to_address.ilike.%${senderEmail}%`)
           .order("email_date", { ascending: false })
@@ -85,12 +90,6 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   }, [senderEmail]);
 
   const current = emails[selectedIdx] ?? null;
-  const previewText = useMemo(() => {
-    if (!current?.body_text) return "";
-    // Mantieni i ritorni a capo (whitespace-pre-wrap), nessun troncamento:
-    // il pannello è scrollabile e ridimensionabile.
-    return current.body_text.trim();
-  }, [current]);
 
   if (!senderEmail) {
     return (
