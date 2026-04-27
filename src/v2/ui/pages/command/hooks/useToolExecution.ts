@@ -31,23 +31,23 @@ function getToolLabels(toolId: string): ToolLabel {
     isTimeline,
     isCardGrid,
     agentLabel: isComposer
-      ? "Email Composer"
+      ? "Assistente email"
       : isFlow
-        ? "Campaign Manager"
+        ? "Assistente campagne"
         : isTimeline
-          ? "Agent Monitor"
+          ? "Resoconto attività"
           : isCardGrid
-            ? "Follow-up Watcher"
-            : "Partner Scout",
+            ? "Promemoria contatti"
+            : "Ricerca partner",
     queryLabel: isComposer
-      ? "Preparazione Composer"
+      ? "Preparo l'email"
       : isFlow
-        ? "Query Supabase · Campaign Jobs"
+        ? "Controllo le campagne in corso"
         : isTimeline
-          ? "Query Supabase · Agents + Activities"
+          ? "Riepilogo le ultime attività"
           : isCardGrid
-            ? "Query Supabase · Search Contacts"
-            : "Query Supabase · Search Partners",
+            ? "Cerco i contatti da risentire"
+            : "Cerco nel database",
   };
 }
 
@@ -118,35 +118,25 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
       pageState.addMessage({
         role: "assistant",
         content: labels.isComposer
-          ? `Sto preparando il composer email...\n\nAnalisi del prompt per estrarre destinatario e oggetto.`
+          ? `Sto preparando un'email per te. Un attimo…`
           : labels.isFlow
-            ? `Sto analizzando lo stato delle campagne usando **Campaign Jobs**...\n\nAggregazione batch in corso.`
+            ? `Controllo lo stato delle tue campagne in corso.`
             : labels.isTimeline
-              ? `Sto aggregando le attività degli agenti negli ultimi 7 giorni usando **Agents + Activities**...\n\nReport in preparazione.`
+              ? `Sto raccogliendo cosa è successo negli ultimi 7 giorni.`
               : labels.isCardGrid
-                ? `Sto cercando contatti inattivi nel database usando **Search Contacts**...\n\nFiltro: nessuna interazione negli ultimi 30 giorni.`
-                : `Sto cercando partner nel database WCA usando **Search Partners**...\n\nQuery in corso tramite il modulo partner management.`,
+                ? `Cerco i contatti che non senti da almeno 30 giorni.`
+                : `Cerco nel database. Un secondo…`,
         agentName: labels.agentLabel,
         timestamp: pageState.ts(),
-        meta: labels.isComposer
-          ? "composer · generate-email + send-email · 2 edge fn"
-          : labels.isFlow
-            ? "campaign-mgr · campaign_jobs · 1 modulo"
-            : labels.isTimeline
-              ? "agent-monitor · agents+activities · 2 moduli"
-              : labels.isCardGrid
-                ? "contact-db · search-contacts · 1 modulo"
-                : "partner-mgmt · search-partners · 1 modulo",
-        governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
       });
 
       pageState.setFlowPhase("executing");
       pageState.setChainHighlight(5);
 
       const liveSteps = [
-        { label: "Interpretazione richiesta", status: "done" as const },
+        { label: "Capisco la richiesta", status: "done" as const },
         { label: labels.queryLabel, status: "running" as const },
-        { label: "Rendering canvas", status: "pending" as const },
+        { label: "Preparo i risultati", status: "pending" as const },
       ];
       pageState.setExecSteps(liveSteps);
       pageState.setExecProgress(33);
@@ -156,9 +146,9 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         if (result.kind === "approval") {
           pageState.setExecSteps([
-            { label: "Interpretazione richiesta", status: "done" },
-            { label: labels.queryLabel, status: "done", detail: "Approvazione richiesta" },
-            { label: "In attesa conferma utente", status: "running" },
+            { label: "Capisco la richiesta", status: "done" },
+            { label: labels.queryLabel, status: "done", detail: "Serve la tua conferma" },
+            { label: "In attesa della tua approvazione", status: "running" },
           ]);
           pageState.setExecProgress(66);
           pageState.setLiveResult(result);
@@ -173,20 +163,18 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
           pageState.addMessage({
             role: "assistant",
-            content: `**${result.title}**\n${result.description}\n\nApprovazione richiesta prima dell'esecuzione.`,
+            content: `**${result.title}**\n${result.description}\n\nVuoi che proceda?`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
-            meta: `governance · ${result.governance.permission}`,
-            governance: `Ruolo: ${result.governance.role} · Permesso: ${result.governance.permission} · Policy: ${result.governance.policy}`,
           });
           return true;
         }
 
         if (result.kind === "result") {
           pageState.setExecSteps([
-            { label: "Interpretazione richiesta", status: "done" },
+            { label: "Capisco la richiesta", status: "done" },
             { label: labels.queryLabel, status: "done" },
-            { label: "Operazione completata", status: "done" },
+            { label: "Fatto", status: "done" },
           ]);
           pageState.setExecProgress(100);
           pageState.setFlowPhase("done");
@@ -194,19 +182,18 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           toast.success(result.message);
           pageState.addMessage({
             role: "assistant",
-            content: `✅ **${result.title}**\n${result.message}`,
+            content: `✅ ${result.message}`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
-            meta: result.meta?.sourceLabel,
           });
           return true;
         }
 
         if (result.kind === "report") {
           pageState.setExecSteps([
-            { label: "Interpretazione richiesta", status: "done" },
+            { label: "Capisco la richiesta", status: "done" },
             { label: labels.queryLabel, status: "done", detail: `${result.sections.length} sezioni` },
-            { label: "Rendering report", status: "done" },
+            { label: "Report pronto", status: "done" },
           ]);
           pageState.setExecProgress(100);
           pageState.setLiveResult(result);
@@ -215,18 +202,17 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           pageState.setShowTools(false);
           pageState.addMessage({
             role: "assistant",
-            content: `Report generato con **${result.sections.length} sezioni**.\n\nDati da: ${result.meta?.sourceLabel ?? "AI"}`,
+            content: `Ho preparato un report con ${result.sections.length} sezioni. Lo trovi qui a fianco.`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
-            meta: result.meta?.sourceLabel,
           });
           return true;
         }
 
         pageState.setExecSteps([
-          { label: "Interpretazione richiesta", status: "done" },
+          { label: "Capisco la richiesta", status: "done" },
           { label: labels.queryLabel, status: "done", detail: `${result.meta?.count ?? 0} risultati` },
-          { label: "Rendering canvas", status: "done" },
+          { label: "Risultati pronti", status: "done" },
         ]);
         pageState.setExecProgress(100);
         pageState.setLiveResult(result);
@@ -242,22 +228,21 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         pageState.addMessage({
           role: "assistant",
-          content: `Trovati **${countLabel}** nel database. Canvas aggiornato con i risultati live.\n\nDati da: ${result.meta?.sourceLabel ?? "Supabase"}`,
+          content: `Ho trovato ${countLabel}. Li vedi nel pannello a destra.`,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
-          meta: `${result.meta?.sourceLabel ?? "Supabase"} · ${result.meta?.count ?? 0} record · LIVE`,
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
         pageState.setExecSteps([
-          { label: "Interpretazione richiesta", status: "done" },
+          { label: "Capisco la richiesta", status: "done" },
           { label: labels.queryLabel, status: "error", detail: "FAIL" },
-          { label: "Rendering canvas", status: "pending" },
+          { label: "Risultati pronti", status: "pending" },
         ]);
         toast.error(msg);
         pageState.addMessage({
           role: "assistant",
-          content: `Errore nella query: ${msg}`,
+          content: `Non sono riuscito a completare: ${msg}`,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
         });
