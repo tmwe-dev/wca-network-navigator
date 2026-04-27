@@ -243,8 +243,7 @@ function VirtualizedSenderList(props: {
   return (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto min-h-0 p-2"
-      style={{ contain: "strict" }}
+      className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2"
     >
       <div
         style={{
