@@ -58,7 +58,7 @@ export function LayoutSidebarNav({
           </div>
         </div>
       </div>
-      <nav className="flex-1 p-2 overflow-y-auto" data-testid="main-sidebar">
+      <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
         {navGroupsDef.map((group, groupIdx) => (
           <div key={group.titleKey}>
             <div className="mb-3">
