@@ -3,7 +3,7 @@
  * Supports two modes: "faithful" (original) and "safe" (normalized white bg).
  */
 
-import { useRef, useEffect } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { blockRemoteImages } from "./emailUtils";
 
 type Props = {
@@ -12,8 +12,12 @@ type Props = {
   blockRemote: boolean;
 };
 
-export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
+export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function EmailHtmlFrame(
+  { html, mode, blockRemote },
+  ref,
+) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  useImperativeHandle(ref, () => iframeRef.current as HTMLIFrameElement, []);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -77,6 +81,13 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
       iframe.style.height = `${h}px`;
     };
 
+    const blockHorizontalWheelNavigation = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) > 1) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
     // ResizeObserver for layout changes
     const resizeObserver = new ResizeObserver(() => recalcHeight());
 
@@ -85,12 +96,6 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
       if (doc.body) resizeObserver.observe(doc.body);
       recalcHeight();
 
-      const blockHorizontalWheelNavigation = (event: WheelEvent) => {
-        if (Math.abs(event.deltaX) > 1) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      };
       doc.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
 
       // Attach load handlers to all images for re-resize
@@ -111,12 +116,7 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
 
     return () => {
       resizeObserver.disconnect();
-      doc.removeEventListener("wheel", (event: WheelEvent) => {
-        if (Math.abs(event.deltaX) > 1) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      }, { capture: true });
+      doc.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
@@ -134,4 +134,4 @@ export function EmailHtmlFrame({ html, mode, blockRemote }: Props) {
       title="Email content"
     />
   );
-}
+});
