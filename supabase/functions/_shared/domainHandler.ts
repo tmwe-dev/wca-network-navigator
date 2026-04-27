@@ -4,6 +4,7 @@
  */
 
 import { enrichActionPayload, type EmailAddressRule } from "./classificationRules.ts";
+import { applyLeadStatusChange } from "./leadStatusGuard.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -89,6 +90,14 @@ export async function handleOperativeRequest(
 
   const isConversionSignal = currentLeadStatus && ["negotiation", "qualified"].includes(currentLeadStatus);
   const isSoftSignalQualification = currentLeadStatus === "engaged" && ["quote_request", "booking_request", "rate_inquiry"].includes(category);
+
+  // Re-engagement: partner in holding/first_touch_sent che invia richiesta operativa
+  // ad alto intento (preventivo, booking, tariffa) → riportare a "engaged".
+  // Chi chiede un preventivo dopo settimane di silenzio è chiaramente ri-coinvolto.
+  const HIGH_INTENT_CATEGORIES = ["quote_request", "booking_request", "rate_inquiry"];
+  const isReEngagementSignal = currentLeadStatus
+    && ["holding", "first_touch_sent"].includes(currentLeadStatus)
+    && HIGH_INTENT_CATEGORIES.includes(category);
 
   try {
     const actionPayload = enrichActionPayload(
@@ -180,6 +189,62 @@ export async function handleOperativeRequest(
       result.actionsExecuted.push("operative_soft_signal_qualification");
     } catch (e) {
       result.errors.push(`Qualification suggestion failed: ${e}`);
+    }
+  }
+
+  // Re-engagement: partner silente (holding/first_touch_sent) che invia richiesta
+  // operativa ad alto intento → escalation automatica a "engaged".
+  // Logica: chi chiede un preventivo/booking dopo settimane di silenzio è ri-coinvolto.
+  // Usa applyLeadStatusChange per audit trail + validazione monotona.
+  if (isReEngagementSignal && input.partnerId) {
+    try {
+      const res = await applyLeadStatusChange(supabase, {
+        table: "partners",
+        recordId: input.partnerId,
+        newStatus: "engaged",
+        userId: input.userId,
+        actor: { type: "system", name: "domainHandler_reengagement" },
+        decisionOrigin: "system_trigger",
+        trigger: `Richiesta operativa "${category}" da partner in "${currentLeadStatus}" — segnale di ri-coinvolgimento`,
+        metadata: {
+          category,
+          confidence: input.confidence,
+          sender: input.senderEmail,
+          previous_status: currentLeadStatus,
+          signal_type: "operative_reengagement",
+        },
+      });
+      if (res.applied) {
+        result.statusChanged = true;
+        result.actionsExecuted.push(`reengagement_${currentLeadStatus}_to_engaged`);
+      }
+    } catch (e) {
+      result.errors.push(`Re-engagement escalation failed: ${e}`);
+    }
+
+    // Crea anche un'azione pending per notificare l'operatore del ri-coinvolgimento
+    try {
+      await supabase.from("ai_pending_actions").insert({
+        user_id: input.userId,
+        partner_id: input.partnerId,
+        action_type: "reply_interested",
+        action_payload: {
+          reply_to: input.senderEmail,
+          original_subject: input.subject,
+          ai_summary: input.aiSummary,
+          domain: "operative",
+          category,
+          previous_lead_status: currentLeadStatus,
+          suggested_action: `Partner ri-coinvolto: era in "${currentLeadStatus}", ora ha inviato ${category}. Rispondere con Accompagnatore per coltivare il momentum.`,
+        },
+        status: "pending",
+        priority: "high",
+        reasoning: `Partner in "${currentLeadStatus}" ha inviato ${category} (confidence ${(input.confidence * 100).toFixed(0)}%). Segnale forte di ri-coinvolgimento → escalato a "engaged". Azione commerciale consigliata.`,
+        created_at: now,
+      });
+      result.actionsExecuted.push("reengagement_commercial_action_created");
+    } catch (e) {
+      result.errors.push(`Re-engagement pending action failed: ${e}`);
     }
   }
 
