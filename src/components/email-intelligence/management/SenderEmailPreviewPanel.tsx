@@ -19,7 +19,11 @@ import {
 import {
   ChevronLeft, ChevronRight, Mail, Loader2,
   ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin,
+  ListCollapse, ListTree,
 } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
@@ -114,6 +118,10 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   const [selectedIdx, setSelectedIdx] = useState(0);
   /** Quando valorizzato, apre il dialog full-page con questa email. */
   const [fullViewEmail, setFullViewEmail] = useState<PreviewEmail | null>(null);
+  /** Mostra/nasconde l'elenco delle email. Per default è nascosto:
+   *  l'utente naviga con i chevron sopra il preview e l'apertura dell'elenco
+   *  è on-demand tramite l'icona dedicata. */
+  const [showList, setShowList] = useState(false);
 
   useEffect(() => {
     if (!senderEmail) {
@@ -167,6 +175,27 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
         </div>
         {emails.length > 0 && (
           <div className="flex items-center gap-1 flex-shrink-0">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon" variant={showList ? "secondary" : "ghost"} className="h-6 w-6"
+                    onClick={() => setShowList((v) => !v)}
+                    aria-label={showList ? "Nascondi elenco email" : "Mostra elenco email"}
+                    aria-pressed={showList}
+                  >
+                    {showList ? (
+                      <ListCollapse className="h-3.5 w-3.5" />
+                    ) : (
+                      <ListTree className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">
+                  {showList ? "Nascondi elenco" : "Mostra elenco email"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               size="icon" variant="ghost" className="h-6 w-6"
               disabled={selectedIdx === 0}
@@ -198,7 +227,7 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
         <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground p-4 text-center">
           Nessuna email trovata per questo mittente
         </div>
-      ) : (
+      ) : showList ? (
         <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
           <ResizablePanel defaultSize={45} minSize={15}>
             <ScrollArea className="h-full">
@@ -253,63 +282,21 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
           {/* Pannello dettaglio email selezionata — ridimensionabile verticalmente */}
           {current && (
             <ResizablePanel defaultSize={55} minSize={15}>
-              <div className="h-full overflow-y-auto bg-muted/10">
-                <div className="px-3 py-2 space-y-1.5">
-                {/* Badge canale + direzione + data */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge variant="outline" className="gap-1 text-[10px] py-0 h-5">
-                    <ChannelIcon channel={current.channel} className="h-2.5 w-2.5" />
-                    {current.channel || "email"}
-                  </Badge>
-                  <Badge
-                    variant={current.direction === "inbound" ? "default" : "secondary"}
-                    className="gap-1 text-[10px] py-0 h-5"
-                  >
-                    {current.direction === "inbound" ? (
-                      <ArrowDownLeft className="h-2.5 w-2.5" />
-                    ) : (
-                      <ArrowUpRight className="h-2.5 w-2.5" />
-                    )}
-                    {current.direction === "inbound" ? "ricevuta" : "inviata"}
-                  </Badge>
-                  {current.email_date && (
-                    <span className="text-[10px] text-muted-foreground ml-auto">
-                      {new Date(current.email_date).toLocaleString("it-IT", {
-                        day: "2-digit", month: "short", year: "numeric",
-                        hour: "2-digit", minute: "2-digit",
-                      })}
-                    </span>
-                  )}
-                </div>
-
-                {/* From / To */}
-                <div className="text-[10px] space-y-0.5">
-                  <div className="flex gap-1">
-                    <span className="text-muted-foreground font-medium w-8 flex-shrink-0">Da:</span>
-                    <span className="truncate text-foreground">{current.from_address || "—"}</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <span className="text-muted-foreground font-medium w-8 flex-shrink-0">A:</span>
-                    <span className="truncate text-foreground">{current.to_address || "—"}</span>
-                  </div>
-                </div>
-
-                {/* Subject in evidenza */}
-                {current.subject && (
-                  <div className="text-xs font-semibold text-foreground pt-1 border-t">
-                    {current.subject}
-                  </div>
-                )}
-
-                {/* Corpo email renderizzato come in Outreach (HTML sanitizzato + iframe). */}
-                <div className="pt-1">
-                  <EmailBody message={current} compact />
-                </div>
-                </div>
-              </div>
+              <EmailDetail current={current} />
             </ResizablePanel>
           )}
         </ResizablePanelGroup>
+      ) : (
+        /* Modalità default: solo il preview, a tutta altezza. */
+        current ? (
+          <div className="flex-1 min-h-0">
+            <EmailDetail current={current} />
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground p-4 text-center">
+            Nessuna email da mostrare
+          </div>
+        )
       )}
 
       {/* Dialog full-page email */}
@@ -373,6 +360,66 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/**
+ * EmailDetail — riquadro dettaglio della mail selezionata. Estratto come
+ * componente per riusarlo sia nella modalità "solo preview" sia nella
+ * modalità "elenco + preview".
+ */
+function EmailDetail({ current }: { current: PreviewEmail }) {
+  return (
+    <div className="h-full overflow-y-auto bg-muted/10">
+      <div className="px-3 py-2 space-y-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant="outline" className="gap-1 text-[10px] py-0 h-5">
+            <ChannelIcon channel={current.channel} className="h-2.5 w-2.5" />
+            {current.channel || "email"}
+          </Badge>
+          <Badge
+            variant={current.direction === "inbound" ? "default" : "secondary"}
+            className="gap-1 text-[10px] py-0 h-5"
+          >
+            {current.direction === "inbound" ? (
+              <ArrowDownLeft className="h-2.5 w-2.5" />
+            ) : (
+              <ArrowUpRight className="h-2.5 w-2.5" />
+            )}
+            {current.direction === "inbound" ? "ricevuta" : "inviata"}
+          </Badge>
+          {current.email_date && (
+            <span className="text-[10px] text-muted-foreground ml-auto">
+              {new Date(current.email_date).toLocaleString("it-IT", {
+                day: "2-digit", month: "short", year: "numeric",
+                hour: "2-digit", minute: "2-digit",
+              })}
+            </span>
+          )}
+        </div>
+
+        <div className="text-[10px] space-y-0.5">
+          <div className="flex gap-1">
+            <span className="text-muted-foreground font-medium w-8 flex-shrink-0">Da:</span>
+            <span className="truncate text-foreground">{current.from_address || "—"}</span>
+          </div>
+          <div className="flex gap-1">
+            <span className="text-muted-foreground font-medium w-8 flex-shrink-0">A:</span>
+            <span className="truncate text-foreground">{current.to_address || "—"}</span>
+          </div>
+        </div>
+
+        {current.subject && (
+          <div className="text-xs font-semibold text-foreground pt-1 border-t">
+            {current.subject}
+          </div>
+        )}
+
+        <div className="pt-1">
+          <EmailBody message={current} compact />
+        </div>
+      </div>
     </div>
   );
 }
