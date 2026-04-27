@@ -15,7 +15,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 
-export type EmailAction = "archive" | "spam" | "move" | "hide";
+export type EmailAction = "archive" | "spam" | "move" | "delete" | "hide";
 
 interface BulkActionInput {
   messages: Array<{ id: string; imap_uid: number | null }>;
@@ -85,10 +85,17 @@ export function useBulkEmailAction() {
       const uids = messages.map(m => m.imap_uid).filter((u): u is number => u != null);
       if (uids.length === 0) {
         // Nessun UID IMAP — solo update folder DB
-        const folder = action === "archive" ? "Archive" : action === "spam" ? "Junk" : (targetFolder || "Archive");
+        const folder =
+          action === "archive" ? "Archive" :
+          action === "spam" ? "Junk" :
+          action === "delete" ? "Trash" :
+          (targetFolder || "Archive");
         const { error } = await supabase
           .from("channel_messages")
-          .update({ folder })
+          .update({
+            folder,
+            ...(action === "delete" ? { hidden_by_rule: true } : {}),
+          })
           .in("id", messages.map(m => m.id));
         if (error) throw error;
         return { dbOnly: messages.length };
@@ -105,17 +112,24 @@ export function useBulkEmailAction() {
       });
 
       // Sync folder lato DB
-      const folder = result?.folder || (action === "archive" ? "Archive" : action === "spam" ? "Junk" : targetFolder!);
+      const folder = result?.folder ||
+        (action === "archive" ? "Archive" :
+         action === "spam" ? "Junk" :
+         action === "delete" ? "Trash" :
+         targetFolder!);
       await supabase
         .from("channel_messages")
-        .update({ folder })
+        .update({
+          folder,
+          ...(action === "delete" ? { hidden_by_rule: true } : {}),
+        })
         .in("imap_uid", uids);
 
       return { moved: result?.moved ?? 0, folder };
     },
     onSuccess: (res, vars) => {
       const labels: Record<EmailAction, string> = {
-        archive: "Archiviate", spam: "Spostate in spam", move: "Spostate", hide: "Nascoste",
+        archive: "Archiviate", spam: "Spostate in spam", move: "Spostate", delete: "Cestinate", hide: "Nascoste",
       };
       toast.success(`${labels[vars.action]} (${vars.messages.length})`);
       qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });

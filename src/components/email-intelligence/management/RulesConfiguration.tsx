@@ -7,8 +7,10 @@
  * (singola azione) + `auto_action_params` (JSONB), quindi le selezioni precedenti
  * non venivano mai eseguite.
  *
- * Le azioni `delete`, `mark_important`, `forward_to`, `auto_reply`, `skip_inbox`
- * non sono ancora implementate nel worker e sono mostrate come "in arrivo" disabilitate.
+ * L'azione `delete` sposta nel cestino IMAP (Trash) ed esegue EXPUNGE: NON è
+ * eliminazione fisica irreversibile, il server applica la sua retention policy.
+ * Le azioni `mark_important`, `forward_to`, `auto_reply`, `skip_inbox` non sono
+ * ancora implementate e restano in coming-soon.
  */
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
@@ -20,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
-export type ImapAction = 'none' | 'mark_read' | 'archive' | 'move_to_folder' | 'spam' | 'hide';
+export type ImapAction = 'none' | 'mark_read' | 'archive' | 'move_to_folder' | 'spam' | 'delete' | 'hide';
 
 export interface RulesConfigValue {
   auto_action: ImapAction;
@@ -43,11 +45,11 @@ const ACTION_OPTIONS: Array<{ value: ImapAction; label: string; description: str
   { value: 'archive', label: 'Archivia', description: 'Sposta nella cartella Archive (o quella indicata)' },
   { value: 'spam', label: 'Sposta in Spam/Junk', description: 'Sposta nella cartella Junk (o quella indicata)' },
   { value: 'move_to_folder', label: 'Sposta in cartella…', description: 'Sposta in una cartella IMAP a tua scelta' },
+  { value: 'delete', label: 'Elimina (cestino)', description: 'Sposta in Trash + EXPUNGE. Reversibile finché il server non lo cancella.' },
   { value: 'hide', label: 'Nascondi (solo nel nostro DB)', description: 'Non tocca IMAP, nasconde dal nostro inbox' },
 ];
 
 const COMING_SOON: Array<{ id: string; label: string }> = [
-  { id: 'delete', label: 'Elimina (cestino)' },
   { id: 'mark_important', label: 'Segna come importante' },
   { id: 'forward_to', label: 'Inoltra a…' },
   { id: 'auto_reply', label: 'Risposta automatica' },
