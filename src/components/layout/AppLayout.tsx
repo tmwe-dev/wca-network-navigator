@@ -100,22 +100,19 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  const hoverTimerLeft = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverTimerRight = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleEdgeEnter = (side: "left" | "right") => {
-    const timer = setTimeout(() => {
-      if (side === "left") setFiltersOpen(true);
-      else setMissionOpen(true);
-    }, 150);
-    if (side === "left") hoverTimerLeft.current = timer;
-    else hoverTimerRight.current = timer;
-  };
-
-  const handleEdgeLeave = (side: "left" | "right") => {
-    const t = side === "left" ? hoverTimerLeft.current : hoverTimerRight.current;
-    if (t) clearTimeout(t);
-  };
+  // Guard globale: blocca QUALSIASI gesto orizzontale del trackpad/mouse
+  // su tutta la finestra. Registrato come non-passive per poter chiamare
+  // preventDefault(). Evita lo swipe-back/forward del browser anche quando
+  // l'evento parte da container con scroll interno (es. tabelle, carousel).
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, []);
 
   return (
     <ActiveOperatorProvider>
@@ -131,8 +128,6 @@ export function AppLayout() {
               </a>
               <button
                 onClick={() => setFiltersOpen(true)}
-                onMouseEnter={() => handleEdgeEnter("left")}
-                onMouseLeave={() => handleEdgeLeave("left")}
                 className={cn(
                   "hidden sm:flex fixed left-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                   filtersOpen && "opacity-0 pointer-events-none"
@@ -147,8 +142,6 @@ export function AppLayout() {
               </button>
               <button
                 onClick={() => setMissionOpen(true)}
-                onMouseEnter={() => handleEdgeEnter("right")}
-                onMouseLeave={() => handleEdgeLeave("right")}
                 className={cn(
                   "hidden sm:flex fixed right-0 top-[4.5rem] z-[60] items-center justify-center w-8 h-14 rounded-l-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all duration-300 ease-out cursor-pointer",
                   missionOpen && "opacity-0 pointer-events-none"
