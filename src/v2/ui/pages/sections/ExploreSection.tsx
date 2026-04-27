@@ -19,7 +19,7 @@ export function ExploreSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <GoldenHeaderBar />
-      <SectionTabs tabs={TABS} rootPath="/v2/explore">
+      <SectionTabs tabs={TABS} rootPath="/v2/explore" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/explore/map" replace />} />
           <Route path="map"         element={<GlobePage />} />
