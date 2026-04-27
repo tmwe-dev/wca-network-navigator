@@ -73,13 +73,11 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-3 md:p-4 gap-3">
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-          <BrainCircuit className="h-4 w-4 text-primary" />
-        </div>
-        <h1 className="text-base font-semibold text-foreground">Email Intelligence</h1>
-      </div>
+    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-2 md:p-3 gap-2">
+      <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-shrink-0">
+        <BrainCircuit className="h-4 w-4 text-primary" />
+        Email Intelligence
+      </h1>
 
       <Tabs defaultValue="manual" className="flex-1 flex flex-col overflow-hidden">
         <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto flex-shrink-0">
