@@ -9,7 +9,7 @@ import {
   LayoutDashboard, ArrowDownLeft, Calendar, Earth,
   ArrowUpDown, Gamepad2, MessageSquare,
   BrainCircuit, ShieldCheck, BarChart3, Rocket,
-  UserCog, BookOpen, Wand2, FlaskConical, Coins, Bell,
+  UserCog, BookOpen, Wand2, FlaskConical, Coins, Bell, PenSquare,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -49,6 +49,7 @@ export const navGroupsDef: readonly NavGroupDef[] = [
     items: [
       { labelKey: "nav.outreach", path: "/v2/outreach", icon: <Mail className="h-4 w-4" />, pinned: true, pinOrder: 5 },
       { labelKey: "nav.inreach", path: "/v2/inreach", icon: <ArrowDownLeft className="h-4 w-4" />, pinned: true, pinOrder: 6 },
+      { labelKey: "Email Composer", path: "/v2/outreach/composer", icon: <PenSquare className="h-4 w-4" /> },
       { labelKey: "nav.agenda", path: "/v2/outreach/agenda", icon: <Calendar className="h-4 w-4" /> },
       { labelKey: "nav.campaigns", path: "/v2/campaigns", icon: <Megaphone className="h-4 w-4" /> },
       { labelKey: "nav.approvals", path: "/v2/sorting", icon: <ArrowUpDown className="h-4 w-4" /> },
