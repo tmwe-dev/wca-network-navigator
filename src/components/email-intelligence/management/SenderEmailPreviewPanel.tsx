@@ -50,8 +50,8 @@ interface SenderEmailPreviewPanelProps {
 const PAGE_SIZE = 20;
 
 function ChannelIcon({ channel, className }: { channel: string | null; className?: string }) {
-  if (channel === "whatsapp") return <MessageCircle className={cn("text-emerald-500", className)} />;
-  if (channel === "linkedin") return <Linkedin className={cn("text-sky-500", className)} />;
+  if (channel === "whatsapp") return <MessageCircle className={cn("text-primary", className)} />;
+  if (channel === "linkedin") return <Linkedin className={cn("text-primary", className)} />;
   return <Mail className={cn("text-primary", className)} />;
 }
 
