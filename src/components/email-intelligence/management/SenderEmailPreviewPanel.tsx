@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -49,6 +50,8 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   const [emails, setEmails] = useState<PreviewEmail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  /** Quando valorizzato, apre il dialog full-page con questa email. */
+  const [fullViewEmail, setFullViewEmail] = useState<PreviewEmail | null>(null);
 
   useEffect(() => {
     if (!senderEmail) {
@@ -150,6 +153,8 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   <button
                     key={em.id}
                     onClick={() => setSelectedIdx(idx)}
+                    onDoubleClick={() => setFullViewEmail(em)}
+                    title="Doppio clic per aprire a tutta pagina"
                     className={cn(
                       "w-full text-left px-2 py-1.5 rounded text-xs transition-colors",
                       idx === selectedIdx
@@ -250,6 +255,68 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
           )}
         </ResizablePanelGroup>
       )}
+
+      {/* Dialog full-page email */}
+      <Dialog open={fullViewEmail !== null} onOpenChange={(o) => { if (!o) setFullViewEmail(null); }}>
+        <DialogContent className="max-w-4xl w-[92vw] max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-5 py-3 border-b flex-shrink-0">
+            <DialogTitle className="text-base flex items-center gap-2 pr-8">
+              {fullViewEmail && <ChannelIcon channel={fullViewEmail.channel} className="h-4 w-4 flex-shrink-0" />}
+              <span className="truncate">{fullViewEmail?.subject || "(senza oggetto)"}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {fullViewEmail && (
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="px-5 py-3 space-y-3">
+                {/* Meta */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="gap-1 text-[10px]">
+                    <ChannelIcon channel={fullViewEmail.channel} className="h-2.5 w-2.5" />
+                    {fullViewEmail.channel || "email"}
+                  </Badge>
+                  <Badge
+                    variant={fullViewEmail.direction === "inbound" ? "default" : "secondary"}
+                    className="gap-1 text-[10px]"
+                  >
+                    {fullViewEmail.direction === "inbound" ? (
+                      <ArrowDownLeft className="h-2.5 w-2.5" />
+                    ) : (
+                      <ArrowUpRight className="h-2.5 w-2.5" />
+                    )}
+                    {fullViewEmail.direction === "inbound" ? "ricevuta" : "inviata"}
+                  </Badge>
+                  {fullViewEmail.email_date && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(fullViewEmail.email_date).toLocaleString("it-IT", {
+                        day: "2-digit", month: "long", year: "numeric",
+                        hour: "2-digit", minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                {/* From / To */}
+                <div className="text-xs space-y-1 border rounded-md p-3 bg-muted/20">
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-10 flex-shrink-0">Da:</span>
+                    <span className="text-foreground break-all">{fullViewEmail.from_address || "—"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground font-medium w-10 flex-shrink-0">A:</span>
+                    <span className="text-foreground break-all">{fullViewEmail.to_address || "—"}</span>
+                  </div>
+                </div>
+
+                {/* Corpo full */}
+                <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap pt-1">
+                  {fullViewEmail.body_text?.trim() || "(corpo email non disponibile)"}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
