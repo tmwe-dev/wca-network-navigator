@@ -58,7 +58,8 @@ export default function ManualGroupingTab() {
   const {
     senders, setSenders, classifiedSenders,
     groups, setGroups, isLoading,
-    loadData,
+    isPopulating,
+    loadData, populateAddressRules,
     assignedByGroup, reloadAssignedRules,
   } = useGroupingData();
 
@@ -209,16 +210,28 @@ export default function ManualGroupingTab() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onCreateGroup={() => setShowCreateDialog(true)}
-        countLabel={countLabel}
+        onRefresh={populateAddressRules}
+        isRefreshing={isPopulating}
       />
 
-      {/* Action bar contestuale */}
-      {selectedSenders.size > 0 && (
+      {/* Action bar contestuale: visibile sempre quando c'è un sender in focus
+          (singolo via preview, oppure ≥1 in multi-selezione). */}
+      {(selectedSenders.size > 0 || previewSender) && (
         <SenderActionBar
-          selectedSenders={selectedEmails}
-          contextLabel={selectionContextLabel}
+          selectedSenders={
+            selectedSenders.size > 0 ? selectedEmails : previewSender ? [previewSender.email] : []
+          }
+          contextLabel={
+            selectedSenders.size > 1
+              ? `${selectedSenders.size} mittenti selezionati`
+              : selectedSenders.size === 1
+                ? (allSenders.find((s) => selectedSenders.has(s.email))?.companyName || selectedEmails[0])
+                : (previewSender?.companyName || previewSender?.email || "")
+          }
           onOpenRules={() => {
-            const first = allSenders.find((s) => selectedSenders.has(s.email));
+            const first = selectedSenders.size > 0
+              ? allSenders.find((s) => selectedSenders.has(s.email))
+              : previewSender;
             if (first) setEmailPreviewSender(first);
             else toast.info("Seleziona un mittente per configurare le regole");
           }}
