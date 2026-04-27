@@ -85,10 +85,17 @@ export function useBulkEmailAction() {
       const uids = messages.map(m => m.imap_uid).filter((u): u is number => u != null);
       if (uids.length === 0) {
         // Nessun UID IMAP — solo update folder DB
-        const folder = action === "archive" ? "Archive" : action === "spam" ? "Junk" : (targetFolder || "Archive");
+        const folder =
+          action === "archive" ? "Archive" :
+          action === "spam" ? "Junk" :
+          action === "delete" ? "Trash" :
+          (targetFolder || "Archive");
         const { error } = await supabase
           .from("channel_messages")
-          .update({ folder })
+          .update({
+            folder,
+            ...(action === "delete" ? { hidden_by_rule: true } : {}),
+          })
           .in("id", messages.map(m => m.id));
         if (error) throw error;
         return { dbOnly: messages.length };
@@ -105,10 +112,17 @@ export function useBulkEmailAction() {
       });
 
       // Sync folder lato DB
-      const folder = result?.folder || (action === "archive" ? "Archive" : action === "spam" ? "Junk" : targetFolder!);
+      const folder = result?.folder ||
+        (action === "archive" ? "Archive" :
+         action === "spam" ? "Junk" :
+         action === "delete" ? "Trash" :
+         targetFolder!);
       await supabase
         .from("channel_messages")
-        .update({ folder })
+        .update({
+          folder,
+          ...(action === "delete" ? { hidden_by_rule: true } : {}),
+        })
         .in("imap_uid", uids);
 
       return { moved: result?.moved ?? 0, folder };
