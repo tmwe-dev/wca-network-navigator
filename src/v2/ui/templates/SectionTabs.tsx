@@ -22,6 +22,14 @@ interface SectionTabsProps {
   /** Page content. */
   children: React.ReactNode;
   className?: string;
+  /**
+   * Comportamento dell'area contenuto:
+   * - "auto"   (default): scroll verticale gestito dal contenitore.
+   *   Adatto a pagine documento/dashboard senza altezza fissa interna.
+   * - "contain": overflow nascosto, il figlio gestisce i propri scroll.
+   *   Adatto a pagine split-panel (GoldenLayout, Inbox, Outreach…).
+   */
+  contentOverflow?: "auto" | "contain";
 }
 
 export function SectionTabs({
@@ -29,6 +37,7 @@ export function SectionTabs({
   rootPath,
   children,
   className,
+  contentOverflow = "auto",
 }: SectionTabsProps): React.ReactElement {
   const { pathname } = useLocation();
   const isRoot = pathname === rootPath || pathname === `${rootPath}/`;
@@ -66,7 +75,14 @@ export function SectionTabs({
           })}
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+      <div
+        className={cn(
+          "flex-1 min-h-0",
+          contentOverflow === "contain" ? "overflow-hidden" : "overflow-y-auto",
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }
