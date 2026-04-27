@@ -88,10 +88,19 @@ export function GroupDropZone({
   };
 
   const handleDeleteGroup = async () => {
-    // Remove group_name from all assigned rules
+    // Sgancia tutti i mittenti dal gruppo: vengono riportati a
+    // "Da classificare" (group_name=null, category=null) MA conserviamo
+    // i prompt dedicati al singolo address (custom_prompt, notes,
+    // auto_action, auto_action_params, target_folder…). I prompt sono
+    // proprietà del mittente, non della categoria.
     await supabase
       .from('email_address_rules')
-      .update({ group_name: null, group_color: null, group_icon: null })
+      .update({
+        group_name: null,
+        group_color: null,
+        group_icon: null,
+        category: null,
+      })
       .eq('group_name', group.nome_gruppo);
     // Delete group definition
     const { error } = await supabase
@@ -99,7 +108,9 @@ export function GroupDropZone({
       .delete()
       .eq('id', group.id);
     if (!error) {
-      toast.success(`${group.nome_gruppo} eliminato`);
+      toast.success(
+        `${group.nome_gruppo} eliminato. Mittenti riportati a "Da classificare" — i prompt dedicati sono stati conservati.`,
+      );
       onRefresh();
     } else {
       toast.error('Errore eliminazione gruppo');
