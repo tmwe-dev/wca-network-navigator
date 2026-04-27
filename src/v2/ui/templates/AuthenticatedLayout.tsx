@@ -184,7 +184,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
   useEffect(() => {
     const blockHorizontalWheelNavigation = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > 1) {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 1) {
         e.preventDefault();
         e.stopPropagation();
       }
