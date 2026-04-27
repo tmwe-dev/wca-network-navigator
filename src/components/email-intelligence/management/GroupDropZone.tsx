@@ -1,10 +1,11 @@
 /**
  * GroupDropZone — Drop zone for sender groups (ported from tmwengine, adapted to WCA)
  */
+import { memo, useCallback, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Trash2, List, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +42,7 @@ interface AssignedRule {
   domain?: string | null;
 }
 
-export function GroupDropZone({
+function GroupDropZoneInner({
   group,
   onRefresh,
   isHovered = false,
@@ -52,6 +53,12 @@ export function GroupDropZone({
   onBulkAssign,
   onPartnerClick,
 }: GroupDropZoneProps) {
+  // Lazy-mount dei dialog: ogni gruppo NON tiene un Dialog/AlertDialog Radix
+  // sempre montato in background. Riduce drasticamente i nodi DOM/portal
+  // quando ci sono molti gruppi (50+).
+  const [listOpen, setListOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
   const partnerToSender = (rule: AssignedRule): SenderAnalysis => ({
     email: rule.email_address,
     companyName: rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name),
@@ -74,7 +81,7 @@ export function GroupDropZone({
     return root.charAt(0).toUpperCase() + root.slice(1);
   };
 
-  const handleRemoveRule = async (ruleId: string, email: string) => {
+  const handleRemoveRule = useCallback(async (ruleId: string, email: string) => {
     const { error } = await supabase
       .from('email_address_rules')
       .update({ group_name: null, group_color: null, group_icon: null })
@@ -85,9 +92,9 @@ export function GroupDropZone({
     } else {
       toast.error('Errore rimozione');
     }
-  };
+  }, [group.nome_gruppo, onRulesChanged]);
 
-  const handleDeleteGroup = async () => {
+  const handleDeleteGroup = useCallback(async () => {
     // Sgancia tutti i mittenti dal gruppo: vengono riportati a
     // "Da classificare" (group_name=null, category=null) MA conserviamo
     // i prompt dedicati al singolo address (custom_prompt, notes,
@@ -115,7 +122,7 @@ export function GroupDropZone({
     } else {
       toast.error('Errore eliminazione gruppo');
     }
-  };
+  }, [group.id, group.nome_gruppo, onRefresh]);
 
   return (
     <div
@@ -174,82 +181,25 @@ export function GroupDropZone({
                 addressCount={rules.length}
                 variant="icon"
               />
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    aria-label="Vedi tutte le aziende"
-                    title="Vedi e gestisci tutte le aziende associate"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <span className="text-2xl">{group.icon || '📁'}</span>{group.nome_gruppo}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-2 mt-4">
-                    {rules.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-8">Nessun mittente classificato</p>
-                    ) : (
-                      rules.map(rule => (
-                        <div
-                          key={rule.id}
-                          className={cn(
-                            "flex items-center justify-between p-3 bg-muted/40 rounded-md hover:bg-muted/60 transition-colors group",
-                            onPartnerClick && "cursor-pointer",
-                          )}
-                          onClick={() => onPartnerClick?.(partnerToSender(rule))}
-                          title={onPartnerClick ? "Clicca per modificare azioni e regole" : undefined}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}</div>
-                            <div className="text-sm text-muted-foreground">{rule.email_address}</div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveRule(rule.id, rule.email_address);
-                            }}
-                            aria-label="Elimina"
-                          >
-                             <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" aria-label="Elimina"><Trash2 className="h-4 w-4" /></Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Eliminare gruppo?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Eliminare <strong>{group.nome_gruppo}</strong>?
-                      {rules.length > 0 && (
-                        <span className="block mt-2 text-destructive font-medium">
-                          {rules.length} associazioni verranno rimosse.
-                        </span>
-                      )}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annulla</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">Elimina</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Vedi tutte le aziende"
+                title="Vedi e gestisci tutte le aziende associate"
+                onClick={() => setListOpen(true)}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:text-destructive"
+                aria-label="Elimina"
+                onClick={() => setConfirmDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -283,6 +233,92 @@ export function GroupDropZone({
           )}
         </CardContent>
       </Card>
+
+      {/* Lazy-mounted dialogs — rimangono fuori dal DOM finché non servono. */}
+      {listOpen && (
+        <Dialog open={listOpen} onOpenChange={setListOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-2xl">{group.icon || '📁'}</span>{group.nome_gruppo}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 mt-4">
+              {rules.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">Nessun mittente classificato</p>
+              ) : (
+                rules.map(rule => (
+                  <div
+                    key={rule.id}
+                    className={cn(
+                      "flex items-center justify-between p-3 bg-muted/40 rounded-md hover:bg-muted/60 transition-colors group",
+                      onPartnerClick && "cursor-pointer",
+                    )}
+                    onClick={() => onPartnerClick?.(partnerToSender(rule))}
+                    title={onPartnerClick ? "Clicca per modificare azioni e regole" : undefined}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}</div>
+                      <div className="text-sm text-muted-foreground">{rule.email_address}</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveRule(rule.id, rule.email_address);
+                      }}
+                      aria-label="Elimina"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {confirmDeleteOpen && (
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminare gruppo?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Eliminare <strong>{group.nome_gruppo}</strong>?
+                {rules.length > 0 && (
+                  <span className="block mt-2 text-destructive font-medium">
+                    {rules.length} associazioni verranno rimosse.
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">Elimina</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
+/**
+ * Memo con confronto custom: la card non si re-renderizza quando il parent
+ * aggiorna selectedCount, hover su un altro gruppo o highlight su un altro
+ * gruppo. Solo dipendenze che la riguardano realmente la fanno aggiornare.
+ */
+export const GroupDropZone = memo(GroupDropZoneInner, (a, b) =>
+  a.group === b.group &&
+  a.rules === b.rules &&
+  a.isHovered === b.isHovered &&
+  a.isHighlighted === b.isHighlighted &&
+  a.selectedCount === b.selectedCount &&
+  a.onRefresh === b.onRefresh &&
+  a.onRulesChanged === b.onRulesChanged &&
+  a.onBulkAssign === b.onBulkAssign &&
+  a.onPartnerClick === b.onPartnerClick,
+);
