@@ -227,7 +227,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Toaster />
                       <LiveRegion message="" />
 
-                    <div className="flex h-screen overflow-hidden overscroll-none bg-background">
+                    <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
                       {/* Skip navigation link for accessibility */}
                       <a
                         href="#main-content"
@@ -342,7 +342,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             />
                           )}
                         </BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-none md:mt-0 mt-12 pb-16 md:pb-0">
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
                             <Outlet />
