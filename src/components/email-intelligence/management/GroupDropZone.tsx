@@ -57,8 +57,10 @@ export function GroupDropZone({
     companyName: rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name),
     domain: rule.domain ?? rule.email_address.split('@')[1] ?? '',
     emailCount: 0,
+    firstSeen: '',
+    lastSeen: '',
     isClassified: true,
-  } as SenderAnalysis);
+  });
 
 
   // Estrae il dominio "root" (penultimo segmento prima del TLD) da un'email.
