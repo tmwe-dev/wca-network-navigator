@@ -248,7 +248,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="partner-directory" element={<Navigate to="/v2/explore/network" replace />} />
           <Route path="operations" element={<Navigate to="/v2/explore/network" replace />} />
           <Route path="import" element={<Navigate to="/v2/explore/network" replace />} />
-          <Route path="network" element={<Navigate to="/v2/explore/network" replace />} />
           {/* Mantengo OperationsPage raggiungibile via deep-link legacy se serve */}
           <Route path="operations-legacy" element={guardedPage(OperationsPage, "PartnerDirectory")} />
 
