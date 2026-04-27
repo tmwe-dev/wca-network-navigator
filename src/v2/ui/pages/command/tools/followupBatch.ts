@@ -50,7 +50,7 @@ export const followupBatchTool: Tool = {
       title: "Clienti inattivi >30gg",
       meta: {
         count: inactive.length,
-        sourceLabel: "Supabase · imported_contacts",
+        sourceLabel: "Contatti CRM",
       },
       cards: inactive.map((c) => ({
         id: c.id as string,
