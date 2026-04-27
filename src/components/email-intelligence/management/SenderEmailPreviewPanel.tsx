@@ -10,6 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import {
   ChevronLeft, ChevronRight, Mail, Loader2,
   ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin,
 } from "lucide-react";
@@ -79,7 +84,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   const current = emails[selectedIdx] ?? null;
   const previewText = useMemo(() => {
     if (!current?.body_text) return "";
-    return current.body_text.replace(/\s+/g, " ").trim().slice(0, 600);
+    // Mantieni i ritorni a capo (whitespace-pre-wrap), nessun troncamento:
+    // il pannello è scrollabile e ridimensionabile.
+    return current.body_text.trim();
   }, [current]);
 
   if (!senderEmail) {
@@ -133,8 +140,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
           Nessuna email trovata per questo mittente
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <ScrollArea className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0">
+          <ResizablePanel defaultSize={45} minSize={15}>
+            <ScrollArea className="h-full">
             <div className="p-1.5 space-y-1">
               {emails.map((em, idx) => {
                 const bodyPreview = (em.body_text ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
@@ -176,12 +184,16 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                 );
               })}
             </div>
-          </ScrollArea>
+            </ScrollArea>
+          </ResizablePanel>
 
-          {/* Pannello dettaglio email selezionata */}
+          {current && <ResizableHandle withHandle />}
+
+          {/* Pannello dettaglio email selezionata — ridimensionabile verticalmente */}
           {current && (
-            <div className="border-t flex-shrink-0 max-h-[45%] overflow-y-auto bg-muted/10">
-              <div className="px-3 py-2 space-y-1.5">
+            <ResizablePanel defaultSize={55} minSize={15}>
+              <div className="h-full overflow-y-auto bg-muted/10">
+                <div className="px-3 py-2 space-y-1.5">
                 {/* Badge canale + direzione + data */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant="outline" className="gap-1 text-[10px] py-0 h-5">
@@ -228,14 +240,15 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   </div>
                 )}
 
-                {/* Corpo */}
-                <p className="text-xs text-foreground/85 leading-relaxed line-clamp-6 whitespace-pre-wrap pt-1">
+                {/* Corpo — niente line-clamp: l'area è scrollabile e ridimensionabile */}
+                <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap pt-1">
                   {previewText || "(corpo email non disponibile)"}
                 </p>
+                </div>
               </div>
-            </div>
+            </ResizablePanel>
           )}
-        </div>
+        </ResizablePanelGroup>
       )}
     </div>
   );
