@@ -51,6 +51,63 @@ function ChannelIcon({ channel, className }: { channel: string | null; className
   return <Mail className={cn("text-primary", className)} />;
 }
 
+/**
+ * EmailBody — rendering identico a Outreach/EmailDetailView:
+ * normalizza HTML/text, sanitizza con DOMPurify e usa EmailHtmlFrame
+ * per visualizzare la mail così com'è arrivata.
+ */
+function EmailBody({ message, compact = false }: { message: PreviewEmail; compact?: boolean }) {
+  const { bodyHtml, bodyText, isLoading } = useEmailMessageContent(message.id, {
+    bodyHtml: message.body_html,
+    bodyText: message.body_text,
+  });
+  const normalized = useMemo(
+    () => normalizeEmailContent({ bodyHtml, bodyText }),
+    [bodyHtml, bodyText],
+  );
+  const sanitizedHtml = useMemo(() => {
+    if (!normalized.bodyHtml) return null;
+    return DOMPurify.sanitize(normalized.bodyHtml, {
+      USE_PROFILES: { html: true },
+      ADD_TAGS: ["style", "center"],
+      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border", "color", "face", "size"],
+      ALLOW_DATA_ATTR: true,
+      FORBID_TAGS: ["script", "form", "input", "textarea", "select", "button"],
+      FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus", "onblur"],
+    });
+  }, [normalized.bodyHtml]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (sanitizedHtml) {
+    return (
+      <div className={cn("min-h-[120px]", compact ? "text-xs" : "text-sm")}>
+        <EmailHtmlFrame html={sanitizedHtml} mode="safe" blockRemote={false} />
+      </div>
+    );
+  }
+  if (normalized.bodyText) {
+    return (
+      <pre
+        className={cn(
+          "leading-relaxed whitespace-pre-wrap break-words font-sans text-foreground/90",
+          compact ? "text-xs" : "text-sm",
+        )}
+      >
+        {normalized.bodyText}
+      </pre>
+    );
+  }
+  return (
+    <p className="text-xs text-muted-foreground">(corpo email non disponibile)</p>
+  );
+}
+
 export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmailPreviewPanelProps) {
   const [emails, setEmails] = useState<PreviewEmail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
