@@ -3,6 +3,7 @@
  */
 import { useMemo, useState } from "react";
 import type { EmailSenderGroup, SenderAnalysis, SortOption } from "@/types/email-management";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const VOLUME_FILTERS = [
   { value: "all", label: "Tutti" },
@@ -13,10 +14,15 @@ const VOLUME_FILTERS = [
 ];
 
 export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderGroup[]) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("count-desc");
-  const [volumeFilter, setVolumeFilter] = useState("all");
-  const [hideClassified, setHideClassified] = useState(true);
+  const g = useGlobalFilters();
+  const searchQuery = g.filters.emailIntelSearch;
+  const setSearchQuery = (v: string) => g.setFilter("emailIntelSearch", v);
+  const sortOption = g.filters.emailIntelSort as SortOption;
+  const setSortOption = (v: SortOption) => g.setFilter("emailIntelSort", v);
+  const volumeFilter = g.filters.emailIntelVolume;
+  const setVolumeFilter = (v: string) => g.setFilter("emailIntelVolume", v);
+  const hideClassified = g.filters.emailIntelHideClassified;
+  const setHideClassified = (v: boolean) => g.setFilter("emailIntelHideClassified", v);
   const [groupSortOption, setGroupSortOption] = useState<"alpha" | "count">("alpha");
   const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
 
