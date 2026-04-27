@@ -23,6 +23,7 @@ import { EmailIntelligenceHeader } from "./management/EmailIntelligenceHeader";
 import { SenderActionBar } from "./management/SenderActionBar";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
+import { RulesConfigurationDialog } from "./management/RulesConfigurationDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SenderAnalysis, EmailSenderGroup, SortOption } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,6 +221,7 @@ export default function ManualGroupingTab() {
   const [previewSender, setPreviewSender] = useState<SenderAnalysis | null>(null);
   const [highlightedGroupName, setHighlightedGroupName] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showRulesDialog, setShowRulesDialog] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [letterRange, setLetterRange] = useState<LetterRange>("all");
   const [aiPromptDraft, setAiPromptDraft] = useState("");
@@ -337,7 +339,7 @@ export default function ManualGroupingTab() {
                 ? (allSenders.find((s) => selectedSenders.has(s.email))?.companyName || selectedEmails[0])
                 : (previewSender?.companyName || previewSender?.email || "")
           }
-          onOpenRules={() => toast.info("Apri pannello regole — in arrivo")}
+          onOpenRules={() => setShowRulesDialog(true)}
           onOpenExport={() => setShowExportDialog(true)}
           onActionComplete={() => {
             setSelectedSenders(new Set());
@@ -450,6 +452,26 @@ export default function ManualGroupingTab() {
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
         senderEmails={selectedEmails}
+      />
+
+      <RulesConfigurationDialog
+        open={showRulesDialog}
+        onOpenChange={setShowRulesDialog}
+        senderEmails={
+          selectedSenders.size > 0
+            ? selectedEmails
+            : previewSender
+              ? [previewSender.email]
+              : []
+        }
+        contextLabel={
+          selectedSenders.size > 1
+            ? `${selectedSenders.size} mittenti`
+            : selectedSenders.size === 1
+              ? (allSenders.find((s) => selectedSenders.has(s.email))?.companyName || selectedEmails[0])
+              : (previewSender?.companyName || previewSender?.email || "")
+        }
+        onSaved={() => loadData()}
       />
     </div>
   );
