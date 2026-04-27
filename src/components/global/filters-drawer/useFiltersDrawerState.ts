@@ -21,6 +21,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isCampaigns = seg === "/campaigns";
   const isInreach = seg === `/${ROUTE_INREACH}`;
   const isEmailForge = seg === "/ai-staff/email-forge";
+  const isEmailIntelligence = seg === "/email-intelligence";
 
   const outreachTab = g.filters.outreachTab;
   const isCockpit = isOutreach && outreachTab === "cockpit";
@@ -53,7 +54,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -100,6 +101,12 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.emailCategory !== "all") n++;
       if (g.filters.sortingFilter !== "all") n++;
     }
+    if (isEmailIntelligence) {
+      if (g.filters.emailIntelSearch.trim()) n++;
+      if (g.filters.emailIntelVolume !== "all") n++;
+      if (g.filters.emailIntelSort !== "count-desc") n++;
+      if (!g.filters.emailIntelHideClassified) n++;
+    }
     if (isNetwork) {
       if (g.filters.networkSearch.trim()) n++;
       if (g.filters.networkQuality !== "all") n++;
@@ -113,7 +120,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.crmChannel !== "all") n++;
     }
     return n;
-  }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM]);
+  }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence]);
 
   const handleResetAll = useCallback(() => {
     if (isCockpit) {
@@ -131,7 +138,13 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isInUscita) { g.setSortingFilter("all"); g.setSortingSearch(""); }
     if (isNetwork) { g.setNetworkSearch(""); g.setNetworkQuality("all"); g.setNetworkSort("name"); g.setNetworkSelectedCountries(new Set()); g.setNetworkDirectoryOnly(false); }
     if (isCRM) { g.setSearch(""); g.setLeadStatus("all"); g.setHoldingPattern("out"); g.setCrmQuality("all"); g.setCrmChannel("all"); g.setGroupBy("country"); g.setSortBy("name"); }
-  }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM]);
+    if (isEmailIntelligence) {
+      g.setFilter("emailIntelSearch", "");
+      g.setFilter("emailIntelVolume", "all");
+      g.setFilter("emailIntelSort", "count-desc");
+      g.setFilter("emailIntelHideClassified", true);
+    }
+  }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM, isEmailIntelligence]);
 
   const toggleOrigin = useCallback((val: string) => {
     const next = new Set(g.filters.origin);
@@ -186,7 +199,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     isSorting, isCodaAI, isABTest, isArena,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
     isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer, isCampaigns,
-    isInreach, isEmailForge,
+    isInreach, isEmailForge, isEmailIntelligence,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
   };
