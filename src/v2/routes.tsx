@@ -200,7 +200,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="inreach" element={<Navigate to="/v2/communicate/inbox" replace />} />
 
           {/* Agents + figli */}
-          <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
+          <Route path="agents" element={<Navigate to="/v2/intelligence/agents" replace />} />
           <Route path="agents/persona" element={guardedPage(AgentPersonaEditorPage, "AgentPersona")} />
           <Route path="agents/missions" element={guardedPage(MissionBuilderPage, "Missions")} />
           <Route path="agents/autopilot" element={guardedPage(MissionsAutopilotPage, "AutopilotMissions")} />
@@ -213,7 +213,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="agent-chat" element={<AgentChatRedirect />} />
 
           {/* Campaigns + figli */}
-          <Route path="campaigns" element={guardedPage(CampaignsPage, "Campaigns")} />
+          <Route path="campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
           <Route path="campaigns/jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
           <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns/jobs" replace />} />
 
@@ -223,18 +223,18 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="ai-staff/email-forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
-          <Route path="prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
+          <Route path="prompt-lab" element={<Navigate to="/v2/intelligence/prompt-lab" replace />} />
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="knowledge-base" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="kb-supervisor" element={<Navigate to="/v2/ai-staff/kb-supervisor" replace />} />
+          <Route path="knowledge-base" element={<Navigate to="/v2/intelligence/kb" replace />} />
+          <Route path="kb-supervisor" element={<Navigate to="/v2/intelligence/kb" replace />} />
           <Route path="ai-lab" element={<Navigate to="/v2/ai-staff/lab" replace />} />
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
-          <Route path="globe" element={guardedPage(GlobePage, "Globe")} />
-          <Route path="deep-search" element={<Navigate to="/v2/network" replace />} />
+          <Route path="globe" element={<Navigate to="/v2/explore/map" replace />} />
+          <Route path="deep-search" element={<Navigate to="/v2/explore/deep-search" replace />} />
           <Route path="sorting" element={guardedPage(SortingPage, "Sorting")} />
           <Route path="ra-explorer" element={guardedPage(RAExplorerPage, "RAExplorer")} />
           <Route path="ra-scraping" element={guardedPage(RAScrapingEnginePage, "RAScraping")} />
@@ -245,9 +245,10 @@ export function V2Routes(): React.ReactElement {
           <Route path="research/company/:id" element={<RACompanyRedirect />} />
 
           {/* Partner directory + alias → unificati su Network */}
-          <Route path="partner-directory" element={<Navigate to="/v2/network" replace />} />
-          <Route path="operations" element={<Navigate to="/v2/network" replace />} />
-          <Route path="import" element={<Navigate to="/v2/network" replace />} />
+          <Route path="partner-directory" element={<Navigate to="/v2/explore/network" replace />} />
+          <Route path="operations" element={<Navigate to="/v2/explore/network" replace />} />
+          <Route path="import" element={<Navigate to="/v2/explore/network" replace />} />
+          <Route path="network" element={<Navigate to="/v2/explore/network" replace />} />
           {/* Mantengo OperationsPage raggiungibile via deep-link legacy se serve */}
           <Route path="operations-legacy" element={guardedPage(OperationsPage, "PartnerDirectory")} />
 
@@ -269,7 +270,7 @@ export function V2Routes(): React.ReactElement {
           {/* Standalone */}
           <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
           <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
-          <Route path="ai-control" element={guardedPage(AIControlCenterPage, "AIControl")} />
+          <Route path="ai-control" element={<Navigate to="/v2/intelligence/control" replace />} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
