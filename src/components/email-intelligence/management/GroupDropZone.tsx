@@ -126,14 +126,14 @@ function GroupDropZoneInner({
 
   return (
     <div
-      className="h-full w-full min-h-[160px]"
+      className="w-full min-h-[160px]"
       data-drop-zone="true"
       data-group-id={group.id}
       data-group-name={group.nome_gruppo}
     >
       <Card
         className={cn(
-          "h-full transition-colors duration-150 border-2 flex flex-col overflow-hidden",
+          "min-h-[160px] transition-colors duration-150 border-2 flex flex-col overflow-hidden",
           isHovered && "border-primary bg-primary/5 ring-2 ring-primary/30",
           // Glow animato quando il gruppo è "highlighted" (es. via chip AI).
           isHighlighted && "ring-4 ring-primary/50 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)] animate-pulse",
