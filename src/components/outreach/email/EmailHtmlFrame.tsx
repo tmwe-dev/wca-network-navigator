@@ -82,7 +82,7 @@ export const EmailHtmlFrame = forwardRef<HTMLIFrameElement, Props>(function Emai
     };
 
     const blockHorizontalWheelNavigation = (event: WheelEvent) => {
-      if (Math.abs(event.deltaX) > 1) {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY) && Math.abs(event.deltaX) > 1) {
         event.preventDefault();
         event.stopPropagation();
       }
