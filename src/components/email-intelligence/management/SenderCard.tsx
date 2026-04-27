@@ -10,7 +10,7 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GripVertical, Mail, Sparkles, Check } from 'lucide-react';
+import { GripVertical, Mail, Sparkles, Check, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
@@ -80,15 +80,23 @@ export function SenderCard({
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={cn("snap-start", isDragging && "opacity-30")}
+      className={cn("snap-start relative", isDragging && "opacity-30")}
     >
+      {/* Ribbon "Selezionato" che sporge sopra la card quando in focus */}
+      {isFocused && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold shadow-sm whitespace-nowrap">
+            ● Selezionato
+          </span>
+        </div>
+      )}
       <Card
         onDoubleClick={() => onDoubleClick?.(sender)}
         className={cn(
           "border-l-4 transition-all cursor-grab",
           !isDragging && "hover:shadow-md",
           // Focus visivo (preview): ring sottile, NESSUNA opacità ridotta.
-          isFocused && "ring-2 ring-primary/50",
+          isFocused && "ring-2 ring-primary shadow-md",
           isSelected && "border-2 border-primary bg-primary/5",
           sender.emailCount > 100
             ? "border-l-destructive"
@@ -154,15 +162,20 @@ export function SenderCard({
                 title={`Suggerimento AI (confidenza ${Math.round((sender.aiSuggestion.confidence ?? 0) * 100)}%)`}
               >
                 <Badge
-                  variant="outline"
-                  className="gap-1 text-[9px] py-0 h-4 px-1.5 border-primary/40 bg-primary/5 hover:bg-primary/15 transition-colors"
+                  variant="default"
+                  className="gap-1 text-[10px] py-0.5 h-5 px-2 bg-primary/90 hover:bg-primary transition-colors shadow-sm"
                 >
-                  <Sparkles className="h-2.5 w-2.5 text-primary" />
-                  <span className="text-primary font-medium truncate max-w-[90px]">
+                  <Sparkles className="h-3 w-3" />
+                  <span className="font-semibold truncate max-w-[100px]">
                     AI: {sender.aiSuggestion.group_name}
                   </span>
                 </Badge>
               </button>
+            )}
+            {!sender.aiSuggestion?.group_name && !sender.isClassified && (
+              <span className="text-[9px] text-muted-foreground/60 italic">
+                Nessun suggerimento AI
+              </span>
             )}
             {sender.isClassified && (
               <Badge
@@ -187,6 +200,18 @@ export function SenderCard({
               </button>
             )}
           </div>
+
+          {/* Riga 3: ultima email ricevuta */}
+          {sender.lastSeen && (
+            <div className="flex items-center gap-1 text-[9px] text-muted-foreground/80 pt-0.5 border-t border-border/40">
+              <Clock className="h-2.5 w-2.5 flex-shrink-0" />
+              <span className="truncate">
+                Ultima: {new Date(sender.lastSeen).toLocaleDateString("it-IT", {
+                  day: "2-digit", month: "short", year: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
