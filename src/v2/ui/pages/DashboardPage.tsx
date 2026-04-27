@@ -3,7 +3,7 @@
  */
 import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Radar, Network, Users, CalendarCheck, ChevronDown } from "lucide-react";
+import { ArrowRight, Radar, Search, Kanban, Brain, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HomeAIPrompt } from "@/components/home/HomeAIPrompt";
@@ -33,10 +33,10 @@ function formatCompact(value: number) {
 }
 
 const NAV_CARDS = [
-  { key: "outreach", title: "Outreach", description: "Cockpit AI e invio email", route: "/v2/outreach", icon: Radar },
-  { key: "network", title: "Network", description: "Partner e directory", route: "/v2/network", icon: Network },
-  { key: "crm", title: "CRM", description: "Prospect e contatti", route: "/v2/crm", icon: Users },
-  { key: "agenda", title: "Agenda", description: "Attività e follow-up", route: "/v2/outreach/agenda", icon: CalendarCheck },
+  { key: "explore",      title: "Esplora",      description: "Network, mappa, ricerca",     route: "/v2/explore",      icon: Search },
+  { key: "pipeline",     title: "Pipeline",     description: "Contatti, deals, agenda",     route: "/v2/pipeline",     icon: Kanban },
+  { key: "communicate",  title: "Comunica",     description: "Inbox, outreach, composer",   route: "/v2/communicate",  icon: Radar },
+  { key: "intelligence", title: "Intelligence", description: "Agenti, KB, analytics",       route: "/v2/intelligence", icon: Brain },
 ] as const;
 
 export function DashboardPage() {
@@ -62,10 +62,10 @@ export function DashboardPage() {
 
   const statForCard = (key: string) => {
     switch (key) {
-      case "outreach": return `${formatCompact(dashData?.readyContactsCount ?? 0)} pronti`;
-      case "network": return `${formatCompact(dashData?.partnerCount ?? 0)} partner`;
-      case "crm": return `${formatCompact(dashData?.prospectTotal ?? 0)} prospect`;
-      case "agenda": return `${formatCompact(dashData?.openActivitiesCount ?? 0)} aperte`;
+      case "explore":      return `${formatCompact(dashData?.partnerCount ?? 0)} partner`;
+      case "pipeline":     return `${formatCompact(dashData?.prospectTotal ?? 0)} prospect`;
+      case "communicate":  return `${formatCompact(dashData?.readyContactsCount ?? 0)} pronti`;
+      case "intelligence": return `${formatCompact(dashData?.openActivitiesCount ?? 0)} aperte`;
       default: return "";
     }
   };
