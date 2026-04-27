@@ -51,8 +51,9 @@ export function SenderManagementTab() {
 
   // Realtime
   useEffect(() => {
-    const ch = supabase.channel('sender-mgmt-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_sender_groups' }, () => loadGroups())
+    const channelName = `sender-mgmt-rt-${Math.random().toString(36).slice(2, 10)}`;
+    const ch = supabase.channel(channelName);
+    ch.on('postgres_changes', { event: '*', schema: 'public', table: 'email_sender_groups' }, () => loadGroups())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);

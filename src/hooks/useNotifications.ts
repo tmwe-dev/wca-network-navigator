@@ -34,8 +34,10 @@ export function useNotifications(filters: NotificationFilters = {}) {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel(`notifications_${user.id}`)
+    // Unique channel name per effect instance to avoid StrictMode double-mount collisions.
+    const channelName = `notifications_${user.id}_${Math.random().toString(36).slice(2, 10)}`;
+    const channel = supabase.channel(channelName);
+    channel
       .on(
         "postgres_changes",
         {
@@ -77,8 +79,9 @@ export function useUnreadCount() {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel(`notifications_count_${user.id}`)
+    const channelName = `notifications_count_${user.id}_${Math.random().toString(36).slice(2, 10)}`;
+    const channel = supabase.channel(channelName);
+    channel
       .on(
         "postgres_changes",
         {
