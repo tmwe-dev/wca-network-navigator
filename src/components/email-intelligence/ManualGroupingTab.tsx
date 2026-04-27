@@ -158,26 +158,57 @@ function GroupGridPanel(props: {
   loadData: () => void;
   selectedCount: number;
   onBulkAssign: (group: { id: string; nome_gruppo: string }) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  onCreateGroup: () => void;
 }) {
   const { groups, visibleGroups, groupSortOption, onGroupSortChange,
     letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
-    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign } = props;
+    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
+    onRefresh, isRefreshing, onCreateGroup } = props;
   return (
     <div className="flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
       <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">
           Gruppi ({visibleGroups.length}{letterRange !== "all" ? `/${groups.length}` : ""})
         </span>
-        <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
-          <SelectTrigger className="w-[140px] h-8">
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="alpha">A → Z</SelectItem>
-            <SelectItem value="count">Per contatti</SelectItem>
-          </SelectContent>
-        </Select>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-1.5">
+            <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
+              <SelectTrigger className="w-[140px] h-8">
+                <ArrowUpDown className="h-3 w-3 mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">A → Z</SelectItem>
+                <SelectItem value="count">Per contatti</SelectItem>
+              </SelectContent>
+            </Select>
+            {onRefresh && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                    aria-label="Aggiorna mittenti"
+                    className="h-8 w-8"
+                  >
+                    {isRefreshing
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RefreshCw className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Aggiorna mittenti</TooltipContent>
+              </Tooltip>
+            )}
+            <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8">
+              <Plus className="h-4 w-4 mr-1" />
+              Nuovo gruppo
+            </Button>
+          </div>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
