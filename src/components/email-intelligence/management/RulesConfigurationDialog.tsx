@@ -135,7 +135,7 @@ export function RulesConfigurationDialog({
               ? <>Configura l'azione automatica per <strong>{contextLabel}</strong>.</>
               : <>Configura l'azione automatica per <strong>{senderEmails.length} mittenti</strong>.</>}
             {mixed && (
-              <span className="block mt-1 text-amber-600 dark:text-amber-400">
+              <span className="block mt-1 text-warning">
                 ⚠️ I mittenti selezionati hanno regole diverse. Salvando le sovrascriverai tutte.
               </span>
             )}
