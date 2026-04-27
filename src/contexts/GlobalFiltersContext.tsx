@@ -51,6 +51,11 @@ export interface GlobalFilterState {
   // Inreach (pagina dedicata /v2/inreach)
   inreachChannel: "email" | "whatsapp" | "linkedin";
   inreachGroupBySender: boolean;
+  // Email Intelligence — Manual Grouping (Mittenti)
+  emailIntelSearch: string;
+  emailIntelVolume: string; // "all" | "2" | "5" | "10" | "50"
+  emailIntelHideClassified: boolean;
+  emailIntelSort: string; // "name-asc" | "count-desc" | "ai_group"
 }
 
 // --- Reducer ---
@@ -103,6 +108,10 @@ const defaults: GlobalFilterState = {
   campaignsAiQuery: "",
   inreachChannel: "email",
   inreachGroupBySender: false,
+  emailIntelSearch: "",
+  emailIntelVolume: "all",
+  emailIntelHideClassified: true,
+  emailIntelSort: "count-desc",
 };
 
 function cloneDefaults(): GlobalFilterState {
