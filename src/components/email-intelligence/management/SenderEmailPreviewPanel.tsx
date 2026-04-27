@@ -6,6 +6,7 @@
  *  • dettaglio in basso: from/to + badge canale/direzione + corpo 6 righe
  */
 import { useState, useEffect, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,9 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
+import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
+import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
 
 interface PreviewEmail {
   id: string;
@@ -31,6 +35,7 @@ interface PreviewEmail {
   from_address: string | null;
   to_address: string | null;
   body_text: string | null;
+  body_html: string | null;
 }
 
 interface SenderEmailPreviewPanelProps {
@@ -44,6 +49,63 @@ function ChannelIcon({ channel, className }: { channel: string | null; className
   if (channel === "whatsapp") return <MessageCircle className={cn("text-emerald-500", className)} />;
   if (channel === "linkedin") return <Linkedin className={cn("text-sky-500", className)} />;
   return <Mail className={cn("text-primary", className)} />;
+}
+
+/**
+ * EmailBody — rendering identico a Outreach/EmailDetailView:
+ * normalizza HTML/text, sanitizza con DOMPurify e usa EmailHtmlFrame
+ * per visualizzare la mail così com'è arrivata.
+ */
+function EmailBody({ message, compact = false }: { message: PreviewEmail; compact?: boolean }) {
+  const { bodyHtml, bodyText, isLoading } = useEmailMessageContent(message.id, {
+    bodyHtml: message.body_html,
+    bodyText: message.body_text,
+  });
+  const normalized = useMemo(
+    () => normalizeEmailContent({ bodyHtml, bodyText }),
+    [bodyHtml, bodyText],
+  );
+  const sanitizedHtml = useMemo(() => {
+    if (!normalized.bodyHtml) return null;
+    return DOMPurify.sanitize(normalized.bodyHtml, {
+      USE_PROFILES: { html: true },
+      ADD_TAGS: ["style", "center"],
+      ADD_ATTR: ["target", "style", "class", "bgcolor", "background", "align", "valign", "width", "height", "cellpadding", "cellspacing", "border", "color", "face", "size"],
+      ALLOW_DATA_ATTR: true,
+      FORBID_TAGS: ["script", "form", "input", "textarea", "select", "button"],
+      FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus", "onblur"],
+    });
+  }, [normalized.bodyHtml]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (sanitizedHtml) {
+    return (
+      <div className={cn("min-h-[120px]", compact ? "text-xs" : "text-sm")}>
+        <EmailHtmlFrame html={sanitizedHtml} mode="safe" blockRemote={false} />
+      </div>
+    );
+  }
+  if (normalized.bodyText) {
+    return (
+      <pre
+        className={cn(
+          "leading-relaxed whitespace-pre-wrap break-words font-sans text-foreground/90",
+          compact ? "text-xs" : "text-sm",
+        )}
+      >
+        {normalized.bodyText}
+      </pre>
+    );
+  }
+  return (
+    <p className="text-xs text-muted-foreground">(corpo email non disponibile)</p>
+  );
 }
 
 export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmailPreviewPanelProps) {
@@ -65,7 +127,7 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
       try {
         const { data, error } = await supabase
           .from("channel_messages")
-          .select("id, subject, email_date, direction, channel, from_address, to_address, body_text")
+          .select("id, subject, email_date, direction, channel, from_address, to_address, body_text, body_html")
           .eq("channel", "email")
           .or(`from_address.ilike.%${senderEmail}%,to_address.ilike.%${senderEmail}%`)
           .order("email_date", { ascending: false })
@@ -85,12 +147,6 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   }, [senderEmail]);
 
   const current = emails[selectedIdx] ?? null;
-  const previewText = useMemo(() => {
-    if (!current?.body_text) return "";
-    // Mantieni i ritorni a capo (whitespace-pre-wrap), nessun troncamento:
-    // il pannello è scrollabile e ridimensionabile.
-    return current.body_text.trim();
-  }, [current]);
 
   if (!senderEmail) {
     return (
@@ -245,10 +301,10 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   </div>
                 )}
 
-                {/* Corpo — niente line-clamp: l'area è scrollabile e ridimensionabile */}
-                <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap pt-1">
-                  {previewText || "(corpo email non disponibile)"}
-                </p>
+                {/* Corpo email renderizzato come in Outreach (HTML sanitizzato + iframe). */}
+                <div className="pt-1">
+                  <EmailBody message={current} compact />
+                </div>
                 </div>
               </div>
             </ResizablePanel>
@@ -308,9 +364,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                   </div>
                 </div>
 
-                {/* Corpo full */}
-                <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap pt-1">
-                  {fullViewEmail.body_text?.trim() || "(corpo email non disponibile)"}
+                {/* Corpo full — stesso renderer di Outreach. */}
+                <div className="pt-1">
+                  <EmailBody message={fullViewEmail} />
                 </div>
               </div>
             </div>
