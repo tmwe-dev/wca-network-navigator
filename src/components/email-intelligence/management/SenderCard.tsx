@@ -14,7 +14,7 @@
  * spam, esporta, prompt regola custom) sono raccolte nella popup
  * `SenderActionsDialog` aperta dal bottone "Azioni & regole".
  */
-import { useState, useRef } from 'react';
+import { memo, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,7 @@ interface SenderCardProps {
   onActionComplete?: () => void;
 }
 
-export function SenderCard({
+function SenderCardImpl({
   sender,
   onDragStart,
   onDragEnd,
@@ -331,14 +331,40 @@ export function SenderCard({
           </CardContent>
         </Card>
 
-        <SenderActionsDialog
-          sender={actionsOpen ? sender : null}
-          open={actionsOpen}
-          onOpenChange={setActionsOpen}
-          onActionDone={onActionComplete}
-        />
+        {/* Dialog montato solo quando l'utente lo apre — evita migliaia di
+         *  Radix Portal montati in lista. */}
+        {actionsOpen && (
+          <SenderActionsDialog
+            sender={sender}
+            open={actionsOpen}
+            onOpenChange={setActionsOpen}
+            onActionDone={onActionComplete}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
 }
+
+/**
+ * Memoized export: la lista mittenti rendea ~1 200 card; senza memo ogni
+ * cambio di stato del parent (selezione, hover, drag) ne rerenderizza tutte.
+ */
+export const SenderCard = memo(SenderCardImpl, (prev, next) =>
+  prev.sender === next.sender
+  && prev.isSelected === next.isSelected
+  && prev.isFocused === next.isFocused
+  && prev.onDragStart === next.onDragStart
+  && prev.onDragEnd === next.onDragEnd
+  && prev.onToggleSelect === next.onToggleSelect
+  && prev.onAiChipClick === next.onAiChipClick
+  && prev.onFocusRequest === next.onFocusRequest
+  && prev.onOpenRules === next.onOpenRules
+  && prev.onMarkRead === next.onMarkRead
+  && prev.onDelete === next.onDelete
+  && prev.onExport === next.onExport
+  && prev.onBlock === next.onBlock
+  && prev.onAnalyzeAI === next.onAnalyzeAI
+  && prev.onAcceptAiSuggestion === next.onAcceptAiSuggestion
+  && prev.onActionComplete === next.onActionComplete);
 
