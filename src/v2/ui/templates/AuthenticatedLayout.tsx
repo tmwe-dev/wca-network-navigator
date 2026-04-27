@@ -182,21 +182,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  useEffect(() => {
-    const blockHorizontalWheelNavigation = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 1) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    window.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
-    document.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
-    return () => {
-      window.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
-      document.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
-    };
-  }, []);
+  // ⚠️ Nessun listener globale wheel/preventDefault: blocca il trackpad e
+  // rompe gli scroll annidati di tutta l'app. La protezione contro lo
+  // swipe-back orizzontale del browser è gestita dal CSS
+  // `overscroll-behavior-x: none` su html/body in src/index.css.
 
   if (isLoading || !sessionReady) {
     return (
