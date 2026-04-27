@@ -382,18 +382,6 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-2">
-      <CompactToolbar
-        showPreview={showPreview}
-        onTogglePreview={() => setShowPreview((v) => !v)}
-        onRefresh={populateAddressRules}
-        isRefreshing={isPopulating}
-        onCreateGroup={() => setShowCreateDialog(true)}
-        visibleCount={sortedSenders.length}
-        totalCount={allSenders.length}
-        classifiedCount={classifiedSenders.length}
-        selectedCount={selectedSenders.size}
-      />
-
       {/* Layout 3 colonne resizable: [Preview opzionale] | [Sender cards verticali] | [Gruppi] */}
       <ResizablePanelGroup
         direction="horizontal"
@@ -418,8 +406,42 @@ export default function ManualGroupingTab() {
         <ResizablePanel defaultSize={showPreview ? 30 : 40} minSize={20}>
           <div className="h-full flex flex-col overflow-hidden border-l-0">
             <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                Mittenti ({sortedSenders.length})
+              <div className="flex items-center gap-2 min-w-0">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 flex-shrink-0"
+                        onClick={() => setShowPreview((v) => !v)}
+                        aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
+                      >
+                        {showPreview
+                          ? <PanelLeftClose className="h-3.5 w-3.5" />
+                          : <PanelLeftOpen className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs font-medium text-muted-foreground truncate">
+                  Mittenti ({sortedSenders.length})
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                <span className="font-semibold text-foreground">{sortedSenders.length}</span>
+                <span> / {allSenders.length}</span>
+                <span className="mx-1 opacity-50">·</span>
+                {classifiedSenders.length} classificati
+                {selectedSenders.size > 0 && (
+                  <>
+                    <span className="mx-1 opacity-50">·</span>
+                    <span className="text-primary font-semibold">{selectedSenders.size} sel.</span>
+                  </>
+                )}
               </span>
             </div>
             {sortedSenders.length === 0 ? (
@@ -472,6 +494,9 @@ export default function ManualGroupingTab() {
               loadData={loadData}
               selectedCount={selectedSenders.size}
               onBulkAssign={handleBulkAssignFromGroup}
+              onRefresh={populateAddressRules}
+              isRefreshing={isPopulating}
+              onCreateGroup={() => setShowCreateDialog(true)}
             />
           </div>
         </ResizablePanel>
