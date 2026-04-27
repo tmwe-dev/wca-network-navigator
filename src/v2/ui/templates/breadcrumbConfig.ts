@@ -29,6 +29,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 const SUB_LABELS: Record<string, string> = {
   contacts: "Contatti",
+  kanban: "Kanban",
   prospects: "Prospect",
   acquisition: "Acquisizione",
   deals: "Deals",

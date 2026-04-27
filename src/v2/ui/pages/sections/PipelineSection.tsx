@@ -6,6 +6,7 @@
 import * as React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
+import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 import { CRMPage } from "@/v2/ui/pages/CRMPage";
 import { DealsPage } from "@/v2/ui/pages/DealsPage";
@@ -20,16 +21,19 @@ const TABS: readonly SectionTab[] = [
 
 export function PipelineSection(): React.ReactElement {
   return (
-    <SectionTabs tabs={TABS} rootPath="/v2/pipeline">
-      <Routes>
-        <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
-        <Route path="contacts" element={<ContactsPage />} />
-        <Route path="kanban"   element={<CRMPage />} />
-        <Route path="deals"    element={<DealsPage />} />
-        <Route path="agenda"   element={<AgendaPage />} />
-        <Route path="*"        element={<Navigate to="/v2/pipeline/contacts" replace />} />
-      </Routes>
-    </SectionTabs>
+    <div className="flex flex-col h-full overflow-hidden">
+      <GoldenHeaderBar />
+      <SectionTabs tabs={TABS} rootPath="/v2/pipeline">
+        <Routes>
+          <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="kanban"   element={<CRMPage />} />
+          <Route path="deals"    element={<DealsPage />} />
+          <Route path="agenda"   element={<AgendaPage />} />
+          <Route path="*"        element={<Navigate to="/v2/pipeline/contacts" replace />} />
+        </Routes>
+      </SectionTabs>
+    </div>
   );
 }
 export default PipelineSection;
