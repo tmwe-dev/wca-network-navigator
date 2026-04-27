@@ -20,7 +20,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Loader2, ArrowUpDown, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Loader2, ArrowUpDown, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
@@ -28,7 +28,6 @@ import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
 import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
@@ -64,11 +63,27 @@ function inLetterRange(name: string, range: LetterRange): boolean {
 // CompactToolbar rimosso: toggle preview spostato accanto a "Mittenti",
 // refresh + nuovo gruppo spostati nell'header del pannello "Gruppi".
 
+type GroupSort = "alpha-asc" | "alpha-desc" | "count-desc" | "count-asc";
+
+const GROUP_SORT_CYCLE: Record<GroupSort, GroupSort> = {
+  "alpha-asc": "alpha-desc",
+  "alpha-desc": "count-desc",
+  "count-desc": "count-asc",
+  "count-asc": "alpha-asc",
+};
+
+const GROUP_SORT_META: Record<GroupSort, { label: string; Icon: typeof ArrowUpDown }> = {
+  "alpha-asc":  { label: "A → Z",        Icon: ArrowDownAZ },
+  "alpha-desc": { label: "Z → A",        Icon: ArrowUpAZ },
+  "count-desc": { label: "Più contatti", Icon: ArrowDown01 },
+  "count-asc":  { label: "Meno contatti", Icon: ArrowUp01 },
+};
+
 function GroupGridPanel(props: {
   groups: EmailSenderGroup[];
   visibleGroups: EmailSenderGroup[];
-  groupSortOption: "alpha" | "count";
-  onGroupSortChange: (s: "alpha" | "count") => void;
+  groupSortOption: GroupSort;
+  onGroupSortChange: (s: GroupSort) => void;
   letterRange: LetterRange;
   onLetterRangeChange: (r: LetterRange) => void;
   hoveredGroupId: string | null;
@@ -86,6 +101,8 @@ function GroupGridPanel(props: {
     letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
     assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
     onRefresh, isRefreshing, onCreateGroup } = props;
+  const sortMeta = GROUP_SORT_META[groupSortOption];
+  const SortIcon = sortMeta.Icon;
   return (
     <div className="flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
       <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
@@ -94,16 +111,21 @@ function GroupGridPanel(props: {
         </span>
         <TooltipProvider delayDuration={300}>
           <div className="flex items-center gap-1.5">
-            <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
-              <SelectTrigger className="w-[140px] h-8">
-                <ArrowUpDown className="h-3 w-3 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alpha">A → Z</SelectItem>
-                <SelectItem value="count">Per contatti</SelectItem>
-              </SelectContent>
-            </Select>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => onGroupSortChange(GROUP_SORT_CYCLE[groupSortOption])}
+                  aria-label="Cambia ordinamento gruppi"
+                >
+                  <SortIcon className="h-3.5 w-3.5 mr-1.5" />
+                  {sortMeta.label}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Click per ciclare A→Z, Z→A, più/meno contatti</TooltipContent>
+            </Tooltip>
             {onRefresh && (
               <Tooltip>
                 <TooltipTrigger asChild>
