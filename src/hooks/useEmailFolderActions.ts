@@ -15,7 +15,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 
-export type EmailAction = "archive" | "spam" | "move" | "hide";
+export type EmailAction = "archive" | "spam" | "move" | "delete" | "hide";
 
 interface BulkActionInput {
   messages: Array<{ id: string; imap_uid: number | null }>;
@@ -115,7 +115,7 @@ export function useBulkEmailAction() {
     },
     onSuccess: (res, vars) => {
       const labels: Record<EmailAction, string> = {
-        archive: "Archiviate", spam: "Spostate in spam", move: "Spostate", hide: "Nascoste",
+        archive: "Archiviate", spam: "Spostate in spam", move: "Spostate", delete: "Cestinate", hide: "Nascoste",
       };
       toast.success(`${labels[vars.action]} (${vars.messages.length})`);
       qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
