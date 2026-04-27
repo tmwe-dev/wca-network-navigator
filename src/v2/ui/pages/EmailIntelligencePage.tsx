@@ -73,7 +73,7 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex flex-col h-screen overflow-hidden p-2 md:p-3 gap-2">
+    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden p-2 md:p-3 gap-2">
       <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-shrink-0">
         <BrainCircuit className="h-4 w-4 text-primary" />
         Email Intelligence
