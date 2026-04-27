@@ -4,9 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent browser back/forward on horizontal swipe (trackpad two-finger) */
+/* Blocco totale dei gesti di navigazione del trackpad/touchscreen.
+ * - overscroll-behavior: none su entrambi gli assi → no swipe-back/forward,
+ *   no pull-to-refresh.
+ * - touch-action: pan-y pinch-zoom su html → permette solo lo scroll
+ *   verticale e il pinch-to-zoom; blocca pan orizzontale a livello browser.
+ * - Applicato anche a tutti i discendenti per evitare che container
+ *   con overflow inneschino la chain di overscroll del browser. */
 html, body {
+  overscroll-behavior: none;
   overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 html {
   touch-action: pan-y pinch-zoom;
@@ -17,6 +25,7 @@ html {
 
 @layer base {
   *, *::before, *::after {
+    overscroll-behavior: none;
     overscroll-behavior-x: none;
   }
 
