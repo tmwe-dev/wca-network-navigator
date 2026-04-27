@@ -84,7 +84,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
   const current = emails[selectedIdx] ?? null;
   const previewText = useMemo(() => {
     if (!current?.body_text) return "";
-    return current.body_text.replace(/\s+/g, " ").trim().slice(0, 600);
+    // Mantieni i ritorni a capo (whitespace-pre-wrap), nessun troncamento:
+    // il pannello è scrollabile e ridimensionabile.
+    return current.body_text.trim();
   }, [current]);
 
   if (!senderEmail) {
