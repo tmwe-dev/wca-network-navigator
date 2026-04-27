@@ -78,7 +78,7 @@ export function AnalyticsPage() {
   return (
     <div
       data-testid="page-analytics"
-      className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground flex flex-col"
+      className="h-full min-h-0 overflow-hidden bg-background text-foreground flex flex-col"
     >
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-6">
