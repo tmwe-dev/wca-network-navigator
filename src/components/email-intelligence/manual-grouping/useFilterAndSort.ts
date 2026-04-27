@@ -23,7 +23,9 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
   const setVolumeFilter = (v: string) => g.setFilter("emailIntelVolume", v);
   const hideClassified = g.filters.emailIntelHideClassified;
   const setHideClassified = (v: boolean) => g.setFilter("emailIntelHideClassified", v);
-  const [groupSortOption, setGroupSortOption] = useState<"alpha" | "count">("alpha");
+  const [groupSortOption, setGroupSortOption] = useState<
+    "alpha-asc" | "alpha-desc" | "count-desc" | "count-asc"
+  >("alpha-asc");
   const [activeLetterFilter, setActiveLetterFilter] = useState<string | null>(null);
 
   const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
@@ -93,14 +95,23 @@ export function useFilterAndSort(senders: SenderAnalysis[], groups: EmailSenderG
       }
     }
 
-    if (groupSortOption === "alpha") {
-      return filtered.sort((a, b) => a.nome_gruppo.localeCompare(b.nome_gruppo));
-    } else {
-      return filtered.sort((a, b) => {
-        const countA = (a as any).assigned_count || 0;
-        const countB = (b as any).assigned_count || 0;
-        return countB - countA;
-      });
+    switch (groupSortOption) {
+      case "alpha-asc":
+        return filtered.sort((a, b) => a.nome_gruppo.localeCompare(b.nome_gruppo));
+      case "alpha-desc":
+        return filtered.sort((a, b) => b.nome_gruppo.localeCompare(a.nome_gruppo));
+      case "count-desc":
+        return filtered.sort((a, b) => {
+          const ca = (a as unknown as { assigned_count?: number }).assigned_count || 0;
+          const cb = (b as unknown as { assigned_count?: number }).assigned_count || 0;
+          return cb - ca;
+        });
+      case "count-asc":
+        return filtered.sort((a, b) => {
+          const ca = (a as unknown as { assigned_count?: number }).assigned_count || 0;
+          const cb = (b as unknown as { assigned_count?: number }).assigned_count || 0;
+          return ca - cb;
+        });
     }
   }, [groups, groupSortOption, activeLetterFilter]);
 
