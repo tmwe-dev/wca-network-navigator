@@ -24,7 +24,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Loader2, Sparkles, ArrowUpDown, Search, RefreshCw, Plus } from "lucide-react";
+import { Loader2, Sparkles, ArrowUpDown, Search, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
@@ -319,6 +319,7 @@ export default function ManualGroupingTab() {
   const [rulesDialogSenders, setRulesDialogSenders] = useState<string[] | null>(null);
   const [rulesDialogContext, setRulesDialogContext] = useState<string>("");
   const [letterRange, setLetterRange] = useState<LetterRange>("all");
+  const [showPreview, setShowPreview] = useState(true);
 
   // Auto-focus primo sender quando lista cambia o nessuno selezionato.
   useEffect(() => {
@@ -485,7 +486,31 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-2">
-      <UnifiedToolbar
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => setShowPreview((v) => !v)}
+                  aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
+                >
+                  {showPreview
+                    ? <PanelLeftClose className="h-4 w-4" />
+                    : <PanelLeftOpen className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Tooltip>
+        <div className="flex-1 min-w-0">
+          <UnifiedToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         sortOption={sortOption}
@@ -502,78 +527,88 @@ export default function ManualGroupingTab() {
         totalCount={allSenders.length}
         classifiedCount={classifiedSenders.length}
         selectedCount={selectedSenders.size}
-      />
+          />
+        </div>
+      </div>
 
-      {/* Layout asimmetrico ridimensionabile: SX preview / DX rail+grid */}
+      {/* Layout 3 colonne resizable: [Preview opzionale] | [Sender cards verticali] | [Gruppi] */}
       <ResizablePanelGroup
         direction="horizontal"
         className="flex-1 min-h-0 rounded-lg border"
       >
-        {/* COLONNA SX — preview email full-height */}
-        <ResizablePanel defaultSize={38} minSize={22} maxSize={65}>
-          <div className="h-full flex flex-col overflow-hidden">
-            <SenderEmailPreviewPanel
-              senderEmail={previewSender?.email ?? null}
-              companyName={previewSender?.companyName ?? null}
-            />
+        {/* COL 1 — Anteprima mail (nascondibile) */}
+        {showPreview && (
+          <>
+            <ResizablePanel defaultSize={32} minSize={20} maxSize={55}>
+              <div className="h-full flex flex-col overflow-hidden">
+                <SenderEmailPreviewPanel
+                  senderEmail={previewSender?.email ?? null}
+                  companyName={previewSender?.companyName ?? null}
+                />
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+          </>
+        )}
+
+        {/* COL 2 — Sender cards in COLONNA verticale */}
+        <ResizablePanel defaultSize={showPreview ? 30 : 40} minSize={20}>
+          <div className="h-full flex flex-col overflow-hidden border-l-0">
+            <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                Mittenti ({sortedSenders.length})
+              </span>
+            </div>
+            {sortedSenders.length === 0 ? (
+              <p className="text-center py-12 text-sm text-muted-foreground">
+                {searchQuery ? "Nessun risultato" : "Nessun mittente"}
+              </p>
+            ) : (
+              <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-2">
+                {sortedSenders.map((sender) => (
+                  <SenderCard
+                    key={sender.email}
+                    sender={sender}
+                    onDragStart={handleDragStartLocal}
+                    onDragEnd={handleDragEndLocal}
+                    isSelected={selectedSenders.has(sender.email)}
+                    onToggleSelect={toggleSenderSelection}
+                    onAiChipClick={handleAiChipClick}
+                    isFocused={previewSender?.email === sender.email}
+                    onFocusRequest={(s) => setPreviewSender(s)}
+                    onOpenRules={onCardOpenRules}
+                    onMarkRead={onCardMarkRead}
+                    onDelete={onCardDelete}
+                    onExport={onCardExport}
+                    onBlock={onCardBlock}
+                    onAnalyzeAI={onCardAnalyzeAI}
+                    onAcceptAiSuggestion={onCardAcceptAiSuggestion}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
-        {/* COLONNA DX — rail card + griglia gruppi */}
-        <ResizablePanel defaultSize={62} minSize={35}>
-          <div className="h-full flex flex-col gap-2 overflow-hidden p-2">
-            {/* Rail orizzontale card */}
-            <div className="border rounded-lg flex-shrink-0 overflow-hidden">
-            {sortedSenders.length === 0 ? (
-              <p className="text-center py-6 text-sm text-muted-foreground">
-                {searchQuery ? "Nessun risultato" : "Nessun mittente"}
-              </p>
-            ) : (
-              <div className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-                <div className="flex gap-2 p-2 min-w-min">
-                  {sortedSenders.map((sender) => (
-                    <div key={sender.email} className="w-[240px] flex-shrink-0">
-                      <SenderCard
-                        sender={sender}
-                        onDragStart={handleDragStartLocal}
-                        onDragEnd={handleDragEndLocal}
-                        isSelected={selectedSenders.has(sender.email)}
-                        onToggleSelect={toggleSenderSelection}
-                        onAiChipClick={handleAiChipClick}
-                        isFocused={previewSender?.email === sender.email}
-                        onFocusRequest={(s) => setPreviewSender(s)}
-                        onOpenRules={onCardOpenRules}
-                        onMarkRead={onCardMarkRead}
-                        onDelete={onCardDelete}
-                        onExport={onCardExport}
-                        onBlock={onCardBlock}
-                        onAnalyzeAI={onCardAnalyzeAI}
-                        onAcceptAiSuggestion={onCardAcceptAiSuggestion}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            </div>
-
-            {/* Griglia gruppi (occupa il resto verticale) */}
+        {/* COL 3 — Griglia gruppi (resizable, supporta 2 colonne quando largo) */}
+        <ResizablePanel defaultSize={showPreview ? 38 : 60} minSize={25}>
+          <div className="h-full flex flex-col overflow-hidden p-2">
             <GroupGridPanel
-            groups={groups}
-            visibleGroups={visibleGroups}
-            groupSortOption={groupSortOption}
-            onGroupSortChange={setGroupSortOption}
-            letterRange={letterRange}
-            onLetterRangeChange={setLetterRange}
-            hoveredGroupId={hoveredGroupId}
-            highlightedGroupName={highlightedGroupName}
-            assignedByGroup={assignedByGroup}
-            reloadAssignedRules={reloadAssignedRules}
-            loadData={loadData}
-            selectedCount={selectedSenders.size}
-            onBulkAssign={handleBulkAssignFromGroup}
+              groups={groups}
+              visibleGroups={visibleGroups}
+              groupSortOption={groupSortOption}
+              onGroupSortChange={setGroupSortOption}
+              letterRange={letterRange}
+              onLetterRangeChange={setLetterRange}
+              hoveredGroupId={hoveredGroupId}
+              highlightedGroupName={highlightedGroupName}
+              assignedByGroup={assignedByGroup}
+              reloadAssignedRules={reloadAssignedRules}
+              loadData={loadData}
+              selectedCount={selectedSenders.size}
+              onBulkAssign={handleBulkAssignFromGroup}
             />
           </div>
         </ResizablePanel>
