@@ -96,11 +96,12 @@ function GroupGridPanel(props: {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onCreateGroup: () => void;
+  onPartnerClick: (sender: SenderAnalysis) => void;
 }) {
   const { groups, visibleGroups, groupSortOption, onGroupSortChange,
     letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
     assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
-    onRefresh, isRefreshing, onCreateGroup } = props;
+    onRefresh, isRefreshing, onCreateGroup, onPartnerClick } = props;
   const sortMeta = GROUP_SORT_META[groupSortOption];
   const SortIcon = sortMeta.Icon;
   return (
@@ -183,6 +184,7 @@ function GroupGridPanel(props: {
               onRulesChanged={reloadAssignedRules}
               selectedCount={selectedCount}
               onBulkAssign={onBulkAssign}
+              onPartnerClick={onPartnerClick}
             />
           ))}
           {groups.length === 0 && (
@@ -272,8 +274,10 @@ export default function ManualGroupingTab() {
         await bulkAssignGroup(selObjs, group.nome_gruppo, group.id);
         setSelectedSenders(new Set());
         await loadData();
-        // Auto-apertura dialog azioni per il primo mittente associato.
-        openActionsDialog(selObjs[0]);
+        // Skippabile: mostra toast con CTA per configurare azioni se serve.
+        toast.success(`${selObjs.length} mittenti → ${group.nome_gruppo}`, {
+          action: { label: "Configura azioni", onClick: () => openActionsDialog(selObjs[0]) },
+        });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore associazione");
       }
@@ -307,10 +311,13 @@ export default function ManualGroupingTab() {
     if (!targetGroupId || !activeDrag) return;
     const group = groups.find((g) => g.id === targetGroupId);
     if (!group) return;
+    const dragged = activeDrag;
     try {
-      await assignToGroup(activeDrag, group.nome_gruppo, targetGroupId);
-      // Auto-apertura della popup azioni per il mittente appena trascinato.
-      openActionsDialog(activeDrag);
+      await assignToGroup(dragged, group.nome_gruppo, targetGroupId);
+      // Skippabile: niente popup forzata, solo toast con CTA.
+      toast.success(`${dragged.companyName} → ${group.nome_gruppo}`, {
+        action: { label: "Configura azioni", onClick: () => openActionsDialog(dragged) },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore associazione");
     }
@@ -377,9 +384,10 @@ export default function ManualGroupingTab() {
       }
       try {
         await assignToGroup(s, target.nome_gruppo, target.id);
-        toast.success(`${s.companyName} associato a ${target.nome_gruppo}`);
         await loadData();
-        openActionsDialog(s);
+        toast.success(`${s.companyName} → ${target.nome_gruppo}`, {
+          action: { label: "Configura azioni", onClick: () => openActionsDialog(s) },
+        });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore associazione");
       }
@@ -516,6 +524,7 @@ export default function ManualGroupingTab() {
               onRefresh={populateAddressRules}
               isRefreshing={isPopulating}
               onCreateGroup={() => setShowCreateDialog(true)}
+              onPartnerClick={openActionsDialog}
             />
           </div>
         </ResizablePanel>

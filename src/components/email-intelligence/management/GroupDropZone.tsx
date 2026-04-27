@@ -9,7 +9,7 @@ import { Trash2, List, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { EmailSenderGroup } from '@/types/email-management';
+import type { EmailSenderGroup, SenderAnalysis } from '@/types/email-management';
 import { BackfillButton } from './BackfillButton';
 
 interface GroupDropZoneProps {
@@ -29,6 +29,8 @@ interface GroupDropZoneProps {
   selectedCount?: number;
   /** Callback quando l'utente clicca "+ Associa" (parent gestisce il bulk). */
   onBulkAssign?: (group: EmailSenderGroup) => void;
+  /** Quando l'utente clicca un partner nel gruppo, apri la popup azioni. */
+  onPartnerClick?: (sender: SenderAnalysis) => void;
 }
 
 interface AssignedRule {
@@ -48,7 +50,18 @@ export function GroupDropZone({
   onRulesChanged,
   selectedCount = 0,
   onBulkAssign,
+  onPartnerClick,
 }: GroupDropZoneProps) {
+  const partnerToSender = (rule: AssignedRule): SenderAnalysis => ({
+    email: rule.email_address,
+    companyName: rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name),
+    domain: rule.domain ?? rule.email_address.split('@')[1] ?? '',
+    emailCount: 0,
+    firstSeen: '',
+    lastSeen: '',
+    isClassified: true,
+  });
+
 
   // Estrae il dominio "root" (penultimo segmento prima del TLD) da un'email.
   // Per "info@mail.everok.eu" → "Everok" (non "Mail" come faceva la vecchia regex).
@@ -173,13 +186,29 @@ export function GroupDropZone({
                       <p className="text-muted-foreground text-center py-8">Nessun mittente classificato</p>
                     ) : (
                       rules.map(rule => (
-                        <div key={rule.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-md hover:bg-muted/60 transition-colors group">
+                        <div
+                          key={rule.id}
+                          className={cn(
+                            "flex items-center justify-between p-3 bg-muted/40 rounded-md hover:bg-muted/60 transition-colors group",
+                            onPartnerClick && "cursor-pointer",
+                          )}
+                          onClick={() => onPartnerClick?.(partnerToSender(rule))}
+                          title={onPartnerClick ? "Clicca per modificare azioni e regole" : undefined}
+                        >
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-base">{rule.display_name || extractCompany(rule.email_address, rule.domain, rule.company_name)}</div>
                             <div className="text-sm text-muted-foreground">{rule.email_address}</div>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
-                            onClick={() => handleRemoveRule(rule.id, rule.email_address)} aria-label="Elimina">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveRule(rule.id, rule.email_address);
+                            }}
+                            aria-label="Elimina"
+                          >
                              <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
