@@ -12,7 +12,8 @@
  *
  * Auto-pop-up regole dopo drop su gruppo.
  */
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -478,28 +479,23 @@ export default function ManualGroupingTab() {
                 {searchQuery ? "Nessun risultato" : "Nessun mittente"}
               </p>
             ) : (
-              <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-2">
-                {sortedSenders.map((sender) => (
-                  <SenderCard
-                    key={sender.email}
-                    sender={sender}
-                    onDragStart={handleDragStartLocal}
-                    onDragEnd={handleDragEndLocal}
-                    isSelected={selectedSenders.has(sender.email)}
-                    onToggleSelect={toggleSenderSelection}
-                    onAiChipClick={handleAiChipClick}
-                    isFocused={previewSender?.email === sender.email}
-                    onFocusRequest={(s) => setPreviewSender(s)}
-                    onOpenRules={onCardOpenRules}
-                    onMarkRead={onCardMarkRead}
-                    onDelete={onCardDelete}
-                    onExport={onCardExport}
-                    onBlock={onCardBlock}
-                    onAnalyzeAI={onCardAnalyzeAI}
-                    onAcceptAiSuggestion={onCardAcceptAiSuggestion}
-                  />
-                ))}
-              </div>
+              <VirtualizedSenderList
+                senders={sortedSenders}
+                selectedEmails={selectedSenders}
+                focusedEmail={previewSender?.email ?? null}
+                onDragStart={handleDragStartLocal}
+                onDragEnd={handleDragEndLocal}
+                onToggleSelect={toggleSenderSelection}
+                onAiChipClick={handleAiChipClick}
+                onFocusRequest={setPreviewSender}
+                onOpenRules={onCardOpenRules}
+                onMarkRead={onCardMarkRead}
+                onDelete={onCardDelete}
+                onExport={onCardExport}
+                onBlock={onCardBlock}
+                onAnalyzeAI={onCardAnalyzeAI}
+                onAcceptAiSuggestion={onCardAcceptAiSuggestion}
+              />
             )}
           </div>
         </ResizablePanel>
