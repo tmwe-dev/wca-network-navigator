@@ -336,7 +336,7 @@ function BigActionButton({
         "flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition-all",
         "hover:scale-[1.02] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
         tone === "info" && "border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10",
-        tone === "warn" && "border-orange-500/40 bg-orange-500/5 hover:border-orange-500 hover:bg-orange-500/10",
+        tone === "warn" && "border-destructive/40 bg-destructive/5 hover:border-destructive hover:bg-destructive/10",
         tone === "ai" && "border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 hover:border-primary",
         tone === "default" && "border-border hover:border-primary/50 hover:bg-muted",
       )}
@@ -344,7 +344,7 @@ function BigActionButton({
       <div className={cn(
         "rounded-full p-2",
         tone === "info" && "text-primary bg-primary/10",
-        tone === "warn" && "text-orange-600 bg-orange-500/10",
+        tone === "warn" && "text-destructive bg-destructive/10",
         tone === "ai" && "text-primary bg-primary/15",
         tone === "default" && "text-foreground/80",
       )}>
