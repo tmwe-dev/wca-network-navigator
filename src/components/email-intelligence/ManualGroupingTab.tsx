@@ -61,88 +61,8 @@ function inLetterRange(name: string, range: LetterRange): boolean {
   return first >= a && first <= b;
 }
 
-/**
- * CompactToolbar — riga unica:
- *   [toggle preview] [↻ refresh] [+ Nuovo gruppo] ········ [counter mittenti]
- * Filtri (search/volume/sort/nascondi classificati) sono nella sidebar globale.
- */
-function CompactToolbar({
-  showPreview, onTogglePreview,
-  onRefresh, isRefreshing,
-  onCreateGroup,
-  visibleCount, totalCount, classifiedCount, selectedCount,
-}: {
-  showPreview: boolean;
-  onTogglePreview: () => void;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
-  onCreateGroup: () => void;
-  visibleCount: number;
-  totalCount: number;
-  classifiedCount: number;
-  selectedCount: number;
-}) {
-  return (
-    <TooltipProvider delayDuration={300}>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 flex-shrink-0"
-              onClick={onTogglePreview}
-              aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
-            >
-              {showPreview
-                ? <PanelLeftClose className="h-4 w-4" />
-                : <PanelLeftOpen className="h-4 w-4" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}</TooltipContent>
-        </Tooltip>
-
-        {onRefresh && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                aria-label="Aggiorna mittenti"
-                className="h-8 w-8 flex-shrink-0"
-              >
-                {isRefreshing
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <RefreshCw className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Aggiorna mittenti</TooltipContent>
-          </Tooltip>
-        )}
-
-        <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8 flex-shrink-0">
-          <Plus className="h-4 w-4 mr-1" />
-          Nuovo gruppo
-        </Button>
-
-        <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
-          <span className="font-semibold text-foreground">{visibleCount}</span>
-          <span> / {totalCount} mittenti</span>
-          <span className="mx-1.5 opacity-50">·</span>
-          {classifiedCount} classificati
-          {selectedCount > 0 && (
-            <>
-              <span className="mx-1.5 opacity-50">·</span>
-              <span className="text-primary font-semibold">{selectedCount} selezionati</span>
-            </>
-          )}
-        </span>
-      </div>
-    </TooltipProvider>
-  );
-}
+// CompactToolbar rimosso: toggle preview spostato accanto a "Mittenti",
+// refresh + nuovo gruppo spostati nell'header del pannello "Gruppi".
 
 function GroupGridPanel(props: {
   groups: EmailSenderGroup[];
@@ -158,26 +78,57 @@ function GroupGridPanel(props: {
   loadData: () => void;
   selectedCount: number;
   onBulkAssign: (group: { id: string; nome_gruppo: string }) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  onCreateGroup: () => void;
 }) {
   const { groups, visibleGroups, groupSortOption, onGroupSortChange,
     letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
-    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign } = props;
+    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
+    onRefresh, isRefreshing, onCreateGroup } = props;
   return (
     <div className="flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
       <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">
           Gruppi ({visibleGroups.length}{letterRange !== "all" ? `/${groups.length}` : ""})
         </span>
-        <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
-          <SelectTrigger className="w-[140px] h-8">
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="alpha">A → Z</SelectItem>
-            <SelectItem value="count">Per contatti</SelectItem>
-          </SelectContent>
-        </Select>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-1.5">
+            <Select value={groupSortOption} onValueChange={(v) => onGroupSortChange(v as "alpha" | "count")}>
+              <SelectTrigger className="w-[140px] h-8">
+                <ArrowUpDown className="h-3 w-3 mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alpha">A → Z</SelectItem>
+                <SelectItem value="count">Per contatti</SelectItem>
+              </SelectContent>
+            </Select>
+            {onRefresh && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                    aria-label="Aggiorna mittenti"
+                    className="h-8 w-8"
+                  >
+                    {isRefreshing
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RefreshCw className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Aggiorna mittenti</TooltipContent>
+              </Tooltip>
+            )}
+            <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8">
+              <Plus className="h-4 w-4 mr-1" />
+              Nuovo gruppo
+            </Button>
+          </div>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
@@ -431,18 +382,6 @@ export default function ManualGroupingTab() {
 
   return (
     <div className="flex flex-col h-full gap-2">
-      <CompactToolbar
-        showPreview={showPreview}
-        onTogglePreview={() => setShowPreview((v) => !v)}
-        onRefresh={populateAddressRules}
-        isRefreshing={isPopulating}
-        onCreateGroup={() => setShowCreateDialog(true)}
-        visibleCount={sortedSenders.length}
-        totalCount={allSenders.length}
-        classifiedCount={classifiedSenders.length}
-        selectedCount={selectedSenders.size}
-      />
-
       {/* Layout 3 colonne resizable: [Preview opzionale] | [Sender cards verticali] | [Gruppi] */}
       <ResizablePanelGroup
         direction="horizontal"
@@ -467,8 +406,42 @@ export default function ManualGroupingTab() {
         <ResizablePanel defaultSize={showPreview ? 30 : 40} minSize={20}>
           <div className="h-full flex flex-col overflow-hidden border-l-0">
             <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                Mittenti ({sortedSenders.length})
+              <div className="flex items-center gap-2 min-w-0">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 flex-shrink-0"
+                        onClick={() => setShowPreview((v) => !v)}
+                        aria-label={showPreview ? "Nascondi anteprima" : "Mostra anteprima"}
+                      >
+                        {showPreview
+                          ? <PanelLeftClose className="h-3.5 w-3.5" />
+                          : <PanelLeftOpen className="h-3.5 w-3.5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {showPreview ? "Nascondi anteprima email" : "Mostra anteprima email"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs font-medium text-muted-foreground truncate">
+                  Mittenti ({sortedSenders.length})
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                <span className="font-semibold text-foreground">{sortedSenders.length}</span>
+                <span> / {allSenders.length}</span>
+                <span className="mx-1 opacity-50">·</span>
+                {classifiedSenders.length} classificati
+                {selectedSenders.size > 0 && (
+                  <>
+                    <span className="mx-1 opacity-50">·</span>
+                    <span className="text-primary font-semibold">{selectedSenders.size} sel.</span>
+                  </>
+                )}
               </span>
             </div>
             {sortedSenders.length === 0 ? (
@@ -521,6 +494,9 @@ export default function ManualGroupingTab() {
               loadData={loadData}
               selectedCount={selectedSenders.size}
               onBulkAssign={handleBulkAssignFromGroup}
+              onRefresh={populateAddressRules}
+              isRefreshing={isPopulating}
+              onCreateGroup={() => setShowCreateDialog(true)}
             />
           </div>
         </ResizablePanel>
