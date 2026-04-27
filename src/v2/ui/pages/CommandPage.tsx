@@ -212,9 +212,9 @@ const CommandPage = () => {
           )}
 
           <VoicePresence
-            active={pageState.voiceSpeaking || voice.listening}
+            active={voiceOut.speaking || voice.listening}
             listening={voice.listening && !voice.speaking}
-            speaking={voice.speaking || pageState.voiceSpeaking}
+            speaking={voice.speaking || voiceOut.speaking}
           />
 
           <CommandInput
