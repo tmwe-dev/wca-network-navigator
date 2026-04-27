@@ -190,14 +190,14 @@ export function V2Routes(): React.ReactElement {
           <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
 
           {/* Outreach + figli */}
-          <Route path="outreach" element={guardedPage(OutreachPage, "Outreach")} />
-          <Route path="outreach/composer" element={guardedPage(EmailComposerPage, "EmailComposer")} />
+          <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
+          <Route path="outreach/composer" element={<Navigate to="/v2/communicate/compose" replace />} />
           <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
-          <Route path="email-composer" element={guardedPage(EmailComposerPage, "EmailComposerAlias")} />
+          <Route path="email-composer" element={<Navigate to="/v2/communicate/compose" replace />} />
           <Route path="agenda" element={<Navigate to="/v2/pipeline/agenda" replace />} />
-          <Route path="cockpit" element={<Navigate to="/v2/outreach" replace />} />
+          <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
-          <Route path="inreach" element={guardedPage(InreachPage, "Inreach")} />
+          <Route path="inreach" element={<Navigate to="/v2/communicate/inbox" replace />} />
 
           {/* Agents + figli */}
           <Route path="agents" element={guardedPage(AgentsPage, "Agents")} />
