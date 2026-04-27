@@ -9,6 +9,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useSelection } from "@/hooks/useSelection";
 import { useCockpitContacts, useDeleteCockpitContacts, type CockpitContact } from "@/hooks/useCockpitContacts";
 import { createLogger } from "@/lib/log";
+import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 
 const log = createLogger("useCockpitLogic");
 import { useClientAssignments, useAssignClient } from "@/hooks/useClientAssignments";
@@ -294,7 +295,36 @@ export function useCockpitLogic() {
     }
   }, [draftState, generate, refetchCredits, contactsMap]);
 
-  const handleBulkDeepSearch = useCallback(() => toast.info(`Deep Search per ${selection.count} contatti`), [selection.count]);
+  const deepSearch = useDeepSearch();
+
+  /** Estrae gli id reali (imported_contacts.id / partners.id) dai record del cockpit. */
+  const resolveDeepIds = useCallback(
+    (queueIds: string[]): { contactIds: string[]; partnerIds: string[] } => {
+      const contactIds: string[] = [];
+      const partnerIds: string[] = [];
+      for (const qid of queueIds) {
+        const c = contactsMap[qid];
+        if (!c) continue;
+        if (c.sourceType === "contact" && c.sourceId) contactIds.push(c.sourceId);
+        else if (c.partnerId) partnerIds.push(c.partnerId);
+      }
+      return { contactIds, partnerIds };
+    },
+    [contactsMap],
+  );
+
+  const handleBulkDeepSearch = useCallback(() => {
+    const ids = Array.from(selection.selectedIds);
+    if (!ids.length) { toast.info("Seleziona almeno un contatto"); return; }
+    const { contactIds, partnerIds } = resolveDeepIds(ids);
+    if (contactIds.length === 0 && partnerIds.length === 0) {
+      toast.error("Nessun contatto o partner valido per Deep Search");
+      return;
+    }
+    if (contactIds.length > 0) deepSearch.start(contactIds, false, "contact");
+    else deepSearch.start(partnerIds, false, "partner");
+  }, [selection.selectedIds, resolveDeepIds, deepSearch]);
+
   const handleBulkAlias = useCallback(() => toast.info(`Generazione Alias per ${selection.count} contatti`), [selection.count]);
 
   const handleBulkLinkedInLookup = useCallback(async () => {
@@ -306,7 +336,17 @@ export function useCockpitLogic() {
     queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
   }, [selection.selectedIds, contactsMap, linkedInLookup, queryClient]);
 
-  const handleSingleDeepSearch = useCallback((id: string) => toast.info(`Deep Search per ${contactsMap[id]?.name || id}`), [contactsMap]);
+  const handleSingleDeepSearch = useCallback((id: string) => {
+    const c = contactsMap[id];
+    if (!c) { toast.error("Contatto non trovato"); return; }
+    if (c.sourceType === "contact" && c.sourceId) {
+      deepSearch.start([c.sourceId], false, "contact");
+    } else if (c.partnerId) {
+      deepSearch.start([c.partnerId], false, "partner");
+    } else {
+      toast.error("Deep Search non disponibile per questo record");
+    }
+  }, [contactsMap, deepSearch]);
   const handleSingleAlias = useCallback((id: string) => toast.info(`Genera Alias per ${contactsMap[id]?.name || id}`), [contactsMap]);
   const handleSingleLinkedInLookup = useCallback((id: string) => {
     const contact = contactsMap[id];
