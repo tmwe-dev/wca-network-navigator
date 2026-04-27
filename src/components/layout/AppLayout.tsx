@@ -100,19 +100,9 @@ export function AppLayout() {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  // Guard globale: blocca QUALSIASI gesto orizzontale del trackpad/mouse
-  // su tutta la finestra. Registrato come non-passive per poter chiamare
-  // preventDefault(). Evita lo swipe-back/forward del browser anche quando
-  // l'evento parte da container con scroll interno (es. tabelle, carousel).
-  useEffect(() => {
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 0) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, []);
+  // ⚠️ Rimosso il listener globale wheel/preventDefault: blocca trackpad
+  // e scroll annidati. Lo swipe-back orizzontale è gestito via CSS
+  // `overscroll-behavior-x: none` in src/index.css.
 
   return (
     <ActiveOperatorProvider>
