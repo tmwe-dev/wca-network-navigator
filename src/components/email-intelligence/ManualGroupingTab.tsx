@@ -172,7 +172,9 @@ function GroupGridPanel(props: {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="p-3 grid gap-3 content-start grid-cols-1 md:grid-cols-2">
+        {/* Una card per riga: layout più leggibile, niente confusione tra
+         *  due colonne quando si trascinano mittenti. */}
+        <div className="p-3 grid gap-3 content-start grid-cols-1">
           {visibleGroups.map((group) => (
             <GroupDropZone
               key={group.id}
