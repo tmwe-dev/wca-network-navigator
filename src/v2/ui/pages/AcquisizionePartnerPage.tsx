@@ -50,7 +50,7 @@ export function AcquisizionePartner() {
   } = pipeline;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] gap-3 -m-6 relative overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 gap-3 relative overflow-hidden">
       {/* Ambient gradient backgrounds */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background dark:block hidden" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.06] via-transparent to-transparent dark:block hidden" />

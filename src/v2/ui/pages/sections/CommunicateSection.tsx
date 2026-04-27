@@ -18,7 +18,7 @@ export function CommunicateSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <GoldenHeaderBar />
-      <SectionTabs tabs={TABS} rootPath="/v2/communicate">
+      <SectionTabs tabs={TABS} rootPath="/v2/communicate" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/communicate/inbox" replace />} />
           <Route path="inbox"    element={<InreachPage />} />

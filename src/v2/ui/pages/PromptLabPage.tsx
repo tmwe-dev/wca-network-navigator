@@ -138,7 +138,7 @@ export function PromptLabPage() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] w-full">
+    <div className="h-full w-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={82} minSize={40}>
           <div className="flex h-full flex-col">

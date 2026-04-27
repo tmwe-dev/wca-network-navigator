@@ -182,21 +182,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     return () => window.removeEventListener("ai-ui-action", handler);
   }, [navigate]);
 
-  useEffect(() => {
-    const blockHorizontalWheelNavigation = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 1) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    window.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
-    document.addEventListener("wheel", blockHorizontalWheelNavigation, { passive: false, capture: true });
-    return () => {
-      window.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
-      document.removeEventListener("wheel", blockHorizontalWheelNavigation, { capture: true });
-    };
-  }, []);
+  // ⚠️ Nessun listener globale wheel/preventDefault: blocca il trackpad e
+  // rompe gli scroll annidati di tutta l'app. La protezione contro lo
+  // swipe-back orizzontale del browser è gestita dal CSS
+  // `overscroll-behavior-x: none` su html/body in src/index.css.
 
   if (isLoading || !sessionReady) {
     return (
@@ -238,7 +227,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Toaster />
                       <LiveRegion message="" />
 
-                    <div className="flex h-screen overflow-hidden overscroll-none bg-background">
+                    <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
                       {/* Skip navigation link for accessibility */}
                       <a
                         href="#main-content"
@@ -353,7 +342,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                             />
                           )}
                         </BackgroundServices>
-                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-none md:mt-0 mt-12 pb-16 md:pb-0">
+                        <main id="main-content" tabIndex={-1} role="main" className="flex-1 overflow-y-auto overscroll-x-none md:mt-0 mt-12 pb-16 md:pb-0">
                           {/* ⚡ Perf: rimosso AnimatePresence mode="wait" che bloccava il mount fino a fine animazione exit (-150-300ms per nav). */}
                           <div className="h-full animate-in fade-in duration-150">
                             <Outlet />

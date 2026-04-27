@@ -26,7 +26,7 @@ export function Campaigns() {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-4rem)] relative overflow-hidden -m-6 flex flex-col">
+    <div className="h-full min-h-0 relative overflow-hidden flex flex-col">
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20">
         <Button variant={c.viewMode === "globe" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => c.setViewMode("globe")}>
           <Target className="w-3.5 h-3.5" />Mappa

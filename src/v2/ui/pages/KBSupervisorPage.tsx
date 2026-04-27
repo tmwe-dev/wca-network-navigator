@@ -12,7 +12,7 @@ export function KBSupervisorPage() {
   const supervisor = useKBSupervisorState();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-full min-h-0">
       <KBSupervisorHeader
         mode={supervisor.mode}
         onModeChange={supervisor.setMode}

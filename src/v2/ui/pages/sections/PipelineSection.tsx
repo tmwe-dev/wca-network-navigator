@@ -23,7 +23,7 @@ export function PipelineSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <GoldenHeaderBar />
-      <SectionTabs tabs={TABS} rootPath="/v2/pipeline">
+      <SectionTabs tabs={TABS} rootPath="/v2/pipeline" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
           <Route path="contacts" element={<ContactsPage />} />

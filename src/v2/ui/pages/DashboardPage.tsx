@@ -75,7 +75,7 @@ export function DashboardPage() {
   }, []);
 
   return (
-    <div data-testid="page-dashboard" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
+    <div data-testid="page-dashboard" className="h-full min-h-0 overflow-hidden bg-background text-foreground">
       <ScrollArea className="h-full">
       <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 sm:px-6">
 
