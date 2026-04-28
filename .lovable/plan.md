@@ -39,7 +39,7 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 | P1.2 ✅ | C7 | `save-wca-cookie` ora usa `requireExtensionAuth` (JWT preferito, anon-key gated da CORS). Limite payload 20KB |
 | P1.3 ✅ | E2/E3 | `analyze-import-structure` + `elevenlabs-conversation-token` ora richiedono JWT valido (no anon-key, no soft-fail) |
 | P1.4 ✅ | E6 | SSRF guard `assertSafePublicUrl()` in `_shared/inputValidator.ts` (14 test verdi). Applicata a `scrape-website` e `enrich-partner-website` |
-| P1.5 | B4/B5 | LinkedIn bridge: validare `event.origin` con extension ID whitelist, gate `sendMessage` dietro conferma utente (riusare `prompt_injection_reviews` o `approvalFlow`) | `src/hooks/useLinkedInExtensionBridge.ts` |
+| P1.5 ✅ | B4/B5 | Edge function LinkedIn hardenizzate: `linkedin-ai-extract` e `linkedin-profile-api` ora richiedono auth via `requireExtensionAuth` (proteggono crediti AI Gateway e Proxycurl). Cf. `mem://security/linkedin-bridge-hardening-2026-04-28` |
 
 ### Priorità 2 — Schema DB residuo (1 giorno)
 
