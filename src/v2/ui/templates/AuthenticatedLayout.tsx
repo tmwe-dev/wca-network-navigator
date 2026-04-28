@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { X, Menu, Sparkles, SlidersHorizontal, Target } from "lucide-react";
+import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -262,6 +262,14 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setCommandOpen(true)}
+                            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
+                            aria-label="Apri Command"
+                            data-testid="mobile-command-button"
+                          >
+                            <Command className="h-5 w-5" />
+                          </button>
                           <button onClick={() => setIntelliflowOpen(true)} className="min-h-[44px] min-w-[44px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
                           <button onClick={() => setMobileOpen(!mobileOpen)} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
