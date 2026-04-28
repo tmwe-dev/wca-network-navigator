@@ -258,7 +258,11 @@ export const composeEmailTool: Tool = {
     }
 
     // Audit references (Prompt Lab + KB + model) per il log visibile in Command
-    const auditRefs: NonNullable<NonNullable<ToolResult["meta"]>["auditRefs"]> = [];
+    const auditRefs: Array<{
+      kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context";
+      label: string;
+      value?: string;
+    }> = [];
     for (const name of appliedPrompts) {
       auditRefs.push({ kind: "operative-prompt", label: name, value: "Prompt Lab" });
     }
