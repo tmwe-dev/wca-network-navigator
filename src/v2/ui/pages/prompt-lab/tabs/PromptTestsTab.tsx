@@ -10,7 +10,7 @@
  * Layout: 3 colonne (prompt list • test cases • dettaglio + esiti).
  * Logic-less: tutta la business logic è in DAL (`@/data/promptTests`).
  */
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { findOperativePrompts } from "@/data/operativePrompts";
@@ -47,7 +47,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
 };
 
-const STATUS_ICON: Record<string, JSX.Element> = {
+const STATUS_ICON: Record<string, ReactNode> = {
   passed: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
   failed: <XCircle className="h-3.5 w-3.5 text-destructive" />,
   error: <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />,
