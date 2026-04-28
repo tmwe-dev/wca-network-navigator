@@ -2,7 +2,7 @@
  * useExport — Hook for exporting contacts, partners, deals, and emails as CSV or Excel
  */
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { toast } from "sonner";
 
 
@@ -74,8 +74,7 @@ async function convertToExcel(
 // ── Export functions ──
 
 async function fetchContactsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = (supabase as any)
-    .from("imported_contacts")
+  let query = untypedFrom("imported_contacts")
     .select(
       "id, name, email, phone, mobile, company_name, title, country, lead_status, created_at, interaction_count"
     );
@@ -102,8 +101,7 @@ async function fetchContactsData(filters?: ExportFilters): Promise<Record<string
 }
 
 async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = (supabase as any)
-    .from("partners")
+  let query = untypedFrom("partners")
     .select(
       "id, name, country, website, email, phone, registration_number, contact_person, status, created_at"
     );
@@ -130,8 +128,7 @@ async function fetchPartnersData(filters?: ExportFilters): Promise<Record<string
 }
 
 async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
-  let query = (supabase as any)
-    .from("deals")
+  let query = untypedFrom("deals")
     .select(
       "id, title, partner_id, contact_id, stage, amount, probability, close_date, created_at, updated_at"
     );

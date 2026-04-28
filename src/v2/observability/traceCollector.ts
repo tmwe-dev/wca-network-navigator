@@ -151,7 +151,7 @@ class TraceCollector {
     try {
       // Insert insert-only — RLS richiede user_id = auth.uid()
       // deno-lint-ignore no-explicit-any
-      const { error } = await (supabase as any).from("ai_runtime_traces").insert(rows);
+      const { error } = await untypedFrom("ai_runtime_traces").insert(rows);
       if (error) {
         // Re-queue se errore transient (max 1 retry implicito al prossimo tick)
         // Per non loopare in modo aggressivo, droppiamo dopo log.
