@@ -179,7 +179,9 @@ export const aiQueryTool: Tool = {
     if (plan.table === "campaign_jobs") {
       const lower = naturalPrompt.toLowerCase();
       if (/\b(attiv|in corso|running)\b/.test(lower)) {
-        plan.filters = plan.filters.filter((f) => !(f.column === "status" && f.value === "active"));
+        plan.filters = plan.filters.filter(
+          (f) => !(f.column === "status" && ["active", "running"].includes(String(f.value))),
+        );
         if (!plan.filters.some((f) => f.column === "status")) {
           plan.filters.push({ column: "status", op: "in", value: ["pending", "in_progress"] });
         }
