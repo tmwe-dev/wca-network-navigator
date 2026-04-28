@@ -1102,6 +1102,48 @@ export type Database = {
           },
         ]
       }
+      ai_invocation_audit: {
+        Row: {
+          block_reason: string | null
+          blocked: boolean | null
+          context_source: string | null
+          created_at: string
+          enforcement_mode: string | null
+          function_name: string
+          grounded: boolean | null
+          id: string
+          scope: string | null
+          tool_calls_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          blocked?: boolean | null
+          context_source?: string | null
+          created_at?: string
+          enforcement_mode?: string | null
+          function_name: string
+          grounded?: boolean | null
+          id?: string
+          scope?: string | null
+          tool_calls_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          blocked?: boolean | null
+          context_source?: string | null
+          created_at?: string
+          enforcement_mode?: string | null
+          function_name?: string
+          grounded?: boolean | null
+          id?: string
+          scope?: string | null
+          tool_calls_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_lab_test_results: {
         Row: {
           created_at: string
@@ -1605,6 +1647,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_scope_registry: {
+        Row: {
+          allowed_tools: string[] | null
+          description: string
+          enforcement_mode: string
+          requires_grounding: boolean
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_tools?: string[] | null
+          description: string
+          enforcement_mode?: string
+          requires_grounding?: boolean
+          scope: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_tools?: string[] | null
+          description?: string
+          enforcement_mode?: string
+          requires_grounding?: boolean
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       ai_session_briefings: {
         Row: {
