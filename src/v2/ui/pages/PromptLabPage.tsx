@@ -66,6 +66,7 @@ import {
   Route,
   TestTube2,
   History,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -191,6 +192,12 @@ export function PromptLabPage() {
                   <Link to="/v2/prompt-lab/atlas" title="Mappa visuale agenti × prompt × KB">
                     <Network className="h-3.5 w-3.5" />
                     Atlas
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
+                  <Link to="/v2/prompt-lab/catalog" title="Catalogo prompt: versione, autore, orchestratori, input">
+                    <Library className="h-3.5 w-3.5" />
+                    Catalog
                   </Link>
                 </Button>
                 <Button

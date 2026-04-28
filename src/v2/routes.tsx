@@ -72,6 +72,7 @@ const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default
 const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage })));
 const AgentAtlasPage = lazy(() => import("./ui/pages/prompt-lab/atlas/AgentAtlasPage"));
 const SuggestionsReviewPage = lazy(() => import("./ui/pages/prompt-lab/SuggestionsReviewPage"));
+const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
 const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
@@ -226,6 +227,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="prompt-lab" element={<Navigate to="/v2/intelligence/prompt-lab" replace />} />
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
+          <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/intelligence/kb" replace />} />
           <Route path="kb-supervisor" element={<Navigate to="/v2/intelligence/kb" replace />} />
