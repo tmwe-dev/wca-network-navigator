@@ -1,82 +1,68 @@
-Ho individuato due cause principali coerenti con il blocco generale degli scroll:
+## Problema
 
-1. È stato aggiunto un blocco globale dei gesti orizzontali del trackpad in `AuthenticatedLayout` tramite listener `wheel` in capture phase su `window` e `document`, con `preventDefault()` e `stopPropagation()`. Questo intercetta il trackpad prima dei componenti interni e può rompere scroll annidati, pannelli, tab, aree Radix ScrollArea e liste.
-2. Sono stati aggiunti stili globali in `src/index.css` che applicano `overscroll-behavior: none` anche a `*`, `*::before`, `*::after`, più `touch-action: pan-y pinch-zoom` su `html`. È troppo aggressivo: impedisce o altera gesture, chain di scroll e interazioni orizzontali necessarie in molte pagine.
+Errore lato client: `Edge function "ai-assistant" failed: Failed to send a request to the Edge Function`.
 
-Piano di correzione profonda:
+## Diagnosi
 
-## 1. Rimuovere il blocco globale del wheel/trackpad
-- Eliminare da `src/v2/ui/templates/AuthenticatedLayout.tsx` l’effetto `useEffect` che registra `blockHorizontalWheelNavigation` su `window` e `document`.
-- Eliminare anche il vecchio equivalente in `src/components/layout/AppLayout.tsx`, anche se V1 è deprecato, per evitare regressioni se componenti legacy vengono montati o preservati.
-- Non sostituirlo con un altro `preventDefault` globale.
+Dai log:
 
-## 2. Ammorbidire gli stili globali anti-gesture
-- In `src/index.css`, rimuovere il blocco iniziale “Blocco totale dei gesti di navigazione del trackpad/touchscreen”.
-- Rimuovere la regola globale dentro `@layer base` che applica `overscroll-behavior` a tutti gli elementi.
-- Mantenere solo una protezione non invasiva su `html, body` se necessaria, preferibilmente limitata all’asse X:
-  - `overscroll-behavior-x: none;`
-  - evitare `overscroll-behavior-y: none` globale
-  - evitare `touch-action` globale su `html`
-- Obiettivo: prevenire quanto possibile swipe-back del browser senza bloccare lo scroll verticale e senza interferire con scroll interni.
+1. **Auth logs** mostrano un loop di `403 bad_jwt — token contains an invalid number of segments` su `/auth/v1/user` ogni ~16 secondi, dallo stesso browser, negli stessi minuti dell'errore (03:00:05 → 03:00:51).
+2. **ai-assistant logs**: la function ha risposto **200** alle 02:57 e 02:58, poi **shutdown** ripetuti tra 03:00:50 e 03:01:27 — segno che il client smette di chiamarla bene perché la sessione è marcata invalida prima ancora di partire la fetch.
+3. Il messaggio "Failed to send a request to the Edge Function" è il testo standard che `supabase-js` produce quando la fetch crasha lato client (JWT malformato negli headers, non risposta HTTP).
+4. Nel codice ci sono **20+ chiamate a `supabase.auth.getUser()`** sparse in hook e componenti. Questo viola la regola in memoria *"NO `getUser()` di rete per validare JWT"*. Ogni `getUser()` con un token corrotto genera un 403 e contribuisce a marcare la sessione invalida.
 
-## 3. Sistemare la catena dello scroll nei layout V2
-- In `AuthenticatedLayout`, sostituire `overscroll-none` sul wrapper e su `<main>` con un comportamento meno invasivo (`overscroll-x-none` o nessun overscroll), lasciando a `<main>` lo scroll verticale naturale.
-- Valutare `min-h-0` sul contenitore animato dentro `<main>`: oggi è `h-full`; per pagine più alte del viewport, può impedire il corretto overflow quando i figli hanno `h-[calc(...)]` o `h-full`.
-- Standardizzare: shell fissa, header fisso, `<main>` scrollabile, sezioni interne scrollabili solo quando davvero split-panel.
+**Causa primaria**: il JWT in `localStorage` è corrotto (probabilmente troncato da un refresh fallito o da un vecchio formato). Tutte le chiamate autenticate — incluso `ai-assistant` — falliscono.
 
-## 4. Correggere i template introdotti nel redesign
-- `SectionTabs`: il contenitore dei children ora è `overflow-hidden`; per pagine non split-panel questo taglia il contenuto se il figlio non ha un proprio scroll. Lo convertirò in un comportamento sicuro:
-  - struttura `flex-1 min-h-0`
-  - scroll verticale consentito quando il figlio non gestisce lo scroll
-  - mantenere overflow nascosto solo dove ci sono split-panel reali.
-- `GoldenLayout`: mantenere `overflow-hidden` solo per il layout split, ma garantire che i pannelli list/detail abbiano altezza corretta e possano scrollare internamente.
-- Se necessario aggiungere una prop leggera a `SectionTabs`/sezioni per distinguere:
-  - `contained` per pagine split/fullscreen
-  - `scroll` per pagine document/dashboard.
+**Causa contribuente**: le `getUser()` di rete amplificano il problema invece di leggere la sessione localmente.
 
-## 5. Audit per sezione e fix mirati
-Verificherò e correggerò le sezioni principali:
+## Cosa farò
 
-- Home/Dashboard: deve scrollare tramite `ScrollArea` o main senza doppio calc errato.
-- Pipeline:
-  - Contatti: `GoldenLayout` + lista/dettaglio devono scrollare.
-  - Kanban/CRM: tab interne e pipeline devono restare scrollabili.
-  - Deals: già ha `overflow-auto h-full`, va preservato.
-  - Agenda: sidebar calendario e dettaglio giorno devono scrollare.
-- Comunica:
-  - Inbox/Inreach
-  - Outreach con tab verticali interne
-  - Composer
-  - Approvazioni
-- Intelligence:
-  - Prompt Lab: pagina attuale ha `h-[calc(100vh-3.5rem)]` dentro nuova shell con header + GoldenHeader + SectionTabs; va convertita a `h-full min-h-0` per evitare altezza eccedente e scroll rotto.
-  - Analytics: stesso problema con `h-[calc(100vh-3.5rem)]`; va adattata al contenitore V2.
-  - KB Supervisor: stesso pattern `h-[calc(100vh-4rem)]`; va adattato.
-  - AI Control Center: aggiungere contenitore `min-h-0 overflow-auto` sul contenuto se necessario.
-- Explore:
-  - Mappa/Globe
-  - Cerca/Contacts
-  - Deep Search
-  - Campagne, che usa già layout fullscreen con calc e può avere doppio header: va normalizzata.
-- Config:
-  - Settings/Guide/Token/Calendar/Admin: assicurare scroll verticale sui contenuti lunghi.
+### 1. Recovery automatico della sessione corrotta (priorità 1)
 
-## 6. Validazione tecnica
-Dopo le modifiche eseguirò:
-- type-check/build disponibile nel progetto;
-- ricerca statica per assicurare che non restino listener `wheel` globali con `preventDefault()`;
-- ricerca per `overscroll-behavior: none` globale e `touch-action` globale;
-- verifica delle pagine chiave al viewport dell’utente circa 993x691:
-  - `/v2/intelligence/prompt-lab`
-  - `/v2/intelligence/analytics`
-  - `/v2/pipeline/contacts`
-  - `/v2/pipeline/deals`
-  - `/v2/communicate/outreach`
-  - `/v2/explore/campaigns`
-  - `/v2/settings/general`
+In `AuthProvider`, aggiungere un guard all'avvio: se `getSession()` ritorna una sessione il cui `access_token` non rispetta il formato JWT (3 segmenti separati da `.`) o il cui `expires_at` è scaduto, eseguire `supabase.auth.signOut({ scope: 'local' })` e ripulire `localStorage` per evitare il loop di 403. L'utente verrà rimandato al login con messaggio chiaro.
 
-## Risultato atteso
-- Trackpad e mouse wheel tornano a funzionare in tutte le aree scrollabili.
-- Niente più blocchi globali che intercettano gli eventi prima dei componenti.
-- Le sezioni del redesign restano ordinate con la navigazione nuova, ma senza tagliare il contenuto.
-- La prevenzione dello swipe-back resta solo dove non rompe lo scroll, non più tramite `preventDefault` globale.
+### 2. Migliorare il messaggio d'errore in `invokeEdgeV2`
+
+In `src/v2/io/edge/client.ts`, distinguere:
+- `Failed to send a request` / network error → messaggio "Sessione scaduta, effettua di nuovo il login" + trigger di logout automatico
+- 401/403 dalla function → stesso flusso
+- 5xx → "Errore temporaneo del motore AI, riprova"
+- altro → messaggio attuale
+
+In questo modo l'utente non vede più il messaggio criptico ma viene guidato.
+
+### 3. Sostituire le `getUser()` di rete con `getSession()` (cleanup conforme a memoria)
+
+Convertire le ~20 occorrenze trovate (in `useWorkspacePresets`, `MemoryDashboard`, `FeedbackButtons`, `GlobalVoiceFAB`, `useWhatsAppDomLearning`, `telemetry`, `useAppSettings`, `TokenSettingsPanel`, `rbac.ts`, ecc.) da:
+```ts
+const { data: { user } } = await supabase.auth.getUser();
+```
+a:
+```ts
+const { data: { session } } = await supabase.auth.getSession();
+const user = session?.user ?? null;
+```
+`getSession()` legge dal local storage senza chiamata di rete e rispetta la regola di memoria *"NO `getUser()` di rete per validare JWT"*.
+
+### 4. Verifica edge function
+
+Controllare brevemente che `ai-assistant/index.ts` non abbia regressioni introdotte nelle ultime modifiche e che gestisca correttamente i mode `tool-decision`, `plan-execution`, `standard` (quelli usati da CommandPage). I test di integrazione esistenti (`index.integration.test.ts`) verranno eseguiti per conferma.
+
+### 5. Test post-fix
+
+- Pulire la sessione (logout+login) e verificare che CommandPage risponda.
+- Verificare che il loop di 403 su `/auth/v1/user` sparisca dai log.
+- Verificare che, simulando un token corrotto, l'app effettui logout pulito invece di andare in loop.
+
+## File principali toccati
+
+- `src/v2/AuthProvider.tsx` (guard JWT corrotto)
+- `src/v2/io/edge/client.ts` (error handling)
+- ~12 file con `getUser()` da convertire a `getSession()`
+- nessuna modifica a `supabase/functions/ai-assistant/*` (la function è sana)
+
+## Cosa NON farò
+
+- Non toccherò `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria).
+- Non aggiungerò Google OAuth né cambierò il flusso whitelist.
+- Non modificherò la logica di prompt/audit appena introdotta in CommandPage.
