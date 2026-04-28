@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 
-const log = createLogger("useImportWizard");
+const wizardLog = createLogger("useImportWizard");
 import {
   useImportLogs,
   useImportLog,
@@ -207,7 +207,7 @@ export function useImportWizard() {
         });
       }
     } catch (err) {
-      log.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
+      wizardLog.error("file analysis failed", { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       toast({ title: "Errore analisi file", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
@@ -225,7 +225,7 @@ export function useImportWizard() {
       });
       setAiMapping(result);
       toast({ title: `${result.parsed_rows.length} righe estratte (confidence: ${Math.round(result.confidence * 100)}%)` });
-    } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
+    } catch (e) { wizardLog.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
   }, [pasteText, analyzeStructure]);
 
   // ── Drag & Drop ──
@@ -286,7 +286,7 @@ export function useImportWizard() {
           }
         }
       } catch (dedupErr) {
-        log.debug("dedup check skipped", { error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr) });
+        wizardLog.debug("dedup check skipped", { error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr) });
       }
 
       let log: ImportLog;
