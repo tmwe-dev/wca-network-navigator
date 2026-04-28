@@ -61,10 +61,10 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 
 | # | Doc | Intervento |
 |---|---|---|
-| P4.1 | B1 | Verificare se i 3 file bridge (`wcaAppBridge.ts`, `wca-app-bridge.ts`, `wcaAppApi.ts`) coesistono ancora. Se sì, mantenere SOLO `wcaAppApi.ts` e ridirezionare gli import. **NO delete fisica** dei file ancora in sviluppo (Code Lifecycle Governance) — usare deprecation notice |
-| P4.2 | B2 | `WcaSessionContext` come SSOT — già parzialmente in `useWcaSession.ts`. Centralizzare lettura `localStorage`+extension state |
-| P4.3 | B3 | Collegare `wcaCheckpoint.waitForGreenLight()` ai chiamanti `wca-app` API (download, enrich) |
-| P4.4 | B6 | Pre-check cookie TTL in `useWcaAppDownload` e auto-refresh se < 1 min |
+| P4.1 ✅ | B1 | Verificato: solo `wcaAppApi.ts` esiste in repo (nessun `wcaAppBridge.ts` o `wca-app-bridge.ts`). Già SSOT |
+| P4.2 ✅ | B2 | `wcaAppApi.getOrRefreshCookie` ora usa `wcaCookieStore` come SSOT (no duplicazione localStorage). `setWcaCookie`/`getWcaCookie` unico punto di accesso |
+| P4.3 ✅ | B3 | `gateAndMark()` integrato in `wcaDiscover`, `wcaScrape`, `wcaEnrich`, `wcaVerify`. Background workers (job-start/status/worker) esclusi (rate limit lato server). `resetCheckpoint()` esportato per test |
+| P4.4 ✅ | B6 | `wcaCookieStore`: `EFFECTIVE_TTL_MS = TTL_MS - 60s`. Refresh proattivo prima dello scadere. Test verdi |
 
 ### Priorità 5 — CRM Lifecycle (2 giorni)
 

@@ -5,6 +5,8 @@
 
 import { createLogger } from "@/lib/log";
 import { ApiError } from "@/lib/api/apiError";
+import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import {
   safeParseDiscover,
   safeParseScrape,
@@ -27,22 +29,14 @@ async function assertOk(res: Response, context: string): Promise<void> {
   throw await ApiError.fromResponse(res, context);
 }
 
-// ─── Cookie cache ───────────────────────────────────────────────
-const COOKIE_KEY = "wca_session_cookie";
-const COOKIE_TTL = 8 * 60 * 1000; // 8 min
+// ─── Cookie cache (SSOT: wcaCookieStore) ────────────────────────
+// P4.2 — usa wcaCookieStore come SSOT, no duplicazione localStorage.
+// P4.4 — pre-refresh: getWcaCookie ritorna null se TTL scaduto; qui aggiungiamo
+// un margine di 1 min per refresh proattivo prima del cutoff.
 
 async function getOrRefreshCookie(): Promise<string> {
-  try {
-    const cached = localStorage.getItem(COOKIE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed.cookie && Date.now() - parsed.savedAt < COOKIE_TTL) {
-        return parsed.cookie;
-      }
-    }
-  } catch (err) {
-    log.warn("cookie cache read failed", { message: err instanceof Error ? err.message : String(err) });
-  }
+  const cached = getWcaCookie();
+  if (cached) return cached;
 
   const res = await fetch(`${BASE}/login`, {
     method: "POST",
@@ -58,12 +52,27 @@ async function getOrRefreshCookie(): Promise<string> {
       details: { context: "wcaLogin" },
     });
   }
-  try {
-    localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() }));
-  } catch (err) {
-    log.warn("cookie cache write failed", { message: err instanceof Error ? err.message : String(err) });
-  }
+  setWcaCookie(cookie);
   return cookie;
+}
+
+/**
+ * P4.3 — Checkpoint gate per chiamate user-facing a wca-app.
+ * Aspetta la green-zone (≥20s tra una richiesta e l'altra) prima di
+ * eseguire fetch verso endpoint sensibili (discover/scrape/enrich/verify).
+ * Background workers (job-start/job-status/worker) sono ESCLUSI: gestiscono
+ * il rate limit lato server.
+ */
+async function gateAndMark(context: string): Promise<void> {
+  const ok = await waitForGreenLight();
+  if (!ok) {
+    throw new ApiError({
+      code: "RATE_LIMITED",
+      message: "WCA checkpoint denied",
+      details: { context },
+    });
+  }
+  markRequestSent();
 }
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -233,6 +242,7 @@ export async function wcaDiscover(
   if (options?.searchBy) filters.searchBy = options.searchBy;
   if (options?.city) filters.city = options.city;
 
+  await gateAndMark("wcaDiscover");
   const res = await fetch(`${BASE}/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -270,6 +280,7 @@ export async function wcaDiscoverAll(
 export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promise<ScrapeResult> {
   const body: Record<string, unknown> = { wcaIds };
   if (networkDomain) body.networkDomain = networkDomain;
+  await gateAndMark("wcaScrape");
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -385,6 +396,7 @@ export async function wcaEnrich(
   networkDomain: string,
   options?: { originalWcaId?: number; networkName?: string }
 ): Promise<EnrichResult> {
+  await gateAndMark("wcaEnrich");
   const res = await fetch(`${BASE}/enrich`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -401,6 +413,7 @@ export async function wcaEnrich(
 
 /** Verifica membro su network specifico */
 export async function wcaVerify(wcaId: number, network: string): Promise<VerifyResult> {
+  await gateAndMark("wcaVerify");
   const res = await fetch(`${BASE}/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

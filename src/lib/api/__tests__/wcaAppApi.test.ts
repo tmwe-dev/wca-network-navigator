@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "@/lib/api/apiError";
+import { resetCheckpoint } from "@/lib/wcaCheckpoint";
 
 vi.mock("@/lib/log", () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
@@ -19,6 +20,7 @@ global.fetch = mockFetch;
 beforeEach(() => {
   vi.clearAllMocks();
   try { localStorage.removeItem("wca_session_cookie"); } catch {}
+  resetCheckpoint();
 });
 
 import { wcaScrape, wcaCheckIds, wcaSave, wcaJobStatus, wcaVerify } from "@/lib/api/wcaAppApi";
