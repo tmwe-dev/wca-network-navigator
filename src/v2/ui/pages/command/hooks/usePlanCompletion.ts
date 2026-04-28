@@ -20,6 +20,7 @@ function canvasForResult(result: ToolResult): CanvasType {
     case "report":     return "live-report";
     case "approval":   return "live-approval";
     case "result":     return "live-result";
+    case "multi":      return "live-multi";
   }
 }
 
