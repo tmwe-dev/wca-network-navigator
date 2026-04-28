@@ -335,6 +335,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                           {({ outreachQueue, globalSync }) => (
                             <LayoutHeader
                               onToggleSidebar={() => setSidebarOpen(o => !o)}
+                              onOpenCommandPalette={() => setCommandOpen(true)}
                               onAiClick={() => setIntelliflowOpen(true)}
                               onAddContact={() => setAddContactOpen(true)}
                               onAgentDash={() => setAgentDashOpen(true)}
