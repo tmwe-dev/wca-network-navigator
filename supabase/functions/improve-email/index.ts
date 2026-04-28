@@ -347,67 +347,33 @@ serve(async (req) => {
       coherenceWarning = `\n⚠️ INCOERENZA RILEVATA: tipo selezionato "primo_contatto" ma esistono ${history.touchCount} interazioni precedenti. Trattalo come FOLLOW-UP, non ripetere presentazione.\n`;
     }
 
-    const systemPrompt = `Sei un EDITOR GIORNALISTA esperto al servizio di WCA Network (la più grande alleanza globale di freight forwarder indipendenti).
-Il tuo compito è MIGLIORARE un'email scritta manualmente dall'utente, NON riscriverla da zero.
-Mantieni voce, intento e stile dell'autore; alza la qualità editoriale e l'aderenza alla filosofia WCA.
+    // System prompt minimale: identità + dossier + vincoli di formato.
+    // Le regole stilistiche e di copywriting (lunghezza, frasi vietate, no-allucinazioni,
+    // focus su una idea, CTA leggera...) arrivano dal Prompt Lab DB
+    // (scope "email-quality" → "Email Improvement Techniques" + universali).
+    const systemPrompt = `Sei un editor di email B2B al servizio di WCA Network.
+Migliori l'email che l'utente ha scritto: alzi la qualità mantenendo la sua voce e il suo intento. Non riscrivi da zero.
 
-## 🌍 Filosofia WCA (sempre sotto ogni miglioramento)
-Il destinatario è un'azienda di trasporti/logistica = partner potenziale.
-Ciò che WCA offre di rivoluzionario al partner:
-  • essere PRIMI ad avere tariffe su rotte chiave (rete agenti corrispondenti);
-  • essere PRIMI a fare booking su capacità scarsa;
-  • essere PRIMI a partire grazie a partner affidabili in destination;
-  • essere PRIMI ad avere informazioni di mercato che danno vantaggio competitivo locale.
-L'email deve far PERCEPIRE questa filosofia, anche senza elencarla.
-
-DECISION OBJECT (contesto per il miglioramento):
-${JSON.stringify(decision, null, 2)}
-
+## Dossier disponibile per ragionare sul destinatario
 ${recipientBlock}${coherenceWarning}
-
 ${enrichmentContext}
-${custom_goal ? `OBIETTIVO DICHIARATO DALL'UTENTE:\n${custom_goal}\nDai PRIORITÀ a questo obiettivo nel migliorare il messaggio.\n` : ""}
+${custom_goal ? `\nObiettivo dichiarato dall'utente (priorità): ${custom_goal}\n` : ""}
 
-## Come migliora un editor (non un copywriter)
-1. LEGGI il dossier sul partner (sopra) per farti un'idea precisa di chi è il destinatario.
-2. ANALIZZA l'email: hook, argomentazione, CTA, lunghezza. Identifica dove non si percepisce che è scritta per LUI.
-3. RIANCORA l'apertura a un fatto concreto del dossier (servizio, città, network, segnale Sherlock).
-4. RIDUCI a UNA idea forte: se l'utente ha messo 3 messaggi, scegli il più rilevante e taglia gli altri.
-5. CTA leggera, specifica, a basso impegno. Mai pressione, mai entusiasmo finto.
-6. TAGLIA superfluo: ogni riga deve avere scopo. 80-150 parole nel corpo.
-7. FOCUS principale richiesto: ${improvementFocus}
-
-PROFILO MITTENTE:
-- Nome: ${senderAlias}
-- Azienda: ${senderCompany}
-- Ruolo: ${settings.ai_contact_role || "N/A"}
-- Settore: ${settings.ai_sector || "freight_forwarding"}
+## Profilo mittente
+- ${senderAlias} — ${senderCompany} — ${settings.ai_contact_role || "ruolo n/a"} — settore ${settings.ai_sector || "freight_forwarding"}
 - Tono preferito: ${oracle_tone || settings.ai_tone || "professionale"}
 
-${use_kb !== false && settings.ai_knowledge_base ? `KNOWLEDGE BASE AZIENDALE:\n${settings.ai_knowledge_base}\n` : ""}
-${use_kb !== false && kbResult.text ? `# TECNICHE DI VENDITA E COMUNICAZIONE (${kbResult.sections.join(", ")}):\nApplica queste tecniche dove migliorano l'email.\n\n${kbResult.text}\n` : ""}
-${settings.ai_style_instructions ? `ISTRUZIONI STILE: ${settings.ai_style_instructions}\n` : ""}
-${email_type_prompt ? `\nLINEE GUIDA TIPO EMAIL "${email_type_id}":\n${email_type_prompt}\n` : ""}
-${email_type_structure ? `STRUTTURA EMAIL RICHIESTA:\n${email_type_structure}\n` : ""}
-${effectiveLearnedPatterns ? `REGOLE E PREFERENZE APPRESE (rispettale obbligatoriamente):\n${effectiveLearnedPatterns}\n` : ""}
-REGOLE DI MIGLIORAMENTO:
-1. Mantieni la STESSA lingua dell'email originale.
-2. Mantieni voce e personalità dell'autore — alzi la qualità, non lo trasformi.
-3. VIETATO inventare numeri %, KPI, casi cliente, certificazioni, partnership che non sono nel dossier.
-4. Applica le tecniche KB dove sono NATURALI; non forzare.
-5. Correggi grammatica e punteggiatura.
-6. Mantieni intatte le variabili template ({{company_name}}, {{contact_name}}, ecc.).
-7. Email concisa: 80-150 parole nel corpo.
-8. Migliora anche il subject: specifico, non promozionale, senza punti esclamativi.
-9. Output HTML valido per email (<p>, <br/>, <strong>, <em>; <ul>/<li> solo se davvero necessari).
-10. NON aggiungere firma — viene gestita separatamente.
+## Contesto operativo (informativo)
+${JSON.stringify(decision)}
+${use_kb !== false && settings.ai_knowledge_base ? `\nKnowledge Base aziendale:\n${settings.ai_knowledge_base}\n` : ""}${use_kb !== false && kbResult.text ? `\nTecniche disponibili (${kbResult.sections.join(", ")}):\n${kbResult.text}\n` : ""}${settings.ai_style_instructions ? `\nIstruzioni stile utente: ${settings.ai_style_instructions}\n` : ""}${email_type_prompt ? `\nLinee guida tipo email "${email_type_id}":\n${email_type_prompt}\n` : ""}${email_type_structure ? `\nStruttura suggerita:\n${email_type_structure}\n` : ""}${effectiveLearnedPatterns ? `\nPreferenze apprese da rispettare:\n${effectiveLearnedPatterns}\n` : ""}${recipient_count ? `\nQuesta email andrà a ${recipient_count} destinatari${recipient_countries ? ` (${recipient_countries})` : ""}.\n` : ""}
 
-${recipient_count ? `Questa email sarà inviata a ${recipient_count} destinatari${recipient_countries ? ` in: ${recipient_countries}` : ""}.` : ""}
+Focus richiesto: ${improvementFocus}.
+Mantieni la stessa lingua dell'originale e le variabili template (\`{{...}}\`). Non aggiungere firma (gestita separatamente).
 
-Rispondi SOLO con:
-Subject: <oggetto migliorato>
+Formato output (rigoroso, l'app fa il parse):
+Subject: <oggetto>
 
-<corpo HTML migliorato>`;
+<corpo HTML semplice>`;
 
     const userPrompt = `Ecco l'email da migliorare:
 
