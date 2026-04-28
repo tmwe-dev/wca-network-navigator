@@ -103,7 +103,18 @@ export const aiQueryTool: Tool = {
       /\bagent/, /\boutreach/, /\bcampagn/, /\bjob/, /\bbiglietti/, /\bkb\b/,
       /\bscansion/, /\bscan\b/, /\bdirectory/, /\bdatabase/, /\btabella/,
     ];
-    return queryPatterns.some((re) => re.test(lower));
+    if (queryPatterns.some((re) => re.test(lower))) return true;
+
+    // Fallback "lookup nudo": prompt breve (<= 6 token) che contiene almeno
+    // un nome proprio (parola con maiuscola iniziale nel testo originale) o
+    // una sequenza alfabetica plausibilmente un'azienda/persona.
+    // Questo cattura prompt come "Radiant", "Acme Corp", "Mario Rossi" che
+    // l'utente intende come ricerca diretta sul DB.
+    const tokens = prompt.trim().split(/\s+/);
+    if (tokens.length === 0 || tokens.length > 6) return false;
+    const hasProperNoun = tokens.some((t) => /^[A-ZÀ-Ý][a-zà-ÿ0-9'’.-]{1,}/.test(t));
+    const isAlphaOnly = /^[\p{L}\p{N}\s'’.&/-]+$/u.test(prompt.trim());
+    return hasProperNoun && isAlphaOnly;
   },
 
   async execute(prompt: string, context): Promise<ToolResult> {
