@@ -1,6 +1,7 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 
 const TARGET_SCHEMA = {
@@ -185,6 +186,30 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
+    // P1.3: require valid user JWT (this function consumes paid AI gateway credits).
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    if (!token || token === SUPABASE_ANON_KEY) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+          status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Authentication check failed" }), {
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
