@@ -2,8 +2,9 @@
  * Routes v2 — Complete routing with all 37 pages, wrapped in FeatureErrorBoundary
  */
 import * as React from "react";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams, Outlet } from "react-router-dom";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 /** Preserva il query param `?agent=` quando si redirige dal vecchio path /v2/agent-chat. */
 function AgentChatRedirect() {
@@ -139,6 +140,19 @@ function RACompanyRedirect(): React.ReactElement {
   return <Navigate to={`/v2/ra-company/${id ?? ""}`} replace />;
 }
 
+function PartnerHubAlias(): React.ReactElement {
+  const [searchParams] = useSearchParams();
+  const { batchUpdate } = useGlobalFilters();
+  const country = searchParams.get("country")?.trim().toUpperCase();
+
+  useEffect(() => {
+    if (!country) return;
+    batchUpdate({ networkSelectedCountries: new Set([country]) });
+  }, [batchUpdate, country]);
+
+  return guardedPage(NetworkPage, "PartnerHub");
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
@@ -174,6 +188,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
+          <Route path="partner-hub" element={<PartnerHubAlias />} />
 
           {/* CRM + figli */}
           <Route path="crm" element={<Navigate to="/v2/pipeline/kanban" replace />} />

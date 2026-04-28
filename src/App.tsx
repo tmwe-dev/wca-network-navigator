@@ -20,8 +20,16 @@ import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
 
+const DEFAULT_HOME_ROUTE = "/v2/partner-hub?country=JO";
+
+function appendLocationParts(target: string, search: string, hash: string): string {
+  if (!search) return `${target}${hash}`;
+  const joiner = target.includes("?") ? "&" : "?";
+  return `${target}${joiner}${search.replace(/^\?/, "")}${hash}`;
+}
+
 const LEGACY_V1_REDIRECTS: Record<string, string> = {
-  "": "/v2",
+  "": DEFAULT_HOME_ROUTE,
   "network": "/v2/network",
   "crm": "/v2/crm",
   "outreach": "/v2/outreach",
@@ -70,7 +78,7 @@ function resolveLegacyV1Path(pathname: string, search: string, hash: string): st
     return `/v2/${legacyPath.replace(/^ra\/company\//, "ra-company/")}${search}${hash}`;
   }
 
-  return `${LEGACY_V1_REDIRECTS[legacyPath] ?? "/v2"}${search}${hash}`;
+  return appendLocationParts(LEGACY_V1_REDIRECTS[legacyPath] ?? DEFAULT_HOME_ROUTE, search, hash);
 }
 
 function V1DeprecationRedirect() {
@@ -107,7 +115,7 @@ const App = () => (
               <RuntimeDiagnosticPanel />
               <Suspense fallback={<PageFallback />}>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/v2" replace />} />
+                  <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
 
                   {/* Public routes */}
                   <Route path="/auth" element={<LegacyRedirect to="/v2/login" />} />
@@ -133,7 +141,7 @@ const App = () => (
                   <Route path="/ai-staff/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
                   <Route path="/email-forge" element={<LegacyRedirect to="/v2/ai-staff/email-forge" />} />
 
-                  <Route path="*" element={<Navigate to="/v2" replace />} />
+                  <Route path="*" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
                 </Routes>
               </Suspense>
             </BrowserRouter>
