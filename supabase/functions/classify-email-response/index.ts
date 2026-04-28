@@ -248,6 +248,22 @@ serve(async (req) => {
       return edgeError("CLASSIFICATION_UPSERT_ERROR", upsertErr.message, undefined, dynCors);
     }
 
+    // ── Persona-aware override: pick the first matching routing rule and
+    //    apply confidence_floor / next_status override / skip_action.
+    //    The matched rule is also surfaced in the response for the audit UI.
+    const matchedRule = findMatchingRule(routingRules, classification, {
+      agentId: input.agent_id ?? null,
+      leadStatus: relationalContext?.lead_status ?? null,
+    });
+    const override = matchedRule ? buildOverride(matchedRule) : null;
+    if (override?.confidenceFloor && classification.confidence < override.confidenceFloor) {
+      classification.confidence = override.confidenceFloor;
+    }
+    if (matchedRule) {
+      // best-effort, non-blocking
+      recordRuleMatch(supabase, matchedRule.id).catch(() => {});
+    }
+
     // 5. Auto-execute eligible actions
     let actionTaken = "none";
     let decisionLogId: string | null = null;
@@ -261,8 +277,9 @@ serve(async (req) => {
         .maybeSingle();
 
       if (partner) {
-        const nextStatus = getNextStatus(partner.lead_status, classification);
-        if (nextStatus) {
+        // Routing override beats hardcoded escalation when present.
+        const nextStatus = override?.nextStatus ?? getNextStatus(partner.lead_status, classification);
+        if (nextStatus && !override?.skipAction) {
           const guardRes = await applyLeadStatusChange(supabase, {
             table: "partners",
             recordId: input.partner_id,
@@ -270,9 +287,19 @@ serve(async (req) => {
             userId: input.user_id,
             actor: { type: "ai_agent", name: "classify-email-response" },
             decisionOrigin: "ai_auto",
-            trigger: `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
+            trigger: matchedRule
+              ? `Routing rule "${matchedRule.name}" → ${nextStatus}`
+              : `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
             reason: `Email classification: ${classification.domain}/${classification.category}`,
-            metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+            metadata: {
+              domain: classification.domain,
+              category: classification.category,
+              confidence: classification.confidence,
+              sentiment: classification.sentiment,
+              action_suggested: classification.action_suggested,
+              routing_rule_id: matchedRule?.id,
+              routing_rule_name: matchedRule?.name,
+            },
           });
 
           if (guardRes.applied) {
@@ -288,7 +315,14 @@ serve(async (req) => {
               email_address: input.email_address,
               decision_origin: "ai_auto",
               ai_decision_log_id: decisionLogId || undefined,
-              metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+              metadata: {
+                domain: classification.domain,
+                category: classification.category,
+                confidence: classification.confidence,
+                sentiment: classification.sentiment,
+                action_suggested: classification.action_suggested,
+                routing_rule_id: matchedRule?.id,
+              },
             });
           }
         }
