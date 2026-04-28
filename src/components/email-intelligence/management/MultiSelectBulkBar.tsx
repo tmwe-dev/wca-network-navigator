@@ -163,7 +163,7 @@ export function MultiSelectBulkBar({
       onComplete?.();
     } catch (err) {
       toast.error("Errore durante l'operazione");
-      log.error(err);
+      log.error("error", { error: err });
     } finally {
       setIsLoading(false);
       setProgress(null);
@@ -183,7 +183,7 @@ export function MultiSelectBulkBar({
       onComplete?.();
     } catch (err) {
       toast.error("Errore assegnazione");
-      log.error(err);
+      log.error("error", { error: err });
     } finally {
       setIsLoading(false);
     }

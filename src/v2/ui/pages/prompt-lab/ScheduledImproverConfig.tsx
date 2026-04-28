@@ -106,7 +106,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       }
     } catch (err) {
       toast.error("Errore nel caricamento configurazione");
-      log.error(err);
+      log.error("error", { error: err });
     } finally {
       setLoading(false);
     }
@@ -141,7 +141,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         );
       } catch (err) {
         toast.error("Errore nel salvataggio configurazione");
-        log.error(err);
+        log.error("error", { error: err });
       } finally {
         setSaving(false);
       }
@@ -188,7 +188,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       toast.success("Avvio 'Migliora tutto'...");
     } catch (err) {
       toast.error("Errore nell'avvio manuale");
-      log.error(err);
+      log.error("error", { error: err });
     } finally {
       setRunningNow(false);
     }
