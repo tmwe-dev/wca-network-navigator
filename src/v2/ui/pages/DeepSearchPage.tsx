@@ -209,7 +209,7 @@ export function DeepSearchPage(): React.ReactElement {
 
               <TabsContent value="markdown" className="flex-1 overflow-auto p-4 m-0">
                 {selectedStep?.markdown ? (
-                  <LazyMarkdown content={selectedStep.markdown} />
+                  <LazyMarkdown>{selectedStep.markdown}</LazyMarkdown>
                 ) : (
                   <div className="text-xs text-muted-foreground">Nessun markdown disponibile.</div>
                 )}
@@ -217,7 +217,7 @@ export function DeepSearchPage(): React.ReactElement {
 
               <TabsContent value="summary" className="flex-1 overflow-auto p-4 m-0 space-y-4">
                 {sherlock.summary ? (
-                  <LazyMarkdown content={sherlock.summary} />
+                  <LazyMarkdown>{sherlock.summary}</LazyMarkdown>
                 ) : (
                   <div className="text-xs text-muted-foreground">Sintesi disponibile a fine indagine.</div>
                 )}
