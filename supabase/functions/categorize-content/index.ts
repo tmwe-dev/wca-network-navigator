@@ -1,6 +1,7 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
 
 
 serve(async (req) => {
@@ -79,10 +80,13 @@ serve(async (req) => {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     let category = "altro";
     if (toolCall?.function?.arguments) {
-      try {
-        const args = JSON.parse(toolCall.function.arguments);
-        if (categories.includes(args.category)) category = args.category;
-      } catch { /* fallback */ }
+      const Schema = z.object({ category: z.enum(categories as [string, ...string[]]) });
+      const r = safeParseToolArgs(toolCall.function.arguments, Schema, {
+        fnName: "categorize-content",
+        model: "google/gemini-3-flash-preview",
+        fallback: { category: "altro" },
+      });
+      category = r.data.category;
     }
 
     return new Response(JSON.stringify({ category }), {
