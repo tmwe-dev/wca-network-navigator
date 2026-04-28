@@ -92,32 +92,22 @@ export function buildClassificationPrompt(
   parts.push(`Subject: ${subjNorm}`);
   parts.push(`Body:\n${bodyBlock}`);
 
-  // LOVABLE-93: Domain detection hints and rules
-  parts.push(`\n## DOMAIN DETECTION RULES (Livello 1)
-Classify email domain FIRST before category classification:
-- "operative": richieste preventivo, booking, tracking spedizioni, documentazione, tariffe, stato merce, ordini
-- "administrative": fatture, pagamenti, solleciti, note di credito, estratti conto, verifiche contabili, ricevute
-- "support": reclami, richieste assistenza, problemi tecnici, feedback servizio, errori sistema
-- "internal": newsletter, notifiche sistema, comunicazioni interne, auto-reply di sistema, digest automati
-- "commercial": tutto ciò che riguarda prospect, lead, partnership, collaborazione nuova, follow-up commerciali
-
-If email_address has manual domain_type set (from email_address_rules), RESPECT that as primary signal.`);
-
-  // Output format
-  parts.push(`\n## Required Output`);
-  parts.push(`Respond with a JSON object (no markdown, no code fences):
-{
-  "domain": "commercial|operative|administrative|support|internal",
-  "category": "interested|not_interested|request_info|question|meeting_request|complaint|follow_up|auto_reply|unsubscribe|bounce|spam|uncategorized|quote_request|booking_request|shipment_tracking|documentation_request|rate_inquiry|cargo_status|invoice_query|payment_request|payment_confirmation|credit_note|account_statement|service_inquiry|technical_issue|feedback|newsletter|system_notification|internal_communication",
+  // Output contract — generato dinamicamente dai VALID_* per non duplicare
+  // l'enum a mano ad ogni cambio. Le regole semantiche di dominio/categoria
+  // sono iniettate dal Prompt Lab (operative_prompts) via operativePromptsLoader.
+  parts.push(`\n## Required Output (JSON, no markdown)`);
+  parts.push(`{
+  "domain": "${VALID_DOMAINS.join("|")}",
+  "category": "${VALID_CATEGORIES.join("|")}",
   "confidence": 0.0-1.0,
-  "ai_summary": "one-sentence summary of the email content and intent. If the email is NOT in Italian, provide an Italian translation summary here.",
-  "keywords": ["keyword1", "keyword2"],
-  "urgency": "critical|high|normal|low",
-  "sentiment": "positive|negative|neutral|mixed",
-  "detected_patterns": ["pattern1"],
-  "action_suggested": "brief description of recommended next action",
-  "reasoning": "brief explanation of classification reasoning",
-  "detected_language": "detected language of the email (e.g. English, Deutsch, Français, Italiano)"
+  "ai_summary": "one-sentence summary in Italian",
+  "keywords": ["..."],
+  "urgency": "${VALID_URGENCY.join("|")}",
+  "sentiment": "${VALID_SENTIMENT.join("|")}",
+  "detected_patterns": ["..."],
+  "action_suggested": "brief next action",
+  "reasoning": "brief explanation",
+  "detected_language": "language of the email"
 }`);
 
   return parts.join("\n");

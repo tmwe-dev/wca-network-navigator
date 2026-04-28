@@ -1,18 +1,17 @@
 /**
  * safeQueryExecutor — Esecutore client-side di query AI-generate.
  *
- * Riceve un `QueryPlan` prodotto dall'AI Query Planner, lo valida contro:
+ * Validazione contro:
  *   • whitelist tabelle business (ALLOWED_TABLES)
  *   • whitelist operatori (eq, neq, gt, gte, lt, lte, ilike, in, is)
  *   • cap limit hard (max 200, default 50)
- *   • whitelist colonne (devono esistere nello schema)
+ *   • colonne reali (introspect live dal DB via liveSchemaClient)
  *
- * Esegue via supabase.from() rispettando RLS.
- * Solo SELECT — nessuna mutazione consentita.
+ * Esegue via supabase.from() rispettando RLS. Solo SELECT.
  */
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
-import { DB_SCHEMA, ALLOWED_TABLES, type TableDescriptor } from "@/v2/agent/kb/dbSchema";
+import { ALLOWED_TABLES, ALLOWED_TABLES_LIST, findAllowedTable, type AllowedTable } from "./allowedTables";
 import { getLiveColumns } from "./liveSchemaClient";
 
 export const QueryFilterSchema = z.object({
@@ -55,27 +54,24 @@ export class QueryValidationError extends Error {
   }
 }
 
-function findTable(name: string): TableDescriptor | undefined {
-  return DB_SCHEMA.find((t) => t.name === name);
-}
-
-async function validatePlan(plan: QueryPlan): Promise<TableDescriptor> {
+async function validatePlan(plan: QueryPlan): Promise<{ table: AllowedTable; liveColumns: string[] }> {
   if (!ALLOWED_TABLES.has(plan.table)) {
     throw new QueryValidationError(
       `Tabella "${plan.table}" non consentita. Tabelle disponibili: ${[...ALLOWED_TABLES].join(", ")}`,
     );
   }
 
-  const table = findTable(plan.table);
-  if (!table) throw new QueryValidationError(`Tabella "${plan.table}" non trovata nello schema.`);
+  const table = findAllowedTable(plan.table)!;
 
-  // Carica colonne reali dal DB (cache 5min). Se l'introspezione fallisce,
-  // fail-open: usa il descrittore TS come fallback (legacy).
-  const liveMap = await getLiveColumns([...ALLOWED_TABLES]);
-  const liveCols = liveMap.get(plan.table);
-  const validColumns = liveCols && liveCols.length > 0
-    ? new Set(liveCols.map((c) => c.name))
-    : new Set(table.columns.map((c) => c.name));
+  // Carica colonne reali dal DB (cache 5 min).
+  const liveMap = await getLiveColumns(ALLOWED_TABLES_LIST.map((t) => t.name));
+  const liveCols = liveMap.get(plan.table) ?? [];
+  if (liveCols.length === 0) {
+    throw new QueryValidationError(
+      `Impossibile introspettare lo schema di "${plan.table}". Riprova tra qualche secondo.`,
+    );
+  }
+  const validColumns = new Set(liveCols.map((c) => c.name));
 
   for (const f of plan.filters) {
     if (!validColumns.has(f.column)) {
@@ -100,7 +96,7 @@ async function validatePlan(plan: QueryPlan): Promise<TableDescriptor> {
     }
   }
 
-  return table;
+  return { table, liveColumns: liveCols.map((c) => c.name) };
 }
 
 export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult> {
@@ -109,12 +105,12 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
     throw new QueryValidationError(`QueryPlan malformato: ${parsed.error.message}`);
   }
   const plan = parsed.data;
-  const table = await validatePlan(plan);
+  const { table, liveColumns } = await validatePlan(plan);
 
-  // Determina colonne da selezionare
+  // Determina colonne da selezionare (default: prime 10 reali)
   const selectCols = plan.columns?.length
     ? plan.columns.join(",")
-    : table.columns.slice(0, 10).map((c) => c.name).join(",");
+    : liveColumns.slice(0, 10).join(",");
 
   // Cap limit
   const limit = Math.min(plan.limit ?? 50, HARD_LIMIT);
@@ -173,7 +169,7 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
 
   if (plan.sort) {
     q = q.order(plan.sort.column, { ascending: plan.sort.ascending });
-  } else if (table.defaultSort) {
+  } else if (table.defaultSort && liveColumns.includes(table.defaultSort.column)) {
     q = q.order(table.defaultSort.column, { ascending: table.defaultSort.ascending });
   }
 
@@ -186,6 +182,6 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
     rows: (data ?? []) as Record<string, unknown>[],
     count: count ?? (Array.isArray(data) ? data.length : 0),
     table: plan.table,
-    columnsUsed: plan.columns ?? table.columns.slice(0, 10).map((c) => c.name),
+    columnsUsed: plan.columns ?? liveColumns.slice(0, 10),
   };
 }

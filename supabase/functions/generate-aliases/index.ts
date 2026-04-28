@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -17,7 +18,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    const { countryCodes, partnerIds, contactIds } = await req.json();
+    const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
     const supabase = createClient<any>(
       Deno.env.get("SUPABASE_URL")!,
@@ -26,19 +27,42 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Risolvi user_id (per caricare le regole dal Prompt Lab personali).
+    // Se non disponibile, usiamo solo il prompt baseline.
+    let resolvedUserId: string | null = bodyUserId ?? null;
+    if (!resolvedUserId) {
+      const auth = req.headers.get("authorization");
+      const token = auth?.replace(/^Bearer\s+/i, "");
+      if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        resolvedUserId = data?.user?.id ?? null;
+      }
+    }
+    const promptLab = resolvedUserId
+      ? await loadOperativePrompts(supabase, resolvedUserId, {
+          scope: "general",
+          extraTags: ["aliases", "copywriting"],
+          includeUniversal: true,
+          limit: 4,
+        })
+      : { block: "" };
+    const systemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${BASE_IDENTITY}`
+      : BASE_IDENTITY;
+
     // ── Branch: imported_contacts (contactIds) ──
     if (contactIds?.length) {
-      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds);
+      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds, systemPrompt);
     }
 
     // ── Branch: partners by ID ──
     if (partnerIds?.length) {
-      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds);
+      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds, systemPrompt);
     }
 
     // ── Branch: partners by country (original) ──
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
-    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes);
+    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
 
   } catch (e: unknown) {
     console.error("generate-aliases error:", e);
@@ -49,20 +73,12 @@ serve(async (req) => {
   }
 });
 
-const SYSTEM_PROMPT = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti, come li userebbe un professionista italiano in un'email.
-
-REGOLE PER ALIAS AZIENDA (company_alias):
-- Rimuovi suffissi legali: SPA, SRL, LLC, Ltd, Inc, GmbH, d.o.o., S.A., Corp, Pty, dba, etc.
-- Rimuovi la città se è nel nome (es. "World Transport Overseas d.o.o. Sarajevo" → "World Transport Overseas")
-- Mantieni il nome riconoscibile e naturale
-- Se il nome è già corto e senza suffissi, lascialo com'è
-
-REGOLE PER ALIAS CONTATTO (contact_alias):
-- Usa SOLO il cognome (es. "Mr. Christian Halpaus" → "Halpaus")
-- Rimuovi titoli (Mr., Mrs., Ms., Dr., Ing., etc.)
-- Se il nome sembra un ruolo e non un nome di persona (es. "President", "Manager", "Operations"), restituisci stringa vuota ""
-- Se c'è solo un nome senza cognome chiaro, usa quel nome
-- NON usare mai nome + cognome insieme`;
+// Identità minimale. Le regole stilistiche complete vivono nel Prompt Lab
+// ("Alias Generation Rules") e vengono iniettate runtime dal loader.
+// Lasciamo qui solo il fallback baseline per quando il Prompt Lab non è
+// disponibile (es. chiamata senza user_id risolvibile).
+const BASE_IDENTITY = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti.
+Output sempre tramite il tool save_aliases.`;
 
 const TOOL_DEF = {
   type: "function" as const,
@@ -92,14 +108,14 @@ const TOOL_DEF = {
   },
 };
 
-async function callAI(apiKey: string, items: Array<Record<string, unknown>>) {
+async function callAI(apiKey: string, items: Array<Record<string, unknown>>, systemPrompt: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify(items) },
       ],
       tools: [TOOL_DEF],
@@ -131,7 +147,7 @@ function ok(data: Record<string, unknown>) {
 }
 
 // ── Process imported_contacts ──
-async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[]) {
+async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[], systemPrompt: string) {
   const { data: contacts, error } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name, company_alias, contact_alias")
@@ -157,7 +173,7 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
       needs_contact_alias: !c.contact_alias,
     }));
 
-    const aliases = await callAI(apiKey, items);
+    const aliases = await callAI(apiKey, items, systemPrompt);
     if (aliases === null) {
       await new Promise((r) => setTimeout(r, 5000));
       i -= BATCH_SIZE;
@@ -181,28 +197,28 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
 }
 
 // ── Process partners by specific IDs ──
-async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[]) {
+async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("id", partnerIds);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
 // ── Process partners by country (original logic) ──
-async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[]) {
+async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("country_code", countryCodes);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
-async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>) {
+async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>, systemPrompt: string) {
   // deno-lint-ignore no-explicit-any
   const eligible = partners.filter((p: any) => {
     const contacts = (p.partner_contacts || []) as any[];
@@ -276,7 +292,7 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: JSON.stringify(partnerList) },
         ],
         tools: [PARTNER_TOOL],
