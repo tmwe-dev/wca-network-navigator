@@ -1,3 +1,4 @@
+import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 /**
  * toolExecutors.ts — Tool execution handlers + dispatcher (refactored barrel).
  * Re-exports main executor function for backward compatibility.
@@ -107,7 +108,7 @@ interface EnterpriseHandlers {
 
 export interface ToolExecutorDeps {
   // deno-lint-ignore no-explicit-any
-  supabase: any;
+  supabase: AnySupabaseClient;
   readH: ReadHandlers;
   writeH: WriteHandlers;
   entH: EnterpriseHandlers;

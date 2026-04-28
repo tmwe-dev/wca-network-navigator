@@ -1,3 +1,4 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 interface WorkPlanStep {
   index?: number;
   title?: string;
@@ -19,7 +20,7 @@ interface AbTestConfig {
 }
 
 export async function handleCreateWorkPlan(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -63,7 +64,7 @@ export async function handleCreateWorkPlan(
 }
 
 export async function handleListWorkPlans(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -109,7 +110,7 @@ export async function handleListWorkPlans(
 }
 
 export async function handleUpdateWorkPlan(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -170,7 +171,7 @@ export async function handleUpdateWorkPlan(
 }
 
 export async function handleCreateCampaign(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {

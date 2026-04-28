@@ -1,4 +1,26 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 import { resolvePartnerId } from "../shared.ts";
+
+/** Loose row shapes used inside this module — narrower than `any`, safe with PostgREST results. */
+type EmailRow = {
+  id?: string; direction?: string; from_address?: string | null; to_address?: string | null;
+  subject?: string | null; body_text?: string | null; email_date?: string | null;
+  channel?: string | null; thread_id?: string | null; in_reply_to?: string | null;
+};
+type ActivityRow = {
+  id?: string; title?: string | null; activity_type?: string | null; status?: string | null;
+  created_at?: string | null; description?: string | null;
+};
+type InteractionRow = {
+  id?: string; interaction_type?: string | null; subject?: string | null; title?: string | null;
+  description?: string | null; notes?: string | null; outcome?: string | null; created_at?: string | null;
+};
+type SentRow = { id?: string; subject?: string | null; recipient_email?: string | null; sent_at?: string | null };
+type HoldingPartnerRow = {
+  id?: string; company_name?: string | null; country_code?: string | null; city?: string | null;
+  email?: string | null; lead_status?: string | null; last_interaction_at?: string | null; interaction_count?: number | null;
+};
+type HoldingContactRow = HoldingPartnerRow & { name?: string | null; country?: string | null };
 
 interface ChannelMessageRow {
   id: string;
@@ -9,10 +31,10 @@ interface ChannelMessageRow {
   subject: string | null;
   body_text: string | null;
   email_date: string | null;
-  read_at: string | null;
-  partner_id: string | null;
-  category: string | null;
-  created_at: string;
+  read_at?: string | null;
+  partner_id?: string | null;
+  category?: string | null;
+  created_at?: string;
   thread_id?: string | null;
   in_reply_to?: string | null;
 }
@@ -30,7 +52,7 @@ interface HoldingItem {
 }
 
 export async function handleGetInbox(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -83,7 +105,7 @@ export async function handleGetInbox(
 }
 
 export async function handleGetConversationHistory(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -107,7 +129,7 @@ export async function handleGetConversationHistory(
       .order("email_date", { ascending: false })
       .limit(30);
 
-    (emails || []).forEach((e: any) =>
+    (emails as EmailRow[] | null || []).forEach((e) =>
       timeline.push({
         type: "email",
         direction: e.direction,
@@ -126,7 +148,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (acts || []).forEach((a: any) =>
+    (acts as ActivityRow[] | null || []).forEach((a) =>
       timeline.push({
         type: "activity",
         subtype: a.activity_type,
@@ -144,7 +166,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (ints || []).forEach((i: any) =>
+    (ints as InteractionRow[] | null || []).forEach((i) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
@@ -162,7 +184,7 @@ export async function handleGetConversationHistory(
       .order("sent_at", { ascending: false })
       .limit(20);
 
-    (sent || []).forEach((s: any) =>
+    (sent as SentRow[] | null || []).forEach((s) =>
       timeline.push({
         type: "email_sent",
         subject: s.subject,
@@ -178,7 +200,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (cInts || []).forEach((i: any) =>
+    (cInts as InteractionRow[] | null || []).forEach((i) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
@@ -203,7 +225,7 @@ export async function handleGetConversationHistory(
 }
 
 export async function handleGetHoldingPattern(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -232,7 +254,7 @@ export async function handleGetHoldingPattern(
 
     const { data: partners } = await pq.limit(Number(args.limit) || 50);
 
-    (partners || []).forEach((p: any) => {
+    (partners as HoldingPartnerRow[] | null || []).forEach((p) => {
       const days = p.last_interaction_at
         ? Math.floor(
             (now.getTime() - new Date(p.last_interaction_at).getTime()) /
@@ -246,15 +268,15 @@ export async function handleGetHoldingPattern(
         return;
 
       items.push({
-        id: p.id,
+        id: p.id ?? "",
         source: "wca",
-        name: p.company_name,
-        country: p.country_code,
-        city: p.city,
-        email: p.email,
-        status: p.lead_status,
+        name: p.company_name ?? "",
+        country: p.country_code ?? "",
+        city: p.city ?? undefined,
+        email: p.email ?? null,
+        status: p.lead_status ?? "",
         days_waiting: days,
-        interactions: p.interaction_count,
+        interactions: p.interaction_count ?? undefined,
       });
     });
   }
@@ -274,7 +296,7 @@ export async function handleGetHoldingPattern(
 
     const { data: contacts } = await cq.limit(Number(args.limit) || 50);
 
-    (contacts || []).forEach((c: any) => {
+    (contacts as HoldingContactRow[] | null || []).forEach((c) => {
       const days = c.last_interaction_at
         ? Math.floor(
             (now.getTime() - new Date(c.last_interaction_at).getTime()) /
@@ -288,15 +310,15 @@ export async function handleGetHoldingPattern(
         return;
 
       items.push({
-        id: c.id,
+        id: c.id ?? "",
         source: "crm",
         name: c.company_name || c.name || "—",
-        country: c.country,
-        city: c.city,
-        email: c.email,
-        status: c.lead_status,
+        country: c.country ?? "",
+        city: c.city ?? undefined,
+        email: c.email ?? null,
+        status: c.lead_status ?? "",
         days_waiting: days,
-        interactions: c.interaction_count,
+        interactions: c.interaction_count ?? undefined,
       });
     });
   }
@@ -310,7 +332,7 @@ export async function handleGetHoldingPattern(
 }
 
 export async function handleUpdateMessageStatus(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -326,7 +348,7 @@ export async function handleUpdateMessageStatus(
 }
 
 export async function handleGetEmailThread(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -342,7 +364,7 @@ export async function handleGetEmailThread(
       .eq("thread_id", args.thread_id)
       .order("email_date", { ascending: true });
 
-    messages = data || [];
+    messages = (data as ChannelMessageRow[] | null) || [];
   }
 
   if (messages.length === 0 && args.partner_id) {
@@ -357,7 +379,7 @@ export async function handleGetEmailThread(
       .order("email_date", { ascending: true })
       .limit(Number(args.limit) || 50);
 
-    messages = data || [];
+    messages = (data as ChannelMessageRow[] | null) || [];
   }
 
   if (messages.length === 0 && args.email_address) {
@@ -374,7 +396,7 @@ export async function handleGetEmailThread(
       .order("email_date", { ascending: true })
       .limit(Number(args.limit) || 50);
 
-    messages = data || [];
+    messages = (data as ChannelMessageRow[] | null) || [];
   }
 
   return {

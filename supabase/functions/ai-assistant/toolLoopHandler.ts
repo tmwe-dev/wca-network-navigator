@@ -7,12 +7,27 @@
 import type { AnySupabaseClient as SupabaseClient } from "../_shared/supabaseClient.ts";
 import { escapeLike } from "../_shared/sqlEscape.ts";
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
 import { executeTool } from "./toolExecutors.ts";
 import type { ToolExecutorDeps } from "./toolExecutors.ts";
 
+/** Minimal shape we rely on from an OpenAI/Lovable AI assistant message. */
+export interface AssistantToolCall {
+  id: string;
+  function: { name: string; arguments: string };
+}
+export interface AssistantMessage {
+  role?: string;
+  content?: string | null;
+  tool_calls?: AssistantToolCall[];
+}
+
+interface AiUsage { prompt_tokens?: number; completion_tokens?: number }
+interface AiChoice { message?: AssistantMessage }
+interface AiResponseData { choices?: AiChoice[]; usage?: AiUsage }
+
 export interface ToolLoopState {
-  // deno-lint-ignore no-explicit-any
-  assistantMessage?: any;
+  assistantMessage?: AssistantMessage;
   allMessages: Record<string, unknown>[];
   lastPartnerResult?: Record<string, unknown>[];
   uiActions: Record<string, unknown>[];
@@ -47,6 +62,7 @@ async function autoSaveToolMemory(
   args: Record<string, unknown>,
   result: Record<string, unknown>
 ): Promise<void> {
+  const log = createLogger("ai-assistant", { userId, scope: "autoSaveToolMemory", toolName });
   const autoSaveTools: Record<
     string,
     (a: Record<string, unknown>, r: Record<string, unknown>) => string | null
@@ -95,11 +111,12 @@ async function autoSaveToolMemory(
           decay_rate: 0.02,
           source: "auto_tool",
         })
-        .then(() => {}, (_e: unknown) => {
-          /* swallow auto-memory write errors */
+        .then(() => {}, (e: unknown) => {
+          log.warn("auto_memory_insert_failed", { reason: extractErrorMessage(e) });
         });
     }
   } catch (e) {
+    log.error("auto_memory_lookup_failed", e);
   }
 }
 
@@ -261,7 +278,7 @@ export async function executeToolLoop(
     }
 
     // Update messages and call AI again
-    state.allMessages.push(state.assistantMessage);
+    state.allMessages.push(state.assistantMessage as unknown as Record<string, unknown>);
     state.allMessages.push(...toolResults);
 
     const loopResponse = await callAiForLoop(state.allMessages);
@@ -273,14 +290,11 @@ export async function executeToolLoop(
       };
     }
 
-    // deno-lint-ignore no-explicit-any
-    const result = loopResponse.data as any;
-    state.assistantMessage = result?.choices?.[0]?.message;
+    const result = (loopResponse.data ?? {}) as AiResponseData;
+    state.assistantMessage = result.choices?.[0]?.message;
     if (result.usage) {
-      state.totalUsage.prompt_tokens +=
-        (result.usage as Record<string, unknown>)?.prompt_tokens as number || 0;
-      state.totalUsage.completion_tokens +=
-        (result.usage as Record<string, unknown>)?.completion_tokens as number || 0;
+      state.totalUsage.prompt_tokens += result.usage.prompt_tokens ?? 0;
+      state.totalUsage.completion_tokens += result.usage.completion_tokens ?? 0;
     }
   }
 

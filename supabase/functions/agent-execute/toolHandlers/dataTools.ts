@@ -1,7 +1,8 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 import { escapeLike } from "../shared.ts";
 
 export async function handleCreateDownloadJob(
-  supabase: any,
+  supabase: AnySupabaseClient,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const cc = String(args.country_code || "").toUpperCase();
@@ -88,7 +89,7 @@ export async function handleCreateDownloadJob(
 }
 
 export async function handleDownloadSinglePartner(
-  supabase: any,
+  supabase: AnySupabaseClient,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const partnerName = String(args.company_name || "").trim();
@@ -159,7 +160,7 @@ export async function handleDownloadSinglePartner(
 }
 
 export async function handleGetBlacklist(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -178,7 +179,7 @@ export async function handleGetBlacklist(
 }
 
 export async function handleListReminders(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -198,7 +199,7 @@ export async function handleListReminders(
 }
 
 export async function handleGetPartnersWithoutContacts(
-  supabase: any,
+  supabase: AnySupabaseClient,
   args: Record<string, unknown>
 ): Promise<unknown> {
   const { data, error } = await supabase
