@@ -3,6 +3,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -151,22 +152,17 @@ export async function buildContextBlock(
       }
     }
 
-    const { data: opPromptsData } = await supabase
-      .from("operative_prompts")
-      .select("name, objective, procedure, criteria, tags, priority")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .order("priority", { ascending: false });
-    const opPrompts = asArray(opPromptsData as OperativePromptRow[] | null);
-    if (opPrompts.length) {
-      contextBlock += "\n--- PROMPT OPERATIVI ---\n";
-      for (const p of opPrompts) {
-        contextBlock += `### ${p.name} (priorità: ${p.priority ?? 0})\n`;
-        if (p.objective) contextBlock += `Obiettivo: ${p.objective}\n`;
-        if (p.procedure) contextBlock += `Procedura: ${p.procedure.substring(0, 300)}\n`;
-        if (p.criteria) contextBlock += `Criteri: ${p.criteria.substring(0, 200)}\n`;
-        contextBlock += "\n";
-      }
+    // ── Prompt Lab via UNIFIED loader (scope agent-loop covers outreach +
+    //    multi-channel + lead-status; universals included). Same matching
+    //    rules as generate-email so the agent never disagrees with the
+    //    email pipeline on which OBBLIGATORIA rules apply.
+    const opResult = await loadOperativePrompts(supabase, userId, {
+      scope: "agent-loop",
+      includeUniversal: true,
+      limit: 8,
+    });
+    if (opResult.block) {
+      contextBlock += `\n--- PROMPT OPERATIVI (Prompt Lab) ---\n${opResult.block}\n`;
     }
 
     if (allAgents?.length) {
