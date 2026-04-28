@@ -13,6 +13,7 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import { checkInjectionGuard } from "../_shared/injectionGuard.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -90,6 +91,38 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
+
+    // ── Anti-Prompt-Injection Guard ──
+    // Se il testo inbound contiene pattern HIGH (override istruzioni, esfiltrazione
+    // system prompt, jailbreak, ecc.) e c'è un utente proprietario, bloccare
+    // l'elaborazione e creare una review che richiede conferma esplicita.
+    // Senza user_id (chiamata da trigger DB) ci si affida al sanitizer downstream.
+    if (body.user_id) {
+      const reviewToken = req.headers.get("x-injection-review-id");
+      const guard = await checkInjectionGuard(supabase, {
+        userId: body.user_id,
+        source: channel === "whatsapp" ? "whatsapp-message"
+          : channel === "linkedin" ? "linkedin-message"
+          : "email-inbound",
+        functionName: "classify-inbound-message",
+        text: `${subject || ""}\n\n${body_text || ""}`,
+        reviewToken,
+        metadata: { message_id, activity_id, channel, from_address },
+      });
+      if (guard.needsConfirmation) {
+        endMetrics(metrics, true, 409);
+        return new Response(
+          JSON.stringify({
+            error: "prompt_injection_review_required",
+            review_id: guard.reviewId,
+            findings: guard.findings,
+            message_id,
+            hint: "Approva la review via POST /confirm-injection-review e ritrasmetti la richiesta con header x-injection-review-id.",
+          }),
+          { status: 409, headers },
+        );
+      }
+    }
 
     // ── LLM Classification ──
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
