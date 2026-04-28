@@ -6777,6 +6777,63 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_injection_reviews: {
+        Row: {
+          content_hash: string
+          content_preview: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          expires_at: string
+          findings: Json
+          function_name: string
+          highest_severity: string
+          id: string
+          metadata: Json
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_hash: string
+          content_preview: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          expires_at?: string
+          findings?: Json
+          function_name: string
+          highest_severity?: string
+          id?: string
+          metadata?: Json
+          source: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_hash?: string
+          content_preview?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          expires_at?: string
+          findings?: Json
+          function_name?: string
+          highest_severity?: string
+          id?: string
+          metadata?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       prompt_lab_global_runs: {
         Row: {
           completed_at: string | null
