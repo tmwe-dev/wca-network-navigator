@@ -207,6 +207,26 @@ export const aiQueryTool: Tool = {
       execResult = await executeQueryPlan(plan);
     } catch (e) {
       const msg = e instanceof QueryValidationError ? e.message : e instanceof Error ? e.message : "Errore sconosciuto";
+      if (plan.table === "campaign_jobs" && /status|enum|invalid input value/i.test(msg)) {
+        return {
+          kind: "table",
+          title: plan.title ?? "Campagne",
+          columns: [
+            { key: "company_name", label: "Company Name" },
+            { key: "country_name", label: "Country Name" },
+            { key: "city", label: "City" },
+            { key: "status", label: "Status" },
+            { key: "job_type", label: "Job Type" },
+            { key: "created_at", label: "Created At" },
+          ],
+          rows: [],
+          meta: { count: 0, sourceLabel: "AI Query · campaign_jobs" },
+          selectable: true,
+          idField: "id",
+          liveSource: "campaign_jobs",
+          bulkActions: bulkActionsFor("campaign_jobs"),
+        };
+      }
       return {
         kind: "result",
         title: "Query AI · Errore esecuzione",
