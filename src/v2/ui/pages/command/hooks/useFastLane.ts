@@ -66,7 +66,7 @@ export function useFastLane(deps: FastLaneDeps) {
               label: `ai-query · ${p.table}`,
               toolId: "ai-query",
               stepNumber: i + 1,
-              status: p.error ? "error" : "ok",
+              status: p.error ? "failed" : "ok",
               durationMs: p.durationMs ?? 0,
               reasoning: p.error ?? undefined,
             });
