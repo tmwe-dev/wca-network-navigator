@@ -165,6 +165,46 @@ export default function CommandCanvas({
               <LiveActivityRail activities={activities} />
             </div>
           )}
+          {canvas === "live-multi" && liveResult && liveResult.kind === "multi" && (
+            <div className="float-panel p-6 rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold tracking-wider bg-success/20 text-success">LIVE</span>
+                  <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                </div>
+                <button onClick={handleClose} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+              </div>
+              {liveResult.meta?.sourceLabel && (
+                <div className="text-[9px] text-muted-foreground/60 font-mono mb-3">{liveResult.meta.sourceLabel}</div>
+              )}
+              <div className="space-y-6">
+                {liveResult.parts.map((part, i) => (
+                  <div key={`${part.table}-${i}`} className="border border-border/30 rounded-lg p-4">
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h4 className="text-[12px] font-medium text-foreground">{part.title}</h4>
+                      <span className="text-[10px] font-mono text-muted-foreground/70">
+                        {part.error ? "errore" : `${part.count.toLocaleString("it-IT")} record`}
+                        {part.durationMs ? ` · ${part.durationMs}ms` : ""}
+                      </span>
+                    </div>
+                    {part.error ? (
+                      <p className="text-[11px] text-destructive/80">⚠️ {part.error}</p>
+                    ) : part.rows.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground/60">Nessun risultato.</p>
+                    ) : (
+                      <TableCanvas
+                        columns={part.columns}
+                        rows={part.rows}
+                        isLive
+                        meta={{ count: part.count, sourceLabel: `${part.table}` }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <LiveActivityRail activities={activities} />
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
