@@ -17,6 +17,8 @@ export interface Message {
   governance?: string;
   /** Optional follow-up actions rendered as clickable buttons under the message */
   suggestedActions?: { label: string; prompt: string }[];
+  /** Short conversational version used for TTS playback (max ~200 chars). */
+  spokenSummary?: string;
 }
 
 export type CanvasType =

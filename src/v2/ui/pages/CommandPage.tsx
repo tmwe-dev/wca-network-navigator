@@ -24,6 +24,7 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import { SCENARIOS, QUICK_PROMPTS, detectScenario } from "./command/scenarios";
+import { toast as sonnerToast } from "sonner";
 
 const CommandPage = () => {
   const nav = useNavigate();
@@ -47,7 +48,6 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (voice.error) {
-      const { toast: sonnerToast } = require("sonner");
       sonnerToast.error(voice.error);
     }
   }, [voice.error]);
@@ -56,16 +56,23 @@ const CommandPage = () => {
     pageState.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [pageState.messages]);
 
-  // Speak the latest assistant message via ElevenLabs (skips thinking placeholders).
+  // Speak the latest assistant message via ElevenLabs.
+  // Prefer the conversational `spokenSummary` produced by the commentary layer;
+  // fall back to `content` only if missing. Skips thinking placeholders.
   useEffect(() => {
     const last = pageState.messages[pageState.messages.length - 1];
     if (!last || last.role !== "assistant" || last.thinking) return;
+    const spoken = (last.spokenSummary ?? "").trim();
+    if (spoken) {
+      voiceOut.speak(spoken);
+      return;
+    }
     if (!last.content || !last.content.trim()) return;
-    // Strip markdown for cleaner speech.
     const clean = last.content
       .replace(/[*_`#>]/g, "")
       .replace(/\n+/g, ". ")
-      .trim();
+      .trim()
+      .slice(0, 200);
     voiceOut.speak(clean);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageState.messages.length]);
@@ -106,6 +113,21 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (!conv.conversationId || conv.messages.length === 0) return;
+    // Rehydrate the visible chat history from the loaded conversation.
+    const visible = conv.messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m, idx) => ({
+        id: idx + 1,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.created_at).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        agentName: m.role === "assistant" ? "Direttore" : undefined,
+      }));
+    pageState.setMessages(visible);
+
     const last = [...conv.messages]
       .reverse()
       .find((m) => m.role === "tool" && m.tool_result);
@@ -119,7 +141,8 @@ const CommandPage = () => {
       else if (kind === "composer") pageState.setCanvas("live-composer");
       else if (kind === "report") pageState.setCanvas("live-report");
     }
-  }, [conv.conversationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conv.conversationId, conv.messages.length]);
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
@@ -136,9 +159,10 @@ const CommandPage = () => {
           conversations={conv.conversations}
           activeId={conv.conversationId}
           onSelect={(id) => {
-            conv.loadConversation(id);
-            pageState.setMessages([]);
             pageState.setCanvas(null);
+            pageState.setLiveResult(null);
+            pageState.setFlowPhase("idle");
+            void conv.loadConversation(id);
           }}
           onNew={() => {
             conv.newConversation();

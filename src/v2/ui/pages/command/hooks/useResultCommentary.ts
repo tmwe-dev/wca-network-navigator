@@ -47,11 +47,8 @@ export function useResultCommentary(deps: CommentaryDeps) {
             meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
             governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
             suggestedActions: local.suggestedActions,
+            spokenSummary: local.spokenSummary,
           });
-          // Fire TTS in parallel — does not block
-          if (local.spokenSummary.trim()) {
-            void Promise.resolve().then(() => ttsSpeak(local.spokenSummary));
-          }
           setVoiceSpeaking(false);
           return;
         }
@@ -80,10 +77,8 @@ export function useResultCommentary(deps: CommentaryDeps) {
         meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
         governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
         suggestedActions: comment.suggestedActions,
+        spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
       });
-
-      const tts = comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200);
-      if (tts.trim()) void Promise.resolve().then(() => ttsSpeak(tts));
       setVoiceSpeaking(false);
     },
     [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak],
