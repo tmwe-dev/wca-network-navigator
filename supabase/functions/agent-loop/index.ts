@@ -163,26 +163,24 @@ serve(async (req: Request) => {
 
     // ── Prompt Lab injection (UNIFIED loader): LUCA inherits the user's
     //    operative prompts so it follows the same OBBLIGATORIA rules as
-    //    generate-email / generate-outreach. Soft-fail: empty if user has no
-    //    prompts or table unreachable.
+    //    generate-email / generate-outreach. Soft-fail: empty if user is
+    //    anonymous, has no prompts, or the table is unreachable.
     let promptLabBlock = "";
-    try {
-      const userIdGuess = (typeof body === "object" && body && (body as Record<string, unknown>).user_id)
-        ? String((body as Record<string, unknown>).user_id) : "";
-      if (userIdGuess) {
+    if (userId && userId !== "anonymous") {
+      try {
         const supabaseSrv = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         );
-        const lab = await loadOperativePrompts(supabaseSrv, userIdGuess, {
+        const lab = await loadOperativePrompts(supabaseSrv, userId, {
           scope: "agent-loop",
           includeUniversal: true,
           limit: 5,
         });
         promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
+      } catch (e) {
+        console.warn("[agent-loop] prompt-lab load skipped:", (e as Error).message);
       }
-    } catch (e) {
-      console.warn("[agent-loop] prompt-lab load skipped:", (e as Error).message);
     }
 
     const systemPrompt = `Sei LUCA, l'assistente AI del CRM WCA Network Navigator.
