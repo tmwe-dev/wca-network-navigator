@@ -12,6 +12,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -115,6 +116,23 @@ ${channelHint}
 Classify the message and extract structured metadata using the provided tool.
 Consider the channel context when evaluating tone and intent.`;
 
+      // Inject Prompt Lab rules (Lead Qualification v2 9-stati, channel rules).
+      let promptLabBlock = "";
+      if (body.user_id) {
+        try {
+          const opResult = await loadOperativePrompts(supabase, body.user_id, {
+            scope: "classification",
+            channel: channel as "email" | "whatsapp" | "linkedin",
+            includeUniversal: true,
+            limit: 5,
+          });
+          if (opResult.block) promptLabBlock = `\n\n${opResult.block}`;
+        } catch (e) {
+          console.warn("[classify-inbound-message] prompt lab load failed:", (e as Error).message);
+        }
+      }
+      const finalSystemPrompt = systemPrompt + promptLabBlock;
+
       const userPrompt = `Channel: ${channel}
 From: ${from_address}
 Subject: ${subject || "(none)"}
@@ -131,7 +149,7 @@ ${(body_text || "").substring(0, 3000)}`;
           body: JSON.stringify({
             model,
             messages: [
-              { role: "system", content: systemPrompt },
+              { role: "system", content: finalSystemPrompt },
               { role: "user", content: userPrompt },
             ],
             tools: [{
