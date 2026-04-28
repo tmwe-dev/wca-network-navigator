@@ -575,6 +575,101 @@ export type Database = {
           },
         ]
       }
+      agent_routing_rules: {
+        Row: {
+          agent_id: string | null
+          bias_category_hint: string | null
+          bias_domain_hint: string | null
+          bias_extra_instructions: string | null
+          bias_tone_hint: string | null
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          last_matched_at: string | null
+          match_category: string | null
+          match_count: number
+          match_domain: string | null
+          match_keywords: string[]
+          match_lead_status: string | null
+          match_min_confidence: number
+          match_sentiment: string | null
+          name: string
+          override_action_type: string | null
+          override_confidence_floor: number | null
+          override_next_status: string | null
+          override_priority: string | null
+          override_skip_action: boolean
+          priority: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          bias_category_hint?: string | null
+          bias_domain_hint?: string | null
+          bias_extra_instructions?: string | null
+          bias_tone_hint?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_matched_at?: string | null
+          match_category?: string | null
+          match_count?: number
+          match_domain?: string | null
+          match_keywords?: string[]
+          match_lead_status?: string | null
+          match_min_confidence?: number
+          match_sentiment?: string | null
+          name: string
+          override_action_type?: string | null
+          override_confidence_floor?: number | null
+          override_next_status?: string | null
+          override_priority?: string | null
+          override_skip_action?: boolean
+          priority?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          bias_category_hint?: string | null
+          bias_domain_hint?: string | null
+          bias_extra_instructions?: string | null
+          bias_tone_hint?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_matched_at?: string | null
+          match_category?: string | null
+          match_count?: number
+          match_domain?: string | null
+          match_keywords?: string[]
+          match_lead_status?: string | null
+          match_min_confidence?: number
+          match_sentiment?: string | null
+          name?: string
+          override_action_type?: string | null
+          override_confidence_floor?: number | null
+          override_next_status?: string | null
+          override_priority?: string | null
+          override_skip_action?: boolean
+          priority?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_routing_rules_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_tasks: {
         Row: {
           agent_id: string
@@ -8443,6 +8538,10 @@ export type Database = {
       }
       increment_partner_interaction: {
         Args: { p_partner_id: string }
+        Returns: undefined
+      }
+      increment_routing_rule_match: {
+        Args: { _rule_id: string }
         Returns: undefined
       }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
