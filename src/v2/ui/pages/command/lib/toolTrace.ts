@@ -100,7 +100,6 @@ class TraceBuilder {
         steps: trace.steps,
         references: trace.references,
       });
-    }
     return trace;
   }
 }
