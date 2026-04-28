@@ -253,18 +253,10 @@ export async function detectScenario(text: string): Promise<string | null> {
   // Check for real tool match first (async now)
   const tool = await resolveTool(text);
   if (tool) return null; // null = use live tool
-  if (lower.includes("template") || lower.includes("salva questo flusso"))
-    return "template";
-  if (lower.includes("batch") || lower.includes("invio batch")) return "batch";
-  if (lower.includes("importa") || lower.includes("uniscili")) return "import";
-  if (lower.includes("business card") || lower.includes("bigliett"))
-    return "businesscard";
-  if (lower.includes("campagna") || lower.includes("lead")) return "campaign";
-  if (lower.includes("report") || lower.includes("asia") || lower.includes("board"))
-    return "report";
-  if (lower.includes("bozze") || lower.includes("email") || lower.includes("draft"))
-    return "email";
-  if (lower.includes("leggi") || lower.includes("voce") || lower.includes("alta voce"))
+  // No mock fallback: if no real tool matches, return null and let the
+  // caller produce a short, direct answer (or escalate to AI Q&A).
+  // Only the "voice" pseudo-scenario stays for explicit voice-read commands.
+  if (lower.includes("leggi ad alta voce") || lower.includes("leggi a voce alta"))
     return "voice";
-  return "churn";
+  return null;
 }
