@@ -17,6 +17,10 @@ export interface Message {
   governance?: string;
   /** Optional follow-up actions rendered as clickable buttons under the message */
   suggestedActions?: { label: string; prompt: string }[];
+  /** Optional short text used by TTS instead of visible content */
+  spokenSummary?: string;
+  /** Prevents TTS for restored/history/status messages */
+  silent?: boolean;
 }
 
 export type CanvasType =
