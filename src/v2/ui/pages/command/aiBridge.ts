@@ -127,26 +127,32 @@ export async function getAiComment(
 ): Promise<AiCommentResponse> {
   const { userPrompt, toolId, toolLabel, resultSummary, history = [] } = req;
 
-  const userTurn = `Hai appena eseguito il tool **${toolLabel}** (id: ${toolId}) per la richiesta dell'utente:
+  const userTurn = `L'utente ti ha chiesto:
 > "${userPrompt}"
 
-Risultato dell'esecuzione (JSON compatto):
+Hai i dati pronti (li vedi tu, l'utente li vede nel canvas a fianco):
 \`\`\`json
 ${resultSummary}
 \`\`\`
 
-Ora COMMENTA il risultato come Direttore Operativo. SII SINTETICO E OPERATIVO:
-- 1 frase MAX (massimo 25 parole) che risponda DIRETTAMENTE alla richiesta dell'utente, citando numeri/nomi reali dal risultato (mai inventati).
-- Se vuoto: 1 riga + 1 alternativa concreta. Se ricco: 1 riga col dato chiave.
-- NIENTE elenco moduli, NIENTE provenance, NIENTE "ho usato il tool X". L'utente vuole il risultato, non come ci sei arrivato.
-- Proponi 2-3 prossime azioni concrete come array JSON (label brevi, max 4 parole).
+Rispondi come stai PARLANDO con un collega, non come stai presentando un report.
 
-Rispondi SOLO con questo JSON valido (nessun altro testo):
+REGOLE FERREE:
+- "message": 1 frase diretta, max 20 parole, tono colloquiale ("ok, abbiamo X", "guarda, ne ho trovati Y", "niente, zero risultati"). NIENTE elenchi, NIENTE descrizione del risultato (i dati sono già visibili nel canvas), NIENTE "ho eseguito il tool", NIENTE markdown.
+- "spokenSummary": versione PARLATA (max 150 char), naturale, come se lo dicessi a voce a un collega — frasi brevi, niente numeri formattati strani, niente "asterischi" né caratteri speciali.
+- "suggestedActions": 2-3 prossime mosse concrete che l'utente potrebbe volere ORA dato il risultato (label max 3-4 parole). Se il risultato è vuoto, suggerisci alternative. Se è ricco, suggerisci la prossima azione operativa (filtra, contatta, esporta, approfondisci).
+
+Esempi tono giusto:
+- message: "Ok, sono 247 partner in Germania."  spoken: "Sono duecentoquarantasette partner in Germania."
+- message: "Niente, nessun risultato. Provo allargando ai paesi limitrofi?"  spoken: "Nessun risultato. Allargo ai paesi vicini?"
+- message: "Trovati 12, te li faccio vedere."  spoken: "Ne ho trovati dodici, guarda nel canvas."
+
+Rispondi SOLO con questo JSON valido, niente altro testo:
 {
-  "message": "<1 frase diretta, max 25 parole, niente markdown>",
-  "spokenSummary": "<versione vocale max 200 char, niente markdown>",
+  "message": "<frase colloquiale, max 20 parole, niente markdown>",
+  "spokenSummary": "<frase parlata, max 150 char, naturale>",
   "suggestedActions": [
-    {"label": "<pulsante breve>", "prompt": "<comando completo da inviare se cliccato>"}
+    {"label": "<3-4 parole>", "prompt": "<comando completo da inviare se cliccato>"}
   ]
 }`;
 
