@@ -108,14 +108,14 @@ const TOOL_DEF = {
   },
 };
 
-async function callAI(apiKey: string, items: Array<Record<string, unknown>>) {
+async function callAI(apiKey: string, items: Array<Record<string, unknown>>, systemPrompt: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify(items) },
       ],
       tools: [TOOL_DEF],
@@ -147,7 +147,7 @@ function ok(data: Record<string, unknown>) {
 }
 
 // ── Process imported_contacts ──
-async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[]) {
+async function processImportedContacts(supabase: SupabaseClient, apiKey: string, contactIds: string[], systemPrompt: string) {
   const { data: contacts, error } = await supabase
     .from("imported_contacts")
     .select("id, company_name, name, company_alias, contact_alias")
@@ -173,7 +173,7 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
       needs_contact_alias: !c.contact_alias,
     }));
 
-    const aliases = await callAI(apiKey, items);
+    const aliases = await callAI(apiKey, items, systemPrompt);
     if (aliases === null) {
       await new Promise((r) => setTimeout(r, 5000));
       i -= BATCH_SIZE;
@@ -197,28 +197,28 @@ async function processImportedContacts(supabase: SupabaseClient, apiKey: string,
 }
 
 // ── Process partners by specific IDs ──
-async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[]) {
+async function processPartnersByIds(supabase: SupabaseClient, apiKey: string, partnerIds: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("id", partnerIds);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
 // ── Process partners by country (original logic) ──
-async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[]) {
+async function processPartnersByCountry(supabase: SupabaseClient, apiKey: string, countryCodes: string[], systemPrompt: string) {
   const { data: partners, error } = await supabase
     .from("partners")
     .select("id, company_name, country_code, company_alias, partner_contacts(id, name, title, contact_alias)")
     .in("country_code", countryCodes);
 
   if (error) throw error;
-  return processPartners(supabase, apiKey, partners || []);
+  return processPartners(supabase, apiKey, partners || [], systemPrompt);
 }
 
-async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>) {
+async function processPartners(supabase: SupabaseClient, apiKey: string, partners: Array<Record<string, unknown>>, systemPrompt: string) {
   // deno-lint-ignore no-explicit-any
   const eligible = partners.filter((p: any) => {
     const contacts = (p.partner_contacts || []) as any[];
@@ -292,7 +292,7 @@ async function processPartners(supabase: SupabaseClient, apiKey: string, partner
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: JSON.stringify(partnerList) },
         ],
         tools: [PARTNER_TOOL],
