@@ -165,9 +165,17 @@ export function tryLocalComment(
   const filters = plan.filters as FilterShape[];
   const table = plan.table;
 
+  // The user explicitly asked for an ENUMERATION (list/elenco/mostra/dammi/vedi).
+  // In that case we MUST render the table, never collapse to a count message —
+  // even if the planner reduced the columns to ["id"].
+  const isListMode = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(userPrompt);
+
   // ── COUNT MODE ──
+  // Only when the user really asked "how many" — never auto-trigger from the
+  // planner having reduced columns to ["id"], that is a planner heuristic, not
+  // user intent.
   const isCountMode =
-    (plan.columns?.length === 1 && plan.columns[0] === "id") ||
+    !isListMode &&
     /\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt);
 
   if (isCountMode) {
