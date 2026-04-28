@@ -141,7 +141,7 @@ export async function updateEvent(id: string, updates: CalendarEventUpdate): Pro
  * Delete an event
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const { error } = await (supabase as any).from("calendar_events").delete().eq("id", id);
+  const { error } = await untypedFrom("calendar_events").delete().eq("id", id);
 
   if (error) throw error;
 }
