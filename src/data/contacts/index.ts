@@ -24,9 +24,13 @@ export {
   updateLeadStatus,
   toggleContactSelection,
   markContactTransferred,
+  linkContactToPartner,
+  findImportDuplicates,
   updateContactEnrichment,
   findContactByEmail,
 } from "./queries";
+
+export type { ImportDuplicateMatch } from "./queries";
 
 export { findContactsPaginated } from "./pagination";
 
