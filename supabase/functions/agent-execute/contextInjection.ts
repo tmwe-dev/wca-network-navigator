@@ -4,6 +4,12 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  sanitizeForPrompt,
+  wrapUntrusted,
+  summarizeFindings,
+  type SanitizeFinding,
+} from "../_shared/promptSanitizer.ts";
 
 type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -88,6 +94,9 @@ export async function buildContextBlock(
   allAgents: AgentRow[] | null
 ): Promise<string> {
   let contextBlock = "";
+  // Accumulatore di pattern di prompt-injection trovati nei contenuti non-trusted.
+  // Logato a fine funzione per audit (vedi summarizeFindings).
+  const injectionFindings: SanitizeFinding[] = [];
 
   try {
     const { data: settingsData } = await supabase
@@ -133,7 +142,9 @@ export async function buildContextBlock(
     if (memories.length) {
       contextBlock += "\n--- MEMORIA OPERATIVA ---\n";
       for (const m of memories) {
-        contextBlock += `- [L${m.level}/${m.memory_type}] ${m.content}\n`;
+        const safe = sanitizeForPrompt(m.content, { source: "rag-memory", maxChars: 1200, policy: "redact" });
+        if (safe.findings.length) injectionFindings.push(...safe.findings);
+        contextBlock += `- [L${m.level}/${m.memory_type}] ${safe.text}\n`;
       }
     }
 
@@ -148,7 +159,9 @@ export async function buildContextBlock(
     if (kbEntries.length) {
       contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
       for (const k of kbEntries) {
-        contextBlock += `### ${k.title}\n${(k.content || "").substring(0, 800)}\n\n`;
+        const safe = sanitizeForPrompt(k.content, { source: "kb-user-document", maxChars: 800, policy: "redact" });
+        if (safe.findings.length) injectionFindings.push(...safe.findings);
+        contextBlock += `### ${k.title}\n${safe.text}\n\n`;
       }
     }
 
@@ -251,9 +264,14 @@ export async function buildContextBlock(
             contextBlock += `\n${addr} (ultime ${Math.min(msgs.length, 3)}):\n`;
             for (const msg of msgs.slice(0, 3)) {
               const date = new Date(msg.created_at).toLocaleDateString("it-IT");
-              contextBlock += `  [${date}] ${msg.subject || "(nessun subject)"}\n`;
+              const subjSafe = sanitizeForPrompt(msg.subject, { source: "email-inbound", maxChars: 200, policy: "redact" });
+              if (subjSafe.findings.length) injectionFindings.push(...subjSafe.findings);
+              contextBlock += `  [${date}] ${subjSafe.text || "(nessun subject)"}\n`;
               if (msg.body_text) {
-                contextBlock += `  ${msg.body_text.slice(0, 150)}...\n`;
+                const bodySafe = sanitizeForPrompt(msg.body_text, { source: "email-inbound", maxChars: 150, policy: "redact" });
+                if (bodySafe.findings.length) injectionFindings.push(...bodySafe.findings);
+                // Wrap come blocco non-trusted: il modello deve trattarlo come dati, non istruzioni.
+                contextBlock += `  ${wrapUntrusted(bodySafe.text + "...", "EMAIL BODY", "email-inbound")}\n`;
               }
             }
           }
@@ -364,6 +382,21 @@ export async function buildContextBlock(
     }
   } catch (e) {
     console.error("Context injection error:", e);
+  }
+
+  // Audit log dei pattern di prompt-injection trovati nei contenuti non-trusted
+  // (memoria, KB, email inbound). NON blocca mai il flusso: il sanitizer ha già
+  // applicato la policy "redact" sui pattern high/medium.
+  if (injectionFindings.length > 0) {
+    const summary = summarizeFindings(injectionFindings);
+    console.warn(JSON.stringify({
+      level: "warn",
+      event: "prompt_injection_detected",
+      fn: "agent-execute/contextInjection",
+      userId,
+      agentId,
+      ...summary,
+    }));
   }
 
   return contextBlock;
