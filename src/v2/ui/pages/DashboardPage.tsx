@@ -34,7 +34,7 @@ function formatCompact(value: number) {
 
 const NAV_CARDS = [
   { key: "explore",      title: "Esplora",      description: "Network, mappa, ricerca",     route: "/v2/explore",      icon: Search },
-  { key: "pipeline",     title: "Pipeline",     description: "Contatti, deals, agenda",     route: "/v2/pipeline",     icon: Kanban },
+  { key: "pipeline",     title: "Pipeline",     description: "Contatti, kanban, agenda",    route: "/v2/pipeline",     icon: Kanban },
   { key: "communicate",  title: "Comunica",     description: "Inbox, outreach, composer",   route: "/v2/communicate",  icon: Radar },
   { key: "intelligence", title: "Intelligence", description: "Agenti, KB, analytics",       route: "/v2/intelligence", icon: Brain },
 ] as const;

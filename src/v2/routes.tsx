@@ -198,8 +198,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
 
-          {/* Deals & Pipeline */}
-          <Route path="deals" element={<Navigate to="/v2/pipeline/deals" replace />} />
+          {/* Deals — feature rimossa: redirect verso Kanban (pipeline contatti) */}
+          <Route path="deals" element={<Navigate to="/v2/pipeline/kanban" replace />} />
 
           {/* Calendar */}
           <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
