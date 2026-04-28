@@ -13,6 +13,7 @@ const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { BackgroundSyncIndicator } from "@/components/BackgroundSyncIndicator";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
+import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 const RuntimeDiagnosticPanel = lazyRetry(() => import("@/components/system/RuntimeDiagnosticPanel").then(m => ({ default: m.RuntimeDiagnosticPanel })));
 import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
@@ -156,7 +157,9 @@ const App = () => (
               </Suspense>
               </GlobalFiltersProvider>
             </BrowserRouter>
-            <ContactRecordDrawer />
+            <DrawerErrorBoundary scope="ContactRecordDrawer">
+              <ContactRecordDrawer />
+            </DrawerErrorBoundary>
           </TooltipProvider>
           </ContactDrawerProvider>
         </InboundNotificationsProvider>
