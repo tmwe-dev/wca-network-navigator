@@ -12,6 +12,13 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  loadRoutingRules,
+  renderRoutingBiasBlock,
+  findMatchingRule,
+  buildOverride,
+  recordRuleMatch,
+} from "../_shared/agentRoutingRules.ts";
 
 // ── Import refactored modules ──
 import { buildClassificationPrompt, ConversationExchange } from "./classificationPrompts.ts";
@@ -29,6 +36,8 @@ interface ClassifyRequest {
   partner_id?: string;
   contact_id?: string;
   sender_name?: string;
+  /** Optional agent persona id driving this classification (for routing rules). */
+  agent_id?: string;
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
@@ -157,13 +166,24 @@ serve(async (req) => {
       }
     }
 
+    // ── Persona-aware routing rules (DB) ──
+    const routingRules = await loadRoutingRules(supabase, input.user_id, input.agent_id ?? null);
+    const routingBiasBlock = renderRoutingBiasBlock(routingRules, {
+      agentId: input.agent_id ?? null,
+      leadStatus: relationalContext?.lead_status ?? null,
+    });
+
     // 3. Call AI for classification
     const classPrompt = buildClassificationPrompt(
       input,
       lastExchanges,
       conversationSummary,
       rules as Record<string, unknown>,
-      promptInstructions,
+      // Append routing bias to the per-address custom instructions so the
+      // existing prompt builder picks them up without API changes.
+      routingBiasBlock
+        ? `${promptInstructions ? promptInstructions + "\n\n" : ""}${routingBiasBlock}`
+        : promptInstructions,
       relationalContext
     );
 
@@ -228,6 +248,22 @@ serve(async (req) => {
       return edgeError("CLASSIFICATION_UPSERT_ERROR", upsertErr.message, undefined, dynCors);
     }
 
+    // ── Persona-aware override: pick the first matching routing rule and
+    //    apply confidence_floor / next_status override / skip_action.
+    //    The matched rule is also surfaced in the response for the audit UI.
+    const matchedRule = findMatchingRule(routingRules, classification, {
+      agentId: input.agent_id ?? null,
+      leadStatus: relationalContext?.lead_status ?? null,
+    });
+    const override = matchedRule ? buildOverride(matchedRule) : null;
+    if (override?.confidenceFloor && classification.confidence < override.confidenceFloor) {
+      classification.confidence = override.confidenceFloor;
+    }
+    if (matchedRule) {
+      // best-effort, non-blocking
+      recordRuleMatch(supabase, matchedRule.id).catch(() => {});
+    }
+
     // 5. Auto-execute eligible actions
     let actionTaken = "none";
     let decisionLogId: string | null = null;
@@ -241,8 +277,9 @@ serve(async (req) => {
         .maybeSingle();
 
       if (partner) {
-        const nextStatus = getNextStatus(partner.lead_status, classification);
-        if (nextStatus) {
+        // Routing override beats hardcoded escalation when present.
+        const nextStatus = override?.nextStatus ?? getNextStatus(partner.lead_status, classification);
+        if (nextStatus && !override?.skipAction) {
           const guardRes = await applyLeadStatusChange(supabase, {
             table: "partners",
             recordId: input.partner_id,
@@ -250,9 +287,19 @@ serve(async (req) => {
             userId: input.user_id,
             actor: { type: "ai_agent", name: "classify-email-response" },
             decisionOrigin: "ai_auto",
-            trigger: `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
+            trigger: matchedRule
+              ? `Routing rule "${matchedRule.name}" → ${nextStatus}`
+              : `Auto-executed by AI classification: ${classification.category} (${classification.domain})`,
             reason: `Email classification: ${classification.domain}/${classification.category}`,
-            metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+            metadata: {
+              domain: classification.domain,
+              category: classification.category,
+              confidence: classification.confidence,
+              sentiment: classification.sentiment,
+              action_suggested: classification.action_suggested,
+              routing_rule_id: matchedRule?.id,
+              routing_rule_name: matchedRule?.name,
+            },
           });
 
           if (guardRes.applied) {
@@ -268,7 +315,14 @@ serve(async (req) => {
               email_address: input.email_address,
               decision_origin: "ai_auto",
               ai_decision_log_id: decisionLogId || undefined,
-              metadata: { domain: classification.domain, category: classification.category, confidence: classification.confidence, sentiment: classification.sentiment, action_suggested: classification.action_suggested },
+              metadata: {
+                domain: classification.domain,
+                category: classification.category,
+                confidence: classification.confidence,
+                sentiment: classification.sentiment,
+                action_suggested: classification.action_suggested,
+                routing_rule_id: matchedRule?.id,
+              },
             });
           }
         }
@@ -336,6 +390,9 @@ serve(async (req) => {
       confidence: classification.confidence,
       action_taken: actionTaken,
       post_classification: postClassResult,
+      routing_rule: matchedRule
+        ? { id: matchedRule.id, name: matchedRule.name, agent_id: matchedRule.agent_id }
+        : null,
     }), { headers });
 
   } catch (e: unknown) {
