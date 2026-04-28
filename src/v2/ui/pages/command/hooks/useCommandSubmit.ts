@@ -119,7 +119,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   // Wrapper for runPlan that integrates with completion
   const runPlanWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string, hint: string) => {
-      await runPlan(planStateVal, userPrompt, hint, renderPlanWithContext);
+      await runPlan(planStateVal, userPrompt, hint, (final) => renderPlanWithContext(userPrompt, final));
     },
     [runPlan, renderPlanWithContext],
   );
@@ -135,7 +135,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   // Wrapper for handleApproveStep that integrates completion rendering
   const handleApproveStepWrapped = useCallback(
     async (planStateVal: PlanExecutionState, userPrompt: string) => {
-      await handleApproveStepFromExecution(planStateVal, userPrompt, renderPlanWithContext);
+      await handleApproveStepFromExecution(planStateVal, userPrompt, (final) => renderPlanWithContext(userPrompt, final));
     },
     [handleApproveStepFromExecution, renderPlanWithContext],
   );

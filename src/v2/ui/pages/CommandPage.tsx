@@ -203,7 +203,8 @@ const CommandPage = () => {
               onCancel={() => submit.handleCancel()}
               onApproveStep={() => {
                 if (!state.planState) return;
-                void submit.handleApproveStep(state.planState, state.messages.findLast?.((m) => m.role === "user")?.content ?? "");
+                const lastUser = [...state.messages].reverse().find((m: Message) => m.role === "user");
+                void submit.handleApproveStep(state.planState, lastUser?.content ?? "");
               }}
               onSuggestedAction={(prompt) => handleSend(prompt)}
             />
