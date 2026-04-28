@@ -12,6 +12,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
 import { createLogger } from "@/lib/log";
+import { aiQueryTool } from "@/v2/ui/pages/command/tools/aiQueryTool";
+import type { ToolResult } from "@/v2/ui/pages/command/tools/types";
 
 const log = createLogger("HomeAIPrompt");
 
@@ -129,6 +131,17 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
           body: { agent_id: targetAgent.id, messages: newMessages },
           context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
         });
+      } else if (aiQueryTool.match(cleanMsg)) {
+        // UNIFIED with /v2/command: read-intent prompts go through the
+        // AI Query Planner + safe executor (same pipeline as the Direttore).
+        const result = (await aiQueryTool.execute(cleanMsg, {
+          originalPrompt: cleanMsg,
+          history: newMessages,
+        })) as ToolResult;
+        const raw = formatQueryResultAsMarkdown(result);
+        setResponse(raw);
+        setHistory([...newMessages, { role: "assistant", content: raw }]);
+        return;
       } else {
         // Default: ai-assistant — Charter R1: scope "home"
         data = await invokeAi<Record<string, unknown>>("ai-assistant", {
