@@ -16,6 +16,7 @@ import { assembleOutreachContext } from "./contextAssembler.ts";
 import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts";
 import { parseOutreachResponse } from "./responseParser.ts";
 import { checkCadence } from "../_shared/cadenceEngine.ts";
+import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
@@ -255,12 +256,30 @@ DECISION ENGINE (raccomandazione automatica):
       decisionEngineBlock,
     });
 
+    // ── Prompt Lab injection (UNIFIED loader) ──
+    // Map channel → scope so the WhatsApp Message Gate, LinkedIn limits and
+    // multi-channel sequence rules from the Prompt Lab actually reach this
+    // generator (previously hardcoded prompt only).
+    const promptScope: PromptScope =
+      ch === "whatsapp" ? "whatsapp" :
+      ch === "linkedin" ? "linkedin" :
+      ch === "email" ? "outreach" : "outreach";
+    const promptLab = await loadOperativePrompts(supabase, userId, {
+      scope: promptScope,
+      channel: ch,
+      includeUniversal: true,
+      limit: 6,
+    });
+    const finalSystemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${systemPrompt}`
+      : systemPrompt;
+
     // ── AI call ──
     const model = getModel(quality);
     const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_outreach", 1200);
     const result = await aiChat({
       models: [model, "openai/gpt-5-mini"],
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+      messages: [{ role: "system", content: finalSystemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 40000, maxRetries: 1, max_tokens: maxTokens, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
     });
 
