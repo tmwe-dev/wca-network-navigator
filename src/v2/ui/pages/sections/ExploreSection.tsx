@@ -7,7 +7,7 @@ import { NetworkPage } from "@/v2/ui/pages/NetworkPage";
 import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
 
 const TABS: readonly SectionTab[] = [
-  { key: "network",   label: "Network CRM", to: "/v2/explore/network" },
+  { key: "network",   label: "WCA Partner", to: "/v2/explore/network" },
   { key: "map",       label: "Mappa",       to: "/v2/explore/map" },
   { key: "deep",      label: "Sherlock",    to: "/v2/explore/deep-search" },
 ];
