@@ -33,6 +33,7 @@ import { EmailPromptsTab } from "./prompt-lab/tabs/EmailPromptsTab";
 import { VoiceElevenLabsTab } from "./prompt-lab/tabs/VoiceElevenLabsTab";
 import { PlaybooksTab } from "./prompt-lab/tabs/PlaybooksTab";
 import { AgentPersonasTab } from "./prompt-lab/tabs/AgentPersonasTab";
+import { AgentCapabilitiesTab } from "./prompt-lab/tabs/AgentCapabilitiesTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import {
@@ -55,6 +56,7 @@ import {
   BookmarkPlus,
   Clock,
   Layers,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -75,6 +77,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   operative: Wrench,
   playbooks: Map,
   personas: Users,
+  capabilities: ShieldCheck,
   journalists: Newspaper,
   operative_kb: BookOpen,
   administrative_kb: BookOpen,
@@ -249,6 +252,7 @@ export function PromptLabPage() {
                   {activeTabId === "voice" && <VoiceElevenLabsTab />}
                   {activeTabId === "playbooks" && <PlaybooksTab />}
                   {activeTabId === "personas" && <AgentPersonasTab />}
+                  {activeTabId === "capabilities" && <AgentCapabilitiesTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
                   {activeTabId === "journalists" && <JournalistsTab />}
                 </div>
