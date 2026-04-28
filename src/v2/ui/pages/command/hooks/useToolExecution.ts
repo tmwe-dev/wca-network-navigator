@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { resolveTool, TOOLS } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import type { CommandPageState } from "./useCommandPageState";
+import { tryLocalComment } from "../lib/localResultFormatter";
+import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 
 interface Governance {
   role: string;
@@ -241,11 +243,24 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         const countLabel = getCountLabel(tool.id, result);
 
+        // For AI-query results, try local formatter to get a sharp answer + clickable next-step chips.
+        let messageContent = `${countLabel} →`;
+        let suggestedActions: { label: string; prompt: string }[] | undefined;
+        if (tool.id === "ai-query") {
+          const plan = getLastSuccessfulQueryPlan();
+          const local = tryLocalComment(prompt, result, plan);
+          if (local) {
+            messageContent = local.message;
+            suggestedActions = local.suggestedActions.length > 0 ? [...local.suggestedActions] : undefined;
+          }
+        }
+
         pageState.addMessage({
           role: "assistant",
-          content: `${countLabel} →`,
+          content: messageContent,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
+          suggestedActions,
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
