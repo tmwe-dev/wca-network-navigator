@@ -73,7 +73,7 @@ export function useSystemDirectory() {
   return useQuery({
     queryKey: queryKeys.system.directory,
     queryFn: async (): Promise<SystemDirectory> => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const [agentsData, assignmentsData, tasksData, promptsData] = await Promise.all([

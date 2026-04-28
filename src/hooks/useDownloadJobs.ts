@@ -92,7 +92,7 @@ export function useCreateDownloadJob() {
         }
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       const jobId = await createDownloadJob({
         country_code: params.country_code, country_name: params.country_name,
         network_name: params.network_name, wca_ids: filteredIds,

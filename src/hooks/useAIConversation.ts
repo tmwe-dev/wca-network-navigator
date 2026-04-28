@@ -27,7 +27,7 @@ export function useAIConversation(pageContext: string) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadList = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const data = await findConversations(user.id, pageContext, 30);
     if (data) setConversations(data as unknown as Conversation[]);
@@ -36,7 +36,7 @@ export function useAIConversation(pageContext: string) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) { setLoading(false); return; }
       const list = await findConversations(user.id, pageContext, 1);
       if (list && list.length > 0) {
@@ -71,7 +71,7 @@ export function useAIConversation(pageContext: string) {
       if (conversationId) {
         persistMessages(conversationId, updated, title);
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) return;
         const data = await createConversation({
           user_id: user.id, page_context: pageContext,

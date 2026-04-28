@@ -155,7 +155,7 @@ export function useCreateRuleFromSender() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateRuleFromMessageInput) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       const { data: opRow } = await supabase
         .from("operators").select("id").eq("user_id", user.id).maybeSingle();
@@ -240,7 +240,7 @@ function useApplyRulesToHistory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (ruleId: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       const { data: opRow } = await supabase
         .from("operators").select("id").eq("user_id", user.id).maybeSingle();

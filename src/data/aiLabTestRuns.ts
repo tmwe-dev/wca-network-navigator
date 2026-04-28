@@ -24,7 +24,7 @@ interface TestResultInsert {
 }
 
 export async function insertTestRun(run: TestRunInsert): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -50,7 +50,7 @@ export async function insertTestRun(run: TestRunInsert): Promise<string | null> 
 }
 
 export async function insertTestResults(runId: string, results: TestResultInsert[]): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return false;
 
   const rows = results.map((r) => ({
@@ -89,7 +89,7 @@ export interface TestRunRow {
 }
 
 export async function fetchRecentRuns(limit = 20): Promise<TestRunRow[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return [];
 
   const { data, error } = await supabase

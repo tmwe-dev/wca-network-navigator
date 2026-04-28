@@ -145,7 +145,7 @@ Contesto: outreach commerciale logistica WCA.`,
   // Save draft
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       const { error } = await supabase.from("email_drafts").insert({
         subject,

@@ -42,7 +42,7 @@ export const createAgentTool: Tool = {
     }
 
     const p = context.payload ?? {};
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) throw new Error("Non autenticato");
 
     const result = await createAgent({

@@ -36,7 +36,7 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
     setShowDropdown(open);
     if (open) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (user) {
           const breakdown = await getUsageByFunction(user.id, 7);
           setFunctionBreakdown(breakdown);

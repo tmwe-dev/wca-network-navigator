@@ -30,7 +30,7 @@ export function useHoldingMessages(channel: HoldingChannel) {
   return useQuery({
     queryKey: queryKeys.contacts.holdingMessages(channel),
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       const userId = user?.id;
       if (!userId) return [] as HoldingMessageGroup[];
 
@@ -168,7 +168,7 @@ export function useHoldingUnreadCounts() {
   return useQuery({
     queryKey: queryKeys.contacts.holdingUnreadCounts,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       const userId = user?.id;
       if (!userId) return { email: 0, whatsapp: 0, linkedin: 0 };
 

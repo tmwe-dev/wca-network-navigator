@@ -43,7 +43,7 @@ export function SenderActionBar({
   const [busy, setBusy] = useState<string | null>(null);
 
   const withUser = async <T,>(fn: (userId: string) => Promise<T>): Promise<T | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) {
       toast.error("Sessione scaduta");
       return null;

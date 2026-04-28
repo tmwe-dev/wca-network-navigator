@@ -11,7 +11,7 @@ type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Upda
 
 // ── Pending items (Da Inviare) ──
 export async function findPendingOutreach() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return { activities: [], missionActions: [], pendingActions: [] };
 
   const [actRes, maRes, paRes] = await Promise.all([
@@ -46,7 +46,7 @@ export async function findPendingOutreach() {
 
 // ── Sent items (Inviati) ──
 export async function findSentOutreach() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return { activities: [], missionActions: [] };
 
   const [actRes, maRes] = await Promise.all([
@@ -73,7 +73,7 @@ export async function findSentOutreach() {
 
 // ── Scheduled items (Programmati) ──
 export async function findScheduledOutreach() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return { missionActions: [], pendingActions: [], activities: [] };
 
   const now = new Date().toISOString();
@@ -109,7 +109,7 @@ export async function findScheduledOutreach() {
 
 // ── Failed items (Falliti) ──
 export async function findFailedOutreach() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return { missionActions: [], activities: [] };
 
   const [maRes, actRes] = await Promise.all([
@@ -135,7 +135,7 @@ export async function findFailedOutreach() {
 
 // ── Outreach Stats ──
 export async function fetchOutreachStats() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return { pending: 0, sentToday: 0, scheduled: 0, awaitingResponse: 0, failed: 0 };
 
   const todayStart = new Date();
@@ -239,7 +239,7 @@ export async function logAuditEntry(entry: {
   partner_id?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return;
   // supervisor_audit_log may not be in generated types yet — use dynamic access
   await (supabase.from as Function)("supervisor_audit_log").insert({

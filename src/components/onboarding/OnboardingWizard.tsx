@@ -25,7 +25,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const next = () => setStep(s => Math.min(s + 1, 3));
 
   const saveSetting = async (key: string, value: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     await supabase.from("app_settings").upsert(
       { user_id: user.id, key, value },
@@ -40,7 +40,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   };
 
   const markOnboardingComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (user) {
       await supabase
         .from("profiles")

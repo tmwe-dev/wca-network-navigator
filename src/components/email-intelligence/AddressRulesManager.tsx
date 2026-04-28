@@ -76,7 +76,7 @@ export function AddressRulesManager() {
         const { error } = await supabase.from("email_address_rules").update(payload as never).eq("id", String(id));
         if (error) throw error;
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as never);
         if (error) throw error;
       }

@@ -153,7 +153,7 @@ export function useCockpitContacts() {
   const q = useQuery({
     queryKey: queryKeys.cockpit.queue,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
 
       const queue = await findCockpitQueue(user.id);
@@ -379,7 +379,7 @@ export function useDeleteCockpitContacts() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (prefixedIds: string[]) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const sourceEntries: { type: string; id: string }[] = [];
@@ -404,7 +404,7 @@ export function useSendToCockpit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (items: { sourceType: string; sourceId: string; partnerId?: string; countryCode?: string }[]) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const inserts = items.map(item => ({

@@ -103,7 +103,7 @@ export default function AISuggestionsTab() {
         .eq("id", suggestion.id);
 
       // Log decision
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (user) {
         await supabase.from("ai_decision_log").insert({
           user_id: user.id,

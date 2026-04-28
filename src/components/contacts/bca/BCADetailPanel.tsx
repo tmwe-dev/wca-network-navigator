@@ -82,7 +82,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
 
   const _handleCockpit = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
       await insertCockpitQueueItems([{ source_id: card.id, source_type: "business_card", user_id: user.id, partner_id: card.matched_partner_id || null }]);
       toast({ title: "✅ Aggiunto al Cockpit" });

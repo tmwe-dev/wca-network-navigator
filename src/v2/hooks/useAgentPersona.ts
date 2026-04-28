@@ -42,7 +42,7 @@ export function useAgentPersona(agentId: string | undefined) {
 
   const upsert = useMutation({
     mutationFn: async (persona: Partial<AgentPersona> & { agent_id: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const payload = {

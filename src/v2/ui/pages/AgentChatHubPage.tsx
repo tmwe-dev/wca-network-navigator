@@ -149,7 +149,7 @@ export function AgentChatHub() {
     const userMsg = msgs[msgIndex - 1];
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
 
       if (type === "negative") {

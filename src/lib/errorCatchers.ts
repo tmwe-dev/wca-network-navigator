@@ -10,7 +10,7 @@ async function logGlobalError(entry: {
   error_stack?: string | null;
 }) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     await supabase.from("app_error_logs").insert({
       user_id: user.id,

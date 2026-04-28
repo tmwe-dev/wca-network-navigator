@@ -254,7 +254,7 @@ export default function GlobalVoiceFAB() {
     const next = VOICE_LANG_KEYS[(idx + 1) % VOICE_LANG_KEYS.length];
     setVoiceLang(next);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (user) {
         await supabase.from("app_settings").upsert(
           { user_id: user.id, key: "elevenlabs_language", value: next },

@@ -13,7 +13,7 @@ export function SubscriptionSettingsTab(): React.ReactElement {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.v2.creditTransactions,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return { balance: 0, transactions: [] };
 
       const { data: txs } = await supabase

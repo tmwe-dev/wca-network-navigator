@@ -13,7 +13,7 @@ export function useWorkspacePresets() {
   const { data: presets = [], isLoading } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data, error } = await supabase
         .from("workspace_presets")
@@ -28,7 +28,7 @@ export function useWorkspacePresets() {
 
   const save = useMutation({
     mutationFn: async (preset: { id?: string; name: string; goal: string; base_proposal: string; document_ids: string[]; reference_links: string[] }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       if (preset.id) {

@@ -6,7 +6,7 @@ export function useAppSettings() {
   return useQuery({
     queryKey: queryKeys.appSettings.all,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return {} as Record<string, string>;
       const { data, error } = await supabase
         .from("app_settings")
@@ -28,7 +28,7 @@ export function useUpdateSetting() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const { data: existing } = await supabase

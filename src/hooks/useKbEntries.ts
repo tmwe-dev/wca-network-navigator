@@ -29,7 +29,7 @@ export function useUpsertKbEntry() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (entry: Partial<KbEntry> & { title: string; content: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       await upsertKbEntry(entry, user.id);
     },
@@ -57,7 +57,7 @@ export function useSeedKbFromLegacy() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const count = await countKbEntries();

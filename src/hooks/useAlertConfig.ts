@@ -31,7 +31,7 @@ export function useAlertConfig() {
 
   const updateConfig = useMutation({
     mutationFn: async (updates: Partial<AlertConfig>) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase

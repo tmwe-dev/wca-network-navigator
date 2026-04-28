@@ -26,7 +26,7 @@ export function useAgents() {
 
   const createAgent = useMutation({
     mutationFn: async (agent: Partial<AgentInsert>) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       return dalCreateAgent({ ...agent, user_id: user.id, name: agent.name ?? "New Agent" } as AgentInsert);
     },

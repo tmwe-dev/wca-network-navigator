@@ -91,7 +91,7 @@ export default function BusinessCardsHub() {
     const selected = cards.filter(c => selectedIds.has(c.id));
     if (selected.length === 0) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
       const inserts = selected.map(c => ({ source_id: c.id, source_type: "business_card", user_id: user.id, partner_id: c.matched_partner_id || null }));
       await insertCockpitQueueItems(inserts);
