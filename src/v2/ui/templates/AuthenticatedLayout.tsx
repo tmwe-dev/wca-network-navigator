@@ -290,6 +290,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                                 onToggleTheme={toggleTheme}
                                 onSignOut={signOut}
                                 onMobileClose={() => setMobileOpen(false)}
+                                onOpenCommandPalette={() => setCommandOpen(true)}
                               />
                             </motion.div>
                             <motion.div
