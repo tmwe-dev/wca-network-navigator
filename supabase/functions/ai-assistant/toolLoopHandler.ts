@@ -278,7 +278,7 @@ export async function executeToolLoop(
     }
 
     // Update messages and call AI again
-    state.allMessages.push(state.assistantMessage);
+    state.allMessages.push(state.assistantMessage as unknown as Record<string, unknown>);
     state.allMessages.push(...toolResults);
 
     const loopResponse = await callAiForLoop(state.allMessages);
