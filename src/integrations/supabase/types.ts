@@ -5016,6 +5016,8 @@ export type Database = {
           raw_data: Json | null
           row_number: number
           status_reason: string | null
+          transferred_at: string | null
+          transferred_to_partner_id: string | null
           user_id: string | null
           wca_match_confidence: number | null
           wca_partner_id: string | null
@@ -5057,6 +5059,8 @@ export type Database = {
           raw_data?: Json | null
           row_number?: number
           status_reason?: string | null
+          transferred_at?: string | null
+          transferred_to_partner_id?: string | null
           user_id?: string | null
           wca_match_confidence?: number | null
           wca_partner_id?: string | null
@@ -5098,6 +5102,8 @@ export type Database = {
           raw_data?: Json | null
           row_number?: number
           status_reason?: string | null
+          transferred_at?: string | null
+          transferred_to_partner_id?: string | null
           user_id?: string | null
           wca_match_confidence?: number | null
           wca_partner_id?: string | null
@@ -5116,6 +5122,20 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imported_contacts_transferred_to_partner_id_fkey"
+            columns: ["transferred_to_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imported_contacts_transferred_to_partner_id_fkey"
+            columns: ["transferred_to_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
             referencedColumns: ["id"]
           },
           {
@@ -8790,6 +8810,21 @@ export type Database = {
         }[]
       }
       encrypt_wca_password: { Args: { p_password: string }; Returns: string }
+      expire_stuck_import_logs: { Args: never; Returns: number }
+      find_import_duplicates: {
+        Args: {
+          p_company_names: string[]
+          p_emails: string[]
+          p_user_id: string
+        }
+        Returns: {
+          imported_contact_id: string
+          match_company: string
+          match_email: string
+          partner_id: string
+          source: string
+        }[]
+      }
       get_active_operator_id: { Args: never; Returns: string }
       get_contact_filter_options: {
         Args: never
