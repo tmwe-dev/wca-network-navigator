@@ -4,6 +4,10 @@
  */
 import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName, cleanCompanyName } from "../_shared/textUtils.ts";
+import {
+  buildAddressPriorityBlock,
+  buildCommercialStateBlock,
+} from "../_shared/prompts/promptParts.ts";
 
 export type Channel = "email" | "linkedin" | "whatsapp" | "sms";
 
@@ -78,26 +82,8 @@ export function buildOutreachPrompts(ctx: OutreachPromptContext): { systemPrompt
   const detected = getLanguageHint(country_code);
   const effectiveLanguage = language || detected.language;
 
-  // ── Build address-specific priority instruction block ──
-  let addressPriorityBlock = "";
-  if (addressCustomPrompt || addressCategory) {
-    const parts: string[] = [];
-    if (addressCustomPrompt) {
-      parts.push(`⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO EMAIL:\n${addressCustomPrompt}`);
-    }
-    if (addressCategory) {
-      // Detect holding pattern signals
-      const category = addressCategory.toLowerCase();
-      const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
-                              category.includes("pausa") || category.includes("pending");
-      if (isHoldingPattern) {
-        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}\n→ HOLDING PATTERN RILEVATO: questo contatto è in fase di attesa pianificata.\n  ADATTAMENTI: tono amichevole ma non pressante, mantieni punto di contatto aperto per riattivazione futura, evita CTA aggressivi.`);
-      } else {
-        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}`);
-      }
-    }
-    addressPriorityBlock = parts.join("\n\n") + "\n\n";
-  }
+  // ── Address-specific priority instruction block (shared module) ──
+  const addressPriorityBlock = buildAddressPriorityBlock({ addressCustomPrompt, addressCategory });
 
   const channelContext = `Canale: ${ch.toUpperCase()}`;
 
@@ -198,35 +184,16 @@ ${JSON.stringify(decision, null, 2)}
 
 ${email_type_prompt ? `STRUTTURA EMAIL OBBLIGATORIA (tipo: ${email_type_id}):\n${email_type_prompt}\n\nFORMATO: ${email_type_structure || "hook → corpo → CTA"}\n` : ""}`;
 
-  // Commercial state context (holding pattern + tone modulation)
-  let commercialBlock = "";
-  if (commercialState !== undefined || touchCount !== undefined) {
-    const tc = touchCount || 0;
-    const ws = warmthScore ?? 0;
-    const stateToTone: Record<string, string> = {
-      new: "PRIMO CONTATTO — Freddo-professionale. Presentati brevemente, vai al punto. Nessuna familiarità.",
-      first_touch_sent: "FOLLOW-UP INIZIALE — Professionale con riferimento al primo messaggio. Non ripresentarti. Aggiungi valore.",
-      holding: "RIATTIVAZIONE — Cordiale, richiamo al contatto precedente. Nuova ragione di contatto, valore concreto.",
-      engaged: "DIALOGO ATTIVO — Collega amichevole, riferimenti specifici. Puoi essere diretto e propositivo.",
-      qualified: "QUALIFICATO — Partner diretto, proposta di valore. Focus su next steps concreti.",
-      negotiation: "TRATTATIVA — Partner diretto, dettagli operativi. Focus su termini, condizioni, chiusura.",
-      converted: "CLIENTE — Pari livello, tono collaborativo. Relazione consolidata.",
-      archived: "RIATTIVAZIONE — Cordiale, verifica interesse. Nuova ragione di contatto.",
-    };
-    const toneInstruction = commercialState
-      ? (stateToTone[commercialState] || stateToTone.first_touch_sent)
-      : (tc === 0 ? stateToTone.new : stateToTone.first_touch_sent);
-    commercialBlock = `\n--- STATO COMMERCIALE ---
-- Fase: ${(commercialState || "new").toUpperCase()}
-- Contatti totali inviati: ${tc}
-- Ultimo canale: ${lastChannel || "nessuno"}
-- Ultimo esito: ${lastOutcome || "n/a"}
-- Giorni dall'ultimo contatto: ${daysSinceLastContact ?? "n/a"}
-- Calore relazione: ${ws}/100
-
-ISTRUZIONI TONO (basate su fase): ${toneInstruction}
-`;
-  }
+  // Commercial state context — shared module (by_state strategy = mappa esplicita 9-stati)
+  const commercialBlock = buildCommercialStateBlock({
+    commercialState,
+    touchCount,
+    lastChannel,
+    lastOutcome,
+    daysSinceLastContact,
+    warmthScore,
+    toneStrategy: "by_state",
+  });
 
   const userPrompt = `${senderContext}
 ${recipientContext}

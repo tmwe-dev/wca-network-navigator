@@ -7,6 +7,10 @@ import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 import { getProfileTruncation, getModel } from "./promptHelpers.ts";
 import { buildStrategicAdvisor } from "./strategicAdvisor.ts";
 import type { EmailPromptContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
+import {
+  buildAddressPriorityBlock,
+  buildCommercialStateBlock,
+} from "../_shared/prompts/promptParts.ts";
 
 export type { PartnerData, ContactData, NetworkRow, ServiceRow, SocialLinkRow, EmailPromptContext, StrategicAdvisorContext, PromptBlock, BuiltPrompts } from "./promptTypes.ts";
 export { getModel };
@@ -134,25 +138,8 @@ ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}
 ⚠️ Questa struttura è VINCOLANTE: rispetta sezioni, ordine, vincoli di lunghezza e CTA prescritte.
 ` : "";
 
-  // Address-specific priority instruction block
-  let addressPriorityBlock = "";
-  if (addressCustomPrompt || addressCategory) {
-    const parts: string[] = [];
-    if (addressCustomPrompt) {
-      parts.push(`⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO EMAIL:\n${addressCustomPrompt}`);
-    }
-    if (addressCategory) {
-      const category = addressCategory.toLowerCase();
-      const isHoldingPattern = category.includes("attesa") || category.includes("hold") ||
-                              category.includes("pausa") || category.includes("pending");
-      if (isHoldingPattern) {
-        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}\n→ HOLDING PATTERN RILEVATO: questo contatto è in fase di attesa pianificata.\n  ADATTAMENTI: tono amichevole ma non pressante, mantieni punto di contatto aperto per riattivazione futura, evita CTA aggressivi.`);
-      } else {
-        parts.push(`\nCATEGORIA CONTATTO: ${addressCategory}`);
-      }
-    }
-    addressPriorityBlock = parts.join("\n\n") + "\n\n";
-  }
+  // Address-specific priority instruction block (shared module)
+  const addressPriorityBlock = buildAddressPriorityBlock({ addressCustomPrompt, addressCategory });
 
   // System prompt minimale: identità + missione + dossier + contesto.
   // Le regole di stile, lunghezza, frasi vietate, ancora obbligatoria,
@@ -192,47 +179,17 @@ ${operativePromptsBlock ? `\n${operativePromptsBlock}\n` : ""}${playbookBlock ? 
   systemBlocks.push({ label: "Ancora obbligatoria", content: "Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione WCA onesta." });
   systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
 
-  // Commercial state context
-  let commercialBlock = "";
-  if (commercialState !== undefined || touchCount !== undefined || addressCategory) {
-    const tc = touchCount || 0;
-    const ws = warmthScore ?? 0;
-
-    let effectiveState = commercialState || "new";
-    let holdingPatternNote = "";
-    if (addressCategory) {
-      const catLower = addressCategory.toLowerCase();
-      const isAddressHolding = catLower.includes("attesa") || catLower.includes("hold") ||
-                              catLower.includes("paused") || catLower.includes("on_hold") ||
-                              catLower.includes("holding") || catLower.includes("pausa") ||
-                              catLower.includes("pending");
-      if (isAddressHolding) {
-        effectiveState = "holding";
-        holdingPatternNote = `\n⚠️ [OVERRIDE] Regola email_address_rules.category="${addressCategory}" → stato="holding" (priorità manuale utente su lead_status)`;
-      }
-    }
-
-    const toneInstruction = effectiveState === "holding"
-      ? "CIRCUITO DI ATTESA: Tono cordiale ma non insistente. Mantieni punto di contatto aperto. Suggerisci riattivazione con pretesto leggero. NON CTA aggressivi."
-      : tc === 0
-      ? "PRIMO CONTATTO: Tono freddo-professionale. Breve. CTA basso impegno. NON vendere."
-      : tc <= 3 && ws < 50
-      ? "FOLLOW-UP INIZIALE: Tono cordiale. Riferirsi al contatto precedente. Aggiungere valore. NON ripetere presentazione."
-      : tc > 3 && ws < 50
-      ? "NURTURING: Tono amichevole. Focus su insight di valore. Mostrare competenza."
-      : "RELAZIONE CALDA: Tono da collega/amico professionale. Personalizzazione alta. Proposte concrete.";
-
-    commercialBlock = `\n--- STATO COMMERCIALE ---
-- Fase: ${(effectiveState || "new").toUpperCase()}
-- Contatti totali inviati: ${tc}
-- Ultimo canale: ${lastChannel || "nessuno"}
-- Ultimo esito: ${lastOutcome || "n/a"}
-- Giorni dall'ultimo contatto: ${daysSinceLastContact ?? "n/a"}
-- Calore relazione: ${ws}/100${holdingPatternNote}
-
-ISTRUZIONI TONO: ${toneInstruction}
-`;
-  }
+  // Commercial state context (shared module, by_warmth strategy = legacy generate-email tone heuristic)
+  const commercialBlock = buildCommercialStateBlock({
+    commercialState,
+    touchCount,
+    lastChannel,
+    lastOutcome,
+    daysSinceLastContact,
+    warmthScore,
+    addressCategory,
+    toneStrategy: "by_warmth",
+  });
 
   const goalBlock = `GOAL DELLA COMUNICAZIONE:
 ${goal || "Presentazione aziendale e proposta di collaborazione"}
