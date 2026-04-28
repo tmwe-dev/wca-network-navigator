@@ -2,6 +2,22 @@ import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolvePartnerId, type ExecuteContext } from "../shared.ts";
 import { evaluatePartner } from "../../_shared/decisionEngine.ts";
 import { processAllDecisionActions, undoAction, getApprovalDashboard } from "../../_shared/approvalFlow.ts";
+import { z, safeParseAiJson } from "../../_shared/aiJsonValidator.ts";
+
+const EmailAnalysisSchema = z.object({
+  sentiment: z.enum(["positive", "neutral", "negative"]).default("neutral"),
+  intent: z.enum(["interest", "info_request", "refusal", "ooo", "auto_reply", "spam", "other"]).default("other"),
+  suggested_action: z.enum(["follow_up", "escalation", "close", "schedule_call", "respond_info", "ignore"]).default("ignore"),
+  urgency: z.number().int().min(1).max(5).default(3),
+  summary: z.string().default(""),
+});
+const EMAIL_ANALYSIS_FALLBACK: z.infer<typeof EmailAnalysisSchema> = {
+  sentiment: "neutral",
+  intent: "other",
+  suggested_action: "ignore",
+  urgency: 3,
+  summary: "",
+};
 
 interface CountryStatRow { country_code: string; total_partners: number; with_profile: number; without_profile: number; with_email: number; with_phone: number; hq_count?: number; branch_count?: number; }
 interface DownloadJobRow { id: string; country_name: string; status: string; current_index: number; total_count: number; contacts_found_count: number; contacts_missing_count: number; last_processed_company: string | null; error_message: string | null; created_at: string; }
@@ -201,12 +217,22 @@ export async function handleAnalyzeIncomingEmail(
   if (!analysisRes.ok) return { error: "Errore analisi AI" };
   const analysisData = await analysisRes.json();
   const analysisText = analysisData.choices?.[0]?.message?.content || "{}";
-  try {
-    const parsed = JSON.parse(analysisText.replace(/```json\n?|\n?```/g, "").trim());
-    return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, date: msg.email_date, partner_id: msg.partner_id, exclusive_agent: exclusiveAgentName, analysis: parsed };
-  } catch {
-    return { success: true, message_id: args.message_id, from: msg.from_address, subject: msg.subject, exclusive_agent: exclusiveAgentName, analysis: { raw: analysisText } };
-  }
+  const { data: parsed, isFallback } = safeParseAiJson(analysisText, EmailAnalysisSchema, {
+    fnName: "analysisTools.analyzeEmailMessage",
+    model: "google/gemini-2.5-flash-lite",
+    fallback: EMAIL_ANALYSIS_FALLBACK,
+  });
+  return {
+    success: true,
+    message_id: args.message_id,
+    from: msg.from_address,
+    subject: msg.subject,
+    date: msg.email_date,
+    partner_id: msg.partner_id,
+    exclusive_agent: exclusiveAgentName,
+    analysis: parsed,
+    analysis_is_fallback: isFallback || undefined,
+  };
 }
 
 export async function handleEvaluatePartner(
