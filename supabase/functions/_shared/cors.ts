@@ -5,13 +5,28 @@
  * Restrictive origin checking with backward-compatible export.
  */
 
-const ALLOWED_ORIGINS: readonly string[] = [
+const PRODUCTION_ORIGINS: readonly string[] = [
   "https://wca-network-navigator.lovable.app",
   "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app",
   "https://c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovableproject.com",
+];
+
+const DEV_ONLY_ORIGINS: readonly string[] = [
   "http://localhost:5173",
   "http://localhost:3000",
 ];
+
+/**
+ * In production we exclude localhost to prevent dev clients from hitting prod functions.
+ * Toggle via ENVIRONMENT secret (set to "production" on the deployed Supabase project).
+ */
+const IS_PRODUCTION =
+  (typeof Deno !== "undefined" && Deno.env?.get?.("ENVIRONMENT") === "production") ||
+  (typeof Deno !== "undefined" && Deno.env?.get?.("DENO_DEPLOYMENT_ID") != null);
+
+const ALLOWED_ORIGINS: readonly string[] = IS_PRODUCTION
+  ? PRODUCTION_ORIGINS
+  : [...PRODUCTION_ORIGINS, ...DEV_ONLY_ORIGINS];
 
 /**
  * Returns CORS headers scoped to a validated origin.
