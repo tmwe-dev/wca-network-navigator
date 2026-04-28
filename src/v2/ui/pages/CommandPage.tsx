@@ -85,11 +85,15 @@ const CommandPage = () => {
     state.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages, state.chatEndRef]);
 
-  // TTS: prefer the conversational `spokenSummary` produced by useResultCommentary.
-  // Fallback to a sanitized excerpt of `content` only when no spokenSummary exists.
+  // TTS: read ONLY the conversational commentary produced by the "Direttore"
+  // (i.e. the message that comments on the actual result). Skip technical
+  // chatter from "Automation", "Orchestratore", "Oracolo", "Communication",
+  // etc. — the user does not want the assistant to read step recaps like
+  // "🔧 Ricerca AI · 383".
   useEffect(() => {
     const last = state.messages[state.messages.length - 1];
     if (!last || last.role !== "assistant" || last.thinking) return;
+    if (last.agentName !== "Direttore") return;
     const spoken = (last.spokenSummary ?? "").trim();
     if (spoken) {
       voiceOut.speak(spoken);

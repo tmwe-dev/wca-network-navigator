@@ -145,6 +145,30 @@ export interface LocalComment {
   readonly suggestedActions: SuggestedAction[];
 }
 
+/** Strip basic markdown so the spoken version sounds natural. */
+function stripMarkdown(s: string): string {
+  return s.replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Build a short conversational proposal from the suggested actions, e.g.:
+ *   "Vuoi che ti mostri i top rated o che avvii una deep search?"
+ */
+function buildProposalSentence(actions: SuggestedAction[]): string {
+  if (!actions || actions.length === 0) return "";
+  // Strip leading emojis/symbols from labels for a cleaner sentence.
+  const clean = actions
+    .slice(0, 3)
+    .map((a) => a.label.replace(/^[\p{Extended_Pictographic}\p{S}\p{P}\s]+/u, "").trim())
+    .map((s) => s.charAt(0).toLowerCase() + s.slice(1))
+    .filter((s) => s.length > 0);
+  if (clean.length === 0) return "";
+  if (clean.length === 1) return `Vuoi che ${clean[0]}?`;
+  const head = clean.slice(0, -1).join(", ");
+  const tail = clean[clean.length - 1];
+  return `Vuoi che ${head} o ${tail}?`;
+}
+
 /**
  * Decide if a result can be commented locally (skip LLM).
  * Returns the comment, or null if AI is needed.
@@ -182,18 +206,20 @@ export function tryLocalComment(
     const filtersDesc = describeFilters(filters);
     const word = noun(table, count !== 1);
     const countFmt = count.toLocaleString("it-IT");
-    const message =
+    const actions = suggestedActionsFor(table, filters);
+    const proposal = buildProposalSentence(actions);
+    const base =
       count === 0
         ? `Non risultano ${word} ${filtersDesc}.`.trim().replace(/\s+/g, " ")
         : `Abbiamo **${countFmt}** ${word}${filtersDesc ? " " + filtersDesc : ""}.`;
-    const spokenSummary =
+    const baseSpoken =
       count === 0
         ? `Nessun ${word} ${filtersDesc}`
         : `Abbiamo ${countFmt} ${word} ${filtersDesc}`.trim();
     return {
-      message,
-      spokenSummary,
-      suggestedActions: suggestedActionsFor(table, filters),
+      message: proposal ? `${base} ${proposal}` : base,
+      spokenSummary: proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken,
+      suggestedActions: actions,
     };
   }
 
@@ -212,12 +238,15 @@ export function tryLocalComment(
         return v ? `• ${v}` : null;
       })
       .filter((x): x is string => x !== null);
-    const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}`;
-    const spokenSummary = `${count} ${word} ${filtersDesc}`.trim();
+    const actions = suggestedActionsFor(table, filters);
+    const proposal = buildProposalSentence(actions);
+    const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}${proposal ? `\n\n${proposal}` : ""}`;
+    const baseSpoken = `${count} ${word} ${filtersDesc}`.trim();
+    const spokenSummary = proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken;
     return {
       message,
       spokenSummary,
-      suggestedActions: suggestedActionsFor(table, filters),
+      suggestedActions: actions,
     };
   }
 
