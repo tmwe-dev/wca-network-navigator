@@ -45,9 +45,9 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 
 | # | Doc | Intervento |
 |---|---|---|
-| P2.1 | D2 | Audit indici mancanti su colonne `WHERE`/`JOIN` ad alto traffico (`partners(country_code,lead_status)`, `imported_contacts(email,user_id)`, `download_jobs(status,user_id)`, `activities(partner_id,status)`, `email_campaign_queue(status,scheduled_at)`). Migrazione `CREATE INDEX IF NOT EXISTS` |
-| P2.2 | D3 | Aggiungere FK enforced verso `auth.users` su `agent_tasks`, `ai_conversations`, `ai_memory`, `import_logs` (ON DELETE CASCADE) |
-| P2.3 | D5 | Validazione applicativa con Zod per JSON columns critiche (`partners.enrichment_data`, `agents.assigned_tools`) — solo nella DAL, no CHECK constraint |
+| P2.1 ✅ | D2 | Indici composti aggiunti: `partners(country_code,lead_status)`, `imported_contacts(user_id)`, `download_jobs(status,user_id)`, `activities(partner_id,status)`, `email_campaign_queue(status,scheduled_at)` |
+| P2.2 ✅ | D3 | FK ON DELETE CASCADE verso `auth.users` aggiunte su `agent_tasks`, `ai_conversations`, `ai_memory`, `import_logs` |
+| P2.3 ✅ | D5 | Zod validators in `src/data/schemas/jsonValidators.ts` per `partners.enrichment_data` (passthrough) e `agents.assigned_tools` (snake_case + cap 100). Safe + strict. 9/9 test verdi |
 
 ### Priorità 3 — Email Pipeline residuo (1-2 giorni)
 
