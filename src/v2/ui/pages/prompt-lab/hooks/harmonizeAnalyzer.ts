@@ -310,7 +310,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
     }
   }
   if (skipped > 0) {
-    log.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`, { error:  });
+    log.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`);
   }
 
   return validProposals.map((p, idx): HarmonizeProposal => {
