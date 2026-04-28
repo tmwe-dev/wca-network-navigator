@@ -17,7 +17,7 @@ import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import FloatingDock from "@/components/layout/FloatingDock";
 import ConversationSidebar from "./command/ConversationSidebar";
-import type { ToolResult } from "./command/tools/types";
+import type { ToolResult, BulkAction } from "./command/tools/types";
 import type { Message } from "./command/constants";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
@@ -243,6 +243,19 @@ const CommandPage = () => {
           onClose={() => {
             state.setCanvas(null);
             state.setLiveResult(null);
+          }}
+          selectedIds={state.selectedIds}
+          onToggleId={state.toggleSelected}
+          onSelectAll={state.selectAll}
+          onClearSelection={state.clearSelection}
+          onBulkAction={(action: BulkAction, ids: string[]) => {
+            if (ids.length === 0) {
+              sonnerToast.info("Seleziona almeno un elemento");
+              return;
+            }
+            const prompt = action.promptTemplate.replace("{ids}", ids.join(", "));
+            state.clearSelection();
+            handleSend(prompt);
           }}
         />
       </div>
