@@ -64,11 +64,11 @@ export function LayoutSidebarNav({
         <button
           onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
           className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors"
-          aria-label="Apri Command"
+          aria-label="Apri ricerca rapida"
           data-testid="sidebar-command-button"
         >
           <Command className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">Command</span>
+          <span className="flex-1 text-left">Cerca rapida</span>
           <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>
