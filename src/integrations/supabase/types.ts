@@ -290,6 +290,81 @@ export type Database = {
           },
         ]
       }
+      agent_capabilities: {
+        Row: {
+          agent_id: string
+          allowed_tools: string[]
+          approval_required_tools: string[]
+          blocked_tools: string[]
+          created_at: string
+          execution_mode: string
+          id: string
+          max_concurrent_tools: number
+          max_iterations: number
+          max_tokens_per_call: number
+          notes: string | null
+          operator_id: string | null
+          preferred_model: string | null
+          step_timeout_ms: number
+          temperature: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          allowed_tools?: string[]
+          approval_required_tools?: string[]
+          blocked_tools?: string[]
+          created_at?: string
+          execution_mode?: string
+          id?: string
+          max_concurrent_tools?: number
+          max_iterations?: number
+          max_tokens_per_call?: number
+          notes?: string | null
+          operator_id?: string | null
+          preferred_model?: string | null
+          step_timeout_ms?: number
+          temperature?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          allowed_tools?: string[]
+          approval_required_tools?: string[]
+          blocked_tools?: string[]
+          created_at?: string
+          execution_mode?: string
+          id?: string
+          max_concurrent_tools?: number
+          max_iterations?: number
+          max_tokens_per_call?: number
+          notes?: string | null
+          operator_id?: string | null
+          preferred_model?: string | null
+          step_timeout_ms?: number
+          temperature?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_capabilities_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_capabilities_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_knowledge_links: {
         Row: {
           agent_id: string
