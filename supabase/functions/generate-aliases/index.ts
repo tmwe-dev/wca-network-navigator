@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -17,7 +18,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    const { countryCodes, partnerIds, contactIds } = await req.json();
+    const { countryCodes, partnerIds, contactIds, userId: bodyUserId } = await req.json();
 
     const supabase = createClient<any>(
       Deno.env.get("SUPABASE_URL")!,
@@ -26,19 +27,42 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Risolvi user_id (per caricare le regole dal Prompt Lab personali).
+    // Se non disponibile, usiamo solo il prompt baseline.
+    let resolvedUserId: string | null = bodyUserId ?? null;
+    if (!resolvedUserId) {
+      const auth = req.headers.get("authorization");
+      const token = auth?.replace(/^Bearer\s+/i, "");
+      if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        resolvedUserId = data?.user?.id ?? null;
+      }
+    }
+    const promptLab = resolvedUserId
+      ? await loadOperativePrompts(supabase, resolvedUserId, {
+          scope: "general",
+          extraTags: ["aliases", "copywriting"],
+          includeUniversal: true,
+          limit: 4,
+        })
+      : { block: "" };
+    const systemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${BASE_IDENTITY}`
+      : BASE_IDENTITY;
+
     // ── Branch: imported_contacts (contactIds) ──
     if (contactIds?.length) {
-      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds);
+      return await processImportedContacts(supabase, LOVABLE_API_KEY, contactIds, systemPrompt);
     }
 
     // ── Branch: partners by ID ──
     if (partnerIds?.length) {
-      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds);
+      return await processPartnersByIds(supabase, LOVABLE_API_KEY, partnerIds, systemPrompt);
     }
 
     // ── Branch: partners by country (original) ──
     if (!countryCodes?.length) throw new Error("countryCodes, partnerIds, or contactIds required");
-    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes);
+    return await processPartnersByCountry(supabase, LOVABLE_API_KEY, countryCodes, systemPrompt);
 
   } catch (e: unknown) {
     console.error("generate-aliases error:", e);
@@ -49,20 +73,12 @@ serve(async (req) => {
   }
 });
 
-const SYSTEM_PROMPT = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti, come li userebbe un professionista italiano in un'email.
-
-REGOLE PER ALIAS AZIENDA (company_alias):
-- Rimuovi suffissi legali: SPA, SRL, LLC, Ltd, Inc, GmbH, d.o.o., S.A., Corp, Pty, dba, etc.
-- Rimuovi la città se è nel nome (es. "World Transport Overseas d.o.o. Sarajevo" → "World Transport Overseas")
-- Mantieni il nome riconoscibile e naturale
-- Se il nome è già corto e senza suffissi, lascialo com'è
-
-REGOLE PER ALIAS CONTATTO (contact_alias):
-- Usa SOLO il cognome (es. "Mr. Christian Halpaus" → "Halpaus")
-- Rimuovi titoli (Mr., Mrs., Ms., Dr., Ing., etc.)
-- Se il nome sembra un ruolo e non un nome di persona (es. "President", "Manager", "Operations"), restituisci stringa vuota ""
-- Se c'è solo un nome senza cognome chiaro, usa quel nome
-- NON usare mai nome + cognome insieme`;
+// Identità minimale. Le regole stilistiche complete vivono nel Prompt Lab
+// ("Alias Generation Rules") e vengono iniettate runtime dal loader.
+// Lasciamo qui solo il fallback baseline per quando il Prompt Lab non è
+// disponibile (es. chiamata senza user_id risolvibile).
+const BASE_IDENTITY = `Sei un esperto di comunicazione commerciale italiana. Il tuo compito è generare alias naturali per aziende e contatti.
+Output sempre tramite il tool save_aliases.`;
 
 const TOOL_DEF = {
   type: "function" as const,
