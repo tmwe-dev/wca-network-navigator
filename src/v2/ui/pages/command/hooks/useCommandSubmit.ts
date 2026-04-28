@@ -228,6 +228,22 @@ export function useCommandSubmit(state: CommandStateApi) {
         const plan = planRes.value;
 
         if (plan.steps.length === 0) {
+          // ANTI-ALLUCINAZIONE (2026-04-28):
+          // Se il planner non ha generato step ma il prompt sembra una ricerca
+          // (verbo di lettura, sostantivo di dominio o nome proprio) NON stampiamo
+          // il summary del modello — che spesso inventa "nessun risultato trovato"
+          // senza interrogare il DB — e cadiamo sul fast-lane (ai-query) per
+          // forzare una vera query sul database.
+          const looksLikeSearch =
+            looksLikeSimpleQuery(text) ||
+            /\b(cerca|trova|mostra|elenca|lista|visualizza|dammi|quanti|quante|ultimi|recenti)\b/i.test(text) ||
+            /\b(partner|contatt|prospect|azienda|società|company|attivit|messagg|email|outreach)\b/i.test(text) ||
+            // Nome proprio nudo (es. "Radiant", "Acme Corp")
+            /^[A-ZÀ-Ý][\p{L}\p{N}\s'’.&/-]{1,60}$/u.test(text.trim());
+          if (looksLikeSearch) {
+            await runFastLaneWrapped(text, hint);
+            return;
+          }
           addMessage({
             role: "assistant",
             content: plan.summary || "Non ho trovato un'azione adatta. Puoi essere più specifico? Ad esempio: \"cerca partner italiani con email\" oppure \"mostra dashboard\".",
