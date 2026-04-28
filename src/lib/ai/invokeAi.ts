@@ -29,7 +29,16 @@ export type AiScope =
   | "sherlock"
   | "lab"
   | "diagnostics"
-  | "briefing";
+  | "briefing"
+  | "kb-supervisor"
+  | "deep-search"
+  | "chat"
+  | "mission-builder"
+  | "partner_hub"
+  | "cockpit"
+  | "contacts"
+  | "import"
+  | "extension";
 
 export interface AiContext {
   /** componente o hook chiamante, es. "HomeAIPrompt" */
