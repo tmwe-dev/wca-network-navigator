@@ -26,7 +26,7 @@ import { untypedFrom } from "@/lib/supabaseUntyped";
 
 
 import { createLogger } from "@/lib/log";
-const log = createLogger("baseEnrichment");
+const moduleLog = createLogger("baseEnrichment");
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export type BaseEnrichSource = "wca" | "contacts" | "bca";

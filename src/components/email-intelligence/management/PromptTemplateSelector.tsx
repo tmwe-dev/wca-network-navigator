@@ -86,7 +86,7 @@ export function PromptTemplateSelector({
       setTemplates(data || []);
     } catch (err) {
       toast.error('Errore caricamento template');
-      log.error(err);
+      log.error("Errore caricamento template", { error: err });
     } finally {
       setIsLoading(false);
     }

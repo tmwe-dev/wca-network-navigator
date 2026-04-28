@@ -69,7 +69,7 @@ export function TokenSettingsPanel() {
     },
     onError: (error) => {
       toast.error("Errore salvataggio impostazioni");
-      log.error(error);
+      log.error("Errore salvataggio impostazioni", { error });
     },
   });
 
