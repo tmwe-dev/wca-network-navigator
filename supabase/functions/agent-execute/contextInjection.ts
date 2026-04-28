@@ -346,9 +346,18 @@ export async function buildContextBlock(
           }
         }
       }
-      if (opPrompts.length) {
+      // Director/Account: full list of operative prompts (raw view).
+      const { data: directorPromptsData } = await supabase
+        .from("operative_prompts")
+        .select("name, objective, procedure, criteria, tags, priority")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("priority", { ascending: false })
+        .limit(20);
+      const directorPrompts = asArray(directorPromptsData as OperativePromptRow[] | null);
+      if (directorPrompts.length) {
         contextBlock += "\n--- PROMPT OPERATIVI COMPLETI (Director View) ---\n";
-        for (const p of opPrompts) {
+        for (const p of directorPrompts) {
           contextBlock += `\n### ${p.name}\nObiettivo: ${p.objective || "N/D"}\nProcedura: ${p.procedure || "N/D"}\nCriteri: ${p.criteria || "N/D"}\n`;
         }
       }
