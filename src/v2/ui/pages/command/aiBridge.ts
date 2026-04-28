@@ -135,15 +135,15 @@ Risultato dell'esecuzione (JSON compatto):
 ${resultSummary}
 \`\`\`
 
-Ora COMMENTA il risultato come Direttore Operativo:
-1. In 2-4 frasi spiega cosa è emerso (cita numeri/nomi reali dal risultato, non inventare).
-2. Se il risultato è vuoto, suggerisci alternative concrete (altri filtri, fonti).
-3. Se il risultato è ricco, evidenzia 1-2 pattern interessanti.
-4. Proponi 2-4 prossime azioni concrete come array JSON.
+Ora COMMENTA il risultato come Direttore Operativo. SII SINTETICO E OPERATIVO:
+- 1 frase MAX (massimo 25 parole) che risponda DIRETTAMENTE alla richiesta dell'utente, citando numeri/nomi reali dal risultato (mai inventati).
+- Se vuoto: 1 riga + 1 alternativa concreta. Se ricco: 1 riga col dato chiave.
+- NIENTE elenco moduli, NIENTE provenance, NIENTE "ho usato il tool X". L'utente vuole il risultato, non come ci sei arrivato.
+- Proponi 2-3 prossime azioni concrete come array JSON (label brevi, max 4 parole).
 
 Rispondi SOLO con questo JSON valido (nessun altro testo):
 {
-  "message": "<risposta conversazionale completa, può usare markdown leggero>",
+  "message": "<1 frase diretta, max 25 parole, niente markdown>",
   "spokenSummary": "<versione vocale max 200 char, niente markdown>",
   "suggestedActions": [
     {"label": "<pulsante breve>", "prompt": "<comando completo da inviare se cliccato>"}
