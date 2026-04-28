@@ -28,6 +28,7 @@ interface SidebarProps {
   onToggleTheme: () => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export function LayoutSidebarNav({
