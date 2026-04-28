@@ -39,6 +39,7 @@ import { AuditTab } from "./prompt-lab/tabs/AuditTab";
 import { AgentRoutingTab } from "./prompt-lab/tabs/AgentRoutingTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
+import { PromptTestsTab } from "./prompt-lab/tabs/PromptTestsTab";
 import {
   FlaskConical,
   Brain,
@@ -62,6 +63,7 @@ import {
   ShieldCheck,
   ScanSearch,
   Route,
+  TestTube2,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -87,6 +89,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   audit: ScanSearch,
   routing: Route,
   journalists: Newspaper,
+  tests: TestTube2,
   operative_kb: BookOpen,
   administrative_kb: BookOpen,
   support_kb: BookOpen,
@@ -266,6 +269,7 @@ export function PromptLabPage() {
                   {activeTabId === "routing" && <AgentRoutingTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
                   {activeTabId === "journalists" && <JournalistsTab />}
+                  {activeTabId === "tests" && <PromptTestsTab />}
                 </div>
               </div>
             </Tabs>
