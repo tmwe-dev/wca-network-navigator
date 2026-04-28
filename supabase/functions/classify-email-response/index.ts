@@ -390,6 +390,9 @@ serve(async (req) => {
       confidence: classification.confidence,
       action_taken: actionTaken,
       post_classification: postClassResult,
+      routing_rule: matchedRule
+        ? { id: matchedRule.id, name: matchedRule.name, agent_id: matchedRule.agent_id }
+        : null,
     }), { headers });
 
   } catch (e: unknown) {
