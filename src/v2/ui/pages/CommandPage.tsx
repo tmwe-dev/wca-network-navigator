@@ -1,6 +1,7 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow from "@/components/workspace/ExecutionFlow";
 import ToolActivationBar from "@/components/workspace/ToolActivationBar";
@@ -40,6 +41,7 @@ const CommandPage = () => {
 
   // Voice output (ElevenLabs TTS) — speaks every assistant reply unless muted.
   const voiceOut = useVoiceOutput();
+  const lastSpokenMessageIdRef = useRef<number | null>(null);
 
   const conv = useConversation();
   const governance = useGovernance(pageState.activeScenarioKey ?? undefined);
@@ -47,8 +49,7 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (voice.error) {
-      const { toast: sonnerToast } = require("sonner");
-      sonnerToast.error(voice.error);
+      toast.error(voice.error);
     }
   }, [voice.error]);
 
@@ -59,13 +60,16 @@ const CommandPage = () => {
   // Speak the latest assistant message via ElevenLabs (skips thinking placeholders).
   useEffect(() => {
     const last = pageState.messages[pageState.messages.length - 1];
-    if (!last || last.role !== "assistant" || last.thinking) return;
+    if (!last || last.role !== "assistant" || last.thinking || last.silent) return;
+    if (lastSpokenMessageIdRef.current === last.id) return;
     if (!last.content || !last.content.trim()) return;
     // Strip markdown for cleaner speech.
-    const clean = last.content
+    const spokenText = last.spokenSummary || last.content;
+    const clean = spokenText
       .replace(/[*_`#>]/g, "")
       .replace(/\n+/g, ". ")
       .trim();
+    lastSpokenMessageIdRef.current = last.id;
     voiceOut.speak(clean);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageState.messages.length]);
@@ -73,6 +77,22 @@ const CommandPage = () => {
   const runLiveTool = useToolExecution(pageState, governance);
   const runFlow = useScenarioFlow(pageState);
   const { handleApprove, handleCancel } = useApprovalFlow(pageState);
+
+  useEffect(() => {
+    if (!conv.conversationId) return;
+    pageState.setMessages(
+      conv.messages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => ({
+          id: Number.parseInt(m.id.replace(/\D/g, "").slice(0, 12), 10) || Date.parse(m.created_at),
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(m.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+          agentName: m.role === "assistant" ? "Direttore" : undefined,
+          silent: true,
+        })),
+    );
+  }, [conv.conversationId, conv.messages]);
 
   const sendMessage = async (text?: string) => {
     const content = text || pageState.input.trim();
@@ -137,7 +157,6 @@ const CommandPage = () => {
           activeId={conv.conversationId}
           onSelect={(id) => {
             conv.loadConversation(id);
-            pageState.setMessages([]);
             pageState.setCanvas(null);
           }}
           onNew={() => {
