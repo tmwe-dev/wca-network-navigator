@@ -7,6 +7,7 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
+import { resetAllCircuits } from "@/v2/bridge/circuit-breaker";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -92,6 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (authEvent, currentSession) => {
         if (!mounted) return;
         setEvent(authEvent);
+
+        // When a fresh session arrives (login or refreshed token), clear any
+        // circuit breakers that were opened by the previous corrupted JWT —
+        // otherwise edge function calls keep failing for up to 60s after login.
+        if (authEvent === "SIGNED_IN" || authEvent === "TOKEN_REFRESHED") {
+          if (currentSession?.access_token) {
+            resetAllCircuits();
+          }
+        }
 
         void applyValidatedSession(currentSession);
       },
