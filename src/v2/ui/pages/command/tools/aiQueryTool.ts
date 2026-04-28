@@ -91,7 +91,8 @@ export const aiQueryTool: Tool = {
     const actionPatterns = [
       /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
       /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
-      /\bcomponi\b/, /\bnaviga\b/, /\bcompila form/,
+      /\bcomponi\b/, /\bscrivi\b.*\b(?:e-?mail|mail)\b/, /\bprepara\b.*\b(?:e-?mail|mail)\b/,
+      /\b(?:e-?mail|mail)\s+a\b/, /\bnaviga\b/, /\bcompila form/,
     ];
     if (actionPatterns.some((re) => re.test(lower))) return false;
 
