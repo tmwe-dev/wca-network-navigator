@@ -17,6 +17,30 @@ import type { ToolResult } from "@/v2/ui/pages/command/tools/types";
 
 const log = createLogger("HomeAIPrompt");
 
+function formatQueryResultAsMarkdown(result: ToolResult): string {
+  if (result.kind === "table") {
+    const count = result.meta?.count ?? result.rows.length;
+    const title = result.title ?? "Risultati";
+    const sample = result.rows.slice(0, 10);
+    const cols = result.columns.slice(0, 4);
+    const header = `**${title}** — trovati **${count}** risultati.\n\n`;
+    if (sample.length === 0) {
+      return header + "_Nessuna riga da mostrare._";
+    }
+    const head = "| " + cols.map((c) => c.label).join(" | ") + " |";
+    const sep = "| " + cols.map(() => "---").join(" | ") + " |";
+    const body = sample
+      .map((r) => "| " + cols.map((c) => String(r[c.key] ?? "—")).join(" | ") + " |")
+      .join("\n");
+    const more = count > sample.length ? `\n\n_…e altri ${count - sample.length}. Apri **/v2/command** per vederli tutti e selezionarli._` : "";
+    return header + head + "\n" + sep + "\n" + body + more;
+  }
+  if (result.kind === "result") {
+    return `**${result.title ?? "Risultato"}**\n\n${result.message ?? ""}`;
+  }
+  return `**${(result as { title?: string }).title ?? "Risultato"}**`;
+}
+
 interface Props {
   className?: string;
   systemStats?: {
