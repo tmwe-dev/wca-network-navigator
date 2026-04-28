@@ -4,6 +4,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("data/notifications");
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -76,7 +79,7 @@ export async function listNotifications(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching notifications:", error);
+    log.error("Error fetching notifications", { error: error.message });
     return [];
   }
 
@@ -92,7 +95,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .eq("dismissed", false);
 
   if (error) {
-    console.error("Error fetching unread count:", error);
+    log.error("Error fetching unread count", { error: error.message });
     return 0;
   }
 
@@ -108,7 +111,7 @@ export async function markAsRead(notificationId: string): Promise<Notification |
     .single();
 
   if (error) {
-    console.error("Error marking notification as read:", error);
+    log.error("Error marking notification as read", { error: error.message });
     return null;
   }
 
@@ -123,7 +126,7 @@ export async function markAllAsRead(userId: string): Promise<number> {
     .eq("read", false);
 
   if (error) {
-    console.error("Error marking all as read:", error);
+    log.error("Error marking all as read", { error: error.message });
     return 0;
   }
 
@@ -139,7 +142,7 @@ export async function dismissNotification(notificationId: string): Promise<Notif
     .single();
 
   if (error) {
-    console.error("Error dismissing notification:", error);
+    log.error("Error dismissing notification", { error: error.message });
     return null;
   }
 
@@ -169,7 +172,7 @@ export async function createNotification(
     .single();
 
   if (error) {
-    console.error("Error creating notification:", error);
+    log.error("Error creating notification", { error: error.message });
     return null;
   }
 
@@ -191,7 +194,7 @@ export async function deleteOldNotifications(
     .eq("dismissed", true);
 
   if (error) {
-    console.error("Error deleting old notifications:", error);
+    log.error("Error deleting old notifications", { error: error.message });
     return 0;
   }
 
@@ -239,7 +242,7 @@ export async function savePushSubscription(
     .single();
 
   if (error) {
-    console.error("Error saving push subscription:", error);
+    log.error("Error saving push subscription", { error: error.message });
     return null;
   }
 
@@ -253,7 +256,7 @@ export async function getPushSubscriptions(userId: string): Promise<PushSubscrip
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error fetching push subscriptions:", error);
+    log.error("Error fetching push subscriptions", { error: error.message });
     return [];
   }
 
@@ -267,7 +270,7 @@ export async function deletePushSubscription(endpoint: string): Promise<boolean>
     .eq("endpoint", endpoint);
 
   if (error) {
-    console.error("Error deleting push subscription:", error);
+    log.error("Error deleting push subscription", { error: error.message });
     return false;
   }
 
