@@ -32,7 +32,7 @@ export default function ConversationSidebar({
   onNew,
   onArchive,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <>
