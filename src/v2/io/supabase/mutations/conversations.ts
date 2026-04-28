@@ -1,7 +1,6 @@
 /**
  * Mutations for command conversations (multi-turn memory)
  */
-import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";
 import type { Conversation, ConversationMessage } from "../queries/conversations";
