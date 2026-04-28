@@ -182,18 +182,20 @@ export function tryLocalComment(
     const filtersDesc = describeFilters(filters);
     const word = noun(table, count !== 1);
     const countFmt = count.toLocaleString("it-IT");
-    const message =
+    const actions = suggestedActionsFor(table, filters);
+    const proposal = buildProposalSentence(actions);
+    const base =
       count === 0
         ? `Non risultano ${word} ${filtersDesc}.`.trim().replace(/\s+/g, " ")
         : `Abbiamo **${countFmt}** ${word}${filtersDesc ? " " + filtersDesc : ""}.`;
-    const spokenSummary =
+    const baseSpoken =
       count === 0
         ? `Nessun ${word} ${filtersDesc}`
         : `Abbiamo ${countFmt} ${word} ${filtersDesc}`.trim();
     return {
-      message,
-      spokenSummary,
-      suggestedActions: suggestedActionsFor(table, filters),
+      message: proposal ? `${base} ${proposal}` : base,
+      spokenSummary: proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken,
+      suggestedActions: actions,
     };
   }
 
@@ -212,12 +214,15 @@ export function tryLocalComment(
         return v ? `• ${v}` : null;
       })
       .filter((x): x is string => x !== null);
-    const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}`;
-    const spokenSummary = `${count} ${word} ${filtersDesc}`.trim();
+    const actions = suggestedActionsFor(table, filters);
+    const proposal = buildProposalSentence(actions);
+    const message = `Trovati **${count}** ${word}${filtersDesc ? " " + filtersDesc : ""}:\n${sampleNames.join("\n")}${proposal ? `\n\n${proposal}` : ""}`;
+    const baseSpoken = `${count} ${word} ${filtersDesc}`.trim();
+    const spokenSummary = proposal ? `${baseSpoken}. ${stripMarkdown(proposal)}` : baseSpoken;
     return {
       message,
       spokenSummary,
-      suggestedActions: suggestedActionsFor(table, filters),
+      suggestedActions: actions,
     };
   }
 
