@@ -15,8 +15,8 @@ import { execSync } from "node:child_process";
 // Snapshot 2026-04-28 (post Sprint 3 + logger migration mass) — ratchet-down only.
 // Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 440,
-  eslintDisable: 72,
+  any: 420,
+  eslintDisable: 65,
   console: 22,
 };
 
