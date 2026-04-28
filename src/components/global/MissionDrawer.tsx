@@ -105,7 +105,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             { label: "Export", icon: ArrowUpFromLine, event: "enrichment-export" },
           ]} />}
 
-          {(isOutreach || (!isNetwork && !isCRM && !isSettings)) && (
+          {(isOutreach || (!isNetwork && !isCRM && !isSettings && !isExplore)) && (
             <>
               <DrawerPresetManager presets={m.presets} activePresetId={m.activePresetId} quality={m.quality} onLoadPreset={m.loadPreset} onSavePreset={m.savePreset} onDeletePreset={m.deletePreset} onSetQuality={m.setQuality} />
               <div className="flex items-center gap-2">
