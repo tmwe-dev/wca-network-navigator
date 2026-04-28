@@ -11,7 +11,6 @@ import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
-import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 import { AgendaPage } from "@/v2/ui/pages/AgendaPage";
 import { Campaigns as CampaignsPage } from "@/v2/ui/pages/CampaignsPage";
@@ -44,7 +43,6 @@ function TabFallback() {
 export function PipelineSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <GoldenHeaderBar />
       <SectionTabs tabs={TABS} rootPath="/v2/pipeline" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
