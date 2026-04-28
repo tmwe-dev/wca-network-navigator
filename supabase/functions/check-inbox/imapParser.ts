@@ -8,13 +8,22 @@ import { decodeRfc2047 } from "./mimeDecoder.ts";
 
 // ━━━ Constants ━━━
 
-export const BATCH_SIZE = 1;
-export const UID_SEARCH_INITIAL_WINDOW = 250;
-export const UID_SEARCH_MAX_EXPANSIONS = 10;
-export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-export const MAX_RAW_BYTES = 15 * 1024 * 1024;
-export const MAX_RAW_FETCH_BYTES = 2 * 1024 * 1024;
-export const INLINE_DATA_URI_THRESHOLD = 100 * 1024;
+// Configurable via env to mitigate edge-runtime CPU limits.
+// Defaults are intentionally conservative; raise via Deno.env if instance is upgraded.
+function envInt(name: string, fallback: number): number {
+  const raw = Deno.env.get(name);
+  if (!raw) return fallback;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+export const BATCH_SIZE = envInt("CHECK_INBOX_BATCH_SIZE", 1);
+export const UID_SEARCH_INITIAL_WINDOW = envInt("CHECK_INBOX_UID_WINDOW", 250);
+export const UID_SEARCH_MAX_EXPANSIONS = envInt("CHECK_INBOX_UID_EXPANSIONS", 10);
+export const MAX_ATTACHMENT_BYTES = envInt("CHECK_INBOX_MAX_ATTACHMENT_BYTES", 1 * 1024 * 1024);
+export const MAX_RAW_BYTES = envInt("CHECK_INBOX_MAX_RAW_BYTES", 5 * 1024 * 1024);
+export const MAX_RAW_FETCH_BYTES = envInt("CHECK_INBOX_MAX_RAW_FETCH_BYTES", 512 * 1024);
+export const INLINE_DATA_URI_THRESHOLD = envInt("CHECK_INBOX_INLINE_DATA_URI_THRESHOLD", 50 * 1024);
 
 // ━━━ Envelope helpers ━━━
 
