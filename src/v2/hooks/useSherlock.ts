@@ -69,7 +69,7 @@ export function useSherlock(args: UseSherlockArgs) {
     async (level: SherlockLevel) => {
       if (running) return;
 
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       const userId = userData.user?.id;
       if (!userId) {
         toast.error("Sessione utente non disponibile");

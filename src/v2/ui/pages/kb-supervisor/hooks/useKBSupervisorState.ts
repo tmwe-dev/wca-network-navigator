@@ -105,7 +105,7 @@ export function useKBSupervisorState() {
   // Carica userId
   useEffect(() => {
     let alive = true;
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (alive) setUserId(data.user?.id ?? null);
     });
     return () => { alive = false; };

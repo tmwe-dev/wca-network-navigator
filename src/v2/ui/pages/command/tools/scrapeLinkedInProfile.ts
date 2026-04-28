@@ -42,7 +42,7 @@ export const scrapeLinkedInProfileTool: Tool = {
     // Get current user
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
     if (!user) throw new Error("Utente non autenticato");
 
     // Use Google Search via Partner Connect to find LinkedIn profile

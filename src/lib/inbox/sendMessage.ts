@@ -67,7 +67,7 @@ async function persistOutbound(params: {
   thread_id?: string;
   external_id?: string;
 }): Promise<string | null> {
-  const { data: userData } = await supabase.auth.getUser();
+  const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
   const user_id = userData.user?.id;
   if (!user_id) {
     log.error("send.no_user");
@@ -108,7 +108,7 @@ function rateLimitKey(channel: ChannelKind, userId: string): string {
 }
 
 async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
   return data.user?.id ?? "anonymous";
 }
 

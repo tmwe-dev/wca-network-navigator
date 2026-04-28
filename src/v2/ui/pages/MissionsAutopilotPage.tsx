@@ -113,7 +113,7 @@ export function MissionsPage() {
   // Create mission
   const createMut = useMutation({
     mutationFn: async (mission: Partial<AgentMission>) => {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       const { error } = await untypedFrom("agent_missions").insert({
         ...mission,
         user_id: userData.user?.id,

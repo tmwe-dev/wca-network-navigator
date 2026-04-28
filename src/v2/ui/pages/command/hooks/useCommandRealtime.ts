@@ -51,7 +51,7 @@ export function useCommandRealtime(): RealtimeSnapshot {
     let userId: string | null = null;
 
     const setup = async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       userId = data.user?.id ?? null;
       if (!userId || !mountedRef.current) return;
 

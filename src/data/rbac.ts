@@ -217,7 +217,7 @@ export async function removePermission(roleId: string, permissionId: string): Pr
  * Fetch roles for a user
  */
 export async function fetchUserRoles(userId?: string): Promise<Role[]> {
-  const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+  const targetUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id;
   if (!targetUserId) return [];
 
   const { data, error } = await (supabase as any)

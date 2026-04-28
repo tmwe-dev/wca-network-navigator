@@ -40,7 +40,7 @@ let userIdCache: string | null | undefined = undefined;
 async function getUserId(): Promise<string | null> {
   if (userIdCache !== undefined) return userIdCache;
   try {
-    const { data } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
     userIdCache = data?.user?.id ?? null;
   } catch (e) {
     log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });

@@ -63,7 +63,7 @@ export function useForgeKb(categories: string[] | null) {
 
   const insert = useCallback(async (input: { title: string; content: string; category: string; priority?: number }) => {
     try {
-      const { data: userRes } = await supabase.auth.getUser();
+      const { data: userRes } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       const user_id = userRes.user?.id ?? null;
       const { data, error } = await supabase
         .from("kb_entries")

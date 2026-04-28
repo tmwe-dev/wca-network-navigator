@@ -92,7 +92,7 @@ export function SmartInboxView() {
       email_address: item.email_address,
       user_review: "approved",
       confidence: item.confidence,
-      user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
+      user_id: (await supabase.auth.getSession()).data.session?.user?.id ?? "",
     });
     if (!error) { toast.success("Classificazione approvata"); qc.invalidateQueries({ queryKey: queryKeys.email.classifications }); }
     else toast.error("Errore");

@@ -25,7 +25,7 @@ export function useTokenUsage() {
   // Resolve current user once for both query and realtime channel
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!cancelled) setUserId(data.user?.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
