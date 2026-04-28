@@ -19,6 +19,16 @@ import { analyzePartnerTool } from "./analyzePartner";
 import { calculateLeadScoresTool } from "./calculateLeadScores";
 import { deduplicateContactsTool } from "./deduplicateContacts";
 import { aiQueryTool } from "./aiQueryTool";
+import { scrapeCompanyWebsiteTool } from "./scrapeCompanyWebsite";
+import { scrapeLinkedInProfileTool } from "./scrapeLinkedInProfile";
+import { scrapePartnerTool } from "./scrapePartner";
+import { scrapeProspectTool } from "./scrapeProspect";
+import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
+import { enrichPartnerFromWebsiteTool } from "./enrichPartnerFromWebsite";
+import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
+import { browserAutoCompleteTool } from "./browserAutoComplete";
+import { browserFillFormTool } from "./browserFillForm";
+import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -44,6 +54,18 @@ const TOOLS: readonly Tool[] = [
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
+  // Scraping & enrichment (write — require approval)
+  scrapePartnerTool,
+  scrapeProspectTool,
+  scrapeCompanyWebsiteTool,
+  scrapeLinkedInProfileTool,
+  enrichPartnerFromWebTool,
+  enrichPartnerFromWebsiteTool,
+  enrichProspectFromWebsiteTool,
+  // Browser automation (write — require approval)
+  browserAutoCompleteTool,
+  browserFillFormTool,
+  browserNavigateAndExtractTool,
   // GENERIC AI READ — must be LAST (catch-all for any "mostra/quanti/cerca …" query).
   // Specific tools above win because their match() is more selective.
   aiQueryTool,
@@ -106,6 +128,16 @@ const WRITE_TOOL_IDS = new Set<string>([
   "calculate-lead-scores",
   "deduplicate-contacts",
   "compose-email",
+  "scrape-partner-website",
+  "scrape-prospect-website",
+  "scrape-company-website",
+  "scrape-linkedin-profile",
+  "enrich-partner-from-web",
+  "enrich-partner-from-website",
+  "enrich-prospect-from-website",
+  "browser-auto-complete",
+  "browser-fill-form",
+  "browser-navigate-extract",
 ]);
 
 export interface ToolMetadata {
