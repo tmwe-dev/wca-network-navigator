@@ -9,6 +9,11 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
 import { estimateTokens } from "../_shared/tokenBudget.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  loadAgentCapabilities,
+  filterToolsByCapabilities,
+  DEFAULT_CAPABILITIES,
+} from "../_shared/agentCapabilitiesLoader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,7 +144,7 @@ serve(async (req: Request) => {
     const budget = await checkDailyBudget(userId, "ai", 500); // estimate ~500 tokens per step
     if (!budget.allowed) return budgetExceededResponse(budget, corsHeaders);
 
-    const { goal, history, sessionContext } = await req.json();
+    const { goal, history, sessionContext, agentId } = await req.json();
 
     if (!goal || typeof goal !== "string") {
       return new Response(JSON.stringify({ error: "goal è obbligatorio" }), {
@@ -178,6 +183,27 @@ serve(async (req: Request) => {
       }
     }
 
+    // ── Agent capabilities (DB-backed, soft-fail to defaults).
+    let capabilities = { ...DEFAULT_CAPABILITIES };
+    if (agentId) {
+      try {
+        const supabaseSrv = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        capabilities = await loadAgentCapabilities(supabaseSrv, String(agentId));
+      } catch (e) {
+        console.warn("[agent-loop] capabilities load skipped:", (e as Error).message);
+      }
+    }
+
+    const effectiveTools = filterToolsByCapabilities(TOOL_DEFINITIONS, capabilities);
+    const effectiveModel = capabilities.preferredModel ?? "google/gemini-2.5-flash";
+    const effectiveMaxTokens = capabilities.maxTokensPerCall ?? 500;
+    const effectiveTemperature = typeof capabilities.temperature === "number"
+      ? capabilities.temperature
+      : 0.2;
+
     const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
 
 OBIETTIVO ATTUALE: ${goal}
@@ -197,11 +223,11 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: effectiveModel,
         messages,
-        tools: TOOL_DEFINITIONS,
-        temperature: 0.2,
-        max_tokens: 500,
+        tools: effectiveTools,
+        temperature: effectiveTemperature,
+        max_tokens: effectiveMaxTokens,
       }),
     });
 
@@ -251,7 +277,18 @@ Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pag
     await recordUsage(userId, "ai", responseTokens).catch(() => {});
 
     return new Response(
-      JSON.stringify({ message: msg.content ?? "", toolCalls }),
+      JSON.stringify({
+        message: msg.content ?? "",
+        toolCalls,
+        capabilities: {
+          executionMode: capabilities.executionMode,
+          maxConcurrentTools: capabilities.maxConcurrentTools,
+          stepTimeoutMs: capabilities.stepTimeoutMs,
+          maxIterations: capabilities.maxIterations,
+          approvalRequiredTools: capabilities.approvalRequiredTools,
+          loaded: capabilities.loaded,
+        },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
