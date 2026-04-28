@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import {
-  LayoutDashboard, Search, Kanban, Mail, Brain, Settings,
+  LayoutDashboard, Command, Search, Kanban, Mail, Brain, Settings,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -33,11 +33,12 @@ export interface NavGroupDef {
 /** The 6 canonical destinations — flat list (no titled group). */
 export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.home",         path: "/v2",              icon: <LayoutDashboard className="h-4 w-4" />, pinned: true, pinOrder: 1 },
-  { labelKey: "nav.explore",      path: "/v2/explore",      icon: <Search className="h-4 w-4" />,          pinned: true, pinOrder: 2 },
-  { labelKey: "nav.pipeline",     path: "/v2/pipeline",     icon: <Kanban className="h-4 w-4" />,          pinned: true, pinOrder: 3 },
-  { labelKey: "nav.communicate",  path: "/v2/communicate",  icon: <Mail className="h-4 w-4" />,            pinned: true, pinOrder: 4 },
-  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 5 },
-  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 6 },
+  { labelKey: "nav.command",      path: "/v2/command",      icon: <Command className="h-4 w-4" />,         pinned: true, pinOrder: 2 },
+  { labelKey: "nav.explore",      path: "/v2/explore",      icon: <Search className="h-4 w-4" />,          pinned: true, pinOrder: 3 },
+  { labelKey: "nav.pipeline",     path: "/v2/pipeline",     icon: <Kanban className="h-4 w-4" />,          pinned: true, pinOrder: 4 },
+  { labelKey: "nav.communicate",  path: "/v2/communicate",  icon: <Mail className="h-4 w-4" />,            pinned: true, pinOrder: 5 },
+  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 6 },
+  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 7 },
 ] as const;
 
 /**
