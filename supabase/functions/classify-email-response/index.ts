@@ -12,6 +12,13 @@ import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  loadRoutingRules,
+  renderRoutingBiasBlock,
+  findMatchingRule,
+  buildOverride,
+  recordRuleMatch,
+} from "../_shared/agentRoutingRules.ts";
 
 // ── Import refactored modules ──
 import { buildClassificationPrompt, ConversationExchange } from "./classificationPrompts.ts";
@@ -29,6 +36,8 @@ interface ClassifyRequest {
   partner_id?: string;
   contact_id?: string;
   sender_name?: string;
+  /** Optional agent persona id driving this classification (for routing rules). */
+  agent_id?: string;
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
