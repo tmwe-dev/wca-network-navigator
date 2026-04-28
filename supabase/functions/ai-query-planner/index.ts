@@ -234,14 +234,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ── Bonus optimization: COUNT detection from user prompt ──
-    // For "quanti / quante / totale / numero di ..." force columns=[id], drop sort,
-    // limit=1 (Postgrest count header still returns full count).
-    const isCountIntent = /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
+    // ── Bonus optimization: COUNT vs LIST detection from user prompt ──
+    // LIST intent wins over COUNT when both could match ("dammi l'elenco di
+    // quanti partner..." → user wants the list, not just a number).
+    const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
+    const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
     if (isCountIntent && plan.table && plan.table !== "INVALID") {
+      // Count-only fast path: just need the total, no rows.
       plan.columns = ["id"];
       delete plan.sort;
       plan.limit = 1;
+    } else if (isListIntent && plan.table && plan.table !== "INVALID") {
+      // User explicitly asked for an enumeration: never collapse to ["id"]-only,
+      // and ensure a meaningful limit (cap at 200 in executor anyway).
+      if (Array.isArray(plan.columns) && plan.columns.length === 1 && plan.columns[0] === "id") {
+        delete plan.columns; // fall back to default columns for the table
+      }
+      if (typeof plan.limit !== "number" || plan.limit < 20) {
+        plan.limit = 200;
+      }
     }
 
     return new Response(JSON.stringify(plan), {
