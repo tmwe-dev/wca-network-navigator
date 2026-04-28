@@ -44,6 +44,7 @@ export type PromptLabTabId =
   | "ai_profile"
   | "journalists"
   | "tests"
+  | "history"
   | "operative_kb"
   | "administrative_kb"
   | "support_kb"
@@ -71,6 +72,7 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
   { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI", activation: "Attivo come contesto aziendale trasversale in prompt email, assistenti, agenti commerciali e generazioni che richiedono identità, obiettivi e stile WCA." },
   { id: "journalists", label: "Giornalisti AI", description: "Caporedattore finale (review editoriale)", activation: "Attivo come review post-generazione su generate-email, improve-email e invii agente (send_email/send_whatsapp). Auto-selezione in base al lead_status." },
   { id: "tests", label: "Tests", description: "Suite di test di regressione per i prompt operativi", activation: "Eseguibile manualmente o via cron. Esegue ogni test case via edge function `prompt-test-runner`: sanitizza input, chiama l'AI Gateway, valida l'output con expected_contains/not_contains/regex e salva il run in `prompt_test_runs` collegato all'ultimo snapshot di `prompt_versions`." },
+  { id: "history", label: "History", description: "Storico versioni dei prompt con diff e ripristino", activation: "Read-only sui snapshot immutabili di `prompt_versions` (creati automaticamente dal trigger `trg_snapshot_operative_prompt`). Il ripristino chiama `rollback_prompt_to_version()` che riscrive il prompt corrente e crea una nuova versione di rollback per audit." },
   // LOVABLE-93: coerenza Prompt Lab multi-dominio — KB domain-specific
   { id: "operative_kb", label: "Operativo", description: "KB procedure operative per dominio", activation: "Attive nel classify-email-response quando dominio = operative: procedure preventivi, booking, tracking per agents domain-aware." },
   { id: "administrative_kb", label: "Amministrativo", description: "KB procedure amministrative per dominio", activation: "Attive nel classify-email-response quando dominio = administrative: procedure fatture, pagamenti, autorizzazioni." },
@@ -92,7 +94,7 @@ export interface PromptLabGroupDef {
 export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
   { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile", "journalists"] },
   { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
-  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "tests", "audit", "routing"] },
+  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "tests", "history", "audit", "routing"] },
   // LOVABLE-93: coerenza Prompt Lab multi-dominio
   { id: "operations", label: "Operazioni", icon: "Package", tabs: ["operative_kb", "administrative_kb", "support_kb", "domain_routing"] },
 ] as const;
