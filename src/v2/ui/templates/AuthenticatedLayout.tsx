@@ -244,16 +244,17 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                          aria-label="Menu principale"
                        >
                          <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
-                          <LayoutSidebarNav
-                            profileName={profile?.displayName}
-                            wcaStatusColor={wcaStatusColor}
-                            wcaStatusLabel={wcaStatusLabel}
-                            wcaSessionActive={wcaSession.sessionActive}
-                            onWcaReconnect={() => wcaSession.ensureSession()}
-                            isDark={isDark}
-                            onToggleTheme={toggleTheme}
-                            onSignOut={signOut}
-                          />
+                           <LayoutSidebarNav
+                             profileName={profile?.displayName}
+                             wcaStatusColor={wcaStatusColor}
+                             wcaStatusLabel={wcaStatusLabel}
+                             wcaSessionActive={wcaSession.sessionActive}
+                             onWcaReconnect={() => wcaSession.ensureSession()}
+                             isDark={isDark}
+                             onToggleTheme={toggleTheme}
+                             onSignOut={signOut}
+                             onOpenCommandPalette={() => setCommandOpen(true)}
+                           />
                         </div>
                       </div>
 
