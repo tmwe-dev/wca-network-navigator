@@ -5,14 +5,10 @@ import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { GlobePage } from "@/v2/ui/pages/GlobePage";
 import { NetworkPage } from "@/v2/ui/pages/NetworkPage";
 import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
-import { Campaigns as CampaignsPage } from "@/v2/ui/pages/CampaignsPage";
-import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 
 const TABS: readonly SectionTab[] = [
   { key: "map",       label: "Mappa",       to: "/v2/explore/map" },
-  { key: "search",    label: "Cerca",       to: "/v2/explore/search" },
-  { key: "deep",      label: "Deep Search", to: "/v2/explore/deep-search" },
-  { key: "campaigns", label: "Campagne",    to: "/v2/explore/campaigns" },
+  { key: "deep",      label: "Sherlock",    to: "/v2/explore/deep-search" },
 ];
 
 export function ExploreSection(): React.ReactElement {
@@ -24,9 +20,9 @@ export function ExploreSection(): React.ReactElement {
           <Route index element={<Navigate to="/v2/explore/map" replace />} />
           <Route path="map"         element={<GlobePage />} />
           <Route path="network"     element={<NetworkPage />} />
-          <Route path="search"      element={<ContactsPage />} />
+          <Route path="search"      element={<Navigate to="/v2/pipeline/contacts" replace />} />
           <Route path="deep-search" element={<DeepSearchPage />} />
-          <Route path="campaigns"   element={<CampaignsPage />} />
+          <Route path="campaigns"   element={<Navigate to="/v2/pipeline/campaigns" replace />} />
           <Route path="*"           element={<Navigate to="/v2/explore/map" replace />} />
         </Routes>
       </SectionTabs>

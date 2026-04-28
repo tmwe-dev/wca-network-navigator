@@ -46,12 +46,15 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
 
   const isOutreach = seg === `/${ROUTE_OUTREACH}`;
   const isNetwork = seg === `/${ROUTE_NETWORK}`;
+  const isExploreMap = location.pathname.startsWith("/v2/explore/map");
+  const isExploreSherlock = location.pathname.startsWith("/v2/explore/deep-search");
+  const isExplore = location.pathname.startsWith("/v2/explore");
   const isCRM = seg === `/${ROUTE_CRM}`;
   const isSettings = seg === `/${ROUTE_SETTINGS}`;
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
   const showRecipients = isOutreach || isEmailComposer || isNetwork || isCRM;
-  const contextTitle = isOutreach ? "Outreach Control" : isNetwork ? "Network Actions" : isCRM ? "CRM Actions" : isSettings ? "Strumenti" : "Mission Control";
-  const contextSubtitle = isOutreach ? "Email, destinatari e invio" : isNetwork ? "Deep Search e arricchimento" : isCRM ? "Contatti e comunicazione" : isSettings ? "Azioni rapide" : "Configura e vai";
+  const contextTitle = isOutreach ? "Outreach Control" : isNetwork ? "Network Actions" : isCRM ? "CRM Actions" : isSettings ? "Strumenti" : isExploreMap ? "Mappa Globale" : isExploreSherlock ? "Sherlock Investigator" : isExplore ? "Esplora" : "Mission Control";
+  const contextSubtitle = isOutreach ? "Email, destinatari e invio" : isNetwork ? "Deep Search e arricchimento" : isCRM ? "Contatti e comunicazione" : isSettings ? "Azioni rapide" : isExploreMap ? "Naviga countries e partner sul globo" : isExploreSherlock ? "Indagini multi-livello su company / contact" : isExplore ? "Discovery, mappa e investigazione" : "Configura e vai";
 
   return (
     <PageErrorBoundary>
@@ -70,7 +73,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
               </p>
             </div>
             <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium shrink-0">
-              {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : "Globale"}
+              {isOutreach ? "Outreach" : isNetwork ? "Network" : isCRM ? "CRM" : isSettings ? "Settings" : isExplore ? "Esplora" : "Globale"}
             </span>
           </div>
         </div>
@@ -81,6 +84,15 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             { label: "Deep Search", icon: Search, event: "deep-search-country" },
             { label: "Alias batch", icon: Sparkles, event: "generate-aliases" },
             { label: "Export", icon: ArrowUpFromLine, event: "export-partners" },
+          ]} />}
+          {isExploreMap && <ContextActionPanel title="Azioni Mappa" icon={Globe} color="text-primary" actions={[
+            { label: "Sync WCA", icon: Database, event: "sync-wca-trigger" },
+            { label: "Deep Search Country", icon: Search, event: "deep-search-country" },
+            { label: "Vai a Sherlock", icon: Sparkles, event: "explore-open-sherlock" },
+          ]} />}
+          {isExploreSherlock && <ContextActionPanel title="Sherlock" icon={Search} color="text-primary" actions={[
+            { label: "Nuova indagine", icon: Sparkles, event: "sherlock-new" },
+            { label: "Storico", icon: FileText, event: "sherlock-history" },
           ]} />}
           {isCRM && <ContextActionPanel title="Azioni CRM" icon={Users} color="text-emerald-500" actions={[
             { label: "Deep Search", icon: Search, event: "crm-deep-search" },
@@ -93,7 +105,7 @@ export function MissionDrawer({ open, onOpenChange }: MissionDrawerProps) {
             { label: "Export", icon: ArrowUpFromLine, event: "enrichment-export" },
           ]} />}
 
-          {(isOutreach || (!isNetwork && !isCRM && !isSettings)) && (
+          {(isOutreach || (!isNetwork && !isCRM && !isSettings && !isExplore)) && (
             <>
               <DrawerPresetManager presets={m.presets} activePresetId={m.activePresetId} quality={m.quality} onLoadPreset={m.loadPreset} onSavePreset={m.savePreset} onDeletePreset={m.deletePreset} onSetQuality={m.setQuality} />
               <div className="flex items-center gap-2">
