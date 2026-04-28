@@ -279,11 +279,18 @@ serve(async (req) => {
       }
       const fallbackResponse = await callAiWithoutTools(provider, loopResult.state.allMessages);
       if (!fallbackResponse.ok) {
-        endMetrics(metrics, false, 500);
-        return new Response(JSON.stringify({ error: "Errore finale" }), {
-          status: 500,
-          headers: { ...dynCors, "Content-Type": "application/json" },
-        });
+        // Graceful degradation: don't 500 the UI. Return an empty assistant
+        // message with a soft error flag so the client can surface it.
+        endMetrics(metrics, true, 200);
+        return new Response(
+          JSON.stringify({
+            content: "Non sono riuscito a generare una risposta in questo momento. Riprova tra qualche secondo.",
+            response: "Non sono riuscito a generare una risposta in questo momento. Riprova tra qualche secondo.",
+            soft_error: "ai_empty_completion",
+            fallback: true,
+          }),
+          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
       }
       // deno-lint-ignore no-explicit-any
       const fallbackResult = fallbackResponse.data as any;
