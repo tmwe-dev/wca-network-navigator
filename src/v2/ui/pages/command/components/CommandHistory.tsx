@@ -12,6 +12,8 @@ export interface Message {
   meta?: string;
   tools?: string[];
   governance?: string;
+  /** Optional follow-up actions rendered as clickable chips under the message */
+  suggestedActions?: { label: string; prompt: string }[];
 }
 
 interface CommandHistoryProps {
