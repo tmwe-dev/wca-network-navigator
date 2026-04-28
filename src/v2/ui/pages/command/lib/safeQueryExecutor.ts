@@ -138,9 +138,23 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
       case "lte":
         q = q.lte(f.column, f.value);
         break;
-      case "ilike":
-        q = q.ilike(f.column, typeof f.value === "string" ? `%${f.value}%` : String(f.value));
+      case "ilike": {
+        const raw = typeof f.value === "string" ? f.value : String(f.value);
+        // Accent-insensitive: ILIKE wraps value with %; if the value has
+        // diacritics, also OR-match on the stripped variant so "Arcanà"
+        // hits rows stored as "Arcana" / "Arcana'" / "Acana".
+        const stripped = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[''`]/g, "");
+        if (stripped && stripped.toLowerCase() !== raw.toLowerCase()) {
+          // Postgrest .or() syntax: column.ilike.%val%,column.ilike.%stripped%
+          // Escape commas/parens that would break the .or() grammar.
+          const safeRaw = raw.replace(/[,()]/g, " ").trim();
+          const safeStripped = stripped.replace(/[,()]/g, " ").trim();
+          q = q.or(`${f.column}.ilike.%${safeRaw}%,${f.column}.ilike.%${safeStripped}%`);
+        } else {
+          q = q.ilike(f.column, `%${raw}%`);
+        }
         break;
+      }
       case "in":
         q = q.in(f.column, f.value as (string | number)[]);
         break;
