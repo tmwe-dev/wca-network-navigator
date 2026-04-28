@@ -47,6 +47,8 @@ export function useFastLane(deps: FastLaneDeps) {
       setExecSteps([{ label: "Ricerca AI", detail: "Query DB diretta", status: "pending" as const }]);
 
       const trace = startTrace(userPrompt);
+      trace.setPhase("fast-lane");
+      trace.setDriver("ai-query");
 
       try {
         const tFast = Date.now();
@@ -56,7 +58,22 @@ export function useFastLane(deps: FastLaneDeps) {
           contextHint: hint,
           history: buildHistory(),
         });
-        trace.add({ source: "fast-lane", label: "ai-query", durationMs: Date.now() - tFast });
+        trace.add({
+          source: "fast-lane",
+          label: "ai-query",
+          toolId: "ai-query",
+          stepNumber: 1,
+          status: "ok",
+          durationMs: Date.now() - tFast,
+        });
+
+        // Propaga eventuali audit refs dal tool (es. compose-email lo fa)
+        const refs = result.meta?.auditRefs;
+        if (refs) {
+          for (const r of refs) {
+            trace.addReference({ kind: r.kind, label: r.label, value: r.value });
+          }
+        }
 
         setLiveResult(result);
         setCanvas(canvasForResult(result));

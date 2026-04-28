@@ -39,6 +39,7 @@ import {
   type QueryContext,
 } from "../lib/queryContext";
 import type { Message, CanvasType, FlowPhase } from "../constants";
+import { startTrace, type TraceBuilder } from "../lib/toolTrace";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -109,8 +110,8 @@ export function useCommandSubmit(state: CommandStateApi) {
 
   // Wrapper for plan completion that updates query context
   const renderPlanWithContext = useCallback(
-    async (userPrompt: string, final: PlanExecutionState) => {
-      await renderPlanCompletion(userPrompt, final, commentOnResult);
+    async (userPrompt: string, final: PlanExecutionState, trace?: TraceBuilder) => {
+      await renderPlanCompletion(userPrompt, final, commentOnResult, trace);
       updateQueryContextFromLastPlan();
     },
     [renderPlanCompletion, commentOnResult, updateQueryContextFromLastPlan],
@@ -118,8 +119,14 @@ export function useCommandSubmit(state: CommandStateApi) {
 
   // Wrapper for runPlan that integrates with completion
   const runPlanWrapped = useCallback(
-    async (planStateVal: PlanExecutionState, userPrompt: string, hint: string) => {
-      await runPlan(planStateVal, userPrompt, hint, (final) => renderPlanWithContext(userPrompt, final));
+    async (planStateVal: PlanExecutionState, userPrompt: string, hint: string, trace?: TraceBuilder) => {
+      await runPlan(
+        planStateVal,
+        userPrompt,
+        hint,
+        (final) => renderPlanWithContext(userPrompt, final, trace),
+        trace,
+      );
     },
     [runPlan, renderPlanWithContext],
   );
@@ -264,7 +271,14 @@ export function useCommandSubmit(state: CommandStateApi) {
         setPlanState(newState);
         setFlowPhase("executing");
         setChainHighlight(5);
-        await runPlanWrapped(newState, text, hint);
+
+        // Audit trace per il path plan-execution
+        const planTrace = startTrace(text);
+        planTrace.setPhase("plan-execution");
+        planTrace.setPlanSummary(plan.summary);
+        planTrace.setDriver(cappedSteps[cappedSteps.length - 1]?.toolId ?? "unknown");
+
+        await runPlanWrapped(newState, text, hint, planTrace);
       } catch (err: unknown) {
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));

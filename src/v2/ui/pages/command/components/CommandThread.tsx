@@ -12,6 +12,7 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import type { Message, FlowPhase, ToolPhase } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
 import PlanTimeline from "./PlanTimeline";
+import MessageAuditPanel from "./MessageAuditPanel";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -117,6 +118,7 @@ export default function CommandThread({
                       <span className="text-[9px] text-muted-foreground/100 font-mono">{msg.governance}</span>
                     </motion.div>
                   )}
+                  {msg.audit && <MessageAuditPanel audit={msg.audit} />}
                   <span className="text-[10px] text-muted-foreground/100 mt-2 block">{msg.timestamp}</span>
                 </motion.div>
               </motion.div>

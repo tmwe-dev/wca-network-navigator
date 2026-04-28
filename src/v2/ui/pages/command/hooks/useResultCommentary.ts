@@ -10,6 +10,7 @@ import { getAiComment, serializeResultForAI, type SuggestedAction } from "../aiB
 import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import { tryLocalComment } from "../lib/localResultFormatter";
 import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
+import { buildAuditFromTrace } from "../lib/auditFromTrace";
 
 interface CommentaryDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -32,6 +33,14 @@ export function useResultCommentary(deps: CommentaryDeps) {
       const tool = TOOLS.find((t) => t.id === toolId);
       const toolLabel = tool?.label ?? toolId;
 
+      // Propaga eventuali audit refs dal risultato del tool al trace
+      const refs = result.meta?.auditRefs;
+      if (refs && trace) {
+        for (const r of refs) {
+          trace.addReference({ kind: r.kind, label: r.label, value: r.value });
+        }
+      }
+
       // Try LOCAL formatter (skip LLM for simple count/short list)
       if (toolId === "ai-query") {
         const plan = getLastSuccessfulQueryPlan();
@@ -39,6 +48,7 @@ export function useResultCommentary(deps: CommentaryDeps) {
         if (local) {
           const finalTrace = trace?.finish();
           const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+          const audit = finalTrace ? buildAuditFromTrace(finalTrace) : undefined;
           addMessage({
             role: "assistant",
             content: local.message,
@@ -48,6 +58,7 @@ export function useResultCommentary(deps: CommentaryDeps) {
             governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
             suggestedActions: local.suggestedActions,
             spokenSummary: local.spokenSummary,
+            audit,
           });
           setVoiceSpeaking(false);
           return;
@@ -68,6 +79,7 @@ export function useResultCommentary(deps: CommentaryDeps) {
 
       const finalTrace = trace?.finish();
       const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
+      const audit = finalTrace ? buildAuditFromTrace(finalTrace) : undefined;
 
       addMessage({
         role: "assistant",
@@ -78,6 +90,7 @@ export function useResultCommentary(deps: CommentaryDeps) {
         governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
         suggestedActions: comment.suggestedActions,
         spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
+        audit,
       });
       setVoiceSpeaking(false);
     },

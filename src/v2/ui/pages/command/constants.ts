@@ -19,6 +19,48 @@ export interface Message {
   suggestedActions?: { label: string; prompt: string }[];
   /** Short conversational version used for TTS playback (max ~200 chars). */
   spokenSummary?: string;
+  /** Audit trail visibile sotto il messaggio: fase, plan, tool driver, riferimenti tracciabili. */
+  audit?: MessageAudit;
+}
+
+/** Audit log strutturato di una risposta del Direttore. */
+export interface MessageAudit {
+  /** Fase eseguita: fast-lane (single tool) o plan-execution (multi-step). */
+  phase: "fast-lane" | "plan-execution" | "approval-step";
+  /** Sintesi del piano in linguaggio naturale (vuoto in fast-lane). */
+  planSummary?: string;
+  /** Step eseguiti, in ordine. */
+  steps: AuditStep[];
+  /** Driver/orchestratore principale (es. "ai-query", "compose-email"). */
+  driver: string;
+  /** Riferimenti tracciabili: prompt operativi applicati, KB sections, model. */
+  references?: AuditReference[];
+  /** Durata totale (ms). */
+  totalMs?: number;
+}
+
+export interface AuditStep {
+  /** Numero step (1-based). 0 per fast-lane. */
+  number: number;
+  /** Tool ID (es. "ai-query", "compose-email"). */
+  toolId: string;
+  /** Etichetta human-readable. */
+  label: string;
+  /** Reasoning del planner per questo step (se disponibile). */
+  reasoning?: string;
+  /** Durata (ms). */
+  durationMs?: number;
+  /** Stato finale. */
+  status: "ok" | "failed" | "approved" | "skipped";
+}
+
+export interface AuditReference {
+  /** Tipo riferimento. */
+  kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context";
+  /** Etichetta del riferimento. */
+  label: string;
+  /** Valore o id (es. nome prompt, sezione KB, model name). */
+  value?: string;
 }
 
 export type CanvasType =

@@ -13,6 +13,7 @@ import {
   executeApprovedStep,
   MAX_PLAN_STEPS,
 } from "../planRunner";
+import type { TraceBuilder } from "../lib/toolTrace";
 
 interface PlanExecutionDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -38,6 +39,7 @@ export function usePlanExecution(deps: PlanExecutionDeps) {
       userPrompt: string,
       hint: string,
       onCompletion: (final: PlanExecutionState) => Promise<void>,
+      trace?: TraceBuilder,
     ) => {
       const final = await executePlan(
         planStateVal,
@@ -53,6 +55,13 @@ export function usePlanExecution(deps: PlanExecutionDeps) {
 
       if (final.status === "awaiting-approval") {
         setFlowPhase("proposal");
+        trace?.add({
+          source: "tool",
+          label: "awaiting-approval",
+          stepNumber: final.approvalStepNumber,
+          status: "approved",
+          durationMs: 0,
+        });
         addMessage({
           role: "assistant",
           content: `⏸ Step ${final.approvalStepNumber} richiede la tua approvazione. Conferma per procedere.`,
@@ -87,6 +96,7 @@ export function usePlanExecution(deps: PlanExecutionDeps) {
       planStateVal: PlanExecutionState,
       userPrompt: string,
       onCompletion: (final: PlanExecutionState) => Promise<void>,
+      trace?: TraceBuilder,
     ) => {
       if (planStateVal.status !== "awaiting-approval") return;
       setFlowPhase("executing");

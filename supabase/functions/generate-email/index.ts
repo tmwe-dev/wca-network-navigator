@@ -357,6 +357,9 @@ serve(async (req) => {
         documents_count: (document_ids?.length ?? 0),
         sender_settings_ok: !!(ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name),
         oracle_type: oracle_type ?? null,
+        // Audit trail: prompt operativi (Prompt Lab) iniettati e modello AI usato
+        operative_prompts_applied: ctx.operativePromptsApplied ?? [],
+        model: model,
       },
       // LOVABLE-75: segnale al frontend che NON ci sono dati di arricchimento per questo partner.
       // Il backend non chiama mai più enrich-partner-website live: arricchimento si fa da Settings o Email Forge.

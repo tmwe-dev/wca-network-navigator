@@ -33,6 +33,12 @@ export interface FlowNodeItem {
 export interface ToolResultMeta {
   readonly count: number;
   readonly sourceLabel: string;
+  /** Riferimenti tracciabili da esporre nell'audit del messaggio Direttore. */
+  readonly auditRefs?: ReadonlyArray<{
+    readonly kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context";
+    readonly label: string;
+    readonly value?: string;
+  }>;
 }
 
 export interface BulkAction {
