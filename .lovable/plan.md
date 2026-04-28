@@ -1,125 +1,122 @@
-## Diagnosi: quanta libertà stiamo dando ad AI?
+# Piano di Refactoring Riconciliato — Aprile 2026
 
-### Stato attuale (misurato)
-
-**Prompt hardcoded "tipo programma" (over-prescrizione):**
-
-| File | LOC system prompt | Ricette dettagliate | Problema |
-|---|---|---|---|
-| `generate-email/promptBuilder.ts` | ~220 LOC di system prompt | filosofia WCA, missione, regole dati, "stile editor", "ancora obbligatoria", lunghezza 80-150 parole, lista frasi vietate, ordine sezioni | AI eseguito come template engine: la creatività è azzerata |
-| `improve-email/index.ts` | ~60 LOC system prompt inline (350-410) | 10 regole numerate, "REGOLE DI MIGLIORAMENTO", filosofia WCA duplicata | Duplicato di promptBuilder; non lascia interpretazione |
-| `generate-outreach` | system + Decision Engine block + Readiness + Playbook + commercialBlock | 5+ blocchi prescrittivi sovrapposti | AI riceve istruzioni contraddittorie da fonti diverse |
-| `agent-loop` (LUCA) | 12 righe di "Regole" hardcoded | 6 numerated rules + KEYWORDS forbidden list (`drop table`, `delete account`...) | LUCA è ridotto a parser di tool calls |
-| `src/v2/agent/prompts/core/luca.ts` | "Regole tassative" + "Output Markdown ### sezioni, tabelle per 3+ elementi, max 3 azioni" | Decide per AI il formato output | Vincoli estetici al posto di obiettivi |
-| `src/v2/agent/prompts/core/cockpit-assistant.ts` | "WhatsApp solo se lead_status in [...]" + JSON output rigido | Replica regola business già nel DB Prompt Lab | Doppia enforcement: AI non può ragionare |
-| `src/v2/agent/prompts/core/contacts-assistant.ts` | "Restituisci comandi con delimitatore `---COMMAND---`" | Vincolo formato AI-unfriendly | |
-| `query-planner.ts` | Schema JSON imposto + "MAI esegui" | OK come guardrail tecnico | Accettabile (output strutturato necessario) |
-
-**Prompt Lab DB (7 prompt operativi attivi):**
-Stessi temi (Email A→Z, WhatsApp Gate, Lead Qualification, Multi-canale, Post-Send) sono **anche** nel DB. Risultato: AI riceve la regola **due volte**, una volta hardcoded nel prompt e una volta dal Prompt Lab. Conflitti possibili e zero spazio interpretativo.
-
-**Guardrail veri (in codice, ottimi):**
-- `src/v2/agent/policy/hardGuards.ts`: `FORBIDDEN_TABLES`, `AI_WRITABLE_TABLES`, `assertNotDestructive`, `assertBulkCap`, `requiresApproval` ✅
-- Trigger DB soft-delete ✅
-- Approval-gate per send_* ✅
-- RLS + RBAC ✅
-
-→ **I guardrail giusti esistono già nel codice e nel DB.** Il problema è che ai prompt sopra abbiamo aggiunto **una seconda parete prescrittiva** che soffoca l'AI.
-
-### Esempio concreto del problema
-
-Utente: "scriviamo a Luca Arcanà gli auguri di Natale" (28 aprile).
-
-- LUCA agente ha risposto correttamente ("è il 28 aprile, forse si spaventa") → **buon ragionamento**
-- Ma poi ha fatto solo `Cerca Luca Arcanà` con filtro stretto e si è fermato a "0 risultati" → **non ha provato varianti, non ha proposto alternative, non ha chiesto chiarimenti**
-
-Perché? Il prompt di LUCA dice "max 3 azioni suggerite", "Markdown ### sezioni", cita 11 doctrine, ma **non gli dice "se non trovi, varia la query, esplora, ragiona come farebbe un umano"**. Diamo regole formali, togliamo iniziativa.
+> Il documento "WCA_REFACTORING_PLAN_last.docx" descrive lo stato del codice ad **Aprile 2026** prima di molti interventi già completati nei mesi successivi (cf. `mem://index.md`). Questo piano **non riparte da zero**: confronta il documento con lo stato attuale del codice e propone solo gli interventi **ancora aperti** o **parzialmente fatti**, mantenendo l'architettura esistente (Prompt Lab, DAL, V2, agent-execute, contentNormalizer, injectionGuard).
 
 ---
 
-## Filosofia della rifattorizzazione
+## Sezione A — Già completato (NON rifare)
 
-> **AI è uno spazio aperto a 360°. Ogni istruzione lo restringe. Diamo guardrail, non binari.**
+Questi punti del documento sono già implementati in produzione. Non vanno toccati per non regredire.
 
-Tre principi:
-
-1. **Identità + obiettivo + contesto** → cosa vogliamo
-2. **Guardrail "non puoi"** → cosa è vietato (in codice, non in prompt)
-3. **Capacità "puoi"** → quali strumenti ha
-
-NIENTE ricette step-by-step, NIENTE formati output rigidi se non strettamente necessari, NIENTE liste di frasi vietate, NIENTE doctrine duplicate (vivono nel Prompt Lab DB, non nei system prompt TS).
-
----
-
-## Piano operativo
-
-### Fase 1 — Snellire i system prompt hardcoded (libertà)
-
-**1.1 `generate-email/promptBuilder.ts`** (220 LOC → ~40 LOC)
-- Mantenere: identità ("editor giornalista WCA"), obiettivo ("UN messaggio per UN destinatario"), il **dossier** completo (è contesto, non istruzione)
-- Rimuovere: "REGOLE SUI DATI bilanciate" punto-per-punto, "COME SCRIVE L'EDITOR" stile obbligatorio, "ANCORA OBBLIGATORIA" con tag `[GENERIC]`, lista frasi vietate, lunghezza fissa 80-150 parole
-- Rimpiazzare con: "Scrivi come ti suggerisce il dossier. Le regole inviolabili sono nei PROMPT OPERATIVI sotto."
-- Le doctrine (no inventare, lunghezza, tono) restano nel Prompt Lab DB → **single source of truth**
-
-**1.2 `improve-email/index.ts`**
-- Eliminare i 60 LOC di system prompt inline, sostituire con prompt minimale (5 righe) + iniezione `loadOperativePrompts(scope: "email-quality")` che già c'è
-- Le 10 regole numerate spariscono dal codice; vivono solo in `Email Improvement Techniques` (già nel DB)
-
-**1.3 `generate-outreach`**
-- Rimuovere readiness warnings prescrittivi nel prompt (restano in metadata UI)
-- Decision Engine block diventa "informativo", non direttivo ("ti dico cosa il sistema osserva, decidi tu")
-
-**1.4 `agent-loop` + `src/v2/agent/prompts/core/luca.ts`**
-- Eliminare le 6 "Regole" numerate hardcoded e la `FORBIDDEN_KEYWORDS` (è teatro: il vero blocco è in `hardGuards.ts`)
-- Nuovo prompt: identità + obiettivo + tools disponibili + "se non trovi qualcosa, varia approccio, prova sinonimi, accenti diversi, chiedi all'utente"
-- Rimuovere "Markdown ### sezioni, tabelle per 3+ elementi, max 3 azioni" → l'AI sceglie il formato giusto
-
-**1.5 `cockpit-assistant.ts` / `contacts-assistant.ts`**
-- Rimuovere le regole business duplicate (gate WhatsApp ecc.: vivono già nel Prompt Lab + hardGuards)
-- Mantenere solo il contratto JSON dove l'UI lo richiede davvero
-
-### Fase 2 — Rendere l'AI più "intelligente nel cercare" (esempio Luca Arcanà)
-
-Il caso d'uso ha mostrato che l'AI non esplora. Soluzione lato **prompt**, non codice:
-
-- In `query-planner.ts`: aggiungere principio "se la prima query torna vuota, riprova con varianti (rimuovi accenti, accorcia, prova solo cognome, prova solo azienda separatamente)". **Non come step rigido, come capacità.**
-- In `agent-loop`: aggiungere capacità "auto-retry semantico": se un tool torna vuoto, l'AI può rilanciare con parametri ammorbiditi senza chiedere all'utente.
-- **Nessuna logica TypeScript nuova**: il lavoro accent-stripping già messo in `safeQueryExecutor.ts` resta come safety-net, ma l'AI ora *sa* di poter ritentare.
-
-### Fase 3 — Allineamento Prompt Lab ↔ Codice
-
-- Verificare che i 7 prompt operativi nel DB coprano TUTTE le regole tolte dal codice. Mancanze attese (da aggiungere):
-  - Regola "no allucinazioni numeri" → integrare in `Email Single A→Z`
-  - Stile "asciutto, professionale" → nuovo prompt `email-style` o sezione in `Email Improvement Techniques`
-- Audit table: per ogni regola hardcoded che togliamo, identificare il prompt DB equivalente. Documentare in `mem://architecture/operative-prompts-unified-loader`.
-
-### Fase 4 — Verifica empirica
-
-Test manuali post-modifica (l'utente sceglie 3 casi):
-1. "Scrivi auguri di Natale a Luca Arcanà" → l'AI deve obiettare la data E proporre alternative E provare ricerche varianti.
-2. "Genera email per [partner con dati scarsi]" → l'AI deve scegliere lei lo stile, non applicare template.
-3. "Manda WhatsApp a [lead nuovo]" → l'AI deve rifiutare citando il gate (regola DB), non da prompt hardcoded.
-
----
-
-## Riepilogo numerico atteso
-
-| Metrica | Prima | Dopo |
+| Doc | Tema | Implementazione attuale |
 |---|---|---|
-| LOC system prompt hardcoded (8 file) | ~600 | ~120 |
-| Regole business duplicate (codice ↔ DB) | ~25 | 0 |
-| Frasi "VIETATO/MAI/OBBLIGATORIO" nei prompt TS | ~40 | <5 (solo guardrail tecnici) |
-| Source of truth regole commerciali | 2 (codice + DB) | 1 (DB Prompt Lab) |
-| Guardrail tecnici hard (`hardGuards.ts`, RLS, trigger) | invariati | invariati ✅ |
+| C1 | ProtectedRoute bypass | `src/components/auth/ProtectedRoute.tsx` enforce JWT + redirect `/auth` |
+| C2-C4 | Credenziali WCA in chiaro | Tabella `user_wca_credentials` per-utente |
+| C5 | RLS `USING(true)` su `ra_*` | Tabelle `ra_*` rimosse dallo schema |
+| D1 | `email_drafts` senza `user_id` | Colonna NOT NULL + indice + RLS |
+| D4 | `types.ts` non sincronizzato | Tipi rigenerati automaticamente |
+| E1 | Zero rate limiting | `_shared/rateLimiter.ts` |
+| E5 | `_shared/` mancante | 117 file in `supabase/functions/_shared/` |
+| A2 | Prompt hardcoded | Prompt Lab + tabella `operative_prompts` + `prompt_versions` (snapshot immutabili) |
+| A3 | Response parsing fragile | `_shared/aiJsonValidator.ts` (Zod) |
+| A4 | No cost tracking | `tokenLogger.ts` + `edge_metrics` + `structuredLogger.ts` |
+| A5 | KB injection incoerente | `_shared/operativePromptsLoader.ts` unificato |
+| A6 | Zero prompt-injection protection | `_shared/promptSanitizer.ts` + `_shared/injectionGuard.ts` + `prompt_injection_reviews` |
+| M1 | No retry email | `retry_count` attivo in `process-email-queue` |
+| M4 | `user_id` mancante in `email_campaign_queue` | Colonna presente |
 
-## Cosa NON tocco
+---
 
-- `src/v2/agent/policy/hardGuards.ts` (guardrail veri, restano)
-- RLS, trigger soft-delete, approval gate
-- Edge functions tecniche (parser, OCR, IMAP, scraper)
-- Schema DB `operative_prompts`
-- Loader unificato `_shared/operativePromptsLoader.ts` (appena fatto, funziona)
+## Sezione B — Ancora aperti (interventi proposti)
 
-## Domanda di scoping prima di procedere
+Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è un patch chirurgico compatibile con la struttura esistente.
 
-Vuoi che parta con tutta la Fase 1 in un unico passaggio (8 file), oppure preferisci che la spezzi (es. prima `agent-loop` + `luca.ts` perché è il caso che hai vissuto, poi gli altri)?
+### Priorità 1 — Sicurezza residua (2-3 giorni)
+
+| # | Doc | Intervento | File |
+|---|---|---|---|
+| P1.1 | C6 | Sostituire CORS `*` con `getCorsHeaders()` dinamico nelle 5 funzioni residue: `browser-action`, `agentic-decide`, `agent-loop`, `sherlock-extract`, `ai-query-planner` | `supabase/functions/<name>/index.ts` |
+| P1.2 | C7 | Verificare `save-wca-cookie`: rifiutare anon key, richiedere JWT verificato (riusare `_shared/extensionAuth.ts`) | `save-wca-cookie/index.ts` |
+| P1.3 | E2/E3 | Audit funzioni residue senza JWT verification: `analyze-import-structure`, `elevenlabs-*`. Aggiungere `requireExtensionAuth` o decode JWT locale | edge functions elencate |
+| P1.4 | E6 | SSRF guard per `deep-search-*` ed `enrich-partner-website`: estendere `_shared/inputValidator.ts` con allowlist domini + blocklist IP privati | `_shared/inputValidator.ts` + caller |
+| P1.5 | B4/B5 | LinkedIn bridge: validare `event.origin` con extension ID whitelist, gate `sendMessage` dietro conferma utente (riusare `prompt_injection_reviews` o `approvalFlow`) | `src/hooks/useLinkedInExtensionBridge.ts` |
+
+### Priorità 2 — Schema DB residuo (1 giorno)
+
+| # | Doc | Intervento |
+|---|---|---|
+| P2.1 | D2 | Audit indici mancanti su colonne `WHERE`/`JOIN` ad alto traffico (`partners(country_code,lead_status)`, `imported_contacts(email,user_id)`, `download_jobs(status,user_id)`, `activities(partner_id,status)`, `email_campaign_queue(status,scheduled_at)`). Migrazione `CREATE INDEX IF NOT EXISTS` |
+| P2.2 | D3 | Aggiungere FK enforced verso `auth.users` su `agent_tasks`, `ai_conversations`, `ai_memory`, `import_logs` (ON DELETE CASCADE) |
+| P2.3 | D5 | Validazione applicativa con Zod per JSON columns critiche (`partners.enrichment_data`, `agents.assigned_tools`) — solo nella DAL, no CHECK constraint |
+
+### Priorità 3 — Email Pipeline residuo (1-2 giorni)
+
+| # | Doc | Intervento |
+|---|---|---|
+| P3.1 | M2 | Tabella `email_delivery_events` + edge function webhook handler (parser bounce/delivery SMTP). Trigger di update su `email_campaign_queue.status` |
+| P3.2 | M3 | Hook post-send in `process-email-queue`: dopo `sent`, `UPDATE activities SET status='sent' WHERE source_type/source_id` (estendere `logEmailSideEffects` esistente) |
+| P3.3 | M5 | Rate limit SMTP per utente: integrare `_shared/rateLimiter.ts` in `process-email-queue` con cap configurabile da `app_settings` (default 50/h). **Compatibile con kill-switch `AI_USAGE_LIMITS_ENABLED`** |
+
+### Priorità 4 — Bridge & Hooks consolidation (2-3 giorni)
+
+| # | Doc | Intervento |
+|---|---|---|
+| P4.1 | B1 | Verificare se i 3 file bridge (`wcaAppBridge.ts`, `wca-app-bridge.ts`, `wcaAppApi.ts`) coesistono ancora. Se sì, mantenere SOLO `wcaAppApi.ts` e ridirezionare gli import. **NO delete fisica** dei file ancora in sviluppo (Code Lifecycle Governance) — usare deprecation notice |
+| P4.2 | B2 | `WcaSessionContext` come SSOT — già parzialmente in `useWcaSession.ts`. Centralizzare lettura `localStorage`+extension state |
+| P4.3 | B3 | Collegare `wcaCheckpoint.waitForGreenLight()` ai chiamanti `wca-app` API (download, enrich) |
+| P4.4 | B6 | Pre-check cookie TTL in `useWcaAppDownload` e auto-refresh se < 1 min |
+
+### Priorità 5 — CRM Lifecycle (2 giorni)
+
+| # | Doc | Intervento |
+|---|---|---|
+| P5.1 | CRM1 | Deduplicazione all'import: check `imported_contacts.email` (lower) + `company_name` fuzzy in `useImportWizard`. Merge mode opzionale |
+| P5.2 | CRM2 | Post-transfer in `useTransferToPartners`: marcare `imported_contacts.transferred_to_partner_id` (soft-link, NO delete fisica per `mem://constraints/no-physical-delete`) |
+| P5.3 | CRM4 | Cron pg_cron per `import_logs` stuck > 30min → status `expired` |
+
+### Priorità 6 — TS strict + Testing (incrementale, in background)
+
+| # | Doc | Intervento |
+|---|---|---|
+| P6.1 | I1 | Abilitare `strictNullChecks` in `tsconfig.app.json` come prima fase. NO full `strict: true` finché non si pulisce il debt budget |
+| P6.2 | I4 | Test E2E minimi: auth flow, email queue, AI response parsing (riusare `vitest.config.ts` esistente) |
+| P6.3 | I2 | Lazy-load Three.js solo in `/global` route (verificare se non già fatto via React.lazy) |
+
+---
+
+## Sezione C — Esplicitamente NON da fare
+
+Punti del documento che **contrastano con l'architettura attuale** o sono stati superati da scelte successive:
+
+- **A1 — "Consolidare 9+ orchestratori in `ai-orchestrator` unico"**: contrario all'attuale separazione per scope (`agent-execute`, `ai-assistant`, `generate-email`, `generate-outreach`, `classify-*`). Ogni orchestratore ha responsabilità distinte e contratti diversi. La **convergenza è già avvenuta a livello di componenti condivisi** (`_shared/operativePromptsLoader`, `aiGateway`, `promptSanitizer`, `aiJsonValidator`, `contentNormalizer`, `injectionGuard`).
+- **E2 — "Eliminare SERVICE_ROLE_KEY in tutte le 37 funzioni"**: molte funzioni sono background workers (cron, trigger DB) che NON hanno JWT utente disponibile. Mantenere SERVICE_ROLE dove documentato; usare JWT solo in funzioni invocate dall'utente.
+- **E4 — "Eliminare 14 funzioni orfane"**: violerebbe `mem://project/development-status-governance` (codice unused può essere in development). Tagging deprecation invece di delete.
+- **CRM2/CRM3 con DELETE fisico**: sostituiti da soft-link/soft-delete (`mem://constraints/no-physical-delete`).
+- **I3 — "Migrazione fuori da Lovable cloud-auth"**: vendor lock-in accettato; documentare escape path è sufficiente.
+
+---
+
+## Effort totale stimato
+
+| Priorità | Effort | Impatto |
+|---|---:|---|
+| P1 Sicurezza residua | ~12h | HIGH |
+| P2 Schema residuo | ~6h | MEDIUM |
+| P3 Email pipeline | ~10h | HIGH |
+| P4 Bridge/Hooks | ~14h | MEDIUM |
+| P5 CRM lifecycle | ~10h | MEDIUM |
+| P6 TS strict + test | continuous | MEDIUM |
+| **Totale** | **~52h** | (vs 192h del piano originale) |
+
+Il 73% del piano originale è già stato eseguito. Restano ~52h di patch chirurgici, eseguibili **una priorità alla volta** con deploy indipendente.
+
+---
+
+## Modalità di esecuzione consigliata
+
+1. Fai un'unica prio per messaggio (es. "esegui P1.1") così ogni intervento è atomico, testabile e rollback-able.
+2. Ogni step include: migrazione (se serve) → modifica codice → test verde → memoria aggiornata.
+3. NON toccare `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (`mem://constraints/email-download-integrity`).
+4. Tutti i nuovi prompt passano da Prompt Lab; tutti gli input non-trusted da `contentNormalizer` + `promptSanitizer` + `injectionGuard`.
+
+Approvi il piano così com'è, o vuoi che modifichi priorità / aggiunga / rimuova qualche punto?

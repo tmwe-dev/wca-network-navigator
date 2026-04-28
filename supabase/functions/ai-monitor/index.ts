@@ -13,15 +13,9 @@
  * Backed by RPCs in migration 20260425023330.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
-
-function jsonResponse(data: unknown, status = 200): Response {
+function jsonResponse(data: unknown, corsHeaders: Record<string, string>, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -29,6 +23,7 @@ function jsonResponse(data: unknown, status = 200): Response {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -38,7 +33,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
-      return jsonResponse({ error: "missing_auth" }, 401);
+      return jsonResponse({ error: "missing_auth" }, corsHeaders, 401);
     }
 
     // Validate JWT and resolve user
@@ -47,7 +42,7 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return jsonResponse({ error: "invalid_token" }, 401);
+      return jsonResponse({ error: "invalid_token" }, corsHeaders, 401);
     }
     const userId = userData.user.id;
 
@@ -126,10 +121,10 @@ Deno.serve(async (req) => {
         budgetPercentage,
       },
       _errors: Object.keys(errors).length ? errors : undefined,
-    });
+    }, corsHeaders);
   } catch (err) {
     console.error("[ai-monitor] fatal", err);
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse({ error: "internal", message: msg }, 500);
+    return jsonResponse({ error: "internal", message: msg }, corsHeaders, 500);
   }
 });
