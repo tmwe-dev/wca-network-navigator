@@ -4,6 +4,12 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import {
+  sanitizeForPrompt,
+  wrapUntrusted,
+  summarizeFindings,
+  type SanitizeFinding,
+} from "../_shared/promptSanitizer.ts";
 
 type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -133,7 +139,9 @@ export async function buildContextBlock(
     if (memories.length) {
       contextBlock += "\n--- MEMORIA OPERATIVA ---\n";
       for (const m of memories) {
-        contextBlock += `- [L${m.level}/${m.memory_type}] ${m.content}\n`;
+        const safe = sanitizeForPrompt(m.content, { source: "rag-memory", maxChars: 1200, policy: "redact" });
+        if (safe.findings.length) injectionFindings.push(...safe.findings);
+        contextBlock += `- [L${m.level}/${m.memory_type}] ${safe.text}\n`;
       }
     }
 
@@ -148,7 +156,9 @@ export async function buildContextBlock(
     if (kbEntries.length) {
       contextBlock += "\n--- KNOWLEDGE BASE GLOBALE ---\n";
       for (const k of kbEntries) {
-        contextBlock += `### ${k.title}\n${(k.content || "").substring(0, 800)}\n\n`;
+        const safe = sanitizeForPrompt(k.content, { source: "kb-user-document", maxChars: 800, policy: "redact" });
+        if (safe.findings.length) injectionFindings.push(...safe.findings);
+        contextBlock += `### ${k.title}\n${safe.text}\n\n`;
       }
     }
 
