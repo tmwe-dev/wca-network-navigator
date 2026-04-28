@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useImportLogs";
 import { parseFile, transformRow, TARGET_COLUMNS } from "@/lib/import";
 import { deleteImportErrors, deleteImportedContactsByLogId, deleteImportLog } from "@/data/importLogs";
+import { findImportDuplicates } from "@/data/contacts";
 import { queryKeys } from "@/lib/queryKeys";
 
 // ── Utility helpers ──
@@ -258,6 +259,35 @@ export function useImportWizard() {
       const fileName = uploadMode === "paste"
         ? `testo_incollato_${new Date().toISOString().slice(0, 10)}`
         : pendingFile?.name || "file_importato";
+
+      // P5.1 — Dedup detection (warn, non bloccante)
+      try {
+        const sourceRows = uploadMode === "file" ? pendingRows : aiMapping.parsed_rows;
+        const mapping = aiMapping.column_mapping || {};
+        const emails: string[] = [];
+        const companies: string[] = [];
+        const emailCol = Object.entries(mapping).find(([, v]) => v === "email")?.[0];
+        const companyCol = Object.entries(mapping).find(([, v]) => v === "company_name")?.[0];
+        for (const r of sourceRows) {
+          const e = emailCol ? (r as Record<string, unknown>)[emailCol] : (r as Record<string, unknown>).email;
+          const c = companyCol ? (r as Record<string, unknown>)[companyCol] : (r as Record<string, unknown>).company_name;
+          if (e && String(e).trim()) emails.push(String(e).trim());
+          if (c && String(c).trim()) companies.push(String(c).trim());
+        }
+        if (emails.length || companies.length) {
+          const dups = await findImportDuplicates(user.id, emails.slice(0, 500), companies.slice(0, 500));
+          if (dups.length > 0) {
+            const byEmail = new Set(dups.filter(d => d.match_email).map(d => d.match_email));
+            const byCompany = new Set(dups.filter(d => d.source === "partner_company").map(d => d.match_company));
+            toast({
+              title: `Possibili duplicati: ${dups.length}`,
+              description: `${byEmail.size} email + ${byCompany.size} aziende già presenti. Verificali nello staging dopo l'import.`,
+            });
+          }
+        }
+      } catch (dedupErr) {
+        log.debug("dedup check skipped", { error: dedupErr instanceof Error ? dedupErr.message : String(dedupErr) });
+      }
 
       let log: ImportLog;
       if (uploadMode === "file" && pendingFile) {
