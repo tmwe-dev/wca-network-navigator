@@ -166,13 +166,24 @@ serve(async (req) => {
       }
     }
 
+    // ── Persona-aware routing rules (DB) ──
+    const routingRules = await loadRoutingRules(supabase, input.user_id, input.agent_id ?? null);
+    const routingBiasBlock = renderRoutingBiasBlock(routingRules, {
+      agentId: input.agent_id ?? null,
+      leadStatus: relationalContext?.lead_status ?? null,
+    });
+
     // 3. Call AI for classification
     const classPrompt = buildClassificationPrompt(
       input,
       lastExchanges,
       conversationSummary,
       rules as Record<string, unknown>,
-      promptInstructions,
+      // Append routing bias to the per-address custom instructions so the
+      // existing prompt builder picks them up without API changes.
+      routingBiasBlock
+        ? `${promptInstructions ? promptInstructions + "\n\n" : ""}${routingBiasBlock}`
+        : promptInstructions,
       relationalContext
     );
 
