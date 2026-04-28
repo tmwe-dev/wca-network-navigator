@@ -51,7 +51,7 @@ const TABLE_NOUN_SINGULAR: Record<string, string> = {
   kb_entries: "voce KB",
   business_cards: "biglietto da visita",
   download_jobs: "job",
-  campaign_jobs: "job campagna",
+  campaign_jobs: "campagna",
 };
 
 const TABLE_NOUN_PLURAL: Record<string, string> = {
@@ -65,7 +65,7 @@ const TABLE_NOUN_PLURAL: Record<string, string> = {
   kb_entries: "voci KB",
   business_cards: "biglietti da visita",
   download_jobs: "job",
-  campaign_jobs: "job campagna",
+  campaign_jobs: "campagne",
 };
 
 function noun(table: string, plural: boolean): string {
