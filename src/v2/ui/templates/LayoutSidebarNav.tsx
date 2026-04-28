@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
 import {
-  LogOut, Command, Wifi, WifiOff, Sun, Moon,
+  LogOut, Command, Wifi, WifiOff, Sun, Moon, Search,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
@@ -28,11 +28,13 @@ interface SidebarProps {
   onToggleTheme: () => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export function LayoutSidebarNav({
   profileName, wcaStatusColor, wcaStatusLabel, wcaSessionActive,
   onWcaReconnect, isDark, onToggleTheme, onSignOut, onMobileClose,
+  onOpenCommandPalette,
 }: SidebarProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,6 +60,19 @@ export function LayoutSidebarNav({
           </div>
         </div>
       </div>
+      {onOpenCommandPalette && (
+        <button
+          onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
+          className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground transition-colors"
+          aria-label="Apri ricerca"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 text-left">Cerca…</span>
+          <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
+        </button>
+      )}
       <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
         <div className="space-y-1" aria-label="Navigazione principale">
           {navItemsDef.map((navItem) => {
