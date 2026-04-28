@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Volume2, CheckCircle2, XCircle } from "lucide-react";
 import { useState } from "react";
+import VoiceLanguageSelector from "@/components/voice/VoiceLanguageSelector";
 
 export function VoiceAISettingsTab(): React.ReactElement {
   const { data: settings } = useSettingsV2();
@@ -27,6 +28,18 @@ export function VoiceAISettingsTab(): React.ReactElement {
 
   return (
     <div className="space-y-6">
+      <FormSection title="Lingua vocale" description="Lingua usata per Speech-to-Text e Text-to-Speech degli agenti.">
+        <div className="max-w-xs">
+          <VoiceLanguageSelector
+            value={currentLang}
+            onChange={(lang) => updateSetting.mutate({ key: "elevenlabs_language", value: lang })}
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Spostato qui dalla top bar — preferenza globale.
+          </p>
+        </div>
+      </FormSection>
+
       <FormSection title="ElevenLabs — Voce AI" description="Configurazione del motore vocale per gli agenti AI.">
         <div className="space-y-4">
           {/* API Key Status */}

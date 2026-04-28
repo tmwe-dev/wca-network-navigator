@@ -1,134 +1,102 @@
-## Obiettivo
-Pop-up "Trace Console" attivabile da ogni pagina del V2 che mostra in tempo reale **tutto il traffico frontend** (chiamate AI, edge function, query Supabase) con vista doppia:
-- **Tab Trace** — eventi reali in ordine cronologico, filtrabili
-- **Tab Checklist** — per i flussi critici (es. "send email", "ai-query Command", "agent-loop") la lista dei passi attesi confrontata con quelli effettivamente eseguiti, con verde/rosso/mancante
+## Inventario attuale top bar (17 elementi in 44px)
 
-I dati persistono nella nuova tabella `ai_runtime_traces` per consultazione retrospettiva e cross-utente (admin).
+**Sinistra:**
+1. ☰ Menu hamburger (toggle sidebar)
+2. ⌘ "Cerca rapida" (apre Command Palette, ⌘K)
+3. ActiveProcessIndicator (badge processi background)
+4. Badge "Offline" (condizionale)
+5. Pulsante contestuale → CRM / → Network
+6. ConnectionStatusBar (cluster: AI status, outreach queue, night pause, resume timer)
+7. Slot dinamico `#campaign-header-controls`
 
----
+**Destra:**
+8. TokenUsageCounter (consumo token AI)
+9. AIAutomationToggle (interruttore automazione)
+10. Selettore lingua vocale (🌍 IT/EN/...)
+11. OperatorSelector (admin only, swap operatore)
+12. NotificationCenter (🔔)
+13. ➕ Add Contact
+14. 🗄️ DatabaseZap → settings?tab=enrichment
+15. 📊 Activity → Agent Operations Dashboard
+16. 🧪 FlaskConical → Test Extensions
+17. ✨ Sparkles → IntelliFlow AI
 
-## Architettura
+## Diagnosi
 
-### Layer di raccolta (interceptor centralizzati)
-Un singolo `traceCollector` (singleton in memoria) intercetta a livello frontend:
+- **Funzioni rare in primo piano**: Test Extensions, Enrichment shortcut, Agent Ops sono usate raramente ma occupano spazio fisso.
+- **Stato vs azione mescolati**: ConnectionStatusBar mostra 4-5 cose (AI, queue, night pause, resume) che sono _stato_, accanto a icone _azione_ (➕, ✨…).
+- **Doppia entrata Command Palette**: il pulsante "Cerca rapida" è ridondante con la scorciatoia ⌘K (che funziona sempre). Occupa ~140px.
+- **Settings sparsi**: lingua vocale, AI automation, enrichment shortcut sono tutte preferenze → casa naturale = `/v2/settings`.
+- **Navigazione contestuale CRM↔Network** è già coperta dalle tab e dalla sidebar.
 
-1. **invokeAi()** — già choke point unico per AI (Charter). Aggiungo emit di evento `ai.invoke` con scope, source, model, durata, status.
-2. **invokeEdge()** — choke point per edge function non-AI. Emit `edge.invoke`.
-3. **supabase client wrapper** — patch leggera su `supabase.from(...)` che intercetta `.select/.insert/.update/.delete/.upsert/.rpc` e emette `db.query` (table, op, rowCount, durata, err). Implementato come Proxy attorno al client esistente, senza toccare `client.ts`.
-4. **`window.dispatchEvent('trace:event', ...)`** — API pubblica per emit manuali da hook custom (es. journalist gate, hard guards lato client).
-
-Ogni evento ha lo schema:
-```
-{ id, ts, type, scope, source, route, status, duration_ms, payload_summary, error?, request_id, correlation_id }
-```
-
-`correlation_id` (UUID) raggruppa tutto ciò che parte da una singola azione utente: viene impostato all'inizio di un'invocazione AI/edge e propagato negli eventi figli (es. l'`ai.invoke` `agent-loop` con la sua sequenza di `db.query` correlate).
-
-### Persistenza
-Nuova tabella **`ai_runtime_traces`** (insert-only):
-- `id uuid pk`, `user_id uuid`, `correlation_id uuid`, `ts timestamptz`, `type text`, `scope text`, `source text`, `route text`, `status text`, `duration_ms int`, `payload_summary jsonb`, `error jsonb`, `created_at`
-- Index su `(user_id, ts desc)` e `(correlation_id)`
-- RLS: SELECT solo own + admin via `has_role`; INSERT only own
-- Retention: cron job DB cancella > 7 giorni (rolling window)
-
-Flush DB **batched** (max 25 eventi o 5s) per non spammare.
-
-### UI
-
-**Componente `TraceConsole`** mountato in `App.tsx` come singleton globale. Hotkey `Ctrl+Shift+T` per toggle. Stato persistito in `localStorage` (open/closed, position, filtri).
+## Proposta: top bar a 6 elementi
 
 ```text
-┌─ Trace Console  [×] [⚙️] [📌pin] ┐
-│ [Trace] [Checklist] [Filters]   │
-├─────────────────────────────────┤
-│ 18:52:01.234 ai.invoke ai-query │
-│   ↳ scope=command duration=1.2s │
-│ 18:52:01.512 db.query partners  │
-│   ↳ select count=1 230ms        │
-│ 18:52:02.401 edge.invoke send-..│
-│   ↳ status=200 1.8s             │
-└─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ☰  Breadcrumb · Dashboard › Esplora › Mappa     [stato] 🔔 👤 ⋯ ✨    │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Tab Checklist** — selezioni un `correlation_id` e vedi:
-```text
-Flow: send-email
-✅ journalist_review (522ms)
-✅ promptSanitizer
-✅ generate-email
-❌ post-send-pipeline  ← MANCANTE
-✅ smtp.send
-```
+**Sinistra (sempre visibili):**
+1. **☰ Menu** (toggle sidebar)
+2. **Breadcrumb** (assorbe il GoldenHeaderBar di pagina — un solo header invece di due)
+3. **StatusPill** unico, compatto, cliccabile → apre popover con: connessione, AI on/off, outreach queue, night pause, processi attivi. Sostituisce ConnectionStatusBar + ActiveProcessIndicator + badge Offline. Default: solo un pallino colorato (verde/giallo/rosso) + numero processi se >0.
 
-Le checklist sono definite in un file statico **`src/v2/observability/flowDefinitions.ts`** che mappa flow → step attesi (es. lista di `(type, scope|source)` da matchare nel buffer eventi). Nuovi flussi si aggiungono qui senza toccare il resto.
+**Destra (sempre visibili):**
+4. **🔔 Notifiche**
+5. **👤 Operatore** (mostra avatar; admin → dropdown swap; non-admin → solo profilo + logout)
+6. **⋯ Strumenti** (menu dropdown — vedi sotto)
+7. **✨ AI** (IntelliFlow, unico bottone "azione AI" prominente)
 
-### Filtraggio
-- per `type` (ai/edge/db)
-- per `scope` (es. solo `command`, solo `agent-loop`)
-- per `route` (eventi sulla route corrente)
-- search testuale su payload
+**Rimossi dalla barra:**
+- Pulsante "Cerca rapida" → resta solo lo shortcut ⌘K (ricordato in tooltip su ☰). Risparmio ~140px.
+- Selettore lingua vocale → spostato in `/settings` → tab "Voce & AI".
+- AIAutomationToggle → spostato in `/settings` → tab "AI" (con stato visibile nello StatusPill).
+- TokenUsageCounter → spostato in `/settings` → tab "Billing/Usage" (mostrato nello StatusPill solo quando >80% soglia).
+- ➕ Add Contact → spostato come FAB nelle pagine Pipeline/Network (dove ha senso); rimosso dalla top bar globale.
+- DatabaseZap (Enrichment shortcut) → dentro menu **⋯ Strumenti**.
+- Activity (Agent Ops) → dentro menu **⋯ Strumenti**.
+- FlaskConical (Test Extensions) → dentro menu **⋯ Strumenti** (in fondo, sotto separator "Debug").
+- Pulsanti contestuali "→ CRM" / "→ Network" → rimossi (già coperti da sidebar/tab).
+- Slot `#campaign-header-controls` → mantenuto invisibile per retrocompatibilità ma spostato sotto la GoldenHeaderBar di pagina, dove ha senso visivo.
 
-### Performance / sicurezza
-- Eventi DB **batchati** + payload summary troncato (max 1KB JSON)
-- Body request/response **non** salvati grezzi: solo summary (table, op, count, status)
-- Toggle "Pause recording" per congelare il buffer durante debug
-- In produzione abilitato solo per ruoli admin/operator (RBAC check), gli altri utenti vedono il toggle disabilitato.
+**Menu ⋯ Strumenti (dropdown):**
+- Agent Operations
+- Enrichment Center
+- Test Extensions
+- (separator)
+- Apri Trace Console (🩺)
+- Tema chiaro/scuro
 
----
+## Comportamento responsive
 
-## Dettagli tecnici
+- **Desktop ≥1280px**: tutti e 6 visibili.
+- **Tablet 768-1279px**: StatusPill resta solo pallino colorato (no testo); breadcrumb compresso (mostra ultimi 2 livelli).
+- **Mobile <768px**: top bar già nascosta (`hidden md:flex`) — invariato, resta MobileBottomNav.
 
-### File da creare
-```
-src/v2/observability/
-  traceCollector.ts          ← singleton bus + buffer + flusher
-  traceTypes.ts              ← schema TS + Zod
-  flowDefinitions.ts         ← checklist statiche per flow
-  supabaseTraceProxy.ts      ← Proxy attorno al supabase client
-  TraceConsole.tsx           ← UI floating + tabs
-  TraceConsoleTrigger.tsx    ← bottone fisso bottom-right
-  hooks/useTraceBuffer.ts    ← React subscription al collector
+## Implementazione (sintesi tecnica)
 
-src/data/runtimeTraces.ts    ← DAL insert/select trace
+1. Nuovo `LayoutHeaderCompact.tsx` che sostituisce `LayoutHeader.tsx` (vecchio preservato come `.bak.tsx` per rollback).
+2. Nuovo componente `StatusPill.tsx` che aggrega: online/offline, AI automation, outreach queue, night pause, processi attivi. Popover on-click con dettagli.
+3. Nuovo `HeaderToolsMenu.tsx` (DropdownMenu shadcn) con le voci "Strumenti".
+4. Spostamenti in `/v2/settings`:
+   - Tab "Voce & AI" → integra `VoiceLanguageSelector` + `AIAutomationToggle` + soglia token.
+   - Tab "Usage" → integra `TokenUsageCounter` versione full.
+5. Rimuovere il pulsante "Cerca rapida" — verificare che ⌘K resti registrato globalmente in `useCommandPalette`.
+6. Spostare `Add Contact` come FAB nelle pagine Pipeline/Contacts/Network (riusa `AddContactDialog` esistente).
+7. Aggiornare il selettore tema (oggi non c'è in top bar): aggiungerlo nel menu ⋯ Strumenti.
+8. Mantenere `GoldenHeaderBar` come riga separata sotto la top bar (breadcrumb di pagina + actions di pagina) — alternativa: fonderli in un'unica riga 44px. **Da decidere con te.**
 
-supabase/migrations/<ts>_ai_runtime_traces.sql
-```
+## Cosa NON tocco
 
-### File da modificare (minimo invasivo)
-- `src/v2/io/edge/invokeAi.ts` — wrap chiamata, emit evento prima/dopo
-- `src/lib/api/invokeEdge.ts` — stesso pattern
-- `src/integrations/supabase/client.ts` ⚠️ FILE PROTETTO → uso wrapper esterno: `src/v2/observability/supabaseTraceProxy.ts` re-esporta `supabase` patchato; chi vuole tracciare importa dal nuovo path. Per coprire tutto senza forzare migrazione, monto un **monkey-patch one-shot** in `App.tsx` che avvolge i metodi del client già istanziato.
-- `src/App.tsx` — mount di `<TraceConsole />` e init `traceCollector`
+- Sidebar sinistra
+- MissionDrawer destro
+- MobileBottomNav
+- GoldenHeaderBar di pagina (può restare o fondersi: scelta tua)
+- Logica funzionale dei singoli componenti spostati (solo posizionamento)
 
-### Migration SQL
-```sql
-CREATE TABLE ai_runtime_traces (...);
-ALTER TABLE ai_runtime_traces ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "owners select" ...;
-CREATE POLICY "admin select all" ...;
-CREATE POLICY "owners insert" ...;
-CREATE INDEX ...;
--- cron retention 7gg via pg_cron
-```
+## Domande aperte (da chiarire prima di implementare)
 
-### Checklist flow definite al lancio (estendibili)
-1. `send-email` (direct) → journalist + promptSanitizer + edge `send-email` + post-send + DB activity insert
-2. `ai-query Command` → planner + executor + (opzionale) commenter + DB select sui table dichiarati
-3. `agent-loop` → persona load + capabilities load + operative prompts load + LLM call + tool execution
-4. `process-email-queue` (solo lato frontend trigger) → enqueue + cron pickup notification
-5. `deep-search` → quality preset + tool sequence
-
----
-
-## Cosa NON faccio in questa iterazione
-- Tracing **server-side** dei step interni alle edge function (es. dentro `agent-execute`): per quello c'è già `edge_metrics` + `structuredLogger`. Aggiungo solo la riga `correlation_id` al header passato dal frontend, così in futuro si può fare un join lato server.
-- UI di analytics aggregate (pie chart per scope ecc): vediamo l'esigenza dopo aver raccolto qualche giorno di dati.
-
----
-
-## Verifica
-1. Aprire pagina Command, fare query "quanti contatti" → deve apparire correlation_id con ai-query-planner + ai-comment + db.select su contacts.
-2. Mandare email da SendEmailDialog → checklist tab mostra i 4 step verdi (sanitize, journalist, send-email, post-send).
-3. Reload pagina con `Ctrl+Shift+T` → console riappare aperta nella stessa posizione.
-4. Login con utente non-admin → trigger console disabilitato.
-5. Verifica DB: `select count(*) from ai_runtime_traces` cresce; cron pulizia testato manualmente con backdated row.
+1. **Breadcrumb**: preferisci una sola riga (top bar + breadcrumb fusi in 44px) o due righe (top bar globale + GoldenHeaderBar di pagina)?
+2. **Add Contact**: sei d'accordo a spostarlo come FAB solo nelle pagine pertinenti, oppure preferisci tenerlo nella top bar globale?
+3. **Tema chiaro/scuro**: lo vuoi nel menu ⋯ Strumenti o vicino all'avatar operatore?

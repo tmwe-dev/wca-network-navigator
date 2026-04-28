@@ -92,6 +92,13 @@ export function TraceConsole() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // External open event (es. menu Strumenti in top bar)
+  useEffect(() => {
+    const open = () => setState((s) => ({ ...s, open: true }));
+    window.addEventListener("trace-console-open", open);
+    return () => window.removeEventListener("trace-console-open", open);
+  }, []);
+
   if (!user) return null; // niente console per anon
 
   const filtered = useMemo(() => {

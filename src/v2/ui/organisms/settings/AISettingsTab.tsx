@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../../atoms/Button";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
+import { AIAutomationToggle } from "@/components/header/AIAutomationToggle";
 
 export function AISettingsTab(): React.ReactElement {
   const { data: settings } = useSettingsV2();
@@ -51,6 +52,14 @@ export function AISettingsTab(): React.ReactElement {
 
   return (
     <div className="space-y-6 max-w-lg">
+      <div className="flex items-center justify-between p-3 rounded-md border bg-muted/20">
+        <div>
+          <p className="text-sm font-medium text-foreground">Automazioni AI</p>
+          <p className="text-xs text-muted-foreground">Pausa globale di tutte le automazioni AI (spostato dalla top bar).</p>
+        </div>
+        <AIAutomationToggle />
+      </div>
+
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Modello AI predefinito</label>
         <select

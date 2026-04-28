@@ -348,6 +348,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                               onTestExt={() => setTestExtOpen(true)}
                               outreachQueue={outreachQueue}
                               globalSync={globalSync}
+                              isDark={isDark}
+                              onToggleTheme={toggleTheme}
                             />
                           )}
                         </BackgroundServices>
