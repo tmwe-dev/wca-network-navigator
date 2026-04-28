@@ -1,122 +1,130 @@
-# Piano di Refactoring Riconciliato — Aprile 2026
+# Liberare l'AI Query Planner — meno binari, più intelligenza
 
-> Il documento "WCA_REFACTORING_PLAN_last.docx" descrive lo stato del codice ad **Aprile 2026** prima di molti interventi già completati nei mesi successivi (cf. `mem://index.md`). Questo piano **non riparte da zero**: confronta il documento con lo stato attuale del codice e propone solo gli interventi **ancora aperti** o **parzialmente fatti**, mantenendo l'architettura esistente (Prompt Lab, DAL, V2, agent-execute, contentNormalizer, injectionGuard).
+## Il problema
 
----
+Hai ragione: oggi il sistema "guida" l'AI invece di darle libertà. Tre sintomi concreti nel codice attuale:
 
-## Sezione A — Già completato (NON rifare)
+1. **`ai-query-planner/index.ts`** ha uno `SYSTEM_PROMPT` di ~170 righe con:
+   - Schema DB **duplicato a mano** (già esiste in `dbSchema.ts`, è copia-incolla disallineabile).
+   - **15+ esempi rigidi** ("partner US attivi", "ultimi 20 prospect", "e a Miami?", ecc.) che insegnano frasi invece di principi.
+   - **Regole specifiche per `campaign_jobs.status`** scritte nel prompt ("attive → pending+in_progress", "draft → pending"...).
+   - Mappature paesi hardcoded ("USA→US, Cina→CN...").
 
-Questi punti del documento sono già implementati in produzione. Non vanno toccati per non regredire.
+2. **`aiQueryTool.ts`** ha logica di patching reattiva:
+   - `normalizeCampaignStatusPrompt()` riscrive il prompt utente.
+   - Blocco `if (plan.table === "campaign_jobs")` che ri-applica i filtri **dopo** la risposta dell'AI.
+   - `try/catch` che fabbrica una tabella vuota fittizia se l'enum è sbagliato.
 
-| Doc | Tema | Implementazione attuale |
-|---|---|---|
-| C1 | ProtectedRoute bypass | `src/components/auth/ProtectedRoute.tsx` enforce JWT + redirect `/auth` |
-| C2-C4 | Credenziali WCA in chiaro | Tabella `user_wca_credentials` per-utente |
-| C5 | RLS `USING(true)` su `ra_*` | Tabelle `ra_*` rimosse dallo schema |
-| D1 | `email_drafts` senza `user_id` | Colonna NOT NULL + indice + RLS |
-| D4 | `types.ts` non sincronizzato | Tipi rigenerati automaticamente |
-| E1 | Zero rate limiting | `_shared/rateLimiter.ts` |
-| E5 | `_shared/` mancante | 117 file in `supabase/functions/_shared/` |
-| A2 | Prompt hardcoded | Prompt Lab + tabella `operative_prompts` + `prompt_versions` (snapshot immutabili) |
-| A3 | Response parsing fragile | `_shared/aiJsonValidator.ts` (Zod) |
-| A4 | No cost tracking | `tokenLogger.ts` + `edge_metrics` + `structuredLogger.ts` |
-| A5 | KB injection incoerente | `_shared/operativePromptsLoader.ts` unificato |
-| A6 | Zero prompt-injection protection | `_shared/promptSanitizer.ts` + `_shared/injectionGuard.ts` + `prompt_injection_reviews` |
-| M1 | No retry email | `retry_count` attivo in `process-email-queue` |
-| M4 | `user_id` mancante in `email_campaign_queue` | Colonna presente |
+3. **`dbSchema.ts`** è **statico**. Quando aggiungi una colonna al DB (es. `city` su `imported_contacts`), il planner la rifiuta finché qualcuno non aggiorna il file TS a mano. Da qui l'errore `Colonna filtro "city" non valida`.
 
----
+Risultato: ogni nuovo caso d'uso = nuova patch hardcoded. L'AI non può "ragionare", può solo seguire i binari che le abbiamo posato.
 
-## Sezione B — Ancora aperti (interventi proposti)
+## Doctrine di riferimento
 
-Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è un patch chirurgico compatibile con la struttura esistente.
+Già in memoria (`mem://architecture/ai-prompt-freedom-doctrine`):
+> Diamo guardrail (cosa NON può fare, in codice), non binari (cosa DEVE dire, nei prompt).
+> Vietato: liste di frasi, esempi step-by-step, doctrine duplicate, formato output rigido se non strettamente richiesto.
 
-### Priorità 1 — Sicurezza residua (2-3 giorni)
+Questo piano applica quella dottrina al Query Planner.
 
-| # | Doc | Intervento | File |
-|---|---|---|---|
-| P1.1 ✅ | C6 | CORS `*` rimossi (8 funzioni). Cf. `mem://security/cors-wildcard-cleanup-2026-04-28` |
-| P1.2 ✅ | C7 | `save-wca-cookie` ora usa `requireExtensionAuth` (JWT preferito, anon-key gated da CORS). Limite payload 20KB |
-| P1.3 ✅ | E2/E3 | `analyze-import-structure` + `elevenlabs-conversation-token` ora richiedono JWT valido (no anon-key, no soft-fail) |
-| P1.4 ✅ | E6 | SSRF guard `assertSafePublicUrl()` in `_shared/inputValidator.ts` (14 test verdi). Applicata a `scrape-website` e `enrich-partner-website` |
-| P1.5 ✅ | B4/B5 | Edge function LinkedIn hardenizzate: `linkedin-ai-extract` e `linkedin-profile-api` ora richiedono auth via `requireExtensionAuth` (proteggono crediti AI Gateway e Proxycurl). Cf. `mem://security/linkedin-bridge-hardening-2026-04-28` |
+## Cosa cambia
 
-### Priorità 2 — Schema DB residuo (1 giorno)
+### 1. Schema vivo dal DB (non più hardcoded)
 
-| # | Doc | Intervento |
-|---|---|---|
-| P2.1 ✅ | D2 | Indici composti aggiunti: `partners(country_code,lead_status)`, `imported_contacts(user_id)`, `download_jobs(status,user_id)`, `activities(partner_id,status)`, `email_campaign_queue(status,scheduled_at)` |
-| P2.2 ✅ | D3 | FK ON DELETE CASCADE verso `auth.users` aggiunte su `agent_tasks`, `ai_conversations`, `ai_memory`, `import_logs` |
-| P2.3 ✅ | D5 | Zod validators in `src/data/schemas/jsonValidators.ts` per `partners.enrichment_data` (passthrough) e `agents.assigned_tools` (snake_case + cap 100). Safe + strict. 9/9 test verdi |
+Nuova edge function condivisa `_shared/liveSchemaLoader.ts` che, alla cold-start dell'edge, interroga `information_schema.columns` + `pg_enum` per costruire lo schema reale. Cache 5 minuti in memory.
 
-### Priorità 3 — Email Pipeline residuo (1-2 giorni)
+- Niente più `SCHEMA_TEXT` copia-incolla in `ai-query-planner/index.ts`.
+- Niente più `DB_SCHEMA` array statico in `dbSchema.ts` (resta solo `ALLOWED_TABLES` come whitelist di sicurezza + i `searchable` hint opzionali).
+- Quando aggiungi una colonna al DB, l'AI la vede al prossimo refresh cache. Zero modifiche TS.
 
-| # | Doc | Intervento |
-|---|---|---|
-| P3.1 ✅ | M2 | Tabella `email_delivery_events` + trigger `apply_email_delivery_event` (auto-update `email_campaign_queue.status` su bounce/complaint/rejected/opened) + edge function `email-delivery-webhook` con shared-secret `EMAIL_WEBHOOK_SECRET`, validazione Zod, batch ≤500 |
-| P3.2 ✅ | M3 | Già coperto da `runPostSendPipeline` (LOVABLE-85): activity inserita con `status=completed`, lead_status escalation, interaction logged, partner counters atomici. Nessun lavoro residuo |
-| P3.3 ✅ | M5 | `_shared/smtpRateLimit.ts` (DB-based, no-op quando kill-switch off). Integrato in `process-email-queue`: se cap raggiunto, draft → `paused`, batch interrotto, riprende al prossimo invocation. Cap configurabile via `app_settings.smtp_rate_limit_per_hour` (default 50). 3/3 test verdi |
+L'AI riceve lo schema reale + valori enum reali + quali colonne sono nullable. Decide lei.
 
-### Priorità 4 — Bridge & Hooks consolidation (2-3 giorni)
+### 2. System prompt minimale (~30 righe vs ~170)
 
-| # | Doc | Intervento |
-|---|---|---|
-| P4.1 ✅ | B1 | Verificato: solo `wcaAppApi.ts` esiste in repo (nessun `wcaAppBridge.ts` o `wca-app-bridge.ts`). Già SSOT |
-| P4.2 ✅ | B2 | `wcaAppApi.getOrRefreshCookie` ora usa `wcaCookieStore` come SSOT (no duplicazione localStorage). `setWcaCookie`/`getWcaCookie` unico punto di accesso |
-| P4.3 ✅ | B3 | `gateAndMark()` integrato in `wcaDiscover`, `wcaScrape`, `wcaEnrich`, `wcaVerify`. Background workers (job-start/status/worker) esclusi (rate limit lato server). `resetCheckpoint()` esportato per test |
-| P4.4 ✅ | B6 | `wcaCookieStore`: `EFFECTIVE_TTL_MS = TTL_MS - 60s`. Refresh proattivo prima dello scadere. Test verdi |
+Nuovo prompt, solo:
+- **Identità**: "Sei un Query Planner SELECT-only su un CRM logistico."
+- **Schema** (iniettato dinamico).
+- **Output JSON** schema obbligatorio.
+- **Guardrail tecnici**: solo SELECT, solo tabelle in whitelist, limit ≤ 200, operatori ammessi.
+- **Principio aperto**: "Se la richiesta è ambigua o vuota, decidi tu la tabella più probabile e spiega in `rationale`. Se nessuna tabella è plausibile, restituisci `table:'INVALID'` con motivazione."
 
-### Priorità 5 — CRM Lifecycle (2 giorni)
+**Eliminati**: tutti gli esempi rigidi, le regole su `campaign_jobs.status`, le mappature paesi hardcoded. L'AI vede gli enum reali nello schema e si arrangia.
 
-| # | Doc | Intervento |
-|---|---|---|
-| P5.1 ✅ | CRM1 | RPC `find_import_duplicates(user_id, emails[], company_names[])` + integrazione in `useImportWizard.handleConfirmMapping` (warn non-bloccante via toast). Match: email in imported_contacts (utente) + email/company in partners (globale) |
-| P5.2 ✅ | CRM2 | Colonne `imported_contacts.transferred_to_partner_id` + `transferred_at`. DAL `linkContactToPartner()` sostituisce `markContactTransferred` in `useTransferToPartners` e `useCreateActivitiesFromImport`. NO delete fisica |
-| P5.3 ✅ | CRM4 | Funzione `expire_stuck_import_logs()` + cron `*/15 * * * *` (jobid=49) → marca `pending|processing` > 30min come `expired`. Cf. `mem://features/p5-crm-lifecycle-2026-04-28` |
+### 3. Eliminare patching reattivo nel tool
 
-### Priorità 6 — TS strict + Testing (incrementale, in background)
+Da `aiQueryTool.ts` rimuovo:
+- `normalizeCampaignStatusPrompt()` — l'AI vede gli enum, scegli lei.
+- Il blocco `if (plan.table === "campaign_jobs")` post-pianificazione.
+- Il `try/catch` che fabbrica tabelle vuote fake.
 
-| # | Doc | Intervento |
-|---|---|---|
-| P6.1 | I1 | Abilitare `strictNullChecks` in `tsconfig.app.json` come prima fase. NO full `strict: true` finché non si pulisce il debt budget |
-| P6.2 | I4 | Test E2E minimi: auth flow, email queue, AI response parsing (riusare `vitest.config.ts` esistente) |
-| P6.3 | I2 | Lazy-load Three.js solo in `/global` route (verificare se non già fatto via React.lazy) |
+In caso di errore enum, ritorna l'errore vero al chiamante; il `localResultFormatter` già gestisce zero-result in modo umano (memoria precedente).
 
----
+### 4. Contesto utente nel prompt
 
-## Sezione C — Esplicitamente NON da fare
+Oggi il planner riceve solo `prompt + history + contextHint`. Aggiungo:
+- **Lista compatta delle tabelle whitelisted con purpose** (1 riga ciascuna).
+- **Hint sull'ultima query riuscita** (già c'è via `contextHint`, ma lo formalizzo).
+- **Conteggi rough** (opzionale, fase 2): "partners ha ~25k record, campaign_jobs ha N record con status [...]" — così l'AI sa se vale la pena cercare.
 
-Punti del documento che **contrastano con l'architettura attuale** o sono stati superati da scelte successive:
+### 5. Guardrail in codice (non nel prompt)
 
-- **A1 — "Consolidare 9+ orchestratori in `ai-orchestrator` unico"**: contrario all'attuale separazione per scope (`agent-execute`, `ai-assistant`, `generate-email`, `generate-outreach`, `classify-*`). Ogni orchestratore ha responsabilità distinte e contratti diversi. La **convergenza è già avvenuta a livello di componenti condivisi** (`_shared/operativePromptsLoader`, `aiGateway`, `promptSanitizer`, `aiJsonValidator`, `contentNormalizer`, `injectionGuard`).
-- **E2 — "Eliminare SERVICE_ROLE_KEY in tutte le 37 funzioni"**: molte funzioni sono background workers (cron, trigger DB) che NON hanno JWT utente disponibile. Mantenere SERVICE_ROLE dove documentato; usare JWT solo in funzioni invocate dall'utente.
-- **E4 — "Eliminare 14 funzioni orfane"**: violerebbe `mem://project/development-status-governance` (codice unused può essere in development). Tagging deprecation invece di delete.
-- **CRM2/CRM3 con DELETE fisico**: sostituiti da soft-link/soft-delete (`mem://constraints/no-physical-delete`).
-- **I3 — "Migrazione fuori da Lovable cloud-auth"**: vendor lock-in accettato; documentare escape path è sufficiente.
+Spostiamo le **vere** regole hard in `safeQueryExecutor.ts`:
+- Whitelist tabelle ✅ (già c'è).
+- Whitelist operatori ✅ (già c'è).
+- Cap limit 200 ✅ (già c'è).
+- Validazione colonne contro lo **schema vivo** (non più array TS).
+- Validazione valori enum contro `pg_enum` (errore chiaro se l'AI sbaglia, non patch silenziose).
 
----
+## Architettura post-refactor
 
-## Effort totale stimato
+```text
+User prompt
+    │
+    ▼
+ai-query-planner (edge)
+  ├─ SystemPrompt: 30 LOC (identità + schema vivo + output JSON + guardrail)
+  ├─ Schema: liveSchemaLoader() ← information_schema, cache 5min
+  └─ Output: QueryPlan JSON
+    │
+    ▼
+aiQueryTool.execute()
+  ├─ NO normalize, NO patch
+  └─ executeQueryPlan(plan)
+        │
+        ▼
+safeQueryExecutor
+  ├─ Validazione contro schema vivo
+  ├─ Whitelist tabelle/operatori/limit
+  └─ supabase.from() con RLS
+```
 
-| Priorità | Effort | Impatto |
-|---|---:|---|
-| P1 Sicurezza residua | ~12h | HIGH |
-| P2 Schema residuo | ~6h | MEDIUM |
-| P3 Email pipeline | ~10h | HIGH |
-| P4 Bridge/Hooks | ~14h | MEDIUM |
-| P5 CRM lifecycle | ~10h | MEDIUM |
-| P6 TS strict + test | continuous | MEDIUM |
-| **Totale** | **~52h** | (vs 192h del piano originale) |
+## File toccati
 
-Il 73% del piano originale è già stato eseguito. Restano ~52h di patch chirurgici, eseguibili **una priorità alla volta** con deploy indipendente.
+**Nuovi**
+- `supabase/functions/_shared/liveSchemaLoader.ts` — carica schema da `information_schema` + `pg_enum`, cache 5min, formatta per LLM.
 
----
+**Modificati**
+- `supabase/functions/ai-query-planner/index.ts` — system prompt da ~170 → ~30 LOC, usa `liveSchemaLoader`.
+- `src/v2/ui/pages/command/tools/aiQueryTool.ts` — rimuovi `normalizeCampaignStatusPrompt`, rimuovi blocco campaign_jobs, rimuovi catch enum fittizio.
+- `src/v2/agent/kb/dbSchema.ts` — riduco a `ALLOWED_TABLES` (whitelist sicurezza) + flag `searchable` opzionali. Niente più descrittori statici di colonne (vengono dal DB).
+- `src/v2/ui/pages/command/lib/safeQueryExecutor.ts` — validazione colonne contro schema vivo (caricato lazy, cached client-side).
 
-## Modalità di esecuzione consigliata
+**Non toccati**
+- `localResultFormatter.ts` (la gestione zero-results umana resta).
+- `usePromptAnalysis.ts` (fast-lane resta).
+- Tool d'azione (create/update/scrape...) — non c'entrano.
 
-1. Fai un'unica prio per messaggio (es. "esegui P1.1") così ogni intervento è atomico, testabile e rollback-able.
-2. Ogni step include: migrazione (se serve) → modifica codice → test verde → memoria aggiornata.
-3. NON toccare `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (`mem://constraints/email-download-integrity`).
-4. Tutti i nuovi prompt passano da Prompt Lab; tutti gli input non-trusted da `contentNormalizer` + `promptSanitizer` + `injectionGuard`.
+## Cosa aspettarsi dopo
 
-Approvi il piano così com'è, o vuoi che modifichi priorità / aggiunga / rimuova qualche punto?
+- **"Mostra stato campagne attive"** quando il DB è vuoto → l'AI vede che `campaign_jobs.status` non ha record, risponde "Non ci sono campagne in nessuno stato al momento" senza messaggi di "errore tecnico".
+- **"Cerca contatti a Milano"** → l'AI vede `imported_contacts.city` nello schema vivo, filtra. Nessuna modifica TS necessaria.
+- **Nuova colonna aggiunta al DB** → disponibile all'AI entro 5 min (cache TTL), zero deploy.
+- **Nuova tabella business** → basta aggiungerla a `ALLOWED_TABLES` (1 riga) e l'AI la conosce subito.
+
+## Rischi e mitigazioni
+
+- **Schema vivo + LLM = prompt più lungo**: lo schema reale ha più colonne di quelle "curate". Mitigato filtrando colonne `*_internal`, `*_secret`, e troncando a max 15 colonne per tabella ordinate per rilevanza (PK, name fields, status, date).
+- **AI può scegliere colonne sensibili**: la whitelist tabelle resta. RLS Supabase fa il resto. Per colonne sensibili intra-tabella (es. token), aggiungo blacklist colonne in `safeQueryExecutor`.
+- **Enum cambiati al volo**: cache 5min può servire enum vecchio per qualche minuto. Accettabile; se vogliamo zero lag aggiungiamo invalidazione su `pg_notify`.
+
+Conferma che l'approccio è corretto e procedo con l'implementazione.
