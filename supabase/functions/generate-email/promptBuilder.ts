@@ -23,6 +23,7 @@ export function buildEmailPrompts(ctx: EmailPromptContext): BuiltPrompts {
     email_type_prompt, email_type_structure,
     commercialState, touchCount, lastChannel, lastOutcome, daysSinceLastContact, warmthScore,
     playbookBlock, addressCustomPrompt, addressCategory,
+    operativePromptsBlock, operativePromptsApplied,
   } = ctx;
 
   // Resolve names
@@ -183,7 +184,8 @@ Costruisci nella tua testa un **ritratto preciso** del destinatario:
 Poi scegli **UNA sola leva** — la più rilevante per LUI in base ai dati — e costruisci il messaggio attorno a quella.
 Non elencare tutto. Una idea forte, ben argomentata, vale dieci feature buttate.
 
-${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA.\n` : ""}
+${operativePromptsBlock ? `\n${operativePromptsBlock}\n` : ""}
+${playbookBlock ? `\n${playbookBlock}\n⚠️ Il PLAYBOOK ATTIVO sopra ha priorità sulla KB generica per tono, contenuto e CTA. I PROMPT OPERATIVI dal Prompt Lab restano comunque vincolanti.\n` : ""}
 ${emailTypeStructureBlock}
 ${strategicAdvisor}
 
@@ -225,6 +227,12 @@ e scrivi un'email onesta di presentazione WCA, evitando di fingere personalizzaz
   systemBlocks.push({ label: "Identity (Editor)", content: "Editor giornalista WCA Network. Scrive UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale." });
   systemBlocks.push({ label: "Filosofia WCA", content: "Membership = first-mover advantage: primi su tariffe, booking, partenze, info di mercato. Partner trasporti = guadagno reciproco + vantaggio competitivo." });
   systemBlocks.push({ label: "Missione messaggio", content: "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature." });
+  if (operativePromptsBlock) {
+    const appliedLabel = operativePromptsApplied && operativePromptsApplied.length > 0
+      ? ` [${operativePromptsApplied.join(" • ")}]`
+      : "";
+    systemBlocks.push({ label: `Prompt Lab — Operative Prompts (priority)${appliedLabel}`, content: operativePromptsBlock });
+  }
   if (playbookBlock) systemBlocks.push({ label: "Playbook (priority)", content: playbookBlock });
   if (emailTypeStructureBlock) systemBlocks.push({ label: `EmailType "${emailCategory}" structure`, content: emailTypeStructureBlock });
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
