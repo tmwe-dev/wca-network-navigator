@@ -76,6 +76,9 @@ export interface ContextBlocks {
   // ── Fix 3.2: active playbook (governs tone/content/CTA) ──
   playbookBlock?: string;
   playbookActive?: boolean;
+  // ── Prompt Lab — operative_prompts iniettati ──
+  operativePromptsBlock?: string;
+  operativePromptsApplied?: string[];
   // ── Fix (email_address_rules propagation) ──
   addressCustomPrompt?: string;
   addressCategory?: string;
@@ -240,6 +243,8 @@ export async function assembleContextBlocks(
     lastOutcome: commIntel.lastOutcome,
     playbookBlock: kbAndPb.playbookBlock,
     playbookActive: kbAndPb.playbookActive,
+    operativePromptsBlock: kbAndPb.operativePromptsBlock,
+    operativePromptsApplied: kbAndPb.operativePromptsApplied,
     addressCustomPrompt,
     addressCategory,
     deepSearchStatus: enrichmentCtx.deepSearchStatus,
