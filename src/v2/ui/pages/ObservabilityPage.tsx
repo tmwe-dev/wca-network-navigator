@@ -15,6 +15,9 @@ import { Download, BarChart3, Activity, Zap, AlertTriangle, Clock, RefreshCw, Ch
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("ObservabilityPage");
 // ── Types ──────────────────────────────────────────────────
 
 interface UsageSummary {
@@ -130,7 +133,7 @@ function useCronJobs() {
     queryFn: async (): Promise<CronJobInfo[]> => {
       const { data, error } = await supabase.rpc("cron_job_status" as never);
       if (error) {
-        console.warn("cron_job_status RPC not available:", error.message);
+        log.warn("cron_job_status RPC not available:", { error: error.message });
         return [];
       }
       return (data as unknown as CronJobInfo[]) ?? [];

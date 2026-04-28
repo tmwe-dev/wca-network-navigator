@@ -14,6 +14,9 @@ import { CheckCircle2, AlertCircle, FileText, Clock, ChevronDown, Loader2 } from
 import { formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("RunHistoryPanel");
 export function RunHistoryPanel() {
   const { user } = useAuth();
   const [runs, setRuns] = useState<GlobalRun[]>([]);
@@ -29,7 +32,7 @@ export function RunHistoryPanel() {
         const data = await findLastRuns(user.id, 5);
         setRuns(data);
       } catch (err) {
-        console.error("Errore caricamento storico run:", err);
+        log.error("Errore caricamento storico run:", { error: err });
       } finally {
         setLoading(false);
       }

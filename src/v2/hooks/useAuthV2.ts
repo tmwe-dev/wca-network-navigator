@@ -12,6 +12,9 @@ import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useAuthV2");
 // ── Types ────────────────────────────────────────────────────────────
 
 export type AppRole = "admin" | "moderator" | "user";
@@ -135,7 +138,7 @@ export function useAuthV2(): UseAuthV2Return {
       recordLogin(email);
     } catch (err) {
       // Network errors should NOT block the session
-      console.warn("[useAuthV2] loadUserData non-critical error:", err);
+      log.warn("[useAuthV2] loadUserData non-critical error:", { error: err });
       // Still let user in — profile/roles will be defaults
     }
   }, []);

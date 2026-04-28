@@ -24,6 +24,9 @@ import { updateBusinessCard } from "@/data/businessCards";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedFrom } from "@/lib/supabaseUntyped";
 
+
+import { createLogger } from "@/lib/log";
+const moduleLog = createLogger("baseEnrichment");
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export type BaseEnrichSource = "wca" | "contacts" | "bca";
@@ -340,8 +343,7 @@ export async function enrichBaseTarget(
     logs.push(m);
     if (onLog) onLog(m);
     // Console: utile per debugging dal devtools
-    // eslint-disable-next-line no-console
-    console.info(`[enrich:${target.source}:${target.name}] ${m}`);
+    moduleLog.info(`[enrich:${target.source}:${target.name}] ${m}`);
   };
 
   let slugFound = false;

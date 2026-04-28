@@ -8,6 +8,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("TokenUsageChart");
 interface ChartData {
   date: string;
   tokens: number;
@@ -39,7 +42,7 @@ export function TokenUsageChart() {
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error fetching chart data:", error);
+        log.error("Error fetching chart data:", { error: error });
         return [];
       }
 

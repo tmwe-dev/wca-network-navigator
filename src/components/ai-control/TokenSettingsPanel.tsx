@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("TokenSettingsPanel");
 interface TokenSetting {
   key: string;
   label: string;
@@ -66,7 +69,7 @@ export function TokenSettingsPanel() {
     },
     onError: (error) => {
       toast.error("Errore salvataggio impostazioni");
-      console.error(error);
+      log.error("Errore salvataggio impostazioni", { error });
     },
   });
 

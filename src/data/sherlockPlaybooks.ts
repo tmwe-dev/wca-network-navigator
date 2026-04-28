@@ -10,6 +10,9 @@ import type {
   SherlockLevel,
 } from "@/v2/services/sherlock/sherlockTypes";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("sherlockPlaybooks");
 export const sherlockKeys = {
   playbooks: ["sherlock", "playbooks"] as const,
   playbook: (id: string) => ["sherlock", "playbook", id] as const,
@@ -129,7 +132,7 @@ export async function updatePartnerWebsiteIfMissing(
     if (error) throw error;
     return true;
   } catch (e) {
-    console.warn("[sherlock] updatePartnerWebsiteIfMissing failed", e);
+    log.warn("[sherlock] updatePartnerWebsiteIfMissing failed", { error: e });
     return false;
   }
 }
@@ -160,7 +163,7 @@ export async function updatePartnerLinkedinIfMissing(
     if (error) throw error;
     return true;
   } catch (e) {
-    console.warn("[sherlock] updatePartnerLinkedinIfMissing failed", e);
+    log.warn("[sherlock] updatePartnerLinkedinIfMissing failed", { error: e });
     return false;
   }
 }

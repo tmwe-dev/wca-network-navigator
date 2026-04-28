@@ -20,6 +20,9 @@ import { AGENT_PROMPTS } from "@/data/agentPrompts";
 import { AGENT_TEMPLATES, AGENT_DEFAULT_KB } from "@/data/agentTemplates";
 import { OPERATIONS_PROCEDURES } from "@/data/operationsProcedures";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("AIExportPanel");
 // Static source files served at build-time as raw text
 import scopeConfigsSource from "../../../supabase/functions/_shared/scopeConfigs.ts?raw";
 
@@ -420,7 +423,7 @@ export function AIExportPanel({ userId }: { userId: string }) {
         `Export pronto · ${stats.agents} agenti · ${stats.kb} KB · ${stats.prompts} prompt · ${stats.memories} memorie · ${stats.settings} settings · ${stats.personas} personas · ${elapsed}ms`,
       );
     } catch (e) {
-      console.error("AIExportPanel error:", e);
+      log.error("AIExportPanel error:", { error: e });
       toast.error("Errore durante l'export");
     } finally {
       setBusy(false);

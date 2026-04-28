@@ -37,6 +37,9 @@ import type { ParsedFile } from "../utils/fileParser";
 import { collectRealInventory } from "../hooks/harmonizeCollector";
 import type { EntityCreatedEntry } from "@/data/harmonizerSessions";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useHarmonizerLibraryIngestion");
 export type IngestionPhase =
   | "idle"
   | "starting"
@@ -107,7 +110,7 @@ async function bootstrapEntitiesFromDb(userId: string): Promise<EntityCreatedEnt
         created_in_chunk: -1, // preesistente
       }));
   } catch (e) {
-    console.warn("[ingestion] bootstrap entities failed, proceeding empty", e);
+    log.warn("[ingestion] bootstrap entities failed, proceeding empty", { error: e });
     return [];
   }
 }
@@ -164,7 +167,7 @@ export function useHarmonizerLibraryIngestion(userId: string) {
         // Persisti proposte sul run figlio.
         for (const p of output.proposals) {
           await appendHarmonizeProposal(runId, p).catch((e) => {
-            console.warn("[ingestion] appendHarmonizeProposal failed", e);
+            log.warn("[ingestion] appendHarmonizeProposal failed", { error: e });
           });
         }
 

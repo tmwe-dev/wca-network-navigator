@@ -11,6 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { upsertAppSetting, getAppSetting } from "./appSettings";
 import type { GlobalProposal } from "@/v2/ui/pages/prompt-lab/hooks/useProposalProcessing";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("promptLabMetrics");
 /**
  * Tipo di esito del blocco migliorato.
  * Mappa 1:1 con OutcomeType da useProposalProcessing.
@@ -149,10 +152,7 @@ export async function trackImprovementMetrics(
   try {
     await upsertAppSetting(userId, key, JSON.stringify(metrics));
   } catch (e) {
-    console.error(
-      `[trackImprovementMetrics] Errore salvataggio metriche ${runId}:`,
-      e,
-    );
+    log.error(`[trackImprovementMetrics] Errore salvataggio metriche ${runId}:`, { error: e, });
     // Non lanciamo errore — continuiamo comunque
   }
 
@@ -178,7 +178,7 @@ async function loadRunMetrics(userId: string): Promise<PromptLabMetrics[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("[loadRunMetrics] Errore query app_settings:", error);
+    log.error("[loadRunMetrics] Errore query app_settings:", { error: error });
     return [];
   }
 

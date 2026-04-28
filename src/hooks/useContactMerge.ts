@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useContactMerge");
 // ── Levenshtein distance for fuzzy matching ──
 function levenshteinDistance(a: string, b: string): number {
   const aLower = a.toLowerCase().trim();
@@ -232,14 +235,14 @@ export function useMergeContacts() {
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
 
-      if (activityError) console.warn("Activity reassignment warning:", activityError);
+      if (activityError) log.warn("Activity reassignment warning:", { error: activityError });
 
       // 3. Reassign emails to surviving contact
       const { error: emailError } = await tFrom("emails")
         .update({ contact_id: keepId })
         .eq("contact_id", deleteId);
 
-      if (emailError) console.warn("Email reassignment warning:", emailError);
+      if (emailError) log.warn("Email reassignment warning:", { error: emailError });
 
       // 4. Delete the duplicate
       const { error: deleteError } = await supabase.from("imported_contacts").delete().eq("id", deleteId);

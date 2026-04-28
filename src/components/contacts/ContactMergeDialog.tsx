@@ -18,6 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("ContactMergeDialog");
 export interface ContactMergeDialogProps {
   contact1: ContactForMerge;
   contact2: ContactForMerge;
@@ -93,7 +96,7 @@ export function ContactMergeDialog({
       onOpenChange(false);
       onMergeComplete?.(keepContact.id);
     } catch (error) {
-      console.error("Merge error:", error);
+      log.error("Merge error:", { error: error });
       toast.error("Errore durante l'unione dei contatti");
     }
   };

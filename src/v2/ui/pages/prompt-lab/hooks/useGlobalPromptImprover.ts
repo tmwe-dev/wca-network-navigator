@@ -35,6 +35,9 @@ import { trackImprovementMetrics } from "@/data/promptLabMetrics";
 import { getAppSetting } from "@/data/appSettings";
 import { computeChangeRatio, MINOR_CHANGE_THRESHOLD } from "./changeRatio";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useGlobalPromptImprover");
 /**
  * SYSTEM_MISSION_DEFAULT — fallback usato se non c'è nessun valore in
  * app_settings con chiave `system_mission_text`.
@@ -345,7 +348,7 @@ export function useGlobalPromptImprover(
       );
       runId = run.id;
     } catch (e) {
-      console.warn("[GlobalImprover] DB create failed, continuing without persistence:", e);
+      log.warn("[GlobalImprover] DB create failed, continuing without persistence", { error: e });
     }
 
     setState({
@@ -495,7 +498,7 @@ export function useGlobalPromptImprover(
       try {
         await trackImprovementMetrics(state.runId, userId, state.proposals);
       } catch (e) {
-        console.error("[useGlobalPromptImprover] Errore tracking metriche:", e);
+        log.error("[useGlobalPromptImprover] Errore tracking metriche:", { error: e });
         // Non interrompiamo il flusso se il tracking fallisce
       }
     }

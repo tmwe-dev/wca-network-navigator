@@ -23,6 +23,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("GlobalAIAutomationPause");
 interface PauseState {
   isPaused: boolean;
   pausedAt: string | null;
@@ -56,7 +59,7 @@ export function GlobalAIAutomationPause() {
           .in('key', ['ai_automations_paused', 'ai_automations_paused_at', 'ai_automations_paused_reason']);
 
         if (error) {
-          console.error('Error loading pause state:', error);
+          log.error('Error loading pause state:', { error: error });
           return;
         }
 
@@ -70,7 +73,7 @@ export function GlobalAIAutomationPause() {
           pauseReason: reasonSetting?.value || null,
         });
       } catch (error) {
-        console.error('Error loading pause state:', error);
+        log.error('Error loading pause state:', { error: error });
       } finally {
         setLoading(false);
       }
@@ -148,7 +151,7 @@ export function GlobalAIAutomationPause() {
       setReason('');
       setShowConfirm(false);
     } catch (error) {
-      console.error('Error toggling pause:', error);
+      log.error('Error toggling pause:', { error: error });
       toast.error('Errore aggiornamento stato di pausa');
     } finally {
       setLoading(false);

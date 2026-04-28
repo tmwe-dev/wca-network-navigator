@@ -19,6 +19,9 @@ import { createHarmonizerFollowup, followupFromProposal } from "@/data/harmonize
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import type { HarmonizeProposal } from "@/data/harmonizeRuns";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("harmonizeExecutor");
 export interface ExecuteResult {
   ok: boolean;
   reason?: string;
@@ -40,7 +43,7 @@ export async function executeProposal(
         try {
           followupId = await createHarmonizerFollowup(followup);
         } catch (e) {
-          console.warn("[harmonizeExecutor] followup creation failed", e);
+          log.warn("[harmonizeExecutor] followup creation failed", { error: e });
         }
       }
     }

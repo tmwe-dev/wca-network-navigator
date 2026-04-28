@@ -39,6 +39,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
 import type { SenderAnalysis } from "@/types/email-management";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("SenderActionsDialog");
 /** Voce nel selettore template prompt. */
 interface PromptTemplate {
   id: string;
@@ -136,7 +139,7 @@ export function SenderActionsDialog({
 
         if (!cancelled) setTemplates(list);
       } catch (e) {
-        console.warn("[SenderActionsDialog] template load failed", e);
+        log.warn("[SenderActionsDialog] template load failed", { error: e });
       } finally {
         if (!cancelled) setTemplatesLoading(false);
       }

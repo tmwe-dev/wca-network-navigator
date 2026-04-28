@@ -5,6 +5,9 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useExport");
 export type EntityType = "contacts" | "partners" | "deals" | "emails";
 export type ExportFormat = "csv" | "xlsx";
 
@@ -63,7 +66,7 @@ async function convertToExcel(
 
     return XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as unknown as Uint8Array;
   } catch (error) {
-    console.error("Excel export error:", error);
+    log.error("Excel export error:", { error: error });
     throw new Error("Esportazione Excel non disponibile. Usa CSV invece.");
   }
 }

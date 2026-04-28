@@ -24,6 +24,9 @@ import { queryKeys } from "@/lib/queryKeys";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("PendingActionsPanel");
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
   send_email: { icon: Mail, color: "text-blue-400 bg-blue-400/10", label: "Invia Email" },
   send_whatsapp: { icon: Mail, color: "text-green-400 bg-green-400/10", label: "WhatsApp" },
@@ -122,7 +125,7 @@ export function PendingActionsPanel() {
           const { error: execError } = await supabase.functions.invoke("pending-action-executor", {
             body: { pending_action_id: params.id },
           });
-          if (execError) console.error("Execution failed:", execError);
+          if (execError) log.error("Execution failed:", { error: execError });
         } catch (e) { /* pending-action-executor invocation failed */ }
       }
     },

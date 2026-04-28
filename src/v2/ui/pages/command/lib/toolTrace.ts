@@ -1,3 +1,5 @@
+import { createLogger } from "@/lib/log";
+const log = createLogger("toolTrace");
 /**
  * toolTrace — lightweight per-message execution tracing.
  *
@@ -90,8 +92,7 @@ class TraceBuilder {
       driver: this.driver,
       references: [...this.references],
     };
-    if (typeof console !== "undefined" && console.info) {
-      console.info("[command-trace]", {
+    log.info("[command-trace]", {
         prompt: trace.prompt,
         phase: trace.phase,
         driver: trace.driver,
@@ -99,7 +100,6 @@ class TraceBuilder {
         steps: trace.steps,
         references: trace.references,
       });
-    }
     return trace;
   }
 }

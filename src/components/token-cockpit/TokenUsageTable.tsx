@@ -17,6 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("TokenUsageTable");
 interface UsageRow {
   id: string;
   function_name: string;
@@ -50,7 +53,7 @@ export function TokenUsageTable() {
         .limit(20);
 
       if (error) {
-        console.error("Error fetching table data:", error);
+        log.error("Error fetching table data:", { error: error });
         return [];
       }
 
