@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { dispatchAiAgentEffects, parseAiAgentResponse } from "@/lib/ai/agentResponse";
@@ -38,16 +38,19 @@ export function PartnerAIBar({ viewContext }: Props) {
     const newMessages = [...history, { role: "user", content: text }];
 
     try {
-      const data = await invokeEdge<Record<string, unknown>>("ai-assistant", { body: {
+      const data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+        scope: "partners",
+        body: {
           messages: newMessages,
-          context: viewContext ? {
-            source: "partner_hub",
-            viewLevel: viewContext.viewLevel,
-            selectedCountry: viewContext.selectedCountry,
-            totalPartners: viewContext.totalPartners,
-            selectedCount: viewContext.selectedCount,
-          } : undefined,
-        }, context: "PartnerAIBar.ai_assistant" });
+          viewContext: viewContext ?? null,
+        },
+        context: {
+          source: "PartnerAIBar",
+          route: "/v2/partners",
+          mode: "tool-decision",
+          extra: viewContext as unknown as Record<string, unknown> | undefined,
+        },
+      });
       if (data?.error) {
         toast.error(String(data.error));
         setLoading(false);

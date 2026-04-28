@@ -2,7 +2,7 @@
  * useMissionBuilderV2 — Mission creation wizard
  */
 import { useState, useCallback } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export type MissionStep = "target" | "channel" | "communication" | "agents" | "schedule" | "confirm";
 
@@ -44,9 +44,10 @@ export function useMissionBuilderV2() {
   const submitMission = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      await invokeEdge("unified-assistant", {
-        body: { message: "create_mission", scope: "mission-builder", config },
-        context: "missionBuilderV2",
+      await invokeAi("unified-assistant", {
+        scope: "missions",
+        body: { message: "create_mission", config },
+        context: { source: "useMissionBuilderV2", route: "/v2/missions/builder", mode: "create-mission" },
       });
     } finally {
       setIsSubmitting(false);

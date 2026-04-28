@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { toast } from "sonner";
 import { FlaskConical, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,14 +69,15 @@ export function ABTestCreator() {
     }
     setGenerating(true);
     try {
-      const data = await invokeEdge<{ choices?: { message?: { content?: string } }[]; content?: string; text?: string }>("ai-assistant", {
+      const data = await invokeAi<{ choices?: { message?: { content?: string } }[]; content?: string; text?: string }>("ai-assistant", {
+        scope: "outreach",
         body: {
           messages: [
             { role: "system", content: "Genera una variante alternativa per un A/B test email. Rispondi SOLO con il testo della variante, niente altro." },
             { role: "user", content: `Tipo: ${testType}. Variante originale: "${variantA}". Genera una variante B diversa ma con lo stesso intento.` },
           ],
         },
-        context: "ABTestCreator.generateB",
+        context: { source: "ABTestCreator", route: "/v2/outreach", mode: "generate-variant" },
       });
       const text = data?.choices?.[0]?.message?.content || data?.content || data?.text || "";
       if (text) setVariantB(text.trim().replace(/^["']|["']$/g, ""));
