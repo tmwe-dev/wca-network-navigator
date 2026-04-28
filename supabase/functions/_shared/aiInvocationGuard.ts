@@ -41,6 +41,9 @@ const VALID_SCOPES = new Set([
   "home", "partners", "missions", "outreach", "crm", "staff",
   "strategic", "command", "email", "classify", "agent",
   "sherlock", "lab", "diagnostics", "briefing",
+  // Specialized scopes (unified-assistant routes)
+  "kb-supervisor", "deep-search", "chat", "mission-builder",
+  "partner_hub", "cockpit", "contacts", "import", "extension",
 ]);
 
 function jsonError(status: number, code: string, message: string): Response {
