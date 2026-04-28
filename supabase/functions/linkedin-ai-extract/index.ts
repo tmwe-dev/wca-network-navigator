@@ -1,5 +1,6 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -12,15 +13,10 @@ Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
-    // J8 — Auth check: require at least apikey or Authorization header
-    const authHeader = req.headers.get("Authorization");
-    const apiKey = req.headers.get("apikey");
-    if (!authHeader && !apiKey) {
-      return new Response(JSON.stringify({ error: "Missing auth" }), {
-        status: 401,
-        headers: { ...dynCors, "Content-Type": "application/json" },
-      });
-    }
+    // P1.5 — Hardened auth: require a real JWT (or anon-key from a CORS-whitelisted
+    // origin via extensionAuth fallback). Protects AI Gateway credits.
+    const auth = await requireExtensionAuth(req, dynCors);
+    if (isExtensionAuthError(auth)) return auth;
 
     const { mode, pageType, snapshot } = await req.json();
 
