@@ -8,6 +8,44 @@ import { withCircuitBreaker } from "../../bridge/circuit-breaker";
 import type { z } from "zod";
 
 /**
+ * Translates raw Supabase invoke errors into user-facing messages.
+ * The supabase-js SDK throws "Failed to send a request to the Edge Function"
+ * whenever the underlying fetch crashes — typically because the local JWT is
+ * malformed/expired. In that case the only recovery is a fresh login, so we
+ * give the user actionable feedback instead of the cryptic SDK message.
+ */
+function translateInvokeError(functionName: string, rawMessage: string): string {
+  const msg = (rawMessage ?? "").toLowerCase();
+
+  if (
+    msg.includes("failed to send a request") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("load failed")
+  ) {
+    return `Sessione scaduta o connessione interrotta verso "${functionName}". Effettua di nuovo il login e riprova.`;
+  }
+
+  if (msg.includes("401") || msg.includes("unauthor") || msg.includes("jwt")) {
+    return `Sessione non valida per "${functionName}". Effettua di nuovo il login.`;
+  }
+
+  if (msg.includes("429") || msg.includes("rate limit")) {
+    return `Troppe richieste verso "${functionName}". Attendi qualche secondo e riprova.`;
+  }
+
+  if (msg.includes("402") || msg.includes("payment")) {
+    return `Crediti AI esauriti per "${functionName}". Aggiungi crediti dal pannello workspace.`;
+  }
+
+  if (msg.includes("500") || msg.includes("502") || msg.includes("503") || msg.includes("504")) {
+    return `Errore temporaneo del motore "${functionName}". Riprova tra qualche secondo.`;
+  }
+
+  return `Edge function "${functionName}" failed: ${rawMessage}`;
+}
+
+/**
  * Invokes a Supabase edge function with Result wrapping,
  * Zod response validation, and circuit breaker protection.
  */
@@ -24,7 +62,7 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
       });
 
       if (error) {
-        throw new Error(`Edge function "${functionName}" failed: ${error.message}`);
+        throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
       }
 
       const parsed = responseSchema.safeParse(data);
@@ -53,7 +91,7 @@ export async function invokeEdgeRaw<TReq extends Record<string, unknown>>(
     });
 
     if (error) {
-      return err(ioError("EDGE_FUNCTION_ERROR", error.message, {
+      return err(ioError("EDGE_FUNCTION_ERROR", translateInvokeError(functionName, error.message), {
         functionName,
       }, "invokeEdgeRaw"));
     }
