@@ -1,55 +1,134 @@
-## Audit dei punti che vanno toccati
+## Obiettivo
+Pop-up "Trace Console" attivabile da ogni pagina del V2 che mostra in tempo reale **tutto il traffico frontend** (chiamate AI, edge function, query Supabase) con vista doppia:
+- **Tab Trace** — eventi reali in ordine cronologico, filtrabili
+- **Tab Checklist** — per i flussi critici (es. "send email", "ai-query Command", "agent-loop") la lista dei passi attesi confrontata con quelli effettivamente eseguiti, con verde/rosso/mancante
 
-Ho mappato l'intera catena della "ricerca AI" e ho trovato 7 luoghi dove la logica deve essere coerente. Oggi solo `ai-query-planner` riceverebbe il fix, gli altri 6 continuerebbero a:
-- conoscere a memoria nomi tabella, paesi e label di stato (hardcoded)
-- assumere che ogni risposta = 1 sola tabella
-- non riuscire a commentare risposte multi-entità
+I dati persistono nella nuova tabella `ai_runtime_traces` per consultazione retrospettiva e cross-utente (admin).
 
-| # | Punto | Problema oggi | Cosa va fatto |
-|---|---|---|---|
-| 1 | `supabase/functions/ai-query-planner/index.ts` | Restituisce SEMPRE 1 piano. | Output `{ plans:[...] }` (1..N), formato singolo retro-compatibile. Cap 4. |
-| 2 | `src/v2/io/edge/aiQueryPlanner.ts` | Schema Zod accetta solo `QueryPlan`. | Nuovo schema `QueryPlanBatchSchema = { plans: QueryPlan[] }`, normalizza il singolo. |
-| 3 | `src/v2/ui/pages/command/lib/safeQueryExecutor.ts` | `executeQueryPlan(one)`. | Aggiunge `executeQueryPlans(many)` con `Promise.allSettled`. Singolo invariato. |
-| 4 | `src/v2/ui/pages/command/tools/aiQueryTool.ts` | Render solo `kind:"table"`. | Se >1 piano → nuovo `kind:"multi"` con `parts[]`. Cache `_lastSuccessfulPlan` = primo piano. |
-| 5 | `src/v2/ui/pages/command/lib/localResultFormatter.ts` | Hardcoded `TABLE_NOUN_*`, `COUNTRY_LABELS`, `describeFilters`. | Aggiunge `tryLocalCommentMulti(parts)` che concatena messaggi singoli. **NON** elimino le tabelle hardcoded di label perché sono **UI niceties** (paese in italiano, plurale corretto), non knowledge sul DB — vivono già in TS perché sono testo umano. Spiego nei commenti che è UI, non schema. |
-| 6 | `src/v2/ui/pages/command/hooks/useResultCommentary.ts` | Passa singolo `count` al fallback AI. | Riconosce `kind:"multi"` e chiama `tryLocalCommentMulti`; in fallback AI passa tutti i parts a `serializeResultForAI`. |
-| 7 | `src/v2/ui/pages/command/components/CanvasRenderer.tsx` (via `canvasForResult`) | Non sa renderizzare multi. | Render sezioni in sequenza, header per ognuna; bulk actions disabilitate. |
-| 8 | `src/v2/ui/pages/command/lib/auditFromTrace.ts` + `MessageAuditPanel` | "1 step" anche con N piani. | Mostra "N step paralleli" con tabella+durata per ognuno. |
-| 9 | `src/v2/ui/pages/command/aiBridge.ts → serializeResultForAI` | Serializza solo `kind:"table"`. | Branch per `kind:"multi"` che concatena le parti. |
+---
 
-## Cosa NON tocco e perché
+## Architettura
 
-- **`ai-assistant/systemPrompt.ts`** — già KB-driven via `assemblePrompt` + Charter R5 ("chiama il tool prima di rispondere"). Le entità multiple sono già gestite dai tool (search_partners, search_contacts, get_country_stats sono separati e l'AI li invoca in sequenza/parallelo). Nessuna modifica necessaria.
-- **`agent-execute/systemPrompt.ts`** — già persona/KB-driven, niente nomi tabella nel prompt. Nessuna modifica.
-- **`agentic-decide`, `unified-assistant`, `agent-loop`** — orchestratori che chiamano tool, non scrivono query. Nessuna modifica.
-- **Schema DB, RLS, lista tabelle whitelisted** — invariati.
-- **Pipeline `plan-execution`** (multi-step sequenziale) — invariata. Questo cambio riguarda solo il fast-lane multi-entità, che è ortogonale.
+### Layer di raccolta (interceptor centralizzati)
+Un singolo `traceCollector` (singleton in memoria) intercetta a livello frontend:
 
-## Comportamento risultante
+1. **invokeAi()** — già choke point unico per AI (Charter). Aggiungo emit di evento `ai.invoke` con scope, source, model, durata, status.
+2. **invokeEdge()** — choke point per edge function non-AI. Emit `edge.invoke`.
+3. **supabase client wrapper** — patch leggera su `supabase.from(...)` che intercetta `.select/.insert/.update/.delete/.upsert/.rpc` e emette `db.query` (table, op, rowCount, durata, err). Implementato come Proxy attorno al client esistente, senza toccare `client.ts`.
+4. **`window.dispatchEvent('trace:event', ...)`** — API pubblica per emit manuali da hook custom (es. journalist gate, hard guards lato client).
 
-Prompt: *"quanti address e contatti in totale abbiamo nel sistema"*
-→ Planner: `plans:[{table:"partners",columns:["id"]}, {table:"imported_contacts",columns:["id"]}]`
-→ Executor: 2 query in parallelo
-→ Direttore: *"Nel sistema ci sono **25.103 partner** (address) e **11.414 contatti**. Vuoi filtrarli per paese o stato lead?"*
-→ Audit: *"Fast lane · 2 step paralleli · driver: ai-query · 1.6s"*
+Ogni evento ha lo schema:
+```
+{ id, ts, type, scope, source, route, status, duration_ms, payload_summary, error?, request_id, correlation_id }
+```
 
-Prompt singolo (es. *"quanti partner in Italia"*) → comportamento identico a oggi (regression-free).
+`correlation_id` (UUID) raggruppa tutto ciò che parte da una singola azione utente: viene impostato all'inizio di un'invocazione AI/edge e propagato negli eventi figli (es. l'`ai.invoke` `agent-loop` con la sua sequenza di `db.query` correlate).
 
-## Test
+### Persistenza
+Nuova tabella **`ai_runtime_traces`** (insert-only):
+- `id uuid pk`, `user_id uuid`, `correlation_id uuid`, `ts timestamptz`, `type text`, `scope text`, `source text`, `route text`, `status text`, `duration_ms int`, `payload_summary jsonb`, `error jsonb`, `created_at`
+- Index su `(user_id, ts desc)` e `(correlation_id)`
+- RLS: SELECT solo own + admin via `has_role`; INSERT only own
+- Retention: cron job DB cancella > 7 giorni (rolling window)
 
-- Unit: `aiQueryTool` path multi (2 plans, 1 fallisce → mostra il successo + errore parziale).
-- Unit: `tryLocalCommentMulti` con 2 count.
-- Unit: `serializeResultForAI` con `kind:"multi"`.
-- E2E: `e2e/cockpit-flow.spec.ts` aggiungo step "quanti partner e contatti" → assert messaggio contiene entrambi i numeri.
+Flush DB **batched** (max 25 eventi o 5s) per non spammare.
 
-## Deploy
+### UI
 
-Solo `ai-query-planner` da deployare (le altre modifiche sono client-side).
+**Componente `TraceConsole`** mountato in `App.tsx` come singleton globale. Hotkey `Ctrl+Shift+T` per toggle. Stato persistito in `localStorage` (open/closed, position, filtri).
 
-## Nota sulla "uniformità di prompt"
+```text
+┌─ Trace Console  [×] [⚙️] [📌pin] ┐
+│ [Trace] [Checklist] [Filters]   │
+├─────────────────────────────────┤
+│ 18:52:01.234 ai.invoke ai-query │
+│   ↳ scope=command duration=1.2s │
+│ 18:52:01.512 db.query partners  │
+│   ↳ select count=1 230ms        │
+│ 18:52:02.401 edge.invoke send-..│
+│   ↳ status=200 1.8s             │
+└─────────────────────────────────┘
+```
 
-La tua osservazione era giusta in generale, ma in questo specifico cambio gli **altri** system prompt (ai-assistant, agent-execute) **non** hanno bisogno di patch perché:
-1. non producono query SQL, chiamano tool;
-2. i tool sono già **per-entità** (`search_partners`, `search_contacts` ecc.) quindi l'AI può già invocarli in parallelo se serve.
+**Tab Checklist** — selezioni un `correlation_id` e vedi:
+```text
+Flow: send-email
+✅ journalist_review (522ms)
+✅ promptSanitizer
+✅ generate-email
+❌ post-send-pipeline  ← MANCANTE
+✅ smtp.send
+```
 
-La "stessa filosofia" qui significa togliere knowledge hardcoded sul DB nei punti dove ce n'è — e il punto è il **planner + i suoi consumatori**, non gli altri orchestratori che già passano dai tool.
+Le checklist sono definite in un file statico **`src/v2/observability/flowDefinitions.ts`** che mappa flow → step attesi (es. lista di `(type, scope|source)` da matchare nel buffer eventi). Nuovi flussi si aggiungono qui senza toccare il resto.
+
+### Filtraggio
+- per `type` (ai/edge/db)
+- per `scope` (es. solo `command`, solo `agent-loop`)
+- per `route` (eventi sulla route corrente)
+- search testuale su payload
+
+### Performance / sicurezza
+- Eventi DB **batchati** + payload summary troncato (max 1KB JSON)
+- Body request/response **non** salvati grezzi: solo summary (table, op, count, status)
+- Toggle "Pause recording" per congelare il buffer durante debug
+- In produzione abilitato solo per ruoli admin/operator (RBAC check), gli altri utenti vedono il toggle disabilitato.
+
+---
+
+## Dettagli tecnici
+
+### File da creare
+```
+src/v2/observability/
+  traceCollector.ts          ← singleton bus + buffer + flusher
+  traceTypes.ts              ← schema TS + Zod
+  flowDefinitions.ts         ← checklist statiche per flow
+  supabaseTraceProxy.ts      ← Proxy attorno al supabase client
+  TraceConsole.tsx           ← UI floating + tabs
+  TraceConsoleTrigger.tsx    ← bottone fisso bottom-right
+  hooks/useTraceBuffer.ts    ← React subscription al collector
+
+src/data/runtimeTraces.ts    ← DAL insert/select trace
+
+supabase/migrations/<ts>_ai_runtime_traces.sql
+```
+
+### File da modificare (minimo invasivo)
+- `src/v2/io/edge/invokeAi.ts` — wrap chiamata, emit evento prima/dopo
+- `src/lib/api/invokeEdge.ts` — stesso pattern
+- `src/integrations/supabase/client.ts` ⚠️ FILE PROTETTO → uso wrapper esterno: `src/v2/observability/supabaseTraceProxy.ts` re-esporta `supabase` patchato; chi vuole tracciare importa dal nuovo path. Per coprire tutto senza forzare migrazione, monto un **monkey-patch one-shot** in `App.tsx` che avvolge i metodi del client già istanziato.
+- `src/App.tsx` — mount di `<TraceConsole />` e init `traceCollector`
+
+### Migration SQL
+```sql
+CREATE TABLE ai_runtime_traces (...);
+ALTER TABLE ai_runtime_traces ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owners select" ...;
+CREATE POLICY "admin select all" ...;
+CREATE POLICY "owners insert" ...;
+CREATE INDEX ...;
+-- cron retention 7gg via pg_cron
+```
+
+### Checklist flow definite al lancio (estendibili)
+1. `send-email` (direct) → journalist + promptSanitizer + edge `send-email` + post-send + DB activity insert
+2. `ai-query Command` → planner + executor + (opzionale) commenter + DB select sui table dichiarati
+3. `agent-loop` → persona load + capabilities load + operative prompts load + LLM call + tool execution
+4. `process-email-queue` (solo lato frontend trigger) → enqueue + cron pickup notification
+5. `deep-search` → quality preset + tool sequence
+
+---
+
+## Cosa NON faccio in questa iterazione
+- Tracing **server-side** dei step interni alle edge function (es. dentro `agent-execute`): per quello c'è già `edge_metrics` + `structuredLogger`. Aggiungo solo la riga `correlation_id` al header passato dal frontend, così in futuro si può fare un join lato server.
+- UI di analytics aggregate (pie chart per scope ecc): vediamo l'esigenza dopo aver raccolto qualche giorno di dati.
+
+---
+
+## Verifica
+1. Aprire pagina Command, fare query "quanti contatti" → deve apparire correlation_id con ai-query-planner + ai-comment + db.select su contacts.
+2. Mandare email da SendEmailDialog → checklist tab mostra i 4 step verdi (sanitize, journalist, send-email, post-send).
+3. Reload pagina con `Ctrl+Shift+T` → console riappare aperta nella stessa posizione.
+4. Login con utente non-admin → trigger console disabilitato.
+5. Verifica DB: `select count(*) from ai_runtime_traces` cresce; cron pulizia testato manualmente con backdated row.
