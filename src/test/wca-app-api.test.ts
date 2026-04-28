@@ -8,6 +8,8 @@ import {
   wcaJobPause,
   WCA_NETWORKS,
 } from "@/lib/api/wcaAppApi";
+import { resetCheckpoint } from "@/lib/wcaCheckpoint";
+import { clearWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 
 // ─── E2E contract test per wcaAppApi (mock fetch globale) ────
 
@@ -23,6 +25,9 @@ function mockFetch(response: any, ok = true, status = 200) {
 
 describe("wcaAppApi — contract tests (mocked fetch)", () => {
   beforeEach(() => {
+    resetCheckpoint();
+    clearWcaCookie();
+    setWcaCookie("fake-cookie=abc");
     // stub localStorage con cookie valido per evitare login
     const store = new Map<string, string>();
     store.set(
