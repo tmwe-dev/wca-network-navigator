@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
 import {
-  LogOut, Command, Wifi, WifiOff, Sun, Moon,
+  LogOut, Command, Wifi, WifiOff, Sun, Moon, Search,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
