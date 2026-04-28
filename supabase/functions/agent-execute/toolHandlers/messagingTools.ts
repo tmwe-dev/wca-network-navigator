@@ -1,3 +1,4 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 import { resolvePartnerId } from "../shared.ts";
 
 interface ChannelMessageRow {
@@ -30,7 +31,7 @@ interface HoldingItem {
 }
 
 export async function handleGetInbox(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -83,7 +84,7 @@ export async function handleGetInbox(
 }
 
 export async function handleGetConversationHistory(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -203,7 +204,7 @@ export async function handleGetConversationHistory(
 }
 
 export async function handleGetHoldingPattern(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -310,7 +311,7 @@ export async function handleGetHoldingPattern(
 }
 
 export async function handleUpdateMessageStatus(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -326,7 +327,7 @@ export async function handleUpdateMessageStatus(
 }
 
 export async function handleGetEmailThread(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {

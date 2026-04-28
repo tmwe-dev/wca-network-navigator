@@ -1,3 +1,4 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 import { escapeLike } from "../shared.ts";
 
 interface KbEntry {
@@ -19,7 +20,7 @@ interface AgentRow {
 }
 
 export async function handleCreateAgentTask(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -73,7 +74,7 @@ export async function handleCreateAgentTask(
 }
 
 export async function handleListAgentTasks(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -124,7 +125,7 @@ export async function handleListAgentTasks(
 }
 
 export async function handleGetTeamStatus(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string
 ): Promise<unknown> {
   const { data: agents } = await supabase
@@ -190,7 +191,7 @@ export async function handleGetTeamStatus(
 }
 
 export async function handleUpdateAgentPrompt(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -235,7 +236,7 @@ export async function handleUpdateAgentPrompt(
 }
 
 export async function handleAddAgentKbEntry(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {

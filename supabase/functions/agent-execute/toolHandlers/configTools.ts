@@ -1,5 +1,6 @@
+import type { AnySupabaseClient } from "../../_shared/supabaseClient.ts";
 export async function handleManageWorkspacePreset(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -80,7 +81,7 @@ export async function handleManageWorkspacePreset(
 }
 
 export async function handleGetConversationContext(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -103,7 +104,7 @@ export async function handleGetConversationContext(
 }
 
 export async function handleGetAddressRules(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -132,7 +133,7 @@ export async function handleGetAddressRules(
 }
 
 export async function handleSaveMemory(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -181,7 +182,7 @@ export async function handleDetectLanguage(
 }
 
 export async function handleGetPendingActions(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -210,7 +211,7 @@ export async function handleGetPendingActions(
 }
 
 export async function handleApproveAiAction(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
@@ -229,7 +230,7 @@ export async function handleApproveAiAction(
 }
 
 export async function handleRejectAiAction(
-  supabase: any,
+  supabase: AnySupabaseClient,
   userId: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
