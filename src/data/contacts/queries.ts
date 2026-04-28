@@ -176,6 +176,47 @@ export async function markContactTransferred(id: string) {
   if (error) throw error;
 }
 
+/**
+ * P5.2 — soft-link al partner creato dopo il transfer.
+ * Mai delete fisica (mem://constraints/no-physical-delete).
+ */
+export async function linkContactToPartner(id: string, partnerId: string) {
+  const { error } = await supabase
+    .from("imported_contacts")
+    .update({
+      is_transferred: true,
+      transferred_to_partner_id: partnerId,
+      transferred_at: new Date().toISOString(),
+    } as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * P5.1 — Dedup lookup all'import. Ritorna match per email + company_name.
+ */
+export type ImportDuplicateMatch = {
+  match_email: string | null;
+  match_company: string | null;
+  imported_contact_id: string | null;
+  partner_id: string | null;
+  source: "imported_contact" | "partner" | "partner_company";
+};
+
+export async function findImportDuplicates(
+  userId: string,
+  emails: string[],
+  companyNames: string[],
+): Promise<ImportDuplicateMatch[]> {
+  const { data, error } = await supabase.rpc("find_import_duplicates" as never, {
+    p_user_id: userId,
+    p_emails: emails,
+    p_company_names: companyNames,
+  } as never);
+  if (error) throw error;
+  return (data ?? []) as unknown as ImportDuplicateMatch[];
+}
+
 export async function updateContactEnrichment(id: string, enrichmentPatch: Record<string, unknown>) {
   const { data } = await supabase
     .from("imported_contacts")

@@ -150,7 +150,8 @@ export function useTransferToPartners() {
           });
         }
 
-        await (await import("@/data/contacts")).markContactTransferred(c.id);
+        // P5.2: soft-link al partner creato (no delete fisica)
+        await (await import("@/data/contacts")).linkContactToPartner(c.id, partner.id);
         successCount++;
       }
       return successCount;
@@ -200,7 +201,8 @@ export function useCreateActivitiesFromImport() {
           campaign_batch_id: campaignBatchId || null,
         });
 
-        await (await import("@/data/contacts")).markContactTransferred(c.id);
+        // P5.2: soft-link al partner creato (no delete fisica)
+        await (await import("@/data/contacts")).linkContactToPartner(c.id, partner.id);
         count++;
       }
       return count;
