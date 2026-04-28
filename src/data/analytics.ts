@@ -4,6 +4,9 @@
  */
 import { tFrom } from "@/lib/typedSupabase";
 import { supabase } from "@/integrations/supabase/client";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("data/analytics");
 
 export interface EmailMetricsData {
   totalSent: number;
@@ -114,7 +117,7 @@ export async function getEmailMetrics(
       avgResponseTime,
     };
   } catch (error) {
-    console.error("Error fetching email metrics:", error);
+    log.error("Error fetching email metrics", { error: error instanceof Error ? error.message : String(error) });
     return {
       totalSent: 0,
       totalReceived: 0,
@@ -169,7 +172,7 @@ export async function getPartnerMetrics(userId: string): Promise<PartnerMetricsD
       activePartners,
     };
   } catch (error) {
-    console.error("Error fetching partner metrics:", error);
+    log.error("Error fetching partner metrics", { error: error instanceof Error ? error.message : String(error) });
     return {
       totalPartners: 0,
       byLeadStatus: {},
@@ -227,7 +230,7 @@ export async function getOutreachMetrics(
       },
     };
   } catch (error) {
-    console.error("Error fetching outreach metrics:", error);
+    log.error("Error fetching outreach metrics", { error: error instanceof Error ? error.message : String(error) });
     return {
       emailsSentPerDay: [],
       responseRate: 0,
@@ -284,7 +287,7 @@ export async function getAIUsageMetrics(
       dailyUsage: dailyUsageArray,
     };
   } catch (error) {
-    console.error("Error fetching AI usage metrics:", error);
+    log.error("Error fetching AI usage metrics", { error: error instanceof Error ? error.message : String(error) });
     return {
       totalCalls: 0,
       byType: {},
@@ -356,7 +359,7 @@ export async function getPipelineMetrics(userId: string): Promise<PipelineMetric
       winLossRatio,
     };
   } catch (error) {
-    console.error("Error fetching pipeline metrics:", error);
+    log.error("Error fetching pipeline metrics", { error: error instanceof Error ? error.message : String(error) });
     return {
       totalValue: 0,
       byStage: {},
@@ -413,7 +416,7 @@ export async function getActivityTimeline(
       })
       .sort((a, b) => b.date.localeCompare(a.date));
   } catch (error) {
-    console.error("Error fetching activity timeline:", error);
+    log.error("Error fetching activity timeline", { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -449,7 +452,7 @@ export async function getMetricsComparison(
       },
     };
   } catch (error) {
-    console.error("Error fetching metrics comparison:", error);
+    log.error("Error fetching metrics comparison", { error: error instanceof Error ? error.message : String(error) });
     return {
       sentTrend: { current: 0, previous: 0, change: 0, changePercent: 0 },
       responseTrend: { current: 0, previous: 0, change: 0 },
