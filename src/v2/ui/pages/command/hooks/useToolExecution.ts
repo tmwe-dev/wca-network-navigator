@@ -145,6 +145,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
                 : `Cerco nel database…`,
         agentName: labels.agentLabel,
         timestamp: pageState.ts(),
+        silent: true,
       });
 
       pageState.setFlowPhase("executing");
@@ -244,13 +245,15 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
         const countLabel = getCountLabel(tool.id, result);
 
         // For AI-query results, try local formatter to get a sharp answer + clickable next-step chips.
-        let messageContent = `${countLabel} →`;
+        let messageContent = labels.isComposer ? "Bozza pronta nel canvas. Controlla destinatario e testo, poi invia." : `${countLabel} →`;
+        let spokenSummary = labels.isComposer ? "Ho preparato il composer: verifica destinatario e testo prima dell'invio." : undefined;
         let suggestedActions: { label: string; prompt: string }[] | undefined;
         if (tool.id === "ai-query") {
           const plan = getLastSuccessfulQueryPlan();
           const local = tryLocalComment(prompt, result, plan);
           if (local) {
             messageContent = local.message;
+            spokenSummary = local.spokenSummary;
             suggestedActions = local.suggestedActions.length > 0 ? [...local.suggestedActions] : undefined;
           }
         }
@@ -260,6 +263,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           content: messageContent,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
+          spokenSummary,
           suggestedActions,
         });
       } catch (err: unknown) {
