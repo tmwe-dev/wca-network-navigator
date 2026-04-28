@@ -1,5 +1,8 @@
 // Classification prompts and rules
 
+import { normalizeContent } from "../_shared/contentNormalizer.ts";
+import { safeWrap } from "../_shared/promptSanitizer.ts";
+
 export interface ConversationExchange {
   date: string;
   subject: string;
@@ -76,8 +79,18 @@ export function buildClassificationPrompt(
   parts.push(`\n## Email to Classify`);
   parts.push(`Direction: ${req.direction}`);
   parts.push(`From: ${req.email_address}`);
-  parts.push(`Subject: ${req.subject}`);
-  parts.push(`Body:\n${req.body.substring(0, 4000)}`);
+  // Normalize+sanitize+wrap email content prima di iniettarlo nel prompt:
+  // - rimuove HTML, quoted-replies, firme, disclaimer, zero-width chars
+  // - applica anti-injection redact
+  // - avvolge in fence non-trusted (modello tratta come dati, non istruzioni)
+  const subjNorm = normalizeContent(req.subject || "", { source: "email-inbound", maxChars: 300 }).text;
+  const bodyNorm = normalizeContent(req.body || "", { source: "email-inbound", maxChars: 4000 });
+  const { block: bodyBlock } = safeWrap(bodyNorm.text, "EMAIL BODY", {
+    source: "email-inbound",
+    policy: "redact",
+  });
+  parts.push(`Subject: ${subjNorm}`);
+  parts.push(`Body:\n${bodyBlock}`);
 
   // LOVABLE-93: Domain detection hints and rules
   parts.push(`\n## DOMAIN DETECTION RULES (Livello 1)
