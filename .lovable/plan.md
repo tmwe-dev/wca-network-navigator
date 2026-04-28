@@ -1,102 +1,78 @@
-## Inventario attuale top bar (17 elementi in 44px)
+# Piano esecutivo — WCA Road to 100K v2 (calibrato sul reale)
 
-**Sinistra:**
-1. ☰ Menu hamburger (toggle sidebar)
-2. ⌘ "Cerca rapida" (apre Command Palette, ⌘K)
-3. ActiveProcessIndicator (badge processi background)
-4. Badge "Offline" (condizionale)
-5. Pulsante contestuale → CRM / → Network
-6. ConnectionStatusBar (cluster: AI status, outreach queue, night pause, resume timer)
-7. Slot dinamico `#campaign-header-controls`
+Il piano v2 ricevuto è **buono** (assorbe tutti i feedback critici della v1: Whitelist Sezione 0, DoD binari, Vercel rimosso, Sentry/rate-limiter riusati). Però alcuni numeri sono ancora sottostimati e c'è un **bug runtime attivo** introdotto nei turni precedenti che va sanato per primo.
 
-**Destra:**
-8. TokenUsageCounter (consumo token AI)
-9. AIAutomationToggle (interruttore automazione)
-10. Selettore lingua vocale (🌍 IT/EN/...)
-11. OperatorSelector (admin only, swap operatore)
-12. NotificationCenter (🔔)
-13. ➕ Add Contact
-14. 🗄️ DatabaseZap → settings?tab=enrichment
-15. 📊 Activity → Agent Operations Dashboard
-16. 🧪 FlaskConical → Test Extensions
-17. ✨ Sparkles → IntelliFlow AI
+## A. Correzioni numeriche prima di partire (verifica reale)
 
-## Diagnosi
+| Metrica | Piano v2 dice | Reale (grep) | Impatto |
+|---|---|---|---|
+| `:any` totali | 15 (10 eliminabili) | **515** | Sprint 3 va riformulato come "ridurre a 117 (baseline `debt-budget.js`)", non "azzerare" |
+| `console.error` | non quantificato | **89** | Realistico per Sprint 1 (8h) |
+| `console.warn` | 67 | **70** | OK |
+| Edge functions | 109 | 110 | OK |
+| Test files | 227 unit + 47 E2E | 279 unit + 47 E2E | OK |
 
-- **Funzioni rare in primo piano**: Test Extensions, Enrichment shortcut, Agent Ops sono usate raramente ma occupano spazio fisso.
-- **Stato vs azione mescolati**: ConnectionStatusBar mostra 4-5 cose (AI, queue, night pause, resume) che sono _stato_, accanto a icone _azione_ (➕, ✨…).
-- **Doppia entrata Command Palette**: il pulsante "Cerca rapida" è ridondante con la scorciatoia ⌘K (che funziona sempre). Occupa ~140px.
-- **Settings sparsi**: lingua vocale, AI automation, enrichment shortcut sono tutte preferenze → casa naturale = `/v2/settings`.
-- **Navigazione contestuale CRM↔Network** è già coperta dalle tab e dalla sidebar.
+→ **Aggiornare baseline `scripts/debt-budget.js`** mano a mano che si riduce, NON imporre target irrealistici.
 
-## Proposta: top bar a 6 elementi
+## B. Bug bloccante PRIMA di tutto
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ ☰  Breadcrumb · Dashboard › Esplora › Mappa     [stato] 🔔 👤 ⋯ ✨    │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+**`src/v2/observability/TraceConsole.tsx:102`** viola le Rules of Hooks: `if (!user) return null;` è prima di `useMemo(...)` alle righe 104 e 117 → React 18 lancia "Rendered more hooks than during the previous render" appena un anonimo apre l'app. Fix: spostare i due `useMemo` sopra il guard `!user`.
 
-**Sinistra (sempre visibili):**
-1. **☰ Menu** (toggle sidebar)
-2. **Breadcrumb** (assorbe il GoldenHeaderBar di pagina — un solo header invece di due)
-3. **StatusPill** unico, compatto, cliccabile → apre popover con: connessione, AI on/off, outreach queue, night pause, processi attivi. Sostituisce ConnectionStatusBar + ActiveProcessIndicator + badge Offline. Default: solo un pallino colorato (verde/giallo/rosso) + numero processi se >0.
+→ **Task 0 (15 min)**: fix hook order in TraceConsole. Senza questo, ogni nuovo sprint introduce regressioni invisibili dietro un crash.
 
-**Destra (sempre visibili):**
-4. **🔔 Notifiche**
-5. **👤 Operatore** (mostra avatar; admin → dropdown swap; non-admin → solo profilo + logout)
-6. **⋯ Strumenti** (menu dropdown — vedi sotto)
-7. **✨ AI** (IntelliFlow, unico bottone "azione AI" prominente)
+## C. Sequenza di esecuzione proposta (questo turno)
 
-**Rimossi dalla barra:**
-- Pulsante "Cerca rapida" → resta solo lo shortcut ⌘K (ricordato in tooltip su ☰). Risparmio ~140px.
-- Selettore lingua vocale → spostato in `/settings` → tab "Voce & AI".
-- AIAutomationToggle → spostato in `/settings` → tab "AI" (con stato visibile nello StatusPill).
-- TokenUsageCounter → spostato in `/settings` → tab "Billing/Usage" (mostrato nello StatusPill solo quando >80% soglia).
-- ➕ Add Contact → spostato come FAB nelle pagine Pipeline/Network (dove ha senso); rimosso dalla top bar globale.
-- DatabaseZap (Enrichment shortcut) → dentro menu **⋯ Strumenti**.
-- Activity (Agent Ops) → dentro menu **⋯ Strumenti**.
-- FlaskConical (Test Extensions) → dentro menu **⋯ Strumenti** (in fondo, sotto separator "Debug").
-- Pulsanti contestuali "→ CRM" / "→ Network" → rimossi (già coperti da sidebar/tab).
-- Slot `#campaign-header-controls` → mantenuto invisibile per retrocompatibilità ma spostato sotto la GoldenHeaderBar di pagina, dove ha senso visivo.
+Eseguo **solo la slice ad alto valore / basso rischio** del piano v2, lasciando il resto a sprint successivi (richiedono coordinamento che vale la pena fare a freddo).
 
-**Menu ⋯ Strumenti (dropdown):**
-- Agent Operations
-- Enrichment Center
-- Test Extensions
-- (separator)
-- Apri Trace Console (🩺)
-- Tema chiaro/scuro
+### Lotto immediato (questo turno) — ~2h
 
-## Comportamento responsive
+1. **Fix TraceConsole** (Task 0, blocker runtime).
+2. **Sprint 1 → E1**: ErrorBoundary su `ContactRecordDrawer` e principali drawer/modal. Riuso `PageErrorBoundary.tsx` esistente, no nuovo componente. *DoD: ogni drawer wrappato.*
+3. **Sprint 1 → O5/O6 (slice)**: convertire `console.error/warn` a `createLogger` (esistente in `src/v2/lib/logger.ts`) **solo nei 10 file più critici** (`src/data/notifications.ts`, `src/data/analytics.ts`, `src/data/tokenUsage.ts`, `src/hooks/useGlobalChat.ts`, `src/hooks/useMissionActions.ts`, ecc.). *DoD: in quei 10 file, 0 console.\**
+4. **Sprint 2 → S1**: rimuovere `localhost` da `_shared/cors.ts` quando `Deno.env.get("ENVIRONMENT") === "production"`. *DoD: test che simula prod = origin localhost rifiutata.*
+5. **Sprint 2 → E5**: edge function `health-check` (nuova, ~30 LOC). *DoD: `curl /functions/v1/health-check` → 200 + JSON `{ ok, ts, version }`.*
+6. **Sprint 1 → E2**: unificare error handling in `aiInvocationGuard` per loggare a Sentry tramite `captureException` (già disponibile in `src/lib/sentry.ts`). *DoD: errore AI = breadcrumb Sentry.*
+7. **Aggiornare baseline `debt-budget.js`** se i conteggi scendono dopo i task O5/O6.
 
-- **Desktop ≥1280px**: tutti e 6 visibili.
-- **Tablet 768-1279px**: StatusPill resta solo pallino colorato (no testo); breadcrumb compresso (mostra ultimi 2 livelli).
-- **Mobile <768px**: top bar già nascosta (`hidden md:flex`) — invariato, resta MobileBottomNav.
+### Lotti successivi (NON in questo turno — richiedono PR dedicate)
 
-## Implementazione (sintesi tecnica)
+- **Sprint 1 completo** (rimanenti O5/O6: 80 file): troppo invasivo per una sessione.
+- **Sprint 3** (any reduction da 515 → 117): meccanico ma 4-6h di solo grep+fix.
+- **Sprint 4** (test coverage 35%): richiede progettazione test, non puro coding.
+- **Sprint 5** (performance + arch): richiede profiling reale.
+- **Sprint 6** (AI excellence): richiede misurazioni AI lab prima.
 
-1. Nuovo `LayoutHeaderCompact.tsx` che sostituisce `LayoutHeader.tsx` (vecchio preservato come `.bak.tsx` per rollback).
-2. Nuovo componente `StatusPill.tsx` che aggrega: online/offline, AI automation, outreach queue, night pause, processi attivi. Popover on-click con dettagli.
-3. Nuovo `HeaderToolsMenu.tsx` (DropdownMenu shadcn) con le voci "Strumenti".
-4. Spostamenti in `/v2/settings`:
-   - Tab "Voce & AI" → integra `VoiceLanguageSelector` + `AIAutomationToggle` + soglia token.
-   - Tab "Usage" → integra `TokenUsageCounter` versione full.
-5. Rimuovere il pulsante "Cerca rapida" — verificare che ⌘K resti registrato globalmente in `useCommandPalette`.
-6. Spostare `Add Contact` come FAB nelle pagine Pipeline/Contacts/Network (riusa `AddContactDialog` esistente).
-7. Aggiornare il selettore tema (oggi non c'è in top bar): aggiungerlo nel menu ⋯ Strumenti.
-8. Mantenere `GoldenHeaderBar` come riga separata sotto la top bar (breadcrumb di pagina + actions di pagina) — alternativa: fonderli in un'unica riga 44px. **Da decidere con te.**
+## D. Suggerimenti aggiuntivi (oltre il piano v2)
 
-## Cosa NON tocco
+1. **Aggiungere check anti-regressione hook order** in `eslint.config.js`: `react-hooks/rules-of-hooks: "error"`. Avrebbe prevenuto il bug TraceConsole.
+2. **Sentry: abilitare il `wrap` su `<App />`**: `src/lib/sentry.ts` esiste ma va verificato che `Sentry.ErrorBoundary` sia montato in `main.tsx` come outer boundary. Se manca, l'error capture frontend è cieco.
+3. **Health-check come ping per l'estensione**: l'edge function `health-check` può servire anche da heartbeat per le 6 extensions (Chrome, Email, LI, WA, RA, Partner-Connect) → unifica monitoring.
+4. **Whitelist eseguibile**: aggiungere `eslint-rules/no-touch-protected.js` che fallisce se una PR modifica i file in Sezione 0 senza commento `// owner-approved: <id>`. Trasforma la whitelist da convenzione a guard.
+5. **Trace Console come oracolo di regressione**: `ai_runtime_traces` (creato nei turni precedenti) può essere snapshottato pre/post sprint per detect regressioni AI silenziose. Aggiungere script `scripts/trace-snapshot.ts`.
+6. **Gating progressivo coverage**: invece di gate 35% globale, gate **per cartella** (`src/v2/io/supabase/queries/` deve essere ≥ 60%, il resto libero). Più facile da rispettare, più mirato dove conta.
 
-- Sidebar sinistra
-- MissionDrawer destro
-- MobileBottomNav
-- GoldenHeaderBar di pagina (può restare o fondersi: scelta tua)
-- Logica funzionale dei singoli componenti spostati (solo posizionamento)
+## E. Cosa NON faccio (e perché)
 
-## Domande aperte (da chiarire prima di implementare)
+- Non tocco le 110 edge functions con un wrapper massivo: rischio rottura `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (Sezione 0).
+- Non azzero i `:any` in un colpo solo: 515 occorrenze, molte legittime in test/wrapper.
+- Non aggiungo `vercel.json` né staging Vercel: il piano v2 li ha già scartati correttamente.
+- Non attivo rate limiting AI: memoria attiva dice "AI usage limits DISATTIVATI per uso interno" con kill-switch `AI_USAGE_LIMITS_ENABLED`.
 
-1. **Breadcrumb**: preferisci una sola riga (top bar + breadcrumb fusi in 44px) o due righe (top bar globale + GoldenHeaderBar di pagina)?
-2. **Add Contact**: sei d'accordo a spostarlo come FAB solo nelle pagine pertinenti, oppure preferisci tenerlo nella top bar globale?
-3. **Tema chiaro/scuro**: lo vuoi nel menu ⋯ Strumenti o vicino all'avatar operatore?
+---
+
+## Riepilogo del lotto immediato
+
+| # | Task | Stima | Rischio |
+|---|---|---|---|
+| 0 | Fix `TraceConsole` hook order (blocker) | 15 min | Nullo |
+| 1 | ErrorBoundary su drawer principali | 25 min | Basso |
+| 2 | Migrazione 10 file da console a createLogger | 30 min | Basso |
+| 3 | CORS prod-only (no localhost in prod) | 10 min | Basso |
+| 4 | Edge function `health-check` | 20 min | Nullo |
+| 5 | AI errors → Sentry via aiInvocationGuard | 20 min | Medio (lo guardo prima) |
+| 6 | Aggiornare baseline `debt-budget.js` | 5 min | Nullo |
+| 7 | ESLint `react-hooks/rules-of-hooks: error` | 5 min | Basso |
+
+**Tempo totale stimato: ~2h. Tutto rollbackabile per file.**
+
+Confermi questo lotto? Se sì, eseguo in sequenza con `tsc --noEmit` come gate tra un task e l'altro.

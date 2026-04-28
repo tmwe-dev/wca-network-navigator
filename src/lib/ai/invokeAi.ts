@@ -12,6 +12,7 @@
  */
 import { invokeEdge, type InvokeEdgeOptions } from "@/lib/api/invokeEdge";
 import { traceCollector } from "@/v2/observability/traceCollector";
+import { Sentry } from "@/lib/sentry";
 
 export type AiScope =
   | "home"
@@ -135,6 +136,18 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
       payload_summary: { functionName, mode: context.mode },
       error: { message: e?.message ?? String(err), code: e?.code, status: e?.httpStatus },
       correlation_id: corr,
+    });
+    // Charter R6 — surface AI failures to Sentry with full context for triage.
+    Sentry.captureException(err, {
+      tags: { invocation: "ai", scope, fn: functionName, source: context.source },
+      extra: {
+        mode: context.mode,
+        route,
+        duration_ms: Date.now() - start,
+        correlation_id: corr,
+        httpStatus: e?.httpStatus,
+        code: e?.code,
+      },
     });
     throw err;
   } finally {

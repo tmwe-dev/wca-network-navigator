@@ -99,8 +99,8 @@ export function TraceConsole() {
     return () => window.removeEventListener("trace-console-open", open);
   }, []);
 
-  if (!user) return null; // niente console per anon
-
+  // Hooks MUST run in the same order on every render.
+  // Compute derived state BEFORE any conditional return.
   const filtered = useMemo(() => {
     const q = state.filters.search.trim().toLowerCase();
     return events
@@ -115,6 +115,8 @@ export function TraceConsole() {
   }, [events, state.filters]);
 
   const checklists = useMemo(() => buildChecklists(events), [events]);
+
+  if (!user) return null; // niente console per anon (after hooks)
 
   const togglePause = () => {
     setPaused((p) => {

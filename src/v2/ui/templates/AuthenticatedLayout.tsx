@@ -21,6 +21,7 @@ import { OfflineBanner } from "@/components/shared/OfflineBanner";
 import { LiveRegion } from "@/components/shared/LiveRegion";
 import { useLiveAnnounce } from "@/hooks/useLiveAnnounce";
 import { useAiBridgeListener } from "@/hooks/useAiBridgeListener";
+import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 
 
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -383,7 +384,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </Dialog>
                     )}
 
-                      <Suspense fallback={null}><ContactRecordDrawer /></Suspense>
+                      <Suspense fallback={null}>
+                        <DrawerErrorBoundary scope="ContactRecordDrawer">
+                          <ContactRecordDrawer />
+                        </DrawerErrorBoundary>
+                      </Suspense>
                       <ClaudeBadge />
                       {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
                     </NotificationsProvider>

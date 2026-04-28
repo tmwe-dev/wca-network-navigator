@@ -1,5 +1,8 @@
 project_id = "zrbditqddhjkutzjycgi"
 
+[functions.health-check]
+verify_jwt = false
+
 [functions.analyze-partner]
 verify_jwt = false
 

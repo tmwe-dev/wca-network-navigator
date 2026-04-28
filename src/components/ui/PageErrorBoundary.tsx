@@ -5,6 +5,7 @@
  */
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
+import { Sentry } from "@/lib/sentry";
 
 interface State {
   hasError: boolean;
@@ -25,6 +26,10 @@ export class PageErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error("[PageErrorBoundary]", error, info.componentStack);
+    Sentry.captureException(error, {
+      tags: { boundary: "page" },
+      extra: { componentStack: info.componentStack },
+    });
   }
 
   render() {
