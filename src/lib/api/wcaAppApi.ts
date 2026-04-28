@@ -255,6 +255,7 @@ export async function wcaDiscover(
   if (options?.searchBy) filters.searchBy = options.searchBy;
   if (options?.city) filters.city = options.city;
 
+  await gateAndMark("wcaDiscover");
   const res = await fetch(`${BASE}/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -292,6 +293,7 @@ export async function wcaDiscoverAll(
 export async function wcaScrape(wcaIds: number[], networkDomain?: string): Promise<ScrapeResult> {
   const body: Record<string, unknown> = { wcaIds };
   if (networkDomain) body.networkDomain = networkDomain;
+  await gateAndMark("wcaScrape");
   const res = await fetch(`${BASE}/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -407,6 +409,7 @@ export async function wcaEnrich(
   networkDomain: string,
   options?: { originalWcaId?: number; networkName?: string }
 ): Promise<EnrichResult> {
+  await gateAndMark("wcaEnrich");
   const res = await fetch(`${BASE}/enrich`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -423,6 +426,7 @@ export async function wcaEnrich(
 
 /** Verifica membro su network specifico */
 export async function wcaVerify(wcaId: number, network: string): Promise<VerifyResult> {
+  await gateAndMark("wcaVerify");
   const res = await fetch(`${BASE}/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
