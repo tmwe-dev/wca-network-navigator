@@ -27,6 +27,27 @@ import "../_shared/llmFetchInterceptor.ts";
  *   }
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+
+const DecideSchema = z.object({
+  stop: z.boolean().default(false),
+  reason: z.string().default(""),
+  next_actions: z
+    .array(
+      z.object({
+        url: z.string(),
+        label: z.string().optional().default(""),
+        why: z.string().optional().default(""),
+      }),
+    )
+    .max(3)
+    .default([]),
+});
+const DECIDE_FALLBACK: z.infer<typeof DecideSchema> = {
+  stop: true,
+  reason: "schema_validation_failed",
+  next_actions: [],
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -190,7 +211,14 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const parsed = JSON.parse(argsStr);
+    const { data: parsed, isFallback } = safeParseToolArgs(argsStr, DecideSchema, {
+      fnName: "agentic-decide",
+      model: "ai-tool-call",
+      fallback: DECIDE_FALLBACK,
+    });
+    if (isFallback) {
+      console.warn("[agentic-decide] schema fallback triggered, stopping investigation");
+    }
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

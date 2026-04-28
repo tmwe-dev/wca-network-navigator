@@ -1,0 +1,12 @@
+---
+name: AI JSON Schema Validator
+description: _shared/aiJsonValidator.ts (Zod) per parsing+validazione output AI con fallback safe
+type: tech
+---
+- File: `supabase/functions/_shared/aiJsonValidator.ts` + `aiJsonValidator.test.ts` (11 test verdi).
+- API: `safeParseAiJson(raw, zodSchema, {fnName, model, fallback})` e `safeParseToolArgs(...)`.
+- Comportamento: strip fences markdown, estrazione primo blocco `{...}`/`[...]`, JSON.parse, validazione Zod; in caso di errore log strutturato `[AI_JSON_VALIDATION] fn=... model=... err=parse_error|schema_error|empty_response issues=path:code:msg raw="..."` e ritorno fallback.
+- Risultato: `{ data: T, isFallback: boolean, error?: string }` — `data` sempre valorizzato.
+- Adottato in: agent-prompt-refiner, parse-business-card (tool+content), agentic-decide, categorize-content, suggest-email-groups, agent-execute/analysisTools (analyzeEmailMessage).
+- Zod via `https://esm.sh/zod@3.23.8` (riesportato dal modulo).
+- Estendere a nuovi consumer AI: definire schema Zod accanto alla function e chiamare `safeParseAiJson` invece di `JSON.parse` su output modello.

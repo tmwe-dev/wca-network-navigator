@@ -2,6 +2,20 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { z, safeParseAiJson, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+
+const BusinessCardSchema = z.object({
+  company_name: z.string().nullish(),
+  contact_name: z.string().nullish(),
+  position: z.string().nullish(),
+  email: z.string().nullish(),
+  phone: z.string().nullish(),
+  mobile: z.string().nullish(),
+  address: z.string().nullish(),
+  website: z.string().nullish(),
+  notes: z.string().nullish(),
+}).passthrough();
+const BC_FALLBACK = {} as z.infer<typeof BusinessCardSchema>;
 
 
 serve(async (req) => {
@@ -144,25 +158,33 @@ Sii preciso con numeri di telefono e email. Se ci sono più numeri, metti il fis
 
     const aiData = await aiResp.json();
     let extracted: Record<string, unknown> = {};
-
-    // Parse tool call response
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        extracted = typeof toolCall.function.arguments === "string"
-          ? JSON.parse(toolCall.function.arguments)
-          : toolCall.function.arguments;
-      } catch {
-        // Fallback: try parsing from content
+    const toolArgsRaw = toolCall?.function?.arguments;
+    if (toolArgsRaw) {
+      const argsStr = typeof toolArgsRaw === "string" ? toolArgsRaw : JSON.stringify(toolArgsRaw);
+      const r = safeParseToolArgs(argsStr, BusinessCardSchema, {
+        fnName: "parse-business-card",
+        model: "ai-tool-call",
+        fallback: BC_FALLBACK,
+      });
+      extracted = r.data as Record<string, unknown>;
+      if (r.isFallback) {
         const content = aiData.choices?.[0]?.message?.content || "";
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
+        const r2 = safeParseAiJson(content, BusinessCardSchema, {
+          fnName: "parse-business-card",
+          model: "ai-content-fallback",
+          fallback: BC_FALLBACK,
+        });
+        extracted = r2.data as Record<string, unknown>;
       }
     } else {
-      // Fallback: parse from content
       const content = aiData.choices?.[0]?.message?.content || "";
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) extracted = JSON.parse(jsonMatch[0]);
+      const r = safeParseAiJson(content, BusinessCardSchema, {
+        fnName: "parse-business-card",
+        model: "ai-content",
+        fallback: BC_FALLBACK,
+      });
+      extracted = r.data as Record<string, unknown>;
     }
 
     return new Response(JSON.stringify({
