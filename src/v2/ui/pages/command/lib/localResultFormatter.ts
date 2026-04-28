@@ -202,6 +202,38 @@ export function tryLocalComment(
     !isListMode &&
     /\b(quanti|quante|conteggio|totale|numero)\b/i.test(userPrompt);
 
+  // ── ZERO RESULTS (any mode) ──
+  // Handle this BEFORE falling through to AI commentary, otherwise the LLM
+  // tends to hallucinate "errore tecnico nel filtro" when it just got 0 rows.
+  if (count === 0) {
+    const filtersDesc = describeFilters(filters);
+    const word = noun(table, true);
+    const base = filtersDesc
+      ? `Non ho trovato ${word} ${filtersDesc}.`
+      : `Non ho trovato ${word} che corrispondano alla richiesta.`;
+    // Build alternative actions: drop the most specific filter (last one) and
+    // offer the broader query, plus a "show all" fallback.
+    const altActions: SuggestedAction[] = [];
+    if (filters.length > 0) {
+      const broader = filters.slice(0, -1);
+      const broaderDesc = describeFilters(broader);
+      altActions.push({
+        label: `🔁 Riprova senza l'ultimo filtro`,
+        prompt: `mostra ${word} ${broaderDesc}`.trim(),
+      });
+    }
+    altActions.push({
+      label: `📋 Mostra tutti i ${word}`,
+      prompt: `mostra tutti i ${word}`,
+    });
+    const proposal = buildProposalSentence(altActions);
+    return {
+      message: proposal ? `${base} ${proposal}` : base,
+      spokenSummary: stripMarkdown(proposal ? `${base} ${proposal}` : base),
+      suggestedActions: altActions,
+    };
+  }
+
   if (isCountMode) {
     const filtersDesc = describeFilters(filters);
     const word = noun(table, count !== 1);
