@@ -108,7 +108,7 @@ export async function handleGetConversationHistory(
       .order("email_date", { ascending: false })
       .limit(30);
 
-    (emails || []).forEach((e: any) =>
+    (emails || []).forEach((e: Record<string, unknown>) =>
       timeline.push({
         type: "email",
         direction: e.direction,
@@ -127,7 +127,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (acts || []).forEach((a: any) =>
+    (acts || []).forEach((a: Record<string, unknown>) =>
       timeline.push({
         type: "activity",
         subtype: a.activity_type,
@@ -145,7 +145,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (ints || []).forEach((i: any) =>
+    (ints || []).forEach((i: Record<string, unknown>) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
@@ -163,7 +163,7 @@ export async function handleGetConversationHistory(
       .order("sent_at", { ascending: false })
       .limit(20);
 
-    (sent || []).forEach((s: any) =>
+    (sent || []).forEach((s: Record<string, unknown>) =>
       timeline.push({
         type: "email_sent",
         subject: s.subject,
@@ -179,7 +179,7 @@ export async function handleGetConversationHistory(
       .order("created_at", { ascending: false })
       .limit(30);
 
-    (cInts || []).forEach((i: any) =>
+    (cInts || []).forEach((i: Record<string, unknown>) =>
       timeline.push({
         type: "interaction",
         subtype: i.interaction_type,
@@ -233,7 +233,7 @@ export async function handleGetHoldingPattern(
 
     const { data: partners } = await pq.limit(Number(args.limit) || 50);
 
-    (partners || []).forEach((p: any) => {
+    (partners || []).forEach((p: Record<string, unknown>) => {
       const days = p.last_interaction_at
         ? Math.floor(
             (now.getTime() - new Date(p.last_interaction_at).getTime()) /
@@ -275,7 +275,7 @@ export async function handleGetHoldingPattern(
 
     const { data: contacts } = await cq.limit(Number(args.limit) || 50);
 
-    (contacts || []).forEach((c: any) => {
+    (contacts || []).forEach((c: Record<string, unknown>) => {
       const days = c.last_interaction_at
         ? Math.floor(
             (now.getTime() - new Date(c.last_interaction_at).getTime()) /
