@@ -277,6 +277,7 @@ export const queryKeys = {
     capabilities: (agentId?: string) => ["agent-capabilities", agentId] as const,
     persona: (agentId?: string) => ["agent-persona-lab", agentId] as const,
     audit: () => ["agent-audit"] as const,
+    routingRules: () => ["agent-routing-rules"] as const,
   },
 
   // ── Missions ──────────────────────────────────────────
