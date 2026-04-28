@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { resolveTool, TOOLS } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import type { CommandPageState } from "./useCommandPageState";
+import { tryLocalComment } from "../lib/localResultFormatter";
+import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 
 interface Governance {
   role: string;
@@ -133,14 +135,14 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
       pageState.addMessage({
         role: "assistant",
         content: labels.isComposer
-          ? `Sto preparando un'email per te. Un attimo…`
+          ? `Preparo l'email…`
           : labels.isFlow
-            ? `Controllo lo stato delle tue campagne in corso.`
+            ? `Controllo le campagne…`
             : labels.isTimeline
-              ? `Sto raccogliendo cosa è successo negli ultimi 7 giorni.`
+              ? `Riepilogo ultimi 7 giorni…`
               : labels.isCardGrid
-                ? `Cerco i contatti che non senti da almeno 30 giorni.`
-                : `Cerco nel database. Un secondo…`,
+                ? `Cerco contatti inattivi…`
+                : `Cerco nel database…`,
         agentName: labels.agentLabel,
         timestamp: pageState.ts(),
       });
@@ -178,7 +180,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
           pageState.addMessage({
             role: "assistant",
-            content: `**${result.title}**\n${result.description}\n\nVuoi che proceda?`,
+            content: `${result.title}. ${result.description} Procedo?`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
           });
@@ -217,7 +219,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           pageState.setShowTools(false);
           pageState.addMessage({
             role: "assistant",
-            content: `Ho preparato un report con ${result.sections.length} sezioni. Lo trovi qui a fianco.`,
+            content: `Report pronto (${result.sections.length} sezioni) →`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
           });
@@ -241,11 +243,24 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         const countLabel = getCountLabel(tool.id, result);
 
+        // For AI-query results, try local formatter to get a sharp answer + clickable next-step chips.
+        let messageContent = `${countLabel} →`;
+        let suggestedActions: { label: string; prompt: string }[] | undefined;
+        if (tool.id === "ai-query") {
+          const plan = getLastSuccessfulQueryPlan();
+          const local = tryLocalComment(prompt, result, plan);
+          if (local) {
+            messageContent = local.message;
+            suggestedActions = local.suggestedActions.length > 0 ? [...local.suggestedActions] : undefined;
+          }
+        }
+
         pageState.addMessage({
           role: "assistant",
-          content: `Ho trovato ${countLabel}. Li vedi nel pannello a destra.`,
+          content: messageContent,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
+          suggestedActions,
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";

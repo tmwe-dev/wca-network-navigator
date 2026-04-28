@@ -25,15 +25,6 @@ import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import { SCENARIOS, QUICK_PROMPTS, detectScenario } from "./command/scenarios";
 
-const tableData = [
-  { name: "TechBridge Japan", sector: "Technology", revenue: "€412k", days: "98", churn: 91 },
-  { name: "Meridian Asia Pacific", sector: "Consulting", revenue: "€234k", days: "112", churn: 89 },
-  { name: "SteelForge Srl", sector: "Manufacturing", revenue: "€187k", days: "105", churn: 85 },
-  { name: "NovaPharma Group", sector: "Healthcare", revenue: "€156k", days: "93", churn: 82 },
-  { name: "Apex Financial", sector: "Finance", revenue: "€298k", days: "88", churn: 76 },
-  { name: "Orion Logistics", sector: "Logistics", revenue: "€143k", days: "120", churn: 71 },
-];
-
 const CommandPage = () => {
   const nav = useNavigate();
   const pageState = useCommandPageState();
@@ -237,7 +228,6 @@ const CommandPage = () => {
           canvas={pageState.canvas}
           liveResult={pageState.liveResult}
           activeScenarioKey={pageState.activeScenarioKey}
-          tableData={tableData}
           onClose={() => {
             pageState.setCanvas(null);
             pageState.setLiveResult(null);

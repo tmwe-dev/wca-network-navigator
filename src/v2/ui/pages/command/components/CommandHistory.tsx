@@ -12,6 +12,8 @@ export interface Message {
   meta?: string;
   tools?: string[];
   governance?: string;
+  /** Optional follow-up actions rendered as clickable chips under the message */
+  suggestedActions?: { label: string; prompt: string }[];
 }
 
 interface CommandHistoryProps {
@@ -228,6 +230,24 @@ export function CommandHistory({
                       <span className="text-[9px] text-muted-foreground/100 font-mono">
                         {msg.governance}
                       </span>
+                    </motion.div>
+                  )}
+                  {msg.role === "assistant" && msg.suggestedActions && msg.suggestedActions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="flex flex-wrap gap-2 mt-3"
+                    >
+                      {msg.suggestedActions.map((action, i) => (
+                        <button
+                          key={`${action.label}-${i}`}
+                          onClick={() => onQuickPrompt(action.prompt)}
+                          className="text-[11px] px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary/90 hover:text-primary border border-primary/20 hover:border-primary/40 transition-all duration-300 font-light"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
                     </motion.div>
                   )}
                   <span className="text-[10px] text-muted-foreground/100 mt-2 block">

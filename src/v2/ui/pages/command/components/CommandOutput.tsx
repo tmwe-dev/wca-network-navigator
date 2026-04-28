@@ -1,12 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ToolResult } from "../tools/types";
 import type { CanvasType } from "../hooks/useCommandPageState";
-import {
-  TableCanvas,
-  CampaignCanvas,
-  ReportCanvas,
-  ResultCanvas,
-} from "@/components/workspace/CanvasViews";
 import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
@@ -17,7 +11,6 @@ interface CommandOutputProps {
   canvas: CanvasType;
   liveResult: ToolResult | null;
   activeScenarioKey: string | null;
-  tableData: Array<Record<string, string | number>>;
   onClose: () => void;
 }
 
@@ -27,7 +20,6 @@ export function CommandOutput({
   canvas,
   liveResult,
   activeScenarioKey,
-  tableData,
   onClose,
 }: CommandOutputProps) {
   return (
@@ -40,18 +32,9 @@ export function CommandOutput({
           transition={{ duration: 0.7, ease }}
           className="w-[50%] p-4 overflow-y-auto"
         >
-          {canvas === "table" && (
-            <TableCanvas data={tableData as unknown as Parameters<typeof TableCanvas>[0]["data"]} onClose={onClose} />
-          )}
-          {canvas === "campaign" && (
-            <CampaignCanvas onClose={onClose} />
-          )}
-          {canvas === "report" && (
-            <ReportCanvas onClose={onClose} />
-          )}
-          {canvas === "result" && (
-            <ResultCanvas onClose={onClose} scenarioKey={activeScenarioKey || undefined} />
-          )}
+          {/* Mock canvas (table/campaign/report/result) RIMOSSI:
+              non esistono più dati mock nella piattaforma operativa.
+              Solo i canvas LIVE alimentati da tool reali sono renderizzati. */}
           {canvas === "live-table" && liveResult && (
             liveResult.kind === "table" ? (
               <LiveTableCanvas
