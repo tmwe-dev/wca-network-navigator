@@ -191,6 +191,10 @@ export const composeEmailTool: Tool = {
     let initialSubject = "";
     let initialBody = "";
     let generationWarning: string | null = null;
+    let appliedPrompts: string[] = [];
+    let usedModel: string | undefined;
+    let kbSections: string[] = [];
+    let playbookActive = false;
     try {
       const gen = await invokeEdge<{
         success?: boolean;
@@ -198,6 +202,12 @@ export const composeEmailTool: Tool = {
         body?: string;
         error?: string;
         message?: string;
+        _context_summary?: {
+          operative_prompts_applied?: string[];
+          model?: string;
+          kb_sections?: string[];
+          playbook_active?: boolean;
+        };
       }>("generate-email", {
         body: {
           standalone: true,
@@ -217,6 +227,13 @@ export const composeEmailTool: Tool = {
       if (gen?.subject) initialSubject = gen.subject;
       if (gen?.body) initialBody = gen.body;
       if (!gen?.body && gen?.message) generationWarning = gen.message;
+      const cs = gen?._context_summary;
+      if (cs) {
+        appliedPrompts = cs.operative_prompts_applied ?? [];
+        usedModel = cs.model;
+        kbSections = cs.kb_sections ?? [];
+        playbookActive = !!cs.playbook_active;
+      }
     } catch (e) {
       generationWarning = e instanceof Error ? e.message : "Errore generazione";
     }
@@ -240,10 +257,30 @@ export const composeEmailTool: Tool = {
       notes.push(`Generazione AI: ${generationWarning}. Puoi rigenerare o scrivere manualmente.`);
     }
 
+    // Audit references (Prompt Lab + KB + model) per il log visibile in Command
+    const auditRefs: NonNullable<NonNullable<ToolResult["meta"]>["auditRefs"]> = [];
+    for (const name of appliedPrompts) {
+      auditRefs.push({ kind: "operative-prompt", label: name, value: "Prompt Lab" });
+    }
+    if (playbookActive) {
+      auditRefs.push({ kind: "playbook", label: "Playbook attivo", value: "yes" });
+    }
+    for (const section of kbSections.slice(0, 5)) {
+      auditRefs.push({ kind: "kb-section", label: section });
+    }
+    if (usedModel) {
+      auditRefs.push({ kind: "model", label: "AI model", value: usedModel });
+    }
+    auditRefs.push({ kind: "context", label: "Lead status", value: partner.lead_status ?? "n/d" });
+
     return {
       kind: "composer",
       title: `Email a ${recipientName ?? partner.company_name}`,
-      meta: { count: 1, sourceLabel: "Edge · generate-email (Oracolo+Architetto+Giornalista)" },
+      meta: {
+        count: 1,
+        sourceLabel: "Edge · generate-email (Oracolo+Architetto+Giornalista)",
+        auditRefs,
+      },
       initialTo: recipientEmail,
       initialSubject,
       initialBody,
