@@ -286,7 +286,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="onboarding" element={guardedPage(OnboardingPage, "Onboarding")} />
           <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
           <Route path="ai-control" element={<Navigate to="/v2/intelligence/control" replace />} />
-          <Route path="email-intelligence" element={<Navigate to="/v2/intelligence/email" replace />} />
+          <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
           <Route path="token-cockpit" element={guardedPage(TokenCockpitPage, "TokenCockpit")} />
           <Route path="notifications" element={guardedPage(NotificationsPage, "Notifications")} />
