@@ -3,6 +3,20 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+
+const ClassificationsSchema = z.object({
+  classifications: z
+    .array(
+      z.object({
+        email: z.string(),
+        suggested_group: z.string(),
+        confidence: z.number().min(0).max(1),
+        reasoning: z.string().optional().default(""),
+      }),
+    )
+    .default([]),
+});
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -152,15 +166,22 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     let classifications: Array<{ email: string; suggested_group: string; confidence: number; reasoning: string }> = [];
 
-    try {
-      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        classifications = parsed.classifications || [];
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      const r = safeParseToolArgs(toolCall.function.arguments, ClassificationsSchema, {
+        fnName: "suggest-email-groups",
+        model: "ai-tool-call",
+        fallback: { classifications: [] },
+      });
+      classifications = r.data.classifications.map((c) => ({
+        email: c.email,
+        suggested_group: c.suggested_group,
+        confidence: c.confidence,
+        reasoning: c.reasoning,
+      }));
+      if (r.isFallback) {
+        console.warn("[suggest-email-groups] schema fallback → empty classifications");
       }
-    } catch (e) {
-      console.error("Parse error:", e);
-      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
     // 5. Save suggestions
