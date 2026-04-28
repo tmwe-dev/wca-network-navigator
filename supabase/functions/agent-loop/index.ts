@@ -107,15 +107,10 @@ const TOOL_DEFINITIONS = [
   },
 ];
 
-const FORBIDDEN_KEYWORDS = [
-  "drop table", "truncate", "delete account", "rm -rf",
-  "format disk", "password reset", "transfer funds",
-];
-
-function containsForbidden(text: string): boolean {
-  const lower = text.toLowerCase();
-  return FORBIDDEN_KEYWORDS.some((k) => lower.includes(k));
-}
+// Safety: i blocchi distruttivi reali stanno in src/v2/agent/policy/hardGuards.ts
+// (FORBIDDEN_TABLES, assertNotDestructive, assertBulkCap, requiresApproval).
+// Qui non duplichiamo controlli "teatrali" sulle keyword: l'AI è libera di
+// ragionare, l'esecuzione passa comunque dal preflight in hardGuards.
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -183,18 +178,12 @@ serve(async (req: Request) => {
       }
     }
 
-    const systemPrompt = `Sei LUCA, l'assistente AI del CRM WCA Network Navigator.
-Operi in italiano. Le tue risposte devono essere brevi e operative.
-OBIETTIVO ATTUALE: ${goal}
-${sessionContext ? `CONTESTO: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}${promptLabBlock}
+    const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
 
-Regole:
-1. Prima di agire, LEGGI la pagina con read_page.
-2. Non usare azioni distruttive (logout, delete account).
-3. Per click su submit/invio form, fermati prima e verifica.
-4. Se bloccato, usa ask_user.
-5. Quando completato, usa finish con riassunto.
-6. Rispondi SEMPRE in italiano.`;
+OBIETTIVO ATTUALE: ${goal}
+${sessionContext ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}${promptLabBlock}
+
+Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pagina se ti serve capire dove sei, esplora la KB se ti serve contesto, chiedi all'utente se sei bloccato, chiama \`finish\` quando hai concluso. Se una ricerca torna vuota, prova varianti prima di rinunciare. Le regole inviolabili sono nei PROMPT OPERATIVI sopra; i blocchi tecnici (azioni distruttive, bulk, tabelle vietate) sono già imposti dal sistema.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -245,14 +234,6 @@ Regole:
       });
     }
 
-    // Safety: check message content
-    if (msg.content && containsForbidden(msg.content)) {
-      return new Response(
-        JSON.stringify({ message: "⚠️ Contenuto bloccato da safety filter.", toolCalls: [] }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // Parse tool calls
     const toolCalls = (msg.tool_calls ?? []).map((tc: Record<string, unknown>) => {
       const fn = tc.function as Record<string, unknown>;
@@ -262,13 +243,6 @@ Regole:
       } catch {
         args = {};
       }
-
-      // Safety: check tool args
-      const argsStr = JSON.stringify(args);
-      if (containsForbidden(argsStr)) {
-        return null;
-      }
-
       return { name: fn.name as string, arguments: args, id: tc.id as string };
     }).filter(Boolean);
 
