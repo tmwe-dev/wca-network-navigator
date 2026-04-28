@@ -6,15 +6,14 @@ import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase as supabaseTyped } from '@/integrations/supabase/client';
+import { supabase as supabaseAuth } from '@/integrations/supabase/client';
+import { untypedFrom } from '@/lib/supabaseUntyped';
 
 import { createLogger } from "@/lib/log";
 const log = createLogger("PromptTemplateSelector");
-// Cast controllato: la tabella `prompt_templates` non è nei tipi generati
-// (DEBT-EMAIL-INTEL-PROMPT-TEMPLATES). Bypass tipi finché non viene aggiunta
-// allo schema o sostituita da `kb_entries` con categoria dedicata.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = supabaseTyped as any;
+// `prompt_templates` non è nei tipi generati (DEBT-EMAIL-INTEL-PROMPT-TEMPLATES).
+// Bypass via untypedFrom; auth.getSession passa dal client tipato.
+const supabase = { from: untypedFrom, auth: supabaseAuth.auth };
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 
