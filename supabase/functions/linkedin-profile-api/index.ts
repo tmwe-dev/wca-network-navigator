@@ -1,4 +1,5 @@
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 const PROXYCURL_API_KEY = Deno.env.get("PROXYCURL_API_KEY");
 
@@ -10,6 +11,11 @@ Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
+    // P1.5 — Auth required: Proxycurl is paid + per-request billed.
+    // Accept real JWT, or anon-key from a CORS-whitelisted origin (extension).
+    const auth = await requireExtensionAuth(req, dynCors);
+    if (isExtensionAuthError(auth)) return auth;
+
     const { linkedin_url } = await req.json();
 
     if (!linkedin_url) {
