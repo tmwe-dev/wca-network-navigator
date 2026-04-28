@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
 
 const ACTION_META: Record<string, { icon: typeof Mail; color: string; label: string }> = {
