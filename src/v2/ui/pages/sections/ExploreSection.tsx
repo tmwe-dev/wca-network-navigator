@@ -7,6 +7,7 @@ import { NetworkPage } from "@/v2/ui/pages/NetworkPage";
 import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
 
 const TABS: readonly SectionTab[] = [
+  { key: "network",   label: "Network CRM", to: "/v2/explore/network" },
   { key: "map",       label: "Mappa",       to: "/v2/explore/map" },
   { key: "deep",      label: "Sherlock",    to: "/v2/explore/deep-search" },
 ];
@@ -17,7 +18,7 @@ export function ExploreSection(): React.ReactElement {
       <GoldenHeaderBar />
       <SectionTabs tabs={TABS} rootPath="/v2/explore" contentOverflow="contain">
         <Routes>
-          <Route index element={<Navigate to="/v2/explore/map" replace />} />
+          <Route index element={<Navigate to="/v2/explore/network" replace />} />
           <Route path="map"         element={<GlobePage />} />
           <Route path="network"     element={<NetworkPage />} />
           <Route path="search"      element={<Navigate to="/v2/pipeline/contacts" replace />} />

@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import {
-  LayoutDashboard, Command, Search, Kanban, Mail, Brain, Settings, Inbox,
+  LayoutDashboard, Command, Search, Kanban, Mail, Brain, Settings, Inbox, Building2,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -34,12 +34,13 @@ export interface NavGroupDef {
 export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.home",         path: "/v2",              icon: <LayoutDashboard className="h-4 w-4" />, pinned: true, pinOrder: 1 },
   { labelKey: "nav.command",      path: "/v2/command",      icon: <Command className="h-4 w-4" />,         pinned: true, pinOrder: 2 },
-  { labelKey: "nav.explore",      path: "/v2/explore",      icon: <Search className="h-4 w-4" />,          pinned: true, pinOrder: 3 },
-  { labelKey: "nav.pipeline",     path: "/v2/pipeline",     icon: <Kanban className="h-4 w-4" />,          pinned: true, pinOrder: 4 },
-  { labelKey: "nav.communicate",  path: "/v2/communicate",  icon: <Mail className="h-4 w-4" />,            pinned: true, pinOrder: 5 },
-  { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Inbox className="h-4 w-4" />, pinned: true, pinOrder: 6 },
-  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 7 },
-  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 8 },
+  { labelKey: "nav.network_crm",  path: "/v2/explore/network", icon: <Building2 className="h-4 w-4" />,    pinned: true, pinOrder: 3 },
+  { labelKey: "nav.explore",      path: "/v2/explore/map",  icon: <Search className="h-4 w-4" />,          pinned: true, pinOrder: 4 },
+  { labelKey: "nav.pipeline",     path: "/v2/pipeline",     icon: <Kanban className="h-4 w-4" />,          pinned: true, pinOrder: 5 },
+  { labelKey: "nav.communicate",  path: "/v2/communicate",  icon: <Mail className="h-4 w-4" />,            pinned: true, pinOrder: 6 },
+  { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Inbox className="h-4 w-4" />, pinned: true, pinOrder: 7 },
+  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 8 },
+  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 9 },
 ] as const;
 
 /**
