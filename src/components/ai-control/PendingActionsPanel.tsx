@@ -148,16 +148,16 @@ export function PendingActionsPanel() {
       const action = actions.find(a => a.id === id);
       if (!action) throw new Error("Action not found");
 
-      const { data, error } = await supabase.functions.invoke("generate-email", {
+      const data = await invokeAi<{ draft_subject?: string; draft_body?: string }>("generate-email", {
+        scope: "email",
         body: {
           pending_action_id: id,
           contact_id: action.contact_id,
           partner_id: action.partner_id,
           email_address: action.email_address,
         },
+        context: { source: "PendingActionsPanel", route: "/v2/ai-control", mode: "regenerate-draft" },
       });
-
-      if (error) throw error;
       if (data?.draft_subject || data?.draft_body) {
         // Update local draft state with regenerated content
         setEditedDraftSubject(data.draft_subject || "");

@@ -117,7 +117,12 @@ async function callAgentEdge(
   const trimmed = trimContext(history);
 
   const { data, error } = await supabase.functions.invoke("agent-loop", {
-    body: { goal, history: trimmed, sessionContext },
+    // Charter R1+R2
+    body: {
+      goal, history: trimmed, sessionContext,
+      scope: "agent",
+      context: { source: "agentLoop", mode: "iteration" },
+    },
   });
 
   if (error) throw new Error(`agent-loop edge error: ${error.message}`);

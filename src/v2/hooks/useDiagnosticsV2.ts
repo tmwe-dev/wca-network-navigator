@@ -63,7 +63,12 @@ export function useDiagnosticsV2() {
     // 3) Edge Functions
     const edgeCheck = await timedCheck("Edge Functions", async () => {
       const { error } = await supabase.functions.invoke("ai-assistant", {
-        body: { ping: true },
+        // Charter R1+R2: ping diagnostico marcato esplicitamente
+        body: {
+          ping: true,
+          scope: "diagnostics",
+          context: { source: "useDiagnosticsV2", route: "/v2/diagnostics", mode: "ping" },
+        },
       });
       // Even a 400 means edge functions are reachable
       if (error && !error.message.includes("validation")) {

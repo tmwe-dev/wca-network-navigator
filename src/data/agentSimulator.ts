@@ -65,7 +65,10 @@ export interface SimulatorResponse {
 }
 
 export async function runAgentSimulator(req: SimulatorRequest): Promise<SimulatorResponse> {
-  const { data, error } = await supabase.functions.invoke("agent-simulate", { body: req });
+  const { data, error } = await supabase.functions.invoke("agent-simulate", {
+    // Charter R1+R2
+    body: { ...req, scope: "lab", context: { source: "agentSimulator", mode: "simulate" } },
+  });
   if (error) throw error;
   return data as SimulatorResponse;
 }
