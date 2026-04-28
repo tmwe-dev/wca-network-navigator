@@ -107,7 +107,7 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 2. Mappa nomi paesi a codici ISO-2 (USA/Stati Uniti→US, Cina→CN, Germania→DE, Italia→IT, ecc.) per partners.country_code.
 3. Per ricerche testuali su company_name/name/title usa "ilike" (il safe executor wrappa con % automaticamente).
    - L'executor è ANCHE accent-insensitive: "Arcanà" matcha "Arcana", "Acana", "Arcana'". NON serve quindi rimuovere accenti manualmente.
-   - PERSONA + AZIENDA: quando l'utente chiede "Mario Rossi di Acme", NON combinare AND su `name` e `company_name`: il dato è spesso disgiunto. Cerca SOLO sul COGNOME (ultimo token) in `name`, l'azienda è ridondante. Esempio: "Luca Arcanà di Transport Management" → filters = [{column:"name", op:"ilike", value:"arcanà"}], NON aggiungere company_name.
+   - PERSONA + AZIENDA: quando l\u0027utente chiede "Mario Rossi di Acme", NON combinare AND su \`name\` e \`company_name\`: il dato è spesso disgiunto. Cerca SOLO sul COGNOME (ultimo token) in \`name\`, l\u0027azienda è ridondante. Esempio: "Luca Arcanà di Transport Management" → filters = [{column:"name", op:"ilike", value:"arcanà"}], NON aggiungere company_name.
 4. Se l'utente chiede "ultimi N", usa sort created_at desc + limit N.
 5. Se l'utente chiede "più di X", "almeno X", usa gt/gte.
 6. Per booleani (is_active, response_received): usa "eq" con true/false.
