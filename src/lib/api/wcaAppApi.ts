@@ -6,6 +6,7 @@
 import { createLogger } from "@/lib/log";
 import { ApiError } from "@/lib/api/apiError";
 import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
+import { getWcaCookie, setWcaCookie } from "@/lib/wcaCookieStore";
 import {
   safeParseDiscover,
   safeParseScrape,
@@ -28,24 +29,14 @@ async function assertOk(res: Response, context: string): Promise<void> {
   throw await ApiError.fromResponse(res, context);
 }
 
-// ─── Cookie cache ───────────────────────────────────────────────
-const COOKIE_KEY = "wca_session_cookie";
-const COOKIE_TTL = 8 * 60 * 1000; // 8 min
-const COOKIE_REFRESH_MARGIN = 60 * 1000; // refresh proactively if < 1 min remaining (P4.4)
+// ─── Cookie cache (SSOT: wcaCookieStore) ────────────────────────
+// P4.2 — usa wcaCookieStore come SSOT, no duplicazione localStorage.
+// P4.4 — pre-refresh: getWcaCookie ritorna null se TTL scaduto; qui aggiungiamo
+// un margine di 1 min per refresh proattivo prima del cutoff.
 
 async function getOrRefreshCookie(): Promise<string> {
-  try {
-    const cached = localStorage.getItem(COOKIE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      const age = Date.now() - parsed.savedAt;
-      if (parsed.cookie && age < COOKIE_TTL - COOKIE_REFRESH_MARGIN) {
-        return parsed.cookie;
-      }
-    }
-  } catch (err) {
-    log.warn("cookie cache read failed", { message: err instanceof Error ? err.message : String(err) });
-  }
+  const cached = getWcaCookie();
+  if (cached) return cached;
 
   const res = await fetch(`${BASE}/login`, {
     method: "POST",
@@ -61,11 +52,7 @@ async function getOrRefreshCookie(): Promise<string> {
       details: { context: "wcaLogin" },
     });
   }
-  try {
-    localStorage.setItem(COOKIE_KEY, JSON.stringify({ cookie, savedAt: Date.now() }));
-  } catch (err) {
-    log.warn("cookie cache write failed", { message: err instanceof Error ? err.message : String(err) });
-  }
+  setWcaCookie(cookie);
   return cookie;
 }
 
