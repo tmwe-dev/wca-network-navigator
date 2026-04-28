@@ -58,14 +58,29 @@ export function useFastLane(deps: FastLaneDeps) {
           contextHint: hint,
           history: buildHistory(),
         });
-        trace.add({
-          source: "fast-lane",
-          label: "ai-query",
-          toolId: "ai-query",
-          stepNumber: 1,
-          status: "ok",
-          durationMs: Date.now() - tFast,
-        });
+        if (result.kind === "multi") {
+          // Un step per ogni query parallela, etichetta = tabella.
+          result.parts.forEach((p, i) => {
+            trace.add({
+              source: "fast-lane",
+              label: `ai-query · ${p.table}`,
+              toolId: "ai-query",
+              stepNumber: i + 1,
+              status: p.error ? "failed" : "ok",
+              durationMs: p.durationMs ?? 0,
+              reasoning: p.error ?? undefined,
+            });
+          });
+        } else {
+          trace.add({
+            source: "fast-lane",
+            label: "ai-query",
+            toolId: "ai-query",
+            stepNumber: 1,
+            status: "ok",
+            durationMs: Date.now() - tFast,
+          });
+        }
 
         // Propaga eventuali audit refs dal tool (es. compose-email lo fa)
         const refs = result.meta?.auditRefs;

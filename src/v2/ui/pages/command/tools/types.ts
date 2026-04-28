@@ -142,7 +142,28 @@ export type ToolResult =
       readonly title: string;
       readonly message: string;
       readonly meta?: ToolResultMeta;
+    }
+  | {
+      readonly kind: "multi";
+      readonly title: string;
+      /** Una sezione per ogni piano eseguito (es. "partner" + "contatti"). */
+      readonly parts: readonly MultiResultPart[];
+      readonly meta?: ToolResultMeta;
     };
+
+export interface MultiResultPart {
+  readonly title: string;
+  readonly table: string;
+  readonly count: number;
+  readonly columns: ToolResultColumn[];
+  readonly rows: Record<string, string | number | null>[];
+  /** Filtri applicati (per il commentary locale). */
+  readonly filters: ReadonlyArray<{ column: string; op: string; value: unknown }>;
+  /** Se la query di questa parte è fallita, il messaggio. */
+  readonly error?: string;
+  /** Durata della singola query (ms). */
+  readonly durationMs?: number;
+}
 
 export interface ToolContext {
   readonly confirmed?: boolean;

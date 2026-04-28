@@ -12,7 +12,7 @@
  * L'AI ha conoscenza completa dello schema DB e produce query libere
  * (rispettando whitelist tabelle/operatori e RLS).
  */
-import type { Tool, ToolResult, ToolResultColumn } from "./types";
+import type { Tool, ToolResult, ToolResultColumn, MultiResultPart } from "./types";
 import { planQuery } from "@/v2/io/edge/aiQueryPlanner";
 import { executeQueryPlan, QueryValidationError, type QueryPlan } from "../lib/safeQueryExecutor";
 import { isOk } from "@/v2/core/domain/result";
@@ -163,66 +163,125 @@ export const aiQueryTool: Tool = {
       };
     }
 
-    const plan = planRes.value;
+    const { plans } = planRes.value;
 
-    if (plan.table === "INVALID") {
+    // Caso INVALID: planner ha esplicitamente segnalato richiesta non-query.
+    const firstPlan = plans[0];
+    if (firstPlan.table === "INVALID") {
       return {
         kind: "result",
         title: "Query AI · Richiesta non supportata",
         message:
-          plan.rationale ?? "Questa richiesta non è una query di lettura. Prova con un'azione esplicita o riformulala come ricerca.",
+          firstPlan.rationale ?? "Questa richiesta non è una query di lettura. Prova con un'azione esplicita o riformulala come ricerca.",
         meta: { count: 0, sourceLabel: "AI Query Planner" },
       };
     }
 
-    // 2) Esegui via safe executor
-    let execResult;
-    try {
-      execResult = await executeQueryPlan(plan);
-    } catch (e) {
-      const msg = e instanceof QueryValidationError ? e.message : e instanceof Error ? e.message : "Errore sconosciuto";
+    // 2) Esegui i piani in PARALLELO. allSettled: una query può fallire senza
+    //    bloccare le altre (es. tabella valida + colonna inventata in una sola).
+    const t0 = Date.now();
+    const settled = await Promise.allSettled(
+      plans.map(async (p) => {
+        const start = Date.now();
+        const exec = await executeQueryPlan(p);
+        return { plan: p, exec, durationMs: Date.now() - start };
+      }),
+    );
+
+    const idField = "id";
+
+    const buildPart = (
+      plan: QueryPlan,
+      exec: { rows: Record<string, unknown>[]; count: number; table: string; columnsUsed: string[] } | null,
+      error: string | null,
+      durationMs: number,
+    ): MultiResultPart => {
+      if (!exec) {
+        return {
+          title: plan.title ?? `Risultati · ${plan.table}`,
+          table: plan.table,
+          count: 0,
+          columns: [],
+          rows: [],
+          filters: plan.filters,
+          error: error ?? "Errore sconosciuto",
+          durationMs,
+        };
+      }
+      const visibleCols = exec.columnsUsed.filter((c) => c !== idField).slice(0, 8);
+      const columns: ToolResultColumn[] = visibleCols.map((c) => ({ key: c, label: humanLabel(c) }));
+      const tableRows = exec.rows.map((r) => {
+        const out: Record<string, string | number | null> = {};
+        if (idField in r) out[idField] = String(r[idField] ?? "");
+        for (const c of visibleCols) out[c] = formatCellValue(r[c]);
+        return out;
+      });
       return {
-        kind: "result",
-        title: "Query AI · Errore esecuzione",
-        message: `❌ ${msg}`,
-        meta: { count: 0, sourceLabel: "Safe Query Executor" },
+        title: plan.title ?? `Risultati · ${exec.table}`,
+        table: exec.table,
+        count: exec.count,
+        columns,
+        rows: tableRows,
+        filters: plan.filters,
+        durationMs,
+      };
+    };
+
+    const parts: MultiResultPart[] = settled.map((s, i) => {
+      const plan = plans[i];
+      if (s.status === "fulfilled") {
+        return buildPart(plan, s.value.exec, null, s.value.durationMs);
+      }
+      const reason = s.reason;
+      const msg = reason instanceof QueryValidationError ? reason.message : reason instanceof Error ? reason.message : String(reason);
+      return buildPart(plan, null, msg, 0);
+    });
+
+    // ── Caso 1 piano: mantengo retro-compatibilità totale (kind:"table"). ──
+    if (parts.length === 1) {
+      const part = parts[0];
+      const plan = plans[0];
+      if (part.error) {
+        return {
+          kind: "result",
+          title: "Query AI · Errore esecuzione",
+          message: `❌ ${part.error}`,
+          meta: { count: 0, sourceLabel: "Safe Query Executor" },
+        };
+      }
+      _lastSuccessfulPlan = plan;
+      return {
+        kind: "table",
+        title: part.title,
+        columns: part.columns,
+        rows: part.rows,
+        meta: {
+          count: part.count,
+          sourceLabel: `AI Query · ${part.table}${plan.rationale ? ` · ${plan.rationale}` : ""}`,
+        },
+        selectable: true,
+        idField,
+        liveSource: part.table,
+        bulkActions: bulkActionsFor(part.table),
       };
     }
 
-    // Cache plan for conversational context
-    _lastSuccessfulPlan = plan;
-
-    const { rows, count, table, columnsUsed } = execResult;
-
-    // 3) Render come table
-    const idField = "id";
-    const visibleCols = columnsUsed.filter((c) => c !== idField).slice(0, 8);
-    const columns: ToolResultColumn[] = visibleCols.map((c) => ({ key: c, label: humanLabel(c) }));
-
-    const tableRows = rows.map((r) => {
-      const out: Record<string, string | number | null> = {};
-      if (idField in r) out[idField] = String(r[idField] ?? "");
-      for (const c of visibleCols) {
-        out[c] = formatCellValue(r[c]);
-      }
-      return out;
-    });
-
-    const title = plan.title ?? `Risultati · ${table}`;
-
+    // ── Caso N piani: kind:"multi". Cache il primo piano riuscito per follow-up. ──
+    const firstSuccessIdx = parts.findIndex((p) => !p.error);
+    if (firstSuccessIdx >= 0) {
+      _lastSuccessfulPlan = plans[firstSuccessIdx];
+    }
+    const totalCount = parts.reduce((s, p) => s + (p.error ? 0 : p.count), 0);
+    const tableNames = parts.map((p) => p.table).join(" + ");
+    const totalMs = Date.now() - t0;
     return {
-      kind: "table",
-      title,
-      columns,
-      rows: tableRows,
+      kind: "multi",
+      title: `Risultati · ${tableNames}`,
+      parts,
       meta: {
-        count,
-        sourceLabel: `AI Query · ${table}${plan.rationale ? ` · ${plan.rationale}` : ""}`,
+        count: totalCount,
+        sourceLabel: `AI Query · ${parts.length} entità · ${totalMs}ms`,
       },
-      selectable: true,
-      idField,
-      liveSource: table,
-      bulkActions: bulkActionsFor(table),
     };
   },
 };

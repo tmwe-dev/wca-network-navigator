@@ -72,6 +72,7 @@ export type CanvasType =
   | "live-approval"
   | "live-report"
   | "live-result"
+  | "live-multi"
   | null;
 
 export type FlowPhase = "idle" | "thinking" | "proposal" | "approval" | "executing" | "done";

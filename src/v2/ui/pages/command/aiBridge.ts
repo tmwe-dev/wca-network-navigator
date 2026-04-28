@@ -112,6 +112,19 @@ export function serializeResultForAI(result: ToolResult): string {
         message: result.message,
         meta: result.meta,
       });
+    case "multi":
+      return JSON.stringify({
+        kind: "multi",
+        title: result.title,
+        parts: result.parts.map((p) => ({
+          table: p.table,
+          title: p.title,
+          count: p.count,
+          error: p.error,
+          sample: p.rows.slice(0, 3),
+        })),
+        meta: result.meta,
+      });
   }
 }
 

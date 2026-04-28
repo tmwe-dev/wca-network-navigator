@@ -8,7 +8,7 @@ import type { ToolResult } from "../tools/types";
 import { TOOLS } from "../tools/registry";
 import { getAiComment, serializeResultForAI, type SuggestedAction } from "../aiBridge";
 import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
-import { tryLocalComment } from "../lib/localResultFormatter";
+import { tryLocalComment, tryLocalCommentMulti } from "../lib/localResultFormatter";
 import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import { buildAuditFromTrace } from "../lib/auditFromTrace";
 
@@ -43,8 +43,9 @@ export function useResultCommentary(deps: CommentaryDeps) {
 
       // Try LOCAL formatter (skip LLM for simple count/short list)
       if (toolId === "ai-query") {
-        const plan = getLastSuccessfulQueryPlan();
-        const local = tryLocalComment(userPrompt, result, plan);
+        const local = result.kind === "multi"
+          ? tryLocalCommentMulti(userPrompt, result.parts)
+          : tryLocalComment(userPrompt, result, getLastSuccessfulQueryPlan());
         if (local) {
           const finalTrace = trace?.finish();
           const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;

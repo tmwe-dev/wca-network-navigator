@@ -68,14 +68,25 @@ ${liveSchema || "(schema non disponibile, usa solo i nomi tabella sopra)"}
 
 FORMATO OUTPUT (JSON puro, niente markdown):
 {
-  "table": "<nome_tabella>",
-  "columns": ["col1","col2"],                         // opzionale
-  "filters": [{"column":"<nome>","op":"<op>","value":<v>}],
-  "sort": {"column":"<nome>","ascending":false},      // opzionale
-  "limit": 50,
-  "title": "<titolo breve>",
-  "rationale": "<1 frase: perché questa tabella, perché questi filtri>"
+  "plans": [
+    {
+      "table": "<nome_tabella>",
+      "columns": ["col1","col2"],                         // opzionale
+      "filters": [{"column":"<nome>","op":"<op>","value":<v>}],
+      "sort": {"column":"<nome>","ascending":false},      // opzionale
+      "limit": 50,
+      "title": "<titolo breve>",
+      "rationale": "<1 frase: perché questa tabella, perché questi filtri>"
+    }
+  ]
 }
+
+MULTI-ENTITÀ:
+- Se la richiesta menziona più entità DISTINTE che vivono in tabelle diverse
+  (es. "quanti partner E contatti", "address e biglietti", "attività e outreach"),
+  produci UN piano per OGNI entità (max 4 piani, in ordine in cui compaiono).
+- Se la richiesta è su una sola entità, produci 1 solo piano nell'array.
+- NON duplicare piani sulla stessa tabella con filtri identici.
 
 OPERATORI AMMESSI: eq, neq, gt, gte, lt, lte, ilike, in, is.
 - "ilike" wrappa automaticamente con % ed è accent-insensitive.
@@ -91,7 +102,7 @@ VINCOLI HARD:
 LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
-- Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}.
+- Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
 - Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
 - Per ricerche testuali (nomi azienda, persona, città) usa ilike. Per nomi paese usa il codice ISO-2 se la colonna si chiama country_code, altrimenti il nome libero.
 - Per "ultimi N" usa sort desc + limit N. Per "quanti/totale" usa columns:["id"] + limit:1 (il count viene dal DB).
@@ -162,17 +173,32 @@ Deno.serve(async (req: Request) => {
     const aiJson = await aiResp.json();
     const content: string = aiJson?.choices?.[0]?.message?.content ?? "";
 
-    let plan: Record<string, unknown> | null;
+    let parsed: Record<string, unknown> | null;
     try {
-      plan = JSON.parse(content);
+      parsed = JSON.parse(content);
     } catch {
       const m = content.match(/\{[\s\S]*\}/);
-      plan = m ? JSON.parse(m[0]) : null;
+      parsed = m ? JSON.parse(m[0]) : null;
     }
 
-    if (!plan || typeof plan !== "object") {
+    if (!parsed || typeof parsed !== "object") {
       return new Response(
         JSON.stringify({ error: "Planner non ha prodotto JSON valido", raw: content.slice(0, 500) }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Normalizza in array di piani. Accetta sia il nuovo formato {plans:[...]}
+    // sia il vecchio formato singolo (retro-compat verso modelli che ignorano
+    // la nuova istruzione).
+    let plans: Record<string, unknown>[];
+    if (Array.isArray((parsed as { plans?: unknown }).plans)) {
+      plans = ((parsed as { plans: unknown[] }).plans as Record<string, unknown>[]).slice(0, 4);
+    } else if (typeof (parsed as { table?: unknown }).table === "string") {
+      plans = [parsed];
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Planner output senza 'plans' né 'table'", raw: content.slice(0, 500) }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -182,23 +208,22 @@ Deno.serve(async (req: Request) => {
     // quanti partner..." → user wants the list, not just a number).
     const isListIntent = /\b(elenco|elenc|lista|liste|mostra|mostrami|dammi|vedi|visualizza|fammi vedere|fai vedere)\b/i.test(prompt);
     const isCountIntent = !isListIntent && /\b(quanti|quante|totale|numero di|conteggio|count)\b/i.test(prompt);
-    if (isCountIntent && plan.table && plan.table !== "INVALID") {
-      // Count-only fast path: just need the total, no rows.
-      plan.columns = ["id"];
-      delete plan.sort;
-      plan.limit = 1;
-    } else if (isListIntent && plan.table && plan.table !== "INVALID") {
-      // User explicitly asked for an enumeration: never collapse to ["id"]-only,
-      // and ensure a meaningful limit (cap at 200 in executor anyway).
-      if (Array.isArray(plan.columns) && plan.columns.length === 1 && plan.columns[0] === "id") {
-        delete plan.columns; // fall back to default columns for the table
-      }
-      if (typeof plan.limit !== "number" || plan.limit < 20) {
-        plan.limit = 200;
+    for (const plan of plans) {
+      if (isCountIntent && plan.table && plan.table !== "INVALID") {
+        plan.columns = ["id"];
+        delete plan.sort;
+        plan.limit = 1;
+      } else if (isListIntent && plan.table && plan.table !== "INVALID") {
+        if (Array.isArray(plan.columns) && plan.columns.length === 1 && plan.columns[0] === "id") {
+          delete plan.columns;
+        }
+        if (typeof plan.limit !== "number" || plan.limit < 20) {
+          plan.limit = 200;
+        }
       }
     }
 
-    return new Response(JSON.stringify(plan), {
+    return new Response(JSON.stringify({ plans }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

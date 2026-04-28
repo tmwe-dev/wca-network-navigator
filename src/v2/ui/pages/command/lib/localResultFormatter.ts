@@ -8,7 +8,7 @@
  * Returns null when the result needs full AI commentary (analysis, complex
  * data, explicit user request like "spiegami / analizza / perché").
  */
-import type { ToolResult } from "../tools/types";
+import type { ToolResult, MultiResultPart } from "../tools/types";
 import type { QueryPlan } from "./safeQueryExecutor";
 import type { SuggestedAction } from "../aiBridge";
 
@@ -299,4 +299,60 @@ export function tryLocalComment(
 
   // Otherwise → fallback to AI commentary
   return null;
+}
+
+/**
+ * Multi-entity local commentary. Concatena un riassunto per ogni parte
+ * (es. "25.103 partner e 11.414 contatti"). Funziona solo se NESSUNA parte
+ * richiede analisi (l'utente non ha chiesto "spiegami/analizza").
+ */
+export function tryLocalCommentMulti(
+  userPrompt: string,
+  parts: readonly MultiResultPart[],
+): LocalComment | null {
+  if (ANALYSIS_KEYWORDS.test(userPrompt)) return null;
+  if (parts.length === 0) return null;
+
+  const fragments: string[] = [];
+  const spokenFragments: string[] = [];
+  const errorFragments: string[] = [];
+
+  for (const p of parts) {
+    if (p.error) {
+      errorFragments.push(`per ${noun(p.table, true)} c'è stato un errore`);
+      continue;
+    }
+    const filtersDesc = describeFilters(p.filters as FilterShape[]);
+    const word = noun(p.table, p.count !== 1);
+    const countFmt = p.count.toLocaleString("it-IT");
+    if (p.count === 0) {
+      fragments.push(`nessun ${noun(p.table, false)}${filtersDesc ? " " + filtersDesc : ""}`);
+      spokenFragments.push(`nessun ${noun(p.table, false)}`);
+    } else {
+      fragments.push(`**${countFmt}** ${word}${filtersDesc ? " " + filtersDesc : ""}`);
+      spokenFragments.push(`${countFmt} ${word}`);
+    }
+  }
+
+  if (fragments.length === 0 && errorFragments.length === 0) return null;
+
+  const joinIt = (arr: string[]) =>
+    arr.length <= 1 ? arr.join("") : `${arr.slice(0, -1).join(", ")} e ${arr[arr.length - 1]}`;
+
+  const all = [...fragments, ...errorFragments];
+  const message = `Nel sistema ci sono ${joinIt(all)}.`;
+  const spoken = `Nel sistema ci sono ${joinIt(spokenFragments)}.`;
+
+  // Suggested actions: una "filtra/esplora" per la prima entità con risultati.
+  const firstWith = parts.find((p) => !p.error && p.count > 0);
+  const actions: SuggestedAction[] = firstWith
+    ? suggestedActionsFor(firstWith.table, firstWith.filters as FilterShape[]).slice(0, 2)
+    : [];
+  const proposal = buildProposalSentence(actions);
+
+  return {
+    message: proposal ? `${message} ${proposal}` : message,
+    spokenSummary: proposal ? `${stripMarkdown(spoken)} ${stripMarkdown(proposal)}` : stripMarkdown(spoken),
+    suggestedActions: actions,
+  };
 }
