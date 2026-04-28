@@ -38,8 +38,8 @@ export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.pipeline",     path: "/v2/pipeline",     icon: <Kanban className="h-4 w-4" />,          pinned: true, pinOrder: 4 },
   { labelKey: "nav.communicate",  path: "/v2/communicate",  icon: <Mail className="h-4 w-4" />,            pinned: true, pinOrder: 5 },
   { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Inbox className="h-4 w-4" />, pinned: true, pinOrder: 6 },
-  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 6 },
-  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 7 },
+  { labelKey: "nav.intelligence", path: "/v2/intelligence", icon: <Brain className="h-4 w-4" />,           pinned: true, pinOrder: 7 },
+  { labelKey: "nav.config",       path: "/v2/settings",     icon: <Settings className="h-4 w-4" />,        pinned: true, pinOrder: 8 },
 ] as const;
 
 /**
