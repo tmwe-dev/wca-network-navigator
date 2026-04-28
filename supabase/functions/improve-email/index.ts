@@ -12,6 +12,7 @@ import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
+import { createLogger } from "../_shared/structuredLogger.ts";
 
 interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
 
