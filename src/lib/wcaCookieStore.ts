@@ -12,6 +12,8 @@ const log = createLogger("wcaCookieStore");
 
 const STORAGE_KEY = "wca_session_cookie";
 const TTL_MS = 8 * 60 * 1000; // 8 minuti
+const REFRESH_MARGIN_MS = 60 * 1000; // P4.4 — refresh proattivo se < 1 min al cutoff
+const EFFECTIVE_TTL_MS = TTL_MS - REFRESH_MARGIN_MS;
 
 // In-memory primary store (non accessibile via XSS su localStorage)
 let memCookie: string | null = null;
@@ -37,7 +39,7 @@ export function setWcaCookie(cookie: string): void {
  */
 export function getWcaCookie(): string | null {
   // In-memory first
-  if (memCookie && Date.now() - memSavedAt < TTL_MS) {
+  if (memCookie && Date.now() - memSavedAt < EFFECTIVE_TTL_MS) {
     return memCookie;
   }
 
@@ -46,7 +48,7 @@ export function getWcaCookie(): string | null {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.cookie && Date.now() - parsed.savedAt < TTL_MS) {
+      if (parsed.cookie && Date.now() - parsed.savedAt < EFFECTIVE_TTL_MS) {
         // Promote to memory
         memCookie = parsed.cookie;
         memSavedAt = parsed.savedAt;
