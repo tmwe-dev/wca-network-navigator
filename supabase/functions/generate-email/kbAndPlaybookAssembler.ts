@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import type { Quality } from "../_shared/kbSlice.ts";
 import { fetchKbEntriesStrategic } from "./kbAssembler.ts";
 import { loadActivePlaybook } from "./playbookLoader.ts";
+import { loadOperativePromptsBlock } from "./operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -14,6 +15,8 @@ export interface KbAndPlaybook {
   salesKBSections: string[];
   playbookBlock?: string;
   playbookActive?: boolean;
+  operativePromptsBlock?: string;
+  operativePromptsApplied?: string[];
 }
 
 /**
@@ -64,7 +67,7 @@ export async function assembleKbAndPlaybook(
   const inferredCategory = tcForCategory === 0 ? "primo_contatto" : "follow_up";
   const finalCategory = emailCategory || inferredCategory;
 
-  const [kbResult, playbook] = await Promise.all([
+  const [kbResult, playbook, operativePrompts] = await Promise.all([
     loadKnowledgeBase(
       supabase,
       quality,
@@ -75,6 +78,7 @@ export async function assembleKbAndPlaybook(
       kbCategories,
     ),
     loadActivePlaybook(supabase, userId, partnerId ?? null),
+    loadOperativePromptsBlock(supabase, userId),
   ]);
 
   return {
@@ -82,5 +86,7 @@ export async function assembleKbAndPlaybook(
     salesKBSections: kbResult.sections,
     playbookBlock: playbook.block,
     playbookActive: playbook.active,
+    operativePromptsBlock: operativePrompts.block || undefined,
+    operativePromptsApplied: operativePrompts.appliedNames.length > 0 ? operativePrompts.appliedNames : undefined,
   };
 }
