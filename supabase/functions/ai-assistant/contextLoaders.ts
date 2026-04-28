@@ -10,6 +10,7 @@
  */
 
 import { extractErrorMessage } from "../_shared/handleEdgeError.ts";
+import { loadOperativePrompts as loadOperativePromptsUnified, type PromptScope } from "../_shared/operativePromptsLoader.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -87,20 +88,23 @@ export async function loadSystemDoctrine(supabase: SupabaseClient): Promise<stri
   return `\n\nDOTTRINA OPERATIVA (Knowledge Base Sistema):\n${entries}`;
 }
 
-export async function loadOperativePrompts(supabase: SupabaseClient, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from("operative_prompts")
-    .select("name, objective, procedure, criteria")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("priority", { ascending: false })
-    .limit(5);
-
-  if (!data?.length) return "";
-
-  const prompts = (data as Record<string, unknown>[]).map(p =>
-    `**${p.name}**: Obiettivo: ${p.objective}. Procedura: ${p.procedure}. Criteri: ${p.criteria}`
-  ).join("\n");
-
-  return `\n\nPROMPT OPERATIVI ATTIVI:\n${prompts}`;
+/**
+ * Load operative prompts via the SHARED loader so that the same context+tag
+ * matching logic used by generate-email is applied here.
+ *
+ * The optional `scope` argument lets callers narrow the match (e.g. cockpit
+ * vs strategic). When omitted, defaults to "general" which still resolves
+ * universal/post-send prompts and OBBLIGATORIA rules tagged broadly.
+ */
+export async function loadOperativePrompts(
+  supabase: SupabaseClient,
+  userId: string,
+  scope: PromptScope = "general",
+): Promise<string> {
+  const { block } = await loadOperativePromptsUnified(supabase, userId, {
+    scope,
+    includeUniversal: true,
+    limit: 6,
+  });
+  return block ? `\n\n${block}` : "";
 }
