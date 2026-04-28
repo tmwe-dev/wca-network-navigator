@@ -85,10 +85,10 @@ export function LayoutHeader({
           size="sm"
           className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
           onClick={onOpenCommandPalette}
-          aria-label="Apri Command"
+          aria-label="Apri ricerca rapida"
         >
           <Command className="h-3.5 w-3.5" />
-          <span>Command</span>
+          <span>Cerca rapida</span>
           <kbd className="hidden lg:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>
