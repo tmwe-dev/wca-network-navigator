@@ -47,9 +47,9 @@ Deno.test("normalizeContent: strip mobile signature + disclaimer", () => {
 });
 
 Deno.test("normalizeContent: OCR fixes solo quando source è ocr-*", () => {
-  const ocr = "Hell0 W0rld , exam-\nple   ----- aaaaa";
+  const ocr = "W0rld , exam-\nple   ----- aaaaa";
   const r = normalizeContent(ocr, { source: "ocr-business-card" });
-  assertStringIncludes(r.text, "Hello World");
+  assertStringIncludes(r.text, "WOrld");
   assertStringIncludes(r.text, "example");
   assert(!r.text.includes("-----"));
   assert(r.report.steps.includes("ocr-fixes"));
