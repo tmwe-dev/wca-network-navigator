@@ -119,6 +119,7 @@ export async function journalistReview(
         { role: "user", content: userPrompt },
       ],
       temperature: 0.3,
+      max_tokens: 2048,
       timeoutMs: 25000,
       maxRetries: 1,
       context: `journalist-review:${userId.substring(0, 8)}`,

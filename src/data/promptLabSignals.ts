@@ -144,7 +144,7 @@ export async function analyzeAndGenerateSignals(userId: string): Promise<PromptL
   // 4) Memorie di apprendimento (feedback dall'utente salvati come memory)
   try {
     const { data: memories } = await supabase
-      .from("ai_memories" as never)
+      .from("ai_memory" as never)
       .select("content, tags, created_at" as never)
       .gte("created_at" as never, sevenDaysAgo as never)
       .contains("tags" as never, ["feedback"] as never)

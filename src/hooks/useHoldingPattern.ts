@@ -67,7 +67,8 @@ export function useHoldingPatternList() {
         .from("prospects")
         .select("id, company_name, city, email, lead_status, last_interaction_at, interaction_count")
         .in("lead_status", ACTIVE_STATUSES)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false });
+        .order("last_interaction_at", { ascending: false, nullsFirst: false })
+        .limit(200);
 
       (prospects || []).forEach((p) =>
         items.push({
@@ -87,7 +88,8 @@ export function useHoldingPatternList() {
         .from("imported_contacts")
         .select("id, company_name, name, city, email, lead_status, last_interaction_at, interaction_count, country")
         .in("lead_status", ACTIVE_STATUSES)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false });
+        .order("last_interaction_at", { ascending: false, nullsFirst: false })
+        .limit(200);
 
       (contacts || []).forEach((c) =>
         items.push({
@@ -111,7 +113,8 @@ export function useHoldingPatternList() {
           .from("activities")
           .select("source_id, user_id, executed_by_agent_id")
           .in("source_id", allIds)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(200);
 
         if (activities && activities.length > 0) {
           // Build map: source_id → first (most recent) activity

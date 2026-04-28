@@ -81,7 +81,7 @@ export function useImportV2() {
           normalization_method: "manual_csv",
         })
         .select("id")
-        .single();
+        .maybeSingle();
       if (logErr || !log) throw logErr || new Error("Failed to create import log");
 
       const mappedCols = columns.filter((c) => c.mappedTo);

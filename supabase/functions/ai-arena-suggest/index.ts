@@ -128,6 +128,7 @@ serve(async (req) => {
             role: "user",
             content: `In ONE sentence in Italian, explain why a freight forwarding company should reach out to "${partner.company_name}" in ${partner.country_name || countryCode}${partner.profile_description ? `. Company profile: ${(partner.profile_description as string).substring(0, 300)}` : ""}${partner.rating ? `. Rating: ${partner.rating}/5` : ""}. Focus on business opportunity.`
           }],
+          max_tokens: 256,
           timeoutMs: 10000, maxRetries: 0, context: "arena-reason",
         });
         aiReasoning = reasonResult.content?.trim() || "Partner mai contattato — opportunità di primo contatto.";
@@ -151,6 +152,7 @@ serve(async (req) => {
               content: `Write an outreach email to ${contactName || "the team"} at ${partner.company_name} (${partner.country_name || countryCode}${partner.city ? `, ${partner.city}` : ""}). Goal: propose freight forwarding partnership. Language: ${targetLanguage}.`
             }
           ],
+          max_tokens: 512,
           timeoutMs: 15000, maxRetries: 1, context: "arena-draft",
         });
 

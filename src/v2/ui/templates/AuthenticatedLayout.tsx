@@ -27,7 +27,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
-import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
 import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRunner";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
@@ -218,11 +217,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ActiveOperatorProvider>
-            <ContactDrawerProvider>
-              <DeepSearchContext.Provider value={deepSearch}>
-                <GlobalFiltersProvider>
-                  <MissionProvider>
-                    <NotificationsProvider>
+            <DeepSearchContext.Provider value={deepSearch}>
+              <GlobalFiltersProvider>
+                <MissionProvider>
+                  <NotificationsProvider>
                       <SonnerToaster position="top-right" richColors closeButton />
                       <Toaster />
                       <LiveRegion message="" />
@@ -390,7 +388,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>
-            </ContactDrawerProvider>
           </ActiveOperatorProvider>
         </TooltipProvider>
       </QueryClientProvider>

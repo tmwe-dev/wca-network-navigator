@@ -1,9 +1,15 @@
 /**
+ * @deprecated Table 'teams' does not exist in current schema (types.ts).
+ * The table exists in Supabase migrations (20260422180200_lovable102_rbac.sql) but
+ * TypeScript types have not been generated. Team functions will log warnings and return early.
+ *
  * Data Access Layer — RBAC (Role-Based Access Control)
  * Single source of truth for all RBAC-related queries.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+
+const TEAMS_TABLE_WARNING = 'Table "teams" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -298,59 +304,41 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
 
 /**
  * Fetch all teams for current user
+ * @deprecated Table 'teams' not in schema. This function will not execute.
  */
 export async function fetchTeams(): Promise<Team[]> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-  if (!user) return [];
-
-  const { data, error } = await (supabase as any)
-    .from("teams")
-    .select("*")
-    .or(`owner_id.eq.${user.id},id.in.(SELECT team_id FROM team_members WHERE user_id = ${user.id})`)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
+  console.warn(TEAMS_TABLE_WARNING);
+  return [];
 }
 
 /**
  * Create a new team
+ * @deprecated Table 'teams' not in schema. This function will not execute.
  */
 export async function createTeam(name: string, description?: string): Promise<Team> {
-  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-  if (!user) throw new Error("Not authenticated");
-
-  const { data, error } = await (supabase as any)
-    .from("teams")
-    .insert({ name, description, owner_id: user.id })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  console.warn(TEAMS_TABLE_WARNING);
+  throw new Error('createTeam: Table "teams" not available in schema');
 }
 
 /**
  * Update a team
+ * @deprecated Table 'teams' not in schema. This function will not execute.
  */
 export async function updateTeam(
   teamId: string,
   updates: { name?: string; description?: string }
 ): Promise<Team> {
-  const { data, error } = await (supabase as any)
-    .from("teams")
-    .update(updates)
-    .eq("id", teamId)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  console.warn(TEAMS_TABLE_WARNING);
+  throw new Error('updateTeam: Table "teams" not available in schema');
 }
 
 /**
  * Delete a team
+ * @deprecated Table 'teams' not in schema. This function will not execute.
  */
 export async function deleteTeam(teamId: string): Promise<void> {
-  const { error } = await (supabase as any).from("teams").delete().eq("id", teamId);
-  if (error) throw error;
+  console.warn(TEAMS_TABLE_WARNING);
+  throw new Error('deleteTeam: Table "teams" not available in schema');
 }
 
 // ─── Team Members ───────────────────────────────────────

@@ -25,7 +25,7 @@ export function useAgentChatV2(agentId: string | null) {
         .from("agents")
         .select("*")
         .eq("id", agentId)
-        .single();
+        .maybeSingle();
       if (error) return null;
       return data;
     },

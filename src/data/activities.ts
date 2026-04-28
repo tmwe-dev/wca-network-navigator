@@ -106,7 +106,8 @@ export async function findActivitiesForPartner(partnerId: string): Promise<Activ
     .from("activities")
     .select("*, team_members(name)")
     .eq("partner_id", partnerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (error) throw error;
   return data as Activity[];
 }

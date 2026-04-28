@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { ContactDrawerProvider } from "@/contexts/ContactDrawerContext";
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { InboundNotificationsProvider } from "@/components/providers/InboundNotificationsProvider";
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -108,13 +109,14 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <ViteChunkRecovery />
-              <PWAUpdatePrompt />
-              <BackgroundSyncIndicator />
-              <ConnectionBanner />
-              <RuntimeDiagnosticPanel />
-              <Suspense fallback={<PageFallback />}>
-                <Routes>
+              <GlobalFiltersProvider>
+                <ViteChunkRecovery />
+                <PWAUpdatePrompt />
+                <BackgroundSyncIndicator />
+                <ConnectionBanner />
+                <RuntimeDiagnosticPanel />
+                <Suspense fallback={<PageFallback />}>
+                  <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
 
                   {/* Public routes */}
@@ -144,6 +146,7 @@ const App = () => (
                   <Route path="*" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
                 </Routes>
               </Suspense>
+              </GlobalFiltersProvider>
             </BrowserRouter>
             <ContactRecordDrawer />
           </TooltipProvider>

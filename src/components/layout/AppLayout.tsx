@@ -7,7 +7,6 @@ import { Menu, Sparkles, Target, SlidersHorizontal, Globe, Users, ArrowRight, Pl
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
-import { useDeepSearchRunner, DeepSearchContext } from "@/hooks/useDeepSearchRunner";
 import { ConnectionStatusBar } from "./ConnectionStatusBar";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { useJobHealthMonitor } from "@/hooks/useJobHealthMonitor";
@@ -42,7 +41,6 @@ export function AppLayout() {
   const [voiceActive, setVoiceActive] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const deepSearch = useDeepSearchRunner();
   const outreachQueue = useOutreachQueue();
   useJobHealthMonitor();
   useWcaSync();
@@ -106,10 +104,9 @@ export function AppLayout() {
 
   return (
     <ActiveOperatorProvider>
-      <DeepSearchContext.Provider value={deepSearch}>
-        <MissionProvider>
-          <GlobalFiltersProvider>
-            <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+      <MissionProvider>
+        <GlobalFiltersProvider>
+          <div className="flex h-screen w-full bg-background overflow-hidden overscroll-none" onClick={() => sidebarOpen && setSidebarOpen(false)}>
               <a
                 href="#main-content-v1"
                 className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
@@ -230,9 +227,8 @@ export function AppLayout() {
               )}
             </div>
             <ClaudeBadge />
-          </GlobalFiltersProvider>
-        </MissionProvider>
-      </DeepSearchContext.Provider>
+        </GlobalFiltersProvider>
+      </MissionProvider>
     </ActiveOperatorProvider>
   );
 }

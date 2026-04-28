@@ -154,7 +154,8 @@ export function useBusinessCardsForCampaign(countryCode: string | null) {
       const { data, error } = await supabase
         .from("business_cards")
         .select("id, company_name, contact_name, email, event_name, met_at, location, matched_partner_id, partner:matched_partner_id(id, company_name, city, country_code, country_name, email, logo_url)")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
 

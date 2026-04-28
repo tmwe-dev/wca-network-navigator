@@ -111,9 +111,9 @@ Rispondi SOLO con un JSON valido con questa struttura:
 
         const result = await aiChat({
           messages: [{ role: "user", content: prompt }],
-          model: "google/gemini-2.5-flash-lite",
+          models: ["google/gemini-2.5-flash-lite", "openai/gpt-5-mini"],
           temperature: 0.3,
-          maxTokens: 800,
+          max_tokens: 800,
         });
 
         const content = result.choices?.[0]?.message?.content || "";

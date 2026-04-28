@@ -100,7 +100,8 @@ export function useEmailContactPicker() {
         .from("partner_contacts")
         .select("id, name, contact_alias, email, title")
         .eq("partner_id", state.expandedPartner!)
-        .order("is_primary", { ascending: false });
+        .order("is_primary", { ascending: false })
+        .limit(50);
       return (data ?? []) as PartnerContactRow[];
     },
   });

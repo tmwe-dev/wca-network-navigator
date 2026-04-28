@@ -149,6 +149,13 @@ async function fetchDealsData(filters?: ExportFilters): Promise<Record<string, u
   return data || [];
 }
 
+// TODO: Email export functionality is dead code
+// The "emails" table referenced here does not exist in Supabase.
+// The closest table is "email_send_log" but it has different columns:
+// - missing: from_address, to_address, contact_id, campaign_id
+// - has instead: recipient_email, sent_at (not created_at), campaign_queue_id
+// Either implement proper email export using email_send_log or remove this function entirely.
+/*
 async function fetchEmailsData(filters?: ExportFilters): Promise<Record<string, unknown>[]> {
   let query = (supabase as any)
     .from("emails")
@@ -176,6 +183,7 @@ async function fetchEmailsData(filters?: ExportFilters): Promise<Record<string, 
   if (error) throw error;
   return data || [];
 }
+*/
 
 // ── Hooks ──
 
@@ -199,10 +207,11 @@ export function useExportCSV() {
           data = await fetchDealsData(options.filters);
           defaultColumns = ["id", "title", "stage", "amount", "probability", "close_date", "created_at"];
           break;
-        case "emails":
-          data = await fetchEmailsData(options.filters);
-          defaultColumns = ["id", "from_address", "to_address", "subject", "status", "created_at"];
-          break;
+        // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
+        // case "emails":
+        //   data = await fetchEmailsData(options.filters);
+        //   defaultColumns = ["id", "from_address", "to_address", "subject", "status", "created_at"];
+        //   break;
       }
 
       const columns = options.columns || defaultColumns;
@@ -241,10 +250,11 @@ export function useExportExcel() {
           data = await fetchDealsData(options.filters);
           defaultColumns = ["id", "title", "stage", "amount", "probability", "close_date", "created_at"];
           break;
-        case "emails":
-          data = await fetchEmailsData(options.filters);
-          defaultColumns = ["id", "from_address", "to_address", "subject", "status", "created_at"];
-          break;
+        // TODO: Email export is disabled (dead code - see fetchEmailsData comment)
+        // case "emails":
+        //   data = await fetchEmailsData(options.filters);
+        //   defaultColumns = ["id", "from_address", "to_address", "subject", "status", "created_at"];
+        //   break;
       }
 
       const columns = options.columns || defaultColumns;

@@ -36,7 +36,8 @@ export function useAgendaDayActivities(day: Date | null) {
         `)
         .gte("created_at", dayStart)
         .lte("created_at", dayEnd)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (actErr) throw actErr;
 
@@ -45,7 +46,8 @@ export function useAgendaDayActivities(day: Date | null) {
         .from("reminders")
         .select(`*, partners(company_name, country_code)`)
         .eq("due_date", dayStr)
-        .order("due_date", { ascending: true });
+        .order("due_date", { ascending: true })
+        .limit(100);
 
       if (remErr) throw remErr;
 

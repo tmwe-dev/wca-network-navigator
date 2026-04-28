@@ -1,4 +1,8 @@
 /**
+ * @deprecated Table 'suggested_improvements' does not exist in current schema (types.ts).
+ * The table exists in Supabase migrations (20260423_suggested_improvements.sql) but
+ * TypeScript types have not been generated. Functions will log warnings and return early.
+ *
  * suggestedImprovements.ts — DAL per il ciclo di apprendimento continuo.
  *
  * L'AI propone suggerimenti → utente conferma → admin approva → Architect consuma.
@@ -9,6 +13,8 @@
  * - prompt_adjustment: richiede approvazione admin, modifica un prompt esistente
  */
 import { supabase } from "@/integrations/supabase/client";
+
+const TABLE_WARNING = 'Table "suggested_improvements" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
 export type SuggestionType = "kb_rule" | "prompt_adjustment" | "user_preference";
 export type SuggestionPriority = "low" | "medium" | "high" | "critical";
@@ -58,151 +64,95 @@ export interface CreateSuggestionInput {
 
 /**
  * Crea un suggerimento. Se è user_preference, lo auto-approva.
+ *
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function createSuggestion(
   userId: string,
   input: CreateSuggestionInput,
 ): Promise<SuggestedImprovement> {
-  const isAutoApprove = input.suggestion_type === "user_preference";
-
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .insert({
-      created_by: userId,
-      source_context: input.source_context,
-      suggestion_type: input.suggestion_type,
-      title: input.title,
-      content: input.content,
-      reasoning: input.reasoning ?? null,
-      target_block_id: input.target_block_id ?? null,
-      target_category: input.target_category ?? null,
-      priority: input.priority ?? "medium",
-      // user_preference → auto-approved
-      status: isAutoApprove ? "approved" : "pending",
-      reviewed_by: isAutoApprove ? userId : null,
-      reviewed_at: isAutoApprove ? new Date().toISOString() : null,
-      review_note: isAutoApprove ? "Auto-approvato (preferenza utente)" : null,
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(`createSuggestion: ${error.message}`);
-  return data as SuggestedImprovement;
+  console.warn(TABLE_WARNING);
+  throw new Error('createSuggestion: Table "suggested_improvements" not available in schema');
 }
 
 // ─── Read ───
 
-/** Suggerimenti dell'utente corrente (qualsiasi stato). */
+/**
+ * Suggerimenti dell'utente corrente (qualsiasi stato).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function listMySuggestions(userId: string): Promise<SuggestedImprovement[]> {
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .select("*")
-    .eq("created_by", userId)
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (error) throw new Error(`listMySuggestions: ${error.message}`);
-  return (data ?? []) as SuggestedImprovement[];
+  console.warn(TABLE_WARNING);
+  return [];
 }
 
-/** Suggerimenti pending per admin review (kb_rule + prompt_adjustment). */
+/**
+ * Suggerimenti pending per admin review (kb_rule + prompt_adjustment).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function listPendingForAdmin(): Promise<SuggestedImprovement[]> {
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .select("*")
-    .eq("status", "pending")
-    .in("suggestion_type", ["kb_rule", "prompt_adjustment"])
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(`listPendingForAdmin: ${error.message}`);
-  return (data ?? []) as SuggestedImprovement[];
+  console.warn(TABLE_WARNING);
+  return [];
 }
 
-/** Suggerimenti approvati non ancora consumati dall'Architect. */
+/**
+ * Suggerimenti approvati non ancora consumati dall'Architect.
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function listApprovedForArchitect(): Promise<SuggestedImprovement[]> {
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .select("*")
-    .eq("status", "approved")
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(`listApprovedForArchitect: ${error.message}`);
-  return (data ?? []) as SuggestedImprovement[];
+  console.warn(TABLE_WARNING);
+  return [];
 }
 
-/** Preferenze utente approvate (per iniettare in learned_patterns). */
+/**
+ * Preferenze utente approvate (per iniettare in learned_patterns).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function listUserPreferences(userId: string): Promise<SuggestedImprovement[]> {
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .select("*")
-    .eq("created_by", userId)
-    .eq("suggestion_type", "user_preference")
-    .in("status", ["approved", "applied"])
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(`listUserPreferences: ${error.message}`);
-  return (data ?? []) as SuggestedImprovement[];
+  console.warn(TABLE_WARNING);
+  return [];
 }
 
 // ─── Admin actions ───
 
-/** Approva un suggerimento (solo admin). */
+/**
+ * Approva un suggerimento (solo admin).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function approveSuggestion(
   id: string,
   adminId: string,
   note?: string,
 ): Promise<void> {
-  const { error } = await (supabase as any)
-    .from("suggested_improvements")
-    .update({
-      status: "approved",
-      reviewed_by: adminId,
-      reviewed_at: new Date().toISOString(),
-      review_note: note ?? null,
-    })
-    .eq("id", id);
-
-  if (error) throw new Error(`approveSuggestion: ${error.message}`);
+  console.warn(TABLE_WARNING);
+  throw new Error('approveSuggestion: Table "suggested_improvements" not available in schema');
 }
 
-/** Rifiuta un suggerimento (solo admin). */
+/**
+ * Rifiuta un suggerimento (solo admin).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function rejectSuggestion(
   id: string,
   adminId: string,
   note?: string,
 ): Promise<void> {
-  const { error } = await (supabase as any)
-    .from("suggested_improvements")
-    .update({
-      status: "rejected",
-      reviewed_by: adminId,
-      reviewed_at: new Date().toISOString(),
-      review_note: note ?? "Rifiutato dall'admin",
-    })
-    .eq("id", id);
-
-  if (error) throw new Error(`rejectSuggestion: ${error.message}`);
+  console.warn(TABLE_WARNING);
+  throw new Error('rejectSuggestion: Table "suggested_improvements" not available in schema');
 }
 
-/** Modifica il contenuto prima di approvare (solo admin). */
+/**
+ * Modifica il contenuto prima di approvare (solo admin).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
+ */
 export async function editAndApprove(
   id: string,
   adminId: string,
   newContent: string,
   note?: string,
 ): Promise<void> {
-  const { error } = await (supabase as any)
-    .from("suggested_improvements")
-    .update({
-      content: newContent,
-      status: "approved",
-      reviewed_by: adminId,
-      reviewed_at: new Date().toISOString(),
-      review_note: note ?? "Modificato e approvato dall'admin",
-    })
-    .eq("id", id);
-
-  if (error) throw new Error(`editAndApprove: ${error.message}`);
+  console.warn(TABLE_WARNING);
+  throw new Error('editAndApprove: Table "suggested_improvements" not available in schema');
 }
 
 // ─── Architect consumption ───
@@ -210,23 +160,14 @@ export async function editAndApprove(
 /**
  * Marca suggerimenti come "applied" dopo che l'Architect li ha consumati.
  * Chiamata al termine del salvataggio del run Migliora tutto.
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function markSuggestionsApplied(
   ids: string[],
   runId: string,
 ): Promise<void> {
   if (ids.length === 0) return;
-
-  const { error } = await (supabase as any)
-    .from("suggested_improvements")
-    .update({
-      status: "applied",
-      applied_at: new Date().toISOString(),
-      applied_in_run_id: runId,
-    })
-    .in("id", ids);
-
-  if (error) throw new Error(`markSuggestionsApplied: ${error.message}`);
+  console.warn(TABLE_WARNING);
 }
 
 // ─── Learned patterns assembly ───
@@ -237,47 +178,23 @@ export async function markSuggestionsApplied(
  *
  * Formato: elenco compatto di regole, ciascuna con titolo e contenuto abbreviato.
  * Chiamato dal frontend quando costruisce il payload per generate-email/improve-email.
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function buildLearnedPatterns(userId: string): Promise<string> {
-  try {
-    const { data, error } = await (supabase as any)
-      .from("suggested_improvements")
-      .select("title, content, suggestion_type, priority")
-      .or(`and(created_by.eq.${userId},suggestion_type.eq.user_preference),suggestion_type.in.(kb_rule,prompt_adjustment)`)
-      .in("status", ["approved", "applied"])
-      .order("priority", { ascending: false })
-      .limit(30);
-
-    if (error || !data || (data as unknown[]).length === 0) return "";
-
-    const rows = data as Array<{ title: string; content: string; suggestion_type: string; priority: string }>;
-    return rows
-      .map((r) => `[${r.suggestion_type}|${r.priority}] ${r.title}: ${r.content.slice(0, 300)}${r.content.length > 300 ? "…" : ""}`)
-      .join("\n");
-  } catch {
-    return "";
-  }
+  console.warn(TABLE_WARNING);
+  return "";
 }
 
 /**
  * Conta suggerimenti per stato (per badge UI).
+ * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function countByStatus(): Promise<Record<SuggestionStatus, number>> {
-  const counts: Record<SuggestionStatus, number> = {
+  console.warn(TABLE_WARNING);
+  return {
     pending: 0,
     approved: 0,
     rejected: 0,
     applied: 0,
   };
-
-  const { data, error } = await (supabase as any)
-    .from("suggested_improvements")
-    .select("status");
-
-  if (error || !data) return counts;
-
-  for (const row of data as Array<{ status: SuggestionStatus }>) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1;
-  }
-  return counts;
 }
