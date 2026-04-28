@@ -60,6 +60,19 @@ export function LayoutSidebarNav({
           </div>
         </div>
       </div>
+      {onOpenCommandPalette && (
+        <button
+          onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
+          className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground transition-colors"
+          aria-label="Apri ricerca"
+        >
+          <Search className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 text-left">Cerca…</span>
+          <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
+        </button>
+      )}
       <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
         <div className="space-y-1" aria-label="Navigazione principale">
           {navItemsDef.map((navItem) => {
