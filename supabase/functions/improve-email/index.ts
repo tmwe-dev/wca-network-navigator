@@ -468,8 +468,18 @@ ${html_body}`;
         }
       }
     } catch (jerr) {
-      console.error("[improve-email] journalistReview failed:", jerr);
+      log.error("journalist_review_failed", jerr, { quality });
     }
+
+    log.metric("improve_email_completed", {
+      duration_ms: Math.round(performance.now() - t0),
+      quality,
+      partner_id: partner_id ?? null,
+      contact_id: contact_id ?? null,
+      kb_sections: kbResult.sections.length,
+      tags: ["success"],
+    });
+    await log.flush();
 
     return new Response(JSON.stringify({
       subject: improvedSubject,
