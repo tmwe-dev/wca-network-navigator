@@ -1,112 +1,32 @@
-import "../_shared/llmFetchInterceptor.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
-import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
+/**
+ * health-check — uptime / liveness probe for the deployed edge runtime.
+ *
+ * Returns a small JSON document so external uptime monitors and the browser
+ * extensions (Chrome, Email, LinkedIn, WhatsApp, RA, Partner-Connect) can
+ * verify that the backend is reachable without paying for a full DB query.
+ *
+ * No auth required — exposes only public, non-sensitive status fields.
+ */
+import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 
-Deno.serve(async (req) => {
-  const pre = corsPreflight(req);
-  if (pre) return pre;
+const STARTED_AT = Date.now();
 
-  const origin = req.headers.get("origin");
-  const dynCors = getCorsHeaders(origin);
-  const headers = getSecurityHeaders(dynCors);
+Deno.serve((req: Request) => {
+  const preflight = corsPreflight(req);
+  if (preflight) return preflight;
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
-  const checks: Record<string, string> = {
-    database: "fail",
-    auth: "fail",
-    storage: "fail",
-    ai_gateway: "fail",
+  const cors = getCorsHeaders(req.headers.get("origin"));
+  const body = {
+    ok: true,
+    service: "wca-network-navigator-edge",
+    ts: new Date().toISOString(),
+    uptime_ms: Date.now() - STARTED_AT,
+    region: Deno.env.get("DENO_REGION") ?? "unknown",
+    version: Deno.env.get("APP_VERSION") ?? "dev",
   };
 
-  // DB
-  try {
-    const { error } = await supabase.from("app_settings").select("id", { count: "exact", head: true });
-    checks.database = error ? "fail" : "ok";
-  } catch { /* */ }
-
-  // Auth
-  try {
-    const { error } = await supabase.auth.admin.listUsers({ perPage: 1 });
-    checks.auth = error ? "fail" : "ok";
-  } catch { /* */ }
-
-  // Storage
-  try {
-    const { error } = await supabase.storage.listBuckets();
-    checks.storage = error ? "fail" : "ok";
-  } catch { /* */ }
-
-  // AI Gateway
-  try {
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (lovableKey) {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/models", {
-        headers: { Authorization: `Bearer ${lovableKey}` },
-        signal: AbortSignal.timeout(5000),
-      });
-      checks.ai_gateway = resp.ok ? "ok" : "fail";
-    }
-  } catch { /* */ }
-
-  const allOk = Object.values(checks).every((v) => v === "ok");
-  // Core services that, if down, mean the app cannot function.
-  // ai_gateway and storage being down → "degraded" (app still works) → return 200.
-  const coreOk = checks.database === "ok" && checks.auth === "ok";
-  const overallStatus = allOk ? "healthy" : "degraded";
-
-  // Webhook alerting on degraded status
-  if (overallStatus === "degraded") {
-    try {
-      const { data: alertConfigs } = await supabase
-        .from("alert_config")
-        .select("*")
-        .eq("enabled", true)
-        .eq("alert_on_degraded", true);
-
-      for (const config of alertConfigs || []) {
-        // Check cooldown
-        if (config.last_alert_at) {
-          const cooldown = (config.cooldown_minutes || 15) * 60 * 1000;
-          if (Date.now() - new Date(config.last_alert_at).getTime() < cooldown) continue;
-        }
-
-        // Send webhook alert
-        if (config.webhook_url) {
-          await fetch(config.webhook_url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: `⚠️ WCA Navigator Health Alert: Status ${overallStatus}`,
-              checks,
-              timestamp: new Date().toISOString(),
-            }),
-            signal: AbortSignal.timeout(5000),
-          }).catch(() => {});
-        }
-
-        // Update last alert timestamp
-        await supabase
-          .from("alert_config")
-          .update({ last_alert_at: new Date().toISOString() })
-          .eq("id", config.id);
-      }
-    } catch { /* fire and forget */ }
-  }
-
-  return new Response(
-    JSON.stringify({
-      status: overallStatus,
-      checks,
-      timestamp: new Date().toISOString(),
-    }),
-    // Only return 503 when CORE services (db/auth) fail.
-    // Degraded states (ai_gateway/storage down) return 200 so the client
-    // doesn't treat the whole app as offline.
-    { status: coreOk ? 200 : 503, headers },
-  );
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
 });
