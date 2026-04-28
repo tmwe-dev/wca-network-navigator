@@ -76,7 +76,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           <span className="hidden xl:inline text-muted-foreground">{summary}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-3 space-y-3">
+      <PopoverContent align="start" className="w-[26rem] max-w-[calc(100vw-1rem)] p-3 space-y-3">
         <div className="flex items-center justify-between border-b border-border/40 pb-2">
           <div className="flex items-center gap-2">
             {isOnline ? (
@@ -147,7 +147,7 @@ export function StatusPill({ onAiClick, outreachQueue, globalSync }: Props): Rea
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
             <Activity className="h-3 w-3" /> Dettagli runtime
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 [&_*]:!flex-wrap [&_*]:max-w-full">
             <ActiveProcessIndicator />
             <ConnectionStatusBar
               onAiClick={onAiClick}
