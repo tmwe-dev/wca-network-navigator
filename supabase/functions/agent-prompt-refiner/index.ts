@@ -7,6 +7,14 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { z, safeParseAiJson } from "../_shared/aiJsonValidator.ts";
+
+const RefinerSchema = z.object({
+  has_suggestions: z.boolean(),
+  summary: z.string().default(""),
+  suggestions: z.array(z.unknown()).default([]),
+});
+const REFINER_FALLBACK = { has_suggestions: false, summary: "", suggestions: [] as unknown[] };
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -124,8 +132,15 @@ Se non ci sono suggerimenti utili, rispondi: {"has_suggestions": false, "suggest
         const result = await aiResponse.json();
         const content = result.choices?.[0]?.message?.content || "";
 
-        const jsonStr = content.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-        const parsed = JSON.parse(jsonStr);
+        const { data: parsed, isFallback } = safeParseAiJson(content, RefinerSchema, {
+          fnName: "agent-prompt-refiner",
+          model: "google/gemini-2.5-flash",
+          fallback: REFINER_FALLBACK,
+        });
+        if (isFallback) {
+          console.warn(`[agent-prompt-refiner] schema fallback for agent=${agent.name} → skipping`);
+          continue;
+        }
 
         if (parsed.has_suggestions && parsed.suggestions?.length > 0) {
           await supabase.from("ai_pending_actions").insert({
