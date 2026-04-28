@@ -123,15 +123,17 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
       let data: unknown;
       if (targetAgent) {
         // Route to agent-execute
-        data = await invokeEdge<Record<string, unknown>>("agent-execute", {
+        data = await invokeAi<Record<string, unknown>>("agent-execute", {
+          scope: "agent",
           body: { agent_id: targetAgent.id, messages: newMessages },
-          context: "HomeAIPrompt.agent_execute",
+          context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
         });
       } else {
-        // Default: ai-assistant
-        data = await invokeEdge<Record<string, unknown>>("ai-assistant", {
+        // Default: ai-assistant — Charter R1: scope "home"
+        data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+          scope: "home",
           body: { messages: newMessages },
-          context: "HomeAIPrompt.ai_assistant",
+          context: { source: "HomeAIPrompt", route: "/v2", mode: "tool-decision" },
         });
       }
       const raw = String((data as Record<string, unknown>)?.content || (data as Record<string, unknown>)?.message || "");
