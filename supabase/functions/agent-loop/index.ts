@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { checkDailyBudget, recordUsage, budgetExceededResponse } from "../_shared/costGuardrail.ts";
 import { estimateTokens } from "../_shared/tokenBudget.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,10 +161,34 @@ serve(async (req: Request) => {
       });
     }
 
+    // ── Prompt Lab injection (UNIFIED loader): LUCA inherits the user's
+    //    operative prompts so it follows the same OBBLIGATORIA rules as
+    //    generate-email / generate-outreach. Soft-fail: empty if user has no
+    //    prompts or table unreachable.
+    let promptLabBlock = "";
+    try {
+      const userIdGuess = (typeof body === "object" && body && (body as Record<string, unknown>).user_id)
+        ? String((body as Record<string, unknown>).user_id) : "";
+      if (userIdGuess) {
+        const supabaseSrv = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const lab = await loadOperativePrompts(supabaseSrv, userIdGuess, {
+          scope: "agent-loop",
+          includeUniversal: true,
+          limit: 5,
+        });
+        promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
+      }
+    } catch (e) {
+      console.warn("[agent-loop] prompt-lab load skipped:", (e as Error).message);
+    }
+
     const systemPrompt = `Sei LUCA, l'assistente AI del CRM WCA Network Navigator.
 Operi in italiano. Le tue risposte devono essere brevi e operative.
 OBIETTIVO ATTUALE: ${goal}
-${sessionContext ? `CONTESTO: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}
+${sessionContext ? `CONTESTO: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}${promptLabBlock}
 
 Regole:
 1. Prima di agire, LEGGI la pagina con read_page.

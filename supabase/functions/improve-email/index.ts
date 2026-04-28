@@ -11,6 +11,7 @@ import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 interface KbEntry { title: string; content: string; category: string; chapter: string; tags: string[]; }
 
@@ -415,10 +416,21 @@ Corpo:
 ${html_body}`;
 
     const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_improve_email", 1500);
+    // ── Prompt Lab injection (UNIFIED loader) — pulls "Email Improvement
+    //    Techniques", "Post-Send Checklist" and any OBBLIGATORIA universal
+    //    rules. Previously this function ignored the Prompt Lab entirely.
+    const promptLab = await loadOperativePrompts(supabase, userId, {
+      scope: "email-quality",
+      includeUniversal: true,
+      limit: 5,
+    });
+    const finalSystemPrompt = promptLab.block
+      ? `${promptLab.block}\n\n${systemPrompt}`
+      : systemPrompt;
     const result = await aiChat({
       models: ["google/gemini-3-flash-preview", "openai/gpt-5-mini"],
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: finalSystemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.4,
