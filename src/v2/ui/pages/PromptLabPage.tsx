@@ -34,6 +34,7 @@ import { VoiceElevenLabsTab } from "./prompt-lab/tabs/VoiceElevenLabsTab";
 import { PlaybooksTab } from "./prompt-lab/tabs/PlaybooksTab";
 import { AgentPersonasTab } from "./prompt-lab/tabs/AgentPersonasTab";
 import { AgentCapabilitiesTab } from "./prompt-lab/tabs/AgentCapabilitiesTab";
+import { SimulatorTab } from "./prompt-lab/tabs/SimulatorTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import {
@@ -78,6 +79,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   playbooks: Map,
   personas: Users,
   capabilities: ShieldCheck,
+  simulator: FlaskConical,
   journalists: Newspaper,
   operative_kb: BookOpen,
   administrative_kb: BookOpen,
@@ -253,6 +255,7 @@ export function PromptLabPage() {
                   {activeTabId === "playbooks" && <PlaybooksTab />}
                   {activeTabId === "personas" && <AgentPersonasTab />}
                   {activeTabId === "capabilities" && <AgentCapabilitiesTab />}
+                  {activeTabId === "simulator" && <SimulatorTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
                   {activeTabId === "journalists" && <JournalistsTab />}
                 </div>
