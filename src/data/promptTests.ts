@@ -173,3 +173,16 @@ export async function listVersionsForPrompt(promptId: string, limit = 20): Promi
   if (error) throw error;
   return (data ?? []) as unknown as PromptVersion[];
 }
+
+export async function rollbackPromptToVersion(args: {
+  promptId: string;
+  versionNumber: number;
+  reason?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("rollback_prompt_to_version" as never, {
+    p_prompt_id: args.promptId,
+    p_version_number: args.versionNumber,
+    p_reason: args.reason ?? null,
+  } as never);
+  if (error) throw error;
+}
