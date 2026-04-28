@@ -18,6 +18,7 @@ import { createKbEntryTool } from "./createKbEntry";
 import { analyzePartnerTool } from "./analyzePartner";
 import { calculateLeadScoresTool } from "./calculateLeadScores";
 import { deduplicateContactsTool } from "./deduplicateContacts";
+import { aiQueryTool } from "./aiQueryTool";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -43,6 +44,9 @@ const TOOLS: readonly Tool[] = [
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
+  // GENERIC AI READ — must be LAST (catch-all for any "mostra/quanti/cerca …" query).
+  // Specific tools above win because their match() is more selective.
+  aiQueryTool,
 ];
 
 /**
