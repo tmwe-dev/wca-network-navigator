@@ -516,6 +516,9 @@ export const queryKeys = {
     active: (userId: string) => ["prompt-lab-global-runs", "active", userId] as const,
     history: (userId: string, limit?: number) => ["prompt-lab-global-runs", "history", userId, limit] as const,
   },
+  promptCatalog: {
+    all: (userId: string) => ["prompt-lab-catalog", userId] as const,
+  },
 
   // ── Deals & Pipeline ───────────────────────────────────
   dealsList: ["deals-list"] as const,
