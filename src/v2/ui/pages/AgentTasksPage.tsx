@@ -131,8 +131,7 @@ export function AgentTasksPage() {
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any)
-        .from("agent_tasks")
+      const { error } = await untypedFrom("agent_tasks")
         .update({ status, started_at: status === "running" ? new Date().toISOString() : undefined })
         .eq("id", id);
       if (error) throw error;

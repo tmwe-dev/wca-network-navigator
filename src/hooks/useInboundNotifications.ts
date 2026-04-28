@@ -89,7 +89,7 @@ export function useInboundNotifications() {
           filter: "direction=eq.inbound",
         },
         (payload) => {
-          const newMessage = payload.new as any;
+          const newMessage = payload.new as { id: string; channel?: string; subject?: string; body_text?: string | null; sender_email?: string | null; sender_name?: string | null };
 
           // Filter for email channel only
           if (newMessage.channel !== "email") {

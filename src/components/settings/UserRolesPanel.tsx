@@ -64,7 +64,7 @@ export default function UserRolesPanel() {
         .in(
           "user_id",
           allUsers.map((u) => u.id)
-        ) as any;
+        );
       if (error) throw error;
 
       const map: Record<string, { id: string; name: string }[]> = {};

@@ -91,7 +91,7 @@ export default function NotificationsPage(): React.ReactElement {
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-secondary/30 rounded-lg">
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
           <SelectTrigger className="bg-background border-input">
             <SelectValue placeholder="Tipo notifica" />
           </SelectTrigger>
@@ -106,7 +106,7 @@ export default function NotificationsPage(): React.ReactElement {
           </SelectContent>
         </Select>
 
-        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
+        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as typeof priorityFilter)}>
           <SelectTrigger className="bg-background border-input">
             <SelectValue placeholder="Priorità" />
           </SelectTrigger>
@@ -119,7 +119,7 @@ export default function NotificationsPage(): React.ReactElement {
           </SelectContent>
         </Select>
 
-        <Select value={readFilter} onValueChange={(v) => setReadFilter(v as any)}>
+        <Select value={readFilter} onValueChange={(v) => setReadFilter(v as typeof readFilter)}>
           <SelectTrigger className="bg-background border-input">
             <SelectValue placeholder="Stato lettura" />
           </SelectTrigger>
