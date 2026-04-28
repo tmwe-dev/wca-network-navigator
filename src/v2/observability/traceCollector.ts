@@ -9,6 +9,7 @@
  *   possono ereditarlo via getActiveCorrelationId() durante la finestra di vita.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { TraceEvent, TraceRow } from "./traceTypes";
 
 const MAX_BUFFER = 500;
