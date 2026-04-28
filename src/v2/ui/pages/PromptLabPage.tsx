@@ -35,6 +35,7 @@ import { PlaybooksTab } from "./prompt-lab/tabs/PlaybooksTab";
 import { AgentPersonasTab } from "./prompt-lab/tabs/AgentPersonasTab";
 import { AgentCapabilitiesTab } from "./prompt-lab/tabs/AgentCapabilitiesTab";
 import { SimulatorTab } from "./prompt-lab/tabs/SimulatorTab";
+import { AuditTab } from "./prompt-lab/tabs/AuditTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import {
@@ -58,6 +59,7 @@ import {
   Clock,
   Layers,
   ShieldCheck,
+  ScanSearch,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -80,6 +82,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   personas: Users,
   capabilities: ShieldCheck,
   simulator: FlaskConical,
+  audit: ScanSearch,
   journalists: Newspaper,
   operative_kb: BookOpen,
   administrative_kb: BookOpen,
@@ -256,6 +259,7 @@ export function PromptLabPage() {
                   {activeTabId === "personas" && <AgentPersonasTab />}
                   {activeTabId === "capabilities" && <AgentCapabilitiesTab />}
                   {activeTabId === "simulator" && <SimulatorTab />}
+                  {activeTabId === "audit" && <AuditTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
                   {activeTabId === "journalists" && <JournalistsTab />}
                 </div>

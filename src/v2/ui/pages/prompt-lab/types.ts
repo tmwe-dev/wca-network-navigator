@@ -39,6 +39,7 @@ export type PromptLabTabId =
   | "personas"
   | "capabilities"
   | "simulator"
+  | "audit"
   | "ai_profile"
   | "journalists"
   | "operative_kb"
@@ -63,6 +64,7 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
   { id: "personas", label: "Agent Personas", description: "Personalità agenti (tono, stile, vocabolario)", activation: "Attive sugli agenti associati: definiscono tono, stile, vocabolario e firma usati nelle risposte, email e prompt voice derivati." },
   { id: "capabilities", label: "Agent Capabilities", description: "Tool, timeout, concorrenza, modello per agente", activation: "Attive nell'edge function agent-loop e nei runtime agente: filtrano i tool disponibili, impongono timeout/iterazioni e selezionano il modello AI per ciascun agente. Hard guards di sicurezza restano sempre attivi." },
   { id: "simulator", label: "Simulator", description: "Test agente: vedi prompt, persona, tool e guards prima di eseguire", activation: "Read-only sandbox: assembla per un agente esattamente lo stesso system prompt che userebbe agent-loop, mostra persona, capabilities, prompt operativi caricati, tool whitelist effettiva, hard guards. Dry-run AI opzionale (nessun tool eseguito)." },
+  { id: "audit", label: "Audit", description: "Cosa è DB (Prompt Lab) vs Hardcoded per agente e tool", activation: "Read-only. Per ogni agente attivo confronta persona, capabilities, prompt operativi e tool registry tra DB e codice; mostra hard guards immutabili. Usalo per capire dove agire (Prompt Lab) vs cosa richiede una PR." },
   { id: "ai_profile", label: "AI Profile", description: "Profilo azienda/utente per AI", activation: "Attivo come contesto aziendale trasversale in prompt email, assistenti, agenti commerciali e generazioni che richiedono identità, obiettivi e stile WCA." },
   { id: "journalists", label: "Giornalisti AI", description: "Caporedattore finale (review editoriale)", activation: "Attivo come review post-generazione su generate-email, improve-email e invii agente (send_email/send_whatsapp). Auto-selezione in base al lead_status." },
   // LOVABLE-93: coerenza Prompt Lab multi-dominio — KB domain-specific
@@ -86,7 +88,7 @@ export interface PromptLabGroupDef {
 export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
   { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile", "journalists"] },
   { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
-  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator"] },
+  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "audit"] },
   // LOVABLE-93: coerenza Prompt Lab multi-dominio
   { id: "operations", label: "Operazioni", icon: "Package", tabs: ["operative_kb", "administrative_kb", "support_kb", "domain_routing"] },
 ] as const;
