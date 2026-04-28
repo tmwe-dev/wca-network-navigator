@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
 import type { SenderAnalysis } from "@/types/email-management";
 
