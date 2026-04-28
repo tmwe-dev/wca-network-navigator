@@ -3,6 +3,8 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkSmtpRateLimit } from "../_shared/smtpRateLimit.ts";
+import { journalistReview } from "../_shared/journalistReviewLayer.ts";
+import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
 
 
 Deno.serve(async (req) => {
@@ -194,12 +196,72 @@ Deno.serve(async (req) => {
       await supabase.from("email_campaign_queue").update({ status: "sending" }).eq("id", item.id);
 
       try {
+        // ── LOVABLE-80: Journalist Review Gate (parità con send-email) ──
+        // Le drafts possono essere editate manualmente dopo generate-email,
+        // quindi rivalutiamo qui prima dell'invio reale via SMTP.
+        let htmlToSend = item.html_body as string;
+        try {
+          const { data: partnerData } = item.partner_id
+            ? await supabase
+                .from("partners")
+                .select("company_name, country, lead_status")
+                .eq("id", item.partner_id)
+                .maybeSingle()
+            : { data: null };
+
+          const reviewInput: JournalistReviewInput = {
+            final_draft: htmlToSend,
+            resolved_brief: {},
+            channel: "email",
+            commercial_state: {
+              lead_status: (partnerData?.lead_status as string) || "unknown",
+            },
+            partner: {
+              id: item.partner_id || null,
+              company_name: partnerData?.company_name || undefined,
+              country: partnerData?.country || undefined,
+            },
+          };
+          const review = await journalistReview(supabase, userId, reviewInput);
+          if (review.verdict === "block") {
+            console.warn(`[pq] BLOCKED by journalist for item=${item.id}: ${review.reasoning_summary}`);
+            await supabase.from("email_campaign_queue").update({
+              status: "failed",
+              error_message: `JOURNALIST_BLOCK: ${review.reasoning_summary}`.slice(0, 1000),
+              failed_at: new Date().toISOString(),
+            }).eq("id", item.id);
+            supabase.from("email_send_log").insert({
+              user_id: userId,
+              recipient_email: item.recipient_email,
+              subject: item.subject,
+              partner_id: item.partner_id ?? null,
+              draft_id,
+              campaign_queue_id: item.id,
+              idempotency_key: item.idempotency_key ?? null,
+              channel: "email",
+              send_method: "campaign",
+              status: "failed",
+              error_message: `JOURNALIST_BLOCK: ${review.reasoning_summary}`.slice(0, 1000),
+            }).then(({ error }) => {
+              if (error) console.error("[pq] esl insert (block) failed:", error.message);
+            });
+            failedCount++;
+            continue;
+          }
+          if (review.verdict === "pass_with_edits" && review.edited_text) {
+            htmlToSend = review.edited_text;
+          }
+        } catch (revErr) {
+          // Fail-open: stessa policy di send-email — log e procedi col draft originale
+          console.error("[pq] journalist review error (fail-open):", revErr);
+        }
+
         await client.send({
           from: senderEmail,
           to: item.recipient_email,
           subject: item.subject,
           content: "auto",
-          html: item.html_body,
+          html: htmlToSend,
         });
 
         // ── Recovery marker: record SMTP success timestamp BEFORE DB updates ──
@@ -234,7 +296,7 @@ Deno.serve(async (req) => {
           contactId: null,
           channel: "email",
           subject: item.subject,
-          body: item.html_body,
+          body: htmlToSend,
           to: item.recipient_email,
           source: "batch",
           meta: {
