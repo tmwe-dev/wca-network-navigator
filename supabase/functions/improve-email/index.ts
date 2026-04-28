@@ -127,6 +127,8 @@ serve(async (req) => {
       });
     }
     const userId = claimsData.claims.sub;
+    const log = createLogger("improve-email", { userId });
+    const t0 = performance.now();
 
     // FIX 12: Rate limit (allineato con generate-email)
     const rl = checkRateLimit(`improve-email:${userId}`, { maxTokens: 10, refillRate: 0.2 });
@@ -179,7 +181,7 @@ serve(async (req) => {
             .join("\n");
         }
       } catch (lpErr) {
-        console.warn("[improve-email] learned_patterns fallback failed:", lpErr instanceof Error ? lpErr.message : lpErr);
+        log.warn("learned_patterns_fallback_failed", { reason: lpErr instanceof Error ? lpErr.message : String(lpErr) });
       }
     }
 
@@ -222,7 +224,7 @@ serve(async (req) => {
           }
         }
       } catch (cerr) {
-        console.warn("[improve-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+        log.error("contract_detector_failed", cerr, { partner_id, contact_id, non_blocking: true });
       }
     }
 
@@ -257,7 +259,7 @@ serve(async (req) => {
         commercialState = (m.commercial_state as string | undefined) ?? (partner?.lead_status as string | null) ?? null;
         lastOutcome = (m.last_outcome as string | undefined) ?? null;
       } catch (e) {
-        console.warn("[improve-email] relationship analysis failed:", e instanceof Error ? e.message : e);
+        log.warn("relationship_analysis_failed", { partner_id, reason: e instanceof Error ? e.message : String(e) });
       }
       // Active playbook flag (lightweight check)
       const { data: state } = await supabase
@@ -286,7 +288,7 @@ serve(async (req) => {
           if (safeBlock) enrichmentContext = `\nDATI ARRICCHIMENTO PARTNER:\n${safeBlock}\n`;
         }
       } catch (e) {
-        console.warn("[improve-email] enrichment read failed:", e instanceof Error ? e.message : e);
+        log.warn("enrichment_read_failed", { partner_id, reason: e instanceof Error ? e.message : String(e) });
       }
     }
 
