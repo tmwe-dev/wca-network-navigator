@@ -73,6 +73,13 @@ export function getLastRequestTimestamp(): number {
 }
 
 /**
+ * Resetta lo stato del checkpoint (uso test/dev).
+ */
+export function resetCheckpoint(): void {
+  getState().lastRequestTs = 0;
+}
+
+/**
  * THE CHECKPOINT GATE.
  * 
  * Waits until the green zone is reached (≥15s since last request),
