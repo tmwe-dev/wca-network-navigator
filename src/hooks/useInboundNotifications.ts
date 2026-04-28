@@ -118,11 +118,11 @@ export function useInboundNotifications() {
             unreadCount: prev.unreadCount + 1,
             latestInbound: {
               id: newMessage.id,
-              from_address: newMessage.from_address,
-              subject: newMessage.subject,
-              created_at: newMessage.created_at,
-              channel: newMessage.channel,
-              direction: newMessage.direction,
+              from_address: newMessage.from_address ?? null,
+              subject: newMessage.subject ?? null,
+              created_at: newMessage.created_at ?? new Date().toISOString(),
+              channel: newMessage.channel ?? "email",
+              direction: newMessage.direction ?? "inbound",
             },
           }));
 
