@@ -110,7 +110,7 @@ async function bootstrapEntitiesFromDb(userId: string): Promise<EntityCreatedEnt
         created_in_chunk: -1, // preesistente
       }));
   } catch (e) {
-    log.warn("[ingestion] bootstrap entities failed, { error: proceeding empty", e });
+    log.warn("[ingestion] bootstrap entities failed, proceeding empty", { error: e });
     return [];
   }
 }

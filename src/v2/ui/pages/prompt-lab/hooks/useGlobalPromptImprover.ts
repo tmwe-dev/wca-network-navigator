@@ -348,7 +348,7 @@ export function useGlobalPromptImprover(
       );
       runId = run.id;
     } catch (e) {
-      log.warn("[GlobalImprover] DB create failed, { error: continuing without persistence:", e });
+      log.warn("[GlobalImprover] DB create failed, continuing without persistence", { error: e });
     }
 
     setState({

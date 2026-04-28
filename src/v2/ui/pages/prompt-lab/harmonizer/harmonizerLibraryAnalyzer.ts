@@ -294,7 +294,7 @@ export async function runLibraryChunkAnalyzer(input: {
   const maxGaps = chunkDef.targetTables.includes("kb_entries") ? 10 : 20;
   const cap = actionable.slice(0, maxGaps);
   if (actionable.length > maxGaps) {
-    log.info(`[libraryAnalyzer] chunk #${chunkDef.index} cap=${maxGaps}, { error: ${actionable.length - maxGaps} gap rinviati a retry`, });
+    log.info(`[libraryAnalyzer] chunk #${chunkDef.index} cap=${maxGaps}, ${actionable.length - maxGaps} gap rinviati a retry`);
   }
 
   // Inietta i .md vincolanti della KB Harmonizer per le tabelle target del
