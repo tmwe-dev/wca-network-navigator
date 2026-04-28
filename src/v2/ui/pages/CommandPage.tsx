@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import ExecutionFlow from "@/components/workspace/ExecutionFlow";
 import ToolActivationBar from "@/components/workspace/ToolActivationBar";
@@ -47,8 +48,7 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (voice.error) {
-      const { toast: sonnerToast } = require("sonner");
-      sonnerToast.error(voice.error);
+      toast.error(voice.error);
     }
   }, [voice.error]);
 
@@ -59,10 +59,11 @@ const CommandPage = () => {
   // Speak the latest assistant message via ElevenLabs (skips thinking placeholders).
   useEffect(() => {
     const last = pageState.messages[pageState.messages.length - 1];
-    if (!last || last.role !== "assistant" || last.thinking) return;
+    if (!last || last.role !== "assistant" || last.thinking || last.silent) return;
     if (!last.content || !last.content.trim()) return;
     // Strip markdown for cleaner speech.
-    const clean = last.content
+    const spokenText = last.spokenSummary || last.content;
+    const clean = spokenText
       .replace(/[*_`#>]/g, "")
       .replace(/\n+/g, ". ")
       .trim();
@@ -137,7 +138,6 @@ const CommandPage = () => {
           activeId={conv.conversationId}
           onSelect={(id) => {
             conv.loadConversation(id);
-            pageState.setMessages([]);
             pageState.setCanvas(null);
           }}
           onNew={() => {
