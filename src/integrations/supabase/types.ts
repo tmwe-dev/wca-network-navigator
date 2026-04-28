@@ -6819,6 +6819,243 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_test_cases: {
+        Row: {
+          created_at: string
+          description: string | null
+          expected_contains: string[]
+          expected_not_contains: string[]
+          expected_regex: string | null
+          id: string
+          input_payload: Json
+          is_active: boolean
+          model: string | null
+          name: string
+          operator_id: string | null
+          prompt_id: string
+          severity: string
+          temperature: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expected_contains?: string[]
+          expected_not_contains?: string[]
+          expected_regex?: string | null
+          id?: string
+          input_payload?: Json
+          is_active?: boolean
+          model?: string | null
+          name: string
+          operator_id?: string | null
+          prompt_id: string
+          severity?: string
+          temperature?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expected_contains?: string[]
+          expected_not_contains?: string[]
+          expected_regex?: string | null
+          id?: string
+          input_payload?: Json
+          is_active?: boolean
+          model?: string | null
+          name?: string
+          operator_id?: string | null
+          prompt_id?: string
+          severity?: string
+          temperature?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_test_cases_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_test_cases_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "operative_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_test_runs: {
+        Row: {
+          ai_output: string | null
+          created_at: string
+          duration_ms: number | null
+          failure_reasons: string[] | null
+          id: string
+          model_used: string | null
+          prompt_id: string
+          prompt_version_id: string | null
+          status: string
+          test_case_id: string
+          tokens_input: number | null
+          tokens_output: number | null
+          trigger_source: string
+          triggered_by_operator_id: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_output?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          failure_reasons?: string[] | null
+          id?: string
+          model_used?: string | null
+          prompt_id: string
+          prompt_version_id?: string | null
+          status: string
+          test_case_id: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          trigger_source?: string
+          triggered_by_operator_id?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_output?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          failure_reasons?: string[] | null
+          id?: string
+          model_used?: string | null
+          prompt_id?: string
+          prompt_version_id?: string | null
+          status?: string
+          test_case_id?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          trigger_source?: string
+          triggered_by_operator_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_test_runs_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "operative_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_test_runs_prompt_version_id_fkey"
+            columns: ["prompt_version_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_test_runs_test_case_id_fkey"
+            columns: ["test_case_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_test_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_test_runs_triggered_by_operator_id_fkey"
+            columns: ["triggered_by_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_versions: {
+        Row: {
+          change_reason: string | null
+          changed_by_operator_id: string | null
+          context: string
+          created_at: string
+          criteria: string
+          examples: string
+          id: string
+          is_active: boolean
+          name: string
+          objective: string
+          operator_id: string | null
+          priority: number
+          procedure: string
+          prompt_id: string
+          tags: string[]
+          user_id: string
+          version_number: number
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by_operator_id?: string | null
+          context: string
+          created_at?: string
+          criteria: string
+          examples: string
+          id?: string
+          is_active: boolean
+          name: string
+          objective: string
+          operator_id?: string | null
+          priority: number
+          procedure: string
+          prompt_id: string
+          tags?: string[]
+          user_id: string
+          version_number: number
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by_operator_id?: string | null
+          context?: string
+          created_at?: string
+          criteria?: string
+          examples?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          objective?: string
+          operator_id?: string | null
+          priority?: number
+          procedure?: string
+          prompt_id?: string
+          tags?: string[]
+          user_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_versions_changed_by_operator_id_fkey"
+            columns: ["changed_by_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_versions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_versions_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "operative_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_contacts: {
         Row: {
           codice_fiscale: string | null
@@ -8653,6 +8890,14 @@ export type Database = {
       release_mission_slot: {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
         Returns: undefined
+      }
+      rollback_prompt_to_version: {
+        Args: {
+          p_prompt_id: string
+          p_reason?: string
+          p_version_number: number
+        }
+        Returns: string
       }
       set_system_paused: { Args: { p_paused: boolean }; Returns: Json }
       show_limit: { Args: never; Returns: number }
