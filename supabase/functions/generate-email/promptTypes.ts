@@ -76,6 +76,9 @@ export interface EmailPromptContext {
   playbookBlock?: string;
   addressCustomPrompt?: string;
   addressCategory?: string;
+  /** Prompt Lab — blocco operativi obbligatori iniettati con priorità assoluta. */
+  operativePromptsBlock?: string;
+  operativePromptsApplied?: string[];
   /** LOVABLE-110: Regole e preferenze apprese dal ciclo di feedback. */
   learnedPatterns?: string;
   decisionContext?: {
