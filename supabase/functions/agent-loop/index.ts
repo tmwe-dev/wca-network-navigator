@@ -114,6 +114,7 @@ const TOOL_DEFINITIONS = [
 // ragionare, l'esecuzione passa comunque dal preflight in hardGuards.
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
