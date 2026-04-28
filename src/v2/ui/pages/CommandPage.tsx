@@ -1,66 +1,94 @@
-import { useEffect, useCallback } from "react";
+/**
+ * CommandPage — UNIFIED conversational orchestrator (single logic path).
+ *
+ * Flow: useCommandState (state) + useCommandSubmit (sendMessage).
+ * - planExecution → planRunner → per-step approval (multi-step)
+ * - Fast-lane direct ai-query for simple reads
+ * - useResultCommentary speaks `spokenSummary` (conversational TTS), not raw results
+ * - Composer uses Prompt Lab via generate-email pipeline (composeEmail tool)
+ *
+ * Legacy paths (resolveTool / useToolExecution / useScenarioFlow / useApprovalFlow /
+ * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
+ * everywhere.
+ */
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import ApprovalPanel from "@/components/workspace/ApprovalPanel";
-import ExecutionFlow from "@/components/workspace/ExecutionFlow";
-import ToolActivationBar from "@/components/workspace/ToolActivationBar";
+import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
-import ConversationSidebar from "./command/ConversationSidebar";
 import FloatingDock from "@/components/layout/FloatingDock";
-import { resolveTool } from "./command/tools/registry";
+import ConversationSidebar from "./command/ConversationSidebar";
 import type { ToolResult } from "./command/tools/types";
+import type { Message } from "./command/constants";
 import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
-import { useConversation } from "./command/hooks/useConversation";
-import { useCommandPageState } from "./command/hooks/useCommandPageState";
-import { useToolExecution } from "./command/hooks/useToolExecution";
-import { useScenarioFlow } from "./command/hooks/useScenarioFlow";
-import { useApprovalFlow } from "./command/hooks/useApprovalFlow";
 import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
+import { useConversation } from "./command/hooks/useConversation";
+import { useCommandState } from "./command/hooks/useCommandState";
+import { useCommandSubmit } from "./command/hooks/useCommandSubmit";
 import { CommandHistory } from "./command/components/CommandHistory";
 import { CommandInput } from "./command/components/CommandInput";
 import { CommandOutput } from "./command/components/CommandOutput";
 import { CommandPageBackButton } from "./command/components/CommandPageBackButton";
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
-import { SCENARIOS, QUICK_PROMPTS, detectScenario } from "./command/scenarios";
-import { toast as sonnerToast } from "sonner";
+import CommandThread from "./command/components/CommandThread";
+import { QUICK_PROMPTS } from "./command/scenarios";
 
 const CommandPage = () => {
   const nav = useNavigate();
-  const pageState = useCommandPageState();
+  const state = useCommandState();
+  const conv = useConversation();
+  const governance = useGovernance(state.activeToolKey ?? undefined);
+  const voiceOut = useVoiceOutput();
+
+  const submit = useCommandSubmit({
+    addMessage: state.addMessage,
+    setMessages: state.setMessages,
+    setCanvas: state.setCanvas,
+    setFlowPhase: state.setFlowPhase,
+    setShowTools: state.setShowTools,
+    setToolPhase: state.setToolPhase,
+    setChainHighlight: state.setChainHighlight,
+    setExecSteps: state.setExecSteps,
+    setExecProgress: state.setExecProgress,
+    setLiveResult: state.setLiveResult,
+    setPendingApproval: state.setPendingApproval,
+    setPlanState: state.setPlanState,
+    setActiveToolKey: state.setActiveToolKey,
+    setVoiceSpeaking: state.setVoiceSpeaking,
+    resetForNewMessage: state.resetForNewMessage,
+    ts: state.ts,
+    governance,
+    ttsSpeak: (text: string) => voiceOut.speak(text),
+    messages: state.messages,
+    queryContext: state.queryContext,
+    setQueryContext: state.setQueryContext,
+  });
+
   const voice = useVoiceInput({
-    onTranscript: (text) => pageState.setInput(text),
+    onTranscript: (text) => state.setInput(text),
     onAutoSubmit: (text) => {
-      pageState.setInput("");
-      sendMessage(text);
+      state.setInput("");
+      void submit.sendMessage(text);
     },
     silenceMs: 2000,
     lang: "it-IT",
   });
 
-  // Voice output (ElevenLabs TTS) — speaks every assistant reply unless muted.
-  const voiceOut = useVoiceOutput();
-
-  const conv = useConversation();
-  const governance = useGovernance(pageState.activeScenarioKey ?? undefined);
-  const isEmpty = pageState.messages.length === 0 && conv.messages.length === 0;
+  const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
 
   useEffect(() => {
-    if (voice.error) {
-      sonnerToast.error(voice.error);
-    }
+    if (voice.error) sonnerToast.error(voice.error);
   }, [voice.error]);
 
   useEffect(() => {
-    pageState.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [pageState.messages]);
+    state.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [state.messages, state.chatEndRef]);
 
-  // Speak the latest assistant message via ElevenLabs.
-  // Prefer the conversational `spokenSummary` produced by the commentary layer;
-  // fall back to `content` only if missing. Skips thinking placeholders.
+  // TTS: prefer the conversational `spokenSummary` produced by useResultCommentary.
+  // Fallback to a sanitized excerpt of `content` only when no spokenSummary exists.
   useEffect(() => {
-    const last = pageState.messages[pageState.messages.length - 1];
+    const last = state.messages[state.messages.length - 1];
     if (!last || last.role !== "assistant" || last.thinking) return;
     const spoken = (last.spokenSummary ?? "").trim();
     if (spoken) {
@@ -75,46 +103,12 @@ const CommandPage = () => {
       .slice(0, 200);
     voiceOut.speak(clean);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageState.messages.length]);
+  }, [state.messages.length]);
 
-  const runLiveTool = useToolExecution(pageState, governance);
-  const runFlow = useScenarioFlow(pageState);
-  const { handleApprove, handleCancel } = useApprovalFlow(pageState);
-
-  const sendMessage = async (text?: string) => {
-    const content = text || pageState.input.trim();
-    if (!content) return;
-    pageState.addMessage({ role: "user", content, timestamp: pageState.ts() });
-    pageState.resetForNewMessage();
-
-    conv.addMessage({ role: "user", content });
-
-    const history = conv.getHistory(10);
-    const scenarioKey = await detectScenario(content);
-    if (scenarioKey === null) {
-      const tool = await resolveTool(content, history);
-      if (!tool) {
-        const noUnderstand =
-          "Non ho capito cosa vuoi fare. Puoi riformulare la richiesta?";
-        pageState.addMessage({
-          role: "assistant",
-          content: noUnderstand,
-          timestamp: pageState.ts(),
-          agentName: "Orchestratore",
-        });
-        conv.addMessage({ role: "assistant", content: noUnderstand });
-        return;
-      }
-      await runLiveTool(content);
-    } else {
-      runFlow(scenarioKey);
-    }
-  };
-
+  // Rehydrate visible chat from a selected stored conversation.
   useEffect(() => {
     if (!conv.conversationId || conv.messages.length === 0) return;
-    // Rehydrate the visible chat history from the loaded conversation.
-    const visible = conv.messages
+    const visible: Message[] = conv.messages
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m, idx) => ({
         id: idx + 1,
@@ -126,32 +120,40 @@ const CommandPage = () => {
         }),
         agentName: m.role === "assistant" ? "Direttore" : undefined,
       }));
-    pageState.setMessages(visible);
+    state.setMessages(visible);
 
     const last = [...conv.messages]
       .reverse()
       .find((m) => m.role === "tool" && m.tool_result);
     if (last?.tool_result) {
-      pageState.setLiveResult(last.tool_result as ToolResult);
-      const kind = (last.tool_result as ToolResult).kind;
-      if (kind === "table") pageState.setCanvas("live-table");
-      else if (kind === "card-grid") pageState.setCanvas("live-card-grid");
-      else if (kind === "timeline") pageState.setCanvas("live-timeline");
-      else if (kind === "flow") pageState.setCanvas("live-flow");
-      else if (kind === "composer") pageState.setCanvas("live-composer");
-      else if (kind === "report") pageState.setCanvas("live-report");
+      const result = last.tool_result as ToolResult;
+      state.setLiveResult(result);
+      const kind = result.kind;
+      if (kind === "table") state.setCanvas("live-table");
+      else if (kind === "card-grid") state.setCanvas("live-card-grid");
+      else if (kind === "timeline") state.setCanvas("live-timeline");
+      else if (kind === "flow") state.setCanvas("live-flow");
+      else if (kind === "composer") state.setCanvas("live-composer");
+      else if (kind === "report") state.setCanvas("live-report");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv.conversationId, conv.messages.length]);
+
+  const handleSend = (text?: string) => {
+    const content = (text ?? state.input).trim();
+    if (!content) return;
+    state.setInput("");
+    void submit.sendMessage(content);
+  };
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
       <CommandPageBackButton onBack={() => nav("/v2")} />
       <CommandPageBackground />
       <CommandPageHeader
-        flowPhase={pageState.flowPhase}
-        lang={pageState.lang}
-        onLangChange={() => pageState.setLang(pageState.lang === "it" ? "en" : "it")}
+        flowPhase={state.flowPhase}
+        lang={state.lang}
+        onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
       />
 
       <div className="flex-1 flex overflow-hidden relative z-10">
@@ -159,71 +161,53 @@ const CommandPage = () => {
           conversations={conv.conversations}
           activeId={conv.conversationId}
           onSelect={(id) => {
-            pageState.setCanvas(null);
-            pageState.setLiveResult(null);
-            pageState.setFlowPhase("idle");
+            state.setCanvas(null);
+            state.setLiveResult(null);
+            state.setFlowPhase("idle");
             void conv.loadConversation(id);
           }}
           onNew={() => {
             conv.newConversation();
-            pageState.setMessages([]);
-            pageState.setCanvas(null);
-            pageState.setFlowPhase("idle");
+            state.setMessages([]);
+            state.setCanvas(null);
+            state.setFlowPhase("idle");
           }}
           onArchive={(id) => conv.archive(id)}
         />
         <div
           className={`flex-1 flex flex-col transition-all duration-700 ease-out ${
-            pageState.canvas ? "max-w-[50%]" : ""
+            state.canvas ? "max-w-[50%]" : ""
           }`}
         >
-          <CommandHistory
-            messages={pageState.messages}
-            isEmpty={isEmpty}
-            quickPrompts={QUICK_PROMPTS}
-            onQuickPrompt={sendMessage}
-            chatEndRef={pageState.chatEndRef}
-          />
-          {!isEmpty && (
-            <>
-              <ToolActivationBar
-                scenarioKey={pageState.activeScenarioKey}
-                visible={pageState.showTools && pageState.flowPhase !== "idle"}
-                phase={pageState.toolPhase}
-                chainHighlight={pageState.chainHighlight}
-              />
-
-              {pageState.activeScenario?.approval &&
-                (pageState.flowPhase === "proposal" ||
-                  pageState.flowPhase === "approval") && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <ApprovalPanel
-                      visible
-                      title={pageState.activeScenario.approval.title}
-                      description={
-                        pageState.activeScenario.approval.description
-                      }
-                      details={pageState.activeScenario.approval.details}
-                      governance={
-                        pageState.activeScenario.approval.governance
-                      }
-                      onApprove={handleApprove}
-                      onModify={() => {}}
-                      onCancel={handleCancel}
-                    />
-                  </motion.div>
-                )}
-
-              <ExecutionFlow
-                visible={pageState.flowPhase === "executing"}
-                steps={pageState.execSteps}
-                progress={pageState.execProgress}
-              />
-            </>
+          {isEmpty ? (
+            <CommandHistory
+              messages={[]}
+              isEmpty
+              quickPrompts={QUICK_PROMPTS}
+              onQuickPrompt={(p) => handleSend(p)}
+              chatEndRef={state.chatEndRef}
+            />
+          ) : (
+            <CommandThread
+              messages={state.messages}
+              activeToolKey={state.activeToolKey}
+              showTools={state.showTools}
+              flowPhase={state.flowPhase}
+              toolPhase={state.toolPhase}
+              chainHighlight={state.chainHighlight}
+              planState={state.planState}
+              execSteps={state.execSteps}
+              execProgress={state.execProgress}
+              governance={governance}
+              chatEndRef={state.chatEndRef}
+              onCancel={() => submit.handleCancel()}
+              onApproveStep={() => {
+                if (!state.planState) return;
+                const lastUser = [...state.messages].reverse().find((m: Message) => m.role === "user");
+                void submit.handleApproveStep(state.planState, lastUser?.content ?? "");
+              }}
+              onSuggestedAction={(prompt) => handleSend(prompt)}
+            />
           )}
 
           <VoicePresence
@@ -233,28 +217,28 @@ const CommandPage = () => {
           />
 
           <CommandInput
-            input={pageState.input}
-            onInputChange={pageState.setInput}
-            onSend={() => sendMessage()}
+            input={state.input}
+            onInputChange={state.setInput}
+            onSend={() => handleSend()}
             onVoiceToggle={() => voice.toggle()}
             onVolumeMute={() => voiceOut.toggleMute()}
-            inputFocused={pageState.inputFocused}
-            onFocus={() => pageState.setInputFocused(true)}
-            onBlur={() => pageState.setInputFocused(false)}
+            inputFocused={state.inputFocused}
+            onFocus={() => state.setInputFocused(true)}
+            onBlur={() => state.setInputFocused(false)}
             voiceSpeaking={voiceOut.speaking}
             voiceListening={voice.listening}
             voiceSupported={voice.supported}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
         </div>
 
         <CommandOutput
-          canvas={pageState.canvas}
-          liveResult={pageState.liveResult}
-          activeScenarioKey={pageState.activeScenarioKey}
+          canvas={state.canvas}
+          liveResult={state.liveResult}
+          activeScenarioKey={state.activeToolKey}
           onClose={() => {
-            pageState.setCanvas(null);
-            pageState.setLiveResult(null);
+            state.setCanvas(null);
+            state.setLiveResult(null);
           }}
         />
       </div>
