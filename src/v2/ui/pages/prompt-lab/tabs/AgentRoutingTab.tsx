@@ -8,7 +8,7 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/providers/AuthProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   listAgentRoutingRules,
