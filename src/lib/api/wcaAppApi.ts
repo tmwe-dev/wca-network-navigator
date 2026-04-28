@@ -5,6 +5,7 @@
 
 import { createLogger } from "@/lib/log";
 import { ApiError } from "@/lib/api/apiError";
+import { waitForGreenLight, markRequestSent } from "@/lib/wcaCheckpoint";
 import {
   safeParseDiscover,
   safeParseScrape,
@@ -30,13 +31,15 @@ async function assertOk(res: Response, context: string): Promise<void> {
 // ─── Cookie cache ───────────────────────────────────────────────
 const COOKIE_KEY = "wca_session_cookie";
 const COOKIE_TTL = 8 * 60 * 1000; // 8 min
+const COOKIE_REFRESH_MARGIN = 60 * 1000; // refresh proactively if < 1 min remaining (P4.4)
 
 async function getOrRefreshCookie(): Promise<string> {
   try {
     const cached = localStorage.getItem(COOKIE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.cookie && Date.now() - parsed.savedAt < COOKIE_TTL) {
+      const age = Date.now() - parsed.savedAt;
+      if (parsed.cookie && age < COOKIE_TTL - COOKIE_REFRESH_MARGIN) {
         return parsed.cookie;
       }
     }
@@ -64,6 +67,25 @@ async function getOrRefreshCookie(): Promise<string> {
     log.warn("cookie cache write failed", { message: err instanceof Error ? err.message : String(err) });
   }
   return cookie;
+}
+
+/**
+ * P4.3 — Checkpoint gate per chiamate user-facing a wca-app.
+ * Aspetta la green-zone (≥20s tra una richiesta e l'altra) prima di
+ * eseguire fetch verso endpoint sensibili (discover/scrape/enrich/verify).
+ * Background workers (job-start/job-status/worker) sono ESCLUSI: gestiscono
+ * il rate limit lato server.
+ */
+async function gateAndMark(context: string): Promise<void> {
+  const ok = await waitForGreenLight();
+  if (!ok) {
+    throw new ApiError({
+      code: "RATE_LIMITED",
+      message: "WCA checkpoint denied",
+      details: { context },
+    });
+  }
+  markRequestSent();
 }
 
 // ─── Types ──────────────────────────────────────────────────────
