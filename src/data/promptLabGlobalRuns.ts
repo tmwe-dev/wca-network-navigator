@@ -5,6 +5,7 @@
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface GlobalRunProposal {
   block_id: string;
@@ -230,22 +231,22 @@ export async function rollbackSavedProposals(runId: string): Promise<number> {
     const kind = src.kind as string;
     try {
       if (kind === "app_setting") {
-        await (supabase as any).from("app_settings").update({ value: p.before }).eq("key", src.key);
+        await untypedFrom("app_settings").update({ value: p.before }).eq("key", src.key);
         restored++;
       } else if (kind === "kb_entry") {
-        await (supabase as any).from("kb_entries").update({ content: p.before }).eq("id", src.id);
+        await untypedFrom("kb_entries").update({ content: p.before }).eq("id", src.id);
         restored++;
       } else if (kind === "operative_prompt") {
-        await (supabase as any).from("operative_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
+        await untypedFrom("operative_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
         restored++;
       } else if (kind === "email_prompt") {
-        await (supabase as any).from("email_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
+        await untypedFrom("email_prompts").update({ [src.field as string]: p.before }).eq("id", src.id);
         restored++;
       } else if (kind === "playbook") {
-        await (supabase as any).from("commercial_playbooks").update({ [src.field as string]: p.before }).eq("id", src.id);
+        await untypedFrom("commercial_playbooks").update({ [src.field as string]: p.before }).eq("id", src.id);
         restored++;
       } else if (kind === "agent_persona") {
-        await (supabase as any).from("agent_personas").update({ [src.field as string]: p.before }).eq("id", src.id);
+        await untypedFrom("agent_personas").update({ [src.field as string]: p.before }).eq("id", src.id);
         restored++;
       }
     } catch {

@@ -6,6 +6,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { savePushSubscription, deletePushSubscription, type Notification } from "@/data/notifications";
 import { supabase } from "@/integrations/supabase/client";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("usePushNotifications");
+
 export interface UsePushNotificationsOptions {
   enabled?: boolean;
   onNotification?: (notification: Notification) => void;
@@ -40,7 +43,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       setHasPermission(granted);
       return granted;
     } catch (error) {
-      console.error("Error requesting notification permission:", error);
+      log.error("Error requesting notification permission:", { error: error });
       return false;
     } finally {
       setIsLoading(false);
@@ -75,7 +78,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         return true;
       }
     } catch (error) {
-      console.error("Error subscribing to push notifications:", error);
+      log.error("Error subscribing to push notifications:", { error: error });
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +103,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         return true;
       }
     } catch (error) {
-      console.error("Error unsubscribing from push notifications:", error);
+      log.error("Error unsubscribing from push notifications:", { error: error });
     } finally {
       setIsLoading(false);
     }

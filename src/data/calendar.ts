@@ -2,9 +2,9 @@
  * Data Access Layer — Calendar Events
  * Single source of truth for all calendar_events table queries.
  */
-import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 // Local type definitions for calendar_events table
 // (table exists in database but not in generated Database types)
@@ -76,8 +76,7 @@ export async function listEvents(
   from: string,
   to: string,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .gte("start_at", from)
@@ -92,8 +91,7 @@ export async function listEvents(
  * Get a single event by ID
  */
 export async function getEvent(id: string): Promise<CalendarEvent | null> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("id", id)
     .single();
@@ -112,8 +110,7 @@ export async function getEvent(id: string): Promise<CalendarEvent | null> {
  * Create a new event
  */
 export async function createEvent(event: CalendarEventInsert): Promise<CalendarEvent> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .insert(event)
     .select()
     .single();
@@ -126,8 +123,7 @@ export async function createEvent(event: CalendarEventInsert): Promise<CalendarE
  * Update an existing event
  */
 export async function updateEvent(id: string, updates: CalendarEventUpdate): Promise<CalendarEvent> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
@@ -141,7 +137,7 @@ export async function updateEvent(id: string, updates: CalendarEventUpdate): Pro
  * Delete an event
  */
 export async function deleteEvent(id: string): Promise<void> {
-  const { error } = await (supabase as any).from("calendar_events").delete().eq("id", id);
+  const { error } = await untypedFrom("calendar_events").delete().eq("id", id);
 
   if (error) throw error;
 }
@@ -152,8 +148,7 @@ export async function deleteEvent(id: string): Promise<void> {
 export async function getUpcomingEvents(userId: string, limit = 5): Promise<CalendarEvent[]> {
   const now = new Date().toISOString();
 
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("status", "scheduled")
@@ -169,8 +164,7 @@ export async function getUpcomingEvents(userId: string, limit = 5): Promise<Cale
  * Get events for a specific partner
  */
 export async function getEventsForPartner(partnerId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("partner_id", partnerId)
     .eq("status", "scheduled")
@@ -184,8 +178,7 @@ export async function getEventsForPartner(partnerId: string): Promise<CalendarEv
  * Get events for a specific deal
  */
 export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("deal_id", dealId)
     .order("start_at", { ascending: true });
@@ -198,8 +191,7 @@ export async function getEventsForDeal(dealId: string): Promise<CalendarEvent[]>
  * Get events for a specific contact
  */
 export async function getEventsForContact(contactId: string): Promise<CalendarEvent[]> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("contact_id", contactId)
     .order("start_at", { ascending: true });
@@ -215,8 +207,7 @@ export async function getEventsByType(
   userId: string,
   eventType: EventType,
 ): Promise<CalendarEvent[]> {
-  const { data, error } = await (supabase as any)
-    .from("calendar_events")
+  const { data, error } = await untypedFrom("calendar_events")
     .select("*")
     .eq("user_id", userId)
     .eq("event_type", eventType)

@@ -12,12 +12,12 @@
 import { execSync } from "node:child_process";
 
 // ── Baseline: update ONLY when you intentionally reduce debt ──
-// Snapshot 2026-04-28 — ratchet-down only. Never raise these numbers.
-// To reduce: lower the number after a successful migration PR.
+// Snapshot 2026-04-28 (post Sprint 3 partial) — ratchet-down only.
+// Never raise these numbers. To reduce: lower after a successful migration PR.
 const BASELINE = {
-  any: 496,
+  any: 440,
   eslintDisable: 73,
-  console: 153,
+  console: 81,
 };
 
 function count(pattern) {

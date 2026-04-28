@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 import { Trash2, Archive, Folder, Check, X } from 'lucide-react';
 import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("MultiSelectBulkBar");
+
 interface MultiSelectBulkBarProps {
   selectedSenders: SenderAnalysis[];
   groups: EmailSenderGroup[];
@@ -129,7 +132,7 @@ export function MultiSelectBulkBar({
               .eq('id', emailId);
           }
         } catch (err) {
-          console.error(`Error processing email ${i + 1}:`, err);
+          log.error(`Error processing email ${i + 1}:`, { error: err });
         }
 
         // Update progress
@@ -160,7 +163,7 @@ export function MultiSelectBulkBar({
       onComplete?.();
     } catch (err) {
       toast.error("Errore durante l'operazione");
-      console.error(err);
+      log.error("error", { error: err });
     } finally {
       setIsLoading(false);
       setProgress(null);
@@ -180,7 +183,7 @@ export function MultiSelectBulkBar({
       onComplete?.();
     } catch (err) {
       toast.error("Errore assegnazione");
-      console.error(err);
+      log.error("error", { error: err });
     } finally {
       setIsLoading(false);
     }

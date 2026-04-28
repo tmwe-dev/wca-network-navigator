@@ -1,3 +1,5 @@
+import { createLogger } from "@/lib/log";
+const log = createLogger("harmonizerKbInjector");
 /**
  * harmonizerKbInjector — carica i file .md della KB Harmonizer rilevanti
  * per UN chunk e li concatena per essere accodati al system prompt.
@@ -51,7 +53,7 @@ async function fetchKbFile(filename: string): Promise<string | null> {
   try {
     const resp = await fetch(`${KB_BASE_PATH}/${filename}`);
     if (!resp.ok) {
-      console.warn(`[kbInjector] ${filename} not found (${resp.status})`);
+      log.warn(`[kbInjector] ${filename} not found (${resp.status})`);
       fileCache.set(filename, null);
       return null;
     }
@@ -59,7 +61,7 @@ async function fetchKbFile(filename: string): Promise<string | null> {
     fileCache.set(filename, text);
     return text;
   } catch (e) {
-    console.warn(`[kbInjector] fetch failed for ${filename}`, e);
+    log.warn(`[kbInjector] fetch failed for ${filename}`, { error: e });
     fileCache.set(filename, null);
     return null;
   }
@@ -101,7 +103,7 @@ export async function buildHarmonizerKbContext(
     if (!body) continue;
     const block = `\n\n--- FILE KB: ${name} ---\n${body.trim()}\n--- END ${name} ---`;
     if (used + block.length > KB_INJECTION_BUDGET_CHARS) {
-      console.warn(`[kbInjector] budget exhausted at ${name}, stop injection`);
+      log.warn(`[kbInjector] budget exhausted at ${name}, stop injection`);
       break;
     }
     parts.push(block);

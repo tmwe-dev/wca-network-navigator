@@ -8,6 +8,9 @@ import { supabase as supabaseTyped } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Trash2, Archive, Folder, Check } from 'lucide-react';
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("BulkEmailActions");
+
 // Cast controllato: questo modulo riferisce colonne (`from`, `is_read`) che
 // non corrispondono allo schema corrente (`from_address`, `read_at`).
 // Vedi DEBT-EMAIL-INTEL-COLUMNS in docs/debt — il refactor andrà eseguito
@@ -44,7 +47,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         if (error) throw error;
         setTotalEmails(count || 0);
       } catch (err) {
-        console.error('Error fetching email count:', err);
+        log.error('Error fetching email count:', { error: err });
       }
     };
 
@@ -140,7 +143,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
             if (error) throw error;
           }
         } catch (err) {
-          console.error(`Error processing email ${i + 1}:`, err);
+          log.error(`Error processing email ${i + 1}:`, { error: err });
           // Continue with next email even if one fails
         }
 
@@ -166,7 +169,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
       onActionsComplete?.();
     } catch (err) {
       toast.error('Errore durante l\'operazione');
-      console.error(err);
+      log.error("error", { error: err });
     } finally {
       setIsLoading(false);
       setProgress(null);

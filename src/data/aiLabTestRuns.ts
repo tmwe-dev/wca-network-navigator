@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("aiLabTestRuns");
+
 interface TestRunInsert {
   totalScore: number;
   maxScore: number;
@@ -43,7 +46,7 @@ export async function insertTestRun(run: TestRunInsert): Promise<string | null> 
     .single();
 
   if (error) {
-    console.error("insertTestRun error:", error);
+    log.error("insertTestRun error:", { error: error });
     return null;
   }
   return data.id;
@@ -70,7 +73,7 @@ export async function insertTestResults(runId: string, results: TestResultInsert
 
   const { error } = await supabase.from("ai_lab_test_results").insert(rows);
   if (error) {
-    console.error("insertTestResults error:", error);
+    log.error("insertTestResults error:", { error: error });
     return false;
   }
   return true;
@@ -100,7 +103,7 @@ export async function fetchRecentRuns(limit = 20): Promise<TestRunRow[]> {
     .limit(limit);
 
   if (error) {
-    console.error("fetchRecentRuns error:", error);
+    log.error("fetchRecentRuns error:", { error: error });
     return [];
   }
   return (data ?? []) as TestRunRow[];
@@ -128,7 +131,7 @@ export async function fetchRunResults(runId: string): Promise<TestResultRow[]> {
     .order("scenario_id", { ascending: true });
 
   if (error) {
-    console.error("fetchRunResults error:", error);
+    log.error("fetchRunResults error:", { error: error });
     return [];
   }
   return (data ?? []) as TestResultRow[];

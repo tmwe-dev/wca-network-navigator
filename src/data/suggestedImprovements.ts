@@ -14,6 +14,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("suggestedImprovements");
+
 const TABLE_WARNING = 'Table "suggested_improvements" is not included in supabase/types.ts. Table exists in DB but type definitions are missing.';
 
 export type SuggestionType = "kb_rule" | "prompt_adjustment" | "user_preference";
@@ -71,7 +74,7 @@ export async function createSuggestion(
   userId: string,
   input: CreateSuggestionInput,
 ): Promise<SuggestedImprovement> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   throw new Error('createSuggestion: Table "suggested_improvements" not available in schema');
 }
 
@@ -82,7 +85,7 @@ export async function createSuggestion(
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function listMySuggestions(userId: string): Promise<SuggestedImprovement[]> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return [];
 }
 
@@ -91,7 +94,7 @@ export async function listMySuggestions(userId: string): Promise<SuggestedImprov
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function listPendingForAdmin(): Promise<SuggestedImprovement[]> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return [];
 }
 
@@ -100,7 +103,7 @@ export async function listPendingForAdmin(): Promise<SuggestedImprovement[]> {
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function listApprovedForArchitect(): Promise<SuggestedImprovement[]> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return [];
 }
 
@@ -109,7 +112,7 @@ export async function listApprovedForArchitect(): Promise<SuggestedImprovement[]
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function listUserPreferences(userId: string): Promise<SuggestedImprovement[]> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return [];
 }
 
@@ -124,7 +127,7 @@ export async function approveSuggestion(
   adminId: string,
   note?: string,
 ): Promise<void> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   throw new Error('approveSuggestion: Table "suggested_improvements" not available in schema');
 }
 
@@ -137,7 +140,7 @@ export async function rejectSuggestion(
   adminId: string,
   note?: string,
 ): Promise<void> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   throw new Error('rejectSuggestion: Table "suggested_improvements" not available in schema');
 }
 
@@ -151,7 +154,7 @@ export async function editAndApprove(
   newContent: string,
   note?: string,
 ): Promise<void> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   throw new Error('editAndApprove: Table "suggested_improvements" not available in schema');
 }
 
@@ -167,7 +170,7 @@ export async function markSuggestionsApplied(
   runId: string,
 ): Promise<void> {
   if (ids.length === 0) return;
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
 }
 
 // ─── Learned patterns assembly ───
@@ -181,7 +184,7 @@ export async function markSuggestionsApplied(
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function buildLearnedPatterns(userId: string): Promise<string> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return "";
 }
 
@@ -190,7 +193,7 @@ export async function buildLearnedPatterns(userId: string): Promise<string> {
  * @deprecated Table 'suggested_improvements' not in schema. This function will not execute.
  */
 export async function countByStatus(): Promise<Record<SuggestionStatus, number>> {
-  console.warn(TABLE_WARNING);
+  log.warn(TABLE_WARNING);
   return {
     pending: 0,
     approved: 0,

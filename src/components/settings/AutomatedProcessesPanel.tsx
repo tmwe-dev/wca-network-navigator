@@ -7,6 +7,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
+interface CronLogRow {
+  job_name: string;
+  ran_at: string;
+  error: string | null;
+}
+
+function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  return "Errore sconosciuto";
+}
+
 interface CronCostConfig {
   key: string;
   jobName: string;
@@ -137,9 +149,9 @@ export default function AutomatedProcessesPanel() {
 
       const next: Record<string, CronState> = {};
       for (const cfg of CRON_CONFIGS) {
-        const jobLogs = (logs || []).filter((l: any) => l.job_name === cfg.jobName);
+        const jobLogs = ((logs ?? []) as CronLogRow[]).filter((l) => l.job_name === cfg.jobName);
         const lastRunRow = jobLogs[0];
-        const errors24h = jobLogs.filter((l: any) => l.error).length;
+        const errors24h = jobLogs.filter((l) => l.error).length;
         next[cfg.key] = {
           enabled:
             settingsMap[cfg.enabledKey] !== undefined
@@ -148,13 +160,13 @@ export default function AutomatedProcessesPanel() {
           intervalMin:
             parseInt(settingsMap[cfg.intervalKey] || "", 10) || cfg.defaultIntervalMin,
           lastRun: lastRunRow ? new Date(lastRunRow.ran_at) : null,
-          lastError: jobLogs.find((l: any) => l.error)?.error || null,
+          lastError: jobLogs.find((l) => l.error)?.error ?? null,
           errors24h,
         };
       }
       setStates(next);
-    } catch (e: any) {
-      toast.error("Errore caricamento", { description: e.message });
+    } catch (e: unknown) {
+      toast.error("Errore caricamento", { description: errorMessage(e) });
     } finally {
       setLoading(false);
     }
@@ -174,8 +186,8 @@ export default function AutomatedProcessesPanel() {
         .upsert({ key, value, user_id: null }, { onConflict: "key,user_id" });
       if (error) throw error;
       toast.success("Salvato");
-    } catch (e: any) {
-      toast.error("Errore salvataggio", { description: e.message });
+    } catch (e: unknown) {
+      toast.error("Errore salvataggio", { description: errorMessage(e) });
     } finally {
       setSaving(null);
     }

@@ -24,6 +24,9 @@ import type { TmweChunkDef } from "./tmweChunks";
 import { TMWE_CHUNKS, TMWE_EXECUTION_ORDER } from "./tmweChunks";
 import { buildHarmonizerKbContext } from "./harmonizerKbInjector";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("harmonizerLibraryAnalyzer");
+
 const FactSchema = z.object({
   value: z.string(),
   evidence: z.string().optional(),
@@ -217,7 +220,7 @@ function parseExtended(raw: string, chunkIndex: number): {
     // Fallback: JSON troncato per token explosion.
     try {
       parsedRaw = JSON.parse(repairTruncatedJson(json));
-      console.warn("[libraryAnalyzer] extended JSON repaired after truncation", { chunkIndex });
+      log.warn("[libraryAnalyzer] extended JSON repaired after truncation", { chunkIndex });
     } catch {
       return empty;
     }
@@ -303,7 +306,7 @@ export async function runLibraryChunkAnalyzer(input: {
   try {
     kbContext = await buildHarmonizerKbContext(chunkDef.targetTables);
   } catch (e) {
-    console.warn("[libraryAnalyzer] KB injection failed, proceeding without", e);
+    log.warn("[libraryAnalyzer] KB injection failed, proceeding without", { error: e });
   }
 
   // Build prompt at multiple compression levels for retry strategy.
@@ -329,12 +332,12 @@ export async function runLibraryChunkAnalyzer(input: {
       try {
         r = await callHarmonizer(userPrompt, systemPrompt);
       } catch (e) {
-        console.error(`[libraryAnalyzer] call failed (level=${level})`, e);
+        log.error(`[libraryAnalyzer] call failed (level=${level})`, { error: e });
         if (level === 3) throw e;
         continue;
       }
       if (r && r.trim().length > 0) return r;
-      console.warn(`[libraryAnalyzer] retry level=${level} reason=empty chunk=#${chunkDef.index}`);
+      log.warn(`[libraryAnalyzer] retry level=${level} reason=empty chunk=#${chunkDef.index}`);
     }
     return "";
   }
@@ -365,7 +368,7 @@ export async function runLibraryChunkAnalyzer(input: {
     }
   }
   if (outOfScope.length > 0) {
-    console.warn(
+    log.warn(
       `[libraryAnalyzer] chunk #${chunkDef.index} ${outOfScope.length} proposte fuori scope scartate`,
       {
         scope: chunkDef.targetTables,

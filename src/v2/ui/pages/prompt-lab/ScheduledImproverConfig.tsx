@@ -28,6 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("ScheduledImproverConfig");
+
 interface ScheduledImproverConfig {
   enabled: boolean;
   dayOfWeek: number; // 0 = domenica, 1 = lunedì, ..., 6 = sabato
@@ -103,7 +106,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       }
     } catch (err) {
       toast.error("Errore nel caricamento configurazione");
-      console.error(err);
+      log.error("error", { error: err });
     } finally {
       setLoading(false);
     }
@@ -138,7 +141,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
         );
       } catch (err) {
         toast.error("Errore nel salvataggio configurazione");
-        console.error(err);
+        log.error("error", { error: err });
       } finally {
         setSaving(false);
       }
@@ -185,7 +188,7 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
       toast.success("Avvio 'Migliora tutto'...");
     } catch (err) {
       toast.error("Errore nell'avvio manuale");
-      console.error(err);
+      log.error("error", { error: err });
     } finally {
       setRunningNow(false);
     }

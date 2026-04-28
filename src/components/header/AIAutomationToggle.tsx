@@ -13,6 +13,9 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("AIAutomationToggle");
+
 interface AIAutomationToggleProps {
   className?: string;
 }
@@ -38,13 +41,13 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
           .maybeSingle();
 
         if (error) {
-          console.error('Error loading AI pause state:', error);
+          log.error('Error loading AI pause state:', { error: error });
           return;
         }
 
         setIsPaused(settings?.value === 'true');
       } catch (error) {
-        console.error('Error loading AI pause state:', error);
+        log.error('Error loading AI pause state:', { error: error });
       } finally {
         setLoading(false);
       }
@@ -79,7 +82,7 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
           : 'Automazioni AI riprese'
       );
     } catch (error) {
-      console.error('Error toggling AI pause:', error);
+      log.error('Error toggling AI pause:', { error: error });
       toast.error('Errore aggiornamento stato AI');
     } finally {
       setLoading(false);

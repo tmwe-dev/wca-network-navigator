@@ -1,18 +1,17 @@
 /**
  * Mutations for command conversations (multi-turn memory)
  */
-import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../../core/domain/result";
 import { fromUnknown } from "../../../core/domain/errors";
 import type { Conversation, ConversationMessage } from "../queries/conversations";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export async function createConversation(
   userId: string,
   title?: string,
 ): Promise<Result<Conversation>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_conversations")
+    const { data, error } = await untypedFrom("command_conversations")
       .insert({ user_id: userId, title: title ?? null })
       .select()
       .single();
@@ -33,8 +32,7 @@ export async function appendMessage(
   },
 ): Promise<Result<ConversationMessage>> {
   try {
-    const { data, error } = await (supabase as any)
-      .from("command_messages")
+    const { data, error } = await untypedFrom("command_messages")
       .insert({
         conversation_id: conversationId,
         role: msg.role,
@@ -47,8 +45,7 @@ export async function appendMessage(
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
 
     // Bump last_message_at
-    await (supabase as any)
-      .from("command_conversations")
+    await untypedFrom("command_conversations")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conversationId);
 
@@ -63,8 +60,7 @@ export async function updateConversationTitle(
   title: string,
 ): Promise<Result<void>> {
   try {
-    const { error } = await (supabase as any)
-      .from("command_conversations")
+    const { error } = await untypedFrom("command_conversations")
       .update({ title })
       .eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
@@ -76,8 +72,7 @@ export async function updateConversationTitle(
 
 export async function archiveConversation(id: string): Promise<Result<void>> {
   try {
-    const { error } = await (supabase as any)
-      .from("command_conversations")
+    const { error } = await untypedFrom("command_conversations")
       .update({ archived: true })
       .eq("id", id);
     if (error) return err(fromUnknown(error, "DATABASE_ERROR"));
