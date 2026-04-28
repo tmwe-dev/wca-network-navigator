@@ -142,6 +142,9 @@ export default function CommandCanvas({
               initialSubject={liveResult.initialSubject}
               initialBody={liveResult.initialBody}
               promptHint={liveResult.promptHint}
+              partnerId={liveResult.partnerId ?? null}
+              recipientName={liveResult.recipientName ?? null}
+              emailType={liveResult.emailType}
               onClose={handleClose}
             />
           )}
