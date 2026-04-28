@@ -14,6 +14,8 @@ export interface Message {
   governance?: string;
   /** Optional follow-up actions rendered as clickable chips under the message */
   suggestedActions?: { label: string; prompt: string }[];
+  spokenSummary?: string;
+  silent?: boolean;
 }
 
 interface CommandHistoryProps {
