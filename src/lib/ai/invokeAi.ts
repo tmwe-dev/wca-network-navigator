@@ -11,6 +11,7 @@
  * Wrapping su invokeEdge per ereditare retry/error normalization.
  */
 import { invokeEdge, type InvokeEdgeOptions } from "@/lib/api/invokeEdge";
+import { traceCollector } from "@/v2/observability/traceCollector";
 
 export type AiScope =
   | "home"
@@ -104,5 +105,39 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     headers,
   };
 
-  return invokeEdge<TResponse>(functionName, invokeOpts);
+  // Trace AI: avvolge l'invocazione in un correlation_id condiviso con
+  // l'evento `edge.invoke` interno (che riusa il correlation attivo).
+  const corr = traceCollector.startCorrelation();
+  const route = typeof window !== "undefined" ? window.location.pathname : undefined;
+  const start = Date.now();
+  try {
+    const res = await invokeEdge<TResponse>(functionName, invokeOpts);
+    traceCollector.push({
+      type: "ai.invoke",
+      scope,
+      source: `${functionName}:${context.source}`,
+      route,
+      status: "success",
+      duration_ms: Date.now() - start,
+      payload_summary: { functionName, mode: context.mode },
+      correlation_id: corr,
+    });
+    return res;
+  } catch (err) {
+    const e = err as { message?: string; code?: string; httpStatus?: number };
+    traceCollector.push({
+      type: "ai.invoke",
+      scope,
+      source: `${functionName}:${context.source}`,
+      route,
+      status: "error",
+      duration_ms: Date.now() - start,
+      payload_summary: { functionName, mode: context.mode },
+      error: { message: e?.message ?? String(err), code: e?.code, status: e?.httpStatus },
+      correlation_id: corr,
+    });
+    throw err;
+  } finally {
+    traceCollector.endCorrelation(corr);
+  }
 }

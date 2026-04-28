@@ -20,6 +20,13 @@ import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { TraceConsole } from "@/v2/observability/TraceConsole";
+import { traceCollector } from "@/v2/observability/traceCollector";
+import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
+
+// Init observability layer (idempotent, safe before any render)
+traceCollector.init();
+installSupabaseTraceProxy();
 
 const DEFAULT_HOME_ROUTE = "/v2/partner-hub?country=JO";
 
@@ -115,6 +122,7 @@ const App = () => (
                 <BackgroundSyncIndicator />
                 <ConnectionBanner />
                 <RuntimeDiagnosticPanel />
+                <TraceConsole />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />

@@ -1648,6 +1648,54 @@ export type Database = {
           },
         ]
       }
+      ai_runtime_traces: {
+        Row: {
+          correlation_id: string
+          created_at: string
+          duration_ms: number | null
+          error: Json | null
+          id: string
+          payload_summary: Json
+          route: string | null
+          scope: string | null
+          source: string | null
+          status: string | null
+          ts: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          correlation_id: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: Json | null
+          id?: string
+          payload_summary?: Json
+          route?: string | null
+          scope?: string | null
+          source?: string | null
+          status?: string | null
+          ts?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          correlation_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: Json | null
+          id?: string
+          payload_summary?: Json
+          route?: string | null
+          scope?: string | null
+          source?: string | null
+          status?: string | null
+          ts?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_scope_registry: {
         Row: {
           allowed_tools: string[] | null
@@ -9143,6 +9191,7 @@ export type Database = {
         Args: { p_only_orphans?: boolean }
         Returns: Json
       }
+      purge_old_runtime_traces: { Args: never; Returns: undefined }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
       release_mission_slot: {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
