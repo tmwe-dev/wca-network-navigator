@@ -1,6 +1,7 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 
 // LOVABLE-75 — LEGACY
 // Questa funzione è mantenuta solo per useAcquisitionPipeline.
@@ -140,7 +141,9 @@ Deno.serve(async (req) => {
     } else {
       // Fallback: direct fetch website content
       try {
-        const fetchResp = await fetch(url, {
+        // SSRF guard P1.4 — block private/internal hosts before fetching
+        const safeUrl = assertSafePublicUrl(url);
+        const fetchResp = await fetch(safeUrl.toString(), {
           headers: { "User-Agent": "Mozilla/5.0 (compatible; PartnerConnectBot/1.0)" },
           redirect: "follow",
         });
