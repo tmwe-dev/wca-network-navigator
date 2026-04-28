@@ -61,7 +61,7 @@ async function fetchKbFile(filename: string): Promise<string | null> {
     fileCache.set(filename, text);
     return text;
   } catch (e) {
-    log.warn(`[kbInjector] fetch failed for ${filename}`, e);
+    log.warn(`[kbInjector] fetch failed for ${filename}`, { error: e });
     fileCache.set(filename, null);
     return null;
   }

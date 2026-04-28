@@ -132,7 +132,7 @@ export function MultiSelectBulkBar({
               .eq('id', emailId);
           }
         } catch (err) {
-          log.error(`Error processing email ${i + 1}:`, err);
+          log.error(`Error processing email ${i + 1}:`, { error: err });
         }
 
         // Update progress

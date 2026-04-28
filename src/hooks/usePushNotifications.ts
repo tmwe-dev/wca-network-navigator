@@ -43,7 +43,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       setHasPermission(granted);
       return granted;
     } catch (error) {
-      log.error("Error requesting notification permission:", error);
+      log.error("Error requesting notification permission:", { error: error });
       return false;
     } finally {
       setIsLoading(false);
@@ -78,7 +78,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         return true;
       }
     } catch (error) {
-      log.error("Error subscribing to push notifications:", error);
+      log.error("Error subscribing to push notifications:", { error: error });
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +103,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         return true;
       }
     } catch (error) {
-      log.error("Error unsubscribing from push notifications:", error);
+      log.error("Error unsubscribing from push notifications:", { error: error });
     } finally {
       setIsLoading(false);
     }

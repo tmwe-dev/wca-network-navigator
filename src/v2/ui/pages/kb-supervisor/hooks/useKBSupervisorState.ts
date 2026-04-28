@@ -119,7 +119,7 @@ export function useKBSupervisorState() {
       const docs = await findKbEntries();
       setDocumentList(docs as KBDocument[]);
     } catch (err) {
-      log.error("loadDocuments error:", err);
+      log.error("loadDocuments error:", { error: err });
       toast.error("Errore caricamento documenti KB");
     }
   }, []);
@@ -162,7 +162,7 @@ export function useKBSupervisorState() {
         setIsSpeaking(false);
       }
     } catch (err) {
-      log.error("TTS error:", err);
+      log.error("TTS error:", { error: err });
       setIsSpeaking(false);
     }
   }, [voiceEnabled, userId]);
@@ -183,7 +183,7 @@ export function useKBSupervisorState() {
       setCanvasTab("audit");
       toast.success(`Audit completato: ${result.summary?.total_issues ?? 0} issues trovate`);
     } catch (err) {
-      log.error("Audit error:", err);
+      log.error("Audit error:", { error: err });
       setAuditStatus("idle");
       toast.error("Errore durante l'audit");
     }
@@ -262,7 +262,7 @@ export function useKBSupervisorState() {
 
       await speakResponse(result.content ?? "");
     } catch (err) {
-      log.error("Supervisor chat error:", err);
+      log.error("Supervisor chat error:", { error: err });
       toast.error("Errore comunicazione con il supervisor");
     } finally {
       setIsLoading(false);
@@ -332,7 +332,7 @@ export function useKBSupervisorState() {
       // Notifica AI dell'approvazione
       void sendMessage(`[SISTEMA] Modifica approvata e applicata: ${action.type} su "${action.targetTitle}"`);
     } catch (err) {
-      log.error("Approve error:", err);
+      log.error("Approve error:", { error: err });
       toast.error("Errore nell'applicare la modifica");
     }
   }, [proposedChanges, userId, documentList, loadDocuments, sendMessage]);
@@ -368,7 +368,7 @@ export function useKBSupervisorState() {
       toast.success("Documento salvato");
       await loadDocuments();
     } catch (err) {
-      log.error("Save error:", err);
+      log.error("Save error:", { error: err });
       toast.error("Errore nel salvare");
     }
   }, [activeDocument, userId, loadDocuments]);

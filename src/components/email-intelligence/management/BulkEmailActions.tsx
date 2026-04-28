@@ -47,7 +47,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
         if (error) throw error;
         setTotalEmails(count || 0);
       } catch (err) {
-        log.error('Error fetching email count:', err);
+        log.error('Error fetching email count:', { error: err });
       }
     };
 
@@ -143,7 +143,7 @@ export function BulkEmailActions({ senderEmail, onActionsComplete }: BulkEmailAc
             if (error) throw error;
           }
         } catch (err) {
-          log.error(`Error processing email ${i + 1}:`, err);
+          log.error(`Error processing email ${i + 1}:`, { error: err });
           // Continue with next email even if one fails
         }
 

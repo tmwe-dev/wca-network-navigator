@@ -37,7 +37,7 @@ export async function getTodayUsage(userId: string): Promise<number> {
     .gte("created_at", startOfDay.toISOString());
 
   if (error) {
-    log.error("[tokenUsage] Error getting today usage:", error);
+    log.error("[tokenUsage] Error getting today usage:", { error: error });
     return 0;
   }
 
@@ -58,7 +58,7 @@ export async function getMonthUsage(userId: string): Promise<number> {
     .gte("created_at", startOfMonth.toISOString());
 
   if (error) {
-    log.error("[tokenUsage] Error getting month usage:", error);
+    log.error("[tokenUsage] Error getting month usage:", { error: error });
     return 0;
   }
 
@@ -79,7 +79,7 @@ export async function getUsageByFunction(userId: string, days: number = 7): Prom
     .gte("created_at", startDate.toISOString());
 
   if (error) {
-    log.error("[tokenUsage] Error getting usage by function:", error);
+    log.error("[tokenUsage] Error getting usage by function:", { error: error });
     return {};
   }
 
@@ -112,7 +112,7 @@ export async function getTokenSettings(userId: string): Promise<Record<string, s
     ]);
 
   if (error) {
-    log.error("[tokenUsage] Error getting token settings:", error);
+    log.error("[tokenUsage] Error getting token settings:", { error: error });
     return {};
   }
 

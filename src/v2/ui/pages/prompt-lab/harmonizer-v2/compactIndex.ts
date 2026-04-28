@@ -65,7 +65,7 @@ async function withFetchRetry<T>(label: string, operation: () => Promise<T>): Pr
       await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
     }
   }
-  log.warn(`[compactIndex] ${label} failed after retry`, lastError);
+  log.warn(`[compactIndex] ${label} failed after retry`, { error: lastError });
   throw lastError;
 }
 
@@ -97,7 +97,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] kb_entries failed", settled[0].reason);
+    log.warn("[compactIndex] kb_entries failed", { error: settled[0].reason });
   }
 
   // 1 — operative_prompts
@@ -111,7 +111,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] operative_prompts failed", settled[1].reason);
+    log.warn("[compactIndex] operative_prompts failed", { error: settled[1].reason });
   }
 
   // 2 — email_prompts
@@ -125,7 +125,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] email_prompts failed", settled[2].reason);
+    log.warn("[compactIndex] email_prompts failed", { error: settled[2].reason });
   }
 
   // 3 — email_address_rules
@@ -139,7 +139,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] email_address_rules failed", settled[3].reason);
+    log.warn("[compactIndex] email_address_rules failed", { error: settled[3].reason });
   }
 
   // 4 — commercial_playbooks
@@ -153,7 +153,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] commercial_playbooks failed", settled[4].reason);
+    log.warn("[compactIndex] commercial_playbooks failed", { error: settled[4].reason });
   }
 
   // 5 — agent_personas
@@ -167,7 +167,7 @@ export async function buildCompactIndex(userId: string): Promise<CompactIndex> {
       });
     }
   } else {
-    log.warn("[compactIndex] agent_personas failed", settled[5].reason);
+    log.warn("[compactIndex] agent_personas failed", { error: settled[5].reason });
   }
 
   // Costruisci mappe.

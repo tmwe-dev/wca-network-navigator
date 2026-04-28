@@ -41,13 +41,13 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
           .maybeSingle();
 
         if (error) {
-          log.error('Error loading AI pause state:', error);
+          log.error('Error loading AI pause state:', { error: error });
           return;
         }
 
         setIsPaused(settings?.value === 'true');
       } catch (error) {
-        log.error('Error loading AI pause state:', error);
+        log.error('Error loading AI pause state:', { error: error });
       } finally {
         setLoading(false);
       }
@@ -82,7 +82,7 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
           : 'Automazioni AI riprese'
       );
     } catch (error) {
-      log.error('Error toggling AI pause:', error);
+      log.error('Error toggling AI pause:', { error: error });
       toast.error('Errore aggiornamento stato AI');
     } finally {
       setLoading(false);

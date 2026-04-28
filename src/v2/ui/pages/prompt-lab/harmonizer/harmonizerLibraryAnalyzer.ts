@@ -306,7 +306,7 @@ export async function runLibraryChunkAnalyzer(input: {
   try {
     kbContext = await buildHarmonizerKbContext(chunkDef.targetTables);
   } catch (e) {
-    log.warn("[libraryAnalyzer] KB injection failed, proceeding without", e);
+    log.warn("[libraryAnalyzer] KB injection failed, proceeding without", { error: e });
   }
 
   // Build prompt at multiple compression levels for retry strategy.
@@ -332,7 +332,7 @@ export async function runLibraryChunkAnalyzer(input: {
       try {
         r = await callHarmonizer(userPrompt, systemPrompt);
       } catch (e) {
-        log.error(`[libraryAnalyzer] call failed (level=${level})`, e);
+        log.error(`[libraryAnalyzer] call failed (level=${level})`, { error: e });
         if (level === 3) throw e;
         continue;
       }

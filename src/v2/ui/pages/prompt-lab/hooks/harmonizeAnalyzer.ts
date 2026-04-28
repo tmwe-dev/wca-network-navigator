@@ -310,9 +310,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
     }
   }
   if (skipped > 0) {
-    log.warn(
-      `[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`,
-    );
+    log.warn(`[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`, { error:  });
   }
 
   return validProposals.map((p, idx): HarmonizeProposal => {
@@ -429,7 +427,7 @@ export async function runHarmonizeAnalyzer(
       }
     } catch (e) {
       // non bloccare: continua coi prossimi chunk
-      log.error("[harmonizeAnalyzer] chunk failed", e);
+      log.error("[harmonizeAnalyzer] chunk failed", { error: e });
     }
     done++;
     onProgress?.(done, total);
