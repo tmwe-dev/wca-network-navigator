@@ -76,11 +76,9 @@ export interface AgentAuditResponse {
   agents: AgentAuditEntry[];
 }
 
-export async function fetchAgentAudit(agentId?: string): Promise<AgentAuditResponse> {
+export async function fetchAgentAudit(): Promise<AgentAuditResponse> {
   const { data, error } = await supabase.functions.invoke<AgentAuditResponse>("agent-audit", {
     method: "GET",
-    headers: agentId ? { "x-agent-id": agentId } : undefined,
-    body: agentId ? { agentId } : undefined,
   });
   if (error) throw error;
   if (!data) throw new Error("agent-audit: empty response");
