@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireExtensionAuth, isExtensionAuthError } from "../_shared/extensionAuth.ts";
 
 /**
  * Save WCA cookie to app_settings.
@@ -12,19 +13,20 @@ Deno.serve(async (req) => {
   if (pre) return pre;
 
   const origin = req.headers.get("origin");
-  const _dynCors = getCorsHeaders(origin);
+  const dynCors = getCorsHeaders(origin);
 
   try {
-    // ── Soft Auth: accept both user JWT and anon key (extension uses anon key) ──
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return respond({ success: false, message: 'Unauthorized' }, 401)
-    }
-    // Cookie is a shared resource in app_settings — extension calls with anon key are valid
+    // P1.2: enforce extension auth (JWT preferred, anon-key only as legacy fallback
+    // and ONLY from CORS-whitelisted origins — getCorsHeaders already gates this).
+    const auth = await requireExtensionAuth(req, dynCors);
+    if (isExtensionAuthError(auth)) return auth;
 
     const { cookie } = await req.json()
     if (!cookie || typeof cookie !== 'string') {
       return respond({ success: false, message: 'Cookie mancante' }, 400)
+    }
+    if (cookie.length > 20000) {
+      return respond({ success: false, message: 'Cookie troppo lungo' }, 413)
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
