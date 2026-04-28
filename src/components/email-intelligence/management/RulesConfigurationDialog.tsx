@@ -15,6 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { bulkUpdateAutoAction } from "@/data/emailAddressRules";
 import {
   RulesConfiguration,
