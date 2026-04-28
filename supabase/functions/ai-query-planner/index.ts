@@ -111,6 +111,12 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 8. Se la richiesta è ambigua, scegli la tabella più ovvia e aggiungi il rationale.
 9. Default limit = 50. Cap massimo = 200.
 10. Per campi enum (lead_status, status, channel, ecc.) usa SEMPRE i valori esatti elencati.
+11. Per campaign_jobs.status NON usare mai "active", "draft", "running" o traduzioni libere:
+    - "campagne attive", "in corso", "running" → status IN ["pending", "in_progress"]
+    - "bozze", "draft" → status = "pending"
+    - "completate" → status = "completed"
+    - "saltate" → status = "skipped"
+    Se non ci sono righe, è un risultato vuoto, NON un errore tecnico.
 
 ═══ ESEMPI ═══
 "mostra partner US attivi con rating > 4"
@@ -145,6 +151,12 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 
 "messaggi non letti dell'ultima settimana"
 → {"table":"channel_messages","filters":[{"column":"direction","op":"eq","value":"inbound"},{"column":"read_at","op":"is","value":null}],"sort":{"column":"email_date","ascending":false},"limit":100,"title":"Inbound non letti","rationale":"direction inbound + read_at null"}
+
+"mostra stato campagne attive"
+→ {"table":"campaign_jobs","filters":[{"column":"status","op":"in","value":["pending","in_progress"]}],"sort":{"column":"created_at","ascending":false},"limit":200,"title":"Campagne attive","rationale":"Le campagne attive corrispondono ai job pending o in_progress"}
+
+"mostra solo campagne in draft"
+→ {"table":"campaign_jobs","filters":[{"column":"status","op":"eq","value":"pending"}],"sort":{"column":"created_at","ascending":false},"limit":200,"title":"Campagne in bozza","rationale":"Draft/bozza viene mappato allo stato pending dei campaign_jobs"}
 
 ═══ FOLLOW-UP ELLITTICI ═══
 Se ricevi un CONTESTO TURNO PRECEDENTE (lo trovi nel system prompt esteso), e il nuovo prompt utente è breve / ellittico (es. "e a New York?", "anche a Miami", "solo gli attivi"), DEVI:
