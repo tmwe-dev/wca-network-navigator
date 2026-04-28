@@ -273,6 +273,8 @@ export const queryKeys = {
       tasks: (filters?: unknown) => ["agent-dashboard-tasks", filters] as const,
       agents: ["agent-dashboard-agents"] as const,
     },
+    allForCapabilities: () => ["agents-for-capabilities"] as const,
+    capabilities: (agentId?: string) => ["agent-capabilities", agentId] as const,
   },
 
   // ── Missions ──────────────────────────────────────────
