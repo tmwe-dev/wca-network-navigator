@@ -10,6 +10,7 @@ import {
   summarizeFindings,
   type SanitizeFinding,
 } from "../_shared/promptSanitizer.ts";
+import { normalizeContent } from "../_shared/contentNormalizer.ts";
 
 type AgentExecuteSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -264,11 +265,16 @@ export async function buildContextBlock(
             contextBlock += `\n${addr} (ultime ${Math.min(msgs.length, 3)}):\n`;
             for (const msg of msgs.slice(0, 3)) {
               const date = new Date(msg.created_at).toLocaleDateString("it-IT");
-              const subjSafe = sanitizeForPrompt(msg.subject, { source: "email-inbound", maxChars: 200, policy: "redact" });
+              const subjNorm = normalizeContent(msg.subject, { source: "email-inbound", maxChars: 200 });
+              const subjSafe = sanitizeForPrompt(subjNorm.text, { source: "email-inbound", maxChars: 200, policy: "redact" });
               if (subjSafe.findings.length) injectionFindings.push(...subjSafe.findings);
               contextBlock += `  [${date}] ${subjSafe.text || "(nessun subject)"}\n`;
               if (msg.body_text) {
-                const bodySafe = sanitizeForPrompt(msg.body_text, { source: "email-inbound", maxChars: 150, policy: "redact" });
+                // 1) normalize: rimuove HTML residuo, quoted-replies, firme, disclaimer
+                // 2) sanitize: anti-injection redact
+                // 3) wrap: fence non-trusted
+                const bodyNorm = normalizeContent(msg.body_text, { source: "email-inbound", maxChars: 600 });
+                const bodySafe = sanitizeForPrompt(bodyNorm.text, { source: "email-inbound", maxChars: 150, policy: "redact" });
                 if (bodySafe.findings.length) injectionFindings.push(...bodySafe.findings);
                 // Wrap come blocco non-trusted: il modello deve trattarlo come dati, non istruzioni.
                 contextBlock += `  ${wrapUntrusted(bodySafe.text + "...", "EMAIL BODY", "email-inbound")}\n`;

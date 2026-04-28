@@ -133,11 +133,26 @@ Consider the channel context when evaluating tone and intent.`;
       }
       const finalSystemPrompt = systemPrompt + promptLabBlock;
 
+      // Normalizza+sanitizza il contenuto inbound prima di iniettarlo nel prompt:
+      // rimuove HTML, quoted-replies, firme, OCR/zero-width noise; poi anti-injection.
+      const { normalizeContent } = await import("../_shared/contentNormalizer.ts");
+      const { safeWrap } = await import("../_shared/promptSanitizer.ts");
+      const channelSource: "email-inbound" | "whatsapp-message" | "linkedin-message" =
+        channel === "whatsapp" ? "whatsapp-message"
+        : channel === "linkedin" ? "linkedin-message"
+        : "email-inbound";
+      const subjNorm = normalizeContent(subject || "", { source: channelSource, maxChars: 300 }).text;
+      const bodyNorm = normalizeContent(body_text || "", { source: channelSource, maxChars: 3000 });
+      const { block: bodyBlock } = safeWrap(bodyNorm.text, "INBOUND BODY", {
+        source: channelSource,
+        policy: "redact",
+      });
+
       const userPrompt = `Channel: ${channel}
 From: ${from_address}
-Subject: ${subject || "(none)"}
+Subject: ${subjNorm || "(none)"}
 Body:
-${(body_text || "").substring(0, 3000)}`;
+${bodyBlock}`;
 
       try {
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
