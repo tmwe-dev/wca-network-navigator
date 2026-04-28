@@ -8841,6 +8841,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      ai_introspect_schema: { Args: { table_names: string[] }; Returns: Json }
       check_channel_rate_limit: {
         Args: { _channel: string; _user_id: string }
         Returns: Json

@@ -13,6 +13,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { DB_SCHEMA, ALLOWED_TABLES, type TableDescriptor } from "@/v2/agent/kb/dbSchema";
+import { getLiveColumns } from "./liveSchemaClient";
 
 export const QueryFilterSchema = z.object({
   column: z.string(),
@@ -58,7 +59,7 @@ function findTable(name: string): TableDescriptor | undefined {
   return DB_SCHEMA.find((t) => t.name === name);
 }
 
-function validatePlan(plan: QueryPlan): TableDescriptor {
+async function validatePlan(plan: QueryPlan): Promise<TableDescriptor> {
   if (!ALLOWED_TABLES.has(plan.table)) {
     throw new QueryValidationError(
       `Tabella "${plan.table}" non consentita. Tabelle disponibili: ${[...ALLOWED_TABLES].join(", ")}`,
@@ -68,7 +69,13 @@ function validatePlan(plan: QueryPlan): TableDescriptor {
   const table = findTable(plan.table);
   if (!table) throw new QueryValidationError(`Tabella "${plan.table}" non trovata nello schema.`);
 
-  const validColumns = new Set(table.columns.map((c) => c.name));
+  // Carica colonne reali dal DB (cache 5min). Se l'introspezione fallisce,
+  // fail-open: usa il descrittore TS come fallback (legacy).
+  const liveMap = await getLiveColumns([...ALLOWED_TABLES]);
+  const liveCols = liveMap.get(plan.table);
+  const validColumns = liveCols && liveCols.length > 0
+    ? new Set(liveCols.map((c) => c.name))
+    : new Set(table.columns.map((c) => c.name));
 
   for (const f of plan.filters) {
     if (!validColumns.has(f.column)) {
@@ -102,7 +109,7 @@ export async function executeQueryPlan(rawPlan: unknown): Promise<ExecutorResult
     throw new QueryValidationError(`QueryPlan malformato: ${parsed.error.message}`);
   }
   const plan = parsed.data;
-  const table = validatePlan(plan);
+  const table = await validatePlan(plan);
 
   // Determina colonne da selezionare
   const selectCols = plan.columns?.length

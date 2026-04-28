@@ -5,169 +5,98 @@ import "../_shared/llmFetchInterceptor.ts";
  * Input:  { prompt: string, history?: {role,content}[] }
  * Output: { table, columns?, filters[], sort?, limit, title?, rationale? }
  *
- * L'AI ha conoscenza COMPLETA dello schema DB (iniettato nel system prompt)
- * e produce query SELECT che verranno eseguite client-side dal safe executor.
+ * L'AI riceve lo SCHEMA REALE letto live dal DB (RPC `ai_introspect_schema`,
+ * cache 5 min) e una whitelist di tabelle. Nessun esempio rigido, nessuna
+ * regola hardcoded. L'AI decide tabella, filtri, valori enum.
  *
- * Solo SELECT consentite. Mai mutazioni.
+ * Guardrail (in codice, non nel prompt):
+ *   - Solo tabelle whitelisted (ALLOWED_TABLES)
+ *   - Solo SELECT; nessuna mutazione
+ *   - Validazione colonne/enum delegata al safe executor client-side
  */
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { loadLiveSchema } from "../_shared/liveSchemaLoader.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-// Schema DB inline (deve restare allineato a src/v2/agent/kb/dbSchema.ts)
-const SCHEMA_TEXT = `
-📊 partners
-  Scopo: Partner della rete WCA (~25.000 record). Logistica/spedizionieri.
-  Colonne: id, company_name, country_code (ISO-2: US, IT, CN, DE...), country_name, city,
-           email, phone, mobile, website, rating (0-5), is_active, is_favorite,
-           lead_status [new|first_touch_sent|holding|engaged|qualified|negotiation|converted|archived|blacklisted],
-           office_type, interaction_count, last_interaction_at, member_since, created_at
+/**
+ * Lista tabelle business consultabili dall'AI. Unica fonte di verità: questa
+ * costante. Per aggiungerne una nuova: aggiungi qui + verifica che esista nel DB.
+ * Lo schema (colonne, enum) viene caricato live tramite RPC.
+ */
+const ALLOWED_TABLES = [
+  "partners",
+  "imported_contacts",
+  "outreach_queue",
+  "activities",
+  "channel_messages",
+  "agents",
+  "agent_tasks",
+  "kb_entries",
+  "business_cards",
+  "download_jobs",
+  "campaign_jobs",
+] as const;
 
-📊 imported_contacts
-  Scopo: Contatti CRM (clienti, lead, prospect).
-  Colonne: id, name, company_name, email, phone, mobile, country, origin,
-           lead_status [new|first_touch_sent|holding|engaged|qualified|negotiation|converted|archived|blacklisted],
-           interaction_count, last_interaction_at, wca_partner_id, created_at
+/** Hint di scopo per ciascuna tabella — una riga, non binari. L'AI sceglie. */
+const TABLE_PURPOSE: Record<string, string> = {
+  partners: "Partner della rete WCA (logistica/spedizionieri internazionali, ~25k record).",
+  imported_contacts: "Contatti CRM importati (clienti, lead, prospect).",
+  outreach_queue: "Coda messaggi outbound (email/whatsapp/linkedin).",
+  activities: "Attività CRM (chiamate, follow-up, meeting, reminder).",
+  channel_messages: "Messaggi sincronizzati inbound+outbound multicanale.",
+  agents: "Agenti AI configurati nel sistema.",
+  agent_tasks: "Task assegnati agli agenti AI.",
+  kb_entries: "Knowledge Base interna (doctrine, manuali).",
+  business_cards: "Biglietti da visita digitalizzati via OCR.",
+  download_jobs: "Job di sincronizzazione massiva da fonti esterne.",
+  campaign_jobs: "Job di campagne outbound assegnati a operatori.",
+};
 
-📊 outreach_queue
-  Scopo: Coda messaggi outbound (email/wa/li).
-  Colonne: id, partner_id, channel [email|whatsapp|linkedin], recipient_email, subject,
-           status [pending|approved|sent|delivered|replied|bounced|failed|running],
-           scheduled_at, processed_at, replied_at, created_at
+function buildSystemPrompt(liveSchema: string): string {
+  const tableList = ALLOWED_TABLES
+    .map((t) => `  • ${t} — ${TABLE_PURPOSE[t] ?? ""}`)
+    .join("\n");
 
-📊 activities
-  Scopo: Attività CRM (call, follow-up, meeting).
-  Colonne: id, title, description, activity_type, status [pending|in_progress|completed|cancelled],
-           priority [low|medium|high|urgent], partner_id, due_date, scheduled_at, completed_at,
-           response_received, created_at
+  return `Sei un Query Planner per un CRM logistico. Ricevi una richiesta in linguaggio naturale e produci un piano di query SELECT in JSON.
 
-📊 channel_messages
-  Scopo: Messaggi sincronizzati (inbound + outbound) email/wa/li.
-  Colonne: id, channel, direction [inbound|outbound], from_address, to_address, subject,
-           body_text, email_date, read_at, partner_id, category
+TABELLE CONSULTABILI:
+${tableList}
 
-📊 agents
-  Scopo: Agenti AI configurati.
-  Colonne: id, name, role, is_active, avatar_emoji, created_at
+SCHEMA REALE (live dal DB — fidati di questo, NON di nomi che ricordi):
+${liveSchema || "(schema non disponibile, usa solo i nomi tabella sopra)"}
 
-📊 agent_tasks
-  Scopo: Task assegnati agli agenti AI.
-  Colonne: id, agent_id, task_type, description,
-           status [proposed|pending|running|completed|failed|cancelled],
-           scheduled_at, started_at, completed_at, created_at
-
-📊 kb_entries
-  Scopo: Knowledge Base / doctrine.
-  Colonne: id, title, content, category, chapter, priority, is_active, access_count
-
-📊 business_cards
-  Scopo: Biglietti da visita OCR.
-  Colonne: id, contact_name, company_name, email, phone, position, location, event_name,
-           match_status [matched|unmatched|needs_review], match_confidence,
-           matched_partner_id, lead_status, created_at
-
-📊 download_jobs
-  Scopo: Job sync massive.
-  Colonne: id, job_type, status [pending|running|completed|failed|cancelled],
-           country_code, progress, created_at, completed_at
-
-📊 campaign_jobs
-  Scopo: Job campagne outbound.
-  Colonne: id, batch_id, company_name, country_code, country_name, city, email,
-           job_type [call|email|visit|qualify], status [pending|in_progress|completed|skipped],
-           partner_id, created_at
-`;
-
-const SYSTEM_PROMPT = `Sei un AI Query Planner per un CRM logistico.
-Riceverai una richiesta utente in italiano e DEVI tradurla in un QueryPlan JSON STRUTTURATO da eseguire su Supabase.
-
-═══ SCHEMA DATABASE ═══
-${SCHEMA_TEXT}
-
-═══ FORMATO OUTPUT (OBBLIGATORIO) ═══
-Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo questo schema:
+FORMATO OUTPUT (JSON puro, niente markdown):
 {
-  "table": "<nome_tabella_whitelisted>",
-  "columns": ["col1","col2",...],            // opzionale, omettere = colonne predefinite
-  "filters": [
-    {"column":"<nome>","op":"<eq|neq|gt|gte|lt|lte|ilike|in|is>","value":<valore>}
-  ],
-  "sort": {"column":"<nome>","ascending":false},  // opzionale
-  "limit": 50,                                    // 1-200, default 50
-  "title": "<titolo breve risultato>",
-  "rationale": "<perché hai scelto questi filtri, 1 frase>"
+  "table": "<nome_tabella>",
+  "columns": ["col1","col2"],                         // opzionale
+  "filters": [{"column":"<nome>","op":"<op>","value":<v>}],
+  "sort": {"column":"<nome>","ascending":false},      // opzionale
+  "limit": 50,
+  "title": "<titolo breve>",
+  "rationale": "<1 frase: perché questa tabella, perché questi filtri>"
 }
 
-═══ REGOLE ═══
-1. SOLO SELECT. Mai INSERT/UPDATE/DELETE. Mai colonne fuori schema.
-2. Mappa nomi paesi a codici ISO-2 (USA/Stati Uniti→US, Cina→CN, Germania→DE, Italia→IT, ecc.) per partners.country_code.
-3. Per ricerche testuali su company_name/name/title usa "ilike" (il safe executor wrappa con % automaticamente).
-   - L'executor è ANCHE accent-insensitive: "Arcanà" matcha "Arcana", "Acana", "Arcana'". NON serve quindi rimuovere accenti manualmente.
-   - PERSONA + AZIENDA: quando l\u0027utente chiede "Mario Rossi di Acme", NON combinare AND su \`name\` e \`company_name\`: il dato è spesso disgiunto. Cerca SOLO sul COGNOME (ultimo token) in \`name\`, l\u0027azienda è ridondante. Esempio: "Luca Arcanà di Transport Management" → filters = [{column:"name", op:"ilike", value:"arcanà"}], NON aggiungere company_name.
-4. Se l'utente chiede "ultimi N", usa sort created_at desc + limit N.
-5. Se l'utente chiede "più di X", "almeno X", usa gt/gte.
-6. Per booleani (is_active, response_received): usa "eq" con true/false.
-7. Per "senza email" / "campo vuoto": usa op "is" con value null.
-8. Se la richiesta è ambigua, scegli la tabella più ovvia e aggiungi il rationale.
-9. Default limit = 50. Cap massimo = 200.
-10. Per campi enum (lead_status, status, channel, ecc.) usa SEMPRE i valori esatti elencati.
-11. Per campaign_jobs.status NON usare mai "active", "draft", "running" o traduzioni libere:
-    - "campagne attive", "in corso", "running" → status IN ["pending", "in_progress"]
-    - "bozze", "draft" → status = "pending"
-    - "completate" → status = "completed"
-    - "saltate" → status = "skipped"
-    Se non ci sono righe, è un risultato vuoto, NON un errore tecnico.
+OPERATORI AMMESSI: eq, neq, gt, gte, lt, lte, ilike, in, is.
+- "ilike" wrappa automaticamente con % ed è accent-insensitive.
+- "in" richiede un array di valori.
+- "is" con value=null per IS NULL.
 
-═══ ESEMPI ═══
-"mostra partner US attivi con rating > 4"
-→ {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"is_active","op":"eq","value":true},{"column":"rating","op":"gt","value":4}],"sort":{"column":"rating","ascending":false},"limit":50,"title":"Partner US attivi rating > 4","rationale":"Country mappato a ISO-2 US, filtro rating numerico"}
+VINCOLI HARD:
+- Solo SELECT. Mai INSERT/UPDATE/DELETE.
+- Solo tabelle dell'elenco sopra.
+- Per colonne enum, usa SOLO i valori elencati nello schema (sotto la colonna in [pipe|separated]).
+- limit max 200, default 50.
 
-"quanti partner abbiamo negli Stati Uniti"
-→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"}],"limit":1,"title":"Conteggio partner USA","rationale":"Conteggio: solo id, count esatto via Supabase"}
-
-"quanti partner a New York" (senza contesto)
-→ {"table":"partners","columns":["id"],"filters":[{"column":"city","op":"ilike","value":"New York"}],"limit":1,"title":"Conteggio partner New York","rationale":"city ilike per match parziale (gestisce varianti tipo 'New York City')"}
-
-"quanti partner USA abbiamo a New York"
-→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"New York"}],"limit":1,"title":"Conteggio partner USA a New York","rationale":"Combinazione country + città"}
-
-"e a Miami?" (CONTESTO TURNO PRECEDENTE: tabella=partners, filtri=[country_code eq \"US\"])
-→ {"table":"partners","columns":["id"],"filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"Miami"}],"limit":1,"title":"Conteggio partner USA a Miami","rationale":"Eredita country_code=US dal contesto, sostituisce/aggiunge filtro city"}
-
-"solo HQ a Los Angeles" (CONTESTO TURNO PRECEDENTE: tabella=partners, filtri=[country_code eq \"US\"])
-→ {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"US"},{"column":"city","op":"ilike","value":"Los Angeles"},{"column":"office_type","op":"ilike","value":"HQ"}],"limit":50,"title":"HQ partner USA a Los Angeles","rationale":"Eredita country, aggiunge city + office_type"}
-
-"ultimi 20 prospect aggiunti"
-→ {"table":"imported_contacts","filters":[],"sort":{"column":"created_at","ascending":false},"limit":20,"title":"Ultimi 20 contatti","rationale":"Ordinamento per data creazione decrescente"}
-
-"contatti senza email"
-→ {"table":"imported_contacts","filters":[{"column":"email","op":"is","value":null}],"limit":50,"title":"Contatti senza email","rationale":"Filtro IS NULL su email"}
-
-"partner italiani con email Gmail"
-→ {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"IT"},{"column":"email","op":"ilike","value":"gmail.com"}],"limit":50,"title":"Partner IT con Gmail","rationale":"ilike per match parziale dominio"}
-
-"trova Luca Arcanà di Transport Management"
-→ {"table":"imported_contacts","filters":[{"column":"name","op":"ilike","value":"arcanà"}],"limit":20,"title":"Contatti cognome Arcanà","rationale":"Cerca solo sul cognome: l'azienda spesso è memorizzata con alias diversi (TMWE vs Transport Management) e l'executor è accent-insensitive"}
-
-"messaggi non letti dell'ultima settimana"
-→ {"table":"channel_messages","filters":[{"column":"direction","op":"eq","value":"inbound"},{"column":"read_at","op":"is","value":null}],"sort":{"column":"email_date","ascending":false},"limit":100,"title":"Inbound non letti","rationale":"direction inbound + read_at null"}
-
-"mostra stato campagne attive"
-→ {"table":"campaign_jobs","filters":[{"column":"status","op":"in","value":["pending","in_progress"]}],"sort":{"column":"created_at","ascending":false},"limit":200,"title":"Campagne attive","rationale":"Le campagne attive corrispondono ai job pending o in_progress"}
-
-"mostra solo campagne in draft"
-→ {"table":"campaign_jobs","filters":[{"column":"status","op":"eq","value":"pending"}],"sort":{"column":"created_at","ascending":false},"limit":200,"title":"Campagne in bozza","rationale":"Draft/bozza viene mappato allo stato pending dei campaign_jobs"}
-
-═══ FOLLOW-UP ELLITTICI ═══
-Se ricevi un CONTESTO TURNO PRECEDENTE (lo trovi nel system prompt esteso), e il nuovo prompt utente è breve / ellittico (es. "e a New York?", "anche a Miami", "solo gli attivi"), DEVI:
-- Ereditare la tabella del contesto.
-- Ereditare i filtri compatibili (country, status) dal contesto.
-- Sovrascrivere SOLO i filtri esplicitamente cambiati dal nuovo prompt (es. città).
-- Mantenere il mode (count/list) coerente col contesto, salvo sia chiaramente cambiato.
-
-Se la richiesta richiede operazioni di scrittura, scansioni esterne o azioni, rispondi:
-{"table":"INVALID","filters":[],"limit":1,"title":"N/A","rationale":"Richiesta non è una query di lettura"}
-`;
+LIBERTÀ:
+- Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
+- Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
+- Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}.
+- Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
+- Per ricerche testuali (nomi azienda, persona, città) usa ilike. Per nomi paese usa il codice ISO-2 se la colonna si chiama country_code, altrimenti il nome libero.
+- Per "ultimi N" usa sort desc + limit N. Per "quanti/totale" usa columns:["id"] + limit:1 (il count viene dal DB).
+- Zero risultati è un risultato valido, NON un errore.`;
+}
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -195,8 +124,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Inject conversational context (previous query shape) directly into the system prompt
-    const systemWithContext = SYSTEM_PROMPT + (contextHint ? `\n\n${contextHint}` : "");
+    // Carica schema reale dal DB (cache 5min)
+    const { rendered: liveSchema } = await loadLiveSchema(ALLOWED_TABLES);
+    const baseSystem = buildSystemPrompt(liveSchema);
+    const systemWithContext = baseSystem + (contextHint ? `\n\nCONTESTO TURNO PRECEDENTE:\n${contextHint}` : "");
 
     const messages = [
       { role: "system", content: systemWithContext },
