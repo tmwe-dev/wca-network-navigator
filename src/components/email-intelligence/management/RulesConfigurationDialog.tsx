@@ -57,10 +57,7 @@ export function RulesConfigurationDialog({
         const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) throw new Error("Non autenticato");
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sb = supabase as any;
-        const { data, error } = await sb
-          .from("email_address_rules")
+        const { data, error } = await untypedFrom("email_address_rules")
           .select("auto_action, auto_action_params")
           .eq("user_id", user.id)
           .in("email_address", senderEmails);
