@@ -16,7 +16,7 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
 import {
-  Menu, ArrowRight, Plus, DatabaseZap, Activity,
+  Menu, Command, ArrowRight, Plus, DatabaseZap, Activity,
   FlaskConical, Sparkles, WifiOff, Globe2,
 } from "lucide-react";
 
@@ -37,6 +37,7 @@ interface GlobalSyncState {
 
 interface Props {
   onToggleSidebar: () => void;
+  onOpenCommandPalette: () => void;
   onAiClick: () => void;
   onAddContact: () => void;
   onAgentDash: () => void;
@@ -46,7 +47,7 @@ interface Props {
 }
 
 export function LayoutHeader({
-  onToggleSidebar, onAiClick, onAddContact, onAgentDash, onTestExt,
+  onToggleSidebar, onOpenCommandPalette, onAiClick, onAddContact, onAgentDash, onTestExt,
   outreachQueue, globalSync,
 }: Props): React.ReactElement {
   const navigate = useNavigate();
@@ -78,6 +79,19 @@ export function LayoutHeader({
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onToggleSidebar} aria-label="Toggle sidebar">
           <Menu className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={onOpenCommandPalette}
+          aria-label="Apri Command"
+        >
+          <Command className="h-3.5 w-3.5" />
+          <span>Command</span>
+          <kbd className="hidden lg:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
         </Button>
         <ActiveProcessIndicator />
         {!isOnline && (
