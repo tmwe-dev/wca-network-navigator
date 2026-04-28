@@ -3637,6 +3637,48 @@ export type Database = {
           },
         ]
       }
+      edge_metrics: {
+        Row: {
+          context: Json | null
+          created_at: string
+          duration_ms: number | null
+          event_type: string
+          function_name: string
+          id: string
+          message: string | null
+          severity: string
+          status_code: number | null
+          tags: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          event_type: string
+          function_name: string
+          id?: string
+          message?: string | null
+          severity?: string
+          status_code?: number | null
+          tags?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          duration_ms?: number | null
+          event_type?: string
+          function_name?: string
+          id?: string
+          message?: string | null
+          severity?: string
+          status_code?: number | null
+          tags?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_address_rules: {
         Row: {
           address: string | null
