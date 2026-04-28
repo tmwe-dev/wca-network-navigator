@@ -94,6 +94,12 @@ function describeFilters(filters: readonly FilterShape[]): string {
       parts.push("attivi");
     } else if (f.column === "lead_status" && typeof f.value === "string") {
       parts.push(`con stato "${f.value}"`);
+    } else if (f.column === "status") {
+      if (f.op === "in" && Array.isArray(f.value)) {
+        parts.push(`con stato ${f.value.map((v) => `"${String(v)}"`).join(" o ")}`);
+      } else if (typeof f.value === "string") {
+        parts.push(`con stato "${f.value}"`);
+      }
     } else if (f.column === "office_type" && typeof f.value === "string") {
       parts.push(`tipo ${f.value}`);
     }
@@ -134,6 +140,13 @@ function suggestedActionsFor(table: string, filters: readonly FilterShape[]): Su
     return [
       { label: `📤 Mostra in coda`, prompt: `mostra i prossimi 20 outreach in coda` },
       { label: `❌ Solo falliti`, prompt: `mostra gli outreach falliti recenti` },
+    ];
+  }
+  if (table === "campaign_jobs") {
+    return [
+      { label: `📋 Mostra tutte`, prompt: `mostra tutte le campagne` },
+      { label: `⏳ Solo in coda`, prompt: `mostra campagne in stato pending` },
+      { label: `✅ Solo completate`, prompt: `mostra campagne completate` },
     ];
   }
   return [];
