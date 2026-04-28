@@ -76,6 +76,18 @@ function humanLabel(col: string): string {
     .replace(/\bId\b/g, "ID");
 }
 
+function normalizeCampaignStatusPrompt(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (!/campagn|campaign/.test(lower)) return prompt;
+  if (/\b(attiv|in corso|running)\b/.test(lower)) {
+    return `${prompt}\nNota tecnica: per campaign_jobs, "campagne attive/in corso" significa status in [pending, in_progress]. Non usare status active.`;
+  }
+  if (/\b(bozz|draft)\b/.test(lower)) {
+    return `${prompt}\nNota tecnica: per campaign_jobs, "bozza/draft" significa status pending. Non usare status draft.`;
+  }
+  return prompt;
+}
+
 export const aiQueryTool: Tool = {
   id: "ai-query",
   label: "Ricerca AI",
@@ -144,10 +156,11 @@ export const aiQueryTool: Tool = {
             }
             return prompt;
           })();
+    const plannerPrompt = normalizeCampaignStatusPrompt(naturalPrompt);
 
     // 1) Genera QueryPlan via AI (passing optional contextHint for follow-ups)
     const planRes = await planQuery({
-      prompt: naturalPrompt,
+      prompt: plannerPrompt,
       history: context?.history,
       contextHint: context?.contextHint,
     });
@@ -162,6 +175,19 @@ export const aiQueryTool: Tool = {
     }
 
     const plan = planRes.value;
+
+    if (plan.table === "campaign_jobs") {
+      const lower = naturalPrompt.toLowerCase();
+      if (/\b(attiv|in corso|running)\b/.test(lower)) {
+        plan.filters = plan.filters.filter((f) => !(f.column === "status" && f.value === "active"));
+        if (!plan.filters.some((f) => f.column === "status")) {
+          plan.filters.push({ column: "status", op: "in", value: ["pending", "in_progress"] });
+        }
+      } else if (/\b(bozz|draft)\b/.test(lower)) {
+        plan.filters = plan.filters.filter((f) => f.column !== "status");
+        plan.filters.push({ column: "status", op: "eq", value: "pending" });
+      }
+    }
 
     if (plan.table === "INVALID") {
       return {
