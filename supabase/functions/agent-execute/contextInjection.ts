@@ -94,6 +94,9 @@ export async function buildContextBlock(
   allAgents: AgentRow[] | null
 ): Promise<string> {
   let contextBlock = "";
+  // Accumulatore di pattern di prompt-injection trovati nei contenuti non-trusted.
+  // Logato a fine funzione per audit (vedi summarizeFindings).
+  const injectionFindings: SanitizeFinding[] = [];
 
   try {
     const { data: settingsData } = await supabase
@@ -261,9 +264,14 @@ export async function buildContextBlock(
             contextBlock += `\n${addr} (ultime ${Math.min(msgs.length, 3)}):\n`;
             for (const msg of msgs.slice(0, 3)) {
               const date = new Date(msg.created_at).toLocaleDateString("it-IT");
-              contextBlock += `  [${date}] ${msg.subject || "(nessun subject)"}\n`;
+              const subjSafe = sanitizeForPrompt(msg.subject, { source: "email-inbound", maxChars: 200, policy: "redact" });
+              if (subjSafe.findings.length) injectionFindings.push(...subjSafe.findings);
+              contextBlock += `  [${date}] ${subjSafe.text || "(nessun subject)"}\n`;
               if (msg.body_text) {
-                contextBlock += `  ${msg.body_text.slice(0, 150)}...\n`;
+                const bodySafe = sanitizeForPrompt(msg.body_text, { source: "email-inbound", maxChars: 150, policy: "redact" });
+                if (bodySafe.findings.length) injectionFindings.push(...bodySafe.findings);
+                // Wrap come blocco non-trusted: il modello deve trattarlo come dati, non istruzioni.
+                contextBlock += `  ${wrapUntrusted(bodySafe.text + "...", "EMAIL BODY", "email-inbound")}\n`;
               }
             }
           }
@@ -374,6 +382,21 @@ export async function buildContextBlock(
     }
   } catch (e) {
     console.error("Context injection error:", e);
+  }
+
+  // Audit log dei pattern di prompt-injection trovati nei contenuti non-trusted
+  // (memoria, KB, email inbound). NON blocca mai il flusso: il sanitizer ha già
+  // applicato la policy "redact" sui pattern high/medium.
+  if (injectionFindings.length > 0) {
+    const summary = summarizeFindings(injectionFindings);
+    console.warn(JSON.stringify({
+      level: "warn",
+      event: "prompt_injection_detected",
+      fn: "agent-execute/contextInjection",
+      userId,
+      agentId,
+      ...summary,
+    }));
   }
 
   return contextBlock;
