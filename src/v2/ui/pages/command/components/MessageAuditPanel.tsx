@@ -39,16 +39,18 @@ export default function MessageAuditPanel({ audit }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 text-[10px] text-muted-foreground/100 hover:text-foreground/90 font-mono uppercase tracking-[0.18em] transition-colors"
+        className="w-full flex items-start gap-2 text-left text-[10px] text-muted-foreground/100 hover:text-foreground/90 font-mono transition-colors"
       >
-        <ScrollText className="w-3 h-3 text-primary/80" />
-        <span>Audit</span>
-        <span className="text-foreground/60 normal-case tracking-normal font-light">
-          {phaseLabel[audit.phase]} · {stepCount} step{stepCount !== 1 ? "s" : ""} · driver: {audit.driver}
-          {totalSec ? ` · ${totalSec}` : ""}
-        </span>
+        <ScrollText className="w-3 h-3 text-primary/80 mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <span className="uppercase tracking-[0.18em]">Audit</span>
+          <span className="text-foreground/60 normal-case tracking-normal font-light text-[10px] leading-snug">
+            {phaseLabel[audit.phase]} · {stepCount} step{stepCount !== 1 ? "s" : ""} · driver: {audit.driver}
+            {totalSec ? ` · ${totalSec}` : ""}
+          </span>
+        </div>
         <ChevronRight
-          className={`ml-auto w-3 h-3 text-muted-foreground/80 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`mt-0.5 shrink-0 w-3 h-3 text-muted-foreground/80 transition-transform ${open ? "rotate-90" : ""}`}
         />
       </button>
 
