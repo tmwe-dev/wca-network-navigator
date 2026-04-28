@@ -70,9 +70,9 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 
 | # | Doc | Intervento |
 |---|---|---|
-| P5.1 | CRM1 | Deduplicazione all'import: check `imported_contacts.email` (lower) + `company_name` fuzzy in `useImportWizard`. Merge mode opzionale |
-| P5.2 | CRM2 | Post-transfer in `useTransferToPartners`: marcare `imported_contacts.transferred_to_partner_id` (soft-link, NO delete fisica per `mem://constraints/no-physical-delete`) |
-| P5.3 | CRM4 | Cron pg_cron per `import_logs` stuck > 30min → status `expired` |
+| P5.1 ✅ | CRM1 | RPC `find_import_duplicates(user_id, emails[], company_names[])` + integrazione in `useImportWizard.handleConfirmMapping` (warn non-bloccante via toast). Match: email in imported_contacts (utente) + email/company in partners (globale) |
+| P5.2 ✅ | CRM2 | Colonne `imported_contacts.transferred_to_partner_id` + `transferred_at`. DAL `linkContactToPartner()` sostituisce `markContactTransferred` in `useTransferToPartners` e `useCreateActivitiesFromImport`. NO delete fisica |
+| P5.3 ✅ | CRM4 | Funzione `expire_stuck_import_logs()` + cron `*/15 * * * *` (jobid=49) → marca `pending|processing` > 30min come `expired`. Cf. `mem://features/p5-crm-lifecycle-2026-04-28` |
 
 ### Priorità 6 — TS strict + Testing (incrementale, in background)
 
