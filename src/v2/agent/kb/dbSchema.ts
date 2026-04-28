@@ -74,6 +74,10 @@ export const DB_SCHEMA: readonly TableDescriptor[] = [
       { name: "phone", type: "string", description: "Telefono" },
       { name: "mobile", type: "string", description: "Cellulare" },
       { name: "country", type: "string", description: "Paese (formato libero o ISO)" },
+      { name: "city", type: "string", description: "Città", searchable: true },
+      { name: "address", type: "string", description: "Indirizzo" },
+      { name: "zip_code", type: "string", description: "CAP" },
+      { name: "position", type: "string", description: "Ruolo / posizione" },
       { name: "origin", type: "string", description: "Origine del contatto (es. fiera, import, web)" },
       {
         name: "lead_status",
