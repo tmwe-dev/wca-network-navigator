@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 
 const USER_AGENT = "WCA-NetworkNavigator/1.0";
 const FETCH_TIMEOUT_MS = 25_000;
@@ -84,11 +85,11 @@ Deno.serve(async (req) => {
     }
 
     let parsed: URL;
-    try { parsed = new URL(url); } catch {
-      return new Response(JSON.stringify({ error: "Invalid URL" }), { status: 400, headers });
-    }
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      return new Response(JSON.stringify({ error: "Only http/https URLs" }), { status: 400, headers });
+    try {
+      parsed = assertSafePublicUrl(url); // SSRF guard P1.4
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "invalid_url";
+      return new Response(JSON.stringify({ error: msg }), { status: 400, headers });
     }
 
     /* ── rate limit ── */

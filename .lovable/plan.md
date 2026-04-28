@@ -35,10 +35,10 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 
 | # | Doc | Intervento | File |
 |---|---|---|---|
-| P1.1 | C6 | Sostituire CORS `*` con `getCorsHeaders()` dinamico nelle 5 funzioni residue: `browser-action`, `agentic-decide`, `agent-loop`, `sherlock-extract`, `ai-query-planner` | `supabase/functions/<name>/index.ts` |
-| P1.2 | C7 | Verificare `save-wca-cookie`: rifiutare anon key, richiedere JWT verificato (riusare `_shared/extensionAuth.ts`) | `save-wca-cookie/index.ts` |
-| P1.3 | E2/E3 | Audit funzioni residue senza JWT verification: `analyze-import-structure`, `elevenlabs-*`. Aggiungere `requireExtensionAuth` o decode JWT locale | edge functions elencate |
-| P1.4 | E6 | SSRF guard per `deep-search-*` ed `enrich-partner-website`: estendere `_shared/inputValidator.ts` con allowlist domini + blocklist IP privati | `_shared/inputValidator.ts` + caller |
+| P1.1 ✅ | C6 | CORS `*` rimossi (8 funzioni). Cf. `mem://security/cors-wildcard-cleanup-2026-04-28` |
+| P1.2 ✅ | C7 | `save-wca-cookie` ora usa `requireExtensionAuth` (JWT preferito, anon-key gated da CORS). Limite payload 20KB |
+| P1.3 ✅ | E2/E3 | `analyze-import-structure` + `elevenlabs-conversation-token` ora richiedono JWT valido (no anon-key, no soft-fail) |
+| P1.4 ✅ | E6 | SSRF guard `assertSafePublicUrl()` in `_shared/inputValidator.ts` (14 test verdi). Applicata a `scrape-website` e `enrich-partner-website` |
 | P1.5 | B4/B5 | LinkedIn bridge: validare `event.origin` con extension ID whitelist, gate `sendMessage` dietro conferma utente (riusare `prompt_injection_reviews` o `approvalFlow`) | `src/hooks/useLinkedInExtensionBridge.ts` |
 
 ### Priorità 2 — Schema DB residuo (1 giorno)

@@ -25,12 +25,24 @@ serve(async (req) => {
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   let userId: string | null = null;
-  if (token && token !== SUPABASE_ANON_KEY) {
-    try {
-      const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const { data } = await supabaseAuth.auth.getUser(token);
-      userId = data?.user?.id || null;
-    } catch { /* best effort */ }
+  if (!token || token === SUPABASE_ANON_KEY) {
+    return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
+  }
+  try {
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data, error: authErr } = await supabaseAuth.auth.getUser(token);
+    userId = data?.user?.id || null;
+    if (authErr || !userId) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+        status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+      });
+    }
+  } catch {
+    return new Response(JSON.stringify({ error: "Authentication check failed" }), {
+      status: 401, headers: { ...dynCors, "Content-Type": "application/json" },
+    });
   }
 
   try {
