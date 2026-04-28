@@ -275,6 +275,7 @@ export const queryKeys = {
     },
     allForCapabilities: () => ["agents-for-capabilities"] as const,
     capabilities: (agentId?: string) => ["agent-capabilities", agentId] as const,
+    persona: (agentId?: string) => ["agent-persona-lab", agentId] as const,
   },
 
   // ── Missions ──────────────────────────────────────────
