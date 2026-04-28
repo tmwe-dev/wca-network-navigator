@@ -34,6 +34,7 @@ interface SidebarProps {
 export function LayoutSidebarNav({
   profileName, wcaStatusColor, wcaStatusLabel, wcaSessionActive,
   onWcaReconnect, isDark, onToggleTheme, onSignOut, onMobileClose,
+  onOpenCommandPalette,
 }: SidebarProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
