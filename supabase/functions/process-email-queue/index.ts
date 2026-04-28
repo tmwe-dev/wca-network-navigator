@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { runPostSendPipeline } from "../_shared/postSendPipeline.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { checkSmtpRateLimit } from "../_shared/smtpRateLimit.ts";
 
 
 Deno.serve(async (req) => {
@@ -150,6 +151,21 @@ Deno.serve(async (req) => {
       // Check if paused/cancelled
       const { data: freshDraft } = await supabase.from("email_drafts").select("queue_status").eq("id", draft_id).single();
       if (freshDraft?.queue_status === "paused" || freshDraft?.queue_status === "cancelled") {
+        break;
+      }
+
+      // ── P3.3: SMTP rate limit per-utente (no-op se kill-switch off) ──
+      const rl = await checkSmtpRateLimit(supabase, userId);
+      if (!rl.allowed) {
+        console.log(
+          `[pq] rate limit hit user=${userId} sent_last_hour=${rl.sentLastHour} cap=${rl.cap} — pausing batch`,
+        );
+        // Lascia gli item in 'pending' per il prossimo invocation;
+        // marca il draft come paused così il dispatcher lo riprenderà.
+        await supabase
+          .from("email_drafts")
+          .update({ queue_status: "paused" })
+          .eq("id", draft_id);
         break;
       }
 
