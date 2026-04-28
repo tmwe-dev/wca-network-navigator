@@ -24,6 +24,7 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import { SCENARIOS, QUICK_PROMPTS, detectScenario } from "./command/scenarios";
+import { toast as sonnerToast } from "sonner";
 
 const CommandPage = () => {
   const nav = useNavigate();
@@ -47,7 +48,6 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (voice.error) {
-      const { toast: sonnerToast } = require("sonner");
       sonnerToast.error(voice.error);
     }
   }, [voice.error]);
@@ -56,16 +56,23 @@ const CommandPage = () => {
     pageState.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [pageState.messages]);
 
-  // Speak the latest assistant message via ElevenLabs (skips thinking placeholders).
+  // Speak the latest assistant message via ElevenLabs.
+  // Prefer the conversational `spokenSummary` produced by the commentary layer;
+  // fall back to `content` only if missing. Skips thinking placeholders.
   useEffect(() => {
     const last = pageState.messages[pageState.messages.length - 1];
     if (!last || last.role !== "assistant" || last.thinking) return;
+    const spoken = (last.spokenSummary ?? "").trim();
+    if (spoken) {
+      voiceOut.speak(spoken);
+      return;
+    }
     if (!last.content || !last.content.trim()) return;
-    // Strip markdown for cleaner speech.
     const clean = last.content
       .replace(/[*_`#>]/g, "")
       .replace(/\n+/g, ". ")
-      .trim();
+      .trim()
+      .slice(0, 200);
     voiceOut.speak(clean);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageState.messages.length]);
