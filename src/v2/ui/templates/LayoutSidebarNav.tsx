@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
+import { OrphanPagesNav } from "./OrphanPagesNav";
 
 /** Backward-compatible export for any code referencing navGroups */
 export const navGroups = navGroupsDef.map((g) => ({
@@ -110,6 +111,7 @@ export function LayoutSidebarNav({
             );
           })}
         </div>
+        <OrphanPagesNav onNavigate={onMobileClose} />
       </nav>
       <div className="p-2 border-t border-border/50 space-y-1">
         <button
