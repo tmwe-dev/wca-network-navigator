@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useVoiceInput } from "@/v2/ui/pages/command/hooks/useVoiceInput";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
+const log = createLogger("useKBSupervisorState");
+
 import {
   findKbEntries,
   upsertKbEntry,
@@ -116,7 +119,7 @@ export function useKBSupervisorState() {
       const docs = await findKbEntries();
       setDocumentList(docs as KBDocument[]);
     } catch (err) {
-      console.error("loadDocuments error:", err);
+      log.error("loadDocuments error:", err);
       toast.error("Errore caricamento documenti KB");
     }
   }, []);
@@ -159,7 +162,7 @@ export function useKBSupervisorState() {
         setIsSpeaking(false);
       }
     } catch (err) {
-      console.error("TTS error:", err);
+      log.error("TTS error:", err);
       setIsSpeaking(false);
     }
   }, [voiceEnabled, userId]);
@@ -180,7 +183,7 @@ export function useKBSupervisorState() {
       setCanvasTab("audit");
       toast.success(`Audit completato: ${result.summary?.total_issues ?? 0} issues trovate`);
     } catch (err) {
-      console.error("Audit error:", err);
+      log.error("Audit error:", err);
       setAuditStatus("idle");
       toast.error("Errore durante l'audit");
     }
@@ -259,7 +262,7 @@ export function useKBSupervisorState() {
 
       await speakResponse(result.content ?? "");
     } catch (err) {
-      console.error("Supervisor chat error:", err);
+      log.error("Supervisor chat error:", err);
       toast.error("Errore comunicazione con il supervisor");
     } finally {
       setIsLoading(false);
@@ -329,7 +332,7 @@ export function useKBSupervisorState() {
       // Notifica AI dell'approvazione
       void sendMessage(`[SISTEMA] Modifica approvata e applicata: ${action.type} su "${action.targetTitle}"`);
     } catch (err) {
-      console.error("Approve error:", err);
+      log.error("Approve error:", err);
       toast.error("Errore nell'applicare la modifica");
     }
   }, [proposedChanges, userId, documentList, loadDocuments, sendMessage]);
@@ -365,7 +368,7 @@ export function useKBSupervisorState() {
       toast.success("Documento salvato");
       await loadDocuments();
     } catch (err) {
-      console.error("Save error:", err);
+      log.error("Save error:", err);
       toast.error("Errore nel salvare");
     }
   }, [activeDocument, userId, loadDocuments]);

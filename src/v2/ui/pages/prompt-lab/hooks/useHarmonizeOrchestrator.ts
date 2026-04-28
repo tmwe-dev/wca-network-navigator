@@ -30,6 +30,9 @@ import {
 } from "@/data/harmonizeRuns";
 import type { ParsedFile } from "../utils/fileParser";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("useHarmonizeOrchestrator");
+
 export type HarmonizePhase =
   | "idle"
   | "collecting"
@@ -188,7 +191,7 @@ export function useHarmonizeOrchestrator(userId: string) {
         const deps = proposal?.dependencies ?? [];
         const missing = deps.filter((d) => !next.has(d));
         if (missing.length > 0) {
-          console.warn("[harmonize] Cannot approve: missing dependency approvals", missing);
+          log.warn("[harmonize] Cannot approve: missing dependency approvals", missing);
           return s; // no-op
         }
         next.add(proposalId);
@@ -251,7 +254,7 @@ export function useHarmonizeOrchestrator(userId: string) {
         return { ok: true };
       } catch (e) {
         const reason = e instanceof Error ? e.message : "salvataggio fallito";
-        console.warn("[harmonize] persist edit failed", reason);
+        log.warn("[harmonize] persist edit failed", reason);
         return { ok: false, reason };
       }
     },
@@ -306,7 +309,7 @@ export function useHarmonizeOrchestrator(userId: string) {
               target_filters: { harmonize_run_id: state.runId, proposal_id: p.id } as never,
             } as never);
           } catch (e) {
-            console.warn("[harmonize] agent_task creation failed", e);
+            log.warn("[harmonize] agent_task creation failed", e);
           }
         }
       } else {
@@ -347,7 +350,7 @@ export function useHarmonizeOrchestrator(userId: string) {
               target_filters: { harmonize_run_id: state.runId, proposal_id: proposal.id } as never,
             } as never);
           } catch (e) {
-            console.warn("[harmonize] agent_task creation failed", e);
+            log.warn("[harmonize] agent_task creation failed", e);
           }
         }
         setState((s) => {

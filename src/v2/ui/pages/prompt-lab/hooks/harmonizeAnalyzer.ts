@@ -22,6 +22,9 @@ import type {
 } from "@/data/harmonizeRuns";
 import type { CollectorOutput, GapCandidate } from "./harmonizeCollector";
 
+import { createLogger } from "@/lib/log";
+const log = createLogger("harmonizeAnalyzer");
+
 const CHUNK_SIZE = 6;
 
 interface UnifiedAssistantResponse {
@@ -170,7 +173,7 @@ export async function callHarmonizer(userPrompt: string, briefing: string = HARM
   // Diagnostica esplicita: se il modello tronca per max_tokens, lo segnaliamo
   // al log così l'operatore in Prompt Lab sa che il chunk va spezzato.
   if (result.finish_reason === "length") {
-    console.warn("[harmonizer] output troncato (finish_reason=length)", {
+    log.warn("[harmonizer] output troncato (finish_reason=length)", {
       usage: result.usage,
       contentLen: result.content?.length ?? 0,
     });
@@ -252,7 +255,7 @@ export function repairTruncatedJson(s: string): string {
 export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): HarmonizeProposal[] {
   const jsonStr = extractJsonObject(raw);
   if (!jsonStr) {
-    console.warn("[harmonizeAnalyzer] no JSON found in response", { rawPreview: raw.slice(0, 200) });
+    log.warn("[harmonizeAnalyzer] no JSON found in response", { rawPreview: raw.slice(0, 200) });
     return [];
   }
   let parsedRaw: unknown;
@@ -262,7 +265,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
     // Tentativo 2: chiusura semplice di stringhe/parentesi (JSON troncato).
     try {
       parsedRaw = JSON.parse(repairTruncatedJson(jsonStr));
-      console.warn("[harmonizeAnalyzer] JSON repaired (truncation closer)", {
+      log.warn("[harmonizeAnalyzer] JSON repaired (truncation closer)", {
         originalEnd: jsonStr.slice(-80),
       });
     } catch (e2) {
@@ -270,11 +273,11 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
       // terminate, virgole pendenti, escape rotti, fence rimasti, ecc.).
       try {
         parsedRaw = JSON.parse(jsonrepair(jsonStr));
-        console.warn("[harmonizeAnalyzer] JSON recovered via jsonrepair", {
+        log.warn("[harmonizeAnalyzer] JSON recovered via jsonrepair", {
           originalEnd: jsonStr.slice(-80),
         });
       } catch (e3) {
-        console.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
+        log.warn("[harmonizeAnalyzer] JSON.parse failed even after repair", {
           err: String(e1),
           repairErr: String(e2),
           jsonrepairErr: String(e3),
@@ -298,7 +301,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
       validProposals.push(r.data);
     } else {
       skipped++;
-      console.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
+      log.warn(`[harmonizeAnalyzer] proposal #${i} skipped`, {
         firstIssue: r.error.issues[0],
         proposalKeys: typeof rawProposals[i] === "object" && rawProposals[i] !== null
           ? Object.keys(rawProposals[i] as object)
@@ -307,7 +310,7 @@ export function parseProposalsFromText(raw: string, chunk: GapCandidate[]): Harm
     }
   }
   if (skipped > 0) {
-    console.warn(
+    log.warn(
       `[harmonizeAnalyzer] ${skipped}/${rawProposals.length} proposte scartate per validazione, ${validProposals.length} valide recuperate`,
     );
   }
@@ -416,7 +419,7 @@ export async function runHarmonizeAnalyzer(
       const raw = await callHarmonizer(userPrompt);
       const parsed = parseProposalsFromText(raw, chunk);
       if (parsed.length === 0) {
-        console.warn("[harmonizeAnalyzer] chunk produced 0 proposals", {
+        log.warn("[harmonizeAnalyzer] chunk produced 0 proposals", {
           gapTitles: chunk.map((g) => g.desired.title),
         });
       }
@@ -426,7 +429,7 @@ export async function runHarmonizeAnalyzer(
       }
     } catch (e) {
       // non bloccare: continua coi prossimi chunk
-      console.error("[harmonizeAnalyzer] chunk failed", e);
+      log.error("[harmonizeAnalyzer] chunk failed", e);
     }
     done++;
     onProgress?.(done, total);
