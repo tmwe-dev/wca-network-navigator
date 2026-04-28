@@ -51,7 +51,7 @@ const TABLE_NOUN_SINGULAR: Record<string, string> = {
   kb_entries: "voce KB",
   business_cards: "biglietto da visita",
   download_jobs: "job",
-  campaign_jobs: "job campagna",
+  campaign_jobs: "campagna",
 };
 
 const TABLE_NOUN_PLURAL: Record<string, string> = {
@@ -65,7 +65,7 @@ const TABLE_NOUN_PLURAL: Record<string, string> = {
   kb_entries: "voci KB",
   business_cards: "biglietti da visita",
   download_jobs: "job",
-  campaign_jobs: "job campagna",
+  campaign_jobs: "campagne",
 };
 
 function noun(table: string, plural: boolean): string {
@@ -94,6 +94,12 @@ function describeFilters(filters: readonly FilterShape[]): string {
       parts.push("attivi");
     } else if (f.column === "lead_status" && typeof f.value === "string") {
       parts.push(`con stato "${f.value}"`);
+    } else if (f.column === "status") {
+      if (f.op === "in" && Array.isArray(f.value)) {
+        parts.push(`con stato ${f.value.map((v) => `"${String(v)}"`).join(" o ")}`);
+      } else if (typeof f.value === "string") {
+        parts.push(`con stato "${f.value}"`);
+      }
     } else if (f.column === "office_type" && typeof f.value === "string") {
       parts.push(`tipo ${f.value}`);
     }
@@ -134,6 +140,13 @@ function suggestedActionsFor(table: string, filters: readonly FilterShape[]): Su
     return [
       { label: `📤 Mostra in coda`, prompt: `mostra i prossimi 20 outreach in coda` },
       { label: `❌ Solo falliti`, prompt: `mostra gli outreach falliti recenti` },
+    ];
+  }
+  if (table === "campaign_jobs") {
+    return [
+      { label: `📋 Mostra tutte`, prompt: `mostra tutte le campagne` },
+      { label: `⏳ Solo in coda`, prompt: `mostra campagne in stato pending` },
+      { label: `✅ Solo completate`, prompt: `mostra campagne completate` },
     ];
   }
   return [];
@@ -208,9 +221,11 @@ export function tryLocalComment(
   if (count === 0) {
     const filtersDesc = describeFilters(filters);
     const word = noun(table, true);
-    const base = filtersDesc
-      ? `Non ho trovato ${word} ${filtersDesc}.`
-      : `Non ho trovato ${word} che corrispondano alla richiesta.`;
+    const base = table === "campaign_jobs" && filters.some((f) => f.column === "status")
+      ? `Non ci sono ${word} ${filtersDesc}.`
+      : filtersDesc
+        ? `Non ho trovato ${word} ${filtersDesc}.`
+        : `Non ho trovato ${word} che corrispondano alla richiesta.`;
     // Build alternative actions: drop the most specific filter (last one) and
     // offer the broader query, plus a "show all" fallback.
     const altActions: SuggestedAction[] = [];
@@ -223,8 +238,8 @@ export function tryLocalComment(
       });
     }
     altActions.push({
-      label: `📋 Mostra tutti i ${word}`,
-      prompt: `mostra tutti i ${word}`,
+      label: table === "campaign_jobs" ? `📋 Mostra tutte` : `📋 Mostra tutti i ${word}`,
+      prompt: table === "campaign_jobs" ? `mostra tutte le campagne` : `mostra tutti i ${word}`,
     });
     const proposal = buildProposalSentence(altActions);
     return {

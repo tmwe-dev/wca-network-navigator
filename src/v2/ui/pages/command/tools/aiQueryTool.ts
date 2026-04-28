@@ -76,6 +76,18 @@ function humanLabel(col: string): string {
     .replace(/\bId\b/g, "ID");
 }
 
+function normalizeCampaignStatusPrompt(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (!/campagn|campaign/.test(lower)) return prompt;
+  if (/\b(attiv\w*|in corso|running)\b/.test(lower)) {
+    return `${prompt}\nNota tecnica: per campaign_jobs, "campagne attive/in corso" significa status in [pending, in_progress]. Non usare status active.`;
+  }
+  if (/\b(bozz\w*|draft)\b/.test(lower)) {
+    return `${prompt}\nNota tecnica: per campaign_jobs, "bozza/draft" significa status pending. Non usare status draft.`;
+  }
+  return prompt;
+}
+
 export const aiQueryTool: Tool = {
   id: "ai-query",
   label: "Ricerca AI",
@@ -144,10 +156,11 @@ export const aiQueryTool: Tool = {
             }
             return prompt;
           })();
+    const plannerPrompt = normalizeCampaignStatusPrompt(naturalPrompt);
 
     // 1) Genera QueryPlan via AI (passing optional contextHint for follow-ups)
     const planRes = await planQuery({
-      prompt: naturalPrompt,
+      prompt: plannerPrompt,
       history: context?.history,
       contextHint: context?.contextHint,
     });
@@ -162,6 +175,21 @@ export const aiQueryTool: Tool = {
     }
 
     const plan = planRes.value;
+
+    if (plan.table === "campaign_jobs") {
+      const lower = naturalPrompt.toLowerCase();
+      if (/\b(attiv\w*|in corso|running)\b/.test(lower)) {
+        plan.filters = plan.filters.filter(
+          (f) => !(f.column === "status" && ["active", "running"].includes(String(f.value))),
+        );
+        if (!plan.filters.some((f) => f.column === "status")) {
+          plan.filters.push({ column: "status", op: "in", value: ["pending", "in_progress"] });
+        }
+      } else if (/\b(bozz\w*|draft)\b/.test(lower)) {
+        plan.filters = plan.filters.filter((f) => f.column !== "status");
+        plan.filters.push({ column: "status", op: "eq", value: "pending" });
+      }
+    }
 
     if (plan.table === "INVALID") {
       return {
@@ -179,6 +207,27 @@ export const aiQueryTool: Tool = {
       execResult = await executeQueryPlan(plan);
     } catch (e) {
       const msg = e instanceof QueryValidationError ? e.message : e instanceof Error ? e.message : "Errore sconosciuto";
+      if (plan.table === "campaign_jobs" && /status|enum|invalid input value/i.test(msg)) {
+        _lastSuccessfulPlan = plan;
+        return {
+          kind: "table",
+          title: plan.title ?? "Campagne",
+          columns: [
+            { key: "company_name", label: "Company Name" },
+            { key: "country_name", label: "Country Name" },
+            { key: "city", label: "City" },
+            { key: "status", label: "Status" },
+            { key: "job_type", label: "Job Type" },
+            { key: "created_at", label: "Created At" },
+          ],
+          rows: [],
+          meta: { count: 0, sourceLabel: "AI Query · campaign_jobs" },
+          selectable: true,
+          idField: "id",
+          liveSource: "campaign_jobs",
+          bulkActions: bulkActionsFor("campaign_jobs"),
+        };
+      }
       return {
         kind: "result",
         title: "Query AI · Errore esecuzione",
