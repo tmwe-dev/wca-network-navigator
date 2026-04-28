@@ -20,6 +20,7 @@ import { MissionProvider } from "@/contexts/MissionContext";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
+import { DrawerErrorBoundary } from "@/components/ui/DrawerErrorBoundary";
 
 const IntelliFlowOverlay = lazy(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const TestExtensionsContent = lazy(() => import("@/components/test-extensions/TestExtensionsView").then((m) => ({ default: m.TestExtensionsContent })));
@@ -192,22 +193,30 @@ export function AppLayout() {
               )}
               {missionOpen && (
                 <Suspense fallback={null}>
-                  <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+                  <DrawerErrorBoundary scope="MissionDrawer" onReset={() => setMissionOpen(false)}>
+                    <MissionDrawer open={missionOpen} onOpenChange={setMissionOpen} />
+                  </DrawerErrorBoundary>
                 </Suspense>
               )}
               {filtersOpen && (
                 <Suspense fallback={null}>
-                  <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
+                  <DrawerErrorBoundary scope="FiltersDrawer" onReset={() => setFiltersOpen(false)}>
+                    <FiltersDrawer open={filtersOpen} onOpenChange={setFiltersOpen} />
+                  </DrawerErrorBoundary>
                 </Suspense>
               )}
               {intelliflowOpen && (
                 <Suspense fallback={null}>
-                  <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+                  <DrawerErrorBoundary scope="IntelliFlowOverlay" onReset={() => setIntelliflowOpen(false)}>
+                    <IntelliFlowOverlay open={intelliflowOpen} onClose={() => setIntelliflowOpen(false)} />
+                  </DrawerErrorBoundary>
                 </Suspense>
               )}
               {addContactOpen && (
                 <Suspense fallback={null}>
-                  <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+                  <DrawerErrorBoundary scope="AddContactDialog" onReset={() => setAddContactOpen(false)}>
+                    <AddContactDialog open={addContactOpen} onOpenChange={setAddContactOpen} />
+                  </DrawerErrorBoundary>
                 </Suspense>
               )}
               <Dialog open={testExtOpen} onOpenChange={setTestExtOpen}>
