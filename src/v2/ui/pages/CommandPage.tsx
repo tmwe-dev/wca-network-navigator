@@ -113,6 +113,21 @@ const CommandPage = () => {
 
   useEffect(() => {
     if (!conv.conversationId || conv.messages.length === 0) return;
+    // Rehydrate the visible chat history from the loaded conversation.
+    const visible = conv.messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m, idx) => ({
+        id: idx + 1,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.created_at).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        agentName: m.role === "assistant" ? "Direttore" : undefined,
+      }));
+    pageState.setMessages(visible);
+
     const last = [...conv.messages]
       .reverse()
       .find((m) => m.role === "tool" && m.tool_result);
@@ -126,7 +141,8 @@ const CommandPage = () => {
       else if (kind === "composer") pageState.setCanvas("live-composer");
       else if (kind === "report") pageState.setCanvas("live-report");
     }
-  }, [conv.conversationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conv.conversationId, conv.messages.length]);
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
@@ -143,9 +159,10 @@ const CommandPage = () => {
           conversations={conv.conversations}
           activeId={conv.conversationId}
           onSelect={(id) => {
-            conv.loadConversation(id);
-            pageState.setMessages([]);
             pageState.setCanvas(null);
+            pageState.setLiveResult(null);
+            pageState.setFlowPhase("idle");
+            void conv.loadConversation(id);
           }}
           onNew={() => {
             conv.newConversation();
