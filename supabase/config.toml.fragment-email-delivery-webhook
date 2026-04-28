@@ -1,3 +1,0 @@
-# Webhook handler: deve essere accessibile senza JWT utente (auth via shared secret).
-[functions.email-delivery-webhook]
-verify_jwt = false
