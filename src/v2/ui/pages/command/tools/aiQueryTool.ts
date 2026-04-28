@@ -208,6 +208,7 @@ export const aiQueryTool: Tool = {
     } catch (e) {
       const msg = e instanceof QueryValidationError ? e.message : e instanceof Error ? e.message : "Errore sconosciuto";
       if (plan.table === "campaign_jobs" && /status|enum|invalid input value/i.test(msg)) {
+        _lastSuccessfulPlan = plan;
         return {
           kind: "table",
           title: plan.title ?? "Campagne",
