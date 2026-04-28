@@ -14,6 +14,7 @@ import {
   filterToolsByCapabilities,
   DEFAULT_CAPABILITIES,
 } from "../_shared/agentCapabilitiesLoader.ts";
+import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -185,6 +186,7 @@ serve(async (req: Request) => {
 
     // ── Agent capabilities (DB-backed, soft-fail to defaults).
     let capabilities = { ...DEFAULT_CAPABILITIES };
+    let personaBlock = "";
     if (agentId) {
       try {
         const supabaseSrv = createClient(
@@ -192,8 +194,11 @@ serve(async (req: Request) => {
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         );
         capabilities = await loadAgentCapabilities(supabaseSrv, String(agentId));
+        const persona = await loadAgentPersona(supabaseSrv, String(agentId), userId !== "anonymous" ? userId : undefined);
+        const rendered = renderPersonaBlock(persona);
+        if (rendered) personaBlock = `\n\n${rendered}`;
       } catch (e) {
-        console.warn("[agent-loop] capabilities load skipped:", (e as Error).message);
+        console.warn("[agent-loop] capabilities/persona load skipped:", (e as Error).message);
       }
     }
 
@@ -207,7 +212,7 @@ serve(async (req: Request) => {
     const systemPrompt = `Sei LUCA, direttore del CRM WCA Network Navigator. Italiano, asciutto, operativo.
 
 OBIETTIVO ATTUALE: ${goal}
-${sessionContext ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}${promptLabBlock}
+${sessionContext ? `CONTESTO PAGINA: ${JSON.stringify(sessionContext).slice(0, 1000)}` : ""}${personaBlock}${promptLabBlock}
 
 Hai a disposizione i tool elencati. Sceglili tu in base al bisogno: leggi la pagina se ti serve capire dove sei, esplora la KB se ti serve contesto, chiedi all'utente se sei bloccato, chiama \`finish\` quando hai concluso. Se una ricerca torna vuota, prova varianti prima di rinunciare. Le regole inviolabili sono nei PROMPT OPERATIVI sopra; i blocchi tecnici (azioni distruttive, bulk, tabelle vietate) sono già imposti dal sistema.`;
 
