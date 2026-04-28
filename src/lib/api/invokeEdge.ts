@@ -21,6 +21,7 @@ import { createLogger } from "@/lib/log";
 import { checkBudget, trackCost } from "@/lib/api/costTracker";
 import { validateResponse, type ResponseSchema } from "@/lib/api/responseValidator";
 import { Sentry } from "@/lib/sentry";
+import { traceCollector } from "@/v2/observability/traceCollector";
 
 const log = createLogger("invokeEdge");
 
@@ -43,6 +44,11 @@ export async function invokeEdge<T = unknown>(
   // Guardrail: block if session budget exceeded
   checkBudget();
 
+  // Trace: ensure correlation id exists for this invocation
+  const _traceCorr = traceCollector.getActiveCorrelationId() ?? traceCollector.startCorrelation();
+  const _traceStart = Date.now();
+  const _traceRoute = typeof window !== "undefined" ? window.location.pathname : undefined;
+
   let result: Awaited<ReturnType<typeof supabase.functions.invoke>>;
   try {
     result = await supabase.functions.invoke(functionName, {
@@ -53,6 +59,17 @@ export async function invokeEdge<T = unknown>(
     log.warn("invoke threw", { functionName, context, err });
     Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} threw`, level: "error", data: { functionName, context } });
     Sentry.captureException(err, { tags: { "edge.function": functionName } });
+    traceCollector.push({
+      type: "edge.invoke",
+      scope: "edge",
+      source: `${functionName}:${context}`,
+      route: _traceRoute,
+      status: "error",
+      duration_ms: Date.now() - _traceStart,
+      payload_summary: { functionName, context },
+      error: { message: err instanceof Error ? err.message : String(err) },
+      correlation_id: _traceCorr,
+    });
     throw ApiError.from(err, context);
   }
 
@@ -99,6 +116,17 @@ export async function invokeEdge<T = unknown>(
 
     log.warn("invoke returned error", { functionName, context, status, name: errAny?.name });
     Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} failed: ${status}`, level: "error", data: { functionName, context, status } });
+    traceCollector.push({
+      type: "edge.invoke",
+      scope: "edge",
+      source: `${functionName}:${context}`,
+      route: _traceRoute,
+      status: status ? String(status) : "error",
+      duration_ms: Date.now() - _traceStart,
+      payload_summary: { functionName, context, status },
+      error: { message: messageFromBody ?? errAny?.message ?? "edge error", code, status },
+      correlation_id: _traceCorr,
+    });
     throw new ApiError({
       code,
       message: messageFromBody ?? errAny?.message ?? `Edge function "${functionName}" failed`,
@@ -108,6 +136,18 @@ export async function invokeEdge<T = unknown>(
   }
 
   const data = result.data as T;
+
+  // Trace success
+  traceCollector.push({
+    type: "edge.invoke",
+    scope: "edge",
+    source: `${functionName}:${context}`,
+    route: _traceRoute,
+    status: "success",
+    duration_ms: Date.now() - _traceStart,
+    payload_summary: { functionName, context },
+    correlation_id: _traceCorr,
+  });
 
   // Guardrail: track cost if _debug.credits_consumed is present
   const debugInfo = (data as Record<string, unknown> | null)?._debug as
