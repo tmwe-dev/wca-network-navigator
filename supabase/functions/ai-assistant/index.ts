@@ -88,7 +88,35 @@ serve(async (req) => {
     }
 
     // ── Parse request ──
-    const { messages, context, mode, scope } = await req.json();
+    const reqBody = await req.json();
+    const { messages, context, mode, scope } = reqBody;
+
+    // ── AI Invocation Charter (R1+R2+R6) ──
+    // Best-effort: scope/context obbligatori per le chiamate dal nuovo gateway.
+    // Modalità interna "ping" e legacy senza scope NON bloccano (warn-only),
+    // così non rompiamo i call-site non ancora migrati.
+    try {
+      const { aiGuard, recordInvocation } = await import("../_shared/aiInvocationGuard.ts");
+      const guard = await aiGuard(req, reqBody, supabase, "ai-assistant");
+      if (!guard.ok) {
+        // R1/R2 violati: il chiamante ha provato a passare uno scope non valido.
+        // Per non rompere gli ultimi call-site legacy lasciamo passare se NON
+        // hanno proprio inviato scope (vecchio formato). Se invece hanno
+        // inviato scope ma malformato, blocchiamo.
+        if (typeof scope === "string" && scope.length > 0) {
+          return guard.response;
+        }
+      } else {
+        // Audit best-effort
+        recordInvocation(supabase, guard.spec, {
+          grounded: false, // aggiornato dal toolLoopHandler in futuro
+          tool_calls_count: 0,
+          blocked: false,
+        }).catch(() => undefined);
+      }
+    } catch {
+      // guard caricamento fallito — degradiamo silenziosamente
+    }
 
     // ═══ TOOL-DECISION MODE ═══
     if (mode === "tool-decision") {

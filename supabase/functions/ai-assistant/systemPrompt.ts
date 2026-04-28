@@ -44,6 +44,14 @@ export async function composeSystemPrompt(opts: ComposeSystemPromptOptions): Pro
 
   const parts: string[] = [base];
 
+  // Charter R5 — Grounding obbligatorio (direttiva fissa, non aggirabile dal modello).
+  parts.push(
+`🛡️ AI INVOCATION CHARTER — REGOLA INVIOLABILE (R5)
+Per ogni domanda che menziona entità del database (partner, paesi, lead, mission, contatti, campagne, business cards) DEVI chiamare il tool appropriato (search_partners, get_country_stats, search_contacts, ecc.) PRIMA di rispondere.
+VIETATO inventare nomi, conteggi, statistiche, sedi.
+Se non sei sicuro di un'entità chiama il tool. Se il tool restituisce vuoto rispondi "Non trovato nel database" — NON ipotizzare.`
+  );
+
   if (opts.scope) {
     parts.push(`🎯 SCOPE ATTIVO: ${opts.scope}\nApplica le regole d'ingaggio specifiche per questo scope (consulta KB doctrine/tone-and-format se serve).`);
   }

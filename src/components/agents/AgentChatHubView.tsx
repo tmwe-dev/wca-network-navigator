@@ -151,6 +151,8 @@ export default function AgentChatHub() {
 
       if (type === "negative") {
         await invokeEdge("save-correction-memory", {
+          // save-correction-memory NON è un'edge AI conversazionale: scrive memoria.
+          // Resta su invokeEdge (charter non si applica).
           body: {
             correction_type: "chat_response_negative",
             original_value: msg?.content?.substring(0, 300) || "",

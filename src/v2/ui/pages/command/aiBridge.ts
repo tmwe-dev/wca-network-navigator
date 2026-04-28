@@ -12,6 +12,7 @@
  * and a true conversational agent (router → execution → reasoning → reply).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { ToolResult } from "./tools/types";
 
 export interface AiCommentRequest {
@@ -157,24 +158,22 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
 }`;
 
   try {
-    const { data, error } = await supabase.functions.invoke("ai-assistant", {
+    const data = await invokeAi<Record<string, unknown>>("ai-assistant", {
+      scope: "command",
       body: {
         messages: [
           ...history.slice(-6).map((m) => ({ role: m.role, content: m.content })),
           { role: "user", content: userTurn },
         ],
-        scope: "command",
-        context: {
-          currentPage: "/v2/command",
-          page: "command",
-          mode: "tool-result-comment",
-        },
       },
+      context: {
+        source: "aiBridge",
+        route: "/v2/command",
+        mode: "tool-result-comment",
+      },
+    }).catch((e: unknown) => {
+      throw new Error(e instanceof Error ? e.message : String(e));
     });
-
-    if (error) {
-      throw new Error(error.message);
-    }
 
     // ai-assistant returns { reply: "..." } or { message: "..." } depending on mode.
     // We try multiple shapes and parse the inner JSON.

@@ -160,6 +160,9 @@ export async function callDecideAI(args: {
       findings_so_far: compactFindingsText,
       target_fields: args.targetFields,
       last_page_summary: args.lastSummary,
+      // Charter R1+R2
+      scope: "sherlock",
+      context: { source: "sherlock.callDecideAI", mode: "decide" },
     },
   });
 

@@ -4,7 +4,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 interface ChatMessage {
   readonly role: "user" | "assistant";
@@ -47,12 +47,13 @@ export function useStaffV2() {
     setMessages(newMsgs);
     setSending(true);
     try {
-      const data = await invokeEdge<{ response?: string; message?: string }>("ai-assistant", {
+      const data = await invokeAi<{ response?: string; message?: string }>("ai-assistant", {
+        scope: "staff",
         body: {
           messages: newMsgs.map((m) => ({ role: m.role, content: m.content })),
-          context: `staff_direzionale_${selectedAgent}`,
+          staffAgent: selectedAgent,
         },
-        context: "staffV2",
+        context: { source: "useStaffV2", route: "/v2/staff", mode: `staff_${selectedAgent}` },
       });
       setMessages([...newMsgs, { role: "assistant", content: data?.response ?? data?.message ?? "Risposta non disponibile" }]);
     } catch {

@@ -131,8 +131,19 @@ export function useMissionBuilder() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(CHAT_URL, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })), context: { currentPage: "/mission-builder", missionData: stepData, countryStats: countryStats.slice(0, 30) } }),
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        // Charter R1+R2: scope obbligatorio + context.source
+        body: JSON.stringify({
+          scope: "missions",
+          context: {
+            source: "useMissionBuilder",
+            route: "/mission-builder",
+            mode: "tool-decision",
+            extra: { missionData: stepData, countryStats: countryStats.slice(0, 30) },
+          },
+          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+        }),
       });
       let assistantContent = "";
       const contentType = resp.headers.get("content-type") || "";

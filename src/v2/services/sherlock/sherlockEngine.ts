@@ -104,6 +104,9 @@ async function callExtractAI(args: {
       target_fields: args.targetFields,
       prior_findings: compactPrior,
       label: args.step.label,
+      // Charter R1+R2
+      scope: "sherlock",
+      context: { source: "sherlock.callExtractAI", mode: "extract" },
     },
   });
   if (args.signal.aborted) throw new Error("Aborted");

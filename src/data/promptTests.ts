@@ -157,7 +157,13 @@ export async function runTests(args: {
   trigger_source?: string;
 }): Promise<RunnerResponse> {
   const { data, error } = await supabase.functions.invoke("prompt-test-runner", {
-    body: { ...args, trigger_source: args.trigger_source ?? "prompt_lab_ui" },
+    body: {
+      ...args,
+      trigger_source: args.trigger_source ?? "prompt_lab_ui",
+      // Charter R1+R2
+      scope: "lab",
+      context: { source: "promptTests.runTests", mode: "run-tests" },
+    },
   });
   if (error) throw error;
   return data as RunnerResponse;
