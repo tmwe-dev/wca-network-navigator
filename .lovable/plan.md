@@ -53,9 +53,9 @@ Ordinati per priorità, **senza riscritture architetturali**: ogni intervento è
 
 | # | Doc | Intervento |
 |---|---|---|
-| P3.1 | M2 | Tabella `email_delivery_events` + edge function webhook handler (parser bounce/delivery SMTP). Trigger di update su `email_campaign_queue.status` |
-| P3.2 | M3 | Hook post-send in `process-email-queue`: dopo `sent`, `UPDATE activities SET status='sent' WHERE source_type/source_id` (estendere `logEmailSideEffects` esistente) |
-| P3.3 | M5 | Rate limit SMTP per utente: integrare `_shared/rateLimiter.ts` in `process-email-queue` con cap configurabile da `app_settings` (default 50/h). **Compatibile con kill-switch `AI_USAGE_LIMITS_ENABLED`** |
+| P3.1 ✅ | M2 | Tabella `email_delivery_events` + trigger `apply_email_delivery_event` (auto-update `email_campaign_queue.status` su bounce/complaint/rejected/opened) + edge function `email-delivery-webhook` con shared-secret `EMAIL_WEBHOOK_SECRET`, validazione Zod, batch ≤500 |
+| P3.2 ✅ | M3 | Già coperto da `runPostSendPipeline` (LOVABLE-85): activity inserita con `status=completed`, lead_status escalation, interaction logged, partner counters atomici. Nessun lavoro residuo |
+| P3.3 ✅ | M5 | `_shared/smtpRateLimit.ts` (DB-based, no-op quando kill-switch off). Integrato in `process-email-queue`: se cap raggiunto, draft → `paused`, batch interrotto, riprende al prossimo invocation. Cap configurabile via `app_settings.smtp_rate_limit_per_hour` (default 50). 3/3 test verdi |
 
 ### Priorità 4 — Bridge & Hooks consolidation (2-3 giorni)
 

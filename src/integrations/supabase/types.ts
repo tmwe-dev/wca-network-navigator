@@ -4099,6 +4099,59 @@ export type Database = {
           },
         ]
       }
+      email_delivery_events: {
+        Row: {
+          campaign_queue_id: string | null
+          created_at: string
+          diagnostic_code: string | null
+          event_type: string
+          id: string
+          message_id: string | null
+          occurred_at: string
+          raw_payload: Json
+          reason: string | null
+          recipient_email: string
+          smtp_code: string | null
+          source: string
+        }
+        Insert: {
+          campaign_queue_id?: string | null
+          created_at?: string
+          diagnostic_code?: string | null
+          event_type: string
+          id?: string
+          message_id?: string | null
+          occurred_at?: string
+          raw_payload?: Json
+          reason?: string | null
+          recipient_email: string
+          smtp_code?: string | null
+          source?: string
+        }
+        Update: {
+          campaign_queue_id?: string | null
+          created_at?: string
+          diagnostic_code?: string | null
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          occurred_at?: string
+          raw_payload?: Json
+          reason?: string | null
+          recipient_email?: string
+          smtp_code?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_events_campaign_queue_id_fkey"
+            columns: ["campaign_queue_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaign_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_drafts: {
         Row: {
           attachment_ids: Json | null

@@ -3,6 +3,9 @@ project_id = "zrbditqddhjkutzjycgi"
 [functions.analyze-partner]
 verify_jwt = false
 
+[functions.email-delivery-webhook]
+verify_jwt = false
+
 [functions.enrich-partner-website]
 verify_jwt = false
 
