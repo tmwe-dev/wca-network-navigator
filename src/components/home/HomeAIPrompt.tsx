@@ -12,8 +12,34 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { VOICE_LANGUAGE_MAP } from "@/components/voice/VoiceLanguageSelector";
 import type { BriefingAction, AgentStatusItem } from "@/hooks/useDailyBriefing";
 import { createLogger } from "@/lib/log";
+import { aiQueryTool } from "@/v2/ui/pages/command/tools/aiQueryTool";
+import type { ToolResult } from "@/v2/ui/pages/command/tools/types";
 
 const log = createLogger("HomeAIPrompt");
+
+function formatQueryResultAsMarkdown(result: ToolResult): string {
+  if (result.kind === "table") {
+    const count = result.meta?.count ?? result.rows.length;
+    const title = result.title ?? "Risultati";
+    const sample = result.rows.slice(0, 10);
+    const cols = result.columns.slice(0, 4);
+    const header = `**${title}** — trovati **${count}** risultati.\n\n`;
+    if (sample.length === 0) {
+      return header + "_Nessuna riga da mostrare._";
+    }
+    const head = "| " + cols.map((c) => c.label).join(" | ") + " |";
+    const sep = "| " + cols.map(() => "---").join(" | ") + " |";
+    const body = sample
+      .map((r) => "| " + cols.map((c) => String(r[c.key] ?? "—")).join(" | ") + " |")
+      .join("\n");
+    const more = count > sample.length ? `\n\n_…e altri ${count - sample.length}. Apri **/v2/command** per vederli tutti e selezionarli._` : "";
+    return header + head + "\n" + sep + "\n" + body + more;
+  }
+  if (result.kind === "result") {
+    return `**${result.title ?? "Risultato"}**\n\n${result.message ?? ""}`;
+  }
+  return `**${(result as { title?: string }).title ?? "Risultato"}**`;
+}
 
 interface Props {
   className?: string;
@@ -129,6 +155,17 @@ export function HomeAIPrompt({ className, systemStats, briefingActions, agents, 
           body: { agent_id: targetAgent.id, messages: newMessages },
           context: { source: "HomeAIPrompt", route: "/v2", mode: "agent-execute" },
         });
+      } else if (aiQueryTool.match(cleanMsg)) {
+        // UNIFIED with /v2/command: read-intent prompts go through the
+        // AI Query Planner + safe executor (same pipeline as the Direttore).
+        const result = (await aiQueryTool.execute(cleanMsg, {
+          originalPrompt: cleanMsg,
+          history: newMessages,
+        })) as ToolResult;
+        const raw = formatQueryResultAsMarkdown(result);
+        setResponse(raw);
+        setHistory([...newMessages, { role: "assistant", content: raw }]);
+        return;
       } else {
         // Default: ai-assistant — Charter R1: scope "home"
         data = await invokeAi<Record<string, unknown>>("ai-assistant", {
