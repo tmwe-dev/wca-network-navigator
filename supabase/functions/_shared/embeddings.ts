@@ -50,59 +50,80 @@ export async function embedBatch(texts: string[], opts: EmbedOptions = {}): Prom
   // Preferisci OPENAI_API_KEY (supporta embedding); LOVABLE_API_KEY come fallback legacy.
   const openaiKey = opts.apiKey || Deno.env.get("OPENAI_API_KEY");
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  const apiKey = openaiKey || lovableKey;
-  if (!apiKey) {
+  if (!openaiKey && !lovableKey) {
     throw new EmbeddingError("no_api_key", "Neither OPENAI_API_KEY nor LOVABLE_API_KEY configured");
   }
-  const useOpenAI = !!openaiKey;
-  const url = useOpenAI ? OPENAI_EMBEDDINGS_URL : LOVABLE_EMBEDDINGS_URL;
-  // Su Lovable Gateway il modello richiede prefisso "openai/", su OpenAI native no.
   const baseModel = (opts.model || DEFAULT_EMBEDDING_MODEL).replace(/^openai\//, "");
-  const model = useOpenAI ? baseModel : `openai/${baseModel}`;
   const timeoutMs = opts.timeoutMs ?? 30000;
 
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), timeoutMs);
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input: texts.map((t) => (t || "").slice(0, 8000)),
-      }),
-      signal: ac.signal,
-    });
-    clearTimeout(timer);
-
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      throw new EmbeddingError("http", `Embedding HTTP ${resp.status}: ${errText.slice(0, 200)}`, resp.status);
-    }
-    const data = await resp.json();
-    const arr = Array.isArray(data?.data) ? data.data : null;
-    if (!arr || arr.length !== texts.length) {
-      throw new EmbeddingError("invalid_response", "Embedding response missing data[]");
-    }
-    return arr.map((row: Record<string, unknown>) => {
-      const v = row?.embedding;
-      const vectorLength = Array.isArray(v) ? v.length : undefined;
-      if (!Array.isArray(v) || vectorLength !== EMBEDDING_DIM) {
-        throw new EmbeddingError("invalid_response", `Invalid embedding vector dim ${vectorLength}`);
-      }
-      return v as number[];
-    });
-  } catch (err) {
-    clearTimeout(timer);
-    if (err instanceof EmbeddingError) throw err;
-    if ((err as { name?: string })?.name === "AbortError") {
-      throw new EmbeddingError("timeout", `Embedding timeout after ${timeoutMs}ms`);
-    }
-    throw new EmbeddingError("network", err instanceof Error ? err.message : String(err));
+  // Provider chain: OpenAI nativo prima (se chiave presente), poi Lovable Gateway come
+  // fallback. Su 401/403 OpenAI proviamo automaticamente il gateway: la chiave OpenAI può
+  // essere scaduta/invalida ma il gateway resta operativo.
+  const providers: Array<{ name: string; url: string; key: string; model: string }> = [];
+  if (openaiKey) {
+    providers.push({ name: "openai", url: OPENAI_EMBEDDINGS_URL, key: openaiKey, model: baseModel });
   }
+  if (lovableKey) {
+    providers.push({ name: "lovable", url: LOVABLE_EMBEDDINGS_URL, key: lovableKey, model: `openai/${baseModel}` });
+  }
+
+  let lastErr: EmbeddingError | null = null;
+  for (const p of providers) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+      const resp = await fetch(p.url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${p.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: p.model,
+          input: texts.map((t) => (t || "").slice(0, 8000)),
+        }),
+        signal: ac.signal,
+      });
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        const err = new EmbeddingError("http", `Embedding HTTP ${resp.status} via ${p.name}: ${errText.slice(0, 200)}`, resp.status);
+        // 401/403 su OpenAI → retry sul prossimo provider (gateway)
+        if ((resp.status === 401 || resp.status === 403) && p.name === "openai") {
+          console.warn(`[embeddings] OpenAI auth ${resp.status}, falling back to Lovable Gateway`);
+          lastErr = err;
+          continue;
+        }
+        throw err;
+      }
+      const data = await resp.json();
+      const arr = Array.isArray(data?.data) ? data.data : null;
+      if (!arr || arr.length !== texts.length) {
+        throw new EmbeddingError("invalid_response", "Embedding response missing data[]");
+      }
+      return arr.map((row: Record<string, unknown>) => {
+        const v = row?.embedding;
+        const vectorLength = Array.isArray(v) ? v.length : undefined;
+        if (!Array.isArray(v) || vectorLength !== EMBEDDING_DIM) {
+          throw new EmbeddingError("invalid_response", `Invalid embedding vector dim ${vectorLength}`);
+        }
+        return v as number[];
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      if (err instanceof EmbeddingError) {
+        lastErr = err;
+        continue;
+      }
+      if ((err as { name?: string })?.name === "AbortError") {
+        lastErr = new EmbeddingError("timeout", `Embedding timeout via ${p.name} after ${timeoutMs}ms`);
+        continue;
+      }
+      lastErr = new EmbeddingError("network", err instanceof Error ? err.message : String(err));
+    }
+  }
+  throw lastErr ?? new EmbeddingError("network", "All embedding providers failed");
 }
 
 /**
