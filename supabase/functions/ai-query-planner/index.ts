@@ -106,6 +106,8 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 1. SOLO SELECT. Mai INSERT/UPDATE/DELETE. Mai colonne fuori schema.
 2. Mappa nomi paesi a codici ISO-2 (USA/Stati Uniti→US, Cina→CN, Germania→DE, Italia→IT, ecc.) per partners.country_code.
 3. Per ricerche testuali su company_name/name/title usa "ilike" (il safe executor wrappa con % automaticamente).
+   - L'executor è ANCHE accent-insensitive: "Arcanà" matcha "Arcana", "Acana", "Arcana'". NON serve quindi rimuovere accenti manualmente.
+   - PERSONA + AZIENDA: quando l'utente chiede "Mario Rossi di Acme", NON combinare AND su `name` e `company_name`: il dato è spesso disgiunto. Cerca SOLO sul COGNOME (ultimo token) in `name`, l'azienda è ridondante. Esempio: "Luca Arcanà di Transport Management" → filters = [{column:"name", op:"ilike", value:"arcanà"}], NON aggiungere company_name.
 4. Se l'utente chiede "ultimi N", usa sort created_at desc + limit N.
 5. Se l'utente chiede "più di X", "almeno X", usa gt/gte.
 6. Per booleani (is_active, response_received): usa "eq" con true/false.
@@ -141,6 +143,9 @@ Rispondi SOLO con JSON valido (niente markdown, niente testo extra) seguendo que
 
 "partner italiani con email Gmail"
 → {"table":"partners","filters":[{"column":"country_code","op":"eq","value":"IT"},{"column":"email","op":"ilike","value":"gmail.com"}],"limit":50,"title":"Partner IT con Gmail","rationale":"ilike per match parziale dominio"}
+
+"trova Luca Arcanà di Transport Management"
+→ {"table":"imported_contacts","filters":[{"column":"name","op":"ilike","value":"arcanà"}],"limit":20,"title":"Contatti cognome Arcanà","rationale":"Cerca solo sul cognome: l'azienda spesso è memorizzata con alias diversi (TMWE vs Transport Management) e l'executor è accent-insensitive"}
 
 "messaggi non letti dell'ultima settimana"
 → {"table":"channel_messages","filters":[{"column":"direction","op":"eq","value":"inbound"},{"column":"read_at","op":"is","value":null}],"sort":{"column":"email_date","ascending":false},"limit":100,"title":"Inbound non letti","rationale":"direction inbound + read_at null"}
