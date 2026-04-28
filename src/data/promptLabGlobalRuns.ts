@@ -5,6 +5,7 @@
  * incrementalmente così il run sopravvive a refresh, crash, errori di rete.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface GlobalRunProposal {
   block_id: string;

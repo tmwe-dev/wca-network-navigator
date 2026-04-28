@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { QueryClient } from "@tanstack/react-query";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 // Local type definitions for calendar_events table
 // (table exists in database but not in generated Database types)
