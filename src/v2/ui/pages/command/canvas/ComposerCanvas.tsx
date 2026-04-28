@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, X, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
+import { invokeEdge } from "@/lib/api/invokeEdge";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 
@@ -18,6 +19,10 @@ interface ComposerCanvasProps {
   readonly initialBody: string;
   readonly promptHint: string;
   readonly onClose: () => void;
+  /** Partner risolto dall'Oracolo: abilita rigenerazione via generate-email. */
+  readonly partnerId?: string | null;
+  readonly recipientName?: string | null;
+  readonly emailType?: string;
 }
 
 export default function ComposerCanvas({
@@ -26,12 +31,16 @@ export default function ComposerCanvas({
   initialBody,
   promptHint,
   onClose,
+  partnerId,
+  recipientName,
+  emailType,
 }: ComposerCanvasProps) {
   const composer = useEmailComposerV2();
   const governance = useGovernance("compose-email");
 
   const [toField, setToField] = useState(initialTo);
   const [showApproval, setShowApproval] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Sync initial values on mount
   useState(() => {
@@ -55,9 +64,38 @@ export default function ComposerCanvas({
     setToField("");
   }, [toField, composer]);
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback(async () => {
+    // Se abbiamo un partner risolto → usa la pipeline ufficiale generate-email
+    if (partnerId) {
+      setRegenerating(true);
+      try {
+        const gen = await invokeEdge<{ subject?: string; body?: string }>("generate-email", {
+          body: {
+            standalone: true,
+            partner_id: partnerId,
+            recipient_name: recipientName ?? null,
+            oracle_type: emailType ?? "primo_contatto",
+            oracle_tone: "professionale",
+            goal: promptHint,
+            quality: "standard",
+            use_kb: true,
+            language: "it",
+          },
+          context: "composer:regenerate",
+        });
+        if (gen?.subject) composer.setSubject(gen.subject);
+        if (gen?.body) composer.setBody(gen.body);
+        toast.success("Bozza rigenerata");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore rigenerazione");
+      } finally {
+        setRegenerating(false);
+      }
+      return;
+    }
+    // Fallback (nessun partner risolto): usa il generator legacy
     composer.generate.mutate(promptHint || undefined);
-  }, [composer, promptHint]);
+  }, [composer, promptHint, partnerId, recipientName, emailType]);
 
   const handleSendClick = useCallback(() => {
     if (composer.recipients.length === 0) {
@@ -88,7 +126,7 @@ export default function ComposerCanvas({
     });
   }, [composer, onClose]);
 
-  const isGenerating = composer.generate.isPending;
+  const isGenerating = composer.generate.isPending || regenerating;
   const isSending = composer.send.isPending;
 
   return (

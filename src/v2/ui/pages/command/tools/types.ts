@@ -99,6 +99,21 @@ export type ToolResult =
       readonly initialBody: string;
       readonly promptHint: string;
       readonly meta?: ToolResultMeta;
+      /** Optional dossier shown in chat BEFORE the composer opens (Oracle/Architect summary). */
+      readonly dossier?: {
+        readonly partnerName: string;
+        readonly contactName: string | null;
+        readonly leadStatus: string | null;
+        readonly lastInteraction: string | null;
+        readonly notes: readonly string[];
+        readonly emailType: string;
+      };
+      /** Resolved partner_id used to call generate-email (for re-generation in composer). */
+      readonly partnerId?: string | null;
+      /** Resolved recipient name used by generate-email. */
+      readonly recipientName?: string | null;
+      /** Resolved oracle email type (e.g. "primo_contatto"). */
+      readonly emailType?: string;
     }
   | {
       readonly kind: "approval";

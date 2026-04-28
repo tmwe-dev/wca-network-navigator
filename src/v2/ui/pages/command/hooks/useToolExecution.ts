@@ -255,6 +255,23 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           }
         }
 
+        // Composer: emetti PRIMA un messaggio Oracolo con il dossier, poi il messaggio del composer.
+        if (result.kind === "composer" && result.dossier) {
+          const d = result.dossier;
+          const lines = [
+            `📋 **${d.partnerName}**${d.contactName ? ` · ${d.contactName}` : ""}`,
+            ...d.notes.map((n) => `• ${n}`),
+            `Tipo email: ${d.emailType.replace(/_/g, " ")}`,
+          ].join("\n");
+          pageState.addMessage({
+            role: "assistant",
+            content: lines,
+            agentName: "Oracolo",
+            timestamp: pageState.ts(),
+          });
+          messageContent = "Bozza pronta nel composer →";
+        }
+
         pageState.addMessage({
           role: "assistant",
           content: messageContent,
