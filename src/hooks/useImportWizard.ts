@@ -251,7 +251,7 @@ export function useImportWizard() {
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const uploadMode = pendingFile ? "file" : "paste";

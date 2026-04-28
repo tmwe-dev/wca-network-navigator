@@ -28,7 +28,7 @@ export function useTrackActivity() {
 
   return useMutation({
     mutationFn: async (params: TrackActivityParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const now = new Date().toISOString();

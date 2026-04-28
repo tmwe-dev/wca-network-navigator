@@ -77,7 +77,7 @@ export default function OperativeGuideSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("app_settings")

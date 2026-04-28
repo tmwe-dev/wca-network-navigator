@@ -16,7 +16,7 @@ export function MemoryAISettingsTab(): React.ReactElement {
   const { data: stats, isLoading } = useQuery({
     queryKey: queryKeys.v2.aiMemoryStats,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return { total: 0, episodic: 0, semantic: 0 };
       const { data } = await supabase
         .from("ai_memory")
@@ -33,7 +33,7 @@ export function MemoryAISettingsTab(): React.ReactElement {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       const { error } = await supabase
         .from("ai_memory")

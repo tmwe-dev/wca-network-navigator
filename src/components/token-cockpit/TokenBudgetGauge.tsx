@@ -53,7 +53,7 @@ export function TokenBudgetGauge() {
   const { data: userData } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       return data.user;
     },
   });

@@ -68,7 +68,7 @@ export function useMissionActions(missionId?: string) {
       missionId: string;
       plan: MissionPlan;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const { data: existing } = await supabase
@@ -216,7 +216,7 @@ export function useActiveMissions() {
   return useQuery({
     queryKey: queryKeys.missions.activeActions(),
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data, error } = await supabase
         .from("mission_actions")

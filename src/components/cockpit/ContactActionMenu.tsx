@@ -53,7 +53,7 @@ export function ContactActionMenu({ contact, children }: Props) {
     status: "completed" | "pending",
     extra: { due_date?: string; description?: string; completed_at?: string } = {}
   ) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
 
     await insertActivity({

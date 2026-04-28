@@ -20,7 +20,7 @@ export function BCASmartActions({ card }: Props) {
 
   const handleCockpitWithContext = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
       await insertCockpitQueueItems([{
         source_id: card.id,

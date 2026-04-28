@@ -380,7 +380,7 @@ export default function ManualGroupingTab() {
     colore: string;
     icon: string;
   }) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const { data: created, error } = await supabase
       .from("email_sender_groups")
@@ -414,7 +414,7 @@ export default function ManualGroupingTab() {
 
   // ── Callback delle azioni rapide della card ─────────────────────────────────
   const withUser = async <T,>(fn: (uid: string) => Promise<T>): Promise<T | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) { toast.error("Sessione scaduta"); return null; }
     return fn(user.id);
   };

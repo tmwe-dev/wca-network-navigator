@@ -26,7 +26,7 @@ export function AIAutomationToggle({ className }: AIAutomationToggleProps) {
   useEffect(() => {
     const loadPauseState = async () => {
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
         if (!data?.user?.id) return;
         setUserId(data.user.id);
 

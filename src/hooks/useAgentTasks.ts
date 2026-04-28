@@ -29,7 +29,7 @@ export function useAgentTasks(agentId?: string) {
 
   const createTask = useMutation({
     mutationFn: async (task: Partial<AgentTaskInsert>) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("agent_tasks")

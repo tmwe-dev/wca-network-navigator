@@ -76,7 +76,7 @@ export function SenderActionsDialog({
     (async () => {
       setTemplatesLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) return;
 
         // 1) Template ufficiali da email_prompts
@@ -243,7 +243,7 @@ export function SenderActionsDialog({
     }
     setBusy("prompt");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Sessione scaduta");
       const { data: existing } = await supabase
         .from("email_address_rules")

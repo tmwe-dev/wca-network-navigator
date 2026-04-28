@@ -54,7 +54,7 @@ export function RulesConfigurationDialog({
     (async () => {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         if (!user) throw new Error("Non autenticato");
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,7 +101,7 @@ export function RulesConfigurationDialog({
     if (senderEmails.length === 0) return;
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       await bulkUpdateAutoAction(
         user.id,

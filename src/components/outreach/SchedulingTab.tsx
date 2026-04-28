@@ -59,7 +59,7 @@ export function SchedulingTab() {
   const { data: activeSchedules = [] } = useQuery({
     queryKey: ["active-schedules"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data } = await supabase
         .from("mission_actions")

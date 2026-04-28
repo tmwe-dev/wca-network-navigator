@@ -59,7 +59,7 @@ export function SenderManagementTab() {
   }, []);
 
   const loadGroups = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const { data } = await supabase
       .from('email_sender_groups')
@@ -72,7 +72,7 @@ export function SenderManagementTab() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error('Non autenticato');
 
       // Load groups
@@ -151,7 +151,7 @@ export function SenderManagementTab() {
   };
 
   const handleCreateCategory = async (data: { nome_gruppo: string; descrizione?: string; colore: string; icon: string }) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const { data: created, error } = await supabase
       .from('email_sender_groups')
@@ -187,7 +187,7 @@ export function SenderManagementTab() {
   };
 
   const assignToGroup = async (sender: SenderAnalysis, groupName: string, _groupId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
 
     const group = groups.find(g => g.nome_gruppo === groupName);

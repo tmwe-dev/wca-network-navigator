@@ -60,7 +60,7 @@ export function useUploadAndParse() {
     setUploading(true);
     setProgress({ current: 0, total: files.length });
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       let imageCount = 0, dataCount = 0, errors = 0;
       for (let i = 0; i < files.length; i++) {

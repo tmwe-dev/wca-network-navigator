@@ -55,7 +55,7 @@ export function CostDashboardWidget() {
   // Get current user
   useEffect(() => {
     const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       setUserId(data?.user?.id || null);
     };
     getUser();

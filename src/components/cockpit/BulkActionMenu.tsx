@@ -72,7 +72,7 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
     status: "completed" | "pending",
     extra: { due_date?: string; description?: string; completed_at?: string } = {}
   ) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
 
     setIsProcessing(true);

@@ -13,7 +13,7 @@ export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
     queryKey: queryKeys.v2.businessCards(),
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data, error } = await supabase
         .from("business_cards")

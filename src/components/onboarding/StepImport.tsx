@@ -63,7 +63,7 @@ export function StepImport({ onFinish, onSkip, loading }: StepImportProps) {
   const handleImport = async () => {
     setImporting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       const reverseMap: Record<string, string> = {};

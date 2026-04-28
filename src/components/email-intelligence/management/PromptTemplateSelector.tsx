@@ -61,8 +61,9 @@ export function PromptTemplateSelector({
       setIsLoading(true);
 
       // Get current user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+      if (!user) {
         throw new Error('Non autenticato');
       }
 

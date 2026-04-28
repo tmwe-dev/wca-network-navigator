@@ -34,7 +34,7 @@ export function useCurrentOperator() {
   return useQuery({
     queryKey: queryKeys.operators.current,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
       const { data, error } = await supabase
         .from("operators")

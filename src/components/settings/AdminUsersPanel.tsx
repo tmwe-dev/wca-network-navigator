@@ -30,7 +30,7 @@ export default function AdminUsers() {
   const { data: myProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.operators.adminCheck,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return null;
       const { data } = await supabase.from("operators").select("is_admin").eq("user_id", user.id).maybeSingle();
       return data;

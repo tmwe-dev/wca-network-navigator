@@ -12,7 +12,7 @@ export function useCreditsV2() {
   const balanceQuery = useQuery({
     queryKey: queryKeys.v2.creditBalance,
     queryFn: async (): Promise<number> => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return 0;
       const result = await fetchCreditBalance(user.id);
       return isOk(result) ? result.value : 0;

@@ -31,7 +31,7 @@ export function useAgentDashboard() {
   const agentsQuery = useQuery({
     queryKey: queryKeys.agents.dashboard.agents,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data: agents } = await supabase
         .from("agents")
@@ -47,7 +47,7 @@ export function useAgentDashboard() {
   const tasksQuery = useQuery({
     queryKey: queryKeys.agents.dashboard.tasks(),
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       const { data } = await supabase
         .from("agent_tasks")

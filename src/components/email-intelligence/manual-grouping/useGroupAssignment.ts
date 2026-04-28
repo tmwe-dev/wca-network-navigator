@@ -16,7 +16,7 @@ export function useGroupAssignment(
 
   const assignToGroup = useCallback(
     async (sender: SenderAnalysis, groupName: string, groupId: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);
@@ -112,7 +112,7 @@ export function useGroupAssignment(
 
   const bulkAssignGroup = useCallback(
     async (senders: SenderAnalysis[], groupName: string, groupId: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
 
       const group = groups.find((g) => g.id === groupId);

@@ -116,7 +116,7 @@ function AddressRulesSection() {
         const { error } = await supabase.from("email_address_rules").update(payload as never);
         if (error) throw error;
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         const { error } = await supabase.from("email_address_rules").insert({ ...payload, user_id: user!.id } as never);
         if (error) throw error;
       }
@@ -314,7 +314,7 @@ function PromptManagerSection() {
       if (id) {
         await supabase.from("email_prompts").update(payload as never);
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
         await supabase.from("email_prompts").insert({ ...payload, user_id: user!.id } as never);
       }
     },

@@ -47,7 +47,7 @@ export function BackfillButton({
   const run = async () => {
     try {
       setRunning(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) {
         toast.error("Sessione scaduta");
         return;

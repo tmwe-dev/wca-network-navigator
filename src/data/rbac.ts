@@ -217,7 +217,7 @@ export async function removePermission(roleId: string, permissionId: string): Pr
  * Fetch roles for a user
  */
 export async function fetchUserRoles(userId?: string): Promise<Role[]> {
-  const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+  const targetUserId = userId || (await supabase.auth.getSession()).data.session?.user?.id;
   if (!targetUserId) return [];
 
   const { data, error } = await (supabase as any)
@@ -235,7 +235,7 @@ export async function fetchUserRoles(userId?: string): Promise<Role[]> {
  * Assign a role to a user
  */
 export async function assignUserRole(userId: string, roleId: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   const { error } = await (supabase as any)
     .from("user_roles")
     .insert({ user_id: userId, role_id: roleId, assigned_by: user?.id });
@@ -260,7 +260,7 @@ export async function removeUserRole(userId: string, roleId: string): Promise<vo
  * Check if current user has a specific permission
  */
 export async function checkUserPermission(permissionKey: string): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return false;
 
   // Fetch user's roles
@@ -300,7 +300,7 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
  * Fetch all teams for current user
  */
 export async function fetchTeams(): Promise<Team[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return [];
 
   const { data, error } = await (supabase as any)
@@ -316,7 +316,7 @@ export async function fetchTeams(): Promise<Team[]> {
  * Create a new team
  */
 export async function createTeam(name: string, description?: string): Promise<Team> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await (supabase as any)

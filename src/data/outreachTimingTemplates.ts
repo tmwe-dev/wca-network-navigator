@@ -42,7 +42,7 @@ export async function fetchTimingTemplates(): Promise<TimingTemplate[]> {
 export async function createTimingTemplate(
   tpl: Omit<TimingTemplate, "id" | "created_at" | "updated_at">
 ): Promise<TimingTemplate> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase

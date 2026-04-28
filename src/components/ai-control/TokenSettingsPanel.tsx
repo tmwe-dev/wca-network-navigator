@@ -28,7 +28,7 @@ export function TokenSettingsPanel() {
   // Load user
   useEffect(() => {
     const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession().then(r => ({ data: { user: r.data.session?.user ?? null } }));
       if (data?.user?.id) {
         setUserId(data.user.id);
       }

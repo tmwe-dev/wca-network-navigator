@@ -25,8 +25,8 @@ export function useTokenUsage() {
   // Resolve current user once for both query and realtime channel
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) setUserId(data.user?.id ?? null);
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) setUserId(data.session?.user?.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUserId(session?.user?.id ?? null);
@@ -40,7 +40,7 @@ export function useTokenUsage() {
   const query = useQuery({
     queryKey: queryKeys.tokenUsage.all,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) {
         return {
           todayTokens: 0,

@@ -34,7 +34,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   private async logErrorToDb(error: Error, info: ErrorInfo) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
       await supabase.from("app_error_logs").insert({
         user_id: user.id,

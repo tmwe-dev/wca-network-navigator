@@ -64,7 +64,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
   };
 
   const markOnboardingComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (user) {
       await supabase
         .from("profiles")

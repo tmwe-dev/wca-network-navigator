@@ -48,7 +48,7 @@ export function useGroupingData() {
   };
 
   const loadGroups = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
     const { data } = await supabase
       .from("email_sender_groups")
@@ -92,7 +92,7 @@ export function useGroupingData() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       // Load groups
@@ -269,7 +269,7 @@ export function useGroupingData() {
   const populateAddressRules = async () => {
     setIsPopulating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return;
 
       // Get only THIS user's inbound email senders

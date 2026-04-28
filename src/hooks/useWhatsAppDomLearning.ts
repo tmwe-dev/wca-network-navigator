@@ -51,7 +51,7 @@ export function useWhatsAppDomLearning() {
     schema.learnedAt = Date.now();
     const value = JSON.stringify(schema);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) return;
 
     await upsertAppSetting(user.id, CACHE_KEY, value);

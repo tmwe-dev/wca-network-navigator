@@ -27,7 +27,7 @@ export function useOperativeJobs() {
   const query = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) return [];
       return findWorkPlans(user.id, [TAG]) as Promise<unknown> as Promise<OperativeJob[]>;
     },
@@ -35,7 +35,7 @@ export function useOperativeJobs() {
 
   const createJob = useMutation({
     mutationFn: async (input: { title: string; description: string; channels: string[]; deadline?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
       const steps = { channels: input.channels, deadline: input.deadline || null, target: "" };
       return createWorkPlan({
@@ -66,7 +66,7 @@ export function useOperativeJobs() {
 
   const generatePrompt = useMutation({
     mutationFn: async (job: OperativeJob) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       const stratValue = user ? await getAppSetting("operative_strategy", user.id) : null;
       const strategy = stratValue ? JSON.parse(stratValue) : {};
 

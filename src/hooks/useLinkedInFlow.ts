@@ -251,7 +251,7 @@ export function useLinkedInFlow() {
       if (!authCheck.ok) { toast.error(`LinkedIn non autenticato (${authCheck.reason}).`); return null; }
     }
     if (contacts.length === 0) { toast.warning("Nessun contatto selezionato"); return null; }
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     if (!user) { toast.error("Non autenticato"); return null; }
 
     const job = await createLinkedInFlowJob({

@@ -48,7 +48,7 @@ export default function AgendaBulkBar({ selectedCount, selectedActivities, onCle
 
     setSending(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
       if (!user) throw new Error("Non autenticato");
 
       // All bulk operations (2+) go to outreach_queue for confirmation

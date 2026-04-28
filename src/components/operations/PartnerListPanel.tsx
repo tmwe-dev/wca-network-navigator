@@ -157,7 +157,7 @@ export function PartnerListPanel({
 
   const handleSendTo = useCallback(async (destination: "cockpit" | "workspace") => {
     if (selectedIds.size === 0) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
     const userId = user?.id;
     if (!userId) { toast.error("Utente non autenticato"); return; }
     const partnerList = (partners || []).filter((p: { id: string }) => selectedIds.has(p.id));
