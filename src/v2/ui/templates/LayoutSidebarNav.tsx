@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/prefetchRoutes";
 import {
-  LogOut, Command, Wifi, WifiOff, Sun, Moon, Search,
+  LogOut, Command, Wifi, WifiOff, Sun, Moon,
 } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { navItemsDef, navGroupsDef } from "./navConfig";
@@ -63,11 +63,12 @@ export function LayoutSidebarNav({
       {onOpenCommandPalette && (
         <button
           onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
-          className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground transition-colors"
-          aria-label="Apri ricerca"
+          className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors"
+          aria-label="Apri Command"
+          data-testid="sidebar-command-button"
         >
-          <Search className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1 text-left">Cerca…</span>
+          <Command className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">Command</span>
           <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>
