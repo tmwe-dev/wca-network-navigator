@@ -7,14 +7,12 @@ import { AgentsPage } from "@/v2/ui/pages/AgentsPage";
 import { PromptLabPage } from "@/v2/ui/pages/PromptLabPage";
 import { KBSupervisorPage } from "@/v2/ui/pages/KBSupervisorPage";
 import { AIControlCenterPage } from "@/v2/ui/pages/AIControlCenterPage";
-import { EmailIntelligencePage } from "@/v2/ui/pages/EmailIntelligencePage";
 
 const TABS: readonly SectionTab[] = [
   { key: "analytics", label: "Analytics",  to: "/v2/intelligence/analytics" },
   { key: "agents",    label: "Agenti",     to: "/v2/intelligence/agents" },
   { key: "prompt",    label: "Prompt Lab", to: "/v2/intelligence/prompt-lab" },
   { key: "kb",        label: "KB",         to: "/v2/intelligence/kb" },
-  { key: "email",     label: "Email Intelligence", to: "/v2/intelligence/email" },
   { key: "control",   label: "Control",    to: "/v2/intelligence/control" },
 ];
 
@@ -29,7 +27,7 @@ export function IntelligenceSection(): React.ReactElement {
           <Route path="agents"     element={<AgentsPage />} />
           <Route path="prompt-lab" element={<PromptLabPage />} />
           <Route path="kb"         element={<KBSupervisorPage />} />
-          <Route path="email"      element={<EmailIntelligencePage />} />
+          <Route path="email"      element={<Navigate to="/v2/email-intelligence" replace />} />
           <Route path="control"    element={<AIControlCenterPage />} />
           <Route path="*"          element={<Navigate to="/v2/intelligence/analytics" replace />} />
         </Routes>
