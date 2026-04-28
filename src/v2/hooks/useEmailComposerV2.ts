@@ -104,15 +104,40 @@ export function useEmailComposerV2() {
         body: {
           messages: [{
             role: "user",
-            content: `Genera un'email di tipo "${emailType}", tono "${tone}". ${recipientInfo}. Oggetto: ${subject || "da definire"}. ${goal ? `Obiettivo: ${goal}` : ""} Contesto: outreach commerciale logistica.`,
+            content: `Sei un assistente che genera SOLO il testo finale di un'email commerciale. NON aggiungere analisi, commenti, prossimi passi, sezioni markdown, intestazioni tipo "Bozza Email" o "Oggetto:". Restituisci ESCLUSIVAMENTE un oggetto JSON valido con questa struttura esatta, senza altro testo, senza backtick, senza markdown:
+{"subject":"<oggetto breve max 70 caratteri>","body":"<corpo email pronto all'invio, in testo semplice con \\n per andare a capo, firma inclusa>"}
+
+Tipo email: "${emailType}". Tono: "${tone}". ${recipientInfo}. ${subject ? `Oggetto suggerito: ${subject}.` : ""} ${goal ? `Richiesta operatore: ${goal}` : ""}
+Contesto: outreach commerciale logistica WCA.`,
           }],
           scope: "extension",
           context: { source: "email_composer", use_kb: useKB },
         },
         context: "emailComposerV2",
       });
-      const aiBody = data?.response || data?.content || "";
-      if (aiBody) setBody(aiBody);
+      const raw = (data?.response || data?.content || "").trim();
+      if (!raw) return;
+      // Strip eventuali fence ```json ... ```
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      // Tenta parse JSON
+      try {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        const jsonStr = match ? match[0] : cleaned;
+        const parsed = JSON.parse(jsonStr) as { subject?: string; body?: string };
+        if (parsed.subject) setSubject(parsed.subject);
+        if (parsed.body) setBody(parsed.body);
+        if (!parsed.body && !parsed.subject) setBody(raw);
+      } catch {
+        // Fallback: estrai con regex Oggetto/Corpo da markdown
+        const subjMatch = raw.match(/(?:\*\*)?Oggetto(?:\*\*)?\s*[:\-]\s*(.+)/i);
+        const bodyMatch = raw.match(/(?:\*\*)?(?:Testo|Corpo|Body)(?:\*\*)?\s*[:\-]?\s*\n+([\s\S]+?)(?:\n---|\n###|$)/i);
+        if (subjMatch?.[1]) setSubject(subjMatch[1].trim().replace(/\*+/g, ""));
+        if (bodyMatch?.[1]) {
+          setBody(bodyMatch[1].trim().replace(/\*\*/g, ""));
+        } else {
+          setBody(raw);
+        }
+      }
     },
     onError: () => toast.error("Errore nella generazione AI"),
   });
