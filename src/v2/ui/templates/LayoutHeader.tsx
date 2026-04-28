@@ -1,24 +1,21 @@
 /**
- * LayoutHeader — Desktop header bar with status, operator, actions
+ * LayoutHeader — Top bar compatta (post-decongestione).
+ * Sinistra: ☰ menu, breadcrumb (delegato a GoldenHeaderBar di pagina), StatusPill.
+ * Destra: NotificationCenter, OperatorSelector, ⋯ Strumenti, ✨ AI.
+ *
+ * Spostati altrove:
+ *  - "Cerca rapida" → solo shortcut ⌘K (registrato globalmente).
+ *  - VoiceLanguageSelector / AIAutomationToggle / TokenUsageCounter → /v2/settings.
+ *  - DatabaseZap / Activity / FlaskConical / Add Contact → menu ⋯ Strumenti.
+ *  - Pulsanti contestuali → CRM / → Network → rimossi (coperti da sidebar).
  */
 import * as React from "react";
-import { useState, useCallback, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { Button } from "../atoms/Button";
-import { ConnectionStatusBar } from "@/components/layout/ConnectionStatusBar";
-import { ActiveProcessIndicator } from "@/components/layout/ActiveProcessIndicator";
-import { OperatorSelector } from "@/components/header/OperatorSelector";
-import { AIAutomationToggle } from "@/components/header/AIAutomationToggle";
-import { TokenUsageCounter } from "@/components/header/TokenUsageCounter";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
-import { VOICE_LANGUAGE_MAP, VOICE_LANG_KEYS } from "@/components/voice/VoiceLanguageSelector";
-import {
-  Menu, Command, ArrowRight, Plus, DatabaseZap, Activity,
-  FlaskConical, Sparkles, WifiOff, Globe2,
-} from "lucide-react";
+import { OperatorSelector } from "@/components/header/OperatorSelector";
+import { StatusPill } from "./header/StatusPill";
+import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
+import { Menu, Sparkles } from "lucide-react";
 
 interface OutreachQueue {
   pendingCount: number;
@@ -44,112 +41,70 @@ interface Props {
   onTestExt: () => void;
   outreachQueue: OutreachQueue;
   globalSync: GlobalSyncState;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export function LayoutHeader({
   onToggleSidebar, onOpenCommandPalette, onAiClick, onAddContact, onAgentDash, onTestExt,
   outreachQueue, globalSync,
+  isDark = false,
+  onToggleTheme = () => {
+    document.documentElement.classList.toggle("dark");
+  },
 }: Props): React.ReactElement {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTranslation();
-  const isOnline = useOnlineStatus();
-  const { data: settings } = useAppSettings();
-  const updateSetting = useUpdateSetting();
-  const [voiceLang, setVoiceLang] = useState<string>("it");
-
-  useEffect(() => {
-    const savedLang = settings?.elevenlabs_language;
-    if (savedLang && VOICE_LANGUAGE_MAP[savedLang]) {
-      setVoiceLang(savedLang);
-    }
-  }, [settings?.elevenlabs_language]);
-
-  const cycleLang = useCallback(() => {
-    const idx = VOICE_LANG_KEYS.indexOf(voiceLang);
-    const next = VOICE_LANG_KEYS[(idx + 1) % VOICE_LANG_KEYS.length];
-    setVoiceLang(next);
-    updateSetting.mutate({ key: "elevenlabs_language", value: next });
-  }, [voiceLang, updateSetting]);
-
-  const langConfig = VOICE_LANGUAGE_MAP[voiceLang] || VOICE_LANGUAGE_MAP.it;
+  // onOpenCommandPalette è raggiungibile via ⌘K (registrato in AuthenticatedLayout)
+  // e via ☰ tooltip; non occupa più spazio fisso nella barra.
+  void onOpenCommandPalette;
 
   return (
-    <header role="banner" data-testid="app-header" className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0">
+    <header
+      role="banner"
+      data-testid="app-header"
+      className="hidden md:flex h-11 items-center justify-between border-b border-border/40 bg-card/60 backdrop-blur-sm px-4 shrink-0"
+    >
+      {/* LEFT cluster */}
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onToggleSidebar} aria-label="Toggle sidebar">
-          <Menu className="h-4 w-4" />
-        </Button>
         <Button
           variant="ghost"
-          size="sm"
-          className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={onOpenCommandPalette}
-          aria-label="Apri ricerca rapida"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={onToggleSidebar}
+          aria-label="Toggle sidebar (⌘K per Cerca rapida)"
+          title="Menu · ⌘K cerca rapida"
         >
-          <Command className="h-3.5 w-3.5" />
-          <span>Cerca rapida</span>
-          <kbd className="hidden lg:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-            ⌘K
-          </kbd>
+          <Menu className="h-4 w-4" />
         </Button>
-        <ActiveProcessIndicator />
-        {!isOnline && (
-          <div className="flex items-center gap-1 text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
-            <WifiOff className="h-3 w-3" />
-            Offline
-          </div>
-        )}
-        {location.pathname.startsWith("/v2/network") && (
-          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/crm")}>
-            <ArrowRight className="h-3 w-3" /> {t("nav.crm")}
-          </Button>
-        )}
-        {location.pathname.startsWith("/v2/crm") && (
-          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => navigate("/v2/network")}>
-            <ArrowRight className="h-3 w-3" /> {t("nav.network")}
-          </Button>
-        )}
-        <ConnectionStatusBar
+
+        <StatusPill
           onAiClick={onAiClick}
           outreachQueue={outreachQueue}
-          nightPause={globalSync.nightPause}
-          isNightTime={globalSync.isNightTime}
-          manualOverride={globalSync.manualOverride}
-          onToggleNightPause={globalSync.toggleNightPause}
-          resumeMinutes={globalSync.resumeMinutes}
+          globalSync={globalSync}
         />
-        <div id="campaign-header-controls" className="flex min-w-0 flex-1 items-center gap-2" />
+
+        {/* Slot dinamico per controlli pagina (campagne, ecc.) — riservato ma compresso */}
+        <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
       </div>
-      <div className="flex items-center gap-0.5">
-        <TokenUsageCounter />
-        <AIAutomationToggle />
-        <button
-          onClick={cycleLang}
-          disabled={updateSetting.isPending}
-          className="mr-1 flex h-7 items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/20 px-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-foreground backdrop-blur-sm transition-all hover:bg-accent/30 disabled:cursor-not-allowed disabled:opacity-60"
-          title={`Lingua vocale: ${langConfig.label}`}
-          aria-label={`Cambia lingua vocale, attuale ${langConfig.label}`}
-        >
-          <Globe2 className="w-3 h-3" />
-          <span>{langConfig.flag}</span>
-          <span>{voiceLang.toUpperCase()}</span>
-        </button>
-        <OperatorSelector />
+
+      {/* RIGHT cluster — solo essenziale */}
+      <div className="flex items-center gap-0.5 shrink-0">
         <NotificationCenter />
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAddContact} aria-label={t("common.add_contact")}>
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={() => navigate("/v2/settings?tab=enrichment")} aria-label={t("common.enrichment")}>
-          <DatabaseZap className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAgentDash} aria-label={t("common.agent_operations")}>
-          <Activity className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onTestExt} aria-label={t("common.test_extensions")}>
-          <FlaskConical className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors" onClick={onAiClick} aria-label="IntelliFlow AI">
+        <OperatorSelector />
+        <HeaderToolsMenu
+          onAddContact={onAddContact}
+          onAgentDash={onAgentDash}
+          onTestExt={onTestExt}
+          isDark={isDark}
+          onToggleTheme={onToggleTheme}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors"
+          onClick={onAiClick}
+          aria-label="IntelliFlow AI"
+          title="IntelliFlow AI · ⌘J"
+        >
           <Sparkles className="h-4 w-4" />
         </Button>
       </div>
