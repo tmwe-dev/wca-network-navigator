@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useVoiceOutput");
 export function useVoiceOutput() {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState<boolean>(
@@ -51,7 +54,7 @@ export function useVoiceOutput() {
         );
 
         if (!response.ok) {
-          console.error("[tts] edge error", response.status);
+          log.error("[tts] edge error", { error: response.status });
           setSpeaking(false);
           return;
         }
@@ -66,7 +69,7 @@ export function useVoiceOutput() {
         audio.onerror = () => cleanup();
         await audio.play();
       } catch (e) {
-        console.error("[tts] failed", e);
+        log.error("[tts] failed", { error: e });
         cleanup();
       }
     },

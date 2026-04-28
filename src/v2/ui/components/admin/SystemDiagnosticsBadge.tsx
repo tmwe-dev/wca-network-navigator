@@ -24,6 +24,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("SystemDiagnosticsBadge");
 interface DiagnosticsPayload {
   agent_tasks_pending: number;
   email_queue_pending: number;
@@ -36,7 +39,7 @@ interface DiagnosticsPayload {
 async function fetchDiagnostics(): Promise<DiagnosticsPayload | null> {
   const { data, error } = await supabase.rpc("get_system_diagnostics" as never);
   if (error) {
-    console.warn("[SystemDiagnosticsBadge] rpc error:", error.message);
+    log.warn("[SystemDiagnosticsBadge] rpc error:", { error: error.message });
     return null;
   }
   return data as unknown as DiagnosticsPayload;

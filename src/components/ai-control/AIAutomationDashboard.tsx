@@ -18,6 +18,9 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("AIAutomationDashboard");
 interface RuleWithStats {
   id: string;
   email_address: string;
@@ -70,7 +73,7 @@ export function AIAutomationDashboard() {
       if (error) throw error;
       setExecutionLogs((data || []) as DecisionLog[]);
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      log.error('Error fetching logs:', { error: error });
     }
   };
 
@@ -102,7 +105,7 @@ export function AIAutomationDashboard() {
       toast.success(currentState ? 'Regola disattivata' : 'Regola attivata');
       refetch();
     } catch (error) {
-      console.error('Error toggling rule:', error);
+      log.error('Error toggling rule:', { error: error });
       toast.error('Errore aggiornamento stato');
     }
   };

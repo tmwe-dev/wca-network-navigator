@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { useCallback, useRef } from "react";
 import { queryKeys } from "@/lib/queryKeys";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useMissionActions");
 type MissionActionRow = Database["public"]["Tables"]["mission_actions"]["Row"];
 type MissionActionInsert = Database["public"]["Tables"]["mission_actions"]["Insert"];
 type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Update"];
@@ -187,7 +190,7 @@ export function useMissionActions(missionId?: string) {
           break;
         }
       } catch (e) {
-        console.error("Mission execution error:", e);
+        log.error("Mission execution error:", { error: e });
         await new Promise(r => setTimeout(r, 10000));
       }
     }

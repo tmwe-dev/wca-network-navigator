@@ -11,6 +11,9 @@ import type { useAcquisitionPipelineState } from "./useAcquisitionPipelineState"
 import type { LiveStats } from "./useAcquisitionPipelineState";
 import { EMPTY_STATS } from "./useAcquisitionPipelineState";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useAcquisitionPipelineActions");
 type State = ReturnType<typeof useAcquisitionPipelineState>;
 
 export function useAcquisitionPipelineActions(
@@ -100,7 +103,7 @@ export function useAcquisitionPipelineActions(
         await updateDownloadJob(jobId, { status: "running", error_message: null });
       }
     } catch (err) {
-      console.error("create/update acquisition job failed", err);
+      log.error("create/update acquisition job failed", { error: err });
     }
 
     const localStats = await runExtensionLoop(jobId!, items as unknown as Record<string, unknown>[]);

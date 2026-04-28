@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFunctionDisplayName } from "@/data/tokenUsage";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("TokenByFunctionPie");
 interface PieData {
   name: string;
   value: number;
@@ -48,7 +51,7 @@ export function TokenByFunctionPie() {
         .gte("created_at", sevenDaysAgo.toISOString());
 
       if (error) {
-        console.error("Error fetching function breakdown:", error);
+        log.error("Error fetching function breakdown:", { error: error });
         return [];
       }
 

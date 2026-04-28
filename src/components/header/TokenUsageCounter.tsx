@@ -21,6 +21,9 @@ import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("TokenUsageCounter");
 interface TokenUsageCounterProps {
   className?: string;
 }
@@ -42,7 +45,7 @@ export function TokenUsageCounter({ className }: TokenUsageCounterProps) {
           setFunctionBreakdown(breakdown);
         }
       } catch (error) {
-        console.error("Error loading function breakdown:", error);
+        log.error("Error loading function breakdown:", { error: error });
       }
     }
   };

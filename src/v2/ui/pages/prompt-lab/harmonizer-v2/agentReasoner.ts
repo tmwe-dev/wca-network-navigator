@@ -24,6 +24,9 @@ import type { MatchCandidate } from "./entityMatcher";
 import type { FullEntryContent } from "./entityRetriever";
 import type { FactEntry } from "@/data/harmonizerSessions";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("agentReasoner");
 export type RetryStrategy = "full" | "simplify" | "explicit_match";
 
 export interface ReasonerInput {
@@ -193,7 +196,7 @@ export async function reasonAboutEntity(input: ReasonerInput): Promise<ReasonerR
     }
   }
 
-  console.warn("[agentReasoner] all strategies failed", { entity: input.entity.title, lastError });
+  log.warn("[agentReasoner] all strategies failed", { entity: input.entity.title, lastError });
   return {
     decision: SAFETY_FALLBACK,
     attemptsUsed: STRATEGIES.length,

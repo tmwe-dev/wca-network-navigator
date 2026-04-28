@@ -7,6 +7,9 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useHoldingStrategy");
 export interface HoldingStrategy {
   draftReply: string;
   sentiment: "positive" | "neutral" | "negative" | "unknown";
@@ -64,7 +67,7 @@ export function useHoldingStrategy() {
       return parsed;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Errore durante l'analisi AI";
-      console.error("Strategy analysis failed:", err);
+      log.error("Strategy analysis failed:", { error: err });
       setError(msg);
       return null;
     } finally {

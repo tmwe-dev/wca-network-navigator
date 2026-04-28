@@ -8,6 +8,9 @@ import type { ConversationMessage } from "@/hooks/useAIConversation";
 import type { RefObject } from "react";
 import { Loader2 } from "lucide-react";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("OverlayConversationThread");
 interface OverlayConversationThreadProps {
   messages: ConversationMessage[];
   loading: boolean;
@@ -36,7 +39,7 @@ export function OverlayConversationThread({ messages, loading, chatEndRef }: Ove
                         method: "POST",
                         headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
                         body: JSON.stringify({ text, voiceId: "FGY2WhTYpPnrIDTdsKH5" }),
-                      }).then(r => r.ok ? r.blob() : null).then(b => b && new Audio(URL.createObjectURL(b)).play()).catch((err) => { console.error("[TTS] playback failed:", err); });
+                      }).then(r => r.ok ? r.blob() : null).then(b => b && new Audio(URL.createObjectURL(b)).play()).catch((err) => { log.error("[TTS] playback failed:", { error: err }); });
                     }}
                     className="ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5"
                     title="Ascolta risposta"

@@ -12,6 +12,9 @@
  */
 import { z } from "zod";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("jsonValidators");
 // ============================================================
 // partners.enrichment_data
 // ============================================================
@@ -63,7 +66,7 @@ export interface SafeParseResult<T> {
 function logValidationError(field: string, errors: z.ZodIssue[]): void {
   if (typeof console !== "undefined") {
     // eslint-disable-next-line no-console
-    console.warn(`[jsonValidators] ${field} validation failed`, {
+    log.warn(`[jsonValidators] ${field} validation failed`, {
       errors: errors.map((e) => ({ path: e.path.join("."), message: e.message })),
     });
   }

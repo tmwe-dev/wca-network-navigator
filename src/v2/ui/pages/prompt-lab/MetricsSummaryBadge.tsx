@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { getMetricsSummary, type MetricsSummary } from "@/data/promptLabMetrics";
 import { useAuth } from "@/providers/AuthProvider";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("MetricsSummaryBadge");
 export function MetricsSummaryBadge() {
   const { user } = useAuth();
   const [summary, setSummary] = useState<MetricsSummary | null>(null);
@@ -27,7 +30,7 @@ export function MetricsSummaryBadge() {
         const s = await getMetricsSummary(user.id);
         setSummary(s);
       } catch (e) {
-        console.error("[MetricsSummaryBadge] Errore caricamento metriche:", e);
+        log.error("[MetricsSummaryBadge] Errore caricamento metriche:", { error: e });
       } finally {
         setLoading(false);
       }

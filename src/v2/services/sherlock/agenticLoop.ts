@@ -7,6 +7,9 @@ import { extractInternalLinks, normalizeUrl, safeHost } from "./urlUtils";
 import { callExtractAI, callDecideAI } from "./aiIntegrations";
 import type { SherlockStepResult, SherlockProgressEvent, SherlockChannel } from "./sherlockTypes";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("agenticLoop");
 export interface AgenticLoopOptions {
   companyName: string;
   city: string;
@@ -66,7 +69,7 @@ export async function runAgenticLoop(opts: AgenticLoopOptions): Promise<AgenticL
         signal: opts.signal,
       });
     } catch (e) {
-      console.warn("[agentic] decide failed", e);
+      log.warn("[agentic] decide failed", { error: e });
       break;
     }
 

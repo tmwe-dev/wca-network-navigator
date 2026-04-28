@@ -11,6 +11,9 @@ import { findEmailAddressRules } from "@/data/emailAddressRules";
 import { findCommercialPlaybooks } from "@/data/commercialPlaybooks";
 import { findAgentPersonas } from "@/data/agentPersonas";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("entityRetriever");
 export interface FullEntryContent {
   id: string;
   table: string;
@@ -102,7 +105,7 @@ async function loadTableIntoCache(
     }
     cache.loadedTables.add(table);
   } catch (err) {
-    console.warn(`[entityRetriever] table ${table} load failed`, err);
+    log.warn(`[entityRetriever] table ${table} load failed`, { error: err });
     cache.loadedTables.add(table); // segna come "tentato" per non riprovare
   }
 }

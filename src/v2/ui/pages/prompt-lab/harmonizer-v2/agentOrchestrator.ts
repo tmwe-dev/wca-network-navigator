@@ -28,11 +28,14 @@ import {
   type HarmonizeActionType,
 } from "@/data/harmonizeRuns";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("agentOrchestrator");
 async function persistBestEffort(label: string, operation: () => Promise<void>): Promise<void> {
   try {
     await operation();
   } catch (error) {
-    console.warn(`[orchestrator] ${label} failed`, error);
+    log.warn(`[orchestrator] ${label} failed`, { error: error });
   }
 }
 
@@ -281,7 +284,7 @@ export async function runAgenticHarmonizer(input: {
     } catch (err) {
       progress[i].status = "error";
       progress[i].errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[orchestrator] entity #${i} fatal`, err);
+      log.error(`[orchestrator] entity #${i} fatal`, { error: err });
     }
 
     cb.onEntityProgress?.(progress[i], i, entities.length);

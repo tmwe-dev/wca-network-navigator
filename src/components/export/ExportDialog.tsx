@@ -27,6 +27,9 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Download, FileText, Sheet } from "lucide-react";
 import { toast } from "sonner";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("ExportDialog");
 export interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -163,7 +166,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       }
       onOpenChange(false);
     } catch (error) {
-      console.error("Export error:", error);
+      log.error("Export error:", { error: error });
       toast.error("Errore durante l'esportazione");
     }
   };

@@ -20,6 +20,9 @@ import type {
   SherlockPlaybook,
 } from "@/v2/services/sherlock/sherlockTypes";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("useSherlock");
 export interface UseSherlockArgs {
   partnerId: string | null;
   contactId: string | null;
@@ -102,7 +105,7 @@ export function useSherlock(args: UseSherlockArgs) {
         invId = inv.id;
         setInvestigationId(inv.id);
       } catch (e) {
-        console.warn("[sherlock] create investigation skipped", e);
+        log.warn("[sherlock] create investigation skipped", { error: e });
       }
 
       try {

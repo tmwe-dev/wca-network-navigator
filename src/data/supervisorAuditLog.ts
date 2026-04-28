@@ -3,6 +3,9 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("supervisorAuditLog");
 export interface AuditLogEntry {
   actor_type?: string;
   actor_id?: string;
@@ -30,6 +33,6 @@ export async function logSupervisorAudit(entry: AuditLogEntry): Promise<void> {
   } as never);
   if (error) {
     // Audit failure must not block UX
-    console.warn("[supervisor_audit_log] insert failed", error);
+    log.warn("[supervisor_audit_log] insert failed", { error: error });
   }
 }

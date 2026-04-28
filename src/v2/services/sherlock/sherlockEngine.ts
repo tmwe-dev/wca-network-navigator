@@ -29,6 +29,9 @@ import type {
   SherlockProgressEvent,
 } from "./sherlockTypes";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("sherlockEngine");
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function extractMarkdown(data: unknown): string {
@@ -428,7 +431,7 @@ export async function runSherlock(opts: RunSherlockOptions): Promise<SherlockRun
       summaryText = ai.summary;
     } catch (e) {
       // AI failure: keep markdown but no findings
-      console.warn("[sherlock] AI extract failed for step", step.order, e);
+      log.warn("[sherlock] AI extract failed for step", { error: step.order, e });
     }
     if (signal.aborted) break;
 

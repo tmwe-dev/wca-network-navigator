@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase as supabaseTyped } from '@/integrations/supabase/client';
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("PromptTemplateSelector");
 // Cast controllato: la tabella `prompt_templates` non è nei tipi generati
 // (DEBT-EMAIL-INTEL-PROMPT-TEMPLATES). Bypass tipi finché non viene aggiunta
 // allo schema o sostituita da `kb_entries` con categoria dedicata.
@@ -83,7 +86,7 @@ export function PromptTemplateSelector({
       setTemplates(data || []);
     } catch (err) {
       toast.error('Errore caricamento template');
-      console.error(err);
+      log.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +122,7 @@ export function PromptTemplateSelector({
         throw error;
       }
     } catch (err) {
-      console.error('Error ensuring system templates:', err);
+      log.error('Error ensuring system templates:', { error: err });
       // Don't throw - templates might already exist
     }
   };

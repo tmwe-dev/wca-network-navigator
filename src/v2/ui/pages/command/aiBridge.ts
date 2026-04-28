@@ -15,6 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import type { ToolResult } from "./tools/types";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("aiBridge");
 export interface AiCommentRequest {
   /** What the user originally asked */
   userPrompt: string;
@@ -234,7 +237,7 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
       };
     }
   } catch (e: unknown) {
-    console.warn("[aiBridge] getAiComment failed:", e);
+    log.warn("[aiBridge] getAiComment failed:", { error: e });
     return fallbackComment(toolLabel);
   }
 }

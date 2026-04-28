@@ -2,6 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeSearchTerm } from "@/lib/sanitizeSearch";
 import type { ContactFilters, LeadStatus, ImportedContactInsert, ImportedContactRow } from "./types";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("queries");
 type ContactQuery = any;
 
 function applyContactFilters(
@@ -100,7 +103,7 @@ export async function updateContact(id: string, updates: Record<string, unknown>
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { lead_status: _stripped, ...safeUpdates } = updates;
   if (_stripped !== undefined) {
-    console.warn("[updateContact] lead_status stripped from generic update — use updateLeadStatus() instead");
+    log.warn("[updateContact] lead_status stripped from generic update — use updateLeadStatus() instead");
   }
   const { error } = await supabase
     .from("imported_contacts")

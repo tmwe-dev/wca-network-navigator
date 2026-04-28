@@ -12,6 +12,9 @@ import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 
+
+import { createLogger } from "@/lib/log";
+const log = createLogger("NotificationPreferences");
 interface NotificationSetting {
   key: string;
   label: string;
@@ -98,7 +101,7 @@ export function NotificationPreferences() {
           );
         }
       } catch (err) {
-        console.error("Error loading settings:", err);
+        log.error("Error loading settings:", { error: err });
         setError("Errore nel caricamento delle preferenze");
       } finally {
         setLoading(false);
@@ -153,7 +156,7 @@ export function NotificationPreferences() {
       // Reset saved state after 3 seconds
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      console.error("Error saving settings:", err);
+      log.error("Error saving settings:", { error: err });
       const errorMsg = err instanceof Error ? err.message : "Errore sconosciuto";
       setError(errorMsg);
       toast.error("Errore nel salvataggio delle preferenze");
