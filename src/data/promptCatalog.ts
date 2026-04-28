@@ -111,10 +111,10 @@ export async function listPromptCatalog(userId: string): Promise<PromptCatalogIt
   if (operatorIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, display_name, full_name")
+      .select("id, display_name")
       .in("id", operatorIds);
-    for (const p of (profiles ?? []) as Array<{ id: string; display_name: string | null; full_name: string | null }>) {
-      operatorNameById.set(p.id, p.display_name || p.full_name || "");
+    for (const p of (profiles ?? []) as Array<{ id: string; display_name: string | null }>) {
+      operatorNameById.set(p.id, p.display_name || "");
     }
   }
 
