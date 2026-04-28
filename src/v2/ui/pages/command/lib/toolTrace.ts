@@ -92,8 +92,7 @@ class TraceBuilder {
       driver: this.driver,
       references: [...this.references],
     };
-    if (typeof console !== "undefined" && console.info) {
-      log.info("[command-trace]", {
+    log.info("[command-trace]", {
         prompt: trace.prompt,
         phase: trace.phase,
         driver: trace.driver,

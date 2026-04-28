@@ -343,8 +343,7 @@ export async function enrichBaseTarget(
     logs.push(m);
     if (onLog) onLog(m);
     // Console: utile per debugging dal devtools
-    // eslint-disable-next-line no-console
-    log.info(`[enrich:${target.source}:${target.name}] ${m}`);
+    moduleLog.info(`[enrich:${target.source}:${target.name}] ${m}`);
   };
 
   let slugFound = false;
