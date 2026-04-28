@@ -89,7 +89,17 @@ export function useInboundNotifications() {
           filter: "direction=eq.inbound",
         },
         (payload) => {
-          const newMessage = payload.new as any;
+          const newMessage = payload.new as {
+            id: string;
+            channel?: string;
+            subject?: string | null;
+            body_text?: string | null;
+            sender_email?: string | null;
+            sender_name?: string | null;
+            from_address?: string | null;
+            created_at?: string;
+            direction?: string;
+          };
 
           // Filter for email channel only
           if (newMessage.channel !== "email") {
@@ -108,11 +118,11 @@ export function useInboundNotifications() {
             unreadCount: prev.unreadCount + 1,
             latestInbound: {
               id: newMessage.id,
-              from_address: newMessage.from_address,
-              subject: newMessage.subject,
-              created_at: newMessage.created_at,
-              channel: newMessage.channel,
-              direction: newMessage.direction,
+              from_address: newMessage.from_address ?? null,
+              subject: newMessage.subject ?? null,
+              created_at: newMessage.created_at ?? new Date().toISOString(),
+              channel: newMessage.channel ?? "email",
+              direction: newMessage.direction ?? "inbound",
             },
           }));
 

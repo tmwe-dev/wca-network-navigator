@@ -31,7 +31,7 @@ function GaugeBar({ percentage, label, used, limit }: { percentage: number; labe
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-foreground">{label}</span>
-        <Badge variant={getStatusColor() as any}>
+        <Badge variant={getStatusColor()}>
           {percentage.toFixed(1)}%
         </Badge>
       </div>

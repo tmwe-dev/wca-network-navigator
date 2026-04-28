@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,8 +132,7 @@ export function AgentTasksPage() {
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any)
-        .from("agent_tasks")
+      const { error } = await untypedFrom("agent_tasks")
         .update({ status, started_at: status === "running" ? new Date().toISOString() : undefined })
         .eq("id", id);
       if (error) throw error;

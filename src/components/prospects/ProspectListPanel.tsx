@@ -58,6 +58,7 @@ export function ProspectListPanel({ atecoCodes, isDark, regionFilter, provinceFi
   const { data: prospects, isLoading } = useQuery({
     queryKey: queryKeys.prospects.byAteco(atecoCodes, regionFilter, provinceFilter, quickSearch, advFilters),
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = await queryProspects((query: any) => {
         if (quickSearch && quickSearch.length >= 2) {
           query = query.or(`company_name.ilike.%${quickSearch}%,partita_iva.ilike.%${quickSearch}%,codice_fiscale.ilike.%${quickSearch}%`);

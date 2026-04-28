@@ -2,6 +2,7 @@
  * DAL — email_address_rules
  */
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface EmailAddressRule {
   id: string;
@@ -32,10 +33,9 @@ export async function findEmailAddressRules(userId: string): Promise<EmailAddres
 }
 
 export async function updateEmailAddressRule(id: string, patch: Partial<EmailAddressRule>): Promise<void> {
-  // Cast controllato: `auto_action_params` qui è Record<string, unknown> ma il tipo
-  // generato di Supabase è `Json` (ricorsivo). Sono compatibili a runtime.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await supabase.from("email_address_rules").update(patch as any).eq("id", id);
+  // `auto_action_params` è Record<string, unknown> ma il tipo generato Supabase è Json
+  // (ricorsivo). Compatibili a runtime — usiamo l'untypedFrom centralizzato.
+  const { error } = await untypedFrom("email_address_rules").update(patch).eq("id", id);
   if (error) throw error;
 }
 
@@ -51,10 +51,7 @@ export async function bulkUpdateAutoAction(
   params: Record<string, unknown> = {},
 ): Promise<void> {
   if (emails.length === 0) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any;
-  const { error } = await sb
-    .from("email_address_rules")
+  const { error } = await untypedFrom("email_address_rules")
     .update({
       auto_action: action,
       auto_action_params: params,
@@ -76,13 +73,10 @@ export async function bulkSetBlocked(
   blocked: boolean,
 ): Promise<void> {
   if (emails.length === 0) return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any;
   const patch = blocked
     ? { is_blocked: true, auto_action: "spam", auto_execute: true }
     : { is_blocked: false };
-  const { error } = await sb
-    .from("email_address_rules")
+  const { error } = await untypedFrom("email_address_rules")
     .update(patch)
     .eq("user_id", userId)
     .in("email_address", emails);

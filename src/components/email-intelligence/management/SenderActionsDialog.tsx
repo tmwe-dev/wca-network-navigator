@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { useImapFolders, useCreateRuleFromSender } from "@/hooks/useEmailFolderActions";
 import type { SenderAnalysis } from "@/types/email-management";
 
@@ -93,10 +94,7 @@ export function SenderActionsDialog({
           .limit(50);
 
         // 2) Prompt custom già usati su altri mittenti (uniti per testo)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sb = supabase as any;
-        const { data: rules } = await sb
-          .from("email_address_rules")
+        const { data: rules } = await untypedFrom("email_address_rules")
           .select("id, email_address, display_name, custom_prompt")
           .eq("user_id", user.id)
           .not("custom_prompt", "is", null)

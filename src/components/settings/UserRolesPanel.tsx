@@ -58,13 +58,13 @@ export default function UserRolesPanel() {
     queryKey: ["user-roles-all"],
     queryFn: async () => {
       if (!allUsers.length) return {};
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from("user_roles")
         .select("user_id, roles(id, name)")
         .in(
           "user_id",
-          allUsers.map((u) => u.id)
-        ) as any;
+          allUsers.map((u) => u.id),
+        )) as unknown as { data: UserRoleJoin[] | null; error: unknown };
       if (error) throw error;
 
       const map: Record<string, { id: string; name: string }[]> = {};
