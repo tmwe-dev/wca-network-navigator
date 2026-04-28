@@ -133,14 +133,14 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
       pageState.addMessage({
         role: "assistant",
         content: labels.isComposer
-          ? `Sto preparando un'email per te. Un attimo…`
+          ? `Preparo l'email…`
           : labels.isFlow
-            ? `Controllo lo stato delle tue campagne in corso.`
+            ? `Controllo le campagne…`
             : labels.isTimeline
-              ? `Sto raccogliendo cosa è successo negli ultimi 7 giorni.`
+              ? `Riepilogo ultimi 7 giorni…`
               : labels.isCardGrid
-                ? `Cerco i contatti che non senti da almeno 30 giorni.`
-                : `Cerco nel database. Un secondo…`,
+                ? `Cerco contatti inattivi…`
+                : `Cerco nel database…`,
         agentName: labels.agentLabel,
         timestamp: pageState.ts(),
       });
@@ -178,7 +178,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
           pageState.addMessage({
             role: "assistant",
-            content: `**${result.title}**\n${result.description}\n\nVuoi che proceda?`,
+            content: `${result.title}. ${result.description} Procedo?`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
           });
@@ -217,7 +217,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
           pageState.setShowTools(false);
           pageState.addMessage({
             role: "assistant",
-            content: `Ho preparato un report con ${result.sections.length} sezioni. Lo trovi qui a fianco.`,
+            content: `Report pronto (${result.sections.length} sezioni) →`,
             agentName: labels.agentLabel,
             timestamp: pageState.ts(),
           });
@@ -243,7 +243,7 @@ export function useToolExecution(pageState: CommandPageState, governance: Govern
 
         pageState.addMessage({
           role: "assistant",
-          content: `Ho trovato ${countLabel}. Li vedi nel pannello a destra.`,
+          content: `${countLabel} →`,
           agentName: labels.agentLabel,
           timestamp: pageState.ts(),
         });
