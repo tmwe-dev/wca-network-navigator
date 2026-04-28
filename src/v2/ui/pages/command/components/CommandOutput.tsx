@@ -1,17 +1,24 @@
 import { AnimatePresence, motion } from "framer-motion";
-import type { ToolResult } from "../tools/types";
+import type { ToolResult, BulkAction } from "../tools/types";
 import type { CanvasType } from "../constants";
 import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
-import LiveTableCanvas from "../canvas/LiveTableCanvas";
+import TableCanvas from "../canvas/TableCanvas";
+import { X } from "lucide-react";
 
 interface CommandOutputProps {
   canvas: CanvasType;
   liveResult: ToolResult | null;
   activeScenarioKey: string | null;
   onClose: () => void;
+  /** Selection */
+  selectedIds: Set<string>;
+  onToggleId: (id: string) => void;
+  onSelectAll: (ids: string[]) => void;
+  onClearSelection: () => void;
+  onBulkAction: (action: BulkAction, ids: string[]) => void;
 }
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
@@ -21,6 +28,11 @@ export function CommandOutput({
   liveResult,
   activeScenarioKey,
   onClose,
+  selectedIds,
+  onToggleId,
+  onSelectAll,
+  onClearSelection,
+  onBulkAction,
 }: CommandOutputProps) {
   return (
     <AnimatePresence>
@@ -37,14 +49,45 @@ export function CommandOutput({
               Solo i canvas LIVE alimentati da tool reali sono renderizzati. */}
           {canvas === "live-table" && liveResult && (
             liveResult.kind === "table" ? (
-              <LiveTableCanvas
-                title={liveResult.title}
-                columns={[...liveResult.columns]}
-                rows={[...liveResult.rows]}
-                sourceLabel={liveResult.meta?.sourceLabel}
-                count={liveResult.meta?.count}
-                onClose={onClose}
-              />
+              <div
+                className="h-full flex flex-col rounded-2xl p-6"
+                style={{
+                  background: "hsl(var(--card) / 0.75)",
+                  backdropFilter: "blur(40px) saturate(1.1)",
+                  border: "1px solid hsl(var(--foreground) / 0.12)",
+                  boxShadow:
+                    "0 0 80px hsl(var(--primary) / 0.03), 0 30px 60px -20px hsl(0 0% 0% / 0.65)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[13px] font-light text-foreground">
+                    {liveResult.title}
+                  </h3>
+                  <button
+                    onClick={onClose}
+                    className="text-muted-foreground hover:text-foreground p-1.5"
+                    aria-label="Chiudi canvas"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <TableCanvas
+                    columns={[...liveResult.columns]}
+                    rows={[...liveResult.rows]}
+                    isLive
+                    meta={liveResult.meta}
+                    selectable={liveResult.selectable}
+                    idField={liveResult.idField}
+                    selectedIds={selectedIds}
+                    onToggleId={onToggleId}
+                    onSelectAll={onSelectAll}
+                    onClearSelection={onClearSelection}
+                    bulkActions={liveResult.bulkActions}
+                    onBulkAction={onBulkAction}
+                  />
+                </div>
+              </div>
             ) : null
           )}
           {canvas === "live-card-grid" &&
@@ -64,6 +107,7 @@ export function CommandOutput({
                 </div>
                 <CardGridCanvas
                   items={liveResult.cards.map((c) => ({
+                    id: c.id,
                     name: c.title,
                     company: c.subtitle,
                     lastContact: c.lastContact
@@ -79,6 +123,13 @@ export function CommandOutput({
                   title={`${liveResult.cards.length} contatti inattivi`}
                   badge="LIVE"
                   sourceLabel={liveResult.meta?.sourceLabel}
+                  selectable={liveResult.selectable}
+                  selectedIds={selectedIds}
+                  onToggleId={onToggleId}
+                  onSelectAll={onSelectAll}
+                  onClearSelection={onClearSelection}
+                  bulkActions={liveResult.bulkActions}
+                  onBulkAction={onBulkAction}
                 />
               </div>
             )}
