@@ -221,9 +221,11 @@ export function tryLocalComment(
   if (count === 0) {
     const filtersDesc = describeFilters(filters);
     const word = noun(table, true);
-    const base = filtersDesc
-      ? `Non ho trovato ${word} ${filtersDesc}.`
-      : `Non ho trovato ${word} che corrispondano alla richiesta.`;
+    const base = table === "campaign_jobs" && filters.some((f) => f.column === "status")
+      ? `Non ci sono ${word} ${filtersDesc}.`
+      : filtersDesc
+        ? `Non ho trovato ${word} ${filtersDesc}.`
+        : `Non ho trovato ${word} che corrispondano alla richiesta.`;
     // Build alternative actions: drop the most specific filter (last one) and
     // offer the broader query, plus a "show all" fallback.
     const altActions: SuggestedAction[] = [];
@@ -236,8 +238,8 @@ export function tryLocalComment(
       });
     }
     altActions.push({
-      label: `📋 Mostra tutti i ${word}`,
-      prompt: `mostra tutti i ${word}`,
+      label: table === "campaign_jobs" ? `📋 Mostra tutte` : `📋 Mostra tutti i ${word}`,
+      prompt: table === "campaign_jobs" ? `mostra tutte le campagne` : `mostra tutti i ${word}`,
     });
     const proposal = buildProposalSentence(altActions);
     return {
