@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { ToolResult } from "../tools/types";
-import type { CanvasType } from "../hooks/useCommandPageState";
+import type { CanvasType } from "../constants";
 import CardGridCanvas from "../canvas/CardGridCanvas";
 import TimelineCanvas from "../canvas/TimelineCanvas";
 import FlowCanvas from "../canvas/FlowCanvas";
