@@ -6,6 +6,16 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { consumeCredits } from "./contextLoader.ts";
+import { corsHeaders as sharedCorsHeaders } from "../_shared/cors.ts";
+
+/**
+ * Headers per le response JSON delle mode handlers.
+ * IMPORTANTE: deve includere `Access-Control-Allow-Origin` (dai shared cors)
+ * altrimenti il browser scarta la risposta e l'SDK supabase-js lancia
+ * "Failed to send a request to the Edge Function" → tradotto lato client
+ * come "Sessione scaduta" generando falsi positivi (vedi LOVABLE 2026-04-29).
+ */
+const jsonHeaders = { ...sharedCorsHeaders, "Content-Type": "application/json" };
 
 export interface AiProvider {
   url: string;
@@ -24,12 +34,10 @@ export async function handleToolDecisionMode(
   userId: string | null,
   supabase: SupabaseClient
 ): Promise<Response> {
-  const corsHeaders = { "Content-Type": "application/json" };
-
   if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "Missing tools or prompt" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 
@@ -68,7 +76,7 @@ ${toolDescriptions}`;
   if (!decisionResponse.ok) {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "AI call failed" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 
@@ -92,12 +100,12 @@ ${toolDescriptions}`;
         toolParams: parsed.toolParams ?? {},
         reasoning: parsed.reasoning ?? "",
       }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   } catch {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "Failed to parse AI response" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 }
@@ -113,12 +121,10 @@ export async function handlePlanExecutionMode(
   userId: string | null,
   supabase: SupabaseClient
 ): Promise<Response> {
-  const corsHeaders = { "Content-Type": "application/json" };
-
   if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
     return new Response(
       JSON.stringify({ steps: [], summary: "Missing prompt or tools" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 
@@ -165,7 +171,7 @@ ${toolDescriptions}`;
     );
     return new Response(
       JSON.stringify({ steps: [], summary: "AI call failed" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 
@@ -190,12 +196,12 @@ ${toolDescriptions}`;
         steps: Array.isArray(parsed.steps) ? parsed.steps : [],
         summary: parsed.summary ?? "",
       }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   } catch {
     return new Response(
       JSON.stringify({ steps: [], summary: "Failed to parse plan" }),
-      { status: 200, headers: corsHeaders }
+      { status: 200, headers: jsonHeaders }
     );
   }
 }
