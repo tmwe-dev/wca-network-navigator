@@ -87,6 +87,7 @@ export async function planExecution(
         })),
         history: history.slice(-10),
       },
+      scope: "command",
     },
     PlanSchema,
   );
