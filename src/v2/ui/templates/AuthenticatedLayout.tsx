@@ -173,6 +173,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
         case "apply_filters":
           window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
           break;
+        case "open_modal": {
+          // Inoltrato al CoPilotContext via custom event interno
+          window.dispatchEvent(new CustomEvent("copilot-open-modal", {
+            detail: { name: detail.modal, params: detail.params || {} },
+          }));
+          break;
+        }
         case "start_download_job":
           if (detail.job_id) {
             toast.success(`Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.`);
