@@ -134,7 +134,7 @@ export const CRM_SORT = [
   { value: "name", label: "Contatto" },
   { value: "country", label: "Paese" },
   { value: "city", label: "Città" },
-  { value: "date_desc", label: "Più recenti" },
+  { value: "recent", label: "Più recenti" },
 ];
 
 export const CRM_ORIGIN = [
