@@ -15,6 +15,7 @@ import type { Quality } from "../_shared/kbSlice.ts";
 
 import { loadEntityFromActivity, loadStandalonePartner, assembleContextBlocks } from "./contextAssembler.ts";
 import { buildEmailPrompts, getModel, type PartnerData, type ContactData } from "./promptBuilder.ts";
+import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
 import { parseEmailResponse } from "./responseParser.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
@@ -227,14 +228,17 @@ serve(async (req) => {
       learnedPatterns: effectiveLearnedPatterns || undefined,
       ...ctx,
     });
+    // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
+    const calligrafiaSection = await buildCalligrafiaSection(supabase, userId);
     // Prompt-Lab overrides: replace system/user prompt entirely if provided
-    const systemPrompt = (typeof _system_prompt_override === "string" && _system_prompt_override.trim().length > 0)
+    const baseSystemPrompt = (typeof _system_prompt_override === "string" && _system_prompt_override.trim().length > 0)
       ? _system_prompt_override : built.systemPrompt;
+    const systemPrompt = `${baseSystemPrompt}\n${calligrafiaSection}`;
     const userPrompt = (typeof _user_prompt_override === "string" && _user_prompt_override.trim().length > 0)
       ? _user_prompt_override : built.userPrompt;
     const blocks = built.blocks;
     const systemBlocks = built.systemBlocks;
-    const promptOverridden = systemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
+    const promptOverridden = baseSystemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
 
     // ── AI call ──
     const model = getModel(quality);
