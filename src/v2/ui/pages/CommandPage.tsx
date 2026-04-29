@@ -32,7 +32,7 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
-import { QUICK_PROMPTS } from "./command/scenarios";
+import { useRecentCommandPrompts } from "@/v2/hooks/useRecentCommandPrompts";
 
 const CommandPage = () => {
   const nav = useNavigate();
@@ -76,6 +76,7 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
+  const { data: recentPrompts = [] } = useRecentCommandPrompts();
 
   useEffect(() => {
     if (voice.error) sonnerToast.error(voice.error);
@@ -188,7 +189,7 @@ const CommandPage = () => {
             <CommandHistory
               messages={[]}
               isEmpty
-              quickPrompts={QUICK_PROMPTS}
+              quickPrompts={recentPrompts}
               onQuickPrompt={(p) => handleSend(p)}
               chatEndRef={state.chatEndRef}
             />

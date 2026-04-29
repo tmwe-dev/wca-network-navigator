@@ -482,6 +482,7 @@ export const queryKeys = {
     emailSync: (filters?: unknown) => ["v2", "email-sync", filters] as const,
     emailCampaignQueue: (filters?: unknown) => ["v2", "email-campaign-queue", filters] as const,
     dailyBriefing: ["v2", "daily-briefing"] as const,
+    recentCommandPrompts: ["v2", "recent-command-prompts"] as const,
     dashboardMetrics: (filters?: unknown) => ["v2", "dashboard-metrics", filters] as const,
     agentTasks: (filters?: unknown) => ["v2", "agent-tasks", filters] as const,
     agents: (filters?: unknown) => ["v2", "agents", filters] as const,
