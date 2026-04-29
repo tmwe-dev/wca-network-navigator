@@ -92,6 +92,8 @@ export const aiQueryTool: Tool = {
       /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
       /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
       /\bcomponi\b/, /\bnaviga\b/, /\bcompila form/,
+      /\bscriv/, /\bredig/, /\bprepar/, /\bmand/, /\bbozz[ae]/, /\bdraft\b/,
+      /\b(e-?mail|mail)\s+a\b/, /\bemail\s+ai\b/, /\bmail\s+ai\b/, /\binvit/,
     ];
     if (actionPatterns.some((re) => re.test(lower))) return false;
 
