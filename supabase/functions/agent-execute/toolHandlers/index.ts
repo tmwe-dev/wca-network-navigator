@@ -53,8 +53,6 @@ export {
 } from "./analysisTools.ts";
 
 export {
-  handleCreateDownloadJob,
-  handleDownloadSinglePartner,
   handleGetBlacklist,
   handleListReminders,
   handleGetPartnersWithoutContacts,
@@ -98,6 +96,5 @@ export {
 export {
   handleEnrichPartnerWebsite,
   handleGenerateAliases,
-  handleScanDirectory,
   handleSuggestNextContacts,
 } from "./externalTools.ts";
