@@ -177,6 +177,98 @@ export const composeEmailTool: Tool = {
   },
 
   async execute(prompt: string): Promise<ToolResult> {
+    // ── 0) Country-wide batch intent ──
+    // Es. "scrivi una mail di presentazione ai partner di Malta",
+    //     "invitiamo tutti i partner di Italia ai nostri magazzini"
+    // In questo caso NON cerchiamo una singola azienda: prepariamo una bozza
+    // template-ready usando il primo partner del paese come campione,
+    // ed elenchiamo tutti i destinatari nel report/dossier.
+    const country = detectCountryCode(prompt);
+    if (country && isCountryWideIntent(prompt)) {
+      const partners = await searchPartnersByCountry(country.code);
+      if (partners.length === 0) {
+        return {
+          kind: "report",
+          title: `Nessun partner in ${country.label.toUpperCase()}`,
+          meta: { count: 0, sourceLabel: "DB · partners" },
+          sections: [
+            {
+              heading: "Verifica Oracolo",
+              body: `Non ho trovato partner attivi in ${country.label} (${country.code}). Controlla il filtro paese o importa prima i contatti.`,
+            },
+          ],
+        };
+      }
+      const withEmail = partners.filter((p) => !!p.email);
+      const sample = withEmail[0] ?? partners[0];
+      // Genera UNA bozza template-ready usando il sample come destinatario di riferimento
+      let initialSubject = "";
+      let initialBody = "";
+      let generationWarning: string | null = null;
+      try {
+        const gen = await invokeEdge<{ subject?: string; body?: string; message?: string }>("generate-email", {
+          body: {
+            standalone: true,
+            partner_id: sample.id,
+            recipient_name: null,
+            recipient_company: sample.company_name,
+            recipient_countries: country.code,
+            oracle_type: "primo_contatto",
+            oracle_tone: "professionale",
+            goal: prompt,
+            quality: "standard",
+            use_kb: true,
+            language: "it",
+          },
+          context: "command:compose-email-batch",
+        });
+        if (gen?.subject) initialSubject = gen.subject;
+        if (gen?.body) initialBody = gen.body;
+        if (!gen?.body && gen?.message) generationWarning = gen.message;
+      } catch (e) {
+        generationWarning = e instanceof Error ? e.message : "Errore generazione";
+      }
+
+      const recipientLines = partners
+        .slice(0, 30)
+        .map((p, i) => `${i + 1}. **${p.company_name}**${p.city ? ` — ${p.city}` : ""}${p.email ? ` · ${p.email}` : " · ⚠️ no email"}`)
+        .join("\n");
+
+      const notes: string[] = [
+        `Bozza template generata su "${sample.company_name}" come campione.`,
+        `Destinatari totali in ${country.label.toUpperCase()}: ${partners.length} partner (${withEmail.length} con email valida).`,
+        partners.length - withEmail.length > 0
+          ? `${partners.length - withEmail.length} partner senza email — andranno arricchiti prima dell'invio.`
+          : "Tutti i partner hanno un indirizzo email.",
+        "Per l'invio massivo: dopo aver perfezionato la bozza, programma una campagna outreach.",
+      ];
+      if (generationWarning) notes.push(`⚠️ ${generationWarning}`);
+
+      return {
+        kind: "composer",
+        title: `Email batch · ${partners.length} partner in ${country.label.toUpperCase()}`,
+        meta: {
+          count: partners.length,
+          sourceLabel: `Edge · generate-email · batch ${country.code}`,
+        },
+        initialTo: sample.email ?? "",
+        initialSubject,
+        initialBody,
+        promptHint: prompt,
+        partnerId: sample.id,
+        recipientName: null,
+        emailType: "primo_contatto",
+        dossier: {
+          partnerName: `${partners.length} partner · ${country.label.toUpperCase()}`,
+          contactName: null,
+          leadStatus: null,
+          lastInteraction: null,
+          notes: [...notes, "", "Destinatari (max 30 mostrati):", recipientLines],
+          emailType: "primo_contatto",
+        },
+      };
+    }
+
     const { person, company, email } = extractPersonAndCompany(prompt);
 
     // 1) Cerca partner
