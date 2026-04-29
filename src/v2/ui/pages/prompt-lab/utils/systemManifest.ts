@@ -73,8 +73,7 @@ PARTNER OPERATIONS
   search_partners           - Query partners by location, type, capability
   get_partner_detail       - Retrieve full partner profile with history
   get_country_overview     - Country-level metrics and partner distribution
-  get_directory_status     - Directory synchronization and coverage status
-  download_single_partner  - Export partner data to file
+  get_directory_status     - Local partner/profile/contact coverage status; no WCA directory access
   update_partner           - Modify partner attributes (company info, contacts)
   bulk_update_partners     - Batch update multiple partners
   add_partner_note         - Add internal note to partner record
