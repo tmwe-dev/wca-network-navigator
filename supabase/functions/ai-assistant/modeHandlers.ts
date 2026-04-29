@@ -140,6 +140,13 @@ export async function handlePlanExecutionMode(
 
   const planSystemPrompt = `Sei un orchestratore. Dato il prompt utente, decomponi il task in una sequenza ordinata di tool da eseguire. Ogni step deve avere: stepNumber, toolId, reasoning, params (oggetto JSON con i parametri estratti dal prompt e dal contesto degli step precedenti). Se uno step dipende dall'output di uno precedente (es: "usa l'id del partner trovato al passo 1"), usa segnaposto {{step1.result.partnerId}}. Ritorna SOLO JSON valido nella forma: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "descrizione del piano in 1 frase" }. Se il task è eseguibile con UN solo tool, ritorna 1 step. Se il task non è eseguibile coi tool disponibili, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
 
+REGOLE OPERATIVE IMPORTANTI:
+- Prompt tipo "scrivi/manda/prepara mail/email a (tutti) i partner di <PAESE>" → UN SOLO STEP con toolId "compose-email" e params {prompt: "<prompt utente originale integrale>"}. Il tool risolve internamente il fan-out per paese e prepara una bozza-template. NON spezzare in ai-query + compose-email: produrresti due step disconnessi che NON si passano i destinatari.
+- Prompt tipo "scrivi mail a <PERSONA> di <AZIENDA>" → UN SOLO STEP "compose-email" con params {prompt: "<prompt integrale>"}.
+- Prompt tipo "quanti partner abbiamo a <LUOGO>" / "mostra/elenca/cerca …" → UN SOLO STEP "ai-query" con params {prompt: "<prompt integrale>"}.
+- Per i tool single-step (compose-email, ai-query) passa SEMPRE il prompt utente originale come params.prompt: i tool sanno auto-risolvere il contesto.
+- Usa multi-step SOLO quando un'azione di scrittura dipende davvero dall'id puntuale di una entity restituita al passo precedente (es. "trova partner X poi crea attività su quell'id").
+
 Tool disponibili:
 ${toolDescriptions}`;
 

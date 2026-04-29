@@ -53,6 +53,62 @@ function extractPersonAndCompany(prompt: string): { person: string | null; compa
   return { person, company, email };
 }
 
+/* ─── Country detection (batch country-wide email) ─────────────────────── */
+
+const COUNTRY_MAP: Record<string, string> = {
+  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
+  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
+  "regno unito": "GB", uk: "GB", "united kingdom": "GB", inghilterra: "GB",
+  olanda: "NL", "paesi bassi": "NL", netherlands: "NL", belgio: "BE", belgium: "BE",
+  portogallo: "PT", portugal: "PT", grecia: "GR", greece: "GR",
+  svizzera: "CH", switzerland: "CH", austria: "AT",
+  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
+  "stati uniti": "US", usa: "US", "united states": "US", america: "US",
+  canada: "CA", messico: "MX", mexico: "MX", brasile: "BR", brazil: "BR",
+  argentina: "AR", cile: "CL", chile: "CL",
+  cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
+  emirati: "AE", uae: "AE", "arabia saudita": "SA", egitto: "EG", egypt: "EG",
+  marocco: "MA", morocco: "MA", "sud africa": "ZA", "south africa": "ZA",
+  australia: "AU", "nuova zelanda": "NZ", "new zealand": "NZ",
+  singapore: "SG", "hong kong": "HK", thailandia: "TH", thailand: "TH",
+  vietnam: "VN", indonesia: "ID", malesia: "MY", malaysia: "MY",
+  filippine: "PH", philippines: "PH", korea: "KR", "corea del sud": "KR",
+};
+
+function detectCountryCode(prompt: string): { code: string; label: string } | null {
+  const lower = prompt.toLowerCase();
+  // Cerca pattern "partner(s) (di|in|a) <paese>" o solo nome paese standalone
+  for (const [name, code] of Object.entries(COUNTRY_MAP)) {
+    const re = new RegExp(`\\b(?:di|in|a|da|of|from|to)\\s+${name}\\b`, "i");
+    if (re.test(lower)) return { code, label: name };
+  }
+  // Fallback: nome paese senza preposizione (es. "partner Malta")
+  for (const [name, code] of Object.entries(COUNTRY_MAP)) {
+    const re = new RegExp(`\\b${name}\\b`, "i");
+    if (re.test(lower)) return { code, label: name };
+  }
+  return null;
+}
+
+function isCountryWideIntent(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
+  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
+}
+
+async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at")
+    .eq("country_code", countryCode)
+    .eq("is_active", true)
+    .neq("lead_status", "blacklisted")
+    .order("company_name")
+    .limit(50);
+  if (error) return [];
+  return (data ?? []) as PartnerRow[];
+}
+
 async function searchPartner(company: string | null, email: string | null): Promise<PartnerRow[]> {
   let q = supabase
     .from("partners")
@@ -121,6 +177,98 @@ export const composeEmailTool: Tool = {
   },
 
   async execute(prompt: string): Promise<ToolResult> {
+    // ── 0) Country-wide batch intent ──
+    // Es. "scrivi una mail di presentazione ai partner di Malta",
+    //     "invitiamo tutti i partner di Italia ai nostri magazzini"
+    // In questo caso NON cerchiamo una singola azienda: prepariamo una bozza
+    // template-ready usando il primo partner del paese come campione,
+    // ed elenchiamo tutti i destinatari nel report/dossier.
+    const country = detectCountryCode(prompt);
+    if (country && isCountryWideIntent(prompt)) {
+      const partners = await searchPartnersByCountry(country.code);
+      if (partners.length === 0) {
+        return {
+          kind: "report",
+          title: `Nessun partner in ${country.label.toUpperCase()}`,
+          meta: { count: 0, sourceLabel: "DB · partners" },
+          sections: [
+            {
+              heading: "Verifica Oracolo",
+              body: `Non ho trovato partner attivi in ${country.label} (${country.code}). Controlla il filtro paese o importa prima i contatti.`,
+            },
+          ],
+        };
+      }
+      const withEmail = partners.filter((p) => !!p.email);
+      const sample = withEmail[0] ?? partners[0];
+      // Genera UNA bozza template-ready usando il sample come destinatario di riferimento
+      let initialSubject = "";
+      let initialBody = "";
+      let generationWarning: string | null = null;
+      try {
+        const gen = await invokeEdge<{ subject?: string; body?: string; message?: string }>("generate-email", {
+          body: {
+            standalone: true,
+            partner_id: sample.id,
+            recipient_name: null,
+            recipient_company: sample.company_name,
+            recipient_countries: country.code,
+            oracle_type: "primo_contatto",
+            oracle_tone: "professionale",
+            goal: prompt,
+            quality: "standard",
+            use_kb: true,
+            language: "it",
+          },
+          context: "command:compose-email-batch",
+        });
+        if (gen?.subject) initialSubject = gen.subject;
+        if (gen?.body) initialBody = gen.body;
+        if (!gen?.body && gen?.message) generationWarning = gen.message;
+      } catch (e) {
+        generationWarning = e instanceof Error ? e.message : "Errore generazione";
+      }
+
+      const recipientLines = partners
+        .slice(0, 30)
+        .map((p, i) => `${i + 1}. **${p.company_name}**${p.city ? ` — ${p.city}` : ""}${p.email ? ` · ${p.email}` : " · ⚠️ no email"}`)
+        .join("\n");
+
+      const notes: string[] = [
+        `Bozza template generata su "${sample.company_name}" come campione.`,
+        `Destinatari totali in ${country.label.toUpperCase()}: ${partners.length} partner (${withEmail.length} con email valida).`,
+        partners.length - withEmail.length > 0
+          ? `${partners.length - withEmail.length} partner senza email — andranno arricchiti prima dell'invio.`
+          : "Tutti i partner hanno un indirizzo email.",
+        "Per l'invio massivo: dopo aver perfezionato la bozza, programma una campagna outreach.",
+      ];
+      if (generationWarning) notes.push(`⚠️ ${generationWarning}`);
+
+      return {
+        kind: "composer",
+        title: `Email batch · ${partners.length} partner in ${country.label.toUpperCase()}`,
+        meta: {
+          count: partners.length,
+          sourceLabel: `Edge · generate-email · batch ${country.code}`,
+        },
+        initialTo: sample.email ?? "",
+        initialSubject,
+        initialBody,
+        promptHint: prompt,
+        partnerId: sample.id,
+        recipientName: null,
+        emailType: "primo_contatto",
+        dossier: {
+          partnerName: `${partners.length} partner · ${country.label.toUpperCase()}`,
+          contactName: null,
+          leadStatus: null,
+          lastInteraction: null,
+          notes: [...notes, "", "Destinatari (max 30 mostrati):", recipientLines],
+          emailType: "primo_contatto",
+        },
+      };
+    }
+
     const { person, company, email } = extractPersonAndCompany(prompt);
 
     // 1) Cerca partner
