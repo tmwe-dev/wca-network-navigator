@@ -1,78 +1,101 @@
-# Piano esecutivo — WCA Road to 100K v2 (calibrato sul reale)
+# Command come "Luca operativo" — collaborativo, proattivo, vocale
 
-Il piano v2 ricevuto è **buono** (assorbe tutti i feedback critici della v1: Whitelist Sezione 0, DoD binari, Vercel rimosso, Sentry/rate-limiter riusati). Però alcuni numeri sono ancora sottostimati e c'è un **bug runtime attivo** introdotto nei turni precedenti che va sanato per primo.
+Obiettivo: rendere `/v2/command` un layer sopra tutti gli agenti che (1) parla con identità Luca, (2) all'apertura propone un briefing data-driven, (3) può conversare a voce sia in modo leggero (attuale) sia full-duplex on-demand, (4) quando "programma un'attività" distingue chiaramente tra task per agenti AI e attività umane in agenda.
 
-## A. Correzioni numeriche prima di partire (verifica reale)
+## 1. Prompt Command nel Prompt Lab (governance, non codice)
 
-| Metrica | Piano v2 dice | Reale (grep) | Impatto |
-|---|---|---|---|
-| `:any` totali | 15 (10 eliminabili) | **515** | Sprint 3 va riformulato come "ridurre a 117 (baseline `debt-budget.js`)", non "azzerare" |
-| `console.error` | non quantificato | **89** | Realistico per Sprint 1 (8h) |
-| `console.warn` | 67 | **70** | OK |
-| Edge functions | 109 | 110 | OK |
-| Test files | 227 unit + 47 E2E | 279 unit + 47 E2E | OK |
+I prompt vivono già in `operative_prompts` (context = `command`). Oggi ne esistono solo 2 (Router + Vincoli messaging). Aggiungiamo via seed (script `scripts/seed-command-prompts.ts`, idempotente per `name+context`) le voci mancanti, tutte editabili dal Prompt Lab senza redeploy:
 
-→ **Aggiornare baseline `scripts/debt-budget.js`** mano a mano che si riduce, NON imporre target irrealistici.
+- **Command — Identità & Collaborazione** (priority 100): "Sei Luca in modalità cockpit. Collabori con l'utente come direttore-operativo: ascolti, proponi, chiedi conferma sulle azioni a impatto, esegui le altre. Italiano, sintetico, una proposta concreta per messaggio."
+- **Command — Briefing all'apertura** (priority 95): regole per il briefing iniziale (vedi §2): cosa includere, cosa NO, lunghezza max, tono.
+- **Command — Programmazione attività** (priority 90): quando creare `agent_tasks` (esecuzione AI) vs `activities` (utente in agenda). Sempre esplicito nel piano: "Eseguo io con [agente]" vs "Metto in agenda tua per [data]".
+- **Command — Uso memoria & guru** (priority 85): regole d'ingaggio per `ai_memory`, KB doctrine, sherlock_playbooks, guru/super-assistant. Quando salvare in memoria, quando consultare il guru.
+- **Command — Proattività & holding pattern** (priority 80): suggerire follow-up basati su `holding_pattern_governance`, lead in attesa >7gg, mission ferme, agenti idle.
+- **Command — Voce conversazionale** (priority 75): quando la sessione è in modalità voce → frasi brevi (3-4), no markdown, no esecuzione di tool di scrittura senza conferma esplicita vocale ("dì 'conferma' per procedere").
 
-## B. Bug bloccante PRIMA di tutto
+Tutti i nuovi prompt useranno `tags: ['command', 'OBBLIGATORIA', '<area>']` per essere caricati dal loader unificato (`_shared/operativePromptsLoader.ts`) con `scope: "command"` (già attivo in `useCommandSubmit` e `ai-assistant`).
 
-**`src/v2/observability/TraceConsole.tsx:102`** viola le Rules of Hooks: `if (!user) return null;` è prima di `useMemo(...)` alle righe 104 e 117 → React 18 lancia "Rendered more hooks than during the previous render" appena un anonimo apre l'app. Fix: spostare i due `useMemo` sopra il guard `!user`.
+## 2. Briefing automatico all'apertura
 
-→ **Task 0 (15 min)**: fix hook order in TraceConsole. Senza questo, ogni nuovo sprint introduce regressioni invisibili dietro un crash.
+Nuovo hook `useCommandBriefing` (`src/v2/ui/pages/command/hooks/useCommandBriefing.ts`) che parte una volta al mount di `CommandPage` se `messages.length === 0`:
 
-## C. Sequenza di esecuzione proposta (questo turno)
+1. **Raccolta dati (DAL, parallel)**:
+   - `holdingPatternStats()` (già esiste in `src/data/contacts.ts`)
+   - `agent_tasks` in stato `pending`/`running` (con count per agente)
+   - `activities` con `due_date` ≤ oggi
+   - `mission_runs` bloccate / in `pending_approval`
+   - Lead in `responded` ma senza follow-up >3gg
+   - Top 3 partner con `lead_score` alto e holding_state critico
+2. **Composizione**: chiamata a `ai-assistant` mode `tool-decision` con scope `command` e un nuovo intent `briefing` che inietta i dati raccolti come context. Il prompt "Briefing all'apertura" (DB) decide cosa dire e quali 3 azioni proporre.
+3. **Output**: messaggio assistant in chat + 3 chip cliccabili sotto la chat (componente `BriefingActionChips`) che pre-compilano l'input. TTS leggero (TTS attuale) legge solo la prima frase; il resto è testo.
+4. **Disattivabile**: toggle in `localStorage.wca_command_briefing` (di default ON), bottone nel header Command.
 
-Eseguo **solo la slice ad alto valore / basso rischio** del piano v2, lasciando il resto a sprint successivi (richiedono coordinamento che vale la pena fare a freddo).
+## 3. Voce ibrida: TTS attuale + ElevenLabs Conversational on-demand
 
-### Lotto immediato (questo turno) — ~2h
+**Stato attuale**: `useVoiceOutput` (TTS via edge `tts`) + `useVoiceInput` (Web Speech STT) — restano default per risposte testo→voce.
 
-1. **Fix TraceConsole** (Task 0, blocker runtime).
-2. **Sprint 1 → E1**: ErrorBoundary su `ContactRecordDrawer` e principali drawer/modal. Riuso `PageErrorBoundary.tsx` esistente, no nuovo componente. *DoD: ogni drawer wrappato.*
-3. **Sprint 1 → O5/O6 (slice)**: convertire `console.error/warn` a `createLogger` (esistente in `src/v2/lib/logger.ts`) **solo nei 10 file più critici** (`src/data/notifications.ts`, `src/data/analytics.ts`, `src/data/tokenUsage.ts`, `src/hooks/useGlobalChat.ts`, `src/hooks/useMissionActions.ts`, ecc.). *DoD: in quei 10 file, 0 console.\**
-4. **Sprint 2 → S1**: rimuovere `localhost` da `_shared/cors.ts` quando `Deno.env.get("ENVIRONMENT") === "production"`. *DoD: test che simula prod = origin localhost rifiutata.*
-5. **Sprint 2 → E5**: edge function `health-check` (nuova, ~30 LOC). *DoD: `curl /functions/v1/health-check` → 200 + JSON `{ ok, ts, version }`.*
-6. **Sprint 1 → E2**: unificare error handling in `aiInvocationGuard` per loggare a Sentry tramite `captureException` (già disponibile in `src/lib/sentry.ts`). *DoD: errore AI = breadcrumb Sentry.*
-7. **Aggiornare baseline `debt-budget.js`** se i conteggi scendono dopo i task O5/O6.
+**Nuovo**: pulsante "Modalità conversazione" (icona mic doppia) nel header Command che apre una sessione full-duplex ElevenLabs:
 
-### Lotti successivi (NON in questo turno — richiedono PR dedicate)
+- Nuovo hook `useCommandRealtimeVoice` basato su `@elevenlabs/react` (`useConversation`) con `connectionType: "webrtc"`.
+- Nuova edge function `elevenlabs-conversation-token` che chiama `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=...` (secret `ELEVENLABS_API_KEY` già presente; richiediamo `ELEVENLABS_COMMAND_AGENT_ID` come nuovo secret se mancante).
+- L'agent ElevenLabs è configurato (lato dashboard ElevenLabs, fuori codice) con `clientTools` whitelisted: `runCommandTool(toolId, params)` → richiama il registry esistente passando per `useCommandSubmit.sendMessage`.
+- `overrides.agent.prompt`: iniettiamo lato client il system prompt composto da `composeSystemPrompt({ scope: "command", conversational: true })` + i prompt operativi `command` letti dal DB → coerenza 100% con la modalità testo.
+- Quando la conversazione è attiva: l'azione di scrittura richiede conferma vocale ("conferma" / "annulla") prima di toccare DB; le hard guards (`hardGuards.ts`) restano invariate.
 
-- **Sprint 1 completo** (rimanenti O5/O6: 80 file): troppo invasivo per una sessione.
-- **Sprint 3** (any reduction da 515 → 117): meccanico ma 4-6h di solo grep+fix.
-- **Sprint 4** (test coverage 35%): richiede progettazione test, non puro coding.
-- **Sprint 5** (performance + arch): richiede profiling reale.
-- **Sprint 6** (AI excellence): richiede misurazioni AI lab prima.
+**Costo controllato**: la modalità realtime parte solo on-demand, non auto-attiva.
 
-## D. Suggerimenti aggiuntivi (oltre il piano v2)
+## 4. Programmazione attività con scelta esplicita
 
-1. **Aggiungere check anti-regressione hook order** in `eslint.config.js`: `react-hooks/rules-of-hooks: "error"`. Avrebbe prevenuto il bug TraceConsole.
-2. **Sentry: abilitare il `wrap` su `<App />`**: `src/lib/sentry.ts` esiste ma va verificato che `Sentry.ErrorBoundary` sia montato in `main.tsx` come outer boundary. Se manca, l'error capture frontend è cieco.
-3. **Health-check come ping per l'estensione**: l'edge function `health-check` può servire anche da heartbeat per le 6 extensions (Chrome, Email, LI, WA, RA, Partner-Connect) → unifica monitoring.
-4. **Whitelist eseguibile**: aggiungere `eslint-rules/no-touch-protected.js` che fallisce se una PR modifica i file in Sezione 0 senza commento `// owner-approved: <id>`. Trasforma la whitelist da convenzione a guard.
-5. **Trace Console come oracolo di regressione**: `ai_runtime_traces` (creato nei turni precedenti) può essere snapshottato pre/post sprint per detect regressioni AI silenziose. Aggiungere script `scripts/trace-snapshot.ts`.
-6. **Gating progressivo coverage**: invece di gate 35% globale, gate **per cartella** (`src/v2/io/supabase/queries/` deve essere ≥ 60%, il resto libero). Più facile da rispettare, più mirato dove conta.
+Nuovo tool nel registry `schedule-activity` (in `src/v2/ui/pages/command/tools/scheduleActivity.ts`) che accetta:
+```
+{ kind: "agent_task" | "human_activity",
+  title, description, dueAt, agentId?, partnerId?, contactId? }
+```
+- `kind = "agent_task"` → insert in `agent_tasks` (eseguito da agente, KPI/budget governance).
+- `kind = "human_activity"` → insert in `activities` (compare in agenda utente).
 
-## E. Cosa NON faccio (e perché)
+Il prompt "Programmazione attività" obbliga il modello, quando propone azioni nel piano, a esplicitare il `kind` per ciascuna. La UI di approvazione (`ApprovalPanel`) mostrerà un badge: 🤖 "Eseguo io" vs 📅 "Metto in agenda tua".
 
-- Non tocco le 110 edge functions con un wrapper massivo: rischio rottura `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (Sezione 0).
-- Non azzero i `:any` in un colpo solo: 515 occorrenze, molte legittime in test/wrapper.
-- Non aggiungo `vercel.json` né staging Vercel: il piano v2 li ha già scartati correttamente.
-- Non attivo rate limiting AI: memoria attiva dice "AI usage limits DISATTIVATI per uso interno" con kill-switch `AI_USAGE_LIMITS_ENABLED`.
+## 5. Uso memoria + guru
+
+`useCommandSubmit` arricchisce già `context.history`. Aggiungiamo nel context inviato a `planExecution`:
+- ultime N entries da `ai_memory` (DAL `src/data/aiMemory.ts`) filtrate per `context = 'command'` o globali
+- top KB hit dal guru (`super-assistant`) per il prompt corrente — chiamata batch 1 sola query KB pre-plan
+
+Questo è puramente lato edge (`ai-assistant`), via il sistema di context injection esistente (`contextInjection.ts`). Aggiungiamo uno scope `command` al builder che pesca da `ai_memory` + KB `command_tools` + KB `doctrine`.
+
+## 6. Discoverability potenziata
+
+La pagina `/v2/command/help` esiste già. Aggiunte:
+- Sezione "Prompt attivi" che lista i prompt `context = command` letti via DAL (`listOperativePrompts({ scope: "command" })`), con link diretto al Prompt Lab pre-filtrato per editarli.
+- Sezione "Memoria & Guru" con conteggio entry `ai_memory` correnti e KB `command_tools` + `doctrine`.
+- Bottone "Avvia briefing ora" che invoca `useCommandBriefing.run()`.
 
 ---
 
-## Riepilogo del lotto immediato
+## Sezione tecnica (riepilogo file)
 
-| # | Task | Stima | Rischio |
-|---|---|---|---|
-| 0 | Fix `TraceConsole` hook order (blocker) | 15 min | Nullo |
-| 1 | ErrorBoundary su drawer principali | 25 min | Basso |
-| 2 | Migrazione 10 file da console a createLogger | 30 min | Basso |
-| 3 | CORS prod-only (no localhost in prod) | 10 min | Basso |
-| 4 | Edge function `health-check` | 20 min | Nullo |
-| 5 | AI errors → Sentry via aiInvocationGuard | 20 min | Medio (lo guardo prima) |
-| 6 | Aggiornare baseline `debt-budget.js` | 5 min | Nullo |
-| 7 | ESLint `react-hooks/rules-of-hooks: error` | 5 min | Basso |
+**Nuovi file**:
+- `scripts/seed-command-prompts.ts` (idempotente)
+- `src/v2/ui/pages/command/hooks/useCommandBriefing.ts`
+- `src/v2/ui/pages/command/hooks/useCommandRealtimeVoice.ts`
+- `src/v2/ui/pages/command/components/BriefingActionChips.tsx`
+- `src/v2/ui/pages/command/components/RealtimeVoiceButton.tsx`
+- `src/v2/ui/pages/command/tools/scheduleActivity.ts`
+- `supabase/functions/elevenlabs-conversation-token/index.ts`
 
-**Tempo totale stimato: ~2h. Tutto rollbackabile per file.**
+**File modificati**:
+- `src/v2/ui/pages/command/CommandPage.tsx` (mount briefing + button realtime)
+- `src/v2/ui/pages/command/components/CommandPageHeader.tsx` (toggle briefing + bottone voce realtime)
+- `src/v2/ui/pages/command/tools/registry.ts` (registra `schedule-activity`)
+- `src/v2/ui/pages/command/CommandHelpPage.tsx` (sezioni prompt attivi + memoria)
+- `supabase/functions/_shared/contextInjection.ts` (scope `command`: `ai_memory` + KB)
+- `supabase/functions/ai-assistant/modeHandlers.ts` (intent `briefing`)
+- `package.json` (`@elevenlabs/react`)
 
-Confermi questo lotto? Se sì, eseguo in sequenza con `tsc --noEmit` come gate tra un task e l'altro.
+**Secrets richiesti** (chiederò via `secrets--add_secret` prima dell'implementazione):
+- `ELEVENLABS_COMMAND_AGENT_ID` (id agente Command su dashboard ElevenLabs; `ELEVENLABS_API_KEY` già presente)
+
+**Memoria**: aggiornerò `mem://features/command-tools-expanded` o creerò `mem://features/command-luca-orchestrator` con la nuova architettura (briefing, voce ibrida, schedule-activity).
+
+**Vincoli rispettati**: AI Invocation Charter (tutto via `invokeAi`/`ai-assistant`), DAL-only, no `any`, voice rules esistenti, no modifica a `check-inbox`/IMAP, hard guards e soft-delete invariati.
