@@ -110,7 +110,7 @@ export const SORTING_FILTERS: { key: SortingFilterMode; label: string }[] = [
 export const NETWORK_SORT = [
   { value: "name", label: "Nome" },
   { value: "rating", label: "Rating" },
-  { value: "contacts", label: "Contatti" },
+  { value: "recent", label: "Più recenti" },
 ];
 
 export const NETWORK_QUALITY = [
