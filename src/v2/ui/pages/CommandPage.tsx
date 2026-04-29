@@ -33,6 +33,8 @@ import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
 import { useRecentCommandPrompts } from "@/v2/hooks/useRecentCommandPrompts";
+import { useCommandBriefing } from "./command/hooks/useCommandBriefing";
+import BriefingPanel from "./command/components/BriefingPanel";
 
 const CommandPage = () => {
   const nav = useNavigate();
@@ -77,6 +79,7 @@ const CommandPage = () => {
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
   const { data: recentPrompts = [] } = useRecentCommandPrompts();
+  const briefing = useCommandBriefing();
 
   useEffect(() => {
     if (voice.error) sonnerToast.error(voice.error);
@@ -186,13 +189,16 @@ const CommandPage = () => {
           }`}
         >
           {isEmpty ? (
-            <CommandHistory
-              messages={[]}
-              isEmpty
-              quickPrompts={recentPrompts}
-              onQuickPrompt={(p) => handleSend(p)}
-              chatEndRef={state.chatEndRef}
-            />
+            <>
+              <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
+              <CommandHistory
+                messages={[]}
+                isEmpty
+                quickPrompts={recentPrompts}
+                onQuickPrompt={(p) => handleSend(p)}
+                chatEndRef={state.chatEndRef}
+              />
+            </>
           ) : (
             <CommandThread
               messages={state.messages}
