@@ -8,6 +8,7 @@ import { readUnifiedEnrichment, formatEnrichmentForPrompt } from "../_shared/enr
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
+import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
