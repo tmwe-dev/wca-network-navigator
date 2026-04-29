@@ -15,6 +15,53 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+/** Estrae user_id dal JWT senza verifica crittografica (gateway l'ha già validato) */
+function extractUserIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return (decoded?.sub as string) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Crea un bridge_token sha256-hashed in tabella, ritorna il token in chiaro */
+async function mintBridgeToken(userId: string): Promise<string | null> {
+  try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const raw = crypto.randomUUID() + "-" + crypto.randomUUID();
+    const hashBuf = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(raw),
+    );
+    const tokenHash = Array.from(new Uint8Array(hashBuf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const { error } = await supabase.from("bridge_tokens").insert({
+      token_hash: tokenHash,
+      created_by: userId,
+      // expires_at default = 30 min (vedi migration 20260410101008)
+    });
+    if (error) {
+      console.warn("bridge_token insert failed", error.message);
+      return null;
+    }
+    return raw;
+  } catch (e) {
+    console.warn("mintBridgeToken failed", (e as Error).message);
+    return null;
+  }
+}
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -77,7 +124,11 @@ serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ token, agentId }), {
+    // Mint bridge_token per autenticare il client tool ask_brain → command-ask-brain
+    const userId = extractUserIdFromJwt(authHeader);
+    const bridgeToken = userId ? await mintBridgeToken(userId) : null;
+
+    return new Response(JSON.stringify({ token, agentId, bridge_token: bridgeToken }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
