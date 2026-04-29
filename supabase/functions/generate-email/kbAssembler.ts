@@ -31,6 +31,12 @@ const FALLBACK_ALWAYS_ON_CATEGORIES = [
   "hook",
   "cold_outreach",
   "dati_partner",
+  // Categorie effettivamente presenti nelle KB degli operatori
+  "doctrine",
+  "email_management",
+  "system_doctrine",
+  "sales_doctrine",
+  "calligrafia",
 ] as const;
 
 async function loadAlwaysOnCategories(supabase: SupabaseClient): Promise<string[]> {
@@ -73,8 +79,11 @@ export async function fetchKbEntriesStrategic(
   const { data: entries } = await supabase
     .from("kb_entries")
     .select("title, content, category, chapter, tags")
-    .eq("user_id", userId)
+    // Le KB sono visibili a tutti gli operatori autenticati (memoria globale-visibility):
+    // entry dell'utente corrente + entry "system" (user_id NULL) + entry condivise.
+    .or(`user_id.eq.${userId},user_id.is.null`)
     .eq("is_active", true)
+    .is("deleted_at", null)
     .in("category", [...new Set(categories)])
     .order("priority", { ascending: false })
     .order("sort_order")

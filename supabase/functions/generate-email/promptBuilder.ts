@@ -142,11 +142,15 @@ ${email_type_prompt ? `\n## Istruzioni operative del tipo:\n${email_type_prompt}
   const addressPriorityBlock = buildAddressPriorityBlock({ addressCustomPrompt, addressCategory });
 
   // System prompt minimale: identità + missione + dossier + contesto.
-  // Le regole di stile, lunghezza, frasi vietate, ancora obbligatoria,
-  // tono, doctrine commerciali → vivono nel Prompt Lab DB
-  // (scope "email") e arrivano via `operativePromptsBlock` qui sotto.
-  // I guardrail tecnici di esecuzione stanno in src/v2/agent/policy/hardGuards.ts.
-  const systemPrompt = `${addressPriorityBlock}Sei l'editor che scrive UN messaggio email per UN destinatario, al servizio di WCA Network (alleanza globale di freight forwarder indipendenti).
+  // L'identità del MITTENTE è dinamica: viene da app_settings (ai_company_name / ai_contact_*)
+  // e NON è hardcoded. Le regole di stile/lunghezza/tono vivono nel Prompt Lab DB (scope "email").
+  const senderCompanyForPrompt = senderCompanyAlias || "(azienda mittente non configurata in Settings)";
+  const systemPrompt = `${addressPriorityBlock}Sei l'editor che scrive UN messaggio email per UN destinatario, AL SERVIZIO ESCLUSIVO di "${senderCompanyForPrompt}" (questo è il MITTENTE — vedi blocco "Mittente" nel dossier per ruolo, recapiti, settore e knowledge base aziendale).
+
+REGOLA IDENTITÀ (NON NEGOZIABILE):
+- Tu rappresenti "${senderCompanyForPrompt}". MAI firmare, citare o lasciare intendere altre aziende come mittente.
+- MAI usare nomi di network, alleanze o brand di terzi come identità del mittente, anche se compaiono nel dossier o nella KB. Quei nomi sono CONTESTO, non firma.
+- Tutti i pronomi "noi/nostro/la nostra azienda" si riferiscono ESCLUSIVAMENTE a "${senderCompanyForPrompt}".
 
 Leggi il dossier sotto, costruisci nella tua testa il ritratto del destinatario, scegli UNA leva di interesse rilevante per lui, e scrivi. Le regole vincolanti su stile, lunghezza, dati e copywriting arrivano dal Prompt Lab qui sotto — applica quelle.
 
@@ -162,8 +166,8 @@ ${operativePromptsBlock ? `\n${operativePromptsBlock}\n` : ""}${playbookBlock ? 
   const systemBlocks: PromptBlock[] = [];
   if (addressCustomPrompt) systemBlocks.push({ label: "Address Custom Prompt (Priority)", content: addressCustomPrompt });
   if (addressCategory) systemBlocks.push({ label: "Address Category (Priority)", content: addressCategory });
-  systemBlocks.push({ label: "Identity (Editor)", content: "Editor giornalista WCA Network. Scrive UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale." });
-  systemBlocks.push({ label: "Filosofia WCA", content: "Membership = first-mover advantage: primi su tariffe, booking, partenze, info di mercato. Partner trasporti = guadagno reciproco + vantaggio competitivo." });
+  systemBlocks.push({ label: "Identity (Editor)", content: `Editor che scrive a nome di "${senderCompanyForPrompt}". UN messaggio per UN destinatario dopo aver letto il dossier. Trasmette: serietà, personalizzazione vera, standard aziendale del mittente.` });
+  systemBlocks.push({ label: "Identità mittente — VINCOLANTE", content: `Mittente esclusivo: "${senderCompanyForPrompt}". Mai firmare/citare altre aziende, network o alleanze come identità del mittente.` });
   systemBlocks.push({ label: "Missione messaggio", content: "Costruire ritratto preciso del partner → scegliere UNA leva di interesse → costruire l'email attorno a quella. Una idea forte, non elenco feature." });
   if (operativePromptsBlock) {
     const appliedLabel = operativePromptsApplied && operativePromptsApplied.length > 0
@@ -176,7 +180,7 @@ ${operativePromptsBlock ? `\n${operativePromptsBlock}\n` : ""}${playbookBlock ? 
   systemBlocks.push({ label: "Strategic Advisor", content: strategicAdvisor });
   systemBlocks.push({ label: "Regole dati", content: "Usa tutti i dati dei blocchi per ritratto + leva. Vietato inventare numeri/casi/certificazioni. Qualitativo se mancano dati." });
   systemBlocks.push({ label: "Stile Editor", content: "Pro-a-pro, asciutto. Apertura osservazione concreta. UNA idea forte. CTA leggera. 80-150 parole. No bullet di feature, no entusiasmo finto." });
-  systemBlocks.push({ label: "Ancora obbligatoria", content: "Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione WCA onesta." });
+  systemBlocks.push({ label: "Ancora obbligatoria", content: `Almeno 1 elemento specifico dal dossier. Se zero dati → tag [GENERIC] nel subject + presentazione onesta di "${senderCompanyForPrompt}".` });
   systemBlocks.push({ label: "Output + Guardrails", content: `Lingua: ${effectiveLanguage} (${partner.country_code} → ${detected.languageLabel}). Subject prima riga, body HTML semplice, firma auto.` });
 
   // Commercial state context (shared module, by_warmth strategy = legacy generate-email tone heuristic)
