@@ -50,13 +50,13 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return edgeError("AUTH_REQUIRED", "Unauthorized");
+      return edgeError("AUTH_REQUIRED", "Unauthorized", undefined, dynCors);
     }
     const token = authHeader.replace("Bearer ", "");
     const authClient = createUserClient(authHeader);
     const { data: userData, error: authError } = await authClient.auth.getUser(token);
     if (authError || !userData?.user?.id) {
-      return edgeError("AUTH_INVALID", "Unauthorized");
+      return edgeError("AUTH_INVALID", "Unauthorized", undefined, dynCors);
     }
     const userId: string = userData.user.id;
 
@@ -127,7 +127,8 @@ serve(async (req) => {
           ? (messages[messages.length - 1]?.content ?? "")
           : "",
         userId,
-        supabase
+        supabase,
+        dynCors
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -151,7 +152,8 @@ serve(async (req) => {
         userPrompt,
         Array.isArray(context?.history) ? context.history : [],
         userId,
-        supabase
+        supabase,
+        dynCors
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -369,6 +371,6 @@ serve(async (req) => {
     logEdgeError("ai-assistant", e);
     endMetrics(metrics, false, 500);
     console.error("ai-assistant error:", extractErrorMessage(e));
-    return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, dynCors);
   }
 });

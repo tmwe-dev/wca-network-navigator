@@ -6,7 +6,6 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { consumeCredits } from "./contextLoader.ts";
-import { corsHeaders as sharedCorsHeaders } from "../_shared/cors.ts";
 
 /**
  * Headers per le response JSON delle mode handlers.
@@ -15,7 +14,9 @@ import { corsHeaders as sharedCorsHeaders } from "../_shared/cors.ts";
  * "Failed to send a request to the Edge Function" → tradotto lato client
  * come "Sessione scaduta" generando falsi positivi (vedi LOVABLE 2026-04-29).
  */
-const jsonHeaders = { ...sharedCorsHeaders, "Content-Type": "application/json" };
+function jsonHeaders(corsHeaders: Record<string, string>): Record<string, string> {
+  return { ...corsHeaders, "Content-Type": "application/json" };
+}
 
 export interface AiProvider {
   url: string;
@@ -32,12 +33,13 @@ export async function handleToolDecisionMode(
   toolList: Record<string, unknown>[] | undefined,
   userPrompt: string,
   userId: string | null,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "Missing tools or prompt" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 
@@ -76,7 +78,7 @@ ${toolDescriptions}`;
   if (!decisionResponse.ok) {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "AI call failed" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 
@@ -100,12 +102,12 @@ ${toolDescriptions}`;
         toolParams: parsed.toolParams ?? {},
         reasoning: parsed.reasoning ?? "",
       }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   } catch {
     return new Response(
       JSON.stringify({ toolId: "none", reasoning: "Failed to parse AI response" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 }
@@ -119,12 +121,13 @@ export async function handlePlanExecutionMode(
   userPrompt: string,
   history: Record<string, unknown>[],
   userId: string | null,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
     return new Response(
       JSON.stringify({ steps: [], summary: "Missing prompt or tools" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 
@@ -171,7 +174,7 @@ ${toolDescriptions}`;
     );
     return new Response(
       JSON.stringify({ steps: [], summary: "AI call failed" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 
@@ -196,12 +199,12 @@ ${toolDescriptions}`;
         steps: Array.isArray(parsed.steps) ? parsed.steps : [],
         summary: parsed.summary ?? "",
       }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   } catch {
     return new Response(
       JSON.stringify({ steps: [], summary: "Failed to parse plan" }),
-      { status: 200, headers: jsonHeaders }
+      { status: 200, headers: jsonHeaders(corsHeaders) }
     );
   }
 }

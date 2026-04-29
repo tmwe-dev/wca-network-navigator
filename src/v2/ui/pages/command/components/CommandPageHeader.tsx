@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Globe2 } from "lucide-react";
+import { Activity, Globe2 } from "lucide-react";
 
 interface AgentDot {
   agent: string;
@@ -20,9 +20,10 @@ interface CommandPageHeaderProps {
   flowPhase: string;
   lang: string;
   onLangChange: () => void;
+  onOpenTraceConsole: () => void;
 }
 
-export function CommandPageHeader({ flowPhase, lang, onLangChange }: CommandPageHeaderProps) {
+export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceConsole }: CommandPageHeaderProps) {
   return (
     <div className="flex items-center justify-between px-6 py-3 relative z-10 flex-shrink-0">
       <div className="flex items-center gap-3 ml-28">
@@ -76,6 +77,16 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange }: CommandPage
         <span className="text-[8px] text-muted-foreground/100 font-mono tracking-wider">
           14 fonti · 12.8k contatti · 234 partner · 7 agenti
         </span>
+        <button
+          type="button"
+          onClick={onOpenTraceConsole}
+          className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent/60 border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-300"
+          title="Apri monitor AI"
+          aria-label="Apri monitor AI"
+        >
+          <Activity className="w-3 h-3" />
+          <span className="text-[9px] font-semibold tracking-wider uppercase">Monitor</span>
+        </button>
         <motion.button
           onClick={onLangChange}
           whileHover={{ scale: 1.05 }}

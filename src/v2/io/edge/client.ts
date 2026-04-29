@@ -5,14 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../core/domain/errors";
 import { withCircuitBreaker } from "../../bridge/circuit-breaker";
+import { traceCollector } from "../../observability/traceCollector";
 import type { z } from "zod";
 
 /**
  * Translates raw Supabase invoke errors into user-facing messages.
  * The supabase-js SDK throws "Failed to send a request to the Edge Function"
- * whenever the underlying fetch crashes — typically because the local JWT is
- * malformed/expired. In that case the only recovery is a fresh login, so we
- * give the user actionable feedback instead of the cryptic SDK message.
+ * whenever the underlying fetch crashes — most often CORS/preflight/network,
+ * not necessarily auth. Keep the message diagnostic instead of blaming login.
  */
 function translateInvokeError(functionName: string, rawMessage: string): string {
   const msg = (rawMessage ?? "").toLowerCase();
@@ -23,7 +23,7 @@ function translateInvokeError(functionName: string, rawMessage: string): string 
     msg.includes("networkerror") ||
     msg.includes("load failed")
   ) {
-    return `Sessione scaduta o connessione interrotta verso "${functionName}". Effettua di nuovo il login e riprova.`;
+    return `Connessione interrotta verso "${functionName}". Possibile blocco CORS/preflight o rete: apri Trace Console e riprova.`;
   }
 
   if (msg.includes("401") || msg.includes("unauthor") || msg.includes("jwt")) {
@@ -54,25 +54,59 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
   payload: TReq,
   responseSchema: z.ZodType<TRes>,
 ): Promise<Result<TRes, AppError>> {
+  const activeCorrelation = traceCollector.getActiveCorrelationId();
+  const correlationId = activeCorrelation ?? traceCollector.startCorrelation();
+  const ownsCorrelation = !activeCorrelation;
+  const startedAt = Date.now();
+  const route = typeof window !== "undefined" ? window.location.pathname : undefined;
+
   return withCircuitBreaker(
     `edge:${functionName}`,
     async () => {
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload,
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: payload,
+        });
 
-      if (error) {
-        throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
+        if (error) {
+          throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
+        }
+
+        const parsed = responseSchema.safeParse(data);
+        if (!parsed.success) {
+          throw new Error(
+            `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
+          );
+        }
+
+        traceCollector.push({
+          type: "edge.invoke",
+          scope: typeof payload.scope === "string" ? payload.scope : "edge",
+          source: `${functionName}:invokeEdgeV2`,
+          route,
+          status: "success",
+          duration_ms: Date.now() - startedAt,
+          payload_summary: { functionName, request: payload },
+          correlation_id: correlationId,
+        });
+        return parsed.data;
+      } catch (caught: unknown) {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        traceCollector.push({
+          type: "edge.invoke",
+          scope: typeof payload.scope === "string" ? payload.scope : "edge",
+          source: `${functionName}:invokeEdgeV2`,
+          route,
+          status: "error",
+          duration_ms: Date.now() - startedAt,
+          payload_summary: { functionName, request: payload },
+          error: { message },
+          correlation_id: correlationId,
+        });
+        throw caught;
+      } finally {
+        if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
       }
-
-      const parsed = responseSchema.safeParse(data);
-      if (!parsed.success) {
-        throw new Error(
-          `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
-        );
-      }
-
-      return parsed.data;
     },
   );
 }

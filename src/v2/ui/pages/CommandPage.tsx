@@ -158,6 +158,7 @@ const CommandPage = () => {
         flowPhase={state.flowPhase}
         lang={state.lang}
         onLangChange={() => state.setLang(state.lang === "it" ? "en" : "it")}
+        onOpenTraceConsole={() => window.dispatchEvent(new CustomEvent("trace-console-open"))}
       />
 
       <div className="flex-1 flex overflow-hidden relative z-10">

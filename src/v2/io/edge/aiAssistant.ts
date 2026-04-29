@@ -78,6 +78,9 @@ export async function planExecution(
     {
       mode: "plan-execution",
       context: {
+        source: "CommandPage.planExecution",
+        route: "/v2/command",
+        mode: "plan-execution",
         userPrompt: prompt,
         tools: tools.map((t) => ({
           id: t.id,
@@ -87,6 +90,7 @@ export async function planExecution(
         })),
         history: history.slice(-10),
       },
+      scope: "command",
     },
     PlanSchema,
   );
