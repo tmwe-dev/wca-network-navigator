@@ -50,13 +50,13 @@ serve(async (req) => {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return edgeError("AUTH_REQUIRED", "Unauthorized");
+      return edgeError("AUTH_REQUIRED", "Unauthorized", undefined, dynCors);
     }
     const token = authHeader.replace("Bearer ", "");
     const authClient = createUserClient(authHeader);
     const { data: userData, error: authError } = await authClient.auth.getUser(token);
     if (authError || !userData?.user?.id) {
-      return edgeError("AUTH_INVALID", "Unauthorized");
+      return edgeError("AUTH_INVALID", "Unauthorized", undefined, dynCors);
     }
     const userId: string = userData.user.id;
 
