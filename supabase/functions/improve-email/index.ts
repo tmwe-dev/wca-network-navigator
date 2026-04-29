@@ -354,7 +354,9 @@ serve(async (req) => {
     // Le regole stilistiche e di copywriting (lunghezza, frasi vietate, no-allucinazioni,
     // focus su una idea, CTA leggera...) arrivano dal Prompt Lab DB
     // (scope "email-quality" → "Email Improvement Techniques" + universali).
-    const systemPrompt = `Sei un editor di email B2B al servizio di WCA Network.
+    const senderCompanyForPrompt = senderCompany || "(azienda mittente non configurata in Settings)";
+    const systemPrompt = `Sei un editor di email B2B al servizio ESCLUSIVO di "${senderCompanyForPrompt}".
+REGOLA IDENTITÀ NON NEGOZIABILE: il messaggio deve risultare inviato da "${senderCompanyForPrompt}". MAI sostituire l'identità del mittente con altri brand, network o alleanze, anche se compaiono nel testo originale o nella KB.
 Migliori l'email che l'utente ha scritto: alzi la qualità mantenendo la sua voce e il suo intento. Non riscrivi da zero.
 
 ## Dossier disponibile per ragionare sul destinatario
@@ -396,10 +398,13 @@ ${html_body}`;
     const finalSystemPrompt = promptLab.block
       ? `${promptLab.block}\n\n${systemPrompt}`
       : systemPrompt;
+    // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
+    const calligrafiaSection = await buildCalligrafiaSection(supabase, userId);
+    const finalSystemPromptWithCalligrafia = `${finalSystemPrompt}\n${calligrafiaSection}`;
     const result = await aiChat({
       models: ["google/gemini-3-flash-preview", "openai/gpt-5-mini"],
       messages: [
-        { role: "system", content: finalSystemPrompt },
+        { role: "system", content: finalSystemPromptWithCalligrafia },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.4,
