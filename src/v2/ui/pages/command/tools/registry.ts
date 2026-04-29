@@ -29,6 +29,12 @@ import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
 import { browserAutoCompleteTool } from "./browserAutoComplete";
 import { browserFillFormTool } from "./browserFillForm";
 import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
+import { sendWhatsappTool } from "./sendWhatsapp";
+import { sendLinkedinTool } from "./sendLinkedin";
+import { launchMissionTool } from "./launchMission";
+import { dailyBriefingTool } from "./dailyBriefing";
+import { parseBusinessCardTool } from "./parseBusinessCard";
+import { kbIngestDocumentTool } from "./kbIngestDocument";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -37,6 +43,7 @@ const TOOLS: readonly Tool[] = [
   // Reads
   dashboardSnapshotTool,
   outreachQueueStatusTool,
+  dailyBriefingTool,
   followupBatchTool,
   agentReportTool,
   campaignStatusTool,
@@ -50,6 +57,11 @@ const TOOLS: readonly Tool[] = [
   updatePartnerStatusTool,
   createCampaignTool,
   enqueueOutreachTool,
+  sendWhatsappTool,
+  sendLinkedinTool,
+  launchMissionTool,
+  parseBusinessCardTool,
+  kbIngestDocumentTool,
   createAgentTool,
   createKbEntryTool,
   calculateLeadScoresTool,
@@ -128,6 +140,11 @@ const WRITE_TOOL_IDS = new Set<string>([
   "calculate-lead-scores",
   "deduplicate-contacts",
   "compose-email",
+  "send-whatsapp",
+  "send-linkedin",
+  "launch-mission",
+  "parse-business-card",
+  "kb-ingest-document",
   "scrape-partner-website",
   "scrape-prospect-website",
   "scrape-company-website",
