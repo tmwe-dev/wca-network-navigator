@@ -30,6 +30,26 @@ const EMAIL_VARIABLES = [
   { key: "{{country}}", label: "Paese" },
 ] as const;
 
+function normalizeComposerHtml(raw: string): string {
+  const value = (raw || "").replace(/\r\n?/g, "\n").trim();
+  if (!value) return "";
+  if (/<(p|br|ul|ol|li|strong|em|a)\b/i.test(value) || /&lt;(p|br|ul|ol|li|strong|em|a)\b/i.test(value)) {
+    return value
+      .replace(/&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi, (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`)
+      .replace(/<br\s*\/?\s*>/gi, "<br>")
+      .replace(/(?:<br>\s*){2,}/gi, "<br>")
+      .replace(/<\/p>\s*([,.;:])/gi, "$1</p>")
+      .replace(/<p>\s*([,.;:])\s*/gi, "<p>")
+      .trim();
+  }
+  return value
+    .split(/\n\s*\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+}
+
 export { EMAIL_VARIABLES };
 
 export function useEmailComposerV2() {
@@ -125,7 +145,7 @@ Contesto: outreach commerciale logistica WCA.`,
         const jsonStr = match ? match[0] : cleaned;
         const parsed = JSON.parse(jsonStr) as { subject?: string; body?: string };
         if (parsed.subject) setSubject(parsed.subject);
-        if (parsed.body) setBody(parsed.body);
+        if (parsed.body) setBody(normalizeComposerHtml(parsed.body));
         if (!parsed.body && !parsed.subject) setBody(raw);
       } catch {
         // Fallback: estrai con regex Oggetto/Corpo da markdown
@@ -133,9 +153,9 @@ Contesto: outreach commerciale logistica WCA.`,
         const bodyMatch = raw.match(/(?:\*\*)?(?:Testo|Corpo|Body)(?:\*\*)?\s*[:\-]?\s*\n+([\s\S]+?)(?:\n---|\n###|$)/i);
         if (subjMatch?.[1]) setSubject(subjMatch[1].trim().replace(/\*+/g, ""));
         if (bodyMatch?.[1]) {
-          setBody(bodyMatch[1].trim().replace(/\*\*/g, ""));
+          setBody(normalizeComposerHtml(bodyMatch[1].trim().replace(/\*\*/g, "")));
         } else {
-          setBody(raw);
+          setBody(normalizeComposerHtml(raw));
         }
       }
     },
