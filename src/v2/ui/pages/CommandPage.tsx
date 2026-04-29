@@ -32,7 +32,7 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
-import { QUICK_PROMPTS } from "./command/scenarios";
+import { useRecentCommandPrompts } from "@/v2/hooks/useRecentCommandPrompts";
 
 const CommandPage = () => {
   const nav = useNavigate();
