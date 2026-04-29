@@ -43,6 +43,7 @@ export type PromptScope =
   | "post-send"
   | "classification"
   | "agent-loop"
+  | "command"
   | "general";
 
 /** Canonical mapping scope → contexts/tags accepted from the DB. */
@@ -57,6 +58,7 @@ const SCOPE_MAP: Record<PromptScope, { contexts: string[]; tags: string[] }> = {
   "post-send":      { contexts: ["post-send"],                     tags: ["post-send", "checklist"] },
   "classification": { contexts: ["lead-status", "email-quality"],  tags: ["lead-status", "qualification", "classification"] },
   "agent-loop":     { contexts: ["outreach", "multi-channel", "lead-status"], tags: ["workflow", "outreach", "lead-status"] },
+  "command":        { contexts: ["command"],                       tags: ["command", "tool-routing", "router"] },
   "general":        { contexts: [],                                tags: [] },
 };
 
