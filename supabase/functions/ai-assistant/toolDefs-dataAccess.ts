@@ -85,7 +85,7 @@ export const DATA_ACCESS_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "get_partner_detail",
-      description: "Get complete details of a specific partner: company info, contacts, networks, services, certifications, social links, blacklist status.",
+      description: "Get complete details of a specific partner. ALWAYS call this when the user names a specific company (e.g. 'Transport Management', 'XYZ srl Milano'). Returns: company info, city/country, WCA ID, membership_expires, ALL contacts (partner_contacts + business_cards + imported_contacts deduplicated, with `contacts_count_total` and `contacts_breakdown`), networks with expiry, services, certifications, social links, blacklist matches. Pass partner_id if known (from search_partners) else company_name.",
       parameters: {
         type: "object",
         properties: {
