@@ -730,4 +730,23 @@ export const PLATFORM_TOOLS = [
       },
     },
   },
+
+  // ── Detail handlers nuovi (allineamento UI) ──
+  { type: "function", function: { name: "get_business_card_detail", description: "Dettaglio completo di un biglietto da visita (OCR full + partner/contact matchato + email correlate).", parameters: { type: "object", properties: { card_id: { type: "string" }, email: { type: "string" }, contact_name: { type: "string" } } } } },
+  { type: "function", function: { name: "get_prospect_detail", description: "Dettaglio completo di un prospect IT (anagrafica + prospect_contacts + deals).", parameters: { type: "object", properties: { prospect_id: { type: "string" }, company_name: { type: "string" } } } } },
+  { type: "function", function: { name: "search_partner_contacts", description: "Cerca direttamente nei contatti diretti dei partner WCA.", parameters: { type: "object", properties: { name: { type: "string" }, email: { type: "string" }, partner_id: { type: "string" }, is_primary: { type: "boolean" }, limit: { type: "number" } } } } },
+
+  // ── Domini transazionali ──
+  { type: "function", function: { name: "list_deals", description: "Lista deals (opportunità commerciali) con filtri stage/partner/contact.", parameters: { type: "object", properties: { stage: { type: "string" }, stages: { type: "array", items: { type: "string" } }, partner_id: { type: "string" }, contact_id: { type: "string" }, min_amount: { type: "number" }, closing_within_days: { type: "number" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "get_pipeline_view", description: "Vista kanban aggregata: count e total_value per stage.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "list_outreach_queue", description: "Lista voci nella coda di outreach (pending, sent, failed).", parameters: { type: "object", properties: { status: { type: "string" }, statuses: { type: "array", items: { type: "string" } }, channel: { type: "string" }, partner_id: { type: "string" }, contact_id: { type: "string" }, has_reply: { type: "boolean" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "list_calendar_events", description: "Lista eventi del calendario (meeting, call, follow-up).", parameters: { type: "object", properties: { event_type: { type: "string" }, status: { type: "string" }, partner_id: { type: "string" }, contact_id: { type: "string" }, deal_id: { type: "string" }, from_date: { type: "string" }, to_date: { type: "string" }, upcoming: { type: "boolean" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "list_notifications", description: "Lista notifiche dell'utente corrente.", parameters: { type: "object", properties: { unread_only: { type: "boolean" }, type: { type: "string" }, entity_type: { type: "string" }, entity_id: { type: "string" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "list_agent_tasks_status", description: "Lista task degli agent AI con status di esecuzione.", parameters: { type: "object", properties: { status: { type: "string" }, agent_id: { type: "string" }, task_type: { type: "string" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "search_kb", description: "Cerca nella Knowledge Base interna (full text su title+content).", parameters: { type: "object", properties: { query: { type: "string" }, category: { type: "string" }, chapter: { type: "string" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "get_lead_score_breakdown", description: "Scomposizione del lead_score per un contatto (0-100).", parameters: { type: "object", properties: { contact_id: { type: "string" } }, required: ["contact_id"] } } },
+  { type: "function", function: { name: "check_blacklist_email", description: "Controlla se una specifica email o dominio è in blacklist.", parameters: { type: "object", properties: { email: { type: "string" } }, required: ["email"] } } },
+  { type: "function", function: { name: "list_email_send_log", description: "Storico invii email (campagne e dirette).", parameters: { type: "object", properties: { recipient_email: { type: "string" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "get_holding_pattern_list", description: "Lista contatti in holding pattern (interaction_count = 0).", parameters: { type: "object", properties: { country: { type: "string" }, lead_status: { type: "string" }, limit: { type: "number" } } } } },
+  { type: "function", function: { name: "get_global_dashboard", description: "Dashboard omnicomprensiva: totals, pipeline, queue, notifiche, calendar, business cards.", parameters: { type: "object", properties: {} } } },
 ];
