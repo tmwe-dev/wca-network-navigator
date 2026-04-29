@@ -10,9 +10,8 @@ import type { z } from "zod";
 /**
  * Translates raw Supabase invoke errors into user-facing messages.
  * The supabase-js SDK throws "Failed to send a request to the Edge Function"
- * whenever the underlying fetch crashes — typically because the local JWT is
- * malformed/expired. In that case the only recovery is a fresh login, so we
- * give the user actionable feedback instead of the cryptic SDK message.
+ * whenever the underlying fetch crashes — most often CORS/preflight/network,
+ * not necessarily auth. Keep the message diagnostic instead of blaming login.
  */
 function translateInvokeError(functionName: string, rawMessage: string): string {
   const msg = (rawMessage ?? "").toLowerCase();
@@ -23,7 +22,7 @@ function translateInvokeError(functionName: string, rawMessage: string): string 
     msg.includes("networkerror") ||
     msg.includes("load failed")
   ) {
-    return `Sessione scaduta o connessione interrotta verso "${functionName}". Effettua di nuovo il login e riprova.`;
+    return `Connessione interrotta verso "${functionName}". Possibile blocco CORS/preflight o rete: apri Trace Console e riprova.`;
   }
 
   if (msg.includes("401") || msg.includes("unauthor") || msg.includes("jwt")) {
