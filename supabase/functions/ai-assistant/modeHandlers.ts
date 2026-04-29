@@ -34,7 +34,8 @@ export async function handleToolDecisionMode(
   userPrompt: string,
   userId: string | null,
   supabase: SupabaseClient,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
+  commandPromptBlock = ""
 ): Promise<Response> {
   if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
     return new Response(
@@ -55,7 +56,8 @@ Rispondi SOLO con un JSON valido: {"toolId": "<id>", "reasoning": "<spiegazione 
 Se nessun tool è adatto, rispondi: {"toolId": "none", "reasoning": "<motivo>"}
 
 Tool disponibili:
-${toolDescriptions}`;
+${toolDescriptions}
+${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
   const decisionResponse = await fetch(provider.url, {
     method: "POST",
@@ -122,7 +124,8 @@ export async function handlePlanExecutionMode(
   history: Record<string, unknown>[],
   userId: string | null,
   supabase: SupabaseClient,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
+  commandPromptBlock = ""
 ): Promise<Response> {
   if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
     return new Response(
@@ -148,7 +151,8 @@ REGOLE OPERATIVE IMPORTANTI:
 - Usa multi-step SOLO quando un'azione di scrittura dipende davvero dall'id puntuale di una entity restituita al passo precedente (es. "trova partner X poi crea attività su quell'id").
 
 Tool disponibili:
-${toolDescriptions}`;
+${toolDescriptions}
+${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
   const planMessages: Record<string, unknown>[] = [
     { role: "system", content: planSystemPrompt },
