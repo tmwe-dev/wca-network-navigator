@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Sparkles, Globe, Check, Users, RefreshCw } from "lucide-react";
+import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown, Building2 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { NETWORK_QUALITY } from "./constants";
+import { NETWORK_QUALITY, NETWORK_SORT } from "./constants";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("NetworkFiltersSection");
@@ -85,6 +85,13 @@ export function NetworkFiltersSection() {
 
   return (
     <>
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+          <Building2 className="h-3.5 w-3.5" /> WCA Partner
+        </div>
+        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">Tabella partner WCA ufficiali: aziende, paesi, profili e contatti partner.</p>
+      </div>
+
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
         {networkSearchValue.trim().length >= 2 && (
@@ -185,6 +192,12 @@ export function NetworkFiltersSection() {
       <FilterSection icon={Sparkles} label="Qualità dati">
         <ChipGroup>
           {NETWORK_QUALITY.map(o => <Chip key={o.value} active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>)}
+        </ChipGroup>
+      </FilterSection>
+
+      <FilterSection icon={ArrowUpDown} label="Ordina partner">
+        <ChipGroup>
+          {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
         </ChipGroup>
       </FilterSection>
 
