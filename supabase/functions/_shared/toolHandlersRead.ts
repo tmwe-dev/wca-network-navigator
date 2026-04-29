@@ -179,14 +179,52 @@ export function createReadHandlers(supabase: SupabaseClient) {
     const ownerFilter = userId ? { user_id: userId } : null;
     const applyOwner = <T extends { eq: (col: string, val: unknown) => T }>(q: T): T =>
       ownerFilter ? q.eq("user_id", ownerFilter.user_id) : q;
-    const [contactsRes, networksRes, servicesRes, certsRes, socialsRes, blacklistRes] = await Promise.all([
+    const [contactsRes, networksRes, servicesRes, certsRes, socialsRes, blacklistRes, bcaRes, importedRes] = await Promise.all([
       applyOwner(supabase.from("partner_contacts").select("name, email, title, direct_phone, mobile, is_primary").eq("partner_id", pid)),
       applyOwner(supabase.from("partner_networks").select("network_name, expires, network_id").eq("partner_id", pid)),
       applyOwner(supabase.from("partner_services").select("service_category").eq("partner_id", pid)),
       applyOwner(supabase.from("partner_certifications").select("certification").eq("partner_id", pid)),
       applyOwner(supabase.from("partner_social_links").select("platform, url").eq("partner_id", pid)),
       supabase.from("blacklist_entries").select("company_name, total_owed_amount, claims, status").eq("matched_partner_id", pid),
+      // Business cards condivise (BCA): visibilità globale per scelta di prodotto
+      supabase.from("business_cards")
+        .select("contact_name, email, phone, mobile, position, event_name, met_at, location")
+        .eq("matched_partner_id", pid)
+        .is("deleted_at", null),
+      // Contatti importati (CRM) collegati allo stesso partner via match by company name
+      // (per coerenza con la sidebar Network che li somma)
+      applyOwner(
+        supabase.from("imported_contacts")
+          .select("name, email, phone, mobile, position, lead_status, origin")
+          .ilike("company_name", String(partner.company_name || ""))
+          .limit(50),
+      ),
     ]);
+    const partnerContacts = (contactsRes.data || []).map((c: Record<string, unknown>) => ({
+      name: c.name, title: c.title, email: c.email,
+      phone: c.direct_phone || c.mobile, is_primary: c.is_primary, source: "partner",
+    }));
+    const bcaContacts = (bcaRes.data || []).map((c: Record<string, unknown>) => ({
+      name: c.contact_name, title: c.position, email: c.email,
+      phone: c.phone || c.mobile,
+      met_at: c.met_at, event: c.event_name, location: c.location,
+      source: "business_card",
+    }));
+    const importedContacts = (importedRes.data || []).map((c: Record<string, unknown>) => ({
+      name: c.name, title: c.position, email: c.email,
+      phone: c.phone || c.mobile, lead_status: c.lead_status, origin: c.origin,
+      source: "imported",
+    }));
+    // Dedup per email per evitare doppi conteggi tra le 3 fonti
+    const allContacts = [...partnerContacts, ...bcaContacts, ...importedContacts];
+    const seenEmails = new Set<string>();
+    const dedupedContacts = allContacts.filter((c) => {
+      const e = String(c.email || "").trim().toLowerCase();
+      if (!e) return true;
+      if (seenEmails.has(e)) return false;
+      seenEmails.add(e);
+      return true;
+    });
     return {
       id: partner.id, company_name: partner.company_name, alias: partner.company_alias, city: partner.city,
       country: `${partner.country_name} (${partner.country_code})`, address: partner.address || null,
@@ -199,7 +237,13 @@ export function createReadHandlers(supabase: SupabaseClient) {
       profile_summary: partner.profile_description
         ? String(partner.profile_description).substring(0, 2000)
         : (partner.raw_profile_markdown ? String(partner.raw_profile_markdown).substring(0, 2000) : null),
-      contacts: (contactsRes.data || []).map((c: Record<string, unknown>) => ({ name: c.name, title: c.title, email: c.email, phone: c.direct_phone || c.mobile, is_primary: c.is_primary })),
+      contacts: dedupedContacts,
+      contacts_count_total: dedupedContacts.length,
+      contacts_breakdown: {
+        partner_contacts: partnerContacts.length,
+        business_cards: bcaContacts.length,
+        imported_contacts: importedContacts.length,
+      },
       networks: (networksRes.data || []).map((n: Record<string, unknown>) => ({ name: n.network_name, expires: n.expires })),
       services: (servicesRes.data || []).map((s: { service_category: string }) => s.service_category),
       certifications: (certsRes.data || []).map((c: { certification: string }) => c.certification),
