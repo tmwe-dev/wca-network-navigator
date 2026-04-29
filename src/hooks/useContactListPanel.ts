@@ -93,7 +93,7 @@ interface DeduplicateResult {
 }
 
 export function useContactListPanel() {
-  const { filters: gf, setCrmGroupTab, setCrmWcaMatch, setGroupBy } = useGlobalFilters();
+  const { filters: gf, setCrmGroupTab, setCrmWcaMatch, setGroupBy, setSortBy } = useGlobalFilters();
   const selection = useSelection([]);
   const linkedInLookup = useLinkedInLookup();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -101,7 +101,7 @@ export function useContactListPanel() {
   const qc = useQueryClient();
 
   const [state, dispatch] = useReducer(listReducer, {
-    sortField: "company",
+    sortField: "name",
     sortDir: "asc",
     inlineFilters: [],
     addOpen: false,
@@ -125,9 +125,12 @@ export function useContactListPanel() {
   const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);
 
   const serverSort = useMemo(() => {
-    if (!state.sortDir) return "company_asc";
-    return `${state.sortField}_${state.sortDir}`;
-  }, [state.sortField, state.sortDir]);
+    const allowedSortFields = new Set(["company", "name", "country", "city", "origin"]);
+    if (gf.sortBy === "recent") return "recent";
+    const field = allowedSortFields.has(gf.sortBy) ? gf.sortBy : state.sortField;
+    const dir = state.sortField === field ? state.sortDir ?? "asc" : "asc";
+    return `${field}_${dir}`;
+  }, [gf.sortBy, state.sortField, state.sortDir]);
 
   const queryFilters: ContactPaginatedFilters = useMemo(() => {
     const f: ContactPaginatedFilters = {
@@ -217,7 +220,8 @@ export function useContactListPanel() {
     else if (current === "asc") nextDir = "desc";
     else nextDir = null;
     dispatch({ type: "SET_SORT", field, dir: nextDir });
-  }, [state.sortField, state.sortDir]);
+    setSortBy(field);
+  }, [setSortBy, state.sortField, state.sortDir]);
 
   const handleTabClick = useCallback((key: string) => {
     setCrmGroupTab(key === activeGroupTab ? "" : key);
