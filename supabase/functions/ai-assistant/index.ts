@@ -127,7 +127,8 @@ serve(async (req) => {
           ? (messages[messages.length - 1]?.content ?? "")
           : "",
         userId,
-        supabase
+        supabase,
+        dynCors
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -151,7 +152,8 @@ serve(async (req) => {
         userPrompt,
         Array.isArray(context?.history) ? context.history : [],
         userId,
-        supabase
+        supabase,
+        dynCors
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -369,6 +371,6 @@ serve(async (req) => {
     logEdgeError("ai-assistant", e);
     endMetrics(metrics, false, 500);
     console.error("ai-assistant error:", extractErrorMessage(e));
-    return edgeError("INTERNAL_ERROR", extractErrorMessage(e));
+    return edgeError("INTERNAL_ERROR", extractErrorMessage(e), undefined, dynCors);
   }
 });
