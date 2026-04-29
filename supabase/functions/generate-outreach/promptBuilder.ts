@@ -124,7 +124,10 @@ ${enrichmentSnippet}
   // TUTTE le doctrine (filosofia WCA, language rules, anti-ripetizione, WA gate,
   // zero allucinazioni, lunghezze) vivono nel Prompt Lab DB e vengono iniettate
   // dal loader unificato (operativePromptsLoader). Non duplicarle qui.
-  const systemPrompt = `${addressPriorityBlock}${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un editor giornalista al servizio di WCA Network. Scrivi UN messaggio per UN destinatario specifico, basandoti sul dossier che ti viene passato.
+  const senderCompanyForPrompt = settings.ai_company_alias || settings.ai_company_name || "(azienda mittente non configurata in Settings)";
+  const systemPrompt = `${addressPriorityBlock}${channelDeclaration ? channelDeclaration + "\n\n" : ""}Sei un editor giornalista al servizio ESCLUSIVO di "${senderCompanyForPrompt}". Scrivi UN messaggio per UN destinatario specifico, basandoti sul dossier che ti viene passato.
+
+REGOLA IDENTITÀ NON NEGOZIABILE: il mittente del messaggio è "${senderCompanyForPrompt}". MAI firmare/citare altre aziende, network o alleanze come identità del mittente, anche se compaiono nel dossier o nella KB (in tal caso sono CONTESTO, non firma).
 
 ${channelContext}
 Lingua suggerita: ${effectiveLanguage} (${country_code} → ${detected.languageLabel}).

@@ -13,6 +13,7 @@ import type { Quality } from "../_shared/kbSlice.ts";
 import { getLanguageHint, isLikelyPersonName } from "../_shared/textUtils.ts";
 
 import { assembleOutreachContext } from "./contextAssembler.ts";
+import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
 import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts";
 import { parseOutreachResponse } from "./responseParser.ts";
 import { checkCadence } from "../_shared/cadenceEngine.ts";
@@ -270,9 +271,16 @@ DECISION ENGINE (raccomandazione automatica):
       includeUniversal: true,
       limit: 6,
     });
-    const finalSystemPrompt = promptLab.block
+    const baseFinalSystemPrompt = promptLab.block
       ? `${promptLab.block}\n\n${systemPrompt}`
       : systemPrompt;
+    // ── Calligrafia (regole di formattazione email — SSOT KB "calligrafia") ──
+    // Iniettata solo per il canale email; per WhatsApp/LinkedIn la formattazione
+    // è governata da prompt operativi specifici (no HTML).
+    const calligrafiaSection = ch === "email"
+      ? await buildCalligrafiaSection(supabase, userId)
+      : "";
+    const finalSystemPrompt = `${baseFinalSystemPrompt}${calligrafiaSection ? "\n" + calligrafiaSection : ""}`;
 
     // ── AI call ──
     const model = getModel(quality);
