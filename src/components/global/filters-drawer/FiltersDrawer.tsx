@@ -102,8 +102,8 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
               </FilterSection>
             )}
             {state.isNetwork && <NetworkFiltersSection />}
-            {state.isCRM && state.g.filters.crmActiveTab === "contatti" && <CRMFiltersSection />}
-            {state.isCRM && state.g.filters.crmActiveTab === "biglietti" && <BCAFiltersSection />}
+            {state.isCRM && state.crmDrawerTab === "contatti" && <CRMFiltersSection />}
+            {state.isCRM && state.crmDrawerTab === "biglietti" && <BCAFiltersSection />}
             {state.isAgenda && <AgendaFiltersSection />}
             {state.isCampaigns && <CampaignsFiltersSection />}
             {state.isEmailForge && <EmailForgeFiltersSection />}
