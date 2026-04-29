@@ -5,7 +5,7 @@
 export const AGENT_ROLES = [
   { value: "outreach", label: "Outreach", emoji: "📧", color: "text-blue-400" },
   { value: "sales", label: "Sales", emoji: "💰", color: "text-yellow-400" },
-  { value: "download", label: "Download/Sync", emoji: "📥", color: "text-emerald-400" },
+  { value: "download", label: "Data Quality", emoji: "📊", color: "text-emerald-400" },
   { value: "research", label: "Ricerca", emoji: "🔍", color: "text-amber-400" },
   { value: "account", label: "Account Manager", emoji: "🤝", color: "text-purple-400" },
   { value: "strategy", label: "Strategia", emoji: "🧠", color: "text-rose-400" },

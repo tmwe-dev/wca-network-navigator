@@ -61,7 +61,7 @@ interface PromptRecord {
 const SYSTEM_PROCESSES = [
   { name: "Outreach Cockpit", description: "Genera e invia messaggi multicanale (email/WA/LI)", section: "Cockpit" },
   { name: "Circuito di Attesa", description: "Follow-up automatico post-invio con regole per tipo contatto", section: "Cockpit" },
-  { name: "Download WCA", description: "Sync profili dalla directory WCA per paese", section: "Network" },
+  { name: "Copertura Dati WCA", description: "Verifica partner, profili, contatti e biglietti da visita già locali", section: "Network" },
   { name: "Deep Search", description: "Ricerca Google + LinkedIn per arricchimento profili", section: "Ricerca" },
   { name: "Email Sync", description: "Sincronizzazione IMAP bidirezionale", section: "InReach" },
   { name: "WhatsApp Bridge", description: "Lettura messaggi via estensione Chrome", section: "InReach" },

@@ -1,5 +1,5 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PARTNER & DIRECTORY TOOLS
+// PARTNER & LOCAL DATA TOOLS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const PARTNER_TOOLS: Record<string, unknown> = {
@@ -41,7 +41,7 @@ export const PARTNER_TOOLS: Record<string, unknown> = {
     type: "function",
     function: {
       name: "get_directory_status",
-      description: "Directory scanning status for countries.",
+      description: "Local data coverage status for countries. Uses already synchronized internal partner/profile/contact data only; it never scans or downloads WCA directories.",
       parameters: { type: "object", properties: { country_code: { type: "string" } } },
     },
   },
@@ -69,18 +69,6 @@ export const PARTNER_TOOLS: Record<string, unknown> = {
       parameters: { type: "object", properties: { company_name: { type: "string" }, country: { type: "string" } } },
     },
   },
-  download_single_partner: {
-    type: "function",
-    function: {
-      name: "download_single_partner",
-      description: "Recupera/aggiorna profilo di UN SINGOLO partner. Uso eccezionale (<1% dei record con profile_description vuoto). MAI bulk.",
-      parameters: {
-        type: "object",
-        properties: { company_name: { type: "string" }, city: { type: "string" }, country_code: { type: "string" }, wca_id: { type: "number" } },
-        required: ["company_name"],
-      },
-    },
-  },
   update_partner: {
     type: "function",
     function: {
@@ -100,17 +88,6 @@ export const PARTNER_TOOLS: Record<string, unknown> = {
       parameters: {
         type: "object",
         properties: { country_code: { type: "string" }, partner_ids: { type: "array", items: { type: "string" } }, is_favorite: { type: "boolean" }, lead_status: { type: "string" } },
-      },
-    },
-  },
-  scan_directory: {
-    type: "function",
-    function: {
-      name: "scan_directory",
-      description: "Scan WCA directory for a country or search.",
-      parameters: {
-        type: "object",
-        properties: { country_code: { type: "string" }, search_by: { type: "string" }, company_name: { type: "string" }, city: { type: "string" }, member_id: { type: "number" } },
       },
     },
   },

@@ -1,6 +1,6 @@
 ---
-name: WCA Data Availability — Sync Esterno
-description: I partner WCA arrivano già completi via sync esterno (profile_description, email, phone valorizzati ≥99%). AI non deve mai proporre bulk download
+name: WCA Data Availability — Dati Locali
+description: Partner, profili, contatti e biglietti da visita WCA sono già locali. AI non deve mai proporre download/scansioni/accesso directory WCA.
 type: feature
 ---
 
@@ -24,12 +24,13 @@ Implementato in:
 - `supabase/functions/_shared/platformTools.ts`
 - `src/hooks/usePartnerListStats.ts`
 
-## Tool AI rimossi
+## Tool AI vietati
 
-- ❌ `create_download_job` — rimosso da `toolDefinitions.ts`, `agent-execute/toolDefs.ts`, capability set
-- ✅ `download_single_partner` — preservato SOLO per <1% di record incompleti (uso eccezionale)
+- ❌ `create_download_job` — vietato
+- ❌ `download_single_partner` — vietato
+- ❌ `scan_directory` — vietato
 
-Handler legacy `create_download_job` resta in `agent-execute/toolHandlers.ts` per backward-compat ma non più esposto al modello.
+Gli handler legacy, se chiamati da codice vecchio, devono rispondere con errore e non creare job. L'AI non ha accesso né potere operativo sulla directory WCA.
 
 ## Doctrine KB
 
@@ -40,11 +41,11 @@ Iniettata come `criticalProcedures` nei prompt di: `luca`, `super-assistant`, `c
 ## UI suggestions aggiornate
 
 `src/components/intelliflow/overlay/useIntelliFlowOverlay.ts` rotta `/network`:
-- ❌ Rimossi: "Scarica tutti i partner", "Aggiorna profili mancanti"
+- ❌ Rimossi: "Scarica tutti i partner", "Aggiorna profili mancanti", "Scarica da directory WCA"
 - ✅ Aggiunti: "Deep search USA", "Classifica per servizio", "Verifica email", "Genera alias"
 
 ## Cosa NON è cambiato
 
-- WCAScraper, Download Center, useWcaJobs, sync-wca-partners → uso admin manuale, intatti
+- WCAScraper, Download Center, useWcaJobs, sync-wca-partners → uso tecnico/admin manuale, non proponibile dagli agenti AI
 - Schema DB partners → campi legacy preservati per analytics storica
 - Hard guards / auth → invariati

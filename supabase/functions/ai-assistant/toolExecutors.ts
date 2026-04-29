@@ -7,9 +7,7 @@ import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
  * Refactored into modular components under toolExecutors/:
  * - procedures.ts — Procedure knowledge base (47 lines)
  * - wcaIdResolver.ts — WCA ID resolution for batch jobs (123 lines)
- * - downloadJobs.ts — Download job creation executor (118 lines)
  * - partnerLookup.ts — Partner/company name lookup helpers (124 lines)
- * - partnerDownload.ts — Single partner download executor (138 lines)
  * - email.ts — Email classification & context (65 lines)
  * - aiActions.ts — AI pending actions (129 lines)
  * - crm.ts — Contact & campaign management (123 lines)
@@ -20,8 +18,6 @@ import type { AnySupabaseClient } from "../_shared/supabaseClient.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 import { executeGetProcedure } from "./toolExecutors/procedures.ts";
-import { executeCreateDownloadJob } from "./toolExecutors/downloadJobs.ts";
-import { executeDownloadSinglePartner } from "./toolExecutors/partnerDownload.ts";
 import {
   executeGetEmailClassifications,
   executeGetConversationContext,
@@ -175,7 +171,6 @@ export async function executeTool(
       writeH.executeDeepSearchContact(args, authHeader!),
     enrich_partner_website: () =>
       writeH.executeEnrichPartnerWebsite(args, authHeader!),
-    scan_directory: () => writeH.executeScanDirectory(args, authHeader!),
     generate_aliases: () => writeH.executeGenerateAliases(args, authHeader!),
   };
   if (writeAuthMap[name]) return userId ? writeAuthMap[name]() : { error: "Auth required" };
@@ -218,10 +213,13 @@ export async function executeTool(
 
   // Download jobs (downloadJobs.ts)
   if (name === "create_download_job") {
-    return executeCreateDownloadJob(supabase, args);
+    return { error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory." };
   }
   if (name === "download_single_partner") {
-    return executeDownloadSinglePartner(supabase, args);
+    return { error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory." };
+  }
+  if (name === "scan_directory") {
+    return { error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati." };
   }
 
   // Email tools (email.ts)
