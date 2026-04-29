@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../core/domain/errors";
 import { withCircuitBreaker } from "../../bridge/circuit-breaker";
+import { traceCollector } from "../observability/traceCollector";
 import type { z } from "zod";
 
 /**
@@ -53,25 +54,59 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
   payload: TReq,
   responseSchema: z.ZodType<TRes>,
 ): Promise<Result<TRes, AppError>> {
+  const activeCorrelation = traceCollector.getActiveCorrelationId();
+  const correlationId = activeCorrelation ?? traceCollector.startCorrelation();
+  const ownsCorrelation = !activeCorrelation;
+  const startedAt = Date.now();
+  const route = typeof window !== "undefined" ? window.location.pathname : undefined;
+
   return withCircuitBreaker(
     `edge:${functionName}`,
     async () => {
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload,
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: payload,
+        });
 
-      if (error) {
-        throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
+        if (error) {
+          throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
+        }
+
+        const parsed = responseSchema.safeParse(data);
+        if (!parsed.success) {
+          throw new Error(
+            `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
+          );
+        }
+
+        traceCollector.push({
+          type: "edge.invoke",
+          scope: typeof payload.scope === "string" ? payload.scope : "edge",
+          source: `${functionName}:invokeEdgeV2`,
+          route,
+          status: "success",
+          duration_ms: Date.now() - startedAt,
+          payload_summary: { functionName, request: payload },
+          correlation_id: correlationId,
+        });
+        return parsed.data;
+      } catch (caught: unknown) {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        traceCollector.push({
+          type: "edge.invoke",
+          scope: typeof payload.scope === "string" ? payload.scope : "edge",
+          source: `${functionName}:invokeEdgeV2`,
+          route,
+          status: "error",
+          duration_ms: Date.now() - startedAt,
+          payload_summary: { functionName, request: payload },
+          error: { message },
+          correlation_id: correlationId,
+        });
+        throw caught;
+      } finally {
+        if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
       }
-
-      const parsed = responseSchema.safeParse(data);
-      if (!parsed.success) {
-        throw new Error(
-          `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
-        );
-      }
-
-      return parsed.data;
     },
   );
 }
