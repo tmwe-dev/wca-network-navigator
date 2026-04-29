@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Activity, Globe2, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import RealtimeVoiceToggle from "./RealtimeVoiceToggle";
 
 interface AgentDot {
   agent: string;
@@ -97,6 +98,9 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
           <HelpCircle className="w-3 h-3" />
           <span className="text-[9px] font-semibold tracking-wider uppercase">Cosa posso fare</span>
         </Link>
+        <div className="ml-2">
+          <RealtimeVoiceToggle />
+        </div>
         <motion.button
           onClick={onLangChange}
           whileHover={{ scale: 1.05 }}
