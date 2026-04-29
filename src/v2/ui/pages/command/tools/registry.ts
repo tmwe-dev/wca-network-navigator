@@ -47,6 +47,14 @@ import { optimusAnalyzeTool } from "./optimusAnalyze";
 import { exportAuditCsvTool } from "./exportAuditCsv";
 import { healthCheckTool } from "./healthCheck";
 import { pendingActionExecutorTool } from "./pendingActionExecutor";
+import { scrapeWebsiteTool } from "./scrapeWebsite";
+import { wcaCountryCountsTool } from "./wcaCountryCounts";
+import { linkedinProfileApiTool } from "./linkedinProfileApi";
+import { analyzeEmailEditTool } from "./analyzeEmailEdit";
+import { analyzeImportStructureTool } from "./analyzeImportStructure";
+import { manageEmailFoldersTool } from "./manageEmailFolders";
+import { harmonizeProposalChatTool } from "./harmonizeProposalChat";
+import { replayDomainEventsTool } from "./replayDomainEvents";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -67,6 +75,11 @@ const TOOLS: readonly Tool[] = [
   suggestEmailGroupsTool,
   exportAuditCsvTool,
   healthCheckTool,
+  wcaCountryCountsTool,
+  linkedinProfileApiTool,
+  scrapeWebsiteTool,
+  analyzeEmailEditTool,
+  analyzeImportStructureTool,
   // Writes (approval required)
   createContactTool,
   updateContactTool,
@@ -84,6 +97,9 @@ const TOOLS: readonly Tool[] = [
   syncBusinessCardsTool,
   countryKbGeneratorTool,
   applyEmailRulesTool,
+  manageEmailFoldersTool,
+  harmonizeProposalChatTool,
+  replayDomainEventsTool,
   createAgentTool,
   createKbEntryTool,
   calculateLeadScoresTool,
@@ -176,6 +192,9 @@ const WRITE_TOOL_IDS = new Set<string>([
   "sync-business-cards",
   "country-kb-generator",
   "pending-action-executor",
+  "manage-email-folders",
+  "harmonize-proposal-chat",
+  "replay-domain-events",
   "scrape-partner-website",
   "scrape-prospect-website",
   "scrape-company-website",
