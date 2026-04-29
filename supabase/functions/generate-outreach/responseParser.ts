@@ -4,6 +4,7 @@
  * Wrapped by responseParserFactory.safeParseEmailResponse for resilience.
  */
 import { safeParseEmailResponse } from "../_shared/responseParserFactory.ts";
+import { appendEmailSignature, normalizeEmailHtml } from "../_shared/emailHtmlFormatter.ts";
 
 export interface ParsedOutreachResponse {
   subject: string;
@@ -18,9 +19,7 @@ function _parseEmailInternal(rawContent: string): { subject: string; body: strin
     subject = subjectMatch[1].trim();
     body = rawContent.substring(subjectMatch[0].length).trim();
   }
-  if (!/<(p|br|div|ul|ol|h[1-6])\b/i.test(body)) {
-    body = body.split(/\n\n+/).map((para: string) => `<p>${para.replace(/\n/g, "<br>")}</p>`).join("\n");
-  }
+  body = normalizeEmailHtml(body);
   return { subject, body };
 }
 
@@ -56,9 +55,7 @@ export function parseOutreachResponse(
       if (settings.ai_email_signature) sigParts.push(`Email: ${settings.ai_email_signature}`);
       if (sigParts.length > 0) signatureBlock = sigParts.join("\n");
     }
-    if (signatureBlock.trim()) {
-      body = body + `<br><br>${signatureBlock.replace(/\n/g, "<br>")}`;
-    }
+    body = appendEmailSignature(body, signatureBlock);
   }
 
   return { subject, body };

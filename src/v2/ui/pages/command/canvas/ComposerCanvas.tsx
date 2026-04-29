@@ -10,6 +10,7 @@ import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
+import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -215,13 +216,11 @@ export default function ComposerCanvas({
           Corpo
         </label>
         <div className="relative">
-          <textarea
+          <HtmlEmailEditor
             value={composer.body}
-            onChange={(e) => composer.setBody(e.target.value)}
+            onChange={composer.setBody}
             placeholder="Scrivi il contenuto dell'email..."
-            rows={12}
-            className="w-full rounded-xl px-3 py-2.5 text-[12px] text-foreground outline-none resize-none placeholder:text-muted-foreground/40 leading-relaxed"
-            style={{ background: "hsl(240 5% 10% / 0.5)", border: "1px solid hsl(0 0% 100% / 0.06)" }}
+            className="min-h-[300px] [&_[contenteditable]]:rounded-xl [&_[contenteditable]]:border-border [&_[contenteditable]]:bg-background/50 [&_[contenteditable]]:text-xs [&_[contenteditable]]:leading-relaxed"
           />
           <AnimatePresence>
             {isGenerating && (

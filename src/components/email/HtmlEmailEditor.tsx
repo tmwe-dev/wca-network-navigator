@@ -15,6 +15,18 @@ interface HtmlEmailEditorProps {
 const ALLOWED_TAGS = ['p', 'br', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'img', 'hr', 'blockquote', 'pre', 'code', 'sup', 'sub', 'u', 's'];
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class', 'src', 'alt', 'width', 'height', 'border', 'cellpadding', 'cellspacing', 'align', 'valign', 'colspan', 'rowspan'];
 
+function normalizeEditorHtml(raw: string): string {
+  return (raw || "")
+    .replace(/&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi, (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`)
+    .replace(/<br\s*\/?\s*>/gi, "<br>")
+    .replace(/(?:<br>\s*){2,}/gi, "<br>")
+    .replace(/<\/p>\s*([,.;:])/gi, "$1</p>")
+    .replace(/<p>\s*([,.;:])\s*/gi, "<p>")
+    .replace(/<p>\s+/gi, "<p>")
+    .replace(/\s+<\/p>/gi, "</p>")
+    .trim();
+}
+
 export default function HtmlEmailEditor({ value, onChange, placeholder, className }: HtmlEmailEditorProps) {
   const [sourceMode, setSourceMode] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -27,7 +39,7 @@ export default function HtmlEmailEditor({ value, onChange, placeholder, classNam
       return;
     }
     if (editorRef.current && !sourceMode) {
-      const sanitized = DOMPurify.sanitize(value, { ALLOWED_TAGS, ALLOWED_ATTR });
+      const sanitized = DOMPurify.sanitize(normalizeEditorHtml(value), { ALLOWED_TAGS, ALLOWED_ATTR });
       if (editorRef.current.innerHTML !== sanitized) {
         editorRef.current.innerHTML = sanitized;
       }

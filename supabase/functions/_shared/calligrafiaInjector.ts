@@ -25,8 +25,9 @@ formattazione email" (categoria: calligrafia). Quelle regole governano:
   - divieti tipografici e checklist finale.
 Se il blocco "Calligrafia" è presente sotto, applicalo alla lettera.
 Se NON è presente, applica comunque queste regole minime non negoziabili:
-  - Ogni paragrafo dentro <p>...</p>; mai più di un <br> consecutivo.
-  - Nessun tag visibile come testo; nessun Markdown nel corpo.
+  - Il corpo deve essere HTML renderizzabile, non testo escapato: usa <p>...</p>, NON &lt;p&gt;...&lt;/p&gt;.
+  - Ogni paragrafo dentro <p>...</p>; tra paragrafi NON usare <br>; mai più di un <br> consecutivo.
+  - Nessun tag visibile come testo; nessun Markdown nel corpo; nessuna virgola/punto fuori dai tag di paragrafo.
   - Nessuna firma nel corpo (la aggiunge il sistema).
   - Nessun placeholder, nessun emoji, nessun TUTTO MAIUSCOLO per enfasi.
 `;
