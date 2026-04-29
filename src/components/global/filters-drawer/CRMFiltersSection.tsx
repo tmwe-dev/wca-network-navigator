@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check } from "lucide-react";
+import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check, ArrowUpDown, ContactRound } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { CRM_GROUPBY } from "./constants";
+import { CRM_GROUPBY, CRM_SORT } from "./constants";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("CRMFiltersSection");
@@ -174,6 +174,13 @@ export function CRMFiltersSection() {
 
   return (
     <>
+      <div className="rounded-lg border border-accent/40 bg-accent/20 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-accent-foreground">
+          <ContactRound className="h-3.5 w-3.5" /> Contatti CRM
+        </div>
+        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">Clienti e aziende importate: stati commerciali, origini, canali, match WCA e storico operativo.</p>
+      </div>
+
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Contatto, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
         {searchValue.trim().length >= 2 && (
@@ -219,6 +226,14 @@ export function CRMFiltersSection() {
         <ChipGroup>
           {CRM_GROUPBY.map(o => (
             <Chip key={o.value} active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
+          ))}
+        </ChipGroup>
+      </FilterSection>
+
+      <FilterSection icon={ArrowUpDown} label="Ordina contatti">
+        <ChipGroup>
+          {CRM_SORT.map(o => (
+            <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
           ))}
         </ChipGroup>
       </FilterSection>
