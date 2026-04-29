@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Search, Shield, Eye, BookOpen, Settings2, ArrowLeft } from "lucide-react";
+import { useCommandPromptsAndKb } from "./hooks/useCommandPromptsAndKb";
 
 type Filter = "all" | "read" | "write";
 
@@ -45,6 +46,7 @@ function categorize(tool: ToolMetadata): string {
 export function CommandHelpPage() {
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
+  const { data: promptsAndKb, isLoading: loadingPrompts } = useCommandPromptsAndKb();
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -162,6 +164,83 @@ export function CommandHelpPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Active prompts + Memory & Guru */}
+        <section className="mb-8 grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings2 className="h-4 w-4" /> Prompt attivi
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {loadingPrompts ? "…" : `${promptsAndKb?.prompts.length ?? 0} prompt`} con
+                <code className="ml-1 rounded bg-muted px-1 py-0.5">context = command</code>
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {loadingPrompts ? (
+                <p className="text-xs text-muted-foreground">Caricamento…</p>
+              ) : (promptsAndKb?.prompts.length ?? 0) === 0 ? (
+                <p className="text-xs text-muted-foreground">Nessun prompt configurato.</p>
+              ) : (
+                <ul className="space-y-2 max-h-72 overflow-auto pr-1">
+                  {promptsAndKb!.prompts.map((p) => (
+                    <li key={p.id} className="text-sm flex items-start justify-between gap-2 border-b border-border/40 pb-1.5 last:border-0">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{p.name}</span>
+                          {p.tags?.includes("OBBLIGATORIA") && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0">OBBL</Badge>
+                          )}
+                          {p.is_active === false && (
+                            <Badge variant="secondary" className="text-[9px] px-1 py-0">off</Badge>
+                          )}
+                        </div>
+                        {p.objective && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">{p.objective}</p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0">P{p.priority ?? 0}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button asChild variant="outline" size="sm" className="mt-3 w-full">
+                <Link to="/v2/prompt-lab?context=command">Apri nel Prompt Lab</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BookOpen className="h-4 w-4" /> Memoria & Guru
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Schede KB lette automaticamente da Command (categoria <code className="rounded bg-muted px-1 py-0.5">command_tools</code> e <code className="rounded bg-muted px-1 py-0.5">ai_memory</code>).
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {loadingPrompts ? (
+                <p className="text-xs text-muted-foreground">Caricamento…</p>
+              ) : (promptsAndKb?.kb.length ?? 0) === 0 ? (
+                <p className="text-xs text-muted-foreground">Nessuna scheda dedicata trovata.</p>
+              ) : (
+                <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
+                  {promptsAndKb!.kb.map((k) => (
+                    <li key={k.id} className="text-sm flex items-center justify-between gap-2">
+                      <span className="truncate">{k.title}</span>
+                      <Badge variant="secondary" className="text-[9px] shrink-0">{k.category}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button asChild variant="outline" size="sm" className="mt-3 w-full">
+                <Link to="/v2/knowledge-base">Apri Knowledge Base</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Groups */}
         {grouped.length === 0 ? (
