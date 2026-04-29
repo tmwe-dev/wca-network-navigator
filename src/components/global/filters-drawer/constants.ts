@@ -125,16 +125,16 @@ export const NETWORK_QUALITY = [
 export const CRM_GROUPBY = [
   { value: "country", label: "Paese" },
   { value: "origin", label: "Origine" },
-  { value: "lead_status", label: "Stato" },
-  { value: "import_group", label: "Gruppo" },
+  { value: "status", label: "Stato" },
+  { value: "date", label: "Mese" },
 ];
 
 export const CRM_SORT = [
-  { value: "name", label: "Nome" },
-  { value: "country", label: "Paese" },
   { value: "company", label: "Azienda" },
+  { value: "name", label: "Contatto" },
+  { value: "country", label: "Paese" },
+  { value: "city", label: "Città" },
   { value: "date_desc", label: "Più recenti" },
-  { value: "interaction", label: "Ultimo contatto" },
 ];
 
 export const CRM_ORIGIN = [
