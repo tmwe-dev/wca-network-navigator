@@ -149,7 +149,7 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
     related_pages: ["/operations", "/partner-hub"],
     ai_tools_required: ["get_directory_status", "get_country_overview"],
     tips: [
-      "Non proporre scansioni o download WCA",
+      "Lavora solo sui dati WCA locali già sincronizzati",
       "Usa deep search e website enrichment come azione successiva",
     ],
   },
