@@ -231,9 +231,9 @@ const Guida = () => {
         icon={Puzzle}
         title="Estensioni Chrome"
         subtitle="3 estensioni per automazione e raccolta dati"
-        description="WCA World, LinkedIn e Report Aziende. Auto-login, scraping directory, download profili e sincronizzazione cookie — tutto automatico."
+        description="LinkedIn e Report Aziende per raccolta dati esterna; WCA usa partner, profili, contatti e biglietti da visita già disponibili in locale."
         features={[
-          { text: "WCA: auto-login, scraping directory, download profili" },
+          { text: "WCA: consultazione dei dati locali già sincronizzati" },
           { text: "LinkedIn: sync cookie li_at, estrazione profili" },
           { text: "Report Aziende: scraping prospect con dati finanziari" },
           { text: "Comunicazione bidirezionale webapp ↔ estensione" },
