@@ -35,6 +35,18 @@ import { launchMissionTool } from "./launchMission";
 import { dailyBriefingTool } from "./dailyBriefing";
 import { parseBusinessCardTool } from "./parseBusinessCard";
 import { kbIngestDocumentTool } from "./kbIngestDocument";
+import { sendEmailDirectTool } from "./sendEmailDirect";
+import { deepSearchPartnerTool } from "./deepSearchPartner";
+import { deduplicatePartnersTool } from "./deduplicatePartners";
+import { recalculatePartnerQualityTool } from "./recalculatePartnerQuality";
+import { applyEmailRulesTool } from "./applyEmailRules";
+import { suggestEmailGroupsTool } from "./suggestEmailGroups";
+import { syncBusinessCardsTool } from "./syncBusinessCards";
+import { countryKbGeneratorTool } from "./countryKbGenerator";
+import { optimusAnalyzeTool } from "./optimusAnalyze";
+import { exportAuditCsvTool } from "./exportAuditCsv";
+import { healthCheckTool } from "./healthCheck";
+import { pendingActionExecutorTool } from "./pendingActionExecutor";
 import { decideToolFromPrompt } from "@/v2/io/edge/aiAssistant";
 
 const TOOLS: readonly Tool[] = [
@@ -49,7 +61,12 @@ const TOOLS: readonly Tool[] = [
   campaignStatusTool,
   searchKbTool,
   deepSearchContactTool,
+  deepSearchPartnerTool,
   analyzePartnerTool,
+  optimusAnalyzeTool,
+  suggestEmailGroupsTool,
+  exportAuditCsvTool,
+  healthCheckTool,
   // Writes (approval required)
   createContactTool,
   updateContactTool,
@@ -59,13 +76,20 @@ const TOOLS: readonly Tool[] = [
   enqueueOutreachTool,
   sendWhatsappTool,
   sendLinkedinTool,
+  sendEmailDirectTool,
   launchMissionTool,
+  pendingActionExecutorTool,
   parseBusinessCardTool,
   kbIngestDocumentTool,
+  syncBusinessCardsTool,
+  countryKbGeneratorTool,
+  applyEmailRulesTool,
   createAgentTool,
   createKbEntryTool,
   calculateLeadScoresTool,
   deduplicateContactsTool,
+  deduplicatePartnersTool,
+  recalculatePartnerQualityTool,
   // Scraping & enrichment (write — require approval)
   scrapePartnerTool,
   scrapeProspectTool,
@@ -145,6 +169,13 @@ const WRITE_TOOL_IDS = new Set<string>([
   "launch-mission",
   "parse-business-card",
   "kb-ingest-document",
+  "send-email-direct",
+  "deduplicate-partners",
+  "recalculate-partner-quality",
+  "apply-email-rules",
+  "sync-business-cards",
+  "country-kb-generator",
+  "pending-action-executor",
   "scrape-partner-website",
   "scrape-prospect-website",
   "scrape-company-website",
