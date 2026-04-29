@@ -134,15 +134,15 @@ export const PROCEDURES_PART1: OperationProcedure[] = [
   // ══════════════════════════════════════
   {
     id: "scan_country",
-    name: "Scansione Directory Paese",
-    description: "Scansiona la directory WCA per un paese specifico e aggiorna la cache locale",
-    tags: ["scan", "scansione", "directory", "paese", "wca", "network", "membri"],
+    name: "Verifica Copertura Paese",
+    description: "Verifica la copertura dei dati locali già sincronizzati per un paese",
+    tags: ["copertura", "dati-locali", "paese", "wca", "network", "membri"],
     category: "network",
     prerequisites: [
-      { check: "wca_session_active", label: "Sessione WCA attiva (cookie valido)", path: "/settings" },
+      { check: "local_data_available", label: "Dati locali partner/contatti disponibili" },
     ],
     steps: [
-      { order: 1, action: "Verifica stato dati corrente", tool: "get_directory_status", detail: "Controlla copertura e qualità dati del paese." },
+      { order: 1, action: "Verifica copertura dati locale", tool: "get_directory_status", detail: "Controlla copertura e qualità dei dati già sincronizzati." },
       { order: 2, action: "Confronta con DB locale", tool: "get_country_overview", detail: "Valuta quantità e qualità dei partner presenti." },
       { order: 3, action: "Scegli arricchimento", tool: null, detail: "Se mancano rating o dati qualitativi, proponi deep search o arricchimento sito web." },
     ],
