@@ -30,23 +30,49 @@ const EMAIL_VARIABLES = [
   { key: "{{country}}", label: "Paese" },
 ] as const;
 
+/**
+ * Converte qualsiasi output AI (plain text, HTML, markdown misto) in HTML minimale
+ * (<p>…</p>) per il rendering nell'editor contentEditable. La SSOT del formato AI è
+ * plain text (vedi KB "calligrafia"); qui ci limitiamo a wrappare i paragrafi.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function normalizeComposerHtml(raw: string): string {
-  const value = (raw || "").replace(/\r\n?/g, "\n").trim();
+  let value = (raw || "").replace(/\r\n?/g, "\n").trim();
   if (!value) return "";
-  if (/<(p|br|ul|ol|li|strong|em|a)\b/i.test(value) || /&lt;(p|br|ul|ol|li|strong|em|a)\b/i.test(value)) {
-    return value
-      .replace(/&lt;(\/?(?:p|br|strong|em|ul|ol|li|a)\b[^&]*)&gt;/gi, (_match, tag: string) => `<${tag.replace(/&quot;/g, '"')}>`)
-      .replace(/<br\s*\/?\s*>/gi, "<br>")
-      .replace(/(?:<br>\s*){2,}/gi, "<br>")
-      .replace(/<\/p>\s*([,.;:])/gi, "$1</p>")
-      .replace(/<p>\s*([,.;:])\s*/gi, "<p>")
-      .trim();
-  }
+
+  // Decode entities and strip any HTML/Markdown leaking from the model.
+  value = value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#x27;|&#39;/gi, "'")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(?:p|div|li|h[1-6]|blockquote)>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1");
+
   return value
     .split(/\n\s*\n+/)
-    .map((paragraph) => paragraph.trim())
+    .map((paragraph) =>
+      paragraph
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+/g, " ").trim())
+        .filter(Boolean)
+        .join("<br>"),
+    )
     .filter(Boolean)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/&lt;br&gt;/g, "<br>")}</p>`)
     .join("\n");
 }
 
