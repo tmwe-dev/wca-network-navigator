@@ -58,8 +58,8 @@ ${dataPointsBlock}
 ## Metodo dell'editor:
 1. LEGGI: profilo + enrichment + Sherlock + history. Costruisci nella tua testa un ritratto del partner:
    che servizi fa, su che rotte, in che mercato opera, cosa lo distingue, dove può crescere.
-2. CONNETTI: collega ciò che il partner fa con ciò che WCA Network offre come vantaggio competitivo
-   (vedi sezione "Filosofia WCA" nel system prompt). Trova UNA leva di interesse reale per LUI.
+2. CONNETTI: collega ciò che il partner fa con ciò che il MITTENTE offre come vantaggio competitivo
+   (vedi blocco "Mittente" e "KNOWLEDGE BASE AZIENDALE" nel dossier). Trova UNA leva di interesse reale per LUI.
 3. SCRIVI: messaggio breve, asciutto, da professionista a professionista. Mai vendita aggressiva,
    mai entusiasmo finto, mai elenchi puntati di feature. Una sola idea forte, ben argomentata.
 
