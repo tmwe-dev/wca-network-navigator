@@ -14,8 +14,11 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const route = location.pathname;
   const seg = route.replace(/^\/v2/, "");
   const isOutreach = seg === `/${ROUTE_OUTREACH}`;
-  const isNetwork = seg === `/${ROUTE_NETWORK}`;
-  const isCRM = seg === `/${ROUTE_CRM}`;
+  const isNetwork = seg === `/${ROUTE_NETWORK}` || seg.startsWith("/explore/network");
+  const isCrmContactsRoute = seg === `/${ROUTE_CRM}` || seg === "/contacts" || seg.startsWith("/crm/contacts") || seg.startsWith("/pipeline/contacts") || seg.startsWith("/pipeline/kanban");
+  const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti");
+  const isCRM = isCrmContactsRoute || isBcaRoute;
+  const crmDrawerTab = isBcaRoute ? "biglietti" : "contatti";
   const isAgenda = seg === `/${ROUTE_AGENDA}`;
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
   const isCampaigns = seg === "/campaigns";
@@ -54,7 +57,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "Network" : isCRM ? (g.filters.crmActiveTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
+  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "WCA Partner" : isCRM ? (crmDrawerTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -114,10 +117,16 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.networkSelectedCountries.size > 0) n++;
     }
     if (isCRM) {
+      if (g.filters.search.trim()) n++;
       if (g.filters.leadStatus !== "all") n++;
       if (g.filters.holdingPattern !== "out") n++;
       if (g.filters.crmQuality !== "all") n++;
       if (g.filters.crmChannel !== "all") n++;
+      if (g.filters.crmWcaMatch !== "all") n++;
+      if (g.filters.crmOrigin.size > 0) n++;
+      if (g.filters.crmSelectedCountries.size > 0) n++;
+      if (g.filters.groupBy !== "country") n++;
+      if (g.filters.sortBy !== "name") n++;
     }
     return n;
   }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence]);
@@ -137,7 +146,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isWorkspace) { g.setWorkspaceFilters(new Set()); g.setEmailGenFilter("all"); g.setSearch(""); }
     if (isInUscita) { g.setSortingFilter("all"); g.setSortingSearch(""); }
     if (isNetwork) { g.setNetworkSearch(""); g.setNetworkQuality("all"); g.setNetworkSort("name"); g.setNetworkSelectedCountries(new Set()); g.setNetworkDirectoryOnly(false); }
-    if (isCRM) { g.setSearch(""); g.setLeadStatus("all"); g.setHoldingPattern("out"); g.setCrmQuality("all"); g.setCrmChannel("all"); g.setGroupBy("country"); g.setSortBy("name"); }
+    if (isCRM) { g.setSearch(""); g.setLeadStatus("all"); g.setHoldingPattern("out"); g.setCrmQuality("all"); g.setCrmChannel("all"); g.setCrmOrigin(new Set()); g.setCrmSelectedCountries(new Set()); g.setCrmWcaMatch("all"); g.setGroupBy("country"); g.setSortBy("name"); }
     if (isEmailIntelligence) {
       g.setFilter("emailIntelSearch", "");
       g.setFilter("emailIntelVolume", "all");
@@ -198,7 +207,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     isCockpit, isWorkspace, isInUscita, isCircuito, isAttivita,
     isSorting, isCodaAI, isABTest, isArena,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
-    isOutreach, isNetwork, isCRM, isAgenda, isEmailComposer, isCampaigns,
+    isOutreach, isNetwork, isCRM, crmDrawerTab, isAgenda, isEmailComposer, isCampaigns,
     isInreach, isEmailForge, isEmailIntelligence,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
