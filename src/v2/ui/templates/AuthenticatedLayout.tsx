@@ -38,6 +38,7 @@ import { BackgroundServices } from "./BackgroundServices";
 import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 import { LayoutSidebarNav } from "./LayoutSidebarNav";
 import { LayoutHeader } from "./LayoutHeader";
+import { ContextFiltersRail } from "./ContextFiltersRail";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 
@@ -311,11 +312,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                      {/* Apertura drawer solo con click esplicito: nessun hover/trackpad trigger. */}
+                      {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
                       <button
                         onClick={() => setFiltersOpen(true)}
                         className={cn(
-                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
+                          `hidden md:flex lg:hidden fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
                           filtersOpen && "opacity-0 pointer-events-none"
                         )}
                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
@@ -336,7 +337,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </button>
 
                       {/* Main content */}
-                      <div className="flex-1 flex flex-col overflow-hidden">
+                      <div className="flex-1 flex overflow-hidden">
+                        <ContextFiltersRail />
+                        <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         <OfflineBanner />
                         <BackgroundServices>
                           {({ outreachQueue, globalSync }) => (
@@ -362,6 +365,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         </main>
                         <Suspense fallback={null}><MobileBottomNav /></Suspense>
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
+                        </div>
                       </div>
                     </div>
 
