@@ -49,6 +49,7 @@ const TelemetryPage = lazy(() => import("./ui/pages/TelemetryPage").then((m) => 
 const OperationsPage = lazy(() => import("./ui/pages/OperationsPage").then((m) => ({ default: m.OperationsPage })));
 const AcquisizionePartnerPage = lazy(() => import("./ui/pages/AcquisizionePartnerPage").then((m) => ({ default: m.AcquisizionePartner })));
 const AgentChatHubPage = lazy(() => import("./ui/pages/AgentChatHubPage").then((m) => ({ default: m.AgentChatHub })));
+const CommandHelpPage = lazy(() => import("./ui/pages/command/CommandHelpPage").then((m) => ({ default: m.CommandHelpPage })));
 const ContactsPage = lazy(() => import("./ui/pages/ContactsPage").then((m) => ({ default: m.ContactsPage })));
 const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then((m) => ({ default: m.EmailDownloadPage })));
 const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorer })));
@@ -171,6 +172,7 @@ export function V2Routes(): React.ReactElement {
         {/* Fullscreen authenticated routes (no sidebar/header) */}
         <Route element={<V2AuthGateRaw />}>
           <Route path="command" element={guardedPage(CommandPage, "Command")} />
+          <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="guided-onboarding" element={guardedPage(GuidedOnboardingPage, "GuidedOnboarding")} />
         </Route>
 
