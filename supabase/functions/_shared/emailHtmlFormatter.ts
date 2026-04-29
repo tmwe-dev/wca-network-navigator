@@ -1,18 +1,11 @@
 /**
- * emailHtmlFormatter.ts — canonical HTML layout cleanup for generated emails.
- * Scope: rendering/formatting only. No tone, content, strategy or CTA decisions.
+ * emailHtmlFormatter.ts — canonical PLAIN TEXT layout cleanup for generated emails.
+ * Scope: visual layout only (paragraphs, blank lines, signature). No tone, content,
+ * strategy or CTA decisions. Output is ALWAYS plain text per the "calligrafia" KB.
+ *
+ * Le funzioni mantengono i nomi storici (normalizeEmailHtml, appendEmailSignature)
+ * per compatibilità con i call site, ma producono SEMPRE plain text.
  */
-
-const ALLOWED_ESCAPED_TAG = /^(\/?)(p|br|strong|em|ul|ol|li|a)\b/i;
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
 
 function stripFences(value: string): string {
   return value
@@ -21,78 +14,69 @@ function stripFences(value: string): string {
     .trim();
 }
 
-function decodeAllowedEscapedTags(value: string): string {
-  return value.replace(/&lt;([^<>]+)&gt;/gi, (match, inner: string) => {
-    const trimmed = inner.trim();
-    if (!ALLOWED_ESCAPED_TAG.test(trimmed)) return match;
-    const decoded = trimmed
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;|&#39;/g, "'")
-      .replace(/&amp;/g, "&");
-    return `<${decoded}>`;
-  });
-}
-
-function plainTextToHtml(value: string): string {
+function decodeBasicEntities(value: string): string {
   return value
-    .split(/\n\s*\n+/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
-    .join("\n");
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#x27;|&#39;/gi, "'");
 }
 
-function hasEmailHtml(value: string): boolean {
-  return /<(p|br|div|ul|ol|li|strong|em|a)\b/i.test(value);
-}
-
-export function normalizeEmailHtml(raw: string): string {
-  let html = decodeAllowedEscapedTags(stripFences(raw || "").replace(/\r\n?/g, "\n"));
-  if (!html.trim()) return "";
-
-  if (!hasEmailHtml(html)) return plainTextToHtml(html);
-
-  html = html
-    .replace(/<\/?(?:html|body|head)[^>]*>/gi, "")
-    .replace(/<div\b[^>]*>/gi, "<p>")
-    .replace(/<\/div>/gi, "</p>")
-    .replace(/<span\b[^>]*>/gi, "")
-    .replace(/<\/span>/gi, "")
-    .replace(/<p\b[^>]*>/gi, "<p>")
-    .replace(/<br\s*\/?\s*>/gi, "<br>")
-    .replace(/<strong\b[^>]*>/gi, "<strong>")
-    .replace(/<em\b[^>]*>/gi, "<em>")
-    .replace(/<ul\b[^>]*>/gi, "<ul>")
-    .replace(/<ol\b[^>]*>/gi, "<ol>")
-    .replace(/<li\b[^>]*>/gi, "<li>")
-    .replace(/<p>\s+/gi, "<p>")
-    .replace(/\s+<\/p>/gi, "</p>")
-    .replace(/<p>(?:\s|&nbsp;|<br>)*<\/p>/gi, "")
-    .replace(/(?:<br>\s*){2,}/gi, "<br>")
-    .replace(/<\/p>\s*,/gi, ",</p>")
-    .replace(/<\/p>\s*\./gi, ".</p>")
-    .replace(/<p>\s*[,.;:]\s*/gi, "<p>")
-    .replace(/\s{2,}/g, " ")
-    .replace(/<\/p>\s*<p>/gi, "</p>\n<p>")
-    .replace(/<\/li>\s*<li>/gi, "</li>\n<li>")
-    .trim();
-
-  return html;
-}
-
-export function appendEmailSignature(body: string, signatureBlock: string): string {
-  const normalizedBody = normalizeEmailHtml(body);
-  const source = stripFences(signatureBlock || "").trim();
-  if (!source) return normalizedBody;
-
-  const signatureText = decodeAllowedEscapedTags(source)
+function htmlToPlainText(value: string): string {
+  return value
+    // line breaks
     .replace(/<br\s*\/?\s*>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .split(/\n+/)
-    .map((line) => line.trim())
+    // paragraph & block boundaries → blank line
+    .replace(/<\/(?:p|div|li|h[1-6]|blockquote)>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    // strip every remaining tag
+    .replace(/<[^>]+>/g, "");
+}
+
+/**
+ * Normalizes any AI output (HTML, Markdown, mixed) into clean PLAIN TEXT
+ * compliant with the "calligrafia" KB:
+ *   - paragraphs separated by EXACTLY one blank line (\n\n)
+ *   - no HTML tags, no Markdown markers, no escaped entities
+ *   - no leading/trailing whitespace, no double spaces
+ */
+export function normalizeEmailHtml(raw: string): string {
+  if (!raw) return "";
+  let text = stripFences(String(raw)).replace(/\r\n?/g, "\n");
+  text = htmlToPlainText(text);
+  text = decodeBasicEntities(text);
+
+  // strip common markdown markers
+  text = text
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")            // headings
+    .replace(/\*\*(.+?)\*\*/g, "$1")               // bold
+    .replace(/(^|\s)_([^_\n]+)_(?=\s|$)/g, "$1$2") // italic _x_
+    .replace(/(^|\s)\*([^*\n]+)\*(?=\s|$)/g, "$1$2") // italic *x*
+    .replace(/`([^`]+)`/g, "$1")                   // inline code
+    .replace(/^\s{0,3}[-*+]\s+/gm, "- ");          // unify bullets
+
+  // collapse paragraphs
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) =>
+      p
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+/g, " ").trim())
+        .filter(Boolean)
+        .join("\n"),
+    )
     .filter(Boolean);
 
-  if (signatureText.length === 0) return normalizedBody;
-  const signatureHtml = `<p>${signatureText.map(escapeHtml).join("<br>")}</p>`;
-  return [normalizedBody, signatureHtml].filter(Boolean).join("\n");
+  return paragraphs.join("\n\n").trim();
+}
+
+/** Appends a signature block to the plain-text body, with a blank line in between. */
+export function appendEmailSignature(body: string, signatureBlock: string): string {
+  const bodyText = normalizeEmailHtml(body);
+  const sigText = normalizeEmailHtml(signatureBlock || "");
+  if (!sigText) return bodyText;
+  if (!bodyText) return sigText;
+  return `${bodyText}\n\n${sigText}`;
 }
