@@ -232,6 +232,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
               <GlobalFiltersProvider>
                 <MissionProvider>
                   <NotificationsProvider>
+                  <CoPilotProvider>
                       <SonnerToaster position="top-right" richColors closeButton />
                       <Toaster />
                       <LiveRegion message="" />
@@ -404,6 +405,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </Suspense>
                       <ClaudeBadge />
                       {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
+                      <Suspense fallback={null}>
+                        <FloatingCoPilot />
+                      </Suspense>
+                  </CoPilotProvider>
                     </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
