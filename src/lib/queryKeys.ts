@@ -569,6 +569,13 @@ export const queryKeys = {
   activeSchedules: ["active-schedules"] as const,
   atecoGroups: ["ateco-groups"] as const,
 
+  // ── UI Navigation Map (Floating Co-Pilot) ─────────────
+  uiNavigationMap: {
+    all: ["ui-navigation-map"] as const,
+    enabled: ["ui-navigation-map", "enabled"] as const,
+    byCategory: (category: string) => ["ui-navigation-map", category] as const,
+  },
+
   // ── Contact Merge & Duplicates ────────────────────────
   contactMerge: {
     duplicates: ["contact-duplicates"] as const,
