@@ -139,8 +139,8 @@ REGOLE:
   ],
   download: [
     {
-      title: "Compiti Operativi — Download/Sync",
-      content: `MISSIONE: Verificare qualità e copertura dei dati partner senza proporre download WCA.
+      title: "Compiti Operativi — Data Quality WCA",
+      content: `MISSIONE: Verificare qualità e copertura dei dati partner locali senza proporre download WCA.
 
 FLUSSO:
 1. Analizza stato dati per paese (get_country_overview)
@@ -150,7 +150,7 @@ FLUSSO:
 5. Gestisci retry per partner senza contatti o con arricchimento incompleto
 
 REGOLE:
-- Non proporre create_download_job o download_single_partner
+- Non proporre mai download, scansioni o accesso operativo alla directory WCA
 - Prioritizza paesi con più partner ma minore qualità dati
 - L'obiettivo è arricchire e qualificare, non scaricare`
     }
