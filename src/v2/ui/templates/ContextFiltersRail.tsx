@@ -10,7 +10,7 @@ function getFilterContext(pathname: string): { title: string; content: React.Rea
     return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
   }
 
-  if (pathname.startsWith("/v2/pipeline/contacts") || pathname.startsWith("/v2/crm/contacts") || pathname === "/v2/contacts") {
+  if (pathname.startsWith("/v2/pipeline/contacts") || pathname.startsWith("/v2/pipeline/kanban") || pathname.startsWith("/v2/crm/contacts") || pathname === "/v2/crm" || pathname === "/v2/contacts") {
     return { title: "Filtri Contatti CRM", content: <CRMFiltersSection /> };
   }
 
