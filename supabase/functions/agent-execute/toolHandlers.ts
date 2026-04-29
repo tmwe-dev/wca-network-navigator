@@ -54,8 +54,6 @@ import {
 } from "./toolHandlers/analysisTools.ts";
 
 import {
-  handleCreateDownloadJob,
-  handleDownloadSinglePartner,
   handleGetBlacklist,
   handleListReminders,
   handleGetPartnersWithoutContacts,
@@ -101,7 +99,6 @@ import {
 import {
   handleEnrichPartnerWebsite,
   handleGenerateAliases,
-  handleScanDirectory,
   handleSuggestNextContacts,
 } from "./toolHandlers/externalTools.ts";
 
@@ -267,9 +264,8 @@ export async function executeTool(
 
     // ── DATA TOOLS ──
     case "create_download_job":
-      return handleCreateDownloadJob(supabase, args);
     case "download_single_partner":
-      return handleDownloadSinglePartner(supabase, args);
+      return { error: "Tool non disponibile: i dati WCA sono già locali e l'AI non può scaricare profili o directory." };
     case "get_blacklist":
       return handleGetBlacklist(supabase, userId, args);
     case "list_reminders":
@@ -339,7 +335,7 @@ export async function executeTool(
     case "generate_aliases":
       return handleGenerateAliases(args, authHeader);
     case "scan_directory":
-      return handleScanDirectory();
+      return { error: "Tool non disponibile: l'AI non può scansionare directory WCA; usa i dati locali già sincronizzati." };
     case "suggest_next_contacts":
       return handleSuggestNextContacts(args);
 
