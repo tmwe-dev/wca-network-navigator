@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Activity, Globe2 } from "lucide-react";
+import { Activity, Globe2, HelpCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface AgentDot {
   agent: string;
@@ -87,6 +88,15 @@ export function CommandPageHeader({ flowPhase, lang, onLangChange, onOpenTraceCo
           <Activity className="w-3 h-3" />
           <span className="text-[9px] font-semibold tracking-wider uppercase">Monitor</span>
         </button>
+        <Link
+          to="/v2/command/help"
+          className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent/60 border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-300"
+          title="Cosa può fare Command"
+          aria-label="Cosa può fare Command"
+        >
+          <HelpCircle className="w-3 h-3" />
+          <span className="text-[9px] font-semibold tracking-wider uppercase">Cosa posso fare</span>
+        </Link>
         <motion.button
           onClick={onLangChange}
           whileHover={{ scale: 1.05 }}
