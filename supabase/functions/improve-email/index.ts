@@ -9,6 +9,7 @@ import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import { getMaxTokensForFunction } from "../_shared/tokenLogger.ts";
 import { buildCalligrafiaSection } from "../_shared/calligrafiaInjector.ts";
+import { normalizeEmailHtml } from "../_shared/emailHtmlFormatter.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
@@ -425,7 +426,7 @@ ${html_body}`;
         improvedSubject = subjectMatch[1].trim();
         improvedBody = rawText.substring(subjectMatch[0].length).trim();
       }
-      improvedBody = improvedBody.replace(/^```html?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      improvedBody = normalizeEmailHtml(improvedBody);
       if (!improvedBody || improvedBody.trim().length === 0) {
         throw new Error("empty body after parse");
       }
@@ -433,7 +434,7 @@ ${html_body}`;
       const msg = perr instanceof Error ? perr.message : String(perr);
       console.error(`[PARSE_FAIL] improve-email model=unknown err=${msg} raw="${rawText.slice(0, 200)}"`);
       improvedSubject = subject || "Follow-up";
-      improvedBody = (html_body || rawText || "").slice(0, 5000);
+      improvedBody = normalizeEmailHtml((html_body || rawText || "").slice(0, 5000));
     }
 
     // ── GIORNALISTA AI — Caporedattore Finale ──
