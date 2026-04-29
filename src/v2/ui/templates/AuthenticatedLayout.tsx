@@ -48,6 +48,8 @@ const FiltersDrawer = lazyRetry(() => import("@/components/global/filters-drawer
 const IntelliFlowOverlay = lazyRetry(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
 const GlobalVoiceFAB = lazyRetry(() => import("@/components/voice/GlobalVoiceFAB"));
+const FloatingCoPilot = lazyRetry(() => import("@/v2/ui/copilot/FloatingCoPilot").then(m => ({ default: m.FloatingCoPilot })));
+import { CoPilotProvider, useCoPilot } from "@/v2/ui/copilot/CoPilotContext";
 const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazyRetry(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazyRetry(() => import("@/components/test-extensions/TestExtensionsView"));
