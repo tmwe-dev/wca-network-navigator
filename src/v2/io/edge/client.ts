@@ -61,65 +61,45 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
   const route = typeof window !== "undefined" ? window.location.pathname : undefined;
 
   try {
-    return await withCircuitBreaker(
+    // withCircuitBreaker wraps the resolved value in ok(...) and any thrown
+    // error in err(...). We throw inside `fn` to signal failures so the
+    // outer Result is correctly typed as Result<TRes, AppError>.
+    const result = await withCircuitBreaker<TRes>(
       `edge:${functionName}`,
-      async (): Promise<Result<TRes, AppError>> => {
-        try {
-          const { data, error } = await supabase.functions.invoke(functionName, {
-            body: payload,
-          });
+      async () => {
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: payload,
+        });
 
-          if (error) {
-            const message = translateInvokeError(functionName, error.message ?? String(error));
-            traceCollector.push({
-              type: "edge.invoke",
-              scope: typeof payload.scope === "string" ? payload.scope : "edge",
-              source: `${functionName}:invokeEdgeV2`,
-              route,
-              status: "error",
-              duration_ms: Date.now() - startedAt,
-              payload_summary: { functionName, request: payload },
-              error: { message },
-              correlation_id: correlationId,
-            });
-            return err(ioError("EDGE_FUNCTION_ERROR", message, { functionName }, "invokeEdgeV2"));
-          }
-
-          const parsed = responseSchema.safeParse(data);
-          if (!parsed.success) {
-            const message = `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`;
-            traceCollector.push({
-              type: "edge.invoke",
-              scope: typeof payload.scope === "string" ? payload.scope : "edge",
-              source: `${functionName}:invokeEdgeV2`,
-              route,
-              status: "error",
-              duration_ms: Date.now() - startedAt,
-              payload_summary: { functionName, request: payload },
-              error: { message },
-              correlation_id: correlationId,
-            });
-            return err(ioError("EDGE_FUNCTION_ERROR", message, { functionName }, "invokeEdgeV2"));
-          }
-
-          traceCollector.push({
-            type: "edge.invoke",
-            scope: typeof payload.scope === "string" ? payload.scope : "edge",
-            source: `${functionName}:invokeEdgeV2`,
-            route,
-            status: "success",
-            duration_ms: Date.now() - startedAt,
-            payload_summary: { functionName, request: payload },
-            correlation_id: correlationId,
-          });
-          return ok(parsed.data);
-        } finally {
-          if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
+        if (error) {
+          throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
         }
+
+        const parsed = responseSchema.safeParse(data);
+        if (!parsed.success) {
+          throw new Error(
+            `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
+          );
+        }
+
+        return parsed.data;
       },
     );
+
+    traceCollector.push({
+      type: "edge.invoke",
+      scope: typeof payload.scope === "string" ? payload.scope : "edge",
+      source: `${functionName}:invokeEdgeV2`,
+      route,
+      status: result._tag === "Ok" ? "success" : "error",
+      duration_ms: Date.now() - startedAt,
+      payload_summary: { functionName, request: payload },
+      ...(result._tag === "Err" ? { error: { message: result.error.message } } : {}),
+      correlation_id: correlationId,
+    });
+
+    return result;
   } catch (caught: unknown) {
-    // Circuit breaker open OR unexpected throw: degrade gracefully.
     const message = caught instanceof Error ? caught.message : String(caught);
     traceCollector.push({
       type: "edge.invoke",
@@ -132,8 +112,9 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
       error: { message },
       correlation_id: correlationId,
     });
-    if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
     return err(fromUnknown(caught, "EDGE_FUNCTION_ERROR", `invokeEdgeV2:${functionName}`));
+  } finally {
+    if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
   }
 }
 
