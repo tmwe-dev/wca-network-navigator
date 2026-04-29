@@ -143,7 +143,7 @@ export const scheduleActivityTool: Tool = {
     // human_activity
     const { error } = await supabase.from("activities").insert({
       user_id: userId,
-      activity_type: "task",
+      activity_type: "other",
       title: data.title,
       description: data.description ?? null,
       due_date: data.dueAt ? data.dueAt.slice(0, 10) : null,
