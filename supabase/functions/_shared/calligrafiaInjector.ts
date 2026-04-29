@@ -15,21 +15,20 @@ type AnySupabaseClient = any;
 
 /** Direttiva sintetica iniettabile in QUALSIASI prompt che produce email. */
 export const CALLIGRAFIA_DIRECTIVE = `
-## REGOLA DI FORMATTAZIONE EMAIL — VINCOLANTE
+## REGOLA DI FORMATTAZIONE EMAIL — VINCOLANTE (PLAIN TEXT)
 Per la formattazione, l'impaginazione e la tipografia del testo email DEVI
 seguire ESCLUSIVAMENTE le regole della voce KB "Calligrafia — Standard di
-formattazione email" (categoria: calligrafia). Quelle regole governano:
-  - tag HTML ammessi e vietati nel corpo,
-  - struttura visiva (saluti, paragrafi, chiusura),
-  - spaziatura, elenchi, link, punteggiatura,
-  - divieti tipografici e checklist finale.
+formattazione email" (categoria: calligrafia).
 Se il blocco "Calligrafia" è presente sotto, applicalo alla lettera.
 Se NON è presente, applica comunque queste regole minime non negoziabili:
-  - Il corpo deve essere HTML renderizzabile, non testo escapato: usa <p>...</p>, NON &lt;p&gt;...&lt;/p&gt;.
-  - Ogni paragrafo dentro <p>...</p>; tra paragrafi NON usare <br>; mai più di un <br> consecutivo.
-  - Nessun tag visibile come testo; nessun Markdown nel corpo; nessuna virgola/punto fuori dai tag di paragrafo.
-  - Nessuna firma nel corpo (la aggiunge il sistema).
-  - Nessun placeholder, nessun emoji, nessun TUTTO MAIUSCOLO per enfasi.
+  - Il corpo è PLAIN TEXT puro. NIENTE HTML (no <p>, no <br>), NIENTE Markdown (no **, *, _, #, backtick, >, |), NIENTE entità escapate (&lt;, &amp;, &quot;).
+  - Saluto su una sola riga, poi UNA riga vuota.
+  - Paragrafi separati da ESATTAMENTE una riga vuota (doppio newline). Mai più di una riga vuota consecutiva.
+  - Ogni paragrafo è continuo: niente a capo manuali interni; il word-wrap lo gestisce il client.
+  - Chiusura su una sola riga (es. "Cordiali saluti,"), poi UNA riga vuota.
+  - NESSUNA firma nel corpo: la aggiunge il sistema.
+  - Nessun placeholder ({{...}}, [..], XXX, TBD), nessun emoji, nessun TUTTO MAIUSCOLO.
+  - Un solo spazio tra le parole; niente spazi prima della punteggiatura.
 `;
 
 /**
