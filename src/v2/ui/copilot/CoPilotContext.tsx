@@ -71,6 +71,24 @@ export function CoPilotProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
+  // Bridge: ascolto l'evento `copilot-open-modal` emesso dal listener globale
+  // (`ai-ui-action` → `open_modal`) e provo a invocare l'handler della pagina.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { name?: string; params?: Record<string, unknown> } | undefined;
+      if (!detail?.name) return;
+      const ok = !!modalsRef.current.get(detail.name);
+      if (!ok) {
+        log.warn("open_modal: nessun handler registrato per la route corrente", { name: detail.name });
+        return;
+      }
+      const h = modalsRef.current.get(detail.name);
+      try { void h?.(detail.params || {}); } catch (err) { log.warn("modal handler error", { error: String(err) }); }
+    };
+    window.addEventListener("copilot-open-modal", handler);
+    return () => window.removeEventListener("copilot-open-modal", handler);
+  }, []);
+
   return (
     <Ctx.Provider value={{ registerModal, registerFilter, invokeModal, invokeFilter, isEnabled, setEnabled }}>
       {children}
