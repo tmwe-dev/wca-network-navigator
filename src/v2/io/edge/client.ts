@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { type Result, ok, err } from "../../core/domain/result";
 import { ioError, fromUnknown, type AppError } from "../../core/domain/errors";
 import { withCircuitBreaker } from "../../bridge/circuit-breaker";
-import { traceCollector } from "../observability/traceCollector";
+import { traceCollector } from "../../observability/traceCollector";
 import type { z } from "zod";
 
 /**
