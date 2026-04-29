@@ -419,6 +419,13 @@ export async function loadCompanyProfile(
     "company_competitive_difference",
     "company_values",
     "company_proof",
+    // Fallback: i campi reali del Settings UI hanno prefisso "ai_"
+    "ai_company_name",
+    "ai_company_alias",
+    "ai_focus_areas",
+    "ai_custom_goals",
+    "ai_knowledge_base",
+    "ai_sector_notes",
   ];
 
   const { data: settings } = await supabase
@@ -432,12 +439,22 @@ export async function loadCompanyProfile(
   );
 
   return {
-    company_name: map.get("company_name") || "WCA Network Member",
+    company_name:
+      map.get("company_name") ||
+      map.get("ai_company_alias") ||
+      map.get("ai_company_name") ||
+      "(azienda mittente non configurata)",
     site: map.get("company_site") || "",
-    offering: map.get("company_offering") || "Servizi di spedizione e logistica internazionale",
-    audience: map.get("company_audience") || "Freight forwarders e operatori logistici WCA",
+    offering:
+      map.get("company_offering") ||
+      map.get("ai_focus_areas") ||
+      "Servizi di spedizione e logistica internazionale",
+    audience:
+      map.get("company_audience") ||
+      map.get("ai_custom_goals") ||
+      "Freight forwarders e operatori logistici",
     competitive_difference: map.get("company_competitive_difference") || "",
-    values: map.get("company_values") || "",
+    values: map.get("company_values") || map.get("ai_sector_notes") || "",
     proof: map.get("company_proof") || "",
   };
 }

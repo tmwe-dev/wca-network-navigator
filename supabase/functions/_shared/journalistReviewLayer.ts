@@ -195,7 +195,10 @@ Tono mittente: ${input.original_inbound?.sentiment || "N/A"}
     input.constraints?.length && `VINCOLI: ${input.constraints.join("; ")}`,
   ].filter(Boolean).join("\n");
 
-  return `Sei il CAPOREDATTORE FINALE di WCA Network Navigator.
+  const senderCompanyName = companyProfile?.company_name || "(azienda mittente non configurata)";
+  return `Sei il CAPOREDATTORE FINALE per "${senderCompanyName}".
+
+REGOLA IDENTITÀ (NON NEGOZIABILE): il messaggio deve risultare inviato da "${senderCompanyName}". Se il testo cita o firma a nome di un'altra azienda/network/alleanza come MITTENTE → verdict "block" + correzione in upstream_fix.
 
 ## RUOLO (confini precisi)
 
