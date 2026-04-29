@@ -1,147 +1,145 @@
-## Audit completo Command — TUTTE le entità (non solo partner)
+# Command Co-Pilot: pop-up flottante che guida e agisce nella piattaforma
 
-### Errore del piano precedente
+## Obiettivo
+Trasformare Command da "pagina dedicata" a **assistente vocale persistente** che:
+- Resta sempre disponibile come bolla flottante draggable su tutte le route V2
+- Naviga al posto tuo, apre modali, applica filtri, evidenzia elementi
+- Chiede conferma vocale solo per azioni distruttive (invio email, salvataggi, eliminazioni)
+- Sa "dove portarti" leggendo una mappa intent→route editabile da Prompt Lab
 
-Avevo ridotto tutto al partner. Sbagliato. Command opera su un **dominio multi-entità**: BCA, CRM (contatti importati e **manuali**), partner WCA, prospects, deals, attività, agenda, queue, KB. Ogni handler edge oggi soffre dello **stesso pattern di superficialità**: query minima a una tabella, zero join cross-entità, zero awareness delle altre fonti.
+## Architettura
 
-### Le 5 entità "anagrafiche" che Command deve trattare con paritetà
-
-| Entità | Tabella | Origine | Cosa la UI mostra | Cosa il tool ritorna oggi |
-|---|---|---|---|---|
-| **Partner WCA** | `partners` | Sync directory WCA | Profile description, networks+expires, services, contatti diretti, BCA matchati, deals, activities, address completo, alias, membership | id, città, email/phone, rating, **`raw_profile_html`** (campo VUOTO! anti-pattern), partner_contacts base, networks senza expires, services |
-| **Imported Contact** (CRM) | `imported_contacts` | Import CSV/Excel **+ inserimenti manuali** + Sherlock + deep search | Nome, azienda, email/phone/mobile, address, position, lead_status, lead_score+breakdown, deep_search payload, **note**, alias, BCA collegato, interazioni, holding pattern, origin | id, nome, azienda, email, phone, country, lead_status, created_at — **niente note, niente score, niente BCA, niente interactions, niente deep_search** |
-| **Partner Contact** | `partner_contacts` | Estrazione/inserimento da scheda partner | Nome, title, email, phone, mobile, is_primary, alias, social links | NON esiste tool dedicato. Solo annidato dentro `get_partner_detail` con 5 campi |
-| **Business Card** | `business_cards` | OCR fiere + matching | OCR full payload, ocr_confidence, evento, partner matchato, contatto matchato, note, attachments | id, company_name, contact_name, email, event, match_status — **niente OCR, niente match join, niente note** |
-| **Prospect IT** | `prospects` | Scraping italiano | Anagrafica completa, ATECO, prospect_contacts, lead_status | tool `search_prospects` con filtri base |
-
-**Punto critico**: i contatti **inseriti manualmente** vivono in `imported_contacts` con `origin='manual'` (o simili). Il tool oggi non distingue, non espone l'origin nel detail e non mostra le note dell'operatore — proprio il valore aggiunto del lavoro umano.
-
-### Le entità "transazionali" collegate (oggi invisibili a Command)
-
-Per ogni anagrafica sopra, la UI aggrega:
-
-- **`activities`** — call log, meeting, follow-up
-- **`contact_interactions`** — log interazioni manuali su singolo contatto
-- **`deals`** — opportunità commerciali con stage kanban
-- **`channel_messages`** — email/WA/LinkedIn ricevute e inviate
-- **`outreach_queue`** — campagne pending/scheduled per contatto
-- **`calendar_events`** — meeting, call, follow-up programmati
-- **`notifications`** — eventi recenti su questa entità
-- **`agent_tasks`** — task AI in corso o completati
-- **`partner_relations`** (networks, services, certs, social_links) per partner
-- **`blacklist`** — controllo dominio/email
-- **`download_jobs`** — sync WCA recenti
-- **`lead_score_breakdown`** — formula 0-100
-
-Nessuno di questi viene aggregato nei tool detail oggi.
-
-### Causa radice (uguale per tutte le entità)
-
-1. **Doppio handler non riconciliato**: esiste `_shared/toolHandlersRead.ts` (versione "ricca", parzialmente fatta per partner) ma **non viene mai chiamato**. Command passa per `_shared/platformTools/*Handler.ts` che è la versione minimal.
-2. **Zero uso della DAL `src/data/`**: ogni handler riscrive query Supabase a mano. Drift permanente garantito.
-3. **Zero join cross-entità**: ogni handler legge una sola tabella, mai aggregati.
-4. **Anti-pattern `raw_profile_html`** già violato in `handleGetPartnerDetail` (vedi memoria `wca-data-availability`).
-5. **Tool defs incompleti** per i parametri (no paginazione, no sort multi-colonna, no filtri compositi che la UI ha).
-6. **Domini scoperti**: deals, calendar, notifications, outreach_queue, agent_tasks, kb, lead_score, agenda — nessun tool li espone.
-
-### Fix proposto — un'unica passata, multi-entità
-
-**Fase 1 — Riscrittura "detail" handler con aggregazione cross-entità**
-
-Tre handler riscritti (uno per anagrafica primaria), tutti con lo stesso pattern: leggi entità + aggrega in parallelo le entità collegate.
-
-1. **`handleGetPartnerDetail`** (`partnersSearchHandler.ts`)
-   - Fix anti-pattern: `has_profile = !!profile_description`, `profile_summary` da `profile_description`
-   - Aggiungi: member_since, membership_expires, alias, mobile, fax, address, office_type, partner_type, branches, logo, enrichment_data
-   - Aggrega: `partner_contacts` + `business_cards` (matched) + `imported_contacts` (matched) deduplicati per email → `contacts_count_total` + `contacts_breakdown`
-   - Join: deals, activities recenti (10), channel_messages recenti (5 con direzione), outreach_queue pending count, blacklist status, networks WITH `expires`, services, social_links, calendar_events futuri
-
-2. **`handleGetContactDetail`** (`contactsHandler.ts`) — **questo è il fix più importante che mancava**
-   - Restituisce TUTTI i campi (incluso `note`, `origin`, `position`, `address`, `alias`, `enrichment_data`, `lead_score`, `lead_score_breakdown`, `deep_search_at`, payload deep_search se presente)
-   - Identifica esplicitamente se è **manuale** (`origin='manual'` o equivalente) e lo segnala in output
-   - Aggrega: `contact_interactions` (timeline), `business_card` collegato (via email), `partner` collegato (se transferred_to_partner_id), `channel_messages` (email thread filtrate per email contatto), `outreach_queue` voce attiva, `calendar_events` futuri, `agent_tasks` su questo contatto, `notifications` recenti
-   - `holding_pattern_state` calcolato (in/out + giorni dall'ultima interazione)
-
-3. **NUOVO `handleGetBusinessCardDetail`** (`businessCardsHandler.ts`)
-   - Restituisce OCR completo, ocr_confidence, attachments, note
-   - Join: partner matchato (con stesso schema sintetico di partner_detail), imported_contact matchato, channel_messages collegati per email, calendar_events
-   - Indica chiaramente `match_state` e cosa è collegato
-
-4. **NUOVO `handleGetProspectDetail`** (handler dedicato)
-   - Anagrafica + ATECO + `prospect_contacts` + activities + deals collegati
-
-**Fase 2 — Tool defs arricchiti (`platformToolDefs.ts`)**
-
-- `search_partners`: aggiungi multi-country, lead_status[], member_expiring_within, services[], sort_by extra (interaction_count, last_interaction_at)
-- `search_contacts`: aggiungi paginazione, sort multi-colonna, filtri channel/quality/met_personally/wcaMatch/group, **filtro `origin='manual'`** per trovare i contatti inseriti a mano
-- `search_business_cards`: aggiungi filtri `match_status`, `has_partner_match`, `has_contact_match`, ocr_confidence range, evento+date
-- Nuovi tool: `get_business_card_detail`, `get_prospect_detail`, `search_partner_contacts` (cercare direttamente nei contatti diretti dei partner)
-
-**Fase 3 — Nuovi tool per domini transazionali (1 file: `domainsExtraHandler.ts`)**
-
-- `list_deals` (filtri stage, owner, partner/contact)
-- `get_pipeline_view` (kanban aggregato)
-- `list_outreach_queue` (filtri status, scheduled_at)
-- `list_calendar_events` (range date, type, entity_id)
-- `list_notifications` (filtri unread, type, entity)
-- `list_agent_tasks` (status, agent)
-- `search_kb` (full text su kb_entries)
-- `get_lead_score_breakdown` (per qualsiasi entità con score)
-- `check_blacklist_email` (controllo singolo)
-- `list_email_send_log` (storico campagne per contatto)
-- `get_holding_pattern_list` (lista contatti out)
-- `get_global_dashboard` (stats omnicomprensive: pipeline, queue, missioni, conversion)
-
-**Fase 4 — System prompt Command (`scopeConfigs.ts`, case "command")**
-
-Allarga le regole detail-mode oltre i partner:
-
-```
-DETAIL-MODE per qualsiasi entità nominata:
-- "Acme srl" o nome azienda → search_partners + search_contacts (azienda) + search_business_cards in parallelo;
-  se 1 partner dominante → get_partner_detail; se solo contatti → get_contact_detail per ognuno (top 3)
-- "Mario Rossi" o nome persona → search_contacts (manuali e importati) + search_partner_contacts + search_business_cards;
-  se match unico → get_contact_detail / get_business_card_detail
-- "biglietto da visita di X" → search_business_cards → get_business_card_detail
-- "prospect Y" → search_prospects → get_prospect_detail
-
-Note: i contatti inseriti manualmente (origin='manual') sono LAVORO UMANO PREZIOSO,
-mostra sempre `note` e `position` quando li recuperi.
-
-Per qualsiasi entità: il detail aggrega activities, deals, calendar, outreach,
-business cards, channel_messages. Non rispondere "non ho accesso" se esiste
-un tool dedicato del dominio (deals/calendar/notifications/queue/kb).
+```text
+┌──────────────────────────────────────────────────┐
+│  FloatingCoPilot (singleton in App.tsx)          │
+│  ├─ Bolla 64px draggable (posizione persistita)  │
+│  ├─ Espansa: pannello 360x500 con voce + log     │
+│  └─ Mai smontata durante navigazione             │
+└──────────────────────────────────────────────────┘
+                    │
+                    ▼ usa stesso useCommandRealtimeVoice
+┌──────────────────────────────────────────────────┐
+│  Client Tools registrati su ElevenLabs Agent     │
+│  ├─ navigate_to(intent | path)                   │
+│  ├─ open_modal(name, params)                     │
+│  ├─ apply_filter(scope, filters)                 │
+│  ├─ highlight_element(selector, hint, duration)  │
+│  ├─ confirm_destructive(action_label) → user OK  │
+│  └─ ask_brain (esistente)                        │
+└──────────────────────────────────────────────────┘
+                    │
+                    ▼ emette window event
+┌──────────────────────────────────────────────────┐
+│  ai-ui-action bus (già esistente, esteso)        │
+│  Route handlers ascoltano e reagiscono           │
+└──────────────────────────────────────────────────┘
+                    │
+                    ▼ risolve intent→destinazione
+┌──────────────────────────────────────────────────┐
+│  ui_navigation_map (DB, editabile Prompt Lab)    │
+│  intent_key | path | default_filters | modal     │
+│  description | examples (per match AI)           │
+└──────────────────────────────────────────────────┘
 ```
 
-**Fase 5 — Test paritetà**
+## Cosa costruisco
 
-`platformTools_test.ts`: per ogni entità sample (partner, contact manuale, contact importato, BCA, prospect), il detail handler deve ritornare gli stessi count e campi della UI. CI verifica.
+### 1. DB: tabella `ui_navigation_map`
+Migration con:
+- `intent_key` (slug univoco, es. `network.italy.hot_leads`)
+- `label` (nome leggibile)
+- `description` (per matching AI)
+- `examples` (text[] di frasi tipiche)
+- `path` (es. `/v2/network/IT`)
+- `default_filters` (jsonb, es. `{"leadStatus":"hot"}`)
+- `modal` (nullable, nome modale da aprire)
+- `category` (network, crm, outreach, prompt-lab, settings…)
+- `requires_confirmation` (bool)
+- RLS: tutti gli operatori autenticati leggono, solo admin scrive
 
-**Fase 6 — Memoria + doc**
+Seed iniziale con ~30 intent coprendo le destinazioni V2 più usate (NetworkPage per ogni network principale, BCA, CRM contatti, Outreach Queue, Pipeline, Prompt Lab tabs, Email Intelligence, Staff Direzionale, Sherlock).
 
-- `mem/features/command-orchestrator-v2.md` aggiornato con la lista nuovi tool e l'allargamento multi-entità
-- Marker `@deprecated` su `toolHandlersRead.ts` per evitare confusione futura
+### 2. Singleton `FloatingCoPilot` in App.tsx
+- Component nuovo `src/v2/ui/copilot/FloatingCoPilot.tsx`
+- Posizione draggable persistita in `localStorage`
+- Due stati: bolla compatta (microfono + indicatore voce) ed espansa (controlli completi + ultimi messaggi + log azioni)
+- Si nasconde automaticamente su `/auth` e `/v2/command` (dove c'è già l'esperienza piena)
+- Toggle globale on/off da topbar e da memoria utente
 
-### File toccati
+### 3. UI Action Bus esteso
+- Estendo `src/v2/lib/uiActionBus.ts` con 4 nuovi tipi azione: `navigate`, `open_modal`, `apply_filter`, `highlight`
+- `App.tsx` monta un listener globale che gestisce navigate (via useNavigate) e highlight (overlay con alone pulsante)
+- Le pagine target espongono handler per `open_modal` e `apply_filter` tramite contesto leggero `CoPilotContext`
 
-1. `supabase/functions/_shared/platformTools/partnersSearchHandler.ts` — riscrittura `handleGetPartnerDetail` + fix anti-pattern
-2. `supabase/functions/_shared/platformTools/contactsHandler.ts` — riscrittura `handleGetContactDetail` (incluso supporto contatti manuali) + arricchimento `handleSearchContacts`
-3. `supabase/functions/_shared/platformTools/businessCardsHandler.ts` — riscrittura `handleSearchBusinessCards` + nuovo `handleGetBusinessCardDetail`
-4. `supabase/functions/_shared/platformTools/prospectsHandler.ts` — nuovo `handleGetProspectDetail`
-5. `supabase/functions/_shared/platformTools/domainsExtraHandler.ts` — NUOVO: handler per i 12 nuovi tool transazionali
-6. `supabase/functions/_shared/platformTools/platformToolDefs.ts` — espansione parametri esistenti + 14 nuovi tool defs
-7. `supabase/functions/_shared/platformTools/platformToolHandlers.ts` — routing nuovi handler
-8. `supabase/functions/_shared/scopeConfigs.ts` — aggiornamento system prompt case "command" multi-entità
-9. `supabase/functions/_shared/platformTools_test.ts` — test paritetà
-10. `mem/features/command-orchestrator-v2.md` — aggiornamento doc
+### 4. Client tools voce
+Aggiungo in `useCommandRealtimeVoice.ts` 5 client tools che ElevenLabs può invocare:
+- `navigate_to({ intent_key?, path? })` - se intent_key, lookup in `ui_navigation_map`
+- `open_modal({ name, params })`
+- `apply_filter({ scope, filters })`
+- `highlight_element({ description })` - usa AI per risolvere description→selector dal DOM corrente
+- `request_confirmation({ action_label })` - mostra dialog, attende click utente, ritorna OK/cancel
 
-### Risultato atteso
+Tutti i tool emettono `ai-ui-action` event e ritornano risultato sincrono al modello.
 
-Una sola PR. Dopo il merge Command può rispondere con paritetà alla UI per **partner, contatti CRM (importati e manuali), partner contacts, business cards, prospects**, e per i loro domini collegati (deals, agenda, queue, notifications, score, KB). Niente più "scopri-cose-mancanti" a singhiozzo.
+### 5. Edge function `resolve-ui-intent`
+Nuova edge function con scope `command`:
+- Input: testo libero utente o `intent_key`
+- Logica: se intent_key esatto → lookup DB. Se testo → embedding match su `ui_navigation_map.description + examples` (top-3) + AI re-rank
+- Output: `{ path, default_filters, modal, requires_confirmation, confidence }`
+- Usata dal tool `navigate_to` quando l'AI passa solo un'intenzione
 
-### Garanzie
+### 6. Pagina Prompt Lab → tab "Navigation Map"
+- Nuovo tab in `/v2/prompt-lab` per CRUD su `ui_navigation_map`
+- Form: intent_key, label, descrizione, esempi, path picker, filtri JSON, modale
+- Bottone "Test" che simula la navigazione
 
-- **Nessuna modifica alla UI o alla DAL** (`src/data/` invariata): cambi solo nello strato edge.
-- **Soft-delete e RLS** rispettati: gli handler usano lo stesso supabase client già configurato.
-- **Hard guards** invariati: nessun nuovo tool destructive.
-- **Backwards compatible**: i tool esistenti mantengono firma; aggiungono solo campi al return.
+### 7. ElevenLabs Agent: aggiornamento prompt e tools
+Documento `docs/PROMPT_11LABS_COMMAND.md` aggiornato con:
+- Nuovi 5 client tools (schema + esempi)
+- Nuove regole di comportamento ("se l'utente chiede di vedere/aprire/filtrare X, usa navigate_to o apply_filter prima di descrivere a voce")
+- Pattern di conferma per azioni distruttive
+
+### 8. Memoria
+Nuovo memory file `mem://features/floating-copilot-v1` con:
+- Architettura, vincoli (singleton, no su /auth, /v2/command)
+- Lista client tools e governance ai-ui-action
+
+## Cosa NON tocco
+- Estensione browser: nessuna modifica. Useremo l'estensione SOLO per pagine esterne (WCA/WA/LI), come già fa, attraverso i tool esistenti.
+- Logica voce ElevenLabs core: resta `useCommandRealtimeVoice`, riusato dal pop-up.
+- Tool DB esistenti (`get_partner_detail`, `search_contacts`, ecc.): restano invariati, già rifatti nei turni precedenti.
+
+## Sicurezza
+- `requires_confirmation=true` → tool `request_confirmation` obbligatorio prima di emettere azione
+- Hard guard lato client: azioni `apply_filter`/`open_modal` whitelist per route corrente
+- `ai_scope_registry`: aggiunti i 5 nuovi tool sotto scope `command` con `requires_user_present=true`
+
+## File toccati
+**Nuovi**
+- `supabase/migrations/<ts>_ui_navigation_map.sql`
+- `supabase/functions/resolve-ui-intent/index.ts`
+- `src/v2/ui/copilot/FloatingCoPilot.tsx`
+- `src/v2/ui/copilot/CoPilotBubble.tsx`
+- `src/v2/ui/copilot/CoPilotPanel.tsx`
+- `src/v2/ui/copilot/HighlightOverlay.tsx`
+- `src/v2/ui/copilot/CoPilotContext.tsx`
+- `src/v2/hooks/useCoPilotTools.ts`
+- `src/v2/ui/pages/prompt-lab/tabs/NavigationMapTab.tsx`
+- `src/data/uiNavigationMap.ts` (DAL)
+- `mem/features/floating-copilot-v1.md`
+
+**Modificati**
+- `src/App.tsx` (monta FloatingCoPilot + listener globale)
+- `src/v2/ui/pages/command/hooks/useCommandRealtimeVoice.ts` (aggiunge 5 client tools)
+- `src/v2/lib/uiActionBus.ts` (nuovi tipi azione)
+- `src/lib/queryKeys.ts` (chiavi navigation map)
+- `docs/PROMPT_11LABS_COMMAND.md` (nuovi tool + regole)
+- `mem/index.md` (riferimento)
+
+## Test di accettazione
+1. Da qualsiasi route V2, dico "portami sui partner italiani caldi" → mi navigo su `/v2/network/IT` con filtro lead caldi applicato
+2. Da `/v2/crm`, dico "apri il dettaglio di [nome contatto]" → si apre modale dettaglio contatto
+3. Dico "evidenzia il bottone per inviare email" → alone pulsante sul bottone giusto
+4. Dico "manda l'email" → AI invoca `request_confirmation`, vedo dialog, conferma, parte
+5. Bolla resta visibile cambiando 5 route diverse senza interrompere la conversazione
+6. Da Prompt Lab aggiungo nuovo intent_key, lo provo subito a voce senza redeploy

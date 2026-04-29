@@ -8402,6 +8402,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ui_navigation_map: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          default_filters: Json
+          description: string
+          enabled: boolean
+          examples: string[]
+          id: string
+          intent_key: string
+          label: string
+          modal: string | null
+          modal_params: Json
+          path: string
+          requires_confirmation: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_filters?: Json
+          description: string
+          enabled?: boolean
+          examples?: string[]
+          id?: string
+          intent_key: string
+          label: string
+          modal?: string | null
+          modal_params?: Json
+          path: string
+          requires_confirmation?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_filters?: Json
+          description?: string
+          enabled?: boolean
+          examples?: string[]
+          id?: string
+          intent_key?: string
+          label?: string
+          modal?: string | null
+          modal_params?: Json
+          path?: string
+          requires_confirmation?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       usage_daily_budget: {
         Row: {
           ai_token_cap: number
