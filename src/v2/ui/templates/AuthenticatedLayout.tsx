@@ -48,6 +48,8 @@ const FiltersDrawer = lazyRetry(() => import("@/components/global/filters-drawer
 const IntelliFlowOverlay = lazyRetry(() => import("@/components/intelliflow/IntelliFlowOverlay"));
 const CommandPalette = lazyRetry(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
 const GlobalVoiceFAB = lazyRetry(() => import("@/components/voice/GlobalVoiceFAB"));
+const FloatingCoPilot = lazyRetry(() => import("@/v2/ui/copilot/FloatingCoPilot").then(m => ({ default: m.FloatingCoPilot })));
+import { CoPilotProvider } from "@/v2/ui/copilot/CoPilotContext";
 const AddContactDialog = lazyRetry(() => import("@/components/contacts/AddContactDialog").then(m => ({ default: m.AddContactDialog })));
 const AgentOperationsDashboard = lazyRetry(() => import("@/components/agents/AgentOperationsDashboard").then(m => ({ default: m.AgentOperationsDashboard })));
 const TestExtensionsContent = lazyRetry(() => import("@/components/test-extensions/TestExtensionsView"));
@@ -171,6 +173,13 @@ export function AuthenticatedLayout(): React.ReactElement | null {
         case "apply_filters":
           window.dispatchEvent(new CustomEvent("ai-command", { detail: { filters: detail.filters } }));
           break;
+        case "open_modal": {
+          // Inoltrato al CoPilotContext via custom event interno
+          window.dispatchEvent(new CustomEvent("copilot-open-modal", {
+            detail: { name: detail.modal, params: detail.params || {} },
+          }));
+          break;
+        }
         case "start_download_job":
           if (detail.job_id) {
             toast.success(`Job ${detail.job_id.slice(0, 8)}… pronto. Vai su Network per avviarlo.`);
@@ -223,6 +232,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
               <GlobalFiltersProvider>
                 <MissionProvider>
                   <NotificationsProvider>
+                  <CoPilotProvider>
                       <SonnerToaster position="top-right" richColors closeButton />
                       <Toaster />
                       <LiveRegion message="" />
@@ -395,6 +405,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </Suspense>
                       <ClaudeBadge />
                       {/* GlobalVoiceFAB removed — voice controls moved to LayoutHeader */}
+                      <Suspense fallback={null}>
+                        <FloatingCoPilot />
+                      </Suspense>
+                  </CoPilotProvider>
                     </NotificationsProvider>
                   </MissionProvider>
                 </GlobalFiltersProvider>
