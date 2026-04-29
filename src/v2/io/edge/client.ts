@@ -60,55 +60,81 @@ export async function invokeEdgeV2<TReq extends Record<string, unknown>, TRes>(
   const startedAt = Date.now();
   const route = typeof window !== "undefined" ? window.location.pathname : undefined;
 
-  return withCircuitBreaker(
-    `edge:${functionName}`,
-    async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: payload,
-        });
+  try {
+    return await withCircuitBreaker(
+      `edge:${functionName}`,
+      async (): Promise<Result<TRes, AppError>> => {
+        try {
+          const { data, error } = await supabase.functions.invoke(functionName, {
+            body: payload,
+          });
 
-        if (error) {
-          throw new Error(translateInvokeError(functionName, error.message ?? String(error)));
+          if (error) {
+            const message = translateInvokeError(functionName, error.message ?? String(error));
+            traceCollector.push({
+              type: "edge.invoke",
+              scope: typeof payload.scope === "string" ? payload.scope : "edge",
+              source: `${functionName}:invokeEdgeV2`,
+              route,
+              status: "error",
+              duration_ms: Date.now() - startedAt,
+              payload_summary: { functionName, request: payload },
+              error: { message },
+              correlation_id: correlationId,
+            });
+            return err(ioError("EDGE_FUNCTION_ERROR", message, { functionName }, "invokeEdgeV2"));
+          }
+
+          const parsed = responseSchema.safeParse(data);
+          if (!parsed.success) {
+            const message = `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`;
+            traceCollector.push({
+              type: "edge.invoke",
+              scope: typeof payload.scope === "string" ? payload.scope : "edge",
+              source: `${functionName}:invokeEdgeV2`,
+              route,
+              status: "error",
+              duration_ms: Date.now() - startedAt,
+              payload_summary: { functionName, request: payload },
+              error: { message },
+              correlation_id: correlationId,
+            });
+            return err(ioError("EDGE_FUNCTION_ERROR", message, { functionName }, "invokeEdgeV2"));
+          }
+
+          traceCollector.push({
+            type: "edge.invoke",
+            scope: typeof payload.scope === "string" ? payload.scope : "edge",
+            source: `${functionName}:invokeEdgeV2`,
+            route,
+            status: "success",
+            duration_ms: Date.now() - startedAt,
+            payload_summary: { functionName, request: payload },
+            correlation_id: correlationId,
+          });
+          return ok(parsed.data);
+        } finally {
+          if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
         }
-
-        const parsed = responseSchema.safeParse(data);
-        if (!parsed.success) {
-          throw new Error(
-            `Edge function "${functionName}" response schema mismatch: ${parsed.error.message}`,
-          );
-        }
-
-        traceCollector.push({
-          type: "edge.invoke",
-          scope: typeof payload.scope === "string" ? payload.scope : "edge",
-          source: `${functionName}:invokeEdgeV2`,
-          route,
-          status: "success",
-          duration_ms: Date.now() - startedAt,
-          payload_summary: { functionName, request: payload },
-          correlation_id: correlationId,
-        });
-        return parsed.data;
-      } catch (caught: unknown) {
-        const message = caught instanceof Error ? caught.message : String(caught);
-        traceCollector.push({
-          type: "edge.invoke",
-          scope: typeof payload.scope === "string" ? payload.scope : "edge",
-          source: `${functionName}:invokeEdgeV2`,
-          route,
-          status: "error",
-          duration_ms: Date.now() - startedAt,
-          payload_summary: { functionName, request: payload },
-          error: { message },
-          correlation_id: correlationId,
-        });
-        throw caught;
-      } finally {
-        if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
-      }
-    },
-  );
+      },
+    );
+  } catch (caught: unknown) {
+    // Circuit breaker open OR unexpected throw: degrade gracefully.
+    const message = caught instanceof Error ? caught.message : String(caught);
+    traceCollector.push({
+      type: "edge.invoke",
+      scope: typeof payload.scope === "string" ? payload.scope : "edge",
+      source: `${functionName}:invokeEdgeV2`,
+      route,
+      status: "error",
+      duration_ms: Date.now() - startedAt,
+      payload_summary: { functionName, request: payload },
+      error: { message },
+      correlation_id: correlationId,
+    });
+    if (ownsCorrelation) traceCollector.endCorrelation(correlationId);
+    return err(fromUnknown(caught, "EDGE_FUNCTION_ERROR", `invokeEdgeV2:${functionName}`));
+  }
 }
 
 /**
