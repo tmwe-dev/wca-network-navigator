@@ -53,6 +53,62 @@ function extractPersonAndCompany(prompt: string): { person: string | null; compa
   return { person, company, email };
 }
 
+/* ─── Country detection (batch country-wide email) ─────────────────────── */
+
+const COUNTRY_MAP: Record<string, string> = {
+  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
+  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
+  "regno unito": "GB", uk: "GB", "united kingdom": "GB", inghilterra: "GB",
+  olanda: "NL", "paesi bassi": "NL", netherlands: "NL", belgio: "BE", belgium: "BE",
+  portogallo: "PT", portugal: "PT", grecia: "GR", greece: "GR",
+  svizzera: "CH", switzerland: "CH", austria: "AT",
+  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
+  "stati uniti": "US", usa: "US", "united states": "US", america: "US",
+  canada: "CA", messico: "MX", mexico: "MX", brasile: "BR", brazil: "BR",
+  argentina: "AR", cile: "CL", chile: "CL",
+  cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
+  emirati: "AE", uae: "AE", "arabia saudita": "SA", egitto: "EG", egypt: "EG",
+  marocco: "MA", morocco: "MA", "sud africa": "ZA", "south africa": "ZA",
+  australia: "AU", "nuova zelanda": "NZ", "new zealand": "NZ",
+  singapore: "SG", "hong kong": "HK", thailandia: "TH", thailand: "TH",
+  vietnam: "VN", indonesia: "ID", malesia: "MY", malaysia: "MY",
+  filippine: "PH", philippines: "PH", korea: "KR", "corea del sud": "KR",
+};
+
+function detectCountryCode(prompt: string): { code: string; label: string } | null {
+  const lower = prompt.toLowerCase();
+  // Cerca pattern "partner(s) (di|in|a) <paese>" o solo nome paese standalone
+  for (const [name, code] of Object.entries(COUNTRY_MAP)) {
+    const re = new RegExp(`\\b(?:di|in|a|da|of|from|to)\\s+${name}\\b`, "i");
+    if (re.test(lower)) return { code, label: name };
+  }
+  // Fallback: nome paese senza preposizione (es. "partner Malta")
+  for (const [name, code] of Object.entries(COUNTRY_MAP)) {
+    const re = new RegExp(`\\b${name}\\b`, "i");
+    if (re.test(lower)) return { code, label: name };
+  }
+  return null;
+}
+
+function isCountryWideIntent(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
+  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
+}
+
+async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at")
+    .eq("country_code", countryCode)
+    .eq("is_active", true)
+    .neq("lead_status", "blacklisted")
+    .order("company_name")
+    .limit(50);
+  if (error) return [];
+  return (data ?? []) as PartnerRow[];
+}
+
 async function searchPartner(company: string | null, email: string | null): Promise<PartnerRow[]> {
   let q = supabase
     .from("partners")
