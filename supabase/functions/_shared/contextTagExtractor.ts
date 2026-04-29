@@ -96,6 +96,9 @@ export function extractContextTags(ctx: ConversationContext): ContextTags {
       strategic: ["country_culture", "communication_pattern", "competitive_intelligence"],
       import: ["operative_procedure"],
       extension: ["operative_procedure"],
+      // Command: layer sopra tutti gli agenti — carica schede operative,
+      // memoria AI e doctrine commerciale per orchestrare in modo informato.
+      command: ["command_tools", "ai_memory", "operative_procedure", "system_doctrine"],
     };
     if (scopeMap[ctx.scope]) categories.push(...scopeMap[ctx.scope]);
   }

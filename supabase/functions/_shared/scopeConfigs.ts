@@ -368,6 +368,28 @@ In entrambe le modalità: NESSUNA modifica viene applicata senza approvazione es
         contextRequirements: ["profile", "mission_history"],
       };
 
+    case "command":
+      // Command è il layer orchestratore sopra tutti gli agenti: serve il
+      // massimo del contesto (profilo, memoria L1-L3, KB, doctrine, holding
+      // pattern, prompt operativi DB) perché possa decidere quale agente
+      // attivare e proporre piani con cognizione di causa.
+      return {
+        tools: PLATFORM_TOOLS,
+        temperature: 0.3,
+        creditLabel: "Command Orchestrator",
+        contextRequirements: [
+          "profile",
+          "memory",
+          "kb",
+          "doctrine",
+          "operative_prompts",
+          "mission_history",
+          "holding_state",
+          "active_workflow",
+          "email_context",
+        ],
+      };
+
     default:
       throw new Error(`Unknown scope: ${scope}`);
   }
