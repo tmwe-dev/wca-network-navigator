@@ -4,6 +4,7 @@
  */
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 function extractMissionRef(prompt: string): string | null {
@@ -27,13 +28,14 @@ export const launchMissionTool: Tool = {
       if (ref) {
         if (/^[0-9a-f-]{36}$/i.test(ref)) {
           missionId = ref;
-          const { data } = await supabase.from("missions").select("name").eq("id", ref).maybeSingle();
+          const { data } = await untypedFrom("agent_missions").select("name").eq("id", ref).maybeSingle();
           missionName = (data as { name?: string } | null)?.name ?? null;
         } else {
-          const { data } = await supabase.from("missions").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
+          const { data } = await untypedFrom("agent_missions").select("id, name").ilike("name", `%${ref}%`).limit(1).maybeSingle();
           if (data) {
-            missionId = (data as { id: string }).id;
-            missionName = (data as { name: string }).name;
+            const row = data as { id: string; name: string };
+            missionId = row.id;
+            missionName = row.name;
           }
         }
       }
