@@ -120,6 +120,18 @@ serve(async (req) => {
 
     // ═══ TOOL-DECISION MODE ═══
     if (mode === "tool-decision") {
+      // Inject Prompt Lab "command" scope so the router knows the operator's
+      // routing rules for the new tools (WA, LinkedIn, missions, briefing, …).
+      let commandPromptBlock = "";
+      try {
+        const mod = await import("../_shared/operativePromptsLoader.ts");
+        const { block } = await mod.loadOperativePrompts(supabase, userId ?? "", {
+          scope: "command",
+          includeUniversal: true,
+          limit: 6,
+        });
+        commandPromptBlock = block ?? "";
+      } catch (_) { /* degrade silently */ }
       const result = await handleToolDecisionMode(
         provider,
         context?.tools,
@@ -128,7 +140,8 @@ serve(async (req) => {
           : "",
         userId,
         supabase,
-        dynCors
+        dynCors,
+        commandPromptBlock,
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -146,6 +159,16 @@ serve(async (req) => {
                 ?.content as string
             ) ?? ""
           : "";
+      let commandPromptBlock = "";
+      try {
+        const mod = await import("../_shared/operativePromptsLoader.ts");
+        const { block } = await mod.loadOperativePrompts(supabase, userId ?? "", {
+          scope: "command",
+          includeUniversal: true,
+          limit: 6,
+        });
+        commandPromptBlock = block ?? "";
+      } catch (_) { /* degrade silently */ }
       const result = await handlePlanExecutionMode(
         provider,
         context?.tools || [],
@@ -153,7 +176,8 @@ serve(async (req) => {
         Array.isArray(context?.history) ? context.history : [],
         userId,
         supabase,
-        dynCors
+        dynCors,
+        commandPromptBlock,
       );
       endMetrics(metrics, true, 200);
       return result;
