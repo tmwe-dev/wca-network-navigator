@@ -202,6 +202,18 @@ export function FloatingCoPilot() {
                 <span className="text-sm font-semibold text-foreground">Co-Pilot</span>
               </div>
               <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPos(snapToCorner("tl"))} title="Sposta in alto a sinistra">
+                  <span className="text-[10px]">↖</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPos(snapToCorner("tr"))} title="Sposta in alto a destra">
+                  <span className="text-[10px]">↗</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPos(snapToCorner("bl"))} title="Sposta in basso a sinistra">
+                  <span className="text-[10px]">↙</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPos(snapToCorner("br"))} title="Sposta in basso a destra">
+                  <span className="text-[10px]">↘</span>
+                </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEnabled(false)} title="Disattiva Co-Pilot">
                   <Power className="h-3.5 w-3.5" />
                 </Button>
