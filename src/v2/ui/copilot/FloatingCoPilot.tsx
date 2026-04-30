@@ -18,17 +18,65 @@ import { useCoPilot } from "./CoPilotContext";
 const HIDDEN_ROUTES = [/^\/auth/, /^\/v2\/login/, /^\/v2\/reset-password/, /^\/v2\/onboarding/, /^\/v2\/command(\/|$)/];
 const STORAGE_POS = "copilot.position";
 
+/** Bubble visual size (must match CSS w-/h- of the collapsed bubble) */
+const BUBBLE = 56;
+/** Safe margin from each viewport edge */
+const MARGIN = 16;
+/** Avoid the bottom-right corner where MobileBottomNav lives on small screens */
+const BOTTOM_RESERVED = 72;
+
 interface Position { x: number; y: number; }
+
+/** Default: anchored bottom-right, above mobile bottom nav. */
+function defaultPosition(): Position {
+  const w = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const h = typeof window !== "undefined" ? window.innerHeight : 768;
+  return { x: w - BUBBLE - MARGIN, y: h - BUBBLE - BOTTOM_RESERVED };
+}
+
+/**
+ * Clamp a saved position into the viewport AND push it away from the central
+ * danger zone (25%–75% horizontally, 25%–75% vertically) where it would cover
+ * tables and detail panels.
+ */
+function sanitizePosition(p: Position): Position {
+  if (typeof window === "undefined") return p;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const cx = p.x + BUBBLE / 2;
+  const cy = p.y + BUBBLE / 2;
+  const inCenterX = cx > w * 0.25 && cx < w * 0.75;
+  const inCenterY = cy > h * 0.25 && cy < h * 0.75;
+  if (inCenterX && inCenterY) return defaultPosition();
+  // Clamp to viewport with margins
+  const x = Math.max(MARGIN, Math.min(w - BUBBLE - MARGIN, p.x));
+  const y = Math.max(MARGIN, Math.min(h - BUBBLE - MARGIN, p.y));
+  return { x, y };
+}
 
 function loadPosition(): Position {
   try {
     const raw = localStorage.getItem(STORAGE_POS);
     if (raw) {
-      const p = JSON.parse(raw) as Position;
-      if (typeof p.x === "number" && typeof p.y === "number") return p;
+      const parsed = JSON.parse(raw) as Position;
+      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+        return sanitizePosition(parsed);
+      }
     }
   } catch { /* noop */ }
-  return { x: window.innerWidth - 96, y: window.innerHeight - 120 };
+  return defaultPosition();
+}
+
+type Corner = "tl" | "tr" | "bl" | "br";
+function snapToCorner(corner: Corner): Position {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  switch (corner) {
+    case "tl": return { x: MARGIN, y: MARGIN + 56 /* below header */ };
+    case "tr": return { x: w - BUBBLE - MARGIN, y: MARGIN + 56 };
+    case "bl": return { x: MARGIN, y: h - BUBBLE - BOTTOM_RESERVED };
+    case "br": return { x: w - BUBBLE - MARGIN, y: h - BUBBLE - BOTTOM_RESERVED };
+  }
 }
 
 export function FloatingCoPilot() {
@@ -49,6 +97,13 @@ export function FloatingCoPilot() {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_POS, JSON.stringify(pos)); } catch { /* noop */ }
   }, [pos]);
+
+  // Re-clamp on viewport resize so the bubble never ends up off-screen.
+  useEffect(() => {
+    const onResize = () => setPos((p) => sanitizePosition(p));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Listener: ai-ui-action per highlight + open_modal
   useEffect(() => {
