@@ -107,7 +107,9 @@ export function deriveConstraints(
   prompt: string,
 ): SessionConstraints {
   const lower = prompt.toLowerCase();
-  const next: SessionConstraints = { ...(prev ?? {}) };
+  const next: { -readonly [K in keyof SessionConstraints]: SessionConstraints[K] } = {
+    ...(prev ?? {}),
+  };
 
   // LinkedIn ban
   if (/\b(non|no|niente|evita|senza|mai)\b[^.]{0,40}\blinkedin\b/i.test(lower)) {
@@ -128,7 +130,7 @@ export function deriveConstraints(
     next.onlyOfficialWebsites = true;
   }
 
-  return next;
+  return next as SessionConstraints;
 }
 
 /** Determina se l'utente sta facendo riferimento al working set corrente. */
