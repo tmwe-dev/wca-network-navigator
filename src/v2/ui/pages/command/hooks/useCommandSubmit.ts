@@ -38,8 +38,10 @@ import {
   isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
+import { isSynthesisIntent } from "../lib/intentDetector";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
+import { getAiComment } from "../aiBridge";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -182,8 +184,25 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
 
-      // Build conversational hint from previous query context (if fresh)
-      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+      // ── SYNTHESIS BRANCH ───────────────────────────────────────────────
+      // The user asks for a summary/explanation of what we already returned.
+      // Skip DB. Reuse the snapshot rows from queryContext + ai-comment.
+      if (
+        isSynthesisIntent(text) &&
+        isContextFresh(queryContext) &&
+        queryContext?.lastResultRows &&
+        queryContext.lastResultRows.length > 0
+      ) {
+        await runSynthesis(text, queryContext);
+        return;
+      }
+
+      // Build conversational hint from previous query context (if fresh).
+      // Pass the current prompt so inheritance is suppressed when intent changes.
+      const hint = buildContextHint(
+        isContextFresh(queryContext) ? queryContext : null,
+        text,
+      );
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
