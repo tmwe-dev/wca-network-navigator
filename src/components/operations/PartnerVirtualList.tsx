@@ -97,40 +97,39 @@ export function PartnerVirtualList({ partners, isLoading, isDark, selectedPartne
                 )}
                 {/* Logo / Flag fallback */}
                 {logoUrl ? (
-                  <OptimizedImage src={logoUrl} alt="" className="w-9 h-9 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                  <OptimizedImage src={logoUrl} alt="" className="w-11 h-11 rounded-md object-contain bg-white/10 border border-white/10 shrink-0" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
                 ) : (
-                  <div className={cn("w-9 h-9 rounded-md shrink-0 flex items-center justify-center text-base leading-none", isDark ? "bg-white/[0.06]" : "bg-slate-100")}>
-                    {flag !== "🌍" ? flag : <span className={cn("text-[11px] font-bold", isDark ? "text-slate-500" : "text-slate-400")}>{partner.company_name?.charAt(0)}</span>}
+                  <div className={cn("w-11 h-11 rounded-md shrink-0 flex items-center justify-center text-3xl leading-none ring-1", isDark ? "bg-white/[0.06] ring-white/10" : "bg-slate-100 ring-slate-200")}>
+                    {flag !== "🌍" ? flag : <span className={cn("text-sm font-bold", isDark ? "text-slate-300" : "text-slate-500")}>{partner.company_name?.charAt(0)}</span>}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className={cn("font-bold text-xs truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
+                    <p className={cn("font-bold text-sm truncate", isDark ? "text-slate-100" : "text-slate-800")}>{partner.company_name}</p>
                     {inHolding && (
                       <span title="In circuito di attesa">
                         <Plane className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
                       </span>
                     )}
                     {partner.company_alias && (
-                      <span className={cn("text-[9px] px-1 py-0.5 rounded shrink-0", isDark ? "bg-emerald-900/30 text-emerald-400" : "bg-emerald-100 text-emerald-700")}>{partner.company_alias}</span>
+                      <span className={cn("text-[11px] px-1.5 py-0.5 rounded shrink-0 font-medium", isDark ? "bg-emerald-900/40 text-emerald-300" : "bg-emerald-100 text-emerald-700")}>{partner.company_alias}</span>
                     )}
                     {years > 0 && (
                       <span className="flex items-center gap-0.5 shrink-0">
-                        <Trophy className="w-3 h-3 text-primary fill-primary" />
-                        <span className="text-[10px] font-bold text-primary">{years}</span>
+                        <Trophy className="w-3.5 h-3.5 text-primary fill-primary" />
+                        <span className="text-xs font-bold text-primary">{years}</span>
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-sm leading-none shrink-0">{flag}</span>
-                    <span className={cn("text-[11px] truncate", isDark ? "text-slate-400" : "text-slate-500")}>{partner.city}</span>
-                    {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-2.5 h-2.5" />}
+                    <span className={cn("text-xs truncate font-medium", isDark ? "text-slate-300" : "text-slate-600")}>{partner.city}</span>
+                    {(partner.rating ?? 0) > 0 && <MiniStars rating={Number(partner.rating)} size="w-3 h-3" />}
                     {primaryContact && (
-                      <span className={cn("text-[10px] truncate max-w-[80px]", isDark ? "text-slate-500" : "text-slate-400")}>· {String(primaryContact.name ?? "")}</span>
+                      <span className={cn("text-xs truncate max-w-[120px]", isDark ? "text-slate-400" : "text-slate-500")}>· {String(primaryContact.name ?? "")}</span>
                     )}
                   </div>
                   {snippet && (
-                    <p className={cn("text-[9px] truncate mt-0.5 italic", isDark ? "text-slate-500" : "text-slate-400")}>{snippet}</p>
+                    <p className={cn("text-[11px] truncate mt-0.5 italic", isDark ? "text-slate-400" : "text-slate-500")}>{snippet}</p>
                   )}
                 </div>
                 <EnrichedStatusIcons

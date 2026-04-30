@@ -31,33 +31,33 @@ export function CountryGridV2({ stats, selectedCountry, onSelectCountry }: Count
   return (
     <div className="p-3">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase">
+        <p className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">
           {stats.length} paesi · {stats.reduce((s, c) => s + c.count, 0).toLocaleString("it-IT")} partner
         </p>
         {selectedCountry && (
           <button
             onClick={() => onSelectCountry(undefined)}
-            className="text-[10px] text-primary hover:underline"
+            className="text-xs text-primary hover:underline font-medium"
           >
             Rimuovi filtro
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1">
+      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 gap-1.5">
         {stats.map((s) => (
           <button
             key={s.country_code}
             onClick={() => handleClick(s.country_code)}
             title={`${s.country_code}: ${s.count} partner`}
             className={cn(
-              "flex flex-col items-center justify-center rounded border p-1 text-[10px] transition-all hover:scale-105",
+              "flex flex-col items-center justify-center rounded-md border p-1.5 gap-0.5 transition-all hover:scale-105",
               getDensityClass(s.count, maxCount),
               selectedCountry === s.country_code && "ring-2 ring-primary ring-offset-1 ring-offset-background scale-110",
             )}
           >
-            <span className="text-sm leading-none">{getCountryFlag(s.country_code)}</span>
-            <span className="font-mono font-semibold">{s.count}</span>
+            <span className="text-2xl leading-none">{getCountryFlag(s.country_code)}</span>
+            <span className="font-mono font-bold text-sm">{s.count}</span>
           </button>
         ))}
       </div>

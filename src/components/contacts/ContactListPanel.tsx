@@ -32,6 +32,7 @@ interface Props {
  */
 const COLUMNS: ReadonlyArray<{ key: string; label: string; sortKey?: string; filterField?: string }> = [
   { key: "select", label: "" },
+  { key: "flag", label: "" },
   { key: "location", label: "Località", sortKey: "country", filterField: "country" },
   { key: "company", label: "Azienda", sortKey: "company", filterField: "company" },
   { key: "contact", label: "Contatto", sortKey: "name", filterField: "name" },
@@ -81,16 +82,16 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     <PageErrorBoundary>
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border/30 shrink-0">
+      <div className="px-3 py-1.5 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
-            {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20"><Plane className="w-2.5 h-2.5" /> Fuori circuito</span>}
-            {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20"><Plane className="w-2.5 h-2.5 animate-pulse" /> In circuito</span>}
+            <span className="text-sm font-semibold text-foreground">{totalCount} <span className="text-foreground/60 font-normal">contatti</span></span>
+            {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30"><Plane className="w-3 h-3" /> Fuori circuito</span>}
+            {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/20 text-destructive border border-destructive/30"><Plane className="w-3 h-3 animate-pulse" /> In circuito</span>}
             <div className="flex gap-1">
               {(["all", "matched", "unmatched"] as const).map(v => (
                 <button key={v} onClick={() => setCrmWcaMatch(v)}
-                  className={cn("text-[9px] px-1.5 py-0.5 rounded-full transition-colors", wcaMatch === v ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted")}>
+                  className={cn("text-[11px] px-2 py-0.5 rounded-full transition-colors font-medium", wcaMatch === v ? "bg-primary/25 text-primary font-semibold" : "text-foreground/70 hover:bg-muted")}>
                   {v === "all" ? "Tutti" : v === "matched" ? "WCA ✓" : "Solo CRM"}
                 </button>
               ))}
@@ -99,8 +100,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           <div className="flex items-center gap-1">
             <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
             <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
-                <UserPlus className="w-3.5 h-3.5" /> Nuovo
+              <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm gap-1.5" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
+                <UserPlus className="w-4 h-4" /> Nuovo
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
           </div>
@@ -108,9 +109,9 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       </div>
 
       {/* Group tabs */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 shrink-0">
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30 shrink-0">
         <Select value={groupBy} onValueChange={(v) => { setGroupBy(v); setCrmGroupTab(""); }}>
-          <SelectTrigger className="h-7 w-[100px] text-[10px] border-border/40 bg-transparent"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-[110px] text-xs border-border/40 bg-transparent"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="country">Paese</SelectItem>
             <SelectItem value="origin">Origine</SelectItem>
@@ -119,13 +120,13 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           </SelectContent>
         </Select>
         <div ref={tabsRef} className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-          <button onClick={() => setCrmGroupTab("")} className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", !activeGroupTab ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted/60")}>
+          <button onClick={() => setCrmGroupTab("")} className={cn("shrink-0 text-xs px-2.5 py-1 rounded-md whitespace-nowrap transition-colors font-medium", !activeGroupTab ? "bg-primary/25 text-primary font-semibold" : "text-foreground/70 hover:bg-muted/60")}>
             Tutti ({totalAllGroups})
           </button>
           {tabs.slice(0, 50).map(t => (
             <button key={t.group_key} onClick={() => handleTabClick(t.group_key)}
-              className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", activeGroupTab === t.group_key ? "bg-primary/20 text-primary font-semibold" : "text-foreground/80 hover:bg-muted/60")}>
-              {groupBy === "country" ? `${countryFlag(t.group_key)} ${t.group_label}` : t.group_label.toUpperCase()} ({t.contact_count})
+              className={cn("shrink-0 text-xs px-2.5 py-1 rounded-md whitespace-nowrap transition-colors font-medium flex items-center gap-1", activeGroupTab === t.group_key ? "bg-primary/25 text-primary font-semibold" : "text-foreground/80 hover:bg-muted/60")}>
+              {groupBy === "country" ? <><span className="text-base leading-none">{countryFlag(t.group_key)}</span> {t.group_label}</> : t.group_label.toUpperCase()} ({t.contact_count})
             </button>
           ))}
         </div>
@@ -133,20 +134,20 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
       {/* Inline filter chips */}
       {state.inlineFilters.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1 shrink-0">
+        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1.5 shrink-0">
           {state.inlineFilters.map((f, i) => (
-            <span key={`${f.field}-${f.value}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
+            <span key={`${f.field}-${f.value}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
               {f.value} ({totalCount})
-              <button onClick={() => removeInlineFilter(f.field, f.value)} className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"><X className="w-2.5 h-2.5" /></button>
+              <button onClick={() => removeInlineFilter(f.field, f.value)} className="ml-0.5 p-0.5 rounded-full hover:bg-primary/30 transition-colors"><X className="w-3 h-3" /></button>
             </span>
           ))}
-          <button onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })} className="text-[9px] text-muted-foreground hover:text-foreground ml-1">Reset</button>
+          <button onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })} className="text-xs text-foreground/60 hover:text-foreground ml-1 underline">Reset</button>
         </div>
       )}
 
       {/* Sortable + filterable column header (single-row layout) */}
       <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 py-1.5 border-b border-border/30 shrink-0 bg-muted/30")}
+        className={cn(CONTACT_GRID_CLASS, "px-3 py-2 border-b border-border/40 shrink-0 bg-muted/40")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
         {COLUMNS.map((col) => {
@@ -165,6 +166,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
               </div>
             );
           }
+          if (col.key === "flag") return <div key="flag" />;
           if (col.key === "actions") return <div key="actions" />;
           const isSorted = !!col.sortKey && state.sortField === col.sortKey && state.sortDir;
           return (
@@ -173,8 +175,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
                 onClick={() => col.sortKey && handleSortClick(col.sortKey)}
                 disabled={!col.sortKey}
                 className={cn(
-                  "flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors text-left truncate",
-                  isSorted ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  "flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide transition-colors text-left truncate",
+                  isSorted ? "text-primary" : "text-foreground/70 hover:text-foreground",
                   !col.sortKey && "cursor-default",
                 )}
               >
