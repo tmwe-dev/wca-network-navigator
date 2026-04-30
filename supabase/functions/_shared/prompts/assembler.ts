@@ -259,9 +259,11 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   const variables = { ...args.variables };
   let kbIndex = "(KB non disponibile)";
   let kbExcerpts = "";
+  let dataSchemaIndex = "";
 
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+    dataSchemaIndex = await loadDataSchemaIndex(sb);
     // LOVABLE-93: Se dominio specificato e non è commercial, usa KB domain-aware
     let cats = args.kbCategories;
     if (!cats && args.domain && args.domain !== "commercial") {
@@ -310,6 +312,11 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   if (args.domain && args.domain !== "commercial") {
     const domainNote = `\n\n## PRIORITÀ DOMINIO\nNOTA: Per email di dominio "${args.domain}", le procedure specifiche del dominio hanno priorità sulle regole commerciali generiche. La dottrina commerciale si applica SOLO al dominio "commercial".`;
     finalPrompt = resolved + domainNote;
+  }
+
+  // Iniezione fissa: indice semantico schema dati (sempre presente).
+  if (dataSchemaIndex) {
+    finalPrompt = `${finalPrompt}\n\n## 🗺️ INDICE SCHEMA DATI (dove vivono partner, contatti, indirizzi, biglietti)\n${dataSchemaIndex}`;
   }
 
   return kbExcerpts ? `${finalPrompt}\n\n## Estratti procedure rilevanti\n${kbExcerpts}` : finalPrompt;
