@@ -5,6 +5,7 @@
  * like "e a New York?" can inherit table + compatible filters.
  */
 import type { QueryPlan, QueryFilter } from "./safeQueryExecutor";
+import { isSynthesisIntent } from "./intentDetector";
 
 export interface QueryContext {
   /** Last queried table */
@@ -15,9 +16,29 @@ export interface QueryContext {
   readonly mode: "count" | "list";
   /** Timestamp (ms) — context expires after 5 minutes of inactivity */
   readonly ts: number;
+  /** Snapshot of the rows returned at the previous turn (max 20, capped JSON ≤ 8KB).
+   *  Used by the synthesis branch to reuse data without re-querying the DB. */
+  readonly lastResultRows?: ReadonlyArray<Record<string, unknown>>;
+  /** Title shown in the canvas at the previous turn (for the synthesis prompt). */
+  readonly lastResultTitle?: string;
 }
 
 const CONTEXT_TTL_MS = 5 * 60_000;
+const SNAPSHOT_MAX_ROWS = 20;
+const SNAPSHOT_MAX_BYTES = 8 * 1024;
+
+/** Truncate rows so the JSON payload stays under SNAPSHOT_MAX_BYTES. */
+function capRowsForSnapshot(
+  rows: ReadonlyArray<Record<string, unknown>>,
+): ReadonlyArray<Record<string, unknown>> {
+  const limited = rows.slice(0, SNAPSHOT_MAX_ROWS);
+  // Greedy shrink: drop the tail until we fit the byte budget.
+  let kept = limited.slice();
+  while (kept.length > 0 && JSON.stringify(kept).length > SNAPSHOT_MAX_BYTES) {
+    kept = kept.slice(0, -1);
+  }
+  return kept;
+}
 
 export function buildContextFromPlan(plan: QueryPlan): QueryContext {
   // count-mode heuristic: only id selected OR title contains conteggio/quanti
@@ -30,6 +51,20 @@ export function buildContextFromPlan(plan: QueryPlan): QueryContext {
     filters: plan.filters,
     mode: isCount ? "count" : "list",
     ts: Date.now(),
+  };
+}
+
+/** Same as buildContextFromPlan but also persists a row snapshot for synthesis follow-ups. */
+export function buildContextWithRows(
+  plan: QueryPlan,
+  rows: ReadonlyArray<Record<string, unknown>>,
+  title?: string,
+): QueryContext {
+  const base = buildContextFromPlan(plan);
+  return {
+    ...base,
+    lastResultRows: capRowsForSnapshot(rows),
+    lastResultTitle: title,
   };
 }
 
@@ -59,11 +94,43 @@ export function isElliptical(prompt: string): boolean {
 /**
  * Serialize context to a hint string for the planner prompt.
  * The planner edge fn will use this to inherit compatible filters.
+ *
+ * If `currentPrompt` is provided and the user intent has CHANGED (synthesis,
+ * different domain noun), the hint is suppressed to avoid hyper-restrictive
+ * filter inheritance.
  */
-export function contextHint(ctx: QueryContext | null): string {
+export function contextHint(ctx: QueryContext | null, currentPrompt?: string): string {
   if (!ctx || !isContextFresh(ctx)) return "";
+  if (currentPrompt && shouldSuppressInheritance(ctx, currentPrompt)) return "";
   const filterDesc = ctx.filters
     .map((f) => `${f.column} ${f.op} ${JSON.stringify(f.value)}`)
     .join(" AND ");
   return `\n\nCONTESTO TURNO PRECEDENTE: tabella=${ctx.table}, mode=${ctx.mode}, filtri=[${filterDesc || "nessuno"}]. Se il nuovo prompt è un follow-up ellittico (es. "e a New York?", "anche a Miami"), EREDITA tabella e filtri compatibili dal contesto, SOSTITUENDO solo quelli esplicitamente cambiati (es. cambia/aggiunge "city").`;
+}
+
+/** Decide whether the previous turn's filters should NOT be inherited. */
+function shouldSuppressInheritance(ctx: QueryContext, prompt: string): boolean {
+  // 1. Synthesis intent → never inherit filters (no DB query expected).
+  if (isSynthesisIntent(prompt)) return true;
+  // 2. Domain mismatch: prompt mentions a different domain noun.
+  const domainOfPrompt = detectDomainNoun(prompt);
+  if (domainOfPrompt && !isSameDomain(ctx.table, domainOfPrompt)) return true;
+  return false;
+}
+
+function detectDomainNoun(prompt: string): string | null {
+  const lower = prompt.toLowerCase();
+  if (/\bpartner/.test(lower)) return "partners";
+  if (/\bcontatt/.test(lower)) return "imported_contacts";
+  if (/\battivit/.test(lower)) return "activities";
+  if (/\boutreach\b/.test(lower)) return "outreach_queue";
+  if (/\bcampagn/.test(lower)) return "campaign_jobs";
+  if (/\bbiglietti?\b/.test(lower)) return "business_cards";
+  if (/\bagent[ie]\b/.test(lower)) return "agents";
+  if (/\b(kb|knowledge\s*base|voci\s+kb)\b/.test(lower)) return "kb_entries";
+  return null;
+}
+
+function isSameDomain(table: string, domain: string): boolean {
+  return table === domain;
 }
