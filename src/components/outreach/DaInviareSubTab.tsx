@@ -29,7 +29,7 @@ const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
 
 interface UnifiedItem {
   id: string;
-  type: "activity" | "mission_action" | "pending_action";
+  type: "activity" | "mission_action" | "pending_action" | "campaign_queue";
   email: string;
   partner_name: string;
   channel: string;
@@ -80,6 +80,20 @@ export function DaInviareSubTab() {
         partner_name: (pa.action_payload as Record<string, string>)?.company_name || "—",
         channel: pa.action_type, subject: pa.suggested_content?.slice(0, 80) || pa.reasoning || "",
         source: pa.source || "ai_agent", scheduled_at: null, status: pa.status || "pending", created_at: pa.created_at || "",
+      });
+    }
+    // 4th source: email_campaign_queue (Command-generated + manual campaigns)
+    for (const cq of (data.campaignQueue ?? []) as Array<Record<string, unknown>>) {
+      result.push({
+        id: `cq-${cq.id as string}`, type: "campaign_queue",
+        email: (cq.recipient_email as string) || "",
+        partner_name: (cq.recipient_name as string) || (cq.recipient_email as string) || "—",
+        channel: "send_email",
+        subject: (cq.subject as string) || "",
+        source: "campaign",
+        scheduled_at: (cq.scheduled_at as string | null) ?? null,
+        status: (cq.status as string) || "pending",
+        created_at: (cq.created_at as string) || "",
       });
     }
 
