@@ -335,16 +335,50 @@ DECISION ENGINE (raccomandazione automatica):
     // ── Parse ──
     const { subject, body } = parseOutreachResponse(result.content || "", ch, ctx.settings);
 
+    // ── Giornalista AI — caporedattore finale (uniforma con generate-email) ──
+    // Per WA/LI il wrapper riduce automaticamente la strictness di 2 punti.
+    const journalistChannel: PipelineChannel =
+      ch === "whatsapp" ? "whatsapp" :
+      ch === "linkedin" ? "linkedin" :
+      "email";
+    const reviewResult = await runJournalistReview(supabase, userId, {
+      channel: journalistChannel,
+      draft: body,
+      emailType: email_type_id || decision.email_type,
+      objective: goal || base_proposal || null,
+      playbookActive: ctx.playbookActive,
+      partner: {
+        id: ctx.partnerId,
+        company_name: company_name,
+        country: country_code,
+      },
+      contact: recipientName ? { name: recipientName, role: null } : null,
+      commercialState: {
+        leadStatus: ctx.commercialState || "new",
+        touchCount: ctx.touchCount ?? 0,
+        lastOutcome: ctx.lastOutcome ?? null,
+        daysSinceLastInbound: ctx.daysSinceLastContact ?? null,
+        hasActiveConversation: !!ctx.relationshipMetrics?.total_interactions,
+      },
+      historySummary: ctx.relationshipBlock || null,
+      kbSummary: (ctx.salesKBSections || []).join(", ") || null,
+    });
+    const finalBody = reviewResult.finalText || body;
+
     const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
     const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
     const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
 
     return new Response(JSON.stringify({
-      channel: ch, subject, body, full_content: result.content || "",
+      channel: ch, subject, body: finalBody, full_content: result.content || "",
       contact_name: recipientName || contact_name || null,
       contact_email: contact_email || null, company_name: company_name || null,
       language: effectiveLanguage, quality, model,
       readiness_score: readinessTotal, readiness_warnings: readinessWarnings,
+      journalist_review: serializeJournalistReview(reviewResult.review),
+      contract_used: contractUsed,
+      contract_warnings: contractWarningsOutreach,
+      type_resolution: typeResolutionOutreach,
       _debug: {
         model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
         country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",
