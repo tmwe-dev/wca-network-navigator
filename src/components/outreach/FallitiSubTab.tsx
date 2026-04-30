@@ -1,5 +1,7 @@
 /**
- * FallitiSubTab — Failed outreach actions with retry controls
+ * FallitiSubTab — Failed outreach actions with retry controls.
+ * @deprecated 2026-04-30 — Non più montato in InUscitaTab. Leggeva da
+ * `cockpit_queue` che non è una coda di invio reale. Mantenuto in archivio.
  */
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

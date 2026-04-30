@@ -1,3 +1,9 @@
+/**
+ * CampagneTab.
+ * @deprecated 2026-04-30 — Non incluso in OutreachPage da tempo (dead code).
+ * Le campagne sono visibili in /v2/explore/campaigns e nel CampaignQueueMonitor
+ * dentro il Command Canvas. Mantenuto in archivio (regola: no delete in src/components/).
+ */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
