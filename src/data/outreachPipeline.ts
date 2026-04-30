@@ -217,6 +217,23 @@ export async function cancelPendingAction(id: string) {
   if (error) throw error;
 }
 
+// ── Email campaign queue mutations (4th outreach source) ──
+export async function cancelCampaignQueueItem(id: string) {
+  const { error } = await supabase
+    .from("email_campaign_queue")
+    .update({ status: "cancelled" } as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateCampaignQueueSchedule(id: string, scheduledAt: string) {
+  const { error } = await supabase
+    .from("email_campaign_queue")
+    .update({ scheduled_at: scheduledAt } as never)
+    .eq("id", id);
+  if (error) throw error;
+}
+
 // ── Mission controls ──
 export async function pauseMission(missionId: string) {
   const { error: e1 } = await supabase.from("outreach_missions")
