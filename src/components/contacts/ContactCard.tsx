@@ -146,13 +146,6 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
                 {displayContact ? "· " : ""}{capitalizeLabel(cPosition)}
               </span>
             )}
-            {cOrigin && (
-              <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-semibold ml-auto shrink-0 uppercase tracking-wide">
-                  {capitalizeLabel(cOrigin)}
-                </span>
-              </Filterable>
-            )}
           </div>
         </div>
 
@@ -201,7 +194,20 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           )}
         </div>
 
-        {/* Col 5: Stato + Score + indicatori */}
+        {/* Col 5: Origine — colonna dedicata, sempre visibile, click-to-filter. */}
+        <div className="min-w-0 overflow-hidden flex items-center" data-no-filter>
+          {cOrigin ? (
+            <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-semibold uppercase tracking-wide truncate inline-block max-w-full">
+                {capitalizeLabel(cOrigin)}
+              </span>
+            </Filterable>
+          ) : (
+            <span className="text-[10px] text-foreground/30 italic">—</span>
+          )}
+        </div>
+
+        {/* Col 6: Stato + Score + indicatori */}
         <div className="min-w-0 overflow-hidden flex flex-col gap-1">
           <div className="flex items-center gap-1 min-w-0">
             <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
@@ -242,7 +248,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           </div>
         </div>
 
-        {/* Col 6: Azioni */}
+        {/* Col 7: Azioni */}
         <div className="flex items-center justify-end gap-0.5" data-no-filter>
           <button
             onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
