@@ -30,6 +30,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
  */
 const ALLOWED_TABLES = [
   "partners",
+  "partner_networks",
+  "network_configs",
+  "partner_services",
   "partner_contacts",
   "prospects",
   "prospect_contacts",
@@ -76,6 +79,9 @@ function buildSystemPrompt(liveSchema: string, kbIndex: string): string {
 
   return `Sei un Query Planner per un CRM logistico. Ricevi una richiesta in linguaggio naturale e produci un piano di query SELECT in JSON.
 
+CONTESTO OPERATIVO:
+Il CRM gestisce partner logistici WCA e relative appartenenze a network/gruppi operativi. Quando l'utente parla di gruppi come "Time Critical", "Pharma", "Projects", "Relocations", "Dangerous Goods" o simili, cerca prioritariamente nella tabella delle appartenenze network, non nella Knowledge Base.
+
 TABELLE CONSULTABILI (whitelist di sicurezza — usa SOLO queste):
 ${tableList}
 
@@ -120,6 +126,7 @@ VINCOLI HARD:
 
 LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
+- Per network/gruppi WCA usa `partner_networks.network_name` come fonte primaria. Se serve contare partner in un gruppo, pianifica su `partner_networks` filtrando `network_name`.
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
 - Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
 - Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
