@@ -94,6 +94,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   const { looksLikeSimpleQuery } = usePromptAnalysis();
   const { commentOnResult } = useResultCommentary({
     addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+    getQueryContext: () => queryContext,
   });
   const { updateQueryContextFromLastPlan, updateConstraintsFromPrompt, isContextUsable } = useQueryContext({
     setQueryContext, queryContext,
