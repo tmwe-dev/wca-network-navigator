@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { SlidersHorizontal, X, Check, ChevronLeft } from "lucide-react";
+import { SlidersHorizontal, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
