@@ -63,7 +63,20 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Desktop sidebar: sempre visibile, può essere "collapsed" (stretta a icone).
+  // Stato persistito in localStorage. `sidebarOpen` mantenuto come alias di
+  // "expanded" per compatibilità con i listener esistenti.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("dl_sidebar_collapsed") === "1"; } catch { return false; }
+  });
+  const sidebarOpen = !sidebarCollapsed;
+  const toggleSidebar = () => {
+    setSidebarCollapsed((c) => {
+      const next = !c;
+      try { localStorage.setItem("dl_sidebar_collapsed", next ? "1" : "0"); } catch { /* noop */ }
+      return next;
+    });
+  };
 
   useAiBridgeListener();
 
@@ -246,27 +259,29 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                      {/* Desktop sidebar */}
+                       {/* Desktop sidebar — fissa, collassabile a icone */}
                        <div
-                         className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-                         onMouseLeave={() => setSidebarOpen(false)}
+                         className={cn(
+                           "hidden md:flex shrink-0 h-full flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-[width] duration-200 ease-out",
+                           sidebarCollapsed ? "w-14" : "w-56",
+                         )}
                          role="navigation"
                          aria-label="Menu principale"
+                         data-collapsed={sidebarCollapsed ? "true" : "false"}
                        >
-                         <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
-                           <LayoutSidebarNav
-                             profileName={profile?.displayName}
-                             wcaStatusColor={wcaStatusColor}
-                             wcaStatusLabel={wcaStatusLabel}
-                             wcaSessionActive={wcaSession.sessionActive}
-                             onWcaReconnect={() => wcaSession.ensureSession()}
-                             isDark={isDark}
-                             onToggleTheme={toggleTheme}
-                             onSignOut={signOut}
-                             onOpenCommandPalette={() => setCommandOpen(true)}
-                           />
-                        </div>
-                      </div>
+                         <LayoutSidebarNav
+                           profileName={profile?.displayName}
+                           wcaStatusColor={wcaStatusColor}
+                           wcaStatusLabel={wcaStatusLabel}
+                           wcaSessionActive={wcaSession.sessionActive}
+                           onWcaReconnect={() => wcaSession.ensureSession()}
+                           isDark={isDark}
+                           onToggleTheme={toggleTheme}
+                           onSignOut={signOut}
+                           onOpenCommandPalette={() => setCommandOpen(true)}
+                           collapsed={sidebarCollapsed}
+                         />
+                       </div>
 
                        {/* Mobile header */}
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
@@ -322,18 +337,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                      {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
-                      <button
-                        onClick={() => setFiltersOpen(true)}
-                        className={cn(
-                          `hidden md:flex lg:hidden fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
-                          filtersOpen && "opacity-0 pointer-events-none"
-                        )}
-                        style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
-                        aria-label="Apri filtri"
-                      >
-                        <SlidersHorizontal className="w-3 h-3 text-primary" />
-                      </button>
+                       {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
+                       <button
+                         onClick={() => setFiltersOpen(true)}
+                         className={cn(
+                           "hidden md:flex lg:hidden fixed top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
+                           sidebarCollapsed ? "left-14" : "left-56",
+                           filtersOpen && "opacity-0 pointer-events-none",
+                         )}
+                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
+                         aria-label="Apri filtri"
+                       >
+                         <SlidersHorizontal className="w-3 h-3 text-primary" />
+                       </button>
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
