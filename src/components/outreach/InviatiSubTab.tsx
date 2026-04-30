@@ -65,6 +65,19 @@ export function InviatiSubTab() {
         sent_at: ma.completed_at || ma.created_at,
       });
     }
+    // 4th source: email_campaign_queue sent (Command/Campagne)
+    for (const cq of ((data as { campaignQueue?: Array<Record<string, unknown>> }).campaignQueue ?? [])) {
+      result.push({
+        id: `cq-${cq.id as string}`,
+        email: (cq.recipient_email as string) || "",
+        partner_name: (cq.recipient_name as string) || (cq.recipient_email as string) || "—",
+        channel: "send_email",
+        subject: (cq.subject as string) || "",
+        body: "",
+        source: "campaign",
+        sent_at: (cq.sent_at as string) || (cq.created_at as string) || "",
+      });
+    }
 
     return result.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
   }, [data]);
