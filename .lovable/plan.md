@@ -1,157 +1,98 @@
-## Obiettivo
+## Cosa è successo (diagnosi)
 
-Quando chiedi di scrivere una mail "amichevole, come vecchi compagni di scuola" ai partner di Malta, il Canvas deve mostrare **9 bozze pre-personalizzate sfogliabili** (una per partner). Quando dici "rifai più amichevole", la bozza visibile nel Canvas deve aggiornarsi **in-place** con il nuovo tono — senza ripartire da zero, senza perdere il contesto Malta, senza ritornare "0 partner trovati".
+Tre problemi distinti, tutti nello strato UI (nessuna logica business toccata).
 
-## Cosa NON tocco
+1. **Sidebar di navigazione "scomparsa"**
+   In `AuthenticatedLayout.tsx` la sidebar desktop è renderizzata con `-translate-x-full` finché non si clicca sul burger / hover. È un'autohide laterale introdotta nello sprint scorso. Il rail filtri contestuali (`ContextFiltersRail`) appare invece sempre incollato al contenuto, dando la sensazione che "i filtri siano dentro la maschera" e che la sidebar sia sparita.
 
-- `CommandPage.tsx` (layout, voce, sidebar, FloatingDock, briefing). 
-- `useCommandSubmit`, `useCommandState` (orchestrazione conversazione).
-- Edge function `generate-email` (la pipeline ufficiale resta quella che è).
-- `compose-email` come tool ID e i suoi label/governance.
+2. **Microfono Co-Pilot in mezzo allo schermo**
+   `FloatingCoPilot` è una bolla draggable con posizione persistita in `localStorage` (`copilot.position`). Se il valore salvato è "centrale" o se la finestra è stata ridimensionata, la bolla resta lì e copre tabelle/dettaglio (visibile negli screenshot).
 
-Tutti i fix sono **interni** ai file di logica del tool e al Canvas Composer.
+3. **Lista CRM e Network poco leggibili**
+   - In `ContactCard.tsx` la nazione è ridotta a un emoji + 3 lettere uppercase a 8px sotto la bandierina.
+   - La città è in `text-[10px] text-muted-foreground` e va in truncate aggressivo.
+   - Non esiste colonna **CAP** (`zip_code` esiste in `imported_contacts` ma non viene mostrato né ordinabile).
+   - I filtri "click su un valore per filtrare" esistono (`Filterable`) ma non c'è un input filtro **dentro l'header di colonna** (alla Excel) né l'indicazione visiva che il valore sia cliccabile finché non ci passi sopra.
+   - Stesso pattern, in chiave più estrema, nella lista Network (Partner): card a due righe, città piccola, nessun CAP né indirizzo.
 
-## Diagnosi dei 3 bug attuali
+---
 
-1. **Canvas mostra 1 sola bozza** invece di 9 → `composeEmail.ts` (ramo country-wide) chiama `generate-email` 1 volta su un partner-campione e mostra la lista degli altri 8 come testo nel dossier.
-2. **"Non vedo le nuove versioni" dopo "rifai amichevole"** → `ComposerCanvas` usa `useState(initializer)` per montare i valori iniziali (riga 47-56). L'initializer **non rigira mai** quando arrivano nuovi `initialSubject`/`initialBody` da un secondo turno: il Canvas resta inchiodato al primo testo.
-3. **"0 partner trovati" al 3° turno** → al messaggio "fammele vedere nel canvas", il match di compose-email triggera ma `detectCountryCode` non vede "Malta" e `extractPersonAndCompany` non trova azienda → cade nel ramo "single partner" → 0 risultati. Il tool **non eredita il contesto** del turno precedente (paese + lista partner).
-4. **Tono sempre "professionale"** → `oracle_tone: "professionale"` è hardcoded sia in `composeEmail.ts` (riga 220, 367) sia in `ComposerCanvas.handleGenerate` (riga 79). Il tono richiesto dall'utente nel `goal` non viene mai estratto né passato come parametro.
+## Piano di intervento (solo UI / presentation)
 
-## Cosa cambio
+### Step 1 — Sidebar di navigazione fissa di nuovo
 
-### 1. Tono dinamico estratto dal prompt utente
+`src/v2/ui/templates/AuthenticatedLayout.tsx`
 
-Nuovo modulo `src/v2/ui/pages/command/lib/toneDetector.ts`:
-- Funzione `detectTone(prompt: string): "amichevole" | "professionale" | "diretto" | "informale"`.
-- Pattern: "amichevole / vecchi compagni / informale / colloquiale / scuola / familiare" → `amichevole`; "diretto / breve / no fronzoli" → `diretto`; default `professionale`.
-- 6 unit test (vitest).
+- Rimuovere il pattern `fixed -translate-x-full` + autohide su `onMouseLeave`.
+- Ripristinare la sidebar desktop come **colonna statica `w-56`** dentro il flex root (`md:flex`), affiancata al rail filtri e al main.
+- Mantenere il toggle del burger come "collassa a icone" (`w-14`) per i monitor stretti, con preferenza salvata in `localStorage`.
+- Su `md` (tablet) restare con drawer come oggi.
 
-Userò `detectTone(prompt)` in `composeEmail.ts` e in `ComposerCanvas.handleGenerate` al posto del valore hardcoded.
+Effetto: l'utente rivede subito a sinistra Home / Esplora / Pipeline / ecc., e accanto il rail "FILTRI WCA PARTNER" / "FILTRI CONTATTI CRM" come pannello secondario, non più confondibile.
 
-### 2. Bozze multiple pre-personalizzate (ramo country-wide)
+### Step 2 — Microfono Co-Pilot in posizione neutra
 
-In `composeEmail.ts`, ramo `if (country && isCountryWideIntent(prompt))`:
+`src/v2/ui/copilot/FloatingCoPilot.tsx`
 
-- Generare **9 bozze in parallelo** con `Promise.allSettled` su `generate-email` (cap a 10 per tutela costi, già rispetta i guard).
-- Ogni bozza con `partner_id` reale e `recipient_name` reale (primo `partner_contacts` con email del partner).
-- Aggiungere al risultato `composer` un nuovo campo `drafts: Draft[]` (vedi sotto in "Dettagli tecnici"). La bozza visibile inizialmente resta `initialSubject/initialBody` (= prima bozza dell'array).
+- Cambiare la posizione di default e i bound: ancorato in **basso a destra**, sopra la `MobileBottomNav`, con offset di sicurezza dal bordo (16px).
+- Aggiungere clamp al mount per riportare automaticamente la bolla nell'angolo basso-destra se il valore in `localStorage` la lascia in zone "centrali" (definite come x tra 25% e 75% della viewport).
+- Aggiungere una piccola **maniglia di "snap to corner"** nel menu della bolla (4 angoli) per dare controllo all'utente senza dover trascinare.
+- Reset esplicito in caso di posizione fuori viewport (resize finestra → snap al corner attivo).
 
-### 3. Canvas sfogliabile
+### Step 3 — Lista Contatti CRM più leggibile + CAP + filtro per colonna
 
-In `ComposerCanvas.tsx`:
+A. **Nuova griglia colonne** in `src/components/contacts/contactGridLayout.ts`
 
-- Nuovo prop opzionale `drafts?: ReadonlyArray<{ partnerId, partnerName, contactName, contactEmail, subject, body }>`.
-- Se `drafts.length > 1`: header del composer mostra `‹ 1/9 ›` con frecce + nome azienda corrente. Cliccando la freccia, cambia `recipients/subject/body` con la bozza selezionata.
-- Bottone "**Rigenera tutte**" oltre al "Genera con AI": rifà l'array intero col nuovo tono (vedi punto 4).
-- Bottone "**Invia tutte (9)**" se `drafts.length > 1` → trasforma le bozze in una mini-campagna (riusa `enqueueOutreach` esistente in `src/v2/io/supabase/mutations/outreach-queue.ts`), oppure invia 1 a 1 in loop con `send-email` se l'utente preferisce; resta dietro `ApprovalPanel` come oggi.
-
-### 4. FIX BLOCCANTE: sync `initialSubject/initialBody` quando arrivano nuovi valori
-
-In `ComposerCanvas.tsx`:
-
-- Sostituire l'`useState(() => ...)` iniziale con un `useEffect([initialSubject, initialBody, drafts])` che scrive i nuovi valori nel composer **ogni volta che cambiano**.
-- Senza questo fix, qualunque rigenerazione resta invisibile nel Canvas.
-
-### 5. Contesto conversazionale per compose-email
-
-Estendere `useCommandState` con un piccolo store `lastComposerContext: { country?, partnerIds?, tone? } | null` (analogo a `queryContext` già esistente). 
-
-In `composeEmail.ts`:
-- Se il prompt non contiene paese/azienda MA il `lastComposerContext` è fresco (TTL 5 min, riusa la stessa logica di `queryContext`), **eredita** `country.code` e `partnerIds` per rigenerare le 9 bozze col nuovo tono.
-- Se l'utente dice "rifai amichevole / più breve / più formale", il tool detecta il tono nuovo e rigenera le 9 bozze sui partner ereditati invece di tornare 0 risultati.
-
-In `ComposerCanvas.handleGenerate`:
-- Se ci sono `drafts` con più di un elemento, rigenera tutte e 9 le bozze in parallelo con il nuovo tono detectato dal `promptHint` aggiornato (oppure da un piccolo input "tono" già nella toolbar — opzionale, posso ometterlo per semplicità).
-
-### 6. Messaggio del Direttore corretto
-
-In `useToolExecution.ts` (ramo `if (result.kind === "composer" && result.dossier)`), se `drafts.length > 1` cambiare il messaggio Oracolo da "Bozza pronta nel composer" a:
-
-> "9 bozze pronte nel canvas (sfoglia con le frecce). Tono: amichevole. Vuoi rivedere o invio?"
-
-### 7. Test
-
-- `composeEmail.test.ts`: country-wide → ritorna `drafts.length === N`; follow-up senza paese eredita contesto.
-- `toneDetector.test.ts`: 6 casi (amichevole / vecchi compagni / breve / formale / default).
-- `ComposerCanvas.test.tsx`: re-render con nuovi `initialSubject` aggiorna il body; navigazione frecce cambia bozza; `Rigenera tutte` chiama `generate-email` 9 volte.
-
-## Dettagli tecnici (per i tecnici)
-
-```ts
-// composeEmail.ts — nuovo shape ToolResult composer
-type ComposerDraft = Readonly<{
-  partnerId: string;
-  partnerName: string;
-  contactName: string | null;
-  contactEmail: string;
-  subject: string;
-  body: string;
-  status: "ok" | "no_email" | "ai_error";
-  errorMessage?: string;
-}>;
-
-interface ComposerToolResult {
-  kind: "composer";
-  // ...campi esistenti...
-  drafts?: ReadonlyArray<ComposerDraft>; // NEW: solo per batch country-wide
-  detectedTone: "amichevole" | "professionale" | "diretto" | "informale"; // NEW
-}
+```text
+[#  ☐] [🏳 Paese · Città · CAP] [Azienda · Ruolo] [Contatto · Email] [Stato · Score] [⋮]
+  60    180                       1fr               1fr                 140            48
 ```
 
-```ts
-// ComposerCanvas.tsx — fix critico
-useEffect(() => {
-  if (initialSubject) composer.setSubject(initialSubject);
-  if (initialBody) composer.setBody(initialBody);
-}, [initialSubject, initialBody]);
+- Una sola riga visiva per contatto (oggi sono due, costringono a scrollare).
+- Colonna "Località" combinata: **bandiera grande + nome paese leggibile (text-xs)** + città (text-xs) + CAP (text-[10px] mono).
+- Email spostata accanto al nome contatto (al posto di stare in seconda riga).
 
-useEffect(() => {
-  if (drafts && drafts[currentIndex]) {
-    composer.setSubject(drafts[currentIndex].subject);
-    composer.setBody(drafts[currentIndex].body);
-    composer.clearRecipients();
-    composer.addRecipient({
-      email: drafts[currentIndex].contactEmail,
-      name: drafts[currentIndex].contactName ?? drafts[currentIndex].partnerName,
-    });
-  }
-}, [currentIndex, drafts]);
-```
+B. **Header colonna ordinabile + filtro inline**
+`src/components/contacts/ContactListPanel.tsx`
 
-```ts
-// useCommandState — nuovo store contesto
-const [lastComposerContext, setLastComposerContext] = useState<{
-  countryCode: string;
-  partnerIds: string[];
-  tone: string;
-  ts: number;
-} | null>(null);
-// TTL: 5 min, riusa isContextFresh(...)
-```
+- Ogni intestazione colonna diventa un componente `ColumnHeader` con:
+  - click sul titolo → ordina (asc/desc) — già c'è, va esteso a Paese, Città, CAP.
+  - icona piccola "▾" → apre un popover con campo testo: filtra **dentro la colonna** (es. "Mil" → solo città che contengono Mil).
+  - badge attivo se il filtro è in uso.
+- Aggiungere "CAP" come `sortField` valido in `useContactListPanel` (lato client per ora; ordinamento server-side via parametro nuovo `orderBy=zip_code` come follow-up).
 
-```ts
-// composeEmail.ts — eredità contesto
-if (!country && !company && !email) {
-  const ctx = getLastComposerContext(); // singleton modulo come getLastSuccessfulQueryPlan
-  if (ctx && isFresh(ctx)) {
-    // Rigenera N bozze sugli stessi partnerIds con tone aggiornato
-  }
-}
-```
+C. **Filterable più scopribile**
+- Sottolineatura tratteggiata su valori cliccabili (`border-b border-dotted border-muted-foreground/40`), non solo on-hover.
+- Tooltip "Filtra per …" in tutte le celle filtrabili (oggi solo alcune).
 
-## Files toccati
+### Step 4 — Stessi miglioramenti nella vista Network (Partner)
 
-- `src/v2/ui/pages/command/tools/composeEmail.ts` (modifica ramo country-wide + ramo follow-up)
-- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` (frecce + sync useEffect + invio batch)
-- `src/v2/ui/pages/command/lib/toneDetector.ts` (nuovo, ~40 righe)
-- `src/v2/ui/pages/command/lib/composerContext.ts` (nuovo, store + helper, ~30 righe, stesso pattern di `aiQueryTool.getLastSuccessfulQueryPlan`)
-- `src/v2/ui/pages/command/tools/types.ts` (estendere `ComposerToolResult` con `drafts` e `detectedTone`)
-- `src/v2/ui/pages/command/hooks/useToolExecution.ts` (testo messaggio Oracolo se `drafts.length > 1`)
-- 3 file di test sotto `src/v2/ui/pages/command/__tests__/`
+`src/components/partners/...` (lista partner di `/v2/explore/network`)
 
-Nessuna modifica a `CommandPage.tsx`, alla pipeline `generate-email`, all'auth, al DAL, ai prompt operativi del Prompt Lab. Zero impatti su altre pagine.
+- Card partner: bandierina più grande, **paese + città + indirizzo** su una riga sola con gerarchia tipografica chiara (paese in `text-foreground`, città in `text-muted-foreground`, indirizzo in `text-[10px]`).
+- Header colonna ordinabile/filtrabile come nel CRM (Paese / Città / Anni WCA).
+- Mostrare il CAP se presente in `partners.address` (estratto via regex semplice, fallback "—").
 
-## Stima
+### Step 5 — Coerenza tipografica
 
-~250 righe nuove, ~80 modificate. Una sola sessione di build, test verdi prima di consegnare.
+- Aggiungere/usare i token semantici esistenti (`text-foreground` / `text-muted-foreground` / `text-xs` / `text-[11px]`) per uniformare le due liste.
+- Mai colori hardcoded (regola di sistema).
+
+---
+
+## Cosa resta fuori (da chiedere prima di toccare)
+
+- L'utente ha citato "presenta il CAP in modo da ordinare per CAP". Il CAP non esiste oggi su `partners`; va estratto dal campo `address` con un parser euristico. **Va bene farlo solo lato UI** (parsing al render) come quick win, oppure preferisci che pianifichi una colonna `zip_code` reale e una migrazione + back-fill?
+- "Filtro dentro l'elenco per elemento" l'ho interpretato come **filtro inline di colonna stile Excel** (popover su ▾ dell'header). Se invece intendevi **una riga di campi sotto l'header** (sempre visibile), posso fare quella variante: occupa più spazio verticale ma è più immediata.
+
+## File toccati (stima)
+
+- `src/v2/ui/templates/AuthenticatedLayout.tsx` (sidebar fissa)
+- `src/v2/ui/copilot/FloatingCoPilot.tsx` (snap to corner)
+- `src/components/contacts/contactGridLayout.ts` (nuova griglia)
+- `src/components/contacts/ContactCard.tsx` (riga unica, paese/città/CAP)
+- `src/components/contacts/ContactListPanel.tsx` (header colonna + filtri inline)
+- `src/hooks/useContactListPanel.ts` (sortField=`zip_code`)
+- `src/components/partners/CountryWorkbench*.tsx` + card partner (stessi miglioramenti)
+
+Tutto cosmetico/presentation: nessun cambio a query, RLS, edge functions, DAL.

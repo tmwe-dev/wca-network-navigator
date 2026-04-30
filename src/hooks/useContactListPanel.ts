@@ -125,7 +125,7 @@ export function useContactListPanel() {
   const totalAllGroups = useMemo(() => tabs.reduce((s, t) => s + t.contact_count, 0), [tabs]);
 
   const serverSort = useMemo(() => {
-    const allowedSortFields = new Set(["company", "name", "country", "city", "origin"]);
+    const allowedSortFields = new Set(["company", "name", "country", "city", "origin", "zip"]);
     if (gf.sortBy === "recent") return "recent";
     const field = allowedSortFields.has(gf.sortBy) ? gf.sortBy : state.sortField;
     const dir = state.sortField === field ? state.sortDir ?? "asc" : "asc";

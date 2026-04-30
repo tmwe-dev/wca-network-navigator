@@ -2,13 +2,14 @@ import { lazy, Suspense, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane } from "lucide-react";
+import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane, Filter as FilterIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
@@ -23,11 +24,19 @@ interface Props {
   onSelect: (contact: Record<string, unknown>) => void;
 }
 
-const SORT_COLUMNS = [
-  { field: "company", label: "Azienda", sortKey: "company" },
-  { field: "name", label: "Contatto", sortKey: "name" },
-  { field: "city", label: "Città", sortKey: "city" },
-  { field: "origin", label: "Origine", sortKey: "origin" },
+/**
+ * Column descriptor for the redesigned single-row layout.
+ * `sortKey` matches the values accepted by useContactListPanel.serverSort.
+ * `filterField` matches the field names accepted by addInlineFilter
+ * (same field strings used by ContactCard's <Filterable>).
+ */
+const COLUMNS: ReadonlyArray<{ key: string; label: string; sortKey?: string; filterField?: string }> = [
+  { key: "select", label: "" },
+  { key: "location", label: "Località", sortKey: "country", filterField: "country" },
+  { key: "company", label: "Azienda", sortKey: "company", filterField: "company" },
+  { key: "contact", label: "Contatto", sortKey: "name", filterField: "name" },
+  { key: "status", label: "Stato", sortKey: "origin", filterField: "leadStatus" },
+  { key: "actions", label: "" },
 ];
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
@@ -135,21 +144,54 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
         </div>
       )}
 
-      {/* Sortable column header */}
-      <div className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")} style={{ gridTemplateColumns: CONTACT_GRID_COLS }}>
-        <div className="flex items-center justify-center">
-          <Checkbox checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
-            onCheckedChange={(checked) => { if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id))); else selection.clear(); }}
-            aria-label="Seleziona tutti" className="shrink-0" />
-        </div>
-        <div />
-        {SORT_COLUMNS.map(col => (
-          <button key={col.field} onClick={() => handleSortClick(col.sortKey)}
-            className={cn("flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left", state.sortField === col.sortKey && state.sortDir ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
-            {col.label} <SortIcon field={col.sortKey} />
-          </button>
-        ))}
-        <div />
+      {/* Sortable + filterable column header (single-row layout) */}
+      <div
+        className={cn(CONTACT_GRID_CLASS, "px-2 py-1.5 border-b border-border/30 shrink-0 bg-muted/30")}
+        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
+      >
+        {COLUMNS.map((col) => {
+          if (col.key === "select") {
+            return (
+              <div key="select" className="flex items-center">
+                <Checkbox
+                  checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id)));
+                    else selection.clear();
+                  }}
+                  aria-label="Seleziona tutti"
+                  className="shrink-0"
+                />
+              </div>
+            );
+          }
+          if (col.key === "actions") return <div key="actions" />;
+          const isSorted = !!col.sortKey && state.sortField === col.sortKey && state.sortDir;
+          return (
+            <div key={col.key} className="flex items-center gap-1 min-w-0">
+              <button
+                onClick={() => col.sortKey && handleSortClick(col.sortKey)}
+                disabled={!col.sortKey}
+                className={cn(
+                  "flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors text-left truncate",
+                  isSorted ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  !col.sortKey && "cursor-default",
+                )}
+              >
+                {col.label}
+                {col.sortKey && <SortIcon field={col.sortKey} />}
+              </button>
+              {col.filterField && (
+                <ColumnFilterPopover
+                  field={col.filterField}
+                  label={col.label}
+                  active={state.inlineFilters.some((f) => f.field === col.filterField)}
+                  onApply={(value) => addInlineFilter(col.filterField as string, value)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Bulk actions */}
@@ -241,5 +283,59 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       )}
     </div>
     </PageErrorBoundary>
+  );
+}
+
+/** Small popover that lets the user type a value to filter inline on a column. */
+function ColumnFilterPopover({
+  field, label, active, onApply,
+}: {
+  field: string;
+  label: string;
+  active: boolean;
+  onApply: (value: string) => void;
+}): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "p-0.5 rounded hover:bg-primary/15 transition-colors",
+            active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground",
+          )}
+          title={`Filtra per ${label}`}
+          aria-label={`Filtra per ${label}`}
+        >
+          <FilterIcon className="w-3 h-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          Filtra: {label}
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const v = value.trim();
+            if (v) { onApply(v); setOpen(false); setValue(""); }
+          }}
+          className="flex gap-1"
+        >
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={`es. ${label.toLowerCase()}…`}
+            className="flex-1 h-7 text-xs rounded border border-border bg-background px-2 outline-none focus:border-primary"
+          />
+          <Button type="submit" size="sm" className="h-7 px-2 text-xs">OK</Button>
+        </form>
+        <p className="text-[10px] text-muted-foreground mt-1.5">
+          Suggerimento: clicca un valore in lista per filtrarlo.
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }
