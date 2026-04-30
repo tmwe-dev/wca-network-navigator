@@ -173,6 +173,68 @@ export function useCommandSubmit(state: CommandStateApi) {
     });
   }, [addMessage, resetForNewMessage, ts]);
 
+  /** Synthesis: comment on the previous turn's snapshot WITHOUT touching the DB. */
+  const runSynthesis = useCallback(
+    async (userPrompt: string, ctx: QueryContext) => {
+      const trace = startTrace(userPrompt);
+      trace.setPhase("fast-lane");
+      trace.setDriver("ai-comment");
+
+      setFlowPhase("executing");
+      setShowTools(false);
+      addMessage({
+        role: "assistant",
+        content: `🔧 Sintesi turno precedente · ${ctx.lastResultRows?.length ?? 0} righe`,
+        agentName: "Automation",
+        timestamp: ts(),
+      });
+
+      const t0 = Date.now();
+      const snapshot = JSON.stringify({
+        kind: "table",
+        title: ctx.lastResultTitle ?? `Risultati precedenti · ${ctx.table}`,
+        totalRows: ctx.lastResultRows?.length ?? 0,
+        sample: ctx.lastResultRows ?? [],
+        meta: { count: ctx.lastResultRows?.length ?? 0, sourceLabel: `Snapshot · ${ctx.table}` },
+      });
+
+      try {
+        const comment = await getAiComment({
+          userPrompt: `${userPrompt}\n\n[NB: NON eseguire una nuova ricerca. Sintetizza i dati qui sotto, già recuperati al turno precedente.]`,
+          toolId: "ai-query",
+          toolLabel: `Sintesi · ${ctx.table}`,
+          resultSummary: snapshot,
+          history: buildHistory(),
+        });
+        trace.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
+        const finalTrace = trace.finish();
+        addMessage({
+          role: "assistant",
+          content: comment.message,
+          agentName: "Direttore",
+          timestamp: ts(),
+          meta: `⚡ ${(finalTrace.totalMs / 1000).toFixed(2)}s • ai-comment ${(finalTrace.totalMs / 1000).toFixed(2)}s · synthesis`,
+          governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+          suggestedActions: comment.suggestedActions,
+          spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
+        });
+        setFlowPhase("done");
+      } catch (err: unknown) {
+        trace.finish();
+        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
+        toast.error(msg);
+        addMessage({
+          role: "assistant",
+          content: `❌ Non sono riuscito a sintetizzare i risultati precedenti: ${msg}`,
+          agentName: "Orchestratore",
+          timestamp: ts(),
+        });
+        setFlowPhase("idle");
+      }
+    },
+    [addMessage, buildHistory, governance, setFlowPhase, setShowTools, ts],
+  );
+
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
