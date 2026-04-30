@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
+import { X, Menu, Command, Sparkles, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -337,19 +337,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                       {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
-                       <button
-                         onClick={() => setFiltersOpen(true)}
-                         className={cn(
-                           "hidden md:flex lg:hidden fixed top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
-                           sidebarCollapsed ? "left-14" : "left-56",
-                           filtersOpen && "opacity-0 pointer-events-none",
-                         )}
-                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
-                         aria-label="Apri filtri"
-                       >
-                         <SlidersHorizontal className="w-3 h-3 text-primary" />
-                       </button>
+                       {/* Filtri contestuali a scomparsa: gestiti da <ContextFiltersRail /> con linguetta integrata. */}
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
