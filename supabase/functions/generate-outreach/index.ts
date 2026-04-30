@@ -356,9 +356,9 @@ DECISION ENGINE (raccomandazione automatica):
       commercialState: {
         leadStatus: ctx.commercialState || "new",
         touchCount: ctx.touchCount ?? 0,
-        lastOutcome: ctx.lastOutcome ?? null,
+        lastOutcome: null,
         daysSinceLastInbound: ctx.daysSinceLastContact ?? null,
-        hasActiveConversation: !!ctx.relationshipMetrics?.total_interactions,
+        hasActiveConversation: (ctx.relationshipMetrics?.total_interactions ?? 0) > 0,
       },
       historySummary: ctx.relationshipBlock || null,
       kbSummary: (ctx.salesKBSections || []).join(", ") || null,
