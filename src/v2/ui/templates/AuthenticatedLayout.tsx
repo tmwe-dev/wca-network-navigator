@@ -67,7 +67,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   // Stato persistito in localStorage. `sidebarOpen` mantenuto come alias di
   // "expanded" per compatibilità con i listener esistenti.
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem("dl_sidebar_collapsed") === "1"; } catch { return false; }
+    try {
+      const stored = localStorage.getItem("dl_sidebar_collapsed");
+      // Default: collapsed (icone visibili). Solo "0" esplicito apre la sidebar.
+      return stored === null ? true : stored === "1";
+    } catch { return true; }
   });
   const sidebarOpen = !sidebarCollapsed;
   const toggleSidebar = () => {
