@@ -80,9 +80,14 @@ export function isContextFresh(ctx: QueryContext | null): boolean {
 export function isElliptical(prompt: string): boolean {
   const trimmed = prompt.trim().toLowerCase();
   if (trimmed.length === 0) return false;
-  // Very short queries without verbs
-  const hasVerb = /\b(mostra|cerca|trova|elenc|visualiz|lista|quanti|quante|dammi|fammi)\b/.test(trimmed);
-  if (hasVerb) return false;
+  // Very short queries without verbs (read OR write).
+  // Includiamo anche i verbi di scrittura/azione perché un follow-up come
+  // "scrivi una mail a tutti quanti" NON è ellittico per il fast-lane di
+  // ai-query: è un comando di compose-email che ha solo bisogno di
+  // ereditare il country dalla query precedente.
+  const hasReadVerb = /\b(mostra|cerca|trova|elenc|visualiz|lista|quanti|quante|dammi|fammi)\b/.test(trimmed);
+  const hasWriteVerb = /\b(scriv|componi|prepara|manda|invia|genera|crea|aggiorna|modifica|aggiungi|rimuovi|cancella|elimina|esegui|lancia|avvia)\b/.test(trimmed);
+  if (hasReadVerb || hasWriteVerb) return false;
   // Starts with "e a", "e in", "anche", "solo a", "a "
   if (/^(e\s+a\s+|e\s+in\s+|anche\s+|solo\s+a\s+|a\s+)/i.test(trimmed)) return true;
   if (/^(e\s+|invece\s+|adesso\s+)/i.test(trimmed) && trimmed.length < 40) return true;
