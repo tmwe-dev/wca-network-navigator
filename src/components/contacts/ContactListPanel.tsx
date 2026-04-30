@@ -2,13 +2,14 @@ import { lazy, Suspense, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane } from "lucide-react";
+import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane, Filter as FilterIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
@@ -23,11 +24,19 @@ interface Props {
   onSelect: (contact: Record<string, unknown>) => void;
 }
 
-const SORT_COLUMNS = [
-  { field: "company", label: "Azienda", sortKey: "company" },
-  { field: "name", label: "Contatto", sortKey: "name" },
-  { field: "city", label: "Città", sortKey: "city" },
-  { field: "origin", label: "Origine", sortKey: "origin" },
+/**
+ * Column descriptor for the redesigned single-row layout.
+ * `sortKey` matches the values accepted by useContactListPanel.serverSort.
+ * `filterField` matches the field names accepted by addInlineFilter
+ * (same field strings used by ContactCard's <Filterable>).
+ */
+const COLUMNS: ReadonlyArray<{ key: string; label: string; sortKey?: string; filterField?: string }> = [
+  { key: "select", label: "" },
+  { key: "location", label: "Località", sortKey: "country", filterField: "country" },
+  { key: "company", label: "Azienda", sortKey: "company", filterField: "company" },
+  { key: "contact", label: "Contatto", sortKey: "name", filterField: "name" },
+  { key: "status", label: "Stato", sortKey: "origin", filterField: "leadStatus" },
+  { key: "actions", label: "" },
 ];
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
