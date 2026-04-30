@@ -99,6 +99,7 @@ export function LayoutSidebarNav({
               translated === navItem.labelKey
                 ? navItem.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
                 : translated;
+            const active = isActive(navItem.path);
             return (
               <button
                 key={navItem.path}
@@ -107,13 +108,19 @@ export function LayoutSidebarNav({
                 onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
                 title={collapsed ? label : undefined}
                 className={cn(
-                  "flex w-full items-center rounded-md text-sm font-medium transition-colors capitalize",
+                  "relative flex w-full items-center rounded-md text-sm font-medium transition-colors capitalize",
                   collapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
-                  isActive(navItem.path)
-                    ? "bg-accent text-accent-foreground"
+                  active
+                    ? "bg-primary/10 text-primary font-semibold"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
                 )}
               >
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary"
+                  />
+                )}
                 {navItem.icon}
                 {!collapsed && label}
                 {!collapsed && navItem.badge && (
