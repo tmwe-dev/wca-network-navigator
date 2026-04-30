@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import {
-  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe, Linkedin,
+  Mail, Phone, MessageCircle, Search, Plus, Building2, User, Sparkles, ChevronDown, Handshake, Loader2, Globe, Linkedin, Send,
 } from "lucide-react";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
@@ -41,7 +41,8 @@ function formatPhone(phone: string): string {
 
 function Section({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4 space-y-2", className)}>
+    // Stile allineato a BusinessCardDetailPanel: rounded-lg leggero, p-3, bordo soft.
+    <div className={cn("bg-muted/20 rounded-lg p-3 border border-border/30 space-y-1.5", className)}>
       {children}
     </div>
   );
@@ -49,10 +50,9 @@ function Section({ children, className }: { children: React.ReactNode; className
 
 function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
-      <Icon className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{children}</p>
-    </div>
+    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
+      <Icon className="w-3 h-3" strokeWidth={1.5} /> {children}
+    </p>
   );
 }
 
@@ -103,39 +103,43 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
 
   return (
     <PageErrorBoundary>
-    <div className="h-full overflow-y-auto p-5 space-y-4">
-      <Section className="space-y-3">
+    {/* Layout allineato a BusinessCardDetailPanel: p-4 space-y-4, header pulito,
+        sezioni leggere (rounded-lg) invece di card "rich" (rounded-2xl gradient). */}
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {/* Header — stessa struttura di BCA: icona quadrata 40px + titolo + sottotitolo. */}
+      <div className="space-y-2">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/20 border border-primary/15 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
             <Building2 className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-foreground truncate">{c.company_alias || c.company_name || "Senza azienda"}</h2>
+            <h2 className="text-sm font-bold text-foreground truncate">{c.company_alias || c.company_name || "Senza azienda"}</h2>
+            {(c.contact_alias || c.name || c.position) && (
+              <p className="text-xs text-muted-foreground truncate">
+                {c.contact_alias || c.name || ""}
+                {c.position ? ` · ${c.position}` : ""}
+              </p>
+            )}
             {c.company_alias && c.company_name && c.company_alias !== c.company_name && (
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.company_name}</p>
+              <p className="text-[10px] text-muted-foreground/80 truncate">{c.company_name}</p>
             )}
           </div>
           <LeadScoreBadge score={c.lead_score} breakdown={c.lead_score_breakdown} size="md" />
         </div>
-        {(c.name || c.contact_alias) && (
-          <div className="flex items-center gap-2 ml-[52px]">
-            <User className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0" />
-            <p className="text-sm text-foreground/80">
-              {c.contact_alias || c.name}
-              {c.contact_alias && c.name && c.contact_alias !== c.name && <span className="text-muted-foreground text-xs ml-1">({c.name})</span>}
-              {c.position && <span className="text-primary"> • {c.position}</span>}
-            </p>
-            {(c.company_alias || c.contact_alias) && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
-          </div>
-        )}
         {(c.city || c.country || c.address) && (
-          <p className="text-xs text-muted-foreground ml-[52px]">
+          <p className="text-[11px] text-muted-foreground ml-[52px]">
             {[c.city, c.country].filter(Boolean).join(", ")}{c.address && ` — ${c.address}`}
           </p>
         )}
-      </Section>
+      </div>
 
-      <ContactQuickActions contact={c} />
+      {/* Quick actions — stesso pattern di BCA con label uppercase. */}
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
+          <Send className="w-3 h-3" /> Azioni rapide
+        </p>
+        <ContactQuickActions contact={c} />
+      </div>
       <div className="flex flex-wrap gap-1.5">
         {c.company_name && (
           <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
