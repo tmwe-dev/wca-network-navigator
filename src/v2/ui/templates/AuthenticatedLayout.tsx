@@ -78,6 +78,9 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     setSidebarCollapsed((c) => {
       const next = !c;
       try { localStorage.setItem("dl_sidebar_collapsed", next ? "1" : "0"); } catch { /* noop */ }
+      try {
+        window.dispatchEvent(new CustomEvent("dl-sidebar-toggle", { detail: { collapsed: next } }));
+      } catch { /* noop */ }
       return next;
     });
   };
