@@ -16,6 +16,15 @@ import { RunHistoryPanel } from "./prompt-lab/RunHistoryPanel";
 import { MetricsSummaryBadge } from "./prompt-lab/MetricsSummaryBadge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
 import { useSuggestedImprovements } from "./prompt-lab/hooks/useSuggestedImprovements";
 import { useAuth } from "@/providers/AuthProvider";
@@ -67,6 +76,8 @@ import {
   TestTube2,
   History,
   Library,
+  MoreHorizontal,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -160,112 +171,151 @@ export function PromptLabPage() {
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={82} minSize={40}>
           <div className="flex h-full flex-col">
-            <header className="border-b px-3 py-1.5 flex items-center justify-between bg-background flex-shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <FlaskConical className="h-4 w-4 text-primary flex-shrink-0" />
-                <h1 className="text-sm font-semibold leading-none">Prompt Lab</h1>
-                <MetricsSummaryBadge />
-                <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1.5"
-                  onClick={() => setCreateBlockOpen(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Nuovo
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
-                  <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
-                    <BookmarkPlus className="h-3.5 w-3.5" />
-                    Review
-                    {counts.pending > 0 && (
-                      <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] leading-none">
-                        {counts.pending}
-                      </Badge>
-                    )}
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
-                  <Link to="/v2/prompt-lab/atlas" title="Mappa visuale agenti × prompt × KB">
-                    <Network className="h-3.5 w-3.5" />
-                    Atlas
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
-                  <Link to="/v2/prompt-lab/catalog" title="Catalogo prompt: versione, autore, orchestratori, input">
-                    <Library className="h-3.5 w-3.5" />
-                    Catalog
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1.5"
-                  onClick={() => setHistoryPanelOpen(true)}
-                  title="Storico dei run Migliora tutto"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  Storico
-                </Button>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-8 gap-1.5 px-4 font-semibold"
-                  onClick={() => setGlobalImproverOpen(true)}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Migliora tutto
-                </Button>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-8 gap-1.5 px-4 font-semibold bg-primary/90 hover:bg-primary"
-                  onClick={() => setHarmonizeOpen(true)}
-                  title="Refactor profondo del sistema: confronta DB reale vs libreria desiderata"
-                >
-                  <Layers className="h-4 w-4" />
-                  Armonizza tutto
-                </Button>
-                <ExportButton getSnapshot={handleExport} />
-              </div>
-            </header>
-
-            {/* Livello 1 — Tabs orizzontali (macroaree) */}
-            <Tabs
-              value={activeGroupId}
-              onValueChange={handleGroupChange}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <TabsList className="rounded-none border-b justify-start h-auto p-0 bg-background gap-0">
-                {PROMPT_LAB_GROUPS.map((g) => {
-                  const Icon = GROUP_ICONS[g.id];
-                  return (
-                    <TabsTrigger
-                      key={g.id}
-                      value={g.id}
-                      className="text-xs px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {g.label}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-
-              {/* Livello 2 — Menu verticale a sinistra + contenuto */}
-              <div className="flex-1 flex min-h-0 overflow-hidden">
-                <VerticalTabNav
-                  tabs={verticalTabs}
-                  value={activeTabId}
-                  onChange={(v) => setActiveTabId(v as PromptLabTabId)}
-                />
-                <div className="flex-1 px-3 pt-2 pb-3 min-w-0 min-h-0 flex flex-col overflow-hidden">
-                  <div className="mb-2 rounded border bg-muted/30 px-2.5 py-1 text-[11px] leading-tight text-muted-foreground flex-shrink-0">
-                    <span className="font-medium text-foreground">Dove si attiva:</span> {activeTab.activation}
+            {/* Toolbar unificata: titolo + macroaree + azioni in una sola riga responsive */}
+            <TooltipProvider delayDuration={200}>
+              <header className="border-b bg-background flex-shrink-0">
+                <div className="flex items-center gap-3 px-3 py-1.5 flex-wrap md:flex-nowrap">
+                  {/* Brand + macroaree (Tabs) inline */}
+                  <div className="flex items-center gap-2 min-w-0 shrink-0">
+                    <FlaskConical className="h-4 w-4 text-primary" />
+                    <h1 className="text-sm font-semibold leading-none whitespace-nowrap">Prompt Lab</h1>
+                    <MetricsSummaryBadge />
                   </div>
+
+                  <Tabs
+                    value={activeGroupId}
+                    onValueChange={handleGroupChange}
+                    className="min-w-0"
+                  >
+                    <TabsList className="h-8 p-0.5 bg-muted/60 gap-0.5">
+                      {PROMPT_LAB_GROUPS.map((g) => {
+                        const Icon = GROUP_ICONS[g.id];
+                        return (
+                          <TabsTrigger
+                            key={g.id}
+                            value={g.id}
+                            className="text-xs px-2.5 h-7 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            <span className="hidden lg:inline">{g.label}</span>
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </Tabs>
+
+                  {/* Spacer */}
+                  <div className="flex-1 min-w-0" />
+
+                  {/* Azioni primarie sempre visibili */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-7 gap-1.5"
+                          onClick={() => setGlobalImproverOpen(true)}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Migliora tutto</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Migliora tutti i blocchi del tab attivo</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-7 gap-1.5 bg-primary/90 hover:bg-primary"
+                          onClick={() => setHarmonizeOpen(true)}
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Armonizza</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Refactor profondo: DB reale vs libreria desiderata</TooltipContent>
+                    </Tooltip>
+
+                    {/* Azioni secondarie raggruppate in dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1 relative">
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline text-xs">Azioni</span>
+                          {counts.pending > 0 && (
+                            <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] leading-none">
+                              {counts.pending}
+                            </Badge>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
+                        <DropdownMenuLabel className="text-xs">Gestione</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => setCreateBlockOpen(true)}>
+                          <Plus className="h-3.5 w-3.5 mr-2" /> Nuovo blocco
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/v2/prompt-lab/suggestions" className="flex items-center justify-between">
+                            <span className="flex items-center"><BookmarkPlus className="h-3.5 w-3.5 mr-2" /> Review suggerimenti</span>
+                            {counts.pending > 0 && (
+                              <Badge variant="destructive" className="h-4 min-w-4 px-1 text-[9px]">{counts.pending}</Badge>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs">Esplora</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link to="/v2/prompt-lab/atlas">
+                            <Network className="h-3.5 w-3.5 mr-2" /> Atlas (mappa)
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/v2/prompt-lab/catalog">
+                            <Library className="h-3.5 w-3.5 mr-2" /> Catalog
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setHistoryPanelOpen(true)}>
+                          <Clock className="h-3.5 w-3.5 mr-2" /> Storico run
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-1">
+                          <ExportButton getSnapshot={handleExport} />
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </header>
+            </TooltipProvider>
+
+            {/* Contenuto: menu verticale a sinistra + pannello principale */}
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+              <VerticalTabNav
+                tabs={verticalTabs}
+                value={activeTabId}
+                onChange={(v) => setActiveTabId(v as PromptLabTabId)}
+              />
+              <div className="flex-1 px-3 pt-2 pb-3 min-w-0 min-h-0 flex flex-col overflow-hidden">
+                <TooltipProvider delayDuration={200}>
+                  <div className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground flex-shrink-0">
+                    <span className="font-semibold text-foreground">{activeTab.label}</span>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span className="truncate">{activeTab.description}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground/80 hover:text-foreground">
+                          <Info className="h-3 w-3" /> Dove si attiva
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="end" className="max-w-sm">
+                        {activeTab.activation}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
                   {activeTabId === "system_prompt" && <SystemPromptTab />}
                   {activeTabId === "kb_doctrine" && <KBDoctrineTab />}
                   {activeTabId === "operative" && <OperativePromptsTab />}
@@ -281,9 +331,8 @@ export function PromptLabPage() {
                   {activeTabId === "journalists" && <JournalistsTab />}
                   {activeTabId === "tests" && <PromptTestsTab />}
                   {activeTabId === "history" && <PromptHistoryTab />}
-                </div>
               </div>
-            </Tabs>
+            </div>
           </div>
         </ResizablePanel>
 
