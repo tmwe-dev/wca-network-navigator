@@ -126,7 +126,7 @@ VINCOLI HARD:
 
 LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
-- Per network/gruppi WCA usa `partner_networks.network_name` come fonte primaria. Se serve contare partner in un gruppo, pianifica su `partner_networks` filtrando `network_name`.
+- Per network/gruppi WCA usa \`partner_networks.network_name\` come fonte primaria. Se serve contare partner in un gruppo, pianifica su \`partner_networks\` filtrando \`network_name\`.
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
 - Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
 - Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
