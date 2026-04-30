@@ -216,6 +216,8 @@ export function CommandOutput({
                 partnerId={liveResult.partnerId ?? null}
                 recipientName={liveResult.recipientName ?? null}
                 emailType={liveResult.emailType}
+                drafts={liveResult.drafts}
+                detectedTone={liveResult.detectedTone}
                 onClose={onClose}
               />
             )}
