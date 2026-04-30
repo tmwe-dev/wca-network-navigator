@@ -1,4 +1,4 @@
-import type { Tool, ToolResult, ComposerDraft } from "./types";
+import type { Tool, ToolResult, ComposerDraft, ToolContext } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
@@ -398,7 +398,7 @@ export const composeEmailTool: Tool = {
     return false;
   },
 
-  async execute(prompt: string, context): Promise<ToolResult> {
+  async execute(prompt: string, context?: ToolContext): Promise<ToolResult> {
     // ── 0pre) Decisione semantica del planner (no regex) ───────────────
     // Il planner AI può passare nei payload params strutturati che ci
     // dicono come trattare la richiesta, evitando di reinterpretarla qui:
