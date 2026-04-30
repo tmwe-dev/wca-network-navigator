@@ -22,7 +22,8 @@ interface Props {
   campaignPartners: CampaignPartner[];
   onGenerateJobs: () => void;
   source: CampaignSource;
-  onSourceChange: (s: CampaignSource) => void;
+  /** Deprecato: la sorgente è ora pilotata dal selettore origine in PipelineSection. */
+  onSourceChange?: (s: CampaignSource) => void;
   bcaCountryCounts: Record<string, number>;
 }
 
