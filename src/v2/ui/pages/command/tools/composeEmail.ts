@@ -1,4 +1,4 @@
-import type { Tool, ToolResult, ComposerDraft } from "./types";
+import type { Tool, ToolResult, ComposerDraft, ToolContext } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
@@ -398,7 +398,21 @@ export const composeEmailTool: Tool = {
     return false;
   },
 
-  async execute(prompt: string): Promise<ToolResult> {
+  async execute(prompt: string, context?: ToolContext): Promise<ToolResult> {
+    // ── 0pre) Decisione semantica del planner (no regex) ───────────────
+    // Il planner AI può passare nei payload params strutturati che ci
+    // dicono come trattare la richiesta, evitando di reinterpretarla qui:
+    //   - context_followup: true  → continuazione del batch attivo
+    //   - target: { table, countryCode } → batch country-wide diretto
+    // Se presenti, sono autoritativi rispetto alle euristiche legacy.
+    const payload = (context?.payload ?? {}) as Record<string, unknown>;
+    const aiContextFollowup = payload.context_followup === true;
+    const aiTarget = payload.target && typeof payload.target === "object"
+      ? (payload.target as Record<string, unknown>)
+      : null;
+    const aiCountryCode = aiTarget && typeof aiTarget.countryCode === "string"
+      ? (aiTarget.countryCode as string).toUpperCase()
+      : null;
     // ── 0a) Follow-up sul batch attivo ─────────────────────────────────
     // Se esiste un batch attivo (TTL 5 min) E il prompt non introduce una
     // nuova entità (azienda/email/paese diverso), trattiamo la richiesta
@@ -413,7 +427,9 @@ export const composeEmailTool: Tool = {
       Boolean(newEntity.company) ||
       Boolean(newEntity.email) ||
       (newCountry && lastCtx && newCountry.code !== lastCtx.countryCode);
-    if (lastCtx && !introducesNewTarget) {
+    // Se l'AI ha esplicitamente segnalato follow-up, salta i controlli
+    // sintattici "introducesNewTarget" e tratta come modifica del batch.
+    if (lastCtx && (aiContextFollowup || !introducesNewTarget)) {
       const tone = detectTone(prompt);
       const partners = await fetchPartnersByIds(lastCtx.partnerIds);
       if (partners.length === 0) {
@@ -460,8 +476,11 @@ export const composeEmailTool: Tool = {
     // In questo caso NON cerchiamo una singola azienda: generiamo UNA bozza
     // pre-personalizzata per ciascun partner (Promise.allSettled, cap 12),
     // sfogliabili nel Canvas con frecce.
-    let country = detectCountryCode(prompt);
-    const countryWide = isCountryWideIntent(prompt);
+    // Priorità: target esplicito dal planner > detection regex > query precedente.
+    let country: { code: string; label: string } | null = aiCountryCode
+      ? { code: aiCountryCode, label: labelForCountryCode(aiCountryCode) }
+      : detectCountryCode(prompt);
+    const countryWide = Boolean(aiCountryCode) || isCountryWideIntent(prompt);
 
     // Coreferenza con l'ultima query (ponte ai-query → compose-email).
     // Es. utente ha appena chiesto "quanti partner in Arabia Saudita?" e ora
