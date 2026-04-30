@@ -5,6 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type QueueInsert = Database["public"]["Tables"]["email_campaign_queue"]["Insert"];
+type DraftInsert = Database["public"]["Tables"]["email_drafts"]["Insert"];
+
+export interface CampaignDraftRecipient {
+  readonly partner_id: string;
+  readonly email: string;
+  readonly name?: string | null;
+  readonly subject: string;
+  readonly html: string;
+}
 
 export async function findCampaignQueueItems(draftId: string) {
   const { data, error } = await supabase
@@ -21,6 +30,44 @@ export async function insertCampaignQueueBatch(items: QueueInsert[]) {
     const { error } = await supabase.from("email_campaign_queue").insert(items.slice(i, i + 100));
     if (error) throw error;
   }
+}
+
+export async function createCampaignDraftQueue(params: {
+  readonly userId: string;
+  readonly subject: string;
+  readonly htmlBody: string;
+  readonly partnerIds: readonly string[];
+  readonly recipients: readonly CampaignDraftRecipient[];
+}) {
+  const draft: DraftInsert = {
+    user_id: params.userId,
+    subject: params.subject,
+    html_body: params.htmlBody,
+    category: "altro",
+    recipient_type: "partner",
+    recipient_filter: { partner_ids: [...params.partnerIds] },
+    status: "ready",
+    queue_status: "idle",
+    total_count: params.recipients.length,
+    sent_count: 0,
+  };
+  const { data, error } = await supabase.from("email_drafts").insert(draft).select("id").maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Bozza email non creata");
+
+  const rows: QueueInsert[] = params.recipients.map((r, i) => ({
+    draft_id: data.id,
+    partner_id: r.partner_id,
+    recipient_email: r.email,
+    recipient_name: r.name ?? null,
+    subject: r.subject,
+    html_body: r.html,
+    status: "pending",
+    position: i,
+    user_id: params.userId,
+  }));
+  await insertCampaignQueueBatch(rows);
+  return { draftId: data.id, queued: rows.length };
 }
 
 export async function countPendingCampaignEmails() {
