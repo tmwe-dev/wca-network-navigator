@@ -14,11 +14,13 @@ import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw 
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createCampaignDraftQueue } from "@/data/emailCampaigns";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import type { ComposerDraft } from "../tools/types";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
+import { useAuth } from "@/providers/AuthProvider";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -52,6 +54,7 @@ export default function ComposerCanvas({
 }: ComposerCanvasProps) {
   const composer = useEmailComposerV2();
   const governance = useGovernance("compose-email");
+  const { user } = useAuth();
 
   const [toField, setToField] = useState(initialTo);
   const [showApproval, setShowApproval] = useState(false);
@@ -236,32 +239,41 @@ export default function ComposerCanvas({
     });
   }, [composer, onClose]);
 
-  /** Invia TUTTE le bozze batch (solo quelle con status "ok"). */
+  /** Bulk: mette le bozze in uscita, ma NON invia. L'invio parte solo da conferma umana nella coda. */
   const handleSendAllBatch = useCallback(async () => {
     if (!isBatch) return;
     const sendable = batchDrafts.filter((d) => d.status === "ok" && d.contactEmail && d.body && d.subject);
     if (sendable.length === 0) {
-      toast.error("Nessuna bozza pronta all'invio");
+      toast.error("Nessuna bozza pronta da mettere in uscita");
+      return;
+    }
+    if (!user?.id) {
+      toast.error("Sessione non valida");
       return;
     }
     setBatchSending(true);
-    let okCount = 0;
-    let failCount = 0;
-    for (const d of sendable) {
-      try {
-        await invokeEdge("send-email", {
-          body: { to: d.contactEmail, subject: d.subject, html: d.body },
-          context: "composer:send-batch",
-        });
-        okCount++;
-      } catch {
-        failCount++;
-      }
+    try {
+      const queued = await createCampaignDraftQueue({
+        userId: user.id,
+        subject: sendable[0]?.subject ?? "Bozze email batch",
+        htmlBody: sendable[0]?.body ?? "",
+        partnerIds: sendable.map((d) => d.partnerId),
+        recipients: sendable.map((d) => ({
+          partner_id: d.partnerId,
+          email: d.contactEmail,
+          name: d.contactName ?? d.partnerName,
+          subject: d.subject,
+          html: d.body,
+        })),
+      });
+      toast.success(`${queued.queued} email messe in uscita. Invio fermo finché non lo autorizzi dalla coda.`);
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore accodamento");
+    } finally {
+      setBatchSending(false);
     }
-    setBatchSending(false);
-    if (okCount > 0) toast.success(`${okCount} email inviate${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
-    if (okCount === sendable.length) onClose();
-  }, [isBatch, batchDrafts, onClose]);
+  }, [isBatch, batchDrafts, onClose, user?.id]);
 
   const isGenerating = composer.generate.isPending || regenerating;
   const isSending = composer.send.isPending || batchSending;
