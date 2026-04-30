@@ -397,6 +397,10 @@ DECISION ENGINE (raccomandazione automatica):
         relationship_metrics: ctx.relationshipMetrics,
         playbook_active: ctx.playbookActive,
         channel_declaration: ctx.channelDeclaration,
+        journalist_verdict: reviewResult.review?.verdict ?? null,
+        journalist_enabled: reviewResult.enabled,
+        contract_used: contractUsed,
+        type_resolution_outreach: typeResolutionOutreach,
       },
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
