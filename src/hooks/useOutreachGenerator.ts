@@ -11,6 +11,17 @@ export interface RecipientIntelligence {
   warning: string | null;
 }
 
+export type JournalistVerdict = "pass" | "pass_with_edits" | "warn" | "block";
+
+export interface JournalistReviewSummary {
+  journalist: { role: string; label: string; reasoning: string; auto: boolean };
+  verdict: JournalistVerdict;
+  warnings: Array<{ type: string; description: string; severity: "info" | "warning" | "blocking"; upstream_fix?: string }>;
+  edits: Array<{ type: string; original_fragment: string; edited_fragment: string; reason: string }>;
+  quality_score: number;
+  reasoning: string;
+}
+
 export interface OutreachDebug {
   model: string;
   quality: string;
@@ -46,6 +57,12 @@ export interface OutreachResult {
   company_name: string | null;
   language: string;
   _debug?: OutreachDebug;
+  /** Verdetto del Caporedattore Finale (Giornalista AI). */
+  journalist_review?: JournalistReviewSummary | null;
+  /** True se il contratto email è stato applicato (canale email + partner). */
+  contract_used?: boolean;
+  /** Warnings dalla validazione del contratto (non bloccanti). */
+  contract_warnings?: string[];
 }
 
 export function useOutreachGenerator() {
