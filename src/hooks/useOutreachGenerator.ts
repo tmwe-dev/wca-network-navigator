@@ -112,6 +112,25 @@ export function useOutreachGenerator() {
 
       const outreach = data as OutreachResult;
       setResult(outreach);
+
+      // Caporedattore Finale: notifica visibile su block / warn così
+      // l'operatore sa che la pipeline ha intercettato un problema.
+      const review = outreach.journalist_review;
+      if (review) {
+        if (review.verdict === "block") {
+          toast({
+            title: "Bozza bloccata dal Giornalista",
+            description: review.reasoning || "Il caporedattore ha bloccato l'invio di questa bozza. Rivedi i warnings prima di procedere.",
+            variant: "destructive",
+          });
+        } else if (review.verdict === "warn") {
+          toast({
+            title: "Bozza con avvisi",
+            description: review.reasoning || `${review.warnings.length} avvisi dal Giornalista. Verifica prima dell'invio.`,
+          });
+        }
+      }
+
       return outreach;
     } catch (err: unknown) {
       toast({ title: "Errore generazione", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
