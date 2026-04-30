@@ -8,9 +8,9 @@ export function clean(v: string | null | undefined): string | null {
 }
 
 export function countryFlag(country: string | null): string {
-  if (!country) return "🌍";
+  if (!country) return "";
   const code = resolveCountryCode(country);
-  if (!code) return "🌍";
+  if (!code) return "";
   return getCountryFlag(code);
 }
 

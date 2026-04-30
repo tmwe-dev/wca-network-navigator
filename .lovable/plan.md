@@ -1,83 +1,83 @@
-## Problema osservato (dallo screenshot)
+## Problema osservato
 
-L'header di **Contatti** ha **4 strati impilati** che dicono più o meno la stessa cosa, più filtri che si sovrappongono al selettore di origine:
+Nello screenshot la lista contatti (tab Elenco di **Contatti**) ha due problemi:
 
-```text
-[icon] CONTATTI · Elenco        Elenco | Kanban | Duplicati | Campagne | Agenda     ← strato 1: header pagina
-ORIGINE  [WCA Partner] [Contatti] [Biglietti]                                       ← strato 2: switcher origine
-Home > Contatti > Elenco                                                            ← strato 3: breadcrumb (= "altro tasto Home")
-11349 contatti  [Fuori circuito] [Tutti] [WCA ✓] [Solo CRM]   Segmenti  + Nuovo     ← strato 4: filtri lista (ridondanti con origine)
-```
+1. **Ordine colonne sbagliato**: prima colonna grande = **Località** (paese/città/CAP), poi Azienda, poi Contatto. Per i biglietti da visita invece il pattern è già **Azienda+Contatto a sinistra**, Località come info secondaria.
+2. **"Mondi e mondini"**: per ogni riga senza paese viene mostrato un riquadro col globo/bandiera bianca `🏳` come placeholder. Anche quando il paese è ignoto la cella resta visibile e occupa spazio. Risultato: tante righe identiche col globo blu generico.
 
-Risultato: la parola "Elenco" appare 3 volte, "Contatti" 3 volte, "Home" 2 volte, e i bottoni `Tutti / WCA ✓ / Solo CRM` fanno la stessa cosa del selettore `Origine`.
+## Cosa fare — solo UI, una sola passata
 
-## Cosa fare — UI only, una sola passata
+### 1. Allineare la lista contatti al pattern dei biglietti
 
-### 1. Eliminare il breadcrumb interno alla sezione Contatti
-
-Il breadcrumb `Home > Contatti > Elenco` è il "altro tasto Home" che hai notato. La voce **Home** è già nel menu sinistro e l'header pagina dice già `CONTATTI · Elenco`. Il breadcrumb è ridondante.
-
-→ Nascondere il breadcrumb sulla sezione `/v2/pipeline/*`. Resta solo l'header unificato.
-
-### 2. Fondere l'header pagina e lo switcher origine in **una sola riga**
-
-Oggi ci sono 2 righe (header + ORIGINE). Le unisco così:
+Nuovo ordine colonne (lo stesso "look" della `CompactRow` BCA che già piace all'utente):
 
 ```text
-[👥] CONTATTI    Elenco · Kanban · Duplicati · Campagne · Agenda    ⋯    + Nuovo
-                  └ origine: ◉ Contatti  ○ WCA Partner  ○ Biglietti
+[#☐]  [AZIENDA + ruolo + contatto]   [Località compatta]   [Email/quick]   [Stato + Score]   [Azioni]
 ```
 
-L'origine diventa una riga sottile sotto i tab di lavoro, sempre visibile ma non urlante. Niente etichetta "ORIGINE" tutta maiuscola — basta un selettore segmentato compatto.
+Cioè:
+- **Col 1** (`64px`): index `#N` + checkbox (invariato).
+- **Col 2** (grande, `minmax(220px,1.6fr)`): **AZIENDA in alto** (bold, uppercase) + bandiera piccola inline accanto al nome azienda *solo se* il paese è noto. **Sotto**: nome contatto + ruolo (`Sigra Elena · Operations`).
+- **Col 3** (`minmax(160px,200px)`): Località compatta — `Paese · Città · CAP` su una riga sola, ammessa anche solo `Città` o solo `Paese`. Nessuna icona globo, nessun riquadro.
+- **Col 4** (`minmax(180px,1.2fr)`): Email + (sotto) telefono/origine — invariato il contenuto, solo cambia la posizione.
+- **Col 5** (`minmax(140px,160px)`): Stato + Score + indicatori (LinkedIn, Sito, Business Card) — invariato.
+- **Col 6** (`72px`): Azioni (search + kebab) — invariato.
 
-Rimuovo dall'header:
-- la doppia scritta "Elenco" (badge sezione `· Elenco` + primo tab `Elenco`) → tengo solo i tab.
-- la striscia `ORIGINE` come banda separata → diventa una riga inline sotto i tab.
+La cella "bandiera grande dedicata" (oggi col 2 da 48px) **viene rimossa**: la bandiera diventa un'emoji piccola inline accanto al nome azienda, e solo quando il paese è davvero noto.
 
-### 3. Rimuovere i filtri ridondanti dentro `ContactListPanel`
+Il header della lista (`ContactListPanel`) si aggiorna di conseguenza: header `AZIENDA / LOCALITÀ / CONTATTO / STATO`.
 
-Questi bottoni dentro la lista oggi sono confusi e doppi:
-- `Tutti / WCA ✓ / Solo CRM` → fa la stessa cosa del selettore Origine (WCA Partner / Contatti / Biglietti). Lo elimino.
-- Il chip `Fuori circuito` resta (è un filtro reale di stato, non di origine).
+### 2. Eliminare i "mondi e mondini"
 
-### 4. Risultato finale
+Regola dura: **se `country` è null/vuoto/non riconosciuto, non mostrare nulla** (né bandiera, né globo, né placeholder `🏳`). La cella semplicemente non emette markup. Niente più riquadri grigi col mondo blu generico ripetuto su ogni riga.
+
+Lo stesso vale per la cella Località: se mancano paese, città e CAP, la colonna resta vuota (no `—`). Se manca solo il paese ma c'è la città, mostra solo la città.
+
+### 3. Ordine di lettura per l'occhio
+
+Pattern visivo finale (riga tipica):
 
 ```text
-[👥] CONTATTI    Elenco | Kanban | Duplicati | Campagne | Agenda            + Nuovo
-                 ◉ Contatti  ○ WCA Partner  ○ Biglietti
-─────────────────────────────────────────────────────────────────────────────────────
-11.349 contatti  ✈ Fuori circuito                              Segmenti
+#1  ☐   ACME LOGISTICS  🇮🇹              Roma · 00100      ✉ info@acme.it    ●NEW  ★74    [🔍 ⋯]
+        Sigra Elena · Operations Manager                    📞 +39 06 …       💬 0
 ```
 
-3 righe invece di 5, zero parole ripetute, zero filtri doppi. Il tasto Home resta solo nel menu sinistro.
+Riga senza paese:
 
-## File toccati (solo UI/layout, zero logica)
+```text
+#2  ☐   D-INGREDIENTS                    Milano            ✉ amministra…     ●…     [🔍 ⋯]
+        Sig Ravelli
+```
 
-1. `src/v2/ui/pages/sections/PipelineSection.tsx`
-   - Rimuovo il componente `OrigineSwitcher` come banda separata.
-   - Passo le 3 origini come segmented inline-row dentro `PageHeaderUnified` (nuova prop `subRow` o riutilizzo `chips` con tone "primary" e logica radio).
+## File toccati (solo presentazione, zero logica)
 
-2. `src/v2/ui/templates/PageHeaderUnified.tsx`
-   - Rimuovo la duplicazione `sectionLabel · currentTab.label`: tengo solo `sectionLabel` se uguale al tab attivo, altrimenti il tab attivo.
-   - Aggiungo (o riuso) una "subRow" sottile per il selettore origine.
+1. `src/components/contacts/contactGridLayout.ts`
+   - `CONTACT_GRID_COLS` aggiornato: rimuovo la colonna 48px della bandiera, ricompongo come 6 colonne (vedi sopra).
 
-3. `src/v2/ui/templates/breadcrumbConfig.ts` o il layout che lo monta
-   - Disattivo il breadcrumb interno per i path `/v2/pipeline/*` (la sezione si auto-descrive nell'header).
+2. `src/components/contacts/ContactCard.tsx`
+   - Rimuovo la cella "bandiera grande" dedicata (righe ~115-120).
+   - Sposto Azienda+Contatto in seconda posizione (prima colonna larga).
+   - La bandiera diventa una piccola emoji inline accanto al nome azienda, **renderizzata solo se `flag` è vero** (helper `countryFlag` già ritorna stringa vuota quando il paese non è mappato — basta non mostrare il fallback `🏳`).
+   - Località compatta su una riga: `Paese · Città · CAP` con elementi opzionali (omessi se mancanti, niente `—`).
+   - Niente cambi a Stato/Score/Azioni.
 
-4. `src/components/contacts/ContactListPanel.tsx`
-   - Rimuovo il blocco `Tutti / WCA ✓ / Solo CRM` (righe ~91-98). Lascio il chip "Fuori circuito" e il counter.
-   - L'hook `useContactListPanel` resta invariato: il param `wcaMatch` viene forzato a `"all"` quando la pagina è dentro la pipeline unificata (delegato all'origine).
+3. `src/components/contacts/ContactListPanel.tsx`
+   - Aggiorno l'header riga (label colonne) per riflettere il nuovo ordine: `AZIENDA / LOCALITÀ / CONTATTO / STATO` + ordinamenti corrispondenti (sort `company` su col grande, `country` su Località).
+   - I campi sortabili e i filtri inline restano gli stessi, cambia solo la posizione visiva.
+
+4. `src/components/contacts/contactHelpers.ts` (solo se serve)
+   - Verifico che `countryFlag` ritorni `""` (non `🏳`) per paesi sconosciuti. Se ritorna placeholder, lo cambio a stringa vuota.
 
 ## Cosa NON cambia
 
-- Routing, redirect dei vecchi URL, dataset, RLS, edge function: invariati.
-- Tab di lavoro (Elenco/Kanban/Duplicati/Campagne/Agenda): invariati.
-- Componenti interni (`ContactsPage`, `BusinessCardsHub`, `NetworkPage`, `ContactPipelineView`, `DuplicateDetector`): invariati.
-- Menu sinistro: invariato (resta una sola voce "Contatti").
+- Hook `useContactListPanel`, dataset, filtri, segmenti, paginazione, dettaglio a destra: invariati.
+- Le altre liste (CRM su altre pagine, Network, Biglietti): invariate.
+- Logica di sort, filtri inline `Filterable`: invariata, solo riposizionata.
 
 ## Verifica post-implementazione
 
-- Aprendo `/v2/pipeline/contacts?origine=crm` vedo **una sola** riga "Contatti" + tab di lavoro + selettore origine sottile sotto. Niente breadcrumb.
-- La parola "Elenco" appare **una volta sola** (nel tab attivo).
-- I bottoni `Tutti / WCA ✓ / Solo CRM` non esistono più dentro la lista.
-- Cambiando origine (Contatti → WCA → Biglietti) cambia il dataset, il selettore resta nello stesso posto.
+- La prima colonna larga è **Azienda (uppercase) + Contatto sotto**, come nei biglietti.
+- Le righe senza paese **non mostrano** né globo né bandiera bianca. Nessun riquadro placeholder.
+- La cella Località mostra solo i pezzi noti (paese/città/CAP), separati da `·`.
+- Header colonne aggiornato e sort funziona sui campi giusti.
+- Nessuna regressione in dettaglio contatto, drawer, azioni, deep search.

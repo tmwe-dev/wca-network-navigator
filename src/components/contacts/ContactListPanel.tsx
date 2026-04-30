@@ -32,10 +32,9 @@ interface Props {
  */
 const COLUMNS: ReadonlyArray<{ key: string; label: string; sortKey?: string; filterField?: string }> = [
   { key: "select", label: "" },
-  { key: "flag", label: "" },
+  { key: "company", label: "Azienda · Contatto", sortKey: "company", filterField: "company" },
   { key: "location", label: "Località", sortKey: "country", filterField: "country" },
-  { key: "company", label: "Azienda", sortKey: "company", filterField: "company" },
-  { key: "contact", label: "Contatto", sortKey: "name", filterField: "name" },
+  { key: "email", label: "Email · Telefono", sortKey: "name", filterField: "name" },
   { key: "status", label: "Stato", sortKey: "origin", filterField: "leadStatus" },
   { key: "actions", label: "" },
 ];

@@ -57,7 +57,11 @@ export function GoldenLayout({
 
       {/* Desktop: 40/60 resizable split */}
       <div className="flex-1 min-h-0 hidden md:block">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup
+          key={hasDetail ? "split" : "single"}
+          direction="horizontal"
+          className="h-full"
+        >
           <ResizablePanel
             defaultSize={hasDetail ? 40 : 100}
             minSize={hasDetail ? 30 : 100}
