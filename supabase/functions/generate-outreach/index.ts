@@ -18,6 +18,12 @@ import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts
 import { parseOutreachResponse } from "./responseParser.ts";
 import { checkCadence } from "../_shared/cadenceEngine.ts";
 import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
+import {
+  runEmailContract,
+  runJournalistReview,
+  serializeJournalistReview,
+  type PipelineChannel,
+} from "../_shared/postGenerationReview.ts";
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
