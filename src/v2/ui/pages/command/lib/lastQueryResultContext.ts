@@ -23,7 +23,13 @@ let last: LastQueryResultContext | null = null;
 export function setLastQueryResultContext(
   ctx: Omit<LastQueryResultContext, "ts">,
 ): void {
-  last = { ...ctx, ts: Date.now() };
+  // Preserva l'ultimo countryCode conosciuto se la nuova query non ne
+  // specifica uno (es. ricerca per città senza filtro paese). Senza questo,
+  // dopo "partner di Malta" → "marsa" → "questi partner", il bridge
+  // ai-query→compose-email perderebbe Malta e tornerebbe 0 risultati.
+  const previousCountry = last && last.table === ctx.table ? last.countryCode : null;
+  const countryCode = ctx.countryCode ?? previousCountry;
+  last = { ...ctx, countryCode, ts: Date.now() };
 }
 
 export function getLastQueryResultContext(): LastQueryResultContext | null {
