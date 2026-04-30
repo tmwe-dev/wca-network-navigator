@@ -26,6 +26,8 @@ const refKindLabel: Record<NonNullable<MessageAudit["references"]>[number]["kind
   "model": "Model",
   "playbook": "Playbook",
   "context": "Contesto",
+  "table": "Tabella",
+  "keyword": "Keyword",
 };
 
 export default function MessageAuditPanel({ audit }: Props) {
