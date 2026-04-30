@@ -4,7 +4,8 @@
 /**
  * Campaigns — Orchestrator using sub-components
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 const CampaignAnalyticsTab = lazy(() => import("@/components/analytics/CampaignAnalyticsTab").then(m => ({ default: m.CampaignAnalyticsTab })));
 import { Button } from "@/components/ui/button";
 import { CompanyList } from "@/components/campaigns/CompanyList";
@@ -18,6 +19,16 @@ const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").
 
 export function Campaigns() {
   const c = useCampaignData();
+  const [params] = useSearchParams();
+  const origine = (params.get("origine") ?? "crm").toLowerCase();
+
+  // Sincronizza la sorgente Partner/BCA con il selettore origine del PipelineSection
+  // (wca/crm → partners; biglietti → bca). Evita il toggle duplicato in barra.
+  useEffect(() => {
+    const desired: "partners" | "bca" = origine === "biglietti" ? "bca" : "partners";
+    if (c.source !== desired) c.handleSourceChange(desired);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origine]);
 
   return (
     <div className="h-full min-h-0 relative overflow-hidden flex flex-col">
