@@ -215,6 +215,34 @@ const EXCERPT_DEFAULT = 800;
 /** Single source of truth: tutte le doctrine + procedure indicizzate di default */
 export const DEFAULT_KB_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
 
+/**
+ * Indice semantico schema dati (KB tag `data_schema`) — iniettato sempre come
+ * blocco fisso in ogni prompt assemblato. Cache 5 min per ridurre query DB.
+ */
+let _dataSchemaIndexCache: { content: string; ts: number } | null = null;
+const DATA_SCHEMA_TTL_MS = 5 * 60 * 1000;
+
+async function loadDataSchemaIndex(sb: ReturnType<typeof createClient>): Promise<string> {
+  const now = Date.now();
+  if (_dataSchemaIndexCache && now - _dataSchemaIndexCache.ts < DATA_SCHEMA_TTL_MS) {
+    return _dataSchemaIndexCache.content;
+  }
+  try {
+    const { data } = await sb
+      .from("kb_entries")
+      .select("content")
+      .contains("tags", ["data_schema"])
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    const content = (data as { content?: string } | null)?.content ?? "";
+    _dataSchemaIndexCache = { content, ts: now };
+    return content;
+  } catch {
+    return "";
+  }
+}
+
 // LOVABLE-93: coerenza Prompt Lab multi-dominio — KB per domini email
 /** KB categories per domain-specific classification (email routing) */
 export const DOMAIN_KB_CATEGORIES: Record<string, string[]> = {
