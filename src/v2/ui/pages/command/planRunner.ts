@@ -224,6 +224,7 @@ export async function executePlan(
 export async function executeApprovedStep(
   state: PlanExecutionState,
   onStepUpdate: (state: PlanExecutionState) => void,
+  extras?: PlanExecutionExtras,
 ): Promise<PlanExecutionState> {
   const stepNum = state.approvalStepNumber;
   if (!stepNum) return state;
@@ -249,7 +250,13 @@ export async function executeApprovedStep(
     const resolvedParams = resolveParams(step.params, current.results);
     const promptText = JSON.stringify(resolvedParams);
     const result = await withTimeout(
-      tool.execute(promptText, { confirmed: true, payload: resolvedParams }),
+      tool.execute(promptText, {
+        confirmed: true,
+        payload: resolvedParams,
+        originalPrompt: extras?.originalPrompt,
+        contextHint: extras?.contextHint,
+        history: extras?.history,
+      }),
       STEP_TIMEOUT_MS,
       `Step ${step.stepNumber} (${step.toolId})`,
     );
@@ -279,5 +286,5 @@ export async function executeApprovedStep(
     return current;
   }
 
-  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber);
+  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber, extras);
 }
