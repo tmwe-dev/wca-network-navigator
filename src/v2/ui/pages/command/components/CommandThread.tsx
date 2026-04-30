@@ -13,6 +13,7 @@ import type { Message, FlowPhase, ToolPhase } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
 import PlanTimeline from "./PlanTimeline";
 import MessageAuditPanel from "./MessageAuditPanel";
+import MessageContent from "./MessageContent";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -85,13 +86,7 @@ export default function CommandThread({
                       {msg.agentName}
                     </motion.div>
                   )}
-                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground/100">
-                    {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                      part.startsWith("**") && part.endsWith("**")
-                        ? <span key={i} className="text-primary/92 font-mono text-[12px]">{part.slice(2, -2)}</span>
-                        : <span key={i}>{part}</span>
-                    )}
-                  </div>
+                  <MessageContent content={msg.content} />
                   {msg.suggestedActions && msg.suggestedActions.length > 0 && onSuggestedAction && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/[0.16]">
                       {msg.suggestedActions.map((action, i) => (
