@@ -355,6 +355,7 @@ export const aiQueryTool: Tool = {
         meta: {
           count: part.count,
           sourceLabel: `AI Query · ${part.table}${plan.rationale ? ` · ${plan.rationale}` : ""}`,
+          auditRefs: buildAuditRefsFromPlans([plan]),
         },
         selectable: true,
         idField,
@@ -378,6 +379,7 @@ export const aiQueryTool: Tool = {
       meta: {
         count: totalCount,
         sourceLabel: `AI Query · ${parts.length} entità · ${totalMs}ms`,
+        auditRefs: buildAuditRefsFromPlans(plans),
       },
     };
   },
