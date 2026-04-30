@@ -52,6 +52,13 @@ VIETATO inventare nomi, conteggi, statistiche, sedi.
 Se non sei sicuro di un'entità chiama il tool. Se il tool restituisce vuoto rispondi "Non trovato nel database" — NON ipotizzare.`
   );
 
+  // Puntatore all'indice semantico: dove vivono i dati nel DB.
+  // Niente liste hardcoded di tabelle nei prompt — l'indice è in KB (tag `data_schema`).
+  parts.push(
+`🗺️ DOVE VIVONO I DATI
+Quando cerchi informazioni nel database (indirizzi, contatti, email, telefoni, biglietti, attività), consulta l'indice semantico nella KB (tag \`data_schema\`, titolo "Il Mondo Operativo e Schema Dati") per capire QUALE tabella usare. Esempi: contatti persona di un partner stanno in \`partner_contacts\`, biglietti da visita in \`business_cards\`, prospect in \`prospects\`/\`prospect_contacts\`. Non assumere — guarda l'indice.`
+  );
+
   if (opts.scope) {
     parts.push(`🎯 SCOPE ATTIVO: ${opts.scope}\nApplica le regole d'ingaggio specifiche per questo scope (consulta KB doctrine/tone-and-format se serve).`);
   }
