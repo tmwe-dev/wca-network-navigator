@@ -55,7 +55,8 @@ const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then
 const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorer })));
 const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })));
 const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
-const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
+// 2026-04-30: CampaignJobsPage deprecata (campaign_jobs vuota da sempre).
+// Import rimosso, file mantenuto in src/v2/ui/pages/CampaignJobsPage.tsx.
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.Onboarding })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
