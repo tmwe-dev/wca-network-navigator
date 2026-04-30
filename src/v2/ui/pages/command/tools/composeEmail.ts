@@ -460,8 +460,20 @@ export const composeEmailTool: Tool = {
     // In questo caso NON cerchiamo una singola azienda: generiamo UNA bozza
     // pre-personalizzata per ciascun partner (Promise.allSettled, cap 12),
     // sfogliabili nel Canvas con frecce.
-    const country = detectCountryCode(prompt);
-    if (country && isCountryWideIntent(prompt)) {
+    let country = detectCountryCode(prompt);
+    const countryWide = isCountryWideIntent(prompt);
+
+    // Coreferenza con l'ultima query (ponte ai-query → compose-email).
+    // Es. utente ha appena chiesto "quanti partner in Arabia Saudita?" e ora
+    // dice "scrivi una mail a tutti quanti": eredita country dalla query.
+    if (!country && countryWide) {
+      const lastQ = getLastQueryResultContext();
+      if (lastQ?.countryCode && lastQ.table === "partners") {
+        country = { code: lastQ.countryCode, label: labelForCountryCode(lastQ.countryCode) };
+      }
+    }
+
+    if (country && countryWide) {
       const partners = await searchPartnersByCountry(country.code);
       if (partners.length === 0) {
         return {
