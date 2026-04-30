@@ -48,6 +48,8 @@ interface PageHeaderUnifiedProps {
   primaryAction?: React.ReactNode;
   /** Azioni secondarie a destra (kebab, segmenti, ecc.). */
   secondaryActions?: React.ReactNode;
+  /** Slot opzionale renderizzato come riga sottile sotto i tab (es. selettore origine). */
+  subRow?: React.ReactNode;
   className?: string;
 }
 
@@ -60,6 +62,7 @@ export function PageHeaderUnified({
   chips,
   primaryAction,
   secondaryActions,
+  subRow,
   className,
 }: PageHeaderUnifiedProps): React.ReactElement {
   const { pathname } = useLocation();
@@ -90,15 +93,9 @@ export function PageHeaderUnified({
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <SectionIcon className="h-4 w-4" />
           </span>
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {sectionLabel}
-            </span>
-            <span className="text-muted-foreground/50 text-xs">·</span>
-            <span className="text-sm font-bold text-primary truncate">
-              {currentTab?.label ?? sectionLabel}
-            </span>
-          </div>
+          <span className="text-sm font-bold text-foreground truncate">
+            {sectionLabel}
+          </span>
         </div>
 
         {/* Tabs sorelle inline */}
@@ -143,6 +140,13 @@ export function PageHeaderUnified({
           {primaryAction}
         </div>
       </div>
+
+      {/* Sub-row opzionale (es. selettore origine) */}
+      {subRow && (
+        <div className="flex items-center gap-2 px-4 h-8 min-w-0 border-t border-border/30 bg-card/20 overflow-x-auto scrollbar-thin">
+          {subRow}
+        </div>
+      )}
 
       {/* Riga 2: counter + chip filtri */}
       {hasSecondRow && (
