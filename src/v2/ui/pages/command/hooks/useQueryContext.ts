@@ -10,6 +10,10 @@ import {
 } from "../lib/queryContext";
 import { getLastSuccessfulQueryPlan, clearLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import type { ToolResult } from "../tools/types";
+import {
+  setLastQueryResultContext,
+  extractCountryCodeFromFilters,
+} from "../lib/lastQueryResultContext";
 
 interface QueryContextDeps {
   setQueryContext: (v: QueryContext | null) => void;
@@ -24,6 +28,21 @@ export function useQueryContext(deps: QueryContextDeps) {
   const updateQueryContextFromLastPlan = useCallback((result?: ToolResult) => {
     const plan = getLastSuccessfulQueryPlan();
     if (plan && plan.table !== "INVALID") {
+      // Bridge per compose-email: salva il country (se presente nei filtri)
+      // e il conteggio righe, così follow-up tipo "scrivi a tutti loro"
+      // possono ereditare il paese senza nominarlo nel prompt.
+      const countryCode = extractCountryCodeFromFilters(plan.filters);
+      const rowCount =
+        result && result.kind === "table"
+          ? result.rows.length
+          : result && result.kind === "multi"
+            ? result.parts.reduce((acc, p) => acc + (p.rows?.length ?? 0), 0)
+            : 0;
+      setLastQueryResultContext({
+        table: plan.table,
+        countryCode,
+        rowCount,
+      });
       if (result && result.kind === "table") {
         setQueryContext(buildContextWithRows(plan, result.rows, result.title));
       } else if (result && result.kind === "multi") {

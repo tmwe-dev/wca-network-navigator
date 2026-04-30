@@ -6,6 +6,7 @@ import {
   getLastComposerContext,
   setLastComposerContext,
 } from "../lib/composerContext";
+import { getLastQueryResultContext } from "../lib/lastQueryResultContext";
 
 /**
  * compose-email tool — risolve partner/contatto nel CRM e usa la pipeline
@@ -97,8 +98,22 @@ function detectCountryCode(prompt: string): { code: string; label: string } | nu
 
 function isCountryWideIntent(prompt: string): boolean {
   const lower = prompt.toLowerCase();
-  // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
-  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
+  // Ampliato per intercettare follow-up coreferenziali dopo una query
+  // (es. "scrivi una mail a tutti quanti", "manda a tutti loro").
+  return (
+    /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower) ||
+    /\ba\s+tutti(?:\s+(?:quanti|loro))?\b/i.test(lower) ||
+    /\b(a|per)\s+(?:loro|ognuno|ciascuno)\b/i.test(lower)
+  );
+}
+
+/** Cerca un codice paese ISO-2 (case-insensitive) per ottenere l'etichetta human-readable. */
+function labelForCountryCode(code: string): string {
+  const upper = code.toUpperCase();
+  for (const [name, c] of Object.entries(COUNTRY_MAP)) {
+    if (c === upper) return name;
+  }
+  return upper;
 }
 
 async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
@@ -445,8 +460,20 @@ export const composeEmailTool: Tool = {
     // In questo caso NON cerchiamo una singola azienda: generiamo UNA bozza
     // pre-personalizzata per ciascun partner (Promise.allSettled, cap 12),
     // sfogliabili nel Canvas con frecce.
-    const country = detectCountryCode(prompt);
-    if (country && isCountryWideIntent(prompt)) {
+    let country = detectCountryCode(prompt);
+    const countryWide = isCountryWideIntent(prompt);
+
+    // Coreferenza con l'ultima query (ponte ai-query → compose-email).
+    // Es. utente ha appena chiesto "quanti partner in Arabia Saudita?" e ora
+    // dice "scrivi una mail a tutti quanti": eredita country dalla query.
+    if (!country && countryWide) {
+      const lastQ = getLastQueryResultContext();
+      if (lastQ?.countryCode && lastQ.table === "partners") {
+        country = { code: lastQ.countryCode, label: labelForCountryCode(lastQ.countryCode) };
+      }
+    }
+
+    if (country && countryWide) {
       const partners = await searchPartnersByCountry(country.code);
       if (partners.length === 0) {
         return {
