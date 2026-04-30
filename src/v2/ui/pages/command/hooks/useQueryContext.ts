@@ -5,9 +5,11 @@ import { useCallback } from "react";
 import type { QueryContext } from "../lib/queryContext";
 import {
   buildContextFromPlan,
+  buildContextWithRows,
   isContextFresh,
 } from "../lib/queryContext";
 import { getLastSuccessfulQueryPlan, clearLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
+import type { ToolResult } from "../tools/types";
 
 interface QueryContextDeps {
   setQueryContext: (v: QueryContext | null) => void;
@@ -17,11 +19,24 @@ interface QueryContextDeps {
 export function useQueryContext(deps: QueryContextDeps) {
   const { setQueryContext, queryContext } = deps;
 
-  /** Persist last query plan into context for follow-ups */
-  const updateQueryContextFromLastPlan = useCallback(() => {
+  /** Persist last query plan + result snapshot into context for follow-ups.
+   *  When `result` is provided and is a table, rows are snapshotted (capped). */
+  const updateQueryContextFromLastPlan = useCallback((result?: ToolResult) => {
     const plan = getLastSuccessfulQueryPlan();
     if (plan && plan.table !== "INVALID") {
-      setQueryContext(buildContextFromPlan(plan));
+      if (result && result.kind === "table") {
+        setQueryContext(buildContextWithRows(plan, result.rows, result.title));
+      } else if (result && result.kind === "multi") {
+        // Snapshot the first non-error part (mirrors aiQueryTool cache behaviour).
+        const firstOk = result.parts.find((p) => !p.error);
+        if (firstOk) {
+          setQueryContext(buildContextWithRows(plan, firstOk.rows, firstOk.title));
+        } else {
+          setQueryContext(buildContextFromPlan(plan));
+        }
+      } else {
+        setQueryContext(buildContextFromPlan(plan));
+      }
     }
     clearLastSuccessfulQueryPlan();
   }, [setQueryContext]);

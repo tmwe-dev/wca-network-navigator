@@ -38,8 +38,10 @@ import {
   isElliptical,
   type QueryContext,
 } from "../lib/queryContext";
+import { isSynthesisIntent } from "../lib/intentDetector";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
+import { getAiComment } from "../aiBridge";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -112,7 +114,9 @@ export function useCommandSubmit(state: CommandStateApi) {
   const renderPlanWithContext = useCallback(
     async (userPrompt: string, final: PlanExecutionState, trace?: TraceBuilder) => {
       await renderPlanCompletion(userPrompt, final, commentOnResult, trace);
-      updateQueryContextFromLastPlan();
+      const lastStep = final.steps[final.steps.length - 1];
+      const lastResult = lastStep ? final.results[lastStep.stepNumber] : undefined;
+      updateQueryContextFromLastPlan(lastResult);
     },
     [renderPlanCompletion, commentOnResult, updateQueryContextFromLastPlan],
   );
@@ -169,6 +173,68 @@ export function useCommandSubmit(state: CommandStateApi) {
     });
   }, [addMessage, resetForNewMessage, ts]);
 
+  /** Synthesis: comment on the previous turn's snapshot WITHOUT touching the DB. */
+  const runSynthesis = useCallback(
+    async (userPrompt: string, ctx: QueryContext) => {
+      const trace = startTrace(userPrompt);
+      trace.setPhase("fast-lane");
+      trace.setDriver("ai-comment");
+
+      setFlowPhase("executing");
+      setShowTools(false);
+      addMessage({
+        role: "assistant",
+        content: `🔧 Sintesi turno precedente · ${ctx.lastResultRows?.length ?? 0} righe`,
+        agentName: "Automation",
+        timestamp: ts(),
+      });
+
+      const t0 = Date.now();
+      const snapshot = JSON.stringify({
+        kind: "table",
+        title: ctx.lastResultTitle ?? `Risultati precedenti · ${ctx.table}`,
+        totalRows: ctx.lastResultRows?.length ?? 0,
+        sample: ctx.lastResultRows ?? [],
+        meta: { count: ctx.lastResultRows?.length ?? 0, sourceLabel: `Snapshot · ${ctx.table}` },
+      });
+
+      try {
+        const comment = await getAiComment({
+          userPrompt: `${userPrompt}\n\n[NB: NON eseguire una nuova ricerca. Sintetizza i dati qui sotto, già recuperati al turno precedente.]`,
+          toolId: "ai-query",
+          toolLabel: `Sintesi · ${ctx.table}`,
+          resultSummary: snapshot,
+          history: buildHistory(),
+        });
+        trace.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
+        const finalTrace = trace.finish();
+        addMessage({
+          role: "assistant",
+          content: comment.message,
+          agentName: "Direttore",
+          timestamp: ts(),
+          meta: `⚡ ${(finalTrace.totalMs / 1000).toFixed(2)}s • ai-comment ${(finalTrace.totalMs / 1000).toFixed(2)}s · synthesis`,
+          governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
+          suggestedActions: comment.suggestedActions,
+          spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
+        });
+        setFlowPhase("done");
+      } catch (err: unknown) {
+        trace.finish();
+        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
+        toast.error(msg);
+        addMessage({
+          role: "assistant",
+          content: `❌ Non sono riuscito a sintetizzare i risultati precedenti: ${msg}`,
+          agentName: "Orchestratore",
+          timestamp: ts(),
+        });
+        setFlowPhase("idle");
+      }
+    },
+    [addMessage, buildHistory, governance, setFlowPhase, setShowTools, ts],
+  );
+
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
@@ -180,8 +246,25 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
 
-      // Build conversational hint from previous query context (if fresh)
-      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+      // ── SYNTHESIS BRANCH ───────────────────────────────────────────────
+      // The user asks for a summary/explanation of what we already returned.
+      // Skip DB. Reuse the snapshot rows from queryContext + ai-comment.
+      if (
+        isSynthesisIntent(text) &&
+        isContextFresh(queryContext) &&
+        queryContext?.lastResultRows &&
+        queryContext.lastResultRows.length > 0
+      ) {
+        await runSynthesis(text, queryContext);
+        return;
+      }
+
+      // Build conversational hint from previous query context (if fresh).
+      // Pass the current prompt so inheritance is suppressed when intent changes.
+      const hint = buildContextHint(
+        isContextFresh(queryContext) ? queryContext : null,
+        text,
+      );
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
@@ -313,6 +396,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      runSynthesis,
     ],
   );
 

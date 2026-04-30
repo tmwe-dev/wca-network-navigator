@@ -1,83 +1,87 @@
-## Problema osservato
+# Conversazione AI Command — Fix sintesi multi-turno
 
-Nello screenshot la lista contatti (tab Elenco di **Contatti**) ha due problemi:
+## Cosa è successo nel test dell'utente
 
-1. **Ordine colonne sbagliato**: prima colonna grande = **Località** (paese/città/CAP), poi Azienda, poi Contatto. Per i biglietti da visita invece il pattern è già **Azienda+Contatto a sinistra**, Località come info secondaria.
-2. **"Mondi e mondini"**: per ogni riga senza paese viene mostrato un riquadro col globo/bandiera bianca `🏳` come placeholder. Anche quando il paese è ignoto la cella resta visibile e occupa spazio. Risultato: tante righe identiche col globo blu generico.
+```
+T1  Utente:    "trova la transport management"
+T1  Sistema:   fast-lane → kb_entries (5 voci trovate) ✅
+            → salva queryContext { table: kb_entries, filters: [...], ttl 5min }
 
-## Cosa fare — solo UI, una sola passata
-
-### 1. Allineare la lista contatti al pattern dei biglietti
-
-Nuovo ordine colonne (lo stesso "look" della `CompactRow` BCA che già piace all'utente):
-
-```text
-[#☐]  [AZIENDA + ruolo + contatto]   [Località compatta]   [Email/quick]   [Stato + Score]   [Azioni]
+T2  Utente:    "Cosa dice la knowledge base di transport management in sintesi"
+T2  Sistema:   ❌ matcha 'kb' come domain noun → fast-lane di nuovo
+            → query DB con contextHint che eredita i filtri del T1
+            → planner aggiunge ulteriori filtri restrittivi → 0 righe
+            → "Non ho trovato voci KB" + "Riprova senza l'ultimo filtro"
 ```
 
-Cioè:
-- **Col 1** (`64px`): index `#N` + checkbox (invariato).
-- **Col 2** (grande, `minmax(220px,1.6fr)`): **AZIENDA in alto** (bold, uppercase) + bandiera piccola inline accanto al nome azienda *solo se* il paese è noto. **Sotto**: nome contatto + ruolo (`Sigra Elena · Operations`).
-- **Col 3** (`minmax(160px,200px)`): Località compatta — `Paese · Città · CAP` su una riga sola, ammessa anche solo `Città` o solo `Paese`. Nessuna icona globo, nessun riquadro.
-- **Col 4** (`minmax(180px,1.2fr)`): Email + (sotto) telefono/origine — invariato il contenuto, solo cambia la posizione.
-- **Col 5** (`minmax(140px,160px)`): Stato + Score + indicatori (LinkedIn, Sito, Business Card) — invariato.
-- **Col 6** (`72px`): Azioni (search + kebab) — invariato.
+L'utente non voleva una nuova query: voleva una **sintesi conversazionale** dei 5 risultati appena ottenuti. Il router non distingue "sintetizza/spiega ciò che hai già" da "ricerca questo nel DB".
 
-La cella "bandiera grande dedicata" (oggi col 2 da 48px) **viene rimossa**: la bandiera diventa un'emoji piccola inline accanto al nome azienda, e solo quando il paese è davvero noto.
+## Cause radice
 
-Il header della lista (`ContactListPanel`) si aggiorna di conseguenza: header `AZIENDA / LOCALITÀ / CONTATTO / STATO`.
+1. **Intent di sintesi non riconosciuto.** `looksLikeSimpleQuery` instrada al fast-lane qualsiasi prompt che contenga un domain-noun (`kb`, `partner`, ecc.), anche quando il verbo è `dice/sintesi/spiega/riassumi`. `ANALYSIS_KEYWORDS` in `localResultFormatter` esiste ma viene consultato **dopo** la query, non prima del routing.
+2. **Contesto come "shape DB", non come "risultato".** `queryContext` salva solo tabella+filtri della query precedente, non le righe restituite. Non c'è modo di rispondere "in base ai 5 record che ti ho appena mostrato" senza re-interrogare.
+3. **Eredità troppo aggressiva del contextHint.** Anche quando l'utente cambia argomento o intento, il planner riceve "EREDITA i filtri del turno precedente" e produce query iper-restrittive.
 
-### 2. Eliminare i "mondi e mondini"
+## Piano (UI/orchestrazione, nessuna modifica DB/edge)
 
-Regola dura: **se `country` è null/vuoto/non riconosciuto, non mostrare nulla** (né bandiera, né globo, né placeholder `🏳`). La cella semplicemente non emette markup. Niente più riquadri grigi col mondo blu generico ripetuto su ogni riga.
+### Step 1 — Detector "intent di sintesi/analisi" pre-routing
+File: `src/v2/ui/pages/command/lib/intentDetector.ts` (nuovo, ~40 righe).
+- Esporta `isSynthesisIntent(prompt)` con regex unificata (riassumi, sintesi/sintetizza, in sintesi, in breve, spiega, dice, cosa contiene, cosa c'è, di cosa parla, riassunto, summary, tldr, in sostanza).
+- Riusa `ANALYSIS_KEYWORDS` di `localResultFormatter` come base, ampliato.
 
-Lo stesso vale per la cella Località: se mancano paese, città e CAP, la colonna resta vuota (no `—`). Se manca solo il paese ma c'è la città, mostra solo la città.
+### Step 2 — Salvare snapshot risultati nel queryContext
+File: `src/v2/ui/pages/command/lib/queryContext.ts`.
+- Estendere `QueryContext` con:
+  - `lastResultRows?: ReadonlyArray<Record<string, unknown>>` (max 20 righe, già troncate)
+  - `lastResultTitle?: string`
+- Nuovo helper `buildContextWithRows(plan, rows)` usato da `useQueryContext.updateQueryContextFromLastPlan`.
+- Nessun cambio TTL (resta 5 min).
 
-### 3. Ordine di lettura per l'occhio
+### Step 3 — Branch "synthesis" in useCommandSubmit
+File: `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`.
+- All'ingresso di `sendMessage`, **prima** del check fast-lane:
+  - Se `isSynthesisIntent(text)` AND `queryContext` fresco AND ha `lastResultRows`:
+    - Saltare DB. Costruire un prompt al modello del tipo:  
+      `"L'utente chiede una sintesi. Ecco le {N} voci recuperate al turno precedente da {table}: {JSON troncato}. Rispondi in modo conciso, in italiano, con bullet point se utile."`
+    - Riusare `commentOnResult` (o un nuovo `synthesizeRows`) per generare la risposta via `useResultCommentary`.
+    - Non aggiornare il queryContext (resta valido per altre follow-up).
+- Mostrare in UI uno step audit `synthesis · ai-comment` invece di `Ricerca AI · 0`.
 
-Pattern visivo finale (riga tipica):
+### Step 4 — Disinnescare l'eredità filtri quando l'intent cambia
+File: `src/v2/ui/pages/command/hooks/useCommandSubmit.ts` + `lib/queryContext.ts`.
+- `buildContextHint(ctx, currentPrompt)` accetta il prompt corrente.
+- Se il prompt contiene un nome proprio nuovo, un'altra entità di dominio diversa, o un verbo di sintesi → ritorna stringa vuota (no eredita).
+- `isElliptical` resta come trigger fast-lane solo se l'intent NON è sintesi.
 
-```text
-#1  ☐   ACME LOGISTICS  🇮🇹              Roma · 00100      ✉ info@acme.it    ●NEW  ★74    [🔍 ⋯]
-        Sigra Elena · Operations Manager                    📞 +39 06 …       💬 0
-```
+### Step 5 — UI: messaggio "0 risultati" più onesto
+File: `src/v2/ui/pages/command/lib/localResultFormatter.ts`.
+- Quando count=0 e `queryContext` aveva risultati al turno precedente, mostrare anche l'azione  
+  `💬 Sintetizza i risultati precedenti` → invia il prompt `"riassumi i {word} del turno precedente"`.
 
-Riga senza paese:
+## Sezione tecnica
 
-```text
-#2  ☐   D-INGREDIENTS                    Milano            ✉ amministra…     ●…     [🔍 ⋯]
-        Sig Ravelli
-```
-
-## File toccati (solo presentazione, zero logica)
-
-1. `src/components/contacts/contactGridLayout.ts`
-   - `CONTACT_GRID_COLS` aggiornato: rimuovo la colonna 48px della bandiera, ricompongo come 6 colonne (vedi sopra).
-
-2. `src/components/contacts/ContactCard.tsx`
-   - Rimuovo la cella "bandiera grande" dedicata (righe ~115-120).
-   - Sposto Azienda+Contatto in seconda posizione (prima colonna larga).
-   - La bandiera diventa una piccola emoji inline accanto al nome azienda, **renderizzata solo se `flag` è vero** (helper `countryFlag` già ritorna stringa vuota quando il paese non è mappato — basta non mostrare il fallback `🏳`).
-   - Località compatta su una riga: `Paese · Città · CAP` con elementi opzionali (omessi se mancanti, niente `—`).
-   - Niente cambi a Stato/Score/Azioni.
-
-3. `src/components/contacts/ContactListPanel.tsx`
-   - Aggiorno l'header riga (label colonne) per riflettere il nuovo ordine: `AZIENDA / LOCALITÀ / CONTATTO / STATO` + ordinamenti corrispondenti (sort `company` su col grande, `country` su Località).
-   - I campi sortabili e i filtri inline restano gli stessi, cambia solo la posizione visiva.
-
-4. `src/components/contacts/contactHelpers.ts` (solo se serve)
-   - Verifico che `countryFlag` ritorni `""` (non `🏳`) per paesi sconosciuti. Se ritorna placeholder, lo cambio a stringa vuota.
+- Nessuna chiamata edge function aggiuntiva: la sintesi riusa `useResultCommentary` (già wrappa `aiAssistant`/commentary).
+- Limite hard: max 20 righe e max 8KB JSON nello snapshot per non gonfiare il context window.
+- Audit trace: nuovo phase `synthesis` in `startTrace`, driver `ai-comment`.
+- Test:
+  - `intentDetector.test.ts`: 6 casi (sintesi vs query vs ellittica).
+  - Aggiornare `useCommandSubmit` test esistenti con caso "T1 query → T2 sintesi non rifa DB".
+- Hard guards e RLS invariati.
 
 ## Cosa NON cambia
 
-- Hook `useContactListPanel`, dataset, filtri, segmenti, paginazione, dettaglio a destra: invariati.
-- Le altre liste (CRM su altre pagine, Network, Biglietti): invariate.
-- Logica di sort, filtri inline `Filterable`: invariata, solo riposizionata.
+- Nessuna modifica a edge function `ai-assistant`/`agent-execute`.
+- Nessuna modifica RLS, nessuna nuova tabella.
+- I 17 network WCA, BCA, outreach: nessun impatto.
+- Memoria progetto (queryKeys, DAL, AI Invocation Charter): rispettata.
 
-## Verifica post-implementazione
+## Risultato atteso sul caso utente
 
-- La prima colonna larga è **Azienda (uppercase) + Contatto sotto**, come nei biglietti.
-- Le righe senza paese **non mostrano** né globo né bandiera bianca. Nessun riquadro placeholder.
-- La cella Località mostra solo i pezzi noti (paese/città/CAP), separati da `·`.
-- Header colonne aggiornato e sort funziona sui campi giusti.
-- Nessuna regressione in dettaglio contatto, drawer, azioni, deep search.
+```
+T1  "trova la transport management" → 5 voci KB ✅ (uguale)
+T2  "Cosa dice la KB di transport management in sintesi"
+    → branch synthesis: AI legge le 5 voci snapshot e risponde con un riassunto
+      ("La KB descrive Transport Management come... 3 punti chiave: ...")
+    → niente più "Non ho trovato voci KB"
+T3  "scrivi a chi ha aperto le ultime email" → torna al planner normale
+```
