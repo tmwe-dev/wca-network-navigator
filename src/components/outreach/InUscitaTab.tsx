@@ -21,15 +21,18 @@ export function InUscitaTab() {
     queryKey: queryKeys.outreach.subCounts(),
     queryFn: async () => {
       // Badge contatori riallineati alle stesse fonti dei sotto-tab attivi:
-      // - Da Inviare: activities pending send_email (stessa fonte di DaInviareSubTab)
-      // - Inviati:    activities completed send_email (stessa fonte di InviatiSubTab)
-      const [pending, sent] = await Promise.all([
+      // - Da Inviare: activities pending send_email + email_campaign_queue pending
+      //   (4th source: email Command/Campagne — risolve "9 email Malta invisibili")
+      // - Inviati:    activities completed send_email + email_campaign_queue sent
+      const [pending, sent, cqPending, cqSent] = await Promise.all([
         supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "pending").eq("activity_type", "send_email"),
         supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").eq("activity_type", "send_email"),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
       ]);
       return {
-        pending: pending.count || 0,
-        sent: sent.count || 0,
+        pending: (pending.count || 0) + (cqPending.count || 0),
+        sent: (sent.count || 0) + (cqSent.count || 0),
       };
     },
     refetchInterval: 30000,
