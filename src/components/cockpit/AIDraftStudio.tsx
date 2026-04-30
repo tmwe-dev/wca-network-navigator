@@ -12,6 +12,19 @@ import { useAIDraftActions } from "@/hooks/useAIDraftActions";
 import MessagePipelineTracker from "@/components/messaging/MessagePipelineTracker";
 import { useMessagePipeline } from "@/hooks/useMessagePipeline";
 
+function CockpitInlinePipeline() {
+  const all = useMessagePipeline();
+  const active = all.filter((s) => !s.endedAt || Date.now() - (s.endedAt ?? 0) < 5000);
+  if (active.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      {active.map((snap) => (
+        <MessagePipelineTracker key={snap.pipelineId} snapshot={snap} />
+      ))}
+    </div>
+  );
+}
+
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
 interface AIDraftStudioProps {
