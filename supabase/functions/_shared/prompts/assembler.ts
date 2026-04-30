@@ -215,6 +215,34 @@ const EXCERPT_DEFAULT = 800;
 /** Single source of truth: tutte le doctrine + procedure indicizzate di default */
 export const DEFAULT_KB_CATEGORIES = ["doctrine", "system_doctrine", "sales_doctrine", "procedures"];
 
+/**
+ * Indice semantico schema dati (KB tag `data_schema`) — iniettato sempre come
+ * blocco fisso in ogni prompt assemblato. Cache 5 min per ridurre query DB.
+ */
+let _dataSchemaIndexCache: { content: string; ts: number } | null = null;
+const DATA_SCHEMA_TTL_MS = 5 * 60 * 1000;
+
+async function loadDataSchemaIndex(sb: ReturnType<typeof createClient>): Promise<string> {
+  const now = Date.now();
+  if (_dataSchemaIndexCache && now - _dataSchemaIndexCache.ts < DATA_SCHEMA_TTL_MS) {
+    return _dataSchemaIndexCache.content;
+  }
+  try {
+    const { data } = await sb
+      .from("kb_entries")
+      .select("content")
+      .contains("tags", ["data_schema"])
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    const content = (data as { content?: string } | null)?.content ?? "";
+    _dataSchemaIndexCache = { content, ts: now };
+    return content;
+  } catch {
+    return "";
+  }
+}
+
 // LOVABLE-93: coerenza Prompt Lab multi-dominio — KB per domini email
 /** KB categories per domain-specific classification (email routing) */
 export const DOMAIN_KB_CATEGORIES: Record<string, string[]> = {
@@ -231,9 +259,11 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   const variables = { ...args.variables };
   let kbIndex = "(KB non disponibile)";
   let kbExcerpts = "";
+  let dataSchemaIndex = "";
 
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+    dataSchemaIndex = await loadDataSchemaIndex(sb);
     // LOVABLE-93: Se dominio specificato e non è commercial, usa KB domain-aware
     let cats = args.kbCategories;
     if (!cats && args.domain && args.domain !== "commercial") {
@@ -282,6 +312,11 @@ export async function assemblePrompt(args: AssembleArgs): Promise<string> {
   if (args.domain && args.domain !== "commercial") {
     const domainNote = `\n\n## PRIORITÀ DOMINIO\nNOTA: Per email di dominio "${args.domain}", le procedure specifiche del dominio hanno priorità sulle regole commerciali generiche. La dottrina commerciale si applica SOLO al dominio "commercial".`;
     finalPrompt = resolved + domainNote;
+  }
+
+  // Iniezione fissa: indice semantico schema dati (sempre presente).
+  if (dataSchemaIndex) {
+    finalPrompt = `${finalPrompt}\n\n## 🗺️ INDICE SCHEMA DATI (dove vivono partner, contatti, indirizzi, biglietti)\n${dataSchemaIndex}`;
   }
 
   return kbExcerpts ? `${finalPrompt}\n\n## Estratti procedure rilevanti\n${kbExcerpts}` : finalPrompt;
