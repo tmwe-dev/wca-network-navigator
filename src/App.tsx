@@ -124,6 +124,7 @@ const App = () => (
                 <ConnectionBanner />
                 <RuntimeDiagnosticPanel />
                 <TraceConsole />
+                <MessagePipelineGlobalOverlay />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
