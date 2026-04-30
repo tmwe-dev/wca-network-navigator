@@ -183,7 +183,12 @@ export async function executePlan(
 
     try {
       const resolvedParams = resolveParams(step.params, current.results);
-      const promptText = JSON.stringify(resolvedParams);
+      // FIX memoria conversazionale: passiamo al tool il prompt naturale
+      // dell'utente (originalPrompt) invece della serializzazione JSON dei
+      // params del planner. Senza questo, tool come `compose-email` perdono
+      // il testo originale e non riescono più a rilevare paese, follow-up
+      // o coreferenze ("questi partner", "tutti loro", ecc.).
+      const promptText = extras?.originalPrompt ?? JSON.stringify(resolvedParams);
       const result = await withTimeout(
         tool.execute(promptText, {
           confirmed: false,
@@ -248,7 +253,7 @@ export async function executeApprovedStep(
 
   try {
     const resolvedParams = resolveParams(step.params, current.results);
-    const promptText = JSON.stringify(resolvedParams);
+    const promptText = extras?.originalPrompt ?? JSON.stringify(resolvedParams);
     const result = await withTimeout(
       tool.execute(promptText, {
         confirmed: true,
