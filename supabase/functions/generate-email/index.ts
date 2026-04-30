@@ -114,6 +114,7 @@ serve(async (req) => {
     let typeResolution: ResolvedEmailType | null = null;
     const contractWarnings: string[] = [];
     if (!standalone && partner?.id) {
+      tracer.start("contract");
       try {
         const { contract, build_warnings } = await buildEmailContract(supabase, userId, {
           engine: "generate-email",
@@ -131,19 +132,24 @@ serve(async (req) => {
         contractWarnings.push(...build_warnings, ...validation.warnings);
         if (!validation.valid) {
           // Errori bloccanti del contratto (es. blacklisted) → 422 esplicito
+          tracer.end("contract", "error", "Contratto non valido");
           return new Response(
             JSON.stringify({
               success: false,
               error: "CONTRACT_INVALID",
               errors: validation.errors,
               warnings: validation.warnings,
+              pipeline_trace: tracer.toArray(),
             }),
             { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
           );
         }
+        tracer.end("contract", contractWarnings.length > 0 ? "warn" : "done", contractWarnings[0]);
         // Detector tipo/descrizione/history/stato
+        tracer.start("detector");
         typeResolution = detectEmailType(contract);
         if (!typeResolution.proceed) {
+          tracer.end("detector", "error", "Conflitto tipo email");
           return new Response(
             JSON.stringify({
               success: false,
@@ -153,21 +159,27 @@ serve(async (req) => {
                 .filter((c) => c.severity === "blocking")
                 .map((c) => c.suggestion)
                 .join(". ")}`,
+              pipeline_trace: tracer.toArray(),
             }),
             { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } },
           );
         }
+        tracer.end("detector", "done", `Tipo: ${typeResolution.resolved_type}`);
       } catch (cerr) {
         console.warn("[generate-email] contract/detector failed (non-blocking):", cerr instanceof Error ? cerr.message : cerr);
+        tracer.end("contract", "warn", "Skipped (non-blocking)");
       }
     }
 
     // ── Assemble context ──
+    tracer.start("oracle");
     let ctx;
     try {
       ctx = await assembleContextBlocks(supabase, userId, partner!, contact, contactEmail, sourceType, quality, !!standalone, { oracle_type, use_kb, document_ids, partner_id, deep_search, authHeader, email_type_kb_categories });
+      tracer.end("oracle", "done", `KB:${(ctx.salesKBSections || []).length} history:${ctx.historyContext ? "yes" : "no"}`);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; recentContact?: unknown };
+      tracer.end("oracle", "error", err.message);
       if (err.code === "duplicate_branch") {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: err.message, recent_contact: err.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
@@ -177,6 +189,7 @@ serve(async (req) => {
     // ── LOVABLE-93: Decision Engine — evaluate before generation ──
     let decisionContext: Record<string, unknown> | undefined;
     if (!standalone && partner?.id) {
+      tracer.start("decision");
       try {
         const { evaluatePartner } = await import("../_shared/decisionEngine.ts");
         const { state: pState, actions } = await evaluatePartner(supabase, partner.id, userId);
@@ -196,9 +209,13 @@ serve(async (req) => {
               enrichmentScore: pState.enrichmentScore,
             },
           };
+          tracer.end("decision", "done", `${topAction.action} (${topAction.priority})`);
+        } else {
+          tracer.end("decision", "done", "Nessuna azione raccomandata");
         }
       } catch (decErr) {
         console.warn("[generate-email] Decision Engine evaluation failed (non-blocking):", decErr);
+        tracer.end("decision", "warn", "Skipped (non-blocking)");
       }
     }
 
@@ -222,6 +239,7 @@ serve(async (req) => {
     }
 
     // ── Build prompts ──
+    tracer.start("prompt");
     const built = buildEmailPrompts({
       partner: partner!, contact, contactEmail, sourceType, quality, language,
       goal, base_proposal, oracle_type, oracle_tone, use_kb,
@@ -241,10 +259,12 @@ serve(async (req) => {
     const blocks = built.blocks;
     const systemBlocks = built.systemBlocks;
     const promptOverridden = baseSystemPrompt !== built.systemPrompt || userPrompt !== built.userPrompt;
+    tracer.end("prompt", "done", promptOverridden ? "Override Prompt Lab" : `${(ctx.operativePromptsApplied || []).length} prompt operativi`);
 
     // ── AI call ──
     const model = getModel(quality);
     const aiStart = Date.now();
+    tracer.start("ai");
     const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_email", 1500);
     const result = await aiChat({
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
@@ -252,6 +272,7 @@ serve(async (req) => {
       timeoutMs: 45000, maxRetries: 1, max_tokens: maxTokens, context: "generate-email:" + userId.substring(0, 8),
     });
     const aiLatencyMs = Date.now() - aiStart;
+    tracer.end("ai", "done", `${model} · ${result.usage?.completionTokens ?? "?"} tok`);
 
     // ── Parse response ──
     const { subject, body } = parseEmailResponse(result.content || "", ctx.signatureBlock);
@@ -260,6 +281,7 @@ serve(async (req) => {
     let finalSubject = subject;
     let finalBody = body;
     let journalistResult: JournalistReviewOutput | null = null;
+    tracer.start("journalist");
     try {
       const optimus = await loadOptimusSettings(supabase, userId);
       if (optimus.enabled && finalBody) {
@@ -302,10 +324,17 @@ serve(async (req) => {
         if (journalistResult.verdict !== "block" && journalistResult.edited_text) {
           finalBody = journalistResult.edited_text;
         }
+        tracer.end("journalist",
+          journalistResult.verdict === "block" ? "error" : journalistResult.verdict === "warn" ? "warn" : "done",
+          journalistResult.reasoning_summary?.slice(0, 120));
+      } else {
+        tracer.end("journalist", "done", "Optimus disabilitato");
       }
     } catch (jerr) {
       console.error("[generate-email] journalistReview failed:", jerr);
+      tracer.end("journalist", "warn", "Skipped (errore non-bloccante)");
     }
+    tracer.mark("ready", "done", "Bozza pronta");
 
     // ── Credits (AFTER journalist review) ──
     // Deduct credits based on journalist verdict:
@@ -373,6 +402,7 @@ serve(async (req) => {
       contract_used: true,
       contract_warnings: contractWarnings,
       type_resolution: typeResolution,
+      pipeline_trace: tracer.toArray(),
       ...(_debug_return_prompt ? {
         _debug: {
           systemPrompt,
