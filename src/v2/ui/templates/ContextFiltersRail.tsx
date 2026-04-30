@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X, Check, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersSection } from "@/components/global/filters-drawer/BCAFiltersSection";
@@ -45,6 +46,8 @@ export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
   const context = getFilterContext(pathname);
   const [open, setOpen] = React.useState<boolean>(readInitialOpen);
+  const asideRef = React.useRef<HTMLElement | null>(null);
+  const tabRef = React.useRef<HTMLButtonElement | null>(null);
 
   React.useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, open ? "1" : "0"); } catch { /* noop */ }
@@ -65,14 +68,41 @@ export function ContextFiltersRail(): React.ReactElement | null {
     };
   }, []);
 
+  // Click-outside: chiudi quando l'utente clicca fuori dalla sidebar e fuori dalla linguetta.
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (asideRef.current?.contains(target)) return;
+      if (tabRef.current?.contains(target)) return;
+      // Ignora click su popover/dropdown/portaled overlays (Radix usa data-radix-*).
+      const el = target as HTMLElement;
+      if (el.closest?.("[data-radix-popper-content-wrapper], [role='dialog'], [role='listbox'], [role='menu'], [data-sonner-toaster]")) return;
+      setOpen(false);
+    };
+    // pointerdown intercetta anche prima che il click attivi un bottone della pagina.
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [open]);
+
+  // ESC: chiudi.
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (!context) return null;
 
   return (
     <>
       {/* Pannello a scomparsa (desktop md+). Su mobile resta il FiltersDrawer globale. */}
       <aside
+        ref={asideRef}
         className={cn(
-          "hidden md:flex shrink-0 flex-col border-r border-border/40 bg-card/45 backdrop-blur-sm transition-[width] duration-200 ease-out overflow-hidden",
+          "hidden md:flex shrink-0 flex-col border-r border-border/40 bg-card/45 backdrop-blur-sm transition-[width] duration-200 ease-out overflow-hidden relative",
           open ? "w-80" : "w-0",
         )}
         aria-label={context.title}
@@ -93,28 +123,61 @@ export function ContextFiltersRail(): React.ReactElement | null {
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4 w-80">
           {context.content}
         </div>
+        {/* Footer con bottone Applica e chiudi: i filtri sono già live, qui confermiamo e chiudiamo. */}
+        <div className="shrink-0 border-t border-border/40 bg-card/60 px-3 py-2 w-80 flex items-center justify-end gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setOpen(false)}
+            className="h-8 text-xs"
+            title="Chiudi senza modificare"
+          >
+            Chiudi
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setOpen(false)}
+            className="h-8 text-xs gap-1.5"
+            title="Applica e chiudi"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Applica e chiudi
+          </Button>
+        </div>
       </aside>
 
-      {/* Linguetta sempre visibile per riaprire il pannello quando chiuso */}
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="hidden md:flex shrink-0 items-center justify-center w-6 border-r border-border/40 bg-card/30 hover:bg-primary/10 text-primary/80 hover:text-primary transition-colors group"
-          aria-label={`Apri ${context.title}`}
-          title={context.title}
-          data-testid="context-filters-tab"
-        >
-          <div className="flex flex-col items-center gap-2 py-3">
+      {/* Linguetta sempre visibile: TOGGLE — apre quando chiusa, chiude quando aperta */}
+      <button
+        ref={tabRef}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "hidden md:flex shrink-0 items-center justify-center w-6 border-r border-border/40 transition-colors group",
+          open
+            ? "bg-primary/15 text-primary hover:bg-primary/25"
+            : "bg-card/30 text-primary/80 hover:bg-primary/10 hover:text-primary",
+        )}
+        aria-label={open ? `Chiudi ${context.title}` : `Apri ${context.title}`}
+        aria-expanded={open}
+        title={open ? "Chiudi filtri" : context.title}
+        data-testid="context-filters-tab"
+      >
+        <div className="flex flex-col items-center gap-2 py-3">
+          {open ? (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          ) : (
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-primary"
-              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-            >
-              Filtri
-            </span>
-          </div>
-        </button>
-      )}
+          )}
+          <span
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-wider",
+              open ? "text-primary" : "text-muted-foreground group-hover:text-primary",
+            )}
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            {open ? "Chiudi" : "Filtri"}
+          </span>
+        </div>
+      </button>
     </>
   );
 }
