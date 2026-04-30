@@ -256,12 +256,12 @@ async function processAction(
         // ── Caporedattore Finale: blocca l'auto-execute su verdict "block".
         // L'azione resta in pending review (ai_pending_actions) per intervento umano.
         const review = genData.journalist_review;
-        if (review && review.verdict === "block") {
+        const blockedByJournalist = review && review.verdict === "block";
+        if (blockedByJournalist) {
           executionStatus = "pending";
           executionResult.note = `Bloccato dal Giornalista AI: ${review.reasoning || "verdict=block"}. Revisione umana richiesta.`;
-        } else
-        // Step 2: If email, attempt real send
-        if (actionType === "send_email" && targetEmail && genData.body) {
+        } else if (actionType === "send_email" && targetEmail && genData.body) {
+          // Step 2: If email, attempt real send
           const sendResponse = await fetch(
             `${supabaseUrl}/functions/v1/send-email`,
             {
