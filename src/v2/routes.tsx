@@ -236,8 +236,10 @@ export function V2Routes(): React.ReactElement {
 
           {/* Campaigns + figli */}
           <Route path="campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
-          <Route path="campaigns/jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
-          <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns/jobs" replace />} />
+          {/* 2026-04-30: pagina fantasma — campaign_jobs vuota da sempre.
+              Redirect a /v2/campaigns. CampaignJobsPage resta nel codice. */}
+          <Route path="campaigns/jobs" element={<Navigate to="/v2/campaigns" replace />} />
+          <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns" replace />} />
 
           {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />

@@ -4,10 +4,9 @@
 import * as React from "react";
 import { useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard, Linkedin, Zap } from "lucide-react";
+import { ShieldCheck, Sparkles, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard, Linkedin, Zap } from "lucide-react";
 
 const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
-const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
 const LearningDashboard = lazy(() => import("@/components/ai-control/LearningDashboard").then(m => ({ default: m.LearningDashboard })));
 const AIGeneratedActivitiesPanel = lazy(() => import("@/components/ai-control/AIGeneratedActivitiesPanel").then(m => ({ default: m.AIGeneratedActivitiesPanel })));
 const SupervisorFeedPanel = lazy(() => import("@/components/ai-control/SupervisorFeedPanel").then(m => ({ default: m.SupervisorFeedPanel })));
@@ -17,7 +16,10 @@ const CostDashboardWidget = lazy(() => import("@/components/ai-control/CostDashb
 const LinkedInLimitsPanel = lazy(() => import("@/components/ai-control/LinkedInLimitsPanel").then(m => ({ default: m.LinkedInLimitsPanel })));
 const TokenSettingsPanel = lazy(() => import("@/components/ai-control/TokenSettingsPanel").then(m => ({ default: m.TokenSettingsPanel })));
 
-type SubView = "dashboard" | "pending" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs" | "linkedin-limits" | "token-settings";
+// 2026-04-30: rimossa sub-view "pending" (PendingActionsPanel).
+// La gestione delle azioni AI in attesa di approvazione resta UNICAMENTE
+// in /v2/outreach → tab "Coda AI" per evitare doppi punti d'ingresso.
+type SubView = "dashboard" | "learning" | "ai-activities" | "supervisor" | "optimus" | "controls" | "costs" | "linkedin-limits" | "token-settings";
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -42,9 +44,6 @@ export function AIControlCenterPage(): React.ReactElement {
       <div className="flex items-center gap-2 flex-wrap">
         <Button variant={subView === "dashboard" ? "default" : "outline"} size="sm" onClick={() => setSubView("dashboard")}>
           <Sparkles className="mr-2 h-4 w-4" /> Dashboard
-        </Button>
-        <Button variant={subView === "pending" ? "default" : "outline"} size="sm" onClick={() => setSubView("pending")}>
-          <Clock className="mr-2 h-4 w-4" /> Pending Actions
         </Button>
         <Button variant={subView === "learning" ? "default" : "outline"} size="sm" onClick={() => setSubView("learning")}>
           <BarChart3 className="mr-2 h-4 w-4" /> Learning Insights
@@ -76,7 +75,6 @@ export function AIControlCenterPage(): React.ReactElement {
       <div className="flex-1">
         <Suspense fallback={<TabFallback />}>
           {subView === "dashboard" && <AIAutomationDashboard />}
-          {subView === "pending" && <PendingActionsPanel />}
           {subView === "learning" && <LearningDashboard />}
           {subView === "ai-activities" && <AIGeneratedActivitiesPanel />}
           {subView === "supervisor" && <SupervisorFeedPanel />}

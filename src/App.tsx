@@ -53,7 +53,7 @@ const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "ra/explorer": "/v2/ra-explorer",
   "ra/scraping": "/v2/ra-scraping",
   "campaigns": "/v2/campaigns",
-  "campaign-jobs": "/v2/campaigns/jobs",
+  "campaign-jobs": "/v2/campaigns",
   "diagnostics": "/v2/settings/diagnostics",
   "guida": "/v2/guida",
   "ai-lab": "/v2/ai-staff/lab",
