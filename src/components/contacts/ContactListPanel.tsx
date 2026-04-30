@@ -45,8 +45,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const h = useContactListPanel();
   const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
     contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
-    actions, tabs, totalAllGroups, groupBy, activeGroupTab, wcaMatch,
-    setCrmGroupTab, setCrmWcaMatch, setGroupBy,
+    actions, tabs, totalAllGroups, groupBy, activeGroupTab,
+    setCrmGroupTab, setGroupBy,
     addInlineFilter, removeInlineFilter, handleSortClick, handleTabClick,
     handleDelete, handleDeduplicate, handleWcaMatch } = h;
 
