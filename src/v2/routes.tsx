@@ -154,6 +154,18 @@ function PartnerHubAlias(): React.ReactElement {
   return guardedPage(NetworkPage, "PartnerHub");
 }
 
+/**
+ * Alias /v2/contatti/* → /v2/pipeline/* preservando sub-path e query string.
+ * Esempi:
+ *   /v2/contatti/kanban?origine=crm → /v2/pipeline/kanban?origine=crm
+ *   /v2/contatti/contacts            → /v2/pipeline/contacts
+ */
+function ContattiAlias(): React.ReactElement {
+  const location = useLocation();
+  const subPath = location.pathname.replace(/^\/v2\/contatti/, "") || "/contacts";
+  return <Navigate to={`/v2/pipeline${subPath}${location.search}`} replace />;
+}
+
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
