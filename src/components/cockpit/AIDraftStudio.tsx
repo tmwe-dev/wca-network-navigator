@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypewriterText } from "./TypewriterText";
 import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 import { useAIDraftActions } from "@/hooks/useAIDraftActions";
+import MessagePipelineTracker from "@/components/messaging/MessagePipelineTracker";
+import { useMessagePipeline } from "@/hooks/useMessagePipeline";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -85,6 +87,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
         </TabsList>
 
         <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 space-y-3">
+          <CockpitInlinePipeline />
           {draft.scrapingPhase === "reviewing" && draft.linkedinProfile && (
             <ReviewingState draft={draft} onGenerateAfterReview={onGenerateAfterReview} />
           )}
