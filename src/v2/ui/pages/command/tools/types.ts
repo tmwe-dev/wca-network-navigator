@@ -35,7 +35,7 @@ export interface ToolResultMeta {
   readonly sourceLabel: string;
   /** Riferimenti tracciabili da esporre nell'audit del messaggio Direttore. */
   readonly auditRefs?: ReadonlyArray<{
-    readonly kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context" | "table" | "keyword";
+    readonly kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context" | "table" | "column" | "keyword";
     readonly label: string;
     readonly value?: string;
   }>;
