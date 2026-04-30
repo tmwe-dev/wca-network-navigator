@@ -112,7 +112,9 @@ export function useCommandSubmit(state: CommandStateApi) {
   const renderPlanWithContext = useCallback(
     async (userPrompt: string, final: PlanExecutionState, trace?: TraceBuilder) => {
       await renderPlanCompletion(userPrompt, final, commentOnResult, trace);
-      updateQueryContextFromLastPlan();
+      const lastStep = final.steps[final.steps.length - 1];
+      const lastResult = lastStep ? final.results[lastStep.stepNumber] : undefined;
+      updateQueryContextFromLastPlan(lastResult);
     },
     [renderPlanCompletion, commentOnResult, updateQueryContextFromLastPlan],
   );
