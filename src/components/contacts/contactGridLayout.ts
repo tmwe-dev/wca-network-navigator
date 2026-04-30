@@ -4,8 +4,8 @@
  *   [#☐] [Località: 🏳 paese · città · CAP] [Azienda · Ruolo] [Contatto · Email] [Stato · Score] [Azioni]
  */
 export const CONTACT_GRID_COLS =
-  "56px minmax(150px,200px) minmax(160px,1.2fr) minmax(160px,1.4fr) minmax(120px,140px) 64px";
-export const CONTACT_GRID_CLASS = "grid items-center gap-x-2";
+  "64px 48px minmax(180px,220px) minmax(200px,1.4fr) minmax(200px,1.4fr) minmax(140px,160px) 72px";
+export const CONTACT_GRID_CLASS = "grid items-center gap-x-3";
 
 /** Capitalize first letter, rest lowercase */
 export function capitalizeLabel(s: string | null | undefined): string {
