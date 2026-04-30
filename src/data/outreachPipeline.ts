@@ -12,9 +12,9 @@ type MissionActionUpdate = Database["public"]["Tables"]["mission_actions"]["Upda
 // ── Pending items (Da Inviare) ──
 export async function findPendingOutreach() {
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-  if (!user) return { activities: [], missionActions: [], pendingActions: [] };
+  if (!user) return { activities: [], missionActions: [], pendingActions: [], campaignQueue: [] };
 
-  const [actRes, maRes, paRes] = await Promise.all([
+  const [actRes, maRes, paRes, cqRes] = await Promise.all([
     supabase.from("activities")
       .select("*, partners(company_name, country_code, logo_url)")
       .eq("user_id", user.id)
@@ -35,21 +35,32 @@ export async function findPendingOutreach() {
       .in("action_type", ["send_email", "send_whatsapp", "reply", "forward"])
       .order("created_at", { ascending: false })
       .limit(50),
+    // 4th source: email campaigns (Command-generated emails, manual campaigns).
+    // These live in email_campaign_queue (status='pending') and were previously
+    // invisible in the Outreach pipeline. Filter by user_id when present so each
+    // operator only sees their own; legacy rows without user_id are still shown.
+    supabase.from("email_campaign_queue")
+      .select("id, draft_id, partner_id, recipient_email, recipient_name, subject, status, scheduled_at, created_at, user_id, email_drafts!inner(category, recipient_type)")
+      .eq("status", "pending")
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   return {
     activities: actRes.data ?? [],
     missionActions: maRes.data ?? [],
     pendingActions: paRes.data ?? [],
+    campaignQueue: cqRes.data ?? [],
   };
 }
 
 // ── Sent items (Inviati) ──
 export async function findSentOutreach() {
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-  if (!user) return { activities: [], missionActions: [] };
+  if (!user) return { activities: [], missionActions: [], campaignQueue: [] };
 
-  const [actRes, maRes] = await Promise.all([
+  const [actRes, maRes, cqRes] = await Promise.all([
     supabase.from("activities")
       .select("*, partners(company_name, country_code, logo_url)")
       .eq("user_id", user.id)
@@ -63,11 +74,17 @@ export async function findSentOutreach() {
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(100),
+    supabase.from("email_campaign_queue")
+      .select("id, draft_id, partner_id, recipient_email, recipient_name, subject, status, sent_at, created_at, user_id")
+      .eq("status", "sent")
+      .order("sent_at", { ascending: false })
+      .limit(100),
   ]);
 
   return {
     activities: actRes.data ?? [],
     missionActions: maRes.data ?? [],
+    campaignQueue: cqRes.data ?? [],
   };
 }
 
