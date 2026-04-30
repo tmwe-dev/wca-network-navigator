@@ -59,6 +59,32 @@ function bulkActionsFor(table: string): readonly { id: string; label: string; pr
   }
 }
 
+/** Costruisce i riferimenti tracciabili (tabelle + keyword filtri) dai piani. */
+function buildAuditRefsFromPlans(plans: readonly QueryPlan[]): ToolResult["meta"] extends infer M ? M extends { auditRefs?: infer R } ? R : never : never {
+  const refs: { kind: "table" | "keyword"; label: string; value?: string }[] = [];
+  const seenTables = new Set<string>();
+  const seenKeywords = new Set<string>();
+  for (const plan of plans) {
+    if (plan.table && plan.table !== "INVALID" && !seenTables.has(plan.table)) {
+      seenTables.add(plan.table);
+      refs.push({ kind: "table", label: plan.table, value: plan.rationale });
+    }
+    for (const f of plan.filters ?? []) {
+      const valueStr = Array.isArray(f.value)
+        ? f.value.join(",")
+        : f.value === null
+          ? "null"
+          : String(f.value);
+      const label = `${f.column} ${f.op} ${valueStr}`.slice(0, 60);
+      if (!seenKeywords.has(label)) {
+        seenKeywords.add(label);
+        refs.push({ kind: "keyword", label, value: `${plan.table}.${f.column}` });
+      }
+    }
+  }
+  return refs as never;
+}
+
 function formatCellValue(v: unknown): string | number | null {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "✓" : "✗";
