@@ -56,7 +56,7 @@ export interface AuditStep {
 
 export interface AuditReference {
   /** Tipo riferimento. */
-  kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context";
+  kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context" | "table" | "keyword";
   /** Etichetta del riferimento. */
   label: string;
   /** Valore o id (es. nome prompt, sezione KB, model name). */
