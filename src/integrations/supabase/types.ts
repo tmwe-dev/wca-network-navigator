@@ -6755,7 +6755,6 @@ export type Database = {
           raw_profile_html: string | null
           raw_profile_markdown: string | null
           status_reason: string | null
-          tmwe_anagrafica_id: string | null
           updated_at: string | null
           user_id: string | null
           wca_id: number | null
@@ -6802,7 +6801,6 @@ export type Database = {
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
           status_reason?: string | null
-          tmwe_anagrafica_id?: string | null
           updated_at?: string | null
           user_id?: string | null
           wca_id?: number | null
@@ -6849,7 +6847,6 @@ export type Database = {
           raw_profile_html?: string | null
           raw_profile_markdown?: string | null
           status_reason?: string | null
-          tmwe_anagrafica_id?: string | null
           updated_at?: string | null
           user_id?: string | null
           wca_id?: number | null
@@ -8402,204 +8399,6 @@ export type Database = {
           is_active?: boolean
           name?: string
           role?: string | null
-        }
-        Relationships: []
-      }
-      tmwe_anagrafica_cache: {
-        Row: {
-          fetched_at: string
-          id_anagrafica: string
-          payload: Json
-          pi_cf: string | null
-          rag_soc: string | null
-          tipo: string | null
-        }
-        Insert: {
-          fetched_at?: string
-          id_anagrafica: string
-          payload: Json
-          pi_cf?: string | null
-          rag_soc?: string | null
-          tipo?: string | null
-        }
-        Update: {
-          fetched_at?: string
-          id_anagrafica?: string
-          payload?: Json
-          pi_cf?: string | null
-          rag_soc?: string | null
-          tipo?: string | null
-        }
-        Relationships: []
-      }
-      tmwe_oauth_token: {
-        Row: {
-          access_token: string
-          expires_at: string
-          id: number
-          scope: string | null
-          token_type: string
-          updated_at: string
-        }
-        Insert: {
-          access_token: string
-          expires_at: string
-          id?: number
-          scope?: string | null
-          token_type?: string
-          updated_at?: string
-        }
-        Update: {
-          access_token?: string
-          expires_at?: string
-          id?: number
-          scope?: string | null
-          token_type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tmwe_quotes: {
-        Row: {
-          created_at: string
-          currency: string | null
-          deleted_at: string | null
-          id: string
-          partner_id: string | null
-          request: Json
-          response: Json
-          tmwe_listino: string | null
-          total_amount: number | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          currency?: string | null
-          deleted_at?: string | null
-          id?: string
-          partner_id?: string | null
-          request: Json
-          response: Json
-          tmwe_listino?: string | null
-          total_amount?: number | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          currency?: string | null
-          deleted_at?: string | null
-          id?: string
-          partner_id?: string | null
-          request?: Json
-          response?: Json
-          tmwe_listino?: string | null
-          total_amount?: number | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tmwe_quotes_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tmwe_quotes_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "vw_partner_quality_scores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tmwe_shipments: {
-        Row: {
-          awb: string | null
-          created_at: string
-          deleted_at: string | null
-          id: string
-          last_synced_at: string
-          partner_id: string | null
-          payload: Json
-          status: string
-          tmwe_id: string
-          tracking_url: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          awb?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          last_synced_at?: string
-          partner_id?: string | null
-          payload: Json
-          status?: string
-          tmwe_id: string
-          tracking_url?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          awb?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          last_synced_at?: string
-          partner_id?: string | null
-          payload?: Json
-          status?: string
-          tmwe_id?: string
-          tracking_url?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tmwe_shipments_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tmwe_shipments_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "vw_partner_quality_scores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tmwe_webhook_events: {
-        Row: {
-          event_type: string
-          id: string
-          payload: Json
-          received_at: string
-          signature_ok: boolean
-          tmwe_id: string | null
-        }
-        Insert: {
-          event_type: string
-          id?: string
-          payload: Json
-          received_at?: string
-          signature_ok: boolean
-          tmwe_id?: string | null
-        }
-        Update: {
-          event_type?: string
-          id?: string
-          payload?: Json
-          received_at?: string
-          signature_ok?: boolean
-          tmwe_id?: string | null
         }
         Relationships: []
       }
