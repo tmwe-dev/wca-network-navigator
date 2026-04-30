@@ -238,6 +238,37 @@ DECISION ENGINE (raccomandazione automatica):
       }
     }
 
+    // ── Email Contract + Type Detector (solo canale email con partner) ──
+    // Allinea generate-outreach a generate-email: blocca conflitti tipo/storia
+    // (es. "primo_contatto" su lead già contactato) e violazioni del contratto
+    // (blacklisted, no contact email, ecc.) con 422 espliciti.
+    let typeResolutionOutreach: ReturnType<typeof JSON.parse> | null = null;
+    const contractWarningsOutreach: string[] = [];
+    let contractUsed = false;
+    if (ch === "email" && ctx.partnerId) {
+      const cr = await runEmailContract(supabase, userId, {
+        engine: "command", // generate-outreach è invocato da Cockpit/Cadence/Agent
+        operation: "generate",
+        partnerId: ctx.partnerId,
+        contactId: null,
+        emailType: email_type_id || decision.email_type,
+        emailDescription: goal || base_proposal || "",
+        objective: goal || undefined,
+        language: effectiveLanguage,
+        fallbackPartnerName: company_name || undefined,
+        fallbackContactEmail: contact_email || undefined,
+      });
+      contractUsed = !!cr.contract;
+      contractWarningsOutreach.push(...cr.buildWarnings, ...cr.validationWarnings);
+      typeResolutionOutreach = cr.typeResolution;
+      if (cr.blocking && cr.blockingResponse) {
+        return new Response(JSON.stringify(cr.blockingResponse.body), {
+          status: cr.blockingResponse.status,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // ── Build prompts ──
     let recipientName = "";
     if (contact_name && isLikelyPersonName(contact_name)) recipientName = contact_name;
