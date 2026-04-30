@@ -85,7 +85,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   return (
     <div
       className={cn(
-        "cursor-pointer border-b border-border/50 transition-colors text-xs",
+        "cursor-pointer border-b border-border/50 transition-colors",
         inHolding && "border-l-2 border-l-muted-foreground/40",
         isActive
           ? isAiProcessed ? "bg-primary/15" : "bg-primary/15"
@@ -96,13 +96,13 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
     >
       {/* Single dense row */}
       <div
-        className={cn(CONTACT_GRID_CLASS, "px-2 py-1.5")}
+        className={cn(CONTACT_GRID_CLASS, "px-3 py-2.5")}
         style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
       >
         {/* Col 1: # + Checkbox */}
         <div className="flex items-center gap-1" data-no-filter>
           {typeof index === "number" && (
-            <span className="text-[10px] text-primary/70 font-mono font-semibold w-[24px] text-right">#{index + 1}</span>
+            <span className="text-xs text-primary/70 font-mono font-semibold w-[28px] text-right">#{index + 1}</span>
           )}
           <Checkbox
             checked={isSelected}
@@ -112,55 +112,57 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Col 2: Località — flag + paese · città · CAP */}
-        <div className="min-w-0 overflow-hidden flex items-center gap-1.5">
-          <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="text-base leading-none shrink-0">
+        {/* Col 2: Bandiera grande (slot dedicato, 3x più visibile) */}
+        <div className="flex items-center justify-center">
+          <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="text-3xl leading-none shrink-0 w-10 h-10 flex items-center justify-center rounded-md ring-1 ring-border/50 bg-muted/20">
             <span aria-hidden>{flag || "🏳"}</span>
           </Filterable>
-          <div className="min-w-0 overflow-hidden leading-tight">
-            <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="block truncate text-[11px] text-foreground font-medium">
-              {cCountry ? capitalizeLabel(cCountry) : <span className="text-muted-foreground/50">—</span>}
-            </Filterable>
-            <div className="flex items-center gap-1 min-w-0">
-              {cCity ? (
-                <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-[10px] text-muted-foreground">
-                  {capitalizeLabel(cCity)}
-                </Filterable>
-              ) : (
-                <span className="text-muted-foreground/40 text-[10px]">—</span>
-              )}
-              {cZip && (
-                <Filterable field="zip" value={cZip} onFilterClick={onFilterClick} className="text-[10px] font-mono text-muted-foreground/80 shrink-0">
-                  · {cZip}
-                </Filterable>
-              )}
-            </div>
+        </div>
+
+        {/* Col 3: Località — paese · città · CAP */}
+        <div className="min-w-0 overflow-hidden leading-tight">
+          <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="block truncate text-sm text-foreground font-semibold">
+            {cCountry ? capitalizeLabel(cCountry) : <span className="text-foreground/50">—</span>}
+          </Filterable>
+          <div className="flex items-center gap-1 min-w-0 mt-0.5">
+            {cCity ? (
+              <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-xs text-foreground/70">
+                {capitalizeLabel(cCity)}
+              </Filterable>
+            ) : (
+              <span className="text-foreground/40 text-xs">—</span>
+            )}
+            {cZip && (
+              <Filterable field="zip" value={cZip} onFilterClick={onFilterClick} className="text-xs font-mono text-foreground/60 shrink-0">
+                · {cZip}
+              </Filterable>
+            )}
           </div>
         </div>
 
-        {/* Col 3: Azienda + Ruolo */}
+        {/* Col 4: Azienda + Ruolo + Origine */}
         <div className="min-w-0 overflow-hidden leading-tight">
           <div className="flex items-center gap-1 min-w-0">
             <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
               className={cn(
-                "font-semibold truncate text-[11px]",
-                !rawCompany ? "text-muted-foreground italic" : "text-foreground",
+                "font-bold truncate text-sm",
+                !rawCompany ? "text-foreground/50 italic" : "text-foreground",
               )}>
               {displayCompany}
             </Filterable>
             {isWcaMatched && (
-              <Badge variant="secondary" className="text-[8px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0 shrink-0">WCA</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-500/25 text-emerald-300 border-0 shrink-0 font-semibold">WCA</Badge>
             )}
-            {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
-            {quality === "poor" && <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />}
+            {isAiProcessed && <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />}
+            {quality === "poor" && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
           </div>
-          <div className="flex items-center gap-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
             {cPosition && (
-              <span className="text-[10px] text-primary/70 truncate">{capitalizeLabel(cPosition)}</span>
+              <span className="text-xs text-foreground/70 truncate">{capitalizeLabel(cPosition)}</span>
             )}
             {cOrigin && (
               <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-                <span className="text-[9px] px-1 py-0 rounded bg-primary/15 text-primary font-semibold ml-auto shrink-0">
+                <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-semibold ml-auto shrink-0 uppercase tracking-wide">
                   {capitalizeLabel(cOrigin)}
                 </span>
               </Filterable>
@@ -168,35 +170,35 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           </div>
         </div>
 
-        {/* Col 4: Contatto + Email */}
+        {/* Col 5: Contatto + Email */}
         <div className="min-w-0 overflow-hidden leading-tight">
           {displayContact ? (
             <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
-              <User className="w-3 h-3 text-muted-foreground shrink-0" />
-              <span className="truncate text-[11px] text-foreground/90">{displayContact}</span>
+              <User className="w-3.5 h-3.5 text-foreground/60 shrink-0" />
+              <span className="truncate text-sm text-foreground font-medium">{displayContact}</span>
             </Filterable>
           ) : (
-            <span className="text-muted-foreground/40 text-[10px]">—</span>
+            <span className="text-foreground/40 text-xs">—</span>
           )}
-          <div className="flex items-center gap-1 min-w-0">
+          <div className="flex items-center gap-1 min-w-0 mt-0.5">
             {cEmail ? (
               <>
-                <Mail className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground truncate text-[10px]">{cEmail}</span>
+                <Mail className="w-3 h-3 text-foreground/60 shrink-0" />
+                <span className="text-foreground/80 truncate text-xs">{cEmail}</span>
               </>
             ) : (
-              <span className="text-muted-foreground/40 italic text-[10px]">no email</span>
+              <span className="text-foreground/40 italic text-xs">no email</span>
             )}
           </div>
         </div>
 
-        {/* Col 5: Stato + Score + indicatori */}
-        <div className="min-w-0 overflow-hidden flex flex-col gap-0.5">
+        {/* Col 6: Stato + Score + indicatori */}
+        <div className="min-w-0 overflow-hidden flex flex-col gap-1">
           <div className="flex items-center gap-1 min-w-0">
             <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
             {c.lead_status && c.lead_status !== "new" && (
               <Filterable field="leadStatus" value={c.lead_status} onFilterClick={onFilterClick}>
-                <span className="text-[9px] text-primary bg-primary/15 px-1 py-0 rounded-full font-medium truncate">
+                <span className="text-[11px] text-primary bg-primary/20 px-1.5 py-0.5 rounded-full font-semibold truncate">
                   {c.lead_status}
                 </span>
               </Filterable>
@@ -208,33 +210,37 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           <div className="flex items-center gap-1.5">
             <LeadScoreBadge score={c.lead_score ?? undefined} breakdown={c.lead_score_breakdown as Record<string, number> | undefined} />
             <span className={cn(
-              "inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0 rounded-full",
+              "inline-flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full",
               (c.interaction_count ?? 0) > 0 ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground",
             )}>
-              <MessageCircle className="w-2.5 h-2.5" />{c.interaction_count || 0}
+              <MessageCircle className="w-3 h-3" />{c.interaction_count || 0}
             </span>
             {linkedinUrl && (
-              <span className="p-0.5 rounded bg-muted" title={String(linkedinUrl)}>
-                <Linkedin className="w-2.5 h-2.5 text-muted-foreground" />
+              <span className="p-1 rounded bg-sky-500/15" title="LinkedIn presente">
+                <Linkedin className="w-3 h-3 text-sky-300" />
               </span>
             )}
             {companyWebsite && (
-              <span className="p-0.5 rounded bg-emerald-500/10" title="Sito presente">
-                <Globe2 className="w-2.5 h-2.5 text-emerald-400" />
+              <span className="p-1 rounded bg-emerald-500/15" title="Sito presente">
+                <Globe2 className="w-3 h-3 text-emerald-300" />
               </span>
             )}
-            {hasBusinessCard && <Handshake className="w-2.5 h-2.5 text-emerald-400" />}
+            {hasBusinessCard && (
+              <span className="p-1 rounded bg-amber-500/15" title="Business Card">
+                <Handshake className="w-3 h-3 text-amber-300" />
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Col 6: Azioni */}
+        {/* Col 7: Azioni */}
         <div className="flex items-center justify-end gap-0.5" data-no-filter>
           <button
             onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
-            className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors text-muted-foreground hover:text-primary"
+            className="shrink-0 p-1.5 rounded hover:bg-primary/20 transition-colors text-foreground/60 hover:text-primary"
             title="Visualizza dettaglio"
           >
-            <Search className="w-3.5 h-3.5" />
+            <Search className="w-4 h-4" />
           </button>
           <ContactActionMenu contact={adaptImportedContact(c)} />
         </div>
