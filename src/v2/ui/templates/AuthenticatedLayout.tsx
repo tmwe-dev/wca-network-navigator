@@ -85,7 +85,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     document.title = `${title} — WCA Partners`;
-    setSidebarOpen(false);
+    // sidebar persistente: nessun reset al cambio rotta
   }, [location.pathname]);
 
   // Session readiness sourced from centralized AuthProvider
@@ -370,7 +370,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <BackgroundServices>
                           {({ outreachQueue, globalSync }) => (
                             <LayoutHeader
-                              onToggleSidebar={() => setSidebarOpen(o => !o)}
+                              onToggleSidebar={toggleSidebar}
                               onOpenCommandPalette={() => setCommandOpen(true)}
                               onAiClick={() => setIntelliflowOpen(true)}
                               onAddContact={() => setAddContactOpen(true)}
