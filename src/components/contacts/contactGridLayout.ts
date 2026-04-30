@@ -1,10 +1,10 @@
 /** Shared grid layout for ContactCard and ContactListPanel header.
  *
- * Single-row, high-density layout (apr 2026 redesign):
- *   [#☐] [Località: 🏳 paese · città · CAP] [Azienda · Ruolo] [Contatto · Email] [Stato · Score] [Azioni]
+ * Single-row, high-density layout (apr 2026 redesign — BCA-aligned):
+ *   [#☐] [AZIENDA + Contatto/Ruolo] [Località compatta] [Email/Telefono] [Stato · Score] [Azioni]
  */
 export const CONTACT_GRID_COLS =
-  "64px 48px minmax(180px,220px) minmax(200px,1.4fr) minmax(200px,1.4fr) minmax(140px,160px) 72px";
+  "64px minmax(220px,1.6fr) minmax(160px,200px) minmax(180px,1.2fr) minmax(140px,160px) 72px";
 export const CONTACT_GRID_CLASS = "grid items-center gap-x-3";
 
 /** Capitalize first letter, rest lowercase */
