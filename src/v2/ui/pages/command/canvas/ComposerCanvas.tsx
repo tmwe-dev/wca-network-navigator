@@ -475,7 +475,7 @@ export default function ComposerCanvas({
               ) : (
                 <Send className="w-3.5 h-3.5" />
               )}
-              Invia tutte ({batchDrafts.filter((d) => d.status === "ok").length})
+              Metti in uscita ({batchDrafts.filter((d) => d.status === "ok").length})
             </motion.button>
           )}
 
@@ -492,7 +492,7 @@ export default function ComposerCanvas({
             ) : (
               <Send className="w-3.5 h-3.5" />
             )}
-            {isBatch ? "Invia questa" : "Invia"}
+            {isBatch ? "Rivedi questa" : "Invia"}
           </motion.button>
         </div>
       </div>
