@@ -7,6 +7,7 @@ import FlowCanvas from "../canvas/FlowCanvas";
 import ComposerCanvas from "../canvas/ComposerCanvas";
 import TableCanvas from "../canvas/TableCanvas";
 import { X } from "lucide-react";
+import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 
 interface CommandOutputProps {
   canvas: CanvasType;
@@ -220,6 +221,25 @@ export function CommandOutput({
                 detectedTone={liveResult.detectedTone}
                 onClose={onClose}
               />
+            )}
+          {canvas === "live-approval" &&
+            liveResult &&
+            liveResult.kind === "approval" && (
+              <div className="float-panel p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[13px] font-light text-foreground">{liveResult.title}</h3>
+                  <button onClick={onClose} className="text-muted-foreground/60 hover:text-foreground text-[10px]">✕</button>
+                </div>
+                <ApprovalPanel
+                  visible
+                  title={liveResult.title}
+                  description={liveResult.description}
+                  details={liveResult.details.map((d) => ({ label: d.label, value: d.value }))}
+                  governance={liveResult.governance}
+                  onApprove={() => onBulkAction({ id: "approve", label: "Conferma", promptTemplate: "" }, [])}
+                  onCancel={onClose}
+                />
+              </div>
             )}
         </motion.div>
       )}
