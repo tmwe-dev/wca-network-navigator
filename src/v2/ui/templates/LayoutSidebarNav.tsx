@@ -30,12 +30,14 @@ interface SidebarProps {
   onSignOut: () => void;
   onMobileClose?: () => void;
   onOpenCommandPalette?: () => void;
+  /** When true, render compact icon-only mode (w-14 column). */
+  collapsed?: boolean;
 }
 
 export function LayoutSidebarNav({
   profileName, wcaStatusColor, wcaStatusLabel, wcaSessionActive,
   onWcaReconnect, isDark, onToggleTheme, onSignOut, onMobileClose,
-  onOpenCommandPalette,
+  onOpenCommandPalette, collapsed = false,
 }: SidebarProps): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,31 +50,41 @@ export function LayoutSidebarNav({
 
   return (
     <>
-      <div className="p-4 border-b border-border/50">
+      <div className={cn("border-b border-border/50", collapsed ? "p-2" : "p-4")}>
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
             <Command className="h-4 w-4 text-primary" />
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-foreground leading-tight">WCA Partners</h2>
-            {profileName ? (
-              <p className="text-[10px] text-muted-foreground truncate">{profileName}</p>
-            ) : null}
-          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-foreground leading-tight truncate">WCA Partners</h2>
+              {profileName ? (
+                <p className="text-[10px] text-muted-foreground truncate">{profileName}</p>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
       {onOpenCommandPalette && (
         <button
           onClick={() => { onOpenCommandPalette(); onMobileClose?.(); }}
-          className="mx-3 mt-2 mb-1 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors"
+          className={cn(
+            "mt-2 mb-1 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/15 transition-colors",
+            collapsed ? "mx-2 justify-center px-2 py-2" : "mx-3 px-3 py-2",
+          )}
           aria-label="Apri ricerca rapida"
           data-testid="sidebar-command-button"
+          title={collapsed ? "Cerca rapida (⌘K)" : undefined}
         >
           <Command className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">Cerca rapida</span>
-          <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-            ⌘K
-          </kbd>
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Cerca rapida</span>
+              <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+                ⌘K
+              </kbd>
+            </>
+          )}
         </button>
       )}
       <nav className="flex-1 min-h-0 p-2 overflow-y-auto overscroll-contain" data-testid="main-sidebar">
@@ -93,16 +105,18 @@ export function LayoutSidebarNav({
                 data-testid={`nav-${navId}`}
                 onMouseEnter={() => prefetchRoute(navItem.path)}
                 onClick={() => { navigate(navItem.path); onMobileClose?.(); }}
+                title={collapsed ? label : undefined}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors capitalize",
+                  "flex w-full items-center rounded-md text-sm font-medium transition-colors capitalize",
+                  collapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
                   isActive(navItem.path)
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
                 )}
               >
                 {navItem.icon}
-                {label}
-                {navItem.badge && (
+                {!collapsed && label}
+                {!collapsed && navItem.badge && (
                   <span className="ml-auto text-[9px] font-bold uppercase bg-primary/15 text-primary px-1.5 py-0.5 rounded">
                     {navItem.badge}
                   </span>
@@ -111,30 +125,44 @@ export function LayoutSidebarNav({
             );
           })}
         </div>
-        <OrphanPagesNav onNavigate={onMobileClose} />
+        {!collapsed && <OrphanPagesNav onNavigate={onMobileClose} />}
       </nav>
       <div className="p-2 border-t border-border/50 space-y-1">
         <button
           onClick={onWcaReconnect}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+          className={cn(
+            "flex w-full items-center rounded-md text-xs text-muted-foreground hover:bg-accent/50 transition-colors",
+            collapsed ? "justify-center px-2 py-1.5" : "gap-2 px-3 py-1.5",
+          )}
+          title={collapsed ? wcaStatusLabel : undefined}
         >
           {wcaSessionActive === true ? (
             <Wifi className={cn("h-3.5 w-3.5", wcaStatusColor)} />
           ) : (
             <WifiOff className={cn("h-3.5 w-3.5", wcaStatusColor)} />
           )}
-          <span className={wcaStatusColor}>{wcaStatusLabel}</span>
+          {!collapsed && <span className={wcaStatusColor}>{wcaStatusLabel}</span>}
         </button>
         <button
           onClick={onToggleTheme}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
+          className={cn(
+            "flex w-full items-center rounded-md text-xs text-muted-foreground hover:bg-accent/50 transition-colors",
+            collapsed ? "justify-center px-2 py-1.5" : "gap-2 px-3 py-1.5",
+          )}
+          title={collapsed ? (isDark ? t("common.light_mode") : t("common.dark_mode")) : undefined}
         >
           {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-          {isDark ? t("common.light_mode") : t("common.dark_mode")}
+          {!collapsed && (isDark ? t("common.light_mode") : t("common.dark_mode"))}
         </button>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={onSignOut}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("w-full gap-2", collapsed ? "justify-center px-2" : "justify-start")}
+          onClick={onSignOut}
+          title={collapsed ? String(t("common.logout")) : undefined}
+        >
           <LogOut className="h-4 w-4" />
-          {t("common.logout")}
+          {!collapsed && t("common.logout")}
         </Button>
       </div>
     </>
