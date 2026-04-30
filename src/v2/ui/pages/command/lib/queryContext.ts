@@ -7,6 +7,18 @@
 import type { QueryPlan, QueryFilter } from "./safeQueryExecutor";
 import { isSynthesisIntent } from "./intentDetector";
 
+/**
+ * Vincoli conversazionali espliciti dichiarati dall'utente nella sessione
+ * corrente. Vengono propagati a planner, commentary e tool per impedire
+ * proposte/azioni incoerenti (es. "non usare LinkedIn" deve disabilitare
+ * suggerimenti e tool LinkedIn finché non viene revocato).
+ */
+export interface SessionConstraints {
+  readonly noLinkedIn?: boolean;
+  readonly noWebSearch?: boolean;
+  readonly onlyOfficialWebsites?: boolean;
+}
+
 export interface QueryContext {
   /** Last queried table */
   readonly table: string;
@@ -21,11 +33,22 @@ export interface QueryContext {
   readonly lastResultRows?: ReadonlyArray<Record<string, unknown>>;
   /** Title shown in the canvas at the previous turn (for the synthesis prompt). */
   readonly lastResultTitle?: string;
+  /** WORKING SET: ID canonici dell'ultima query (max 200). Servono a risolvere
+   *  coreferenze come "questi 5", "loro", "i partner selezionati" agli ID reali
+   *  invece di una nuova query allargata. */
+  readonly workingSetIds?: readonly string[];
+  /** Numero righe totali del set (può essere > workingSetIds.length se troncato). */
+  readonly rowCount?: number;
+  /** Etichetta umana del set ("5 partner di Marsa, Malta"). */
+  readonly setLabel?: string;
+  /** Vincoli sticky dichiarati dall'utente in questa sessione. */
+  readonly constraints?: SessionConstraints;
 }
 
 const CONTEXT_TTL_MS = 5 * 60_000;
 const SNAPSHOT_MAX_ROWS = 20;
 const SNAPSHOT_MAX_BYTES = 8 * 1024;
+const WORKING_SET_MAX_IDS = 200;
 
 /** Truncate rows so the JSON payload stays under SNAPSHOT_MAX_BYTES. */
 function capRowsForSnapshot(
@@ -61,11 +84,65 @@ export function buildContextWithRows(
   title?: string,
 ): QueryContext {
   const base = buildContextFromPlan(plan);
+  const ids = rows
+    .map((r) => (typeof r["id"] === "string" ? (r["id"] as string) : null))
+    .filter((x): x is string => !!x)
+    .slice(0, WORKING_SET_MAX_IDS);
   return {
     ...base,
     lastResultRows: capRowsForSnapshot(rows),
     lastResultTitle: title,
+    workingSetIds: ids.length > 0 ? ids : undefined,
+    rowCount: rows.length,
+    setLabel: title,
   };
+}
+
+/**
+ * Estrae i vincoli sticky dal prompt corrente. Conserva i vincoli precedenti
+ * a meno che l'utente li revochi esplicitamente ("usa LinkedIn" / "ok LinkedIn").
+ */
+export function deriveConstraints(
+  prev: SessionConstraints | undefined,
+  prompt: string,
+): SessionConstraints {
+  const lower = prompt.toLowerCase();
+  const next: SessionConstraints = { ...(prev ?? {}) };
+
+  // LinkedIn ban
+  if (/\b(non|no|niente|evita|senza|mai)\b[^.]{0,40}\blinkedin\b/i.test(lower)) {
+    next.noLinkedIn = true;
+  }
+  if (/\b(usa|attiva|riabilita|ok)\b[^.]{0,20}\blinkedin\b/i.test(lower)) {
+    next.noLinkedIn = false;
+  }
+
+  // Web search ban
+  if (/\b(non|no|niente|evita|senza)\b[^.]{0,40}\b(web|internet|google|ricerca esterna|cerca.*internet|cerca.*web)\b/i.test(lower)) {
+    next.noWebSearch = true;
+  }
+
+  // Solo siti ufficiali dei partner
+  if (/\b(solo|soltanto|esclusivamente)\b[^.]{0,30}\bsiti?\b/i.test(lower)
+      || /\bsiti?\s+ufficiali\b/i.test(lower)) {
+    next.onlyOfficialWebsites = true;
+  }
+
+  return next;
+}
+
+/** Determina se l'utente sta facendo riferimento al working set corrente. */
+export function refersToWorkingSet(prompt: string): boolean {
+  const p = prompt.toLowerCase().trim();
+  if (!p) return false;
+  return (
+    /\bquest[oiae]\b/.test(p) ||
+    /\b(loro|tutti loro|a tutti|a tutti loro)\b/.test(p) ||
+    /\b(selezionat[oi]|selez)\b/.test(p) ||
+    /\b(quei|quegli|quelli|quelle)\b/.test(p) ||
+    /\b(i\s+\d+|questi\s+\d+|quei\s+\d+)\b/.test(p) ||
+    /\b(cinque|sei|sette|otto|nove|dieci)\b/.test(p)
+  );
 }
 
 export function isContextFresh(ctx: QueryContext | null): boolean {
