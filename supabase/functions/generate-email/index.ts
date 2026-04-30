@@ -22,6 +22,7 @@ import { loadOptimusSettings } from "../_shared/journalistSelector.ts";
 import type { JournalistReviewOutput } from "../_shared/journalistTypes.ts";
 import { buildEmailContract, validateEmailContract, type ResolvedEmailType } from "../_shared/emailContract.ts";
 import { detectEmailType } from "../_shared/emailTypeDetector.ts";
+import { createPipelineTracer } from "../_shared/pipelineTracer.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -31,6 +32,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   const metrics = startMetrics("generate-email");
+  const tracer = createPipelineTracer();
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
