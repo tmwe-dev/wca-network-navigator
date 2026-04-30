@@ -29,7 +29,7 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 const SUB_LABELS: Record<string, string> = {
-  contacts: "Contatti CRM",
+  contacts: "Elenco",
   kanban: "Kanban",
   biglietti: "Biglietti",
   duplicati: "Duplicati",
