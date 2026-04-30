@@ -189,7 +189,17 @@ export function contextHint(ctx: QueryContext | null, currentPrompt?: string): s
   const filterDesc = ctx.filters
     .map((f) => `${f.column} ${f.op} ${JSON.stringify(f.value)}`)
     .join(" AND ");
-  return `\n\nCONTESTO TURNO PRECEDENTE: tabella=${ctx.table}, mode=${ctx.mode}, filtri=[${filterDesc || "nessuno"}]. Se il nuovo prompt è un follow-up ellittico (es. "e a New York?", "anche a Miami"), EREDITA tabella e filtri compatibili dal contesto, SOSTITUENDO solo quelli esplicitamente cambiati (es. cambia/aggiunge "city").`;
+  const ws = ctx.workingSetIds && ctx.workingSetIds.length > 0
+    ? `\nWORKING SET ATTIVO: ${ctx.workingSetIds.length} record (${ctx.setLabel ?? ctx.table}). IDs canonici: [${ctx.workingSetIds.slice(0, 50).join(", ")}${ctx.workingSetIds.length > 50 ? ", ..." : ""}]. Se il nuovo prompt fa riferimento a "questi", "loro", "i selezionati", "i cinque", "i tre", ecc., l'OPERAZIONE DEVE ESSERE LIMITATA A QUESTI ID. NON allargare la query a tutta la tabella.`
+    : "";
+  const cstr = ctx.constraints
+    ? `\nVINCOLI SESSIONE: ${[
+        ctx.constraints.noLinkedIn ? "NO LinkedIn (vietato proporre o usare tool LinkedIn)" : null,
+        ctx.constraints.noWebSearch ? "NO ricerca web esterna" : null,
+        ctx.constraints.onlyOfficialWebsites ? "Solo siti ufficiali dei partner" : null,
+      ].filter(Boolean).join(" · ")}`
+    : "";
+  return `\n\nCONTESTO TURNO PRECEDENTE: tabella=${ctx.table}, mode=${ctx.mode}, filtri=[${filterDesc || "nessuno"}].${ws}${cstr} Se il nuovo prompt è un follow-up ellittico (es. "e a New York?", "anche a Miami"), EREDITA tabella e filtri compatibili dal contesto, SOSTITUENDO solo quelli esplicitamente cambiati (es. cambia/aggiunge "city").`;
 }
 
 /** Decide whether the previous turn's filters should NOT be inherited. */
