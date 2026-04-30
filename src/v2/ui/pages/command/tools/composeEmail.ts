@@ -1,6 +1,12 @@
-import type { Tool, ToolResult } from "./types";
+import type { Tool, ToolResult, ComposerDraft } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
+import {
+  getLastComposerContext,
+  isRegenerateIntent,
+  setLastComposerContext,
+} from "../lib/composerContext";
 
 /**
  * compose-email tool — risolve partner/contatto nel CRM e usa la pipeline
@@ -109,6 +115,18 @@ async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[
   return (data ?? []) as PartnerRow[];
 }
 
+async function fetchPartnersByIds(ids: ReadonlyArray<string>): Promise<PartnerRow[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at")
+    .in("id", ids as string[])
+    .eq("is_active", true)
+    .neq("lead_status", "blacklisted");
+  if (error) return [];
+  return (data ?? []) as PartnerRow[];
+}
+
 async function searchPartner(company: string | null, email: string | null): Promise<PartnerRow[]> {
   let q = supabase
     .from("partners")
@@ -158,6 +176,188 @@ function leadStatusNote(s: string | null): string {
   return map[s] ?? `Lead status: ${s}`;
 }
 
+/* ─── Batch draft generation (1 chiamata generate-email per partner) ───── */
+
+/** Cap di sicurezza per evitare costi imprevisti. Allineato a `searchPartnersByCountry` (limit 50). */
+const MAX_BATCH_DRAFTS = 12;
+
+async function fetchPrimaryContact(partnerId: string): Promise<{ name: string | null; email: string | null }> {
+  const { data } = await supabase
+    .from("partner_contacts")
+    .select("name, contact_alias, email")
+    .eq("partner_id", partnerId)
+    .not("email", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const row = (data ?? [])[0] as { name: string | null; contact_alias: string | null; email: string | null } | undefined;
+  if (!row) return { name: null, email: null };
+  return { name: row.name ?? row.contact_alias ?? null, email: row.email ?? null };
+}
+
+async function generateOneDraft(
+  partner: PartnerRow,
+  tone: DetectedTone,
+  goal: string,
+): Promise<ComposerDraft> {
+  const contact = await fetchPrimaryContact(partner.id);
+  const recipientEmail = contact.email ?? partner.email ?? "";
+  const recipientName = contact.name;
+  if (!recipientEmail) {
+    return {
+      partnerId: partner.id,
+      partnerName: partner.company_name,
+      contactName: recipientName,
+      contactEmail: "",
+      subject: "",
+      body: "",
+      status: "no_email",
+      errorMessage: "Nessuna email valida per questo partner",
+    };
+  }
+  try {
+    const gen = await invokeEdge<{ subject?: string; body?: string; message?: string; error?: string }>(
+      "generate-email",
+      {
+        body: {
+          standalone: true,
+          partner_id: partner.id,
+          recipient_name: recipientName,
+          recipient_company: partner.company_name,
+          recipient_countries: partner.country_code ?? "",
+          oracle_type: "primo_contatto",
+          oracle_tone: tone,
+          goal,
+          quality: "standard",
+          use_kb: true,
+          language: "it",
+        },
+        context: "command:compose-email-batch-draft",
+      },
+    );
+    if (!gen?.body) {
+      return {
+        partnerId: partner.id,
+        partnerName: partner.company_name,
+        contactName: recipientName,
+        contactEmail: recipientEmail,
+        subject: gen?.subject ?? "",
+        body: "",
+        status: "ai_error",
+        errorMessage: gen?.message ?? gen?.error ?? "Generazione AI fallita",
+      };
+    }
+    return {
+      partnerId: partner.id,
+      partnerName: partner.company_name,
+      contactName: recipientName,
+      contactEmail: recipientEmail,
+      subject: gen.subject ?? "",
+      body: gen.body,
+      status: "ok",
+    };
+  } catch (e) {
+    return {
+      partnerId: partner.id,
+      partnerName: partner.company_name,
+      contactName: recipientName,
+      contactEmail: recipientEmail,
+      subject: "",
+      body: "",
+      status: "ai_error",
+      errorMessage: e instanceof Error ? e.message : "Errore generazione",
+    };
+  }
+}
+
+async function generateDraftsBatch(
+  partners: ReadonlyArray<PartnerRow>,
+  tone: DetectedTone,
+  goal: string,
+): Promise<ComposerDraft[]> {
+  const capped = partners.slice(0, MAX_BATCH_DRAFTS);
+  const settled = await Promise.allSettled(capped.map((p) => generateOneDraft(p, tone, goal)));
+  const out: ComposerDraft[] = [];
+  for (let i = 0; i < settled.length; i++) {
+    const r = settled[i];
+    if (r.status === "fulfilled") {
+      out.push(r.value);
+    } else {
+      const p = capped[i];
+      out.push({
+        partnerId: p.id,
+        partnerName: p.company_name,
+        contactName: null,
+        contactEmail: p.email ?? "",
+        subject: "",
+        body: "",
+        status: "ai_error",
+        errorMessage: r.reason instanceof Error ? r.reason.message : String(r.reason),
+      });
+    }
+  }
+  return out;
+}
+
+function buildBatchComposerResult(args: {
+  partners: ReadonlyArray<PartnerRow>;
+  drafts: ReadonlyArray<ComposerDraft>;
+  tone: DetectedTone;
+  countryCode: string;
+  countryLabel: string;
+  prompt: string;
+}): ToolResult {
+  const { partners, drafts, tone, countryCode, countryLabel, prompt } = args;
+  const okDrafts = drafts.filter((d) => d.status === "ok");
+  const first = okDrafts[0] ?? drafts[0];
+  const recipientLines = drafts
+    .slice(0, 30)
+    .map((d, i) => {
+      const tag =
+        d.status === "ok" ? "✓" : d.status === "no_email" ? "⚠️ no email" : "✗ AI fail";
+      return `${i + 1}. **${d.partnerName}** · ${tag}${d.contactEmail ? ` · ${d.contactEmail}` : ""}`;
+    })
+    .join("\n");
+
+  const notes = [
+    `${drafts.length} bozze generate (${okDrafts.length} pronte all'invio).`,
+    `Tono applicato: ${toneLabel(tone)}.`,
+    drafts.length - okDrafts.length > 0
+      ? `${drafts.length - okDrafts.length} partner senza email o con errore generazione — verifica prima di inviare.`
+      : "Tutte le bozze sono complete e pronte.",
+    "Sfoglia con le frecce nel composer; ogni bozza è personalizzata col nome reale del contatto.",
+    "",
+    "Destinatari (max 30 mostrati):",
+    recipientLines,
+  ];
+
+  return {
+    kind: "composer",
+    title: `Email batch · ${drafts.length} partner in ${countryLabel.toUpperCase()}`,
+    meta: {
+      count: drafts.length,
+      sourceLabel: `Edge · generate-email · batch ${countryCode} · tono ${tone}`,
+    },
+    initialTo: first?.contactEmail ?? "",
+    initialSubject: first?.subject ?? "",
+    initialBody: first?.body ?? "",
+    promptHint: prompt,
+    partnerId: first?.partnerId ?? null,
+    recipientName: first?.contactName ?? null,
+    emailType: "primo_contatto",
+    drafts,
+    detectedTone: tone,
+    countryCode,
+    dossier: {
+      partnerName: `${partners.length} partner · ${countryLabel.toUpperCase()}`,
+      contactName: null,
+      leadStatus: null,
+      lastInteraction: null,
+      notes,
+      emailType: "primo_contatto",
+    },
+  };
+}
+
 function daysSince(iso: string | null): string {
   if (!iso) return "mai";
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -173,16 +373,62 @@ export const composeEmailTool: Tool = {
 
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
-    return /(?:scrivi|componi|invia|prepara|manda).*(?:e-?mail|mail)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p);
+    if (/(?:scrivi|componi|invia|prepara|manda).*(?:e-?mail|mail)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
+      return true;
+    }
+    // Follow-up rigenerazione: "rifai", "fammele vedere nel canvas", "non vedo le nuove versioni"…
+    if (isRegenerateIntent(prompt) && getLastComposerContext() !== null) {
+      return true;
+    }
+    return false;
   },
 
   async execute(prompt: string): Promise<ToolResult> {
+    // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
+    // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
+    //         "non vedo le nuove versioni", "riscrivi più breve".
+    // Eredita country + partner dal contesto, applica il NUOVO tono detectato.
+    const lastCtx = getLastComposerContext();
+    if (lastCtx && isRegenerateIntent(prompt)) {
+      const tone = detectTone(prompt);
+      const partners = await fetchPartnersByIds(lastCtx.partnerIds);
+      if (partners.length === 0) {
+        return {
+          kind: "report",
+          title: "Bozze precedenti non più disponibili",
+          meta: { count: 0, sourceLabel: "DB · partners" },
+          sections: [
+            {
+              heading: "Contesto perso",
+              body: `I partner del batch precedente non sono più recuperabili. Riformula la richiesta indicando di nuovo il paese (es. "scrivi una mail amichevole ai partner di ${lastCtx.countryLabel}").`,
+            },
+          ],
+        };
+      }
+      const drafts = await generateDraftsBatch(partners, tone, lastCtx.originalGoal || prompt);
+      setLastComposerContext({
+        countryCode: lastCtx.countryCode,
+        countryLabel: lastCtx.countryLabel,
+        partnerIds: partners.map((p) => p.id),
+        tone,
+        originalGoal: lastCtx.originalGoal || prompt,
+      });
+      return buildBatchComposerResult({
+        partners,
+        drafts,
+        tone,
+        countryCode: lastCtx.countryCode,
+        countryLabel: lastCtx.countryLabel,
+        prompt,
+      });
+    }
+
     // ── 0) Country-wide batch intent ──
     // Es. "scrivi una mail di presentazione ai partner di Malta",
     //     "invitiamo tutti i partner di Italia ai nostri magazzini"
-    // In questo caso NON cerchiamo una singola azienda: prepariamo una bozza
-    // template-ready usando il primo partner del paese come campione,
-    // ed elenchiamo tutti i destinatari nel report/dossier.
+    // In questo caso NON cerchiamo una singola azienda: generiamo UNA bozza
+    // pre-personalizzata per ciascun partner (Promise.allSettled, cap 12),
+    // sfogliabili nel Canvas con frecce.
     const country = detectCountryCode(prompt);
     if (country && isCountryWideIntent(prompt)) {
       const partners = await searchPartnersByCountry(country.code);
@@ -199,74 +445,23 @@ export const composeEmailTool: Tool = {
           ],
         };
       }
-      const withEmail = partners.filter((p) => !!p.email);
-      const sample = withEmail[0] ?? partners[0];
-      // Genera UNA bozza template-ready usando il sample come destinatario di riferimento
-      let initialSubject = "";
-      let initialBody = "";
-      let generationWarning: string | null = null;
-      try {
-        const gen = await invokeEdge<{ subject?: string; body?: string; message?: string }>("generate-email", {
-          body: {
-            standalone: true,
-            partner_id: sample.id,
-            recipient_name: null,
-            recipient_company: sample.company_name,
-            recipient_countries: country.code,
-            oracle_type: "primo_contatto",
-            oracle_tone: "professionale",
-            goal: prompt,
-            quality: "standard",
-            use_kb: true,
-            language: "it",
-          },
-          context: "command:compose-email-batch",
-        });
-        if (gen?.subject) initialSubject = gen.subject;
-        if (gen?.body) initialBody = gen.body;
-        if (!gen?.body && gen?.message) generationWarning = gen.message;
-      } catch (e) {
-        generationWarning = e instanceof Error ? e.message : "Errore generazione";
-      }
-
-      const recipientLines = partners
-        .slice(0, 30)
-        .map((p, i) => `${i + 1}. **${p.company_name}**${p.city ? ` — ${p.city}` : ""}${p.email ? ` · ${p.email}` : " · ⚠️ no email"}`)
-        .join("\n");
-
-      const notes: string[] = [
-        `Bozza template generata su "${sample.company_name}" come campione.`,
-        `Destinatari totali in ${country.label.toUpperCase()}: ${partners.length} partner (${withEmail.length} con email valida).`,
-        partners.length - withEmail.length > 0
-          ? `${partners.length - withEmail.length} partner senza email — andranno arricchiti prima dell'invio.`
-          : "Tutti i partner hanno un indirizzo email.",
-        "Per l'invio massivo: dopo aver perfezionato la bozza, programma una campagna outreach.",
-      ];
-      if (generationWarning) notes.push(`⚠️ ${generationWarning}`);
-
-      return {
-        kind: "composer",
-        title: `Email batch · ${partners.length} partner in ${country.label.toUpperCase()}`,
-        meta: {
-          count: partners.length,
-          sourceLabel: `Edge · generate-email · batch ${country.code}`,
-        },
-        initialTo: sample.email ?? "",
-        initialSubject,
-        initialBody,
-        promptHint: prompt,
-        partnerId: sample.id,
-        recipientName: null,
-        emailType: "primo_contatto",
-        dossier: {
-          partnerName: `${partners.length} partner · ${country.label.toUpperCase()}`,
-          contactName: null,
-          leadStatus: null,
-          lastInteraction: null,
-          notes: [...notes, "", "Destinatari (max 30 mostrati):", recipientLines],
-          emailType: "primo_contatto",
-        },
-      };
+      const tone = detectTone(prompt);
+      const drafts = await generateDraftsBatch(partners, tone, prompt);
+      setLastComposerContext({
+        countryCode: country.code,
+        countryLabel: country.label,
+        partnerIds: partners.map((p) => p.id),
+        tone,
+        originalGoal: prompt,
+      });
+      return buildBatchComposerResult({
+        partners,
+        drafts,
+        tone,
+        countryCode: country.code,
+        countryLabel: country.label,
+        prompt,
+      });
     }
 
     const { person, company, email } = extractPersonAndCompany(prompt);
@@ -336,6 +531,7 @@ export const composeEmailTool: Tool = {
 
     // 3) Chiama generate-email (pipeline ufficiale)
     const emailType = "primo_contatto";
+    const tone = detectTone(prompt);
     let initialSubject = "";
     let initialBody = "";
     let generationWarning: string | null = null;
@@ -364,7 +560,7 @@ export const composeEmailTool: Tool = {
           recipient_company: partner.company_name,
           recipient_countries: partner.country_code ?? "",
           oracle_type: emailType,
-          oracle_tone: "professionale",
+          oracle_tone: tone,
           goal: prompt,
           quality: "standard",
           use_kb: true,
