@@ -19,10 +19,25 @@ export interface ToolDescriptor {
   readonly description: string;
 }
 
+/**
+ * ActiveContext — descrive uno stato vivo nella UI (es. un batch composer
+ * appena generato) che il router AI deve considerare nella scelta del tool.
+ * Quando presente, il modello sa che esiste un contesto e può rimanere su
+ * quel tool per follow-up senza che il codice debba interpretare l'intento
+ * con regex hand-coded.
+ */
+export interface ActiveContextDescriptor {
+  readonly type: string;
+  readonly toolId: string;
+  readonly description: string;
+  readonly ttlSecondsLeft?: number;
+}
+
 export async function decideToolFromPrompt(
   prompt: string,
   availableTools: readonly ToolDescriptor[],
   history: { role: string; content: string }[] = [],
+  activeContext?: ActiveContextDescriptor | null,
 ) {
   return invokeEdgeV2(
     "ai-assistant",
@@ -38,6 +53,7 @@ export async function decideToolFromPrompt(
           label: t.label,
           description: t.description,
         })),
+        activeContext: activeContext ?? null,
       },
     },
     AiDecisionSchema,
@@ -72,6 +88,7 @@ export async function planExecution(
   prompt: string,
   tools: readonly ToolMetadataItem[],
   history: { role: string; content: string }[] = [],
+  activeContext?: ActiveContextDescriptor | null,
 ) {
   return invokeEdgeV2(
     "ai-assistant",
@@ -89,6 +106,7 @@ export async function planExecution(
           requiresApproval: t.requiresApproval,
         })),
         history: history.slice(-10),
+        activeContext: activeContext ?? null,
       },
       scope: "command",
     },

@@ -35,7 +35,8 @@ export async function handleToolDecisionMode(
   userId: string | null,
   supabase: SupabaseClient,
   corsHeaders: Record<string, string>,
-  commandPromptBlock = ""
+  commandPromptBlock = "",
+  activeContext: Record<string, unknown> | null = null,
 ): Promise<Response> {
   if (!Array.isArray(toolList) || toolList.length === 0 || !userPrompt) {
     return new Response(
@@ -51,12 +52,20 @@ export async function handleToolDecisionMode(
     )
     .join("\n");
 
-  const decisionSystemPrompt = `Sei un router di tool. Dato il prompt utente e la lista di tool disponibili, scegli il tool più appropriato.
+  const activeContextBlock = activeContext
+    ? `\n\n🟢 CONTESTO ATTIVO NELLA UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
+${activeContext.description ?? ""}
+
+REGOLA: se la richiesta dell'utente fa riferimento — anche implicito — a questo contesto vivo (modifiche, rivisitazioni, riapertura, conferme, follow-up senza nuova entità nominata, richieste di formato/lunghezza/tono), scegli toolId="${activeContext.toolId}". Solo se l'utente cambia chiaramente argomento (nuova entità, nuovo paese, nuova ricerca esplicita) scegli un altro tool.`
+    : "";
+
+  const decisionSystemPrompt = `Sei un router di tool intelligente. Interpreta SEMANTICAMENTE la richiesta dell'utente (non cercare parole chiave fisse) e scegli il tool più appropriato.
 Rispondi SOLO con un JSON valido: {"toolId": "<id>", "reasoning": "<spiegazione breve>"}
 Se nessun tool è adatto, rispondi: {"toolId": "none", "reasoning": "<motivo>"}
 
 Tool disponibili:
 ${toolDescriptions}
+${activeContextBlock}
 ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
   const decisionResponse = await fetch(provider.url, {
@@ -125,7 +134,8 @@ export async function handlePlanExecutionMode(
   userId: string | null,
   supabase: SupabaseClient,
   corsHeaders: Record<string, string>,
-  commandPromptBlock = ""
+  commandPromptBlock = "",
+  activeContext: Record<string, unknown> | null = null,
 ): Promise<Response> {
   if (!userPrompt || !Array.isArray(toolList) || toolList.length === 0) {
     return new Response(
@@ -141,7 +151,14 @@ export async function handlePlanExecutionMode(
     )
     .join("\n");
 
-  const planSystemPrompt = `Sei un orchestratore. Dato il prompt utente, decomponi il task in una sequenza ordinata di tool da eseguire. Ogni step deve avere: stepNumber, toolId, reasoning, params (oggetto JSON con i parametri estratti dal prompt e dal contesto degli step precedenti). Se uno step dipende dall'output di uno precedente (es: "usa l'id del partner trovato al passo 1"), usa segnaposto {{step1.result.partnerId}}. Ritorna SOLO JSON valido nella forma: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "descrizione del piano in 1 frase" }. Se il task è eseguibile con UN solo tool, ritorna 1 step. Se il task non è eseguibile coi tool disponibili, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
+  const activeContextBlock = activeContext
+    ? `\n\n🟢 CONTESTO ATTIVO NELLA UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
+${activeContext.description ?? ""}
+
+REGOLA CRITICA: se la richiesta dell'utente fa riferimento — anche implicito — a questo contesto vivo (modifiche di lunghezza/tono/formato/contenuto, "riducile", "compattale", "più sintetiche", "in 4-5 righe", "mostrameli", "riapri", conferme, follow-up senza nuova entità), produci UN SOLO STEP con toolId="${activeContext.toolId}" e params {prompt: "<prompt utente integrale>"}. Solo se l'utente cambia chiaramente argomento usa un altro tool.`
+    : "";
+
+  const planSystemPrompt = `Sei un orchestratore intelligente. Interpreta SEMANTICAMENTE la richiesta dell'utente (non cercare parole chiave fisse) e decomponi il task in una sequenza ordinata di tool. Ogni step ha: stepNumber, toolId, reasoning, params. Se uno step dipende dall'output di uno precedente, usa {{step1.result.partnerId}}. Ritorna SOLO JSON: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "..." }. Se eseguibile con UN solo tool, ritorna 1 step. Se non eseguibile, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
 
 REGOLE OPERATIVE IMPORTANTI:
 - Prompt tipo "scrivi/manda/prepara mail/email a (tutti) i partner di <PAESE>" → UN SOLO STEP con toolId "compose-email" e params {prompt: "<prompt utente originale integrale>"}. Il tool risolve internamente il fan-out per paese e prepara una bozza-template. NON spezzare in ai-query + compose-email: produrresti due step disconnessi che NON si passano i destinatari.
@@ -152,6 +169,7 @@ REGOLE OPERATIVE IMPORTANTI:
 
 Tool disponibili:
 ${toolDescriptions}
+${activeContextBlock}
 ${commandPromptBlock ? `\n\n${commandPromptBlock}` : ""}`;
 
   const planMessages: Record<string, unknown>[] = [

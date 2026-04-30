@@ -42,22 +42,35 @@ export function clearLastComposerContext(): void {
 }
 
 /**
- * Heuristic: il prompt è una richiesta di RIGENERAZIONE/RIVEDERE le bozze
- * appena prodotte (senza nuova ricerca DB)?
+ * activeContextSummary — descrizione breve in linguaggio naturale del batch
+ * composer attivo, da iniettare nel router AI come `activeContext`. Quando
+ * questo summary è presente, l'AI sa che esiste un batch vivo e può scegliere
+ * `compose-email` per follow-up (rigenerazione, modifiche di lunghezza/tono,
+ * riapertura canvas) anche se il prompt non contiene parole chiave fisse.
  *
- * Esempi che matchano:
- *  - "rifai più amichevole"
- *  - "fammele vedere nel canvas"
- *  - "riscrivi più breve"
- *  - "cambia tono"
- *  - "non vedo le nuove versioni"
+ * Niente regex. L'interpretazione semantica della richiesta è demandata al
+ * modello AI, che ha contesto + cronologia + KB.
  */
-export function isRegenerateIntent(prompt: string): boolean {
-  const p = (prompt ?? "").toLowerCase();
-  return (
-    /\b(rifai|riscrivi|rigener[ai]|cambia\s+tono|altro\s+tono|diverso\s+tono|più\s+(amichevole|breve|diretto|informale|formale|corto|lungo))\b/i.test(p) ||
-    /\b(fammel[ae]\s+(?:vedere|rivedere|mostrare))\b/i.test(p) ||
-    /\b(non\s+vedo|dove\s+sono|mostrami)\s+(?:le\s+)?(?:nuove\s+)?(?:versioni|bozze|mail|email)\b/i.test(p) ||
-    /\b(riprovaci|prova\s+(?:di\s+)?nuovo|un'altra\s+versione)\b/i.test(p)
-  );
+export function getActiveComposerContextSummary(): {
+  type: "composer-batch";
+  toolId: "compose-email";
+  description: string;
+  ttlSecondsLeft: number;
+} | null {
+  const ctx = getLastComposerContext();
+  if (!ctx) return null;
+  const ageSec = Math.round((Date.now() - ctx.ts) / 1000);
+  const ttlSec = Math.max(0, Math.round(TTL_MS / 1000) - ageSec);
+  return {
+    type: "composer-batch",
+    toolId: "compose-email",
+    description:
+      `C'è un batch di ${ctx.partnerIds.length} bozze email per partner di ` +
+      `${ctx.countryLabel.toUpperCase()} (codice ${ctx.countryCode}), tono "${ctx.tone}", ` +
+      `generato ${ageSec}s fa. L'utente può chiedere modifiche (lunghezza, tono, ` +
+      `contenuto, formato), riapertura del canvas, o nuove varianti — sempre ` +
+      `riferendosi a queste bozze. Solo se cambia chiaramente argomento ` +
+      `(es. "quanti partner ho a Malta?" o nuova azienda) usa un altro tool.`,
+    ttlSecondsLeft: ttlSec,
+  };
 }

@@ -4,7 +4,6 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
 import {
   getLastComposerContext,
-  isRegenerateIntent,
   setLastComposerContext,
 } from "../lib/composerContext";
 
@@ -376,20 +375,30 @@ export const composeEmailTool: Tool = {
     if (/(?:scrivi|componi|invia|prepara|manda).*(?:e-?mail|mail)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
       return true;
     }
-    // Follow-up rigenerazione: "rifai", "fammele vedere nel canvas", "non vedo le nuove versioni"…
-    if (isRegenerateIntent(prompt) && getLastComposerContext() !== null) {
-      return true;
-    }
+    // Follow-up: nessuna regex hand-coded sull'intento. Il routing al
+    // compose-email per modifiche/rivisitazioni avviene tramite il router AI
+    // contesto-aware (vedi `getActiveComposerContextSummary` iniettato in
+    // `decideToolFromPrompt`/`planExecution`). Il fast-path qui resta solo
+    // per il primo trigger esplicito.
     return false;
   },
 
   async execute(prompt: string): Promise<ToolResult> {
-    // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
-    // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
-    //         "non vedo le nuove versioni", "riscrivi più breve".
-    // Eredita country + partner dal contesto, applica il NUOVO tono detectato.
+    // ── 0a) Follow-up sul batch attivo ─────────────────────────────────
+    // Se esiste un batch attivo (TTL 5 min) E il prompt non introduce una
+    // nuova entità (azienda/email/paese diverso), trattiamo la richiesta
+    // come modifica delle bozze esistenti. Niente regex sull'intento:
+    // il modello AI (router) ha già scelto compose-email leggendo il
+    // contesto attivo. Qui basta verificare che non ci sia un cambio chiaro
+    // di destinatario/azienda nel testo.
     const lastCtx = getLastComposerContext();
-    if (lastCtx && isRegenerateIntent(prompt)) {
+    const newEntity = extractPersonAndCompany(prompt);
+    const newCountry = detectCountryCode(prompt);
+    const introducesNewTarget =
+      Boolean(newEntity.company) ||
+      Boolean(newEntity.email) ||
+      (newCountry && lastCtx && newCountry.code !== lastCtx.countryCode);
+    if (lastCtx && !introducesNewTarget) {
       const tone = detectTone(prompt);
       const partners = await fetchPartnersByIds(lastCtx.partnerIds);
       if (partners.length === 0) {
@@ -405,7 +414,14 @@ export const composeEmailTool: Tool = {
           ],
         };
       }
-      const drafts = await generateDraftsBatch(partners, tone, lastCtx.originalGoal || prompt);
+      // Concateno il goal originale + la richiesta corrente: in questo modo
+      // l'AI generatrice riceve "obiettivo iniziale" + "modifica richiesta"
+      // (es. "riducile a 4-5 righe", "compattale", "più sintetiche") e
+      // interpreta lei in linguaggio naturale.
+      const enrichedGoal = lastCtx.originalGoal
+        ? `${lastCtx.originalGoal}\n\nMODIFICA RICHIESTA DALL'OPERATORE: ${prompt}`
+        : prompt;
+      const drafts = await generateDraftsBatch(partners, tone, enrichedGoal);
       setLastComposerContext({
         countryCode: lastCtx.countryCode,
         countryLabel: lastCtx.countryLabel,

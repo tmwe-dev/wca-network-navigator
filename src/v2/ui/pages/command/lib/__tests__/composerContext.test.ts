@@ -3,7 +3,7 @@ import {
   setLastComposerContext,
   getLastComposerContext,
   clearLastComposerContext,
-  isRegenerateIntent,
+  getActiveComposerContextSummary,
 } from "../composerContext";
 
 describe("composerContext", () => {
@@ -56,26 +56,48 @@ describe("composerContext", () => {
   });
 });
 
-describe("isRegenerateIntent", () => {
-  it("true per richieste esplicite di rifare/cambiare tono", () => {
-    expect(isRegenerateIntent("rifai più amichevole")).toBe(true);
-    expect(isRegenerateIntent("riscrivi più breve")).toBe(true);
-    expect(isRegenerateIntent("cambia tono")).toBe(true);
-    expect(isRegenerateIntent("rigenera con un altro tono")).toBe(true);
-    expect(isRegenerateIntent("più diretto per favore")).toBe(true);
+describe("getActiveComposerContextSummary", () => {
+  beforeEach(() => {
+    clearLastComposerContext();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    clearLastComposerContext();
   });
 
-  it("true per richieste di vedere/mostrare le bozze già prodotte", () => {
-    expect(isRegenerateIntent("fammele vedere nel canvas")).toBe(true);
-    expect(isRegenerateIntent("non vedo le nuove versioni")).toBe(true);
-    expect(isRegenerateIntent("mostrami le bozze")).toBe(true);
-    expect(isRegenerateIntent("riprovaci")).toBe(true);
-    expect(isRegenerateIntent("prova di nuovo")).toBe(true);
+  it("ritorna null se non c'è batch attivo", () => {
+    expect(getActiveComposerContextSummary()).toBeNull();
   });
 
-  it("false per nuove ricerche / prompt iniziali", () => {
-    expect(isRegenerateIntent("manda una mail ai partner di Malta")).toBe(false);
-    expect(isRegenerateIntent("invito a visitare i magazzini")).toBe(false);
-    expect(isRegenerateIntent("")).toBe(false);
+  it("ritorna summary descrittivo con paese, count, tono e TTL", () => {
+    setLastComposerContext({
+      countryCode: "MT",
+      countryLabel: "Malta",
+      partnerIds: ["p1", "p2", "p3"],
+      tone: "amichevole",
+      originalGoal: "invito magazzini",
+    });
+    const summary = getActiveComposerContextSummary();
+    expect(summary).not.toBeNull();
+    expect(summary?.type).toBe("composer-batch");
+    expect(summary?.toolId).toBe("compose-email");
+    expect(summary?.description).toContain("3 bozze");
+    expect(summary?.description).toContain("MALTA");
+    expect(summary?.description).toContain("amichevole");
+    expect(summary?.ttlSecondsLeft).toBeGreaterThan(0);
+  });
+
+  it("ritorna null dopo TTL scaduto", () => {
+    setLastComposerContext({
+      countryCode: "MT",
+      countryLabel: "Malta",
+      partnerIds: ["p1"],
+      tone: "professionale",
+      originalGoal: "x",
+    });
+    expect(getActiveComposerContextSummary()).not.toBeNull();
+    vi.advanceTimersByTime(5 * 60_000 + 1);
+    expect(getActiveComposerContextSummary()).toBeNull();
   });
 });
