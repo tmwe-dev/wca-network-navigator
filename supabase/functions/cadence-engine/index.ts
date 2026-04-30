@@ -249,10 +249,19 @@ async function processAction(
           body: genData.body,
           channel: genData.channel || action.action_type,
           generated: true,
+          journalist_review: genData.journalist_review ?? null,
+          contract_used: genData.contract_used ?? false,
         };
 
-        // Step 2: If email, attempt real send
-        if (actionType === "send_email" && targetEmail && genData.body) {
+        // ── Caporedattore Finale: blocca l'auto-execute su verdict "block".
+        // L'azione resta in pending review (ai_pending_actions) per intervento umano.
+        const review = genData.journalist_review;
+        const blockedByJournalist = review && review.verdict === "block";
+        if (blockedByJournalist) {
+          executionStatus = "pending";
+          executionResult.note = `Bloccato dal Giornalista AI: ${review.reasoning || "verdict=block"}. Revisione umana richiesta.`;
+        } else if (actionType === "send_email" && targetEmail && genData.body) {
+          // Step 2: If email, attempt real send
           const sendResponse = await fetch(
             `${supabaseUrl}/functions/v1/send-email`,
             {

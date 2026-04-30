@@ -11,6 +11,17 @@ export interface RecipientIntelligence {
   warning: string | null;
 }
 
+export type JournalistVerdict = "pass" | "pass_with_edits" | "warn" | "block";
+
+export interface JournalistReviewSummary {
+  journalist: { role: string; label: string; reasoning: string; auto: boolean };
+  verdict: JournalistVerdict;
+  warnings: Array<{ type: string; description: string; severity: "info" | "warning" | "blocking"; upstream_fix?: string }>;
+  edits: Array<{ type: string; original_fragment: string; edited_fragment: string; reason: string }>;
+  quality_score: number;
+  reasoning: string;
+}
+
 export interface OutreachDebug {
   model: string;
   quality: string;
@@ -46,6 +57,12 @@ export interface OutreachResult {
   company_name: string | null;
   language: string;
   _debug?: OutreachDebug;
+  /** Verdetto del Caporedattore Finale (Giornalista AI). */
+  journalist_review?: JournalistReviewSummary | null;
+  /** True se il contratto email è stato applicato (canale email + partner). */
+  contract_used?: boolean;
+  /** Warnings dalla validazione del contratto (non bloccanti). */
+  contract_warnings?: string[];
 }
 
 export function useOutreachGenerator() {
@@ -95,6 +112,25 @@ export function useOutreachGenerator() {
 
       const outreach = data as OutreachResult;
       setResult(outreach);
+
+      // Caporedattore Finale: notifica visibile su block / warn così
+      // l'operatore sa che la pipeline ha intercettato un problema.
+      const review = outreach.journalist_review;
+      if (review) {
+        if (review.verdict === "block") {
+          toast({
+            title: "Bozza bloccata dal Giornalista",
+            description: review.reasoning || "Il caporedattore ha bloccato l'invio di questa bozza. Rivedi i warnings prima di procedere.",
+            variant: "destructive",
+          });
+        } else if (review.verdict === "warn") {
+          toast({
+            title: "Bozza con avvisi",
+            description: review.reasoning || `${review.warnings.length} avvisi dal Giornalista. Verifica prima dell'invio.`,
+          });
+        }
+      }
+
       return outreach;
     } catch (err: unknown) {
       toast({ title: "Errore generazione", description: err instanceof Error ? err.message : String(err), variant: "destructive" });

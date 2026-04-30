@@ -18,6 +18,12 @@ import { buildOutreachPrompts, getModel, type Channel } from "./promptBuilder.ts
 import { parseOutreachResponse } from "./responseParser.ts";
 import { checkCadence } from "../_shared/cadenceEngine.ts";
 import { loadOperativePrompts, type PromptScope } from "../_shared/operativePromptsLoader.ts";
+import {
+  runEmailContract,
+  runJournalistReview,
+  serializeJournalistReview,
+  type PipelineChannel,
+} from "../_shared/postGenerationReview.ts";
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
@@ -232,6 +238,37 @@ DECISION ENGINE (raccomandazione automatica):
       }
     }
 
+    // ── Email Contract + Type Detector (solo canale email con partner) ──
+    // Allinea generate-outreach a generate-email: blocca conflitti tipo/storia
+    // (es. "primo_contatto" su lead già contactato) e violazioni del contratto
+    // (blacklisted, no contact email, ecc.) con 422 espliciti.
+    let typeResolutionOutreach: ReturnType<typeof JSON.parse> | null = null;
+    const contractWarningsOutreach: string[] = [];
+    let contractUsed = false;
+    if (ch === "email" && ctx.partnerId) {
+      const cr = await runEmailContract(supabase, userId, {
+        engine: "command", // generate-outreach è invocato da Cockpit/Cadence/Agent
+        operation: "generate",
+        partnerId: ctx.partnerId,
+        contactId: null,
+        emailType: email_type_id || decision.email_type,
+        emailDescription: goal || base_proposal || "",
+        objective: goal || undefined,
+        language: effectiveLanguage,
+        fallbackPartnerName: company_name || undefined,
+        fallbackContactEmail: contact_email || undefined,
+      });
+      contractUsed = !!cr.contract;
+      contractWarningsOutreach.push(...cr.buildWarnings, ...cr.validationWarnings);
+      typeResolutionOutreach = cr.typeResolution;
+      if (cr.blocking && cr.blockingResponse) {
+        return new Response(JSON.stringify(cr.blockingResponse.body), {
+          status: cr.blockingResponse.status,
+          headers: { ...dynCors, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // ── Build prompts ──
     let recipientName = "";
     if (contact_name && isLikelyPersonName(contact_name)) recipientName = contact_name;
@@ -298,16 +335,50 @@ DECISION ENGINE (raccomandazione automatica):
     // ── Parse ──
     const { subject, body } = parseOutreachResponse(result.content || "", ch, ctx.settings);
 
+    // ── Giornalista AI — caporedattore finale (uniforma con generate-email) ──
+    // Per WA/LI il wrapper riduce automaticamente la strictness di 2 punti.
+    const journalistChannel: PipelineChannel =
+      ch === "whatsapp" ? "whatsapp" :
+      ch === "linkedin" ? "linkedin" :
+      "email";
+    const reviewResult = await runJournalistReview(supabase, userId, {
+      channel: journalistChannel,
+      draft: body,
+      emailType: email_type_id || decision.email_type,
+      objective: goal || base_proposal || null,
+      playbookActive: ctx.playbookActive,
+      partner: {
+        id: ctx.partnerId,
+        company_name: company_name,
+        country: country_code,
+      },
+      contact: recipientName ? { name: recipientName, role: null } : null,
+      commercialState: {
+        leadStatus: ctx.commercialState || "new",
+        touchCount: ctx.touchCount ?? 0,
+        lastOutcome: null,
+        daysSinceLastInbound: ctx.daysSinceLastContact ?? null,
+        hasActiveConversation: (ctx.relationshipMetrics?.total_interactions ?? 0) > 0,
+      },
+      historySummary: ctx.relationshipBlock || null,
+      kbSummary: (ctx.salesKBSections || []).join(", ") || null,
+    });
+    const finalBody = reviewResult.finalText || body;
+
     const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
     const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
     const senderCompanyAlias = ctx.settings.ai_company_alias || ctx.settings.ai_company_name || "";
 
     return new Response(JSON.stringify({
-      channel: ch, subject, body, full_content: result.content || "",
+      channel: ch, subject, body: finalBody, full_content: result.content || "",
       contact_name: recipientName || contact_name || null,
       contact_email: contact_email || null, company_name: company_name || null,
       language: effectiveLanguage, quality, model,
       readiness_score: readinessTotal, readiness_warnings: readinessWarnings,
+      journalist_review: serializeJournalistReview(reviewResult.review),
+      contract_used: contractUsed,
+      contract_warnings: contractWarningsOutreach,
+      type_resolution: typeResolutionOutreach,
       _debug: {
         model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
         country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",
@@ -326,6 +397,10 @@ DECISION ENGINE (raccomandazione automatica):
         relationship_metrics: ctx.relationshipMetrics,
         playbook_active: ctx.playbookActive,
         channel_declaration: ctx.channelDeclaration,
+        journalist_verdict: reviewResult.review?.verdict ?? null,
+        journalist_enabled: reviewResult.enabled,
+        contract_used: contractUsed,
+        type_resolution_outreach: typeResolutionOutreach,
       },
     }), { headers: { ...dynCors, "Content-Type": "application/json" } });
   } catch (e) {
