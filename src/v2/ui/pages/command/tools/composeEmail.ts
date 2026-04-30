@@ -492,7 +492,38 @@ export const composeEmailTool: Tool = {
       }
     }
 
-    if (country && countryWide) {
+    // Fallback ulteriore: scansiona la cronologia conversazionale recente
+    // per trovare un riferimento esplicito a un paese. Copre il caso in cui
+    // `lastQueryResultContext` sia stato sovrascritto da query intermedie
+    // per città (es. "Trova partner di Malta" → "marsa" → "questi partner").
+    if (!country) {
+      const history = context?.history ?? [];
+      // Scorri dal più recente al più vecchio, max 6 messaggi
+      for (let i = history.length - 1; i >= 0 && i >= history.length - 6; i--) {
+        const msg = history[i];
+        if (!msg?.content) continue;
+        const detected = detectCountryCode(msg.content);
+        if (detected) {
+          country = detected;
+          break;
+        }
+      }
+    }
+
+    // Se abbiamo un country ma il prompt non è chiaramente country-wide,
+    // assumiamo country-wide quando il testo contiene riferimenti coreferenziali
+    // ("questi partner", "loro", "tutti") — già coperti da isCountryWideIntent —
+    // oppure quando il prompt è una richiesta generica di scrittura email senza
+    // un destinatario specifico (no azienda/persona/email estratti).
+    const hasExplicitTarget =
+      Boolean(extractPersonAndCompany(prompt).company) ||
+      Boolean(extractPersonAndCompany(prompt).email) ||
+      Boolean(extractPersonAndCompany(prompt).person);
+    const inferredCountryWide =
+      countryWide ||
+      (Boolean(country) && !hasExplicitTarget && /\b(quest[oi]|loro|partner)\b/i.test(prompt));
+
+    if (country && inferredCountryWide) {
       const partners = await searchPartnersByCountry(country.code);
       if (partners.length === 0) {
         return {
