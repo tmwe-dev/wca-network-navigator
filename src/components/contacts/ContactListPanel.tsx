@@ -45,8 +45,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const h = useContactListPanel();
   const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
     contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
-    actions, tabs, totalAllGroups, groupBy, activeGroupTab, wcaMatch,
-    setCrmGroupTab, setCrmWcaMatch, setGroupBy,
+    actions, tabs, totalAllGroups, groupBy, activeGroupTab,
+    setCrmGroupTab, setGroupBy,
     addInlineFilter, removeInlineFilter, handleSortClick, handleTabClick,
     handleDelete, handleDeduplicate, handleWcaMatch } = h;
 
@@ -88,14 +88,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             <span className="text-sm font-semibold text-foreground">{totalCount} <span className="text-foreground/60 font-normal">contatti</span></span>
             {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30"><Plane className="w-3 h-3" /> Fuori circuito</span>}
             {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/20 text-destructive border border-destructive/30"><Plane className="w-3 h-3 animate-pulse" /> In circuito</span>}
-            <div className="flex gap-1">
-              {(["all", "matched", "unmatched"] as const).map(v => (
-                <button key={v} onClick={() => setCrmWcaMatch(v)}
-                  className={cn("text-[11px] px-2 py-0.5 rounded-full transition-colors font-medium", wcaMatch === v ? "bg-primary/25 text-primary font-semibold" : "text-foreground/70 hover:bg-muted")}>
-                  {v === "all" ? "Tutti" : v === "matched" ? "WCA ✓" : "Solo CRM"}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="flex items-center gap-1">
             <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />

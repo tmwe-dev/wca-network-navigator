@@ -1,93 +1,83 @@
-## Obiettivo
+## Problema osservato (dallo screenshot)
 
-Unificare WCA Partners, CRM Contatti e Biglietti da Visita in **una sola pipeline** con tre **origini dati** selezionabili in cima. Stessa UX, stessi tab, stessi strumenti — un solo posto da imparare e da manutenere.
-
-Il primo tab di ogni origine è **l'elenco contatti con dettaglio a destra**. Gli altri tab restano gli attuali (li snelliremo in un secondo passaggio, come da tua indicazione).
-
-## Cosa cambia per te
-
-### Menu di navigazione
-Oggi nel menu vedi 3 voci separate:
-- WCA Partner
-- Contatti CRM
-- Biglietti da visita
-
-Diventa **1 sola voce**: **Contatti** → porta alla pipeline unica.
-
-### Dentro la pipeline unica
-In alto, **3 pillole/tab di "origine"** sempre visibili:
+L'header di **Contatti** ha **4 strati impilati** che dicono più o meno la stessa cosa, più filtri che si sovrappongono al selettore di origine:
 
 ```text
-[ WCA Partner ] [ Contatti ] [ Biglietti ]   ← scegli la fonte dei record
-─────────────────────────────────────────────
-[ Elenco | Kanban | Duplicati | Campagne | Agenda ]   ← tab di lavoro (stessi per tutte e 3)
-─────────────────────────────────────────────
-| Lista record (filtrata per origine) | Dettaglio a destra |
+[icon] CONTATTI · Elenco        Elenco | Kanban | Duplicati | Campagne | Agenda     ← strato 1: header pagina
+ORIGINE  [WCA Partner] [Contatti] [Biglietti]                                       ← strato 2: switcher origine
+Home > Contatti > Elenco                                                            ← strato 3: breadcrumb (= "altro tasto Home")
+11349 contatti  [Fuori circuito] [Tutti] [WCA ✓] [Solo CRM]   Segmenti  + Nuovo     ← strato 4: filtri lista (ridondanti con origine)
 ```
 
-- **Origine** = quale dataset stai guardando (partner WCA, contatti CRM, biglietti).
-- **Tab di lavoro** = sempre gli stessi 5, indipendentemente dall'origine.
-- **Primo tab "Elenco"** = lista a sinistra + pannello dettaglio a destra (come una mailbox).
+Risultato: la parola "Elenco" appare 3 volte, "Contatti" 3 volte, "Home" 2 volte, e i bottoni `Tutti / WCA ✓ / Solo CRM` fanno la stessa cosa del selettore `Origine`.
 
-La parola "Pipeline" sparisce sia dal menu sia dall'header. L'icona resta la stessa.
+## Cosa fare — UI only, una sola passata
 
-## Tab di lavoro — fase 1 (replica gli attuali)
+### 1. Eliminare il breadcrumb interno alla sezione Contatti
 
-Mantengo per ora i tab esistenti, così non rompo nulla:
-- **Elenco** (nuovo: lista + dettaglio a destra)
-- **Kanban** (drag-and-drop per stadi)
-- **Duplicati**
-- **Campagne**
-- **Agenda**
+Il breadcrumb `Home > Contatti > Elenco` è il "altro tasto Home" che hai notato. La voce **Home** è già nel menu sinistro e l'header pagina dice già `CONTATTI · Elenco`. Il breadcrumb è ridondante.
 
-Quando l'avrai usata, decidiamo insieme quali togliere (la tua scelta "Decidiamo dopo").
+→ Nascondere il breadcrumb sulla sezione `/v2/pipeline/*`. Resta solo l'header unificato.
 
-## Redirect — nessun link rotto
+### 2. Fondere l'header pagina e lo switcher origine in **una sola riga**
 
-Tutti i vecchi URL continuano a funzionare e portano alla nuova pipeline con l'origine giusta pre-selezionata:
+Oggi ci sono 2 righe (header + ORIGINE). Le unisco così:
 
-| Vecchio URL                        | Nuovo URL                                  |
-|-----------------------------------|--------------------------------------------|
-| `/v2/explore/network` (WCA Partner) | `/v2/contatti?origine=wca`                |
-| `/v2/pipeline/contacts`            | `/v2/contatti?origine=crm`                 |
-| `/v2/pipeline/biglietti`           | `/v2/contatti?origine=biglietti`           |
-| `/v2/pipeline/kanban`              | `/v2/contatti/kanban?origine=crm`          |
-| `/v2/pipeline/duplicati`           | `/v2/contatti/duplicati?origine=crm`       |
-| `/v2/pipeline/campaigns`           | `/v2/contatti/campagne?origine=crm`        |
-| `/v2/pipeline/agenda`              | `/v2/contatti/agenda?origine=crm`          |
-| `/v2/crm/*`, `/v2/contacts`, `/v2/business-cards` | redirect equivalenti      |
+```text
+[👥] CONTATTI    Elenco · Kanban · Duplicati · Campagne · Agenda    ⋯    + Nuovo
+                  └ origine: ◉ Contatti  ○ WCA Partner  ○ Biglietti
+```
+
+L'origine diventa una riga sottile sotto i tab di lavoro, sempre visibile ma non urlante. Niente etichetta "ORIGINE" tutta maiuscola — basta un selettore segmentato compatto.
+
+Rimuovo dall'header:
+- la doppia scritta "Elenco" (badge sezione `· Elenco` + primo tab `Elenco`) → tengo solo i tab.
+- la striscia `ORIGINE` come banda separata → diventa una riga inline sotto i tab.
+
+### 3. Rimuovere i filtri ridondanti dentro `ContactListPanel`
+
+Questi bottoni dentro la lista oggi sono confusi e doppi:
+- `Tutti / WCA ✓ / Solo CRM` → fa la stessa cosa del selettore Origine (WCA Partner / Contatti / Biglietti). Lo elimino.
+- Il chip `Fuori circuito` resta (è un filtro reale di stato, non di origine).
+
+### 4. Risultato finale
+
+```text
+[👥] CONTATTI    Elenco | Kanban | Duplicati | Campagne | Agenda            + Nuovo
+                 ◉ Contatti  ○ WCA Partner  ○ Biglietti
+─────────────────────────────────────────────────────────────────────────────────────
+11.349 contatti  ✈ Fuori circuito                              Segmenti
+```
+
+3 righe invece di 5, zero parole ripetute, zero filtri doppi. Il tasto Home resta solo nel menu sinistro.
+
+## File toccati (solo UI/layout, zero logica)
+
+1. `src/v2/ui/pages/sections/PipelineSection.tsx`
+   - Rimuovo il componente `OrigineSwitcher` come banda separata.
+   - Passo le 3 origini come segmented inline-row dentro `PageHeaderUnified` (nuova prop `subRow` o riutilizzo `chips` con tone "primary" e logica radio).
+
+2. `src/v2/ui/templates/PageHeaderUnified.tsx`
+   - Rimuovo la duplicazione `sectionLabel · currentTab.label`: tengo solo `sectionLabel` se uguale al tab attivo, altrimenti il tab attivo.
+   - Aggiungo (o riuso) una "subRow" sottile per il selettore origine.
+
+3. `src/v2/ui/templates/breadcrumbConfig.ts` o il layout che lo monta
+   - Disattivo il breadcrumb interno per i path `/v2/pipeline/*` (la sezione si auto-descrive nell'header).
+
+4. `src/components/contacts/ContactListPanel.tsx`
+   - Rimuovo il blocco `Tutti / WCA ✓ / Solo CRM` (righe ~91-98). Lascio il chip "Fuori circuito" e il counter.
+   - L'hook `useContactListPanel` resta invariato: il param `wcaMatch` viene forzato a `"all"` quando la pagina è dentro la pipeline unificata (delegato all'origine).
 
 ## Cosa NON cambia
 
-- Database, RLS, edge function: zero modifiche.
-- Logica di business (stadi, holding pattern, lead scoring, scoring BCA): invariata.
-- Componenti `ContactPipelineView`, `BusinessCardsHub`, `DuplicateDetector`, `ContactsPage`, `CountryGridV2`, `NetworkPage`: invariati internamente — vengono solo **riposizionati** sotto la nuova shell.
-- Filtri laterali (`ContextFiltersRail`): si attivano in base all'origine corrente (WCA → filtri network, CRM/Biglietti → filtri contatti). Già pronti.
-- Nessuna eliminazione di codice — solo cambio di rotte e menu.
-
-## Dettagli tecnici
-
-File toccati (solo UI/routing, zero logica):
-
-1. `src/v2/ui/pages/sections/PipelineSection.tsx` → rinominato concettualmente in `ContattiSection`. Tab "origine" in cima (state `?origine=wca|crm|biglietti`), tab di lavoro sotto.
-2. `src/v2/ui/pages/ContactsPage.tsx` → resa "origine-aware" (mostra elenco WCA, CRM o biglietti in base al param). I componenti tabella interni restano gli stessi.
-3. `src/v2/routes.tsx` → aggiunge `pipeline/*` come alias del nuovo `contatti/*` per retro-compatibilità; redirect da `/v2/explore/network` → `/v2/contatti?origine=wca`.
-4. `src/v2/ui/templates/navConfig.tsx` → da 3 voci (`wca_partners`, `crm_contacts`, `business_cards`) a **1 sola** (`Contatti` → `/v2/contatti`).
-5. `src/v2/ui/templates/breadcrumbConfig.ts` → label `pipeline` → `Contatti`; rimossa label `Pipeline`.
-6. `src/v2/ui/templates/PageHeaderUnified.tsx` → `sectionLabel="Contatti"` (al posto di "Pipeline"), icona `Users`.
-7. `src/v2/ui/templates/ContextFiltersRail.tsx` → si aggancia al param `?origine=` per scegliere il pannello filtri corretto.
-
-Nessuna nuova tabella DB, nessuna nuova edge function, nessun nuovo hook di business. Tutto il lavoro è di **riorganizzazione UI**.
+- Routing, redirect dei vecchi URL, dataset, RLS, edge function: invariati.
+- Tab di lavoro (Elenco/Kanban/Duplicati/Campagne/Agenda): invariati.
+- Componenti interni (`ContactsPage`, `BusinessCardsHub`, `NetworkPage`, `ContactPipelineView`, `DuplicateDetector`): invariati.
+- Menu sinistro: invariato (resta una sola voce "Contatti").
 
 ## Verifica post-implementazione
 
-- I 3 vecchi link nel menu non esistono più → al loro posto c'è "Contatti".
-- Aprendo "Contatti" parte sull'origine **CRM**, primo tab **Elenco**, dettaglio a destra.
-- Cliccando l'origine **WCA** vedi i partner WCA con gli stessi tab di lavoro.
-- Cliccando **Biglietti** vedi i biglietti da visita con gli stessi tab.
-- Tutti i vecchi URL fanno redirect corretto, niente 404.
-- Il `CampaignQueueMonitor` nel Command Canvas continua a funzionare come prima.
-
-## Fase 2 (da decidere insieme dopo che usi la nuova UI)
-
-Quali tab di lavoro tenere/togliere per origine (es. forse Kanban non ha senso per i Biglietti, forse Duplicati va spostato in Config). Lo decidiamo a sistema funzionante, come hai chiesto.
+- Aprendo `/v2/pipeline/contacts?origine=crm` vedo **una sola** riga "Contatti" + tab di lavoro + selettore origine sottile sotto. Niente breadcrumb.
+- La parola "Elenco" appare **una volta sola** (nel tab attivo).
+- I bottoni `Tutti / WCA ✓ / Solo CRM` non esistono più dentro la lista.
+- Cambiando origine (Contatti → WCA → Biglietti) cambia il dataset, il selettore resta nello stesso posto.

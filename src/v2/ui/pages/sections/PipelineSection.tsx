@@ -62,8 +62,8 @@ function useOrigine(): OrigineKey {
   return "crm";
 }
 
-/** Selettore origine: pillole sopra ai tab di lavoro. Preserva il path corrente. */
-function OrigineSwitcher({ origine }: { origine: OrigineKey }): React.ReactElement {
+/** Selettore origine inline: chips sottili sotto ai tab di lavoro. Preserva il path corrente. */
+function OrigineSwitcherInline({ origine }: { origine: OrigineKey }): React.ReactElement {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
 
@@ -80,11 +80,8 @@ function OrigineSwitcher({ origine }: { origine: OrigineKey }): React.ReactEleme
   return (
     <div
       data-testid="origine-switcher"
-      className="shrink-0 border-b border-border/40 bg-card/30 px-4 py-1.5 flex items-center gap-2 min-w-0 overflow-x-auto scrollbar-thin"
+      className="flex items-center gap-1.5 min-w-0"
     >
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-        Origine
-      </span>
       {ORIGINI.map(({ key, label, icon: Icon }) => {
         const active = key === origine;
         return (
@@ -93,14 +90,14 @@ function OrigineSwitcher({ origine }: { origine: OrigineKey }): React.ReactEleme
             to={buildTo(key)}
             replace
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold transition-colors whitespace-nowrap",
+              "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition-colors whitespace-nowrap",
               active
                 ? "bg-primary/15 text-primary border-primary/40"
                 : "bg-muted/30 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/50",
             )}
             aria-current={active ? "page" : undefined}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className="h-3 w-3" />
             {label}
           </NavLink>
         );
@@ -140,8 +137,8 @@ export function PipelineSection(): React.ReactElement {
         sectionLabel="Contatti"
         tabs={TABS}
         rootPath="/v2/pipeline"
+        subRow={<OrigineSwitcherInline origine={origine} />}
       />
-      <OrigineSwitcher origine={origine} />
       <div className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route index element={<Navigate to={`/v2/pipeline/contacts?origine=${origine}`} replace />} />
