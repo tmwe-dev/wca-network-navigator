@@ -64,7 +64,6 @@ const ORPHAN_GROUPS: readonly OrphanGroup[] = [
     items: [
       { label: "Calendar", path: "/v2/calendar" },
       { label: "Outreach Agenda", path: "/v2/outreach/agenda" },
-      { label: "Campaign Jobs", path: "/v2/campaigns/jobs" },
     ],
   },
   {

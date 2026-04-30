@@ -1,114 +1,66 @@
 ## Obiettivo
 
-Replicare l'ergonomia del **Kanban** (pulito, colorato, denso, leggibile) su **tutte** le pagine di gestione contatti, e dare all'utente un'evidenza chiara di **dove si trova** — senza più 4-5 righe orizzontali sopra al contenuto.
+Eliminare la confusione tra "stanze" che sembrano fare la stessa cosa. Niente nuove maschere, niente nuove tabelle, niente cambi al modo in cui le email vengono prodotte e inviate. Solo **pulizia di navigazione**.
 
-## Problemi da eliminare (confermati dagli screenshot)
+## Cosa cambia (lato utente)
 
-1. **Stratificazione verticale** che divora 30% di schermo: app-header → section-tabs → breadcrumb → page-tabs → counters/filters → grid-header.
-2. **Nessun indicatore di pagina corrente** forte (titolo + icona della sezione assenti).
-3. Bandiere micro (text-base), testo grigio scuro su scuro, badge poco leggibili.
-4. **Biglietti**: enorme dropzone "Trasferisci o file dati" sprecata in cima, mentre l'import vive nella sua pagina dedicata.
-5. Inconsistenza tra CRM / Biglietti / Network (ognuna con header diverso).
+### 1. Outreach → "In Uscita" — semplificato
+Oggi ha 4 sotto-tab: **Da Inviare**, **Inviati**, **Programmati**, **Falliti**.
+Domani avrà 2 sotto-tab: **Da Inviare**, **Inviati**.
 
-## Soluzione: il "Page Header Kanban-style" come template unico
+I sotto-tab "Programmati" e "Falliti" leggevano dalla tabella sbagliata (`cockpit_queue`, che non è una coda di invio): erano fuorvianti. Vengono nascosti dalla UI.
 
-Una **singola riga compatta (h-12)** sostituisce breadcrumb + section-tabs + page-tabs + counters separati.
+I **badge contatori in alto** del tab vengono riallineati: oggi contano dalla tabella sbagliata, vanno fatti puntare alle stesse fonti dei sotto-tab rimasti (attività + missioni + storico).
 
-```text
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ [icon] Pipeline · Contatti CRM     ▸ Kanban  Contatti  Biglietti  Duplicati  ⋯  │
-│        11.349 contatti · 🟣Tutti · ✈️ Fuori circuito                  [+ Nuovo] │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
+### 2. AI Control Center → "Pending Actions" — rimossa
+Mostrava le stesse cose della "Coda AI" di Outreach. Tieni solo **Outreach → Coda AI** come unico posto per le azioni AI in attesa di approvazione. La sub-view "pending" sparisce dal menu di AI Control Center.
 
-**Riga 1 (h-7)** — Identità + tabs sorelle:
-- A sinistra: icona sezione colorata (12px) + `Sezione · Pagina corrente` in `text-sm font-bold` (la pagina corrente in colore primary). Sostituisce breadcrumb e tab strip separati.
-- Tabs sorelle inline a destra dell'identità (Kanban / Contatti / Biglietti / Duplicati / Campagne / Agenda) come pill compatte, quella attiva ha background primary/15.
-- A destra dell'header: `[+ Nuovo]`, `Segmenti`, kebab `⋯` per azioni secondarie.
+### 3. Pagine fantasma — nascoste dai menu
 
-**Riga 2 (h-7)** — Stato contestuale (counter + chip filtri attivi):
-- Counter principale `11.349 contatti` in `text-sm font-semibold`.
-- Chip filtri sempre visibili e cliccabili: `Tutti / WCA / Solo CRM / Fuori circuito`.
-- I chip rimangono SEMPRE visibili (no menu), perché sono lo stato dell'elenco.
+- **`/v2/campaigns/jobs`** (pagina vuota, vecchio sistema): rimossa dalla navigazione e dai link interni. Se uno arriva con il vecchio URL, viene rediretto a `/v2/campaigns`.
+- **Componente `CampagneTab`**: nessuno lo importava già — viene marcato come deprecato nel commento di testa (in linea con la regola "non eliminare codice in `src/components/`").
+- **Hook V2 mai usati** (`useCampaignDraftsV2`, `useCampaignStatsV2`, `useEmailCampaignQueueV2`): marcati come deprecati nel commento di testa.
 
-Totale verticale: **≈ 56px** invece degli attuali ~180-220px.
+### 4. Cosa NON cambia
 
-## Pagine impattate
+- Il **CampaignQueueMonitor dentro il Command Canvas** resta esattamente com'è: continui a vedere lì le tue mail batch in coda, con Avvia / Pausa / Cancel.
+- Le tabelle `email_drafts` e `email_campaign_queue` non vengono toccate: i tuoi 5 draft + 4 record in coda restano.
+- La pipeline di creazione/autorizzazione/invio email non viene toccata in questo intervento. Quella la decidiamo dopo, separatamente.
+- Nessuna `cockpit_queue` viene cancellata — è solo nascosta dai sotto-tab che la mostravano in modo fuorviante.
 
-### A. CRM (Contatti / Kanban / Biglietti / Duplicati / Campagne / Agenda)
-File: `src/v2/ui/pages/CRMPage.tsx` + sotto-pagine.
-- Sostituire `GoldenHeaderBar` + `SectionTabs` + header della singola pagina con un **unico componente** `<PageHeaderUnified />`.
-- Tabs Kanban/Contatti/Biglietti/Duplicati spostate dentro l'header unificato.
-- Breadcrumb rimosso (l'identità "Pipeline · Pagina" lo sostituisce).
+## Dettaglio tecnico (per riferimento)
 
-### B. Biglietti (`/v2/pipeline/biglietti`)
-- **Rimuovere completamente** la dropzone "Trasferisci o file dati" dal top.
-- Sostituirla con un piccolo bottone secondario `↓ Importa` nell'header che linka alla pagina Import dedicata.
-- Le card biglietto ricevono lo stesso trattamento delle card contatto (vedi sotto).
+### File modificati
 
-### C. Network (`/v2/explore/network`)
-- Header unificato: `🛰 Esplora · Network` con tabs `WCA Partner / Mappa / Sherlock` inline.
-- Card "Tutti i paesi" e griglia paesi: bandiere `text-3xl` (vs `text-2xl` attuale), counters `text-base font-bold`, eliminare il box "Ordine: Nome" che spreca riga (passa a kebab azioni).
+| File | Cambio |
+|---|---|
+| `src/components/outreach/InUscitaTab.tsx` | Lascia solo i sotto-tab `da-inviare` e `inviati`; ricalcola i badge contatori dalle stesse fonti dei sotto-tab |
+| `src/v2/ui/pages/AIControlCenterPage.tsx` | Rimuove la sub-view `pending` dal menu interno |
+| `src/v2/routes.tsx` | `/v2/campaigns/jobs` → redirect a `/v2/campaigns` |
+| `src/v2/ui/templates/OrphanPagesNav.tsx` | Rimuove la voce "Campaign Jobs" |
+| `src/App.tsx` | Rimuove l'alias di redirect `campaign-jobs → /v2/campaigns/jobs` |
+| `src/components/outreach/ProgrammatiSubTab.tsx` | Header del file: marcato `@deprecated` (codice intatto) |
+| `src/components/outreach/FallitiSubTab.tsx` | Header del file: marcato `@deprecated` |
+| `src/components/outreach/CampagneTab.tsx` | Header del file: marcato `@deprecated` |
+| `src/v2/hooks/useCampaignDraftsV2.ts` | Header del file: marcato `@deprecated` |
+| `src/v2/hooks/useCampaignStatsV2.ts` (se presente nello stesso file sopra) | idem |
+| `src/v2/hooks/useEmailCampaignQueueV2.ts` | Header del file: marcato `@deprecated` |
 
-### D. Card lista contatto/partner — riallineamento "Kanban-style"
-Riferimento: la card `Mario Rossi / TestCorp / mario@test.com / 0 interazioni` del Kanban (ultima foto), che è esattamente il livello di pulizia richiesto.
+### File NON toccati (importanti)
 
-Modifiche a `ContactCard.tsx` / `PartnerVirtualList.tsx`:
-- Bandiera `text-4xl` (48px) in slot dedicato 56×56 (oggi 36px in slot 48px → troppo piccola).
-- Nome azienda `text-base font-bold text-foreground` (oggi text-sm).
-- Sotto-riga: `Persona · Ruolo` in `text-sm text-foreground/85`.
-- Email/telefono in `text-xs text-foreground/70` con icona inline.
-- Badge origine (CSV/WCA/BCA) in `text-[11px] uppercase font-bold` con bg colorato pieno (non outline).
-- Sfondo card: gradient sottile `from-card to-card/60` come le colonne Kanban, bordo `border-border/40`, `rounded-xl`.
-- Hover: lift `+1px` + bordo `border-primary/40`.
+- `supabase/functions/send-email`, `process-email-queue`, `generate-email`, `improve-email`, `journalistReview*`
+- `email_drafts`, `email_campaign_queue`, `cockpit_queue`, `outreach_queue`, `ai_pending_actions`, `campaign_jobs` (nessuna migrazione DB)
+- `CampaignQueueMonitor.tsx` (resta funzionante nel Command Canvas)
 
-### E. Sezione "indicatore pagina globale"
-Nella sidebar laterale a sinistra (`LayoutSidebarNav`), evidenziare con barra primary spessa 3px a sinistra l'icona della pagina corrente (oggi è solo un cambio di colore tenue) → l'utente capisce a colpo d'occhio dove si trova anche dalla nav.
+### Verifica post-modifica
 
-## Nuovo componente
+- Apertura `/v2/outreach` → tab "In Uscita" mostra solo Da Inviare + Inviati, badge contatori coerenti
+- Apertura `/v2/ai-control` → niente sub-view "pending", restano le altre
+- Apertura `/v2/campaigns/jobs` → redirect a `/v2/campaigns`
+- Apertura `/v2/command` → CampaignQueueMonitor continua ad apparire quando crei una bozza batch
 
-`src/v2/ui/templates/PageHeaderUnified.tsx`
+## Cosa decideremo DOPO (non in questo intervento)
 
-```tsx
-interface PageHeaderUnifiedProps {
-  sectionIcon: LucideIcon;
-  sectionLabel: string;          // "Pipeline"
-  pageLabel: string;             // "Contatti CRM"
-  siblingTabs: { key, label, to, count? }[];
-  counter?: { value: number, label: string };
-  filterChips?: { key, label, icon?, active, onClick }[];
-  primaryAction?: { label, icon, onClick };
-  secondaryActions?: ReactNode;  // kebab content
-}
-```
-
-Una sola implementazione, riutilizzata da CRM, Network, Biglietti, Outreach, Campagne, Agenda.
-
-## File da modificare
-
-- **Nuovo**: `src/v2/ui/templates/PageHeaderUnified.tsx`
-- `src/v2/ui/pages/CRMPage.tsx` — adottare PageHeaderUnified, rimuovere SectionTabs.
-- `src/v2/ui/pages/ContactsPage.tsx` — togliere il proprio header interno (delegato).
-- `src/components/contacts/ContactListPanel.tsx` — togliere riga counter+chips (passa all'header unificato).
-- `src/components/contacts/BusinessCardsHub.tsx` (Biglietti) — **rimuovere dropzone** in top, sostituire con bottone Import nell'header.
-- `src/v2/ui/pages/NetworkPage.tsx` — adottare PageHeaderUnified.
-- `src/v2/ui/organisms/network/CountryGridV2.tsx` — bandiere `text-3xl`, rimuovere box "Ordine: Nome" dal contenuto.
-- `src/components/contacts/ContactCard.tsx` — applicare scala "Kanban-style" (bandiere 48px, nome `text-base font-bold`, gradient sottile).
-- `src/components/operations/PartnerVirtualList.tsx` — stessa scala.
-- `src/v2/ui/templates/LayoutSidebarNav.tsx` — barra attiva 3px primary a sinistra sulla pagina corrente.
-- `src/v2/ui/templates/SectionTabs.tsx` — deprecato per le pagine con PageHeaderUnified (resta per le altre).
-
-## Cosa NON tocco
-
-- BCA `BusinessCardsViewV2.tsx` (già il riferimento visivo).
-- Logica/stato (filtri, query, drag&drop Kanban).
-- Sidebar a scomparsa filtri (già ok dopo l'ultimo intervento).
-- LayoutHeader globale (già compatto a h-11).
-
-## Risultato atteso
-
-- Header pagina passa da **~200px verticali** a **~56px**.
-- Pagina corrente sempre evidente (icona+colore in header + barra in sidebar).
-- Card leggibili "a 60 anni" con bandiere triple.
-- Stessa identità visiva su Contatti / Kanban / Biglietti / Duplicati / Network.
-
+- Se trasformare il `CampaignQueueMonitor` in una maschera fissa nel menu (oggi hai detto "no, basta dov'è").
+- Se ricollegare `outreach_queue` come coda multicanale unificata (oggi vuota, è una scelta architetturale separata).
+- Se introdurre lo step "Autorizza" obbligatorio prima dell'invio per le mail batch — discusso nel turno precedente, da affrontare a parte.

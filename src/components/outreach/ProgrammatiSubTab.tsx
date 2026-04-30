@@ -1,5 +1,8 @@
 /**
- * ProgrammatiSubTab — Scheduled/future outreach actions (list + calendar toggle)
+ * ProgrammatiSubTab — Scheduled/future outreach actions (list + calendar toggle).
+ * @deprecated 2026-04-30 — Non più montato in InUscitaTab. Leggeva da
+ * `cockpit_queue` che non è una coda di invio reale. Mantenuto in archivio
+ * (regola: no delete in src/components/).
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
