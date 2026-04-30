@@ -193,16 +193,20 @@ export function V2Routes(): React.ReactElement {
           <Route path="partner-hub" element={<PartnerHubAlias />} />
 
           {/* CRM + figli */}
-          <Route path="crm" element={<Navigate to="/v2/pipeline/kanban" replace />} />
-          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
-          <Route path="crm/biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="crm/business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="crm/kanban" element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          {/* Tutti i vecchi alias rinviano alla pipeline unica con la giusta origine. */}
+          <Route path="crm" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
+          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
+          <Route path="crm/biglietti" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
+          <Route path="crm/business-cards" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
+          <Route path="crm/kanban" element={<Navigate to="/v2/pipeline/kanban?origine=crm" replace />} />
           <Route path="crm/prospects" element={guardedPage(ProspectPage, "Prospects")} />
           <Route path="crm/acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
-          <Route path="business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
+          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
+          <Route path="business-cards" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
+          <Route path="biglietti" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
+          {/* Alias semantico: /v2/contatti/* → /v2/pipeline/* (preserva il path) */}
+          <Route path="contatti" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
+          <Route path="contatti/*" element={<ContattiAlias />} />
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
 
