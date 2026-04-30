@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
-import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry } from "@/data/outreachPipeline";
+import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, cancelCampaignQueueItem, updateActivitySchedule, updateMissionActionSchedule, updateCampaignQueueSchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 
 const CHANNEL_ICON: Record<string, typeof Mail> = { send_email: Mail, email: Mail, outreach: Mail, send_whatsapp: MessageCircle, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone };
@@ -119,7 +119,8 @@ export function DaInviareSubTab() {
     try {
       if (item.type === "activity") await cancelActivity(realId);
       else if (item.type === "mission_action") await cancelMissionAction(realId);
-      else await cancelPendingAction(realId);
+      else if (item.type === "pending_action") await cancelPendingAction(realId);
+      else await cancelCampaignQueueItem(realId);
       await logAuditEntry({ action_category: "activity_deleted", action_detail: `Annullato: ${item.subject}`, decision_origin: "manual", target_type: item.type === "activity" ? "activity" : "mission" });
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending() });
       toast.success("Annullato");
@@ -132,6 +133,7 @@ export function DaInviareSubTab() {
     try {
       if (item.type === "activity") await updateActivitySchedule(realId, isoDate);
       else if (item.type === "mission_action") await updateMissionActionSchedule(realId, isoDate);
+      else if (item.type === "campaign_queue") await updateCampaignQueueSchedule(realId, isoDate);
       await logAuditEntry({ action_category: "activity_updated", action_detail: `Riprogrammato per ${format(date, "dd MMM yyyy", { locale: it })}: ${item.subject}`, decision_origin: "manual", target_type: "activity" });
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending() });
       toast.success(`Programmato per ${format(date, "dd MMM yyyy", { locale: it })}`);
