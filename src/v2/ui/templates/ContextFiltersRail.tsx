@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { SlidersHorizontal, X, Check, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,17 +7,37 @@ import { NetworkFiltersSection } from "@/components/global/filters-drawer/Networ
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersSection } from "@/components/global/filters-drawer/BCAFiltersSection";
 
-function getFilterContext(pathname: string): { title: string; content: React.ReactNode } | null {
+/**
+ * Sceglie il pannello filtri in base al pathname e al query param `?origine=`.
+ *
+ * UX redesign apr 2026: la sezione Contatti unifica WCA / CRM / Biglietti come
+ * **origini** della stessa pipeline. I filtri si adattano all'origine corrente.
+ */
+function getFilterContext(
+  pathname: string,
+  origine: string | null,
+): { title: string; content: React.ReactNode } | null {
+  // Pipeline unica /v2/pipeline/* — filtri scelti in base all'origine.
+  if (pathname.startsWith("/v2/pipeline")) {
+    const o = (origine ?? "crm").toLowerCase();
+    if (o === "wca") {
+      return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
+    }
+    if (o === "biglietti") {
+      return { title: "Filtri Biglietti da visita", content: <BCAFiltersSection /> };
+    }
+    return { title: "Filtri Contatti", content: <CRMFiltersSection /> };
+  }
+
+  // Legacy paths kept working (in caso qualcuno arrivi via vecchio link prima del redirect).
   if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network") {
     return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
   }
-
-  if (pathname.startsWith("/v2/pipeline/contacts") || pathname.startsWith("/v2/pipeline/kanban") || pathname.startsWith("/v2/crm/contacts") || pathname === "/v2/crm" || pathname === "/v2/contacts") {
-    return { title: "Filtri Contatti CRM", content: <CRMFiltersSection /> };
-  }
-
-  if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/crm/biglietti") || pathname.startsWith("/v2/crm/business-cards")) {
+  if (pathname.startsWith("/v2/crm/biglietti") || pathname.startsWith("/v2/crm/business-cards")) {
     return { title: "Filtri Biglietti da visita", content: <BCAFiltersSection /> };
+  }
+  if (pathname.startsWith("/v2/crm") || pathname === "/v2/contacts") {
+    return { title: "Filtri Contatti", content: <CRMFiltersSection /> };
   }
 
   return null;
@@ -44,7 +64,8 @@ function readInitialOpen(): boolean {
  */
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
-  const context = getFilterContext(pathname);
+  const [searchParams] = useSearchParams();
+  const context = getFilterContext(pathname, searchParams.get("origine"));
   const [open, setOpen] = React.useState<boolean>(readInitialOpen);
   const asideRef = React.useRef<HTMLElement | null>(null);
   const tabRef = React.useRef<HTMLButtonElement | null>(null);
