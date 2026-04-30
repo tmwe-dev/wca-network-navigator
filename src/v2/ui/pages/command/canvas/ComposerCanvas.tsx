@@ -1,16 +1,24 @@
 /**
  * ComposerCanvas — Glass-style email composer for Command page.
  * Uses useEmailComposerV2 for real AI generation + send via edge functions.
+ *
+ * Supporta DUE modalità:
+ *  - SINGLE: una bozza singola (partner risolto), rigenerazione via generate-email.
+ *  - BATCH: array `drafts` con N bozze pre-personalizzate, frecce di navigazione,
+ *           "Rigenera tutte" e "Invia tutte". Stato del composer sincronizzato
+ *           con la bozza correntemente selezionata.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, X, Loader2, Mail } from "lucide-react";
+import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import ApprovalPanel from "@/components/workspace/ApprovalPanel";
 import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
+import type { ComposerDraft } from "../tools/types";
+import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -24,6 +32,10 @@ interface ComposerCanvasProps {
   readonly partnerId?: string | null;
   readonly recipientName?: string | null;
   readonly emailType?: string;
+  /** Bozze multiple pre-personalizzate (modalità BATCH country-wide). */
+  readonly drafts?: ReadonlyArray<ComposerDraft>;
+  /** Tono iniziale detectato dal prompt (default: "professionale"). */
+  readonly detectedTone?: DetectedTone;
 }
 
 export default function ComposerCanvas({
@@ -35,6 +47,8 @@ export default function ComposerCanvas({
   partnerId,
   recipientName,
   emailType,
+  drafts,
+  detectedTone,
 }: ComposerCanvasProps) {
   const composer = useEmailComposerV2();
   const governance = useGovernance("compose-email");
@@ -42,18 +56,62 @@ export default function ComposerCanvas({
   const [toField, setToField] = useState(initialTo);
   const [showApproval, setShowApproval] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
+  const [batchDrafts, setBatchDrafts] = useState<ReadonlyArray<ComposerDraft>>(drafts ?? []);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [tone, setTone] = useState<DetectedTone>(detectedTone ?? "professionale");
 
-  // Sync initial values on mount
-  useState(() => {
-    if (initialSubject) composer.setSubject(initialSubject);
-    if (initialBody) composer.setBody(initialBody);
+  const isBatch = batchDrafts.length > 1;
+
+  // ── Sync iniziale + ad ogni cambio di initialSubject/initialBody/initialTo ──
+  // FIX: il vecchio `useState(initializer)` non rigirava mai, quindi i nuovi
+  // valori dopo "rigenera con tono X" restavano invisibili nel Canvas.
+  useEffect(() => {
+    if (isBatch) return; // batch usa l'effetto sotto
+    if (initialSubject !== undefined) composer.setSubject(initialSubject);
+    if (initialBody !== undefined) composer.setBody(initialBody);
     if (initialTo) {
+      // Reset destinatari al singolo iniziale
+      for (const r of composer.recipients) composer.removeRecipient(r.email);
       composer.addRecipient({
         email: initialTo,
-        name: initialTo.split("@")[0] ?? initialTo,
+        name: recipientName ?? (initialTo.split("@")[0] ?? initialTo),
       });
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSubject, initialBody, initialTo, isBatch]);
+
+  // ── Sync nuova lista di drafts (es. dopo "rigenera tutte") ──
+  useEffect(() => {
+    if (drafts && drafts.length > 0) {
+      setBatchDrafts(drafts);
+      setCurrentIndex(0);
+    }
+  }, [drafts]);
+
+  useEffect(() => {
+    if (detectedTone) setTone(detectedTone);
+  }, [detectedTone]);
+
+  // ── Sync composer con la bozza batch correntemente selezionata ──
+  useEffect(() => {
+    if (!isBatch) return;
+    const d = batchDrafts[currentIndex];
+    if (!d) return;
+    composer.setSubject(d.subject ?? "");
+    composer.setBody(d.body ?? "");
+    // Reset destinatari → metti solo quello della bozza corrente
+    for (const r of composer.recipients) composer.removeRecipient(r.email);
+    if (d.contactEmail) {
+      composer.addRecipient({
+        email: d.contactEmail,
+        name: d.contactName ?? d.partnerName,
+        companyName: d.partnerName,
+        partnerId: d.partnerId,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, batchDrafts, isBatch]);
 
   const handleAddRecipient = useCallback(() => {
     const email = toField.trim();
@@ -66,17 +124,67 @@ export default function ComposerCanvas({
   }, [toField, composer]);
 
   const handleGenerate = useCallback(async () => {
+    // BATCH → rigenera tutte le N bozze in parallelo col tono corrente
+    if (isBatch) {
+      setRegenerating(true);
+      const newTone = detectTone(promptHint) ?? tone;
+      try {
+        const settled = await Promise.allSettled(
+          batchDrafts.map(async (d) => {
+            if (!d.contactEmail || !d.partnerId) return d;
+            try {
+              const gen = await invokeEdge<{ subject?: string; body?: string }>("generate-email", {
+                body: {
+                  standalone: true,
+                  partner_id: d.partnerId,
+                  recipient_name: d.contactName,
+                  recipient_company: d.partnerName,
+                  oracle_type: emailType ?? "primo_contatto",
+                  oracle_tone: newTone,
+                  goal: promptHint,
+                  quality: "standard",
+                  use_kb: true,
+                  language: "it",
+                },
+                context: "composer:regenerate-batch",
+              });
+              return {
+                ...d,
+                subject: gen?.subject ?? d.subject,
+                body: gen?.body ?? d.body,
+                status: gen?.body ? ("ok" as const) : ("ai_error" as const),
+              };
+            } catch {
+              return { ...d, status: "ai_error" as const };
+            }
+          }),
+        );
+        const next: ComposerDraft[] = settled.map((r, i) =>
+          r.status === "fulfilled" ? r.value : batchDrafts[i],
+        );
+        setBatchDrafts(next);
+        setTone(newTone);
+        toast.success(`${next.filter((d) => d.status === "ok").length}/${next.length} bozze rigenerate (${toneLabel(newTone)})`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Errore rigenerazione batch");
+      } finally {
+        setRegenerating(false);
+      }
+      return;
+    }
+
     // Se abbiamo un partner risolto → usa la pipeline ufficiale generate-email
     if (partnerId) {
       setRegenerating(true);
       try {
+        const newTone = detectTone(promptHint) ?? tone;
         const gen = await invokeEdge<{ subject?: string; body?: string }>("generate-email", {
           body: {
             standalone: true,
             partner_id: partnerId,
             recipient_name: recipientName ?? null,
             oracle_type: emailType ?? "primo_contatto",
-            oracle_tone: "professionale",
+            oracle_tone: newTone,
             goal: promptHint,
             quality: "standard",
             use_kb: true,
@@ -86,6 +194,7 @@ export default function ComposerCanvas({
         });
         if (gen?.subject) composer.setSubject(gen.subject);
         if (gen?.body) composer.setBody(gen.body);
+        setTone(newTone);
         toast.success("Bozza rigenerata");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Errore rigenerazione");
@@ -96,7 +205,7 @@ export default function ComposerCanvas({
     }
     // Fallback (nessun partner risolto): usa il generator legacy
     composer.generate.mutate(promptHint || undefined);
-  }, [composer, promptHint, partnerId, recipientName, emailType]);
+  }, [composer, promptHint, partnerId, recipientName, emailType, isBatch, batchDrafts, tone]);
 
   const handleSendClick = useCallback(() => {
     if (composer.recipients.length === 0) {
@@ -127,8 +236,36 @@ export default function ComposerCanvas({
     });
   }, [composer, onClose]);
 
+  /** Invia TUTTE le bozze batch (solo quelle con status "ok"). */
+  const handleSendAllBatch = useCallback(async () => {
+    if (!isBatch) return;
+    const sendable = batchDrafts.filter((d) => d.status === "ok" && d.contactEmail && d.body && d.subject);
+    if (sendable.length === 0) {
+      toast.error("Nessuna bozza pronta all'invio");
+      return;
+    }
+    setBatchSending(true);
+    let okCount = 0;
+    let failCount = 0;
+    for (const d of sendable) {
+      try {
+        await invokeEdge("send-email", {
+          body: { to: d.contactEmail, subject: d.subject, html: d.body },
+          context: "composer:send-batch",
+        });
+        okCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBatchSending(false);
+    if (okCount > 0) toast.success(`${okCount} email inviate${failCount > 0 ? ` · ${failCount} fallite` : ""}`);
+    if (okCount === sendable.length) onClose();
+  }, [isBatch, batchDrafts, onClose]);
+
   const isGenerating = composer.generate.isPending || regenerating;
-  const isSending = composer.send.isPending;
+  const isSending = composer.send.isPending || batchSending;
+  const currentDraft = isBatch ? batchDrafts[currentIndex] : null;
 
   return (
     <motion.div
@@ -145,7 +282,12 @@ export default function ComposerCanvas({
             COMPOSER
           </span>
           <Mail className="w-3.5 h-3.5 text-muted-foreground/60" />
-          <span className="text-[13px] font-light text-foreground">Componi email</span>
+          <span className="text-[13px] font-light text-foreground">
+            {isBatch ? `Componi email · batch ${batchDrafts.length}` : "Componi email"}
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider bg-muted/40 text-muted-foreground">
+            tono: {toneLabel(tone)}
+          </span>
         </div>
         <button
           onClick={onClose}
@@ -154,6 +296,47 @@ export default function ComposerCanvas({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Batch navigation header */}
+      {isBatch && currentDraft && (
+        <div
+          className="flex items-center justify-between rounded-xl px-3 py-2"
+          style={{ background: "hsl(240 5% 10% / 0.5)", border: "1px solid hsl(0 0% 100% / 0.06)" }}
+        >
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => (i - 1 + batchDrafts.length) % batchDrafts.length)}
+            disabled={isGenerating || isSending}
+            className="p-1 rounded hover:bg-foreground/5 disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Bozza precedente"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="flex flex-col items-center text-center min-w-0 flex-1 px-2">
+            <span className="text-[10px] font-mono text-muted-foreground/70 tracking-wider">
+              {currentIndex + 1} / {batchDrafts.length}
+            </span>
+            <span className="text-[12px] text-foreground truncate max-w-full font-light">
+              {currentDraft.partnerName}
+              {currentDraft.contactName ? ` · ${currentDraft.contactName}` : ""}
+            </span>
+            {currentDraft.status !== "ok" && (
+              <span className="text-[9px] font-mono text-warning mt-0.5">
+                {currentDraft.status === "no_email" ? "⚠ no email" : "⚠ generazione fallita"}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentIndex((i) => (i + 1) % batchDrafts.length)}
+            disabled={isGenerating || isSending}
+            className="p-1 rounded hover:bg-foreground/5 disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Bozza successiva"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Recipients */}
       <div className="space-y-1">
@@ -249,7 +432,7 @@ export default function ComposerCanvas({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || isSending}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50"
           style={{
             background: "hsl(270 60% 60% / 0.1)",
@@ -257,25 +440,49 @@ export default function ComposerCanvas({
             color: "hsl(270 60% 70%)",
           }}
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          Genera con AI
+          {isBatch ? <RefreshCw className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {isBatch ? `Rigenera tutte (${batchDrafts.length})` : "Genera con AI"}
         </motion.button>
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleSendClick}
-          disabled={isSending}
-          className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success/80 hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
-          style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
-        >
-          {isSending ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Send className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2">
+          {isBatch && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSendAllBatch}
+              disabled={isGenerating || isSending}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50"
+              style={{
+                background: "hsl(152 60% 45% / 0.1)",
+                border: "1px solid hsl(152 60% 45% / 0.2)",
+                color: "hsl(152 60% 60%)",
+              }}
+            >
+              {isSending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              Invia tutte ({batchDrafts.filter((d) => d.status === "ok").length})
+            </motion.button>
           )}
-          Invia
-        </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSendClick}
+            disabled={isSending || isGenerating}
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success/80 hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
+            style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
+          >
+            {isSending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5" />
+            )}
+            {isBatch ? "Invia questa" : "Invia"}
+          </motion.button>
+        </div>
       </div>
 
       {/* Approval Panel */}
