@@ -16,6 +16,15 @@ import { RunHistoryPanel } from "./prompt-lab/RunHistoryPanel";
 import { MetricsSummaryBadge } from "./prompt-lab/MetricsSummaryBadge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
 import { useSuggestedImprovements } from "./prompt-lab/hooks/useSuggestedImprovements";
 import { useAuth } from "@/providers/AuthProvider";
@@ -67,6 +76,8 @@ import {
   TestTube2,
   History,
   Library,
+  MoreHorizontal,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
