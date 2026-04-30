@@ -396,6 +396,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      runSynthesis,
     ],
   );
 
