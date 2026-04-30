@@ -2,7 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadScoreBadge } from "./LeadScoreBadge";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, MessageCircle, User, Sparkles, Handshake, Globe2, Linkedin, Mail, Search } from "lucide-react";
+import { AlertTriangle, MessageCircle, User, Sparkles, Handshake, Globe2, Linkedin, Mail, Phone, Search } from "lucide-react";
 import { HoldingPatternIndicator } from "./HoldingPatternIndicator";
 import { HoldingPatternBadge } from "@/components/shared/HoldingPatternBadge";
 import { clean, getContactQuality, countryFlag } from "./contactHelpers";
@@ -68,6 +68,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const flag = countryFlag(c.country ?? null);
   const isWcaMatched = !!c.wca_partner_id;
   const cEmail = clean(c.email);
+  const cPhone = clean((c as unknown as { phone?: string | null }).phone) || clean((c as unknown as { mobile?: string | null }).mobile);
 
   const ed = (c.enrichment_data ?? {}) as Record<string, unknown>;
   const linkedinUrl = ed?.linkedin_url as string | undefined;
@@ -112,37 +113,14 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           />
         </div>
 
-        {/* Col 2: Bandiera grande (slot dedicato, 3x più visibile) */}
-        <div className="flex items-center justify-center">
-          <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="text-3xl leading-none shrink-0 w-10 h-10 flex items-center justify-center rounded-md ring-1 ring-border/50 bg-muted/20">
-            <span aria-hidden>{flag || "🏳"}</span>
-          </Filterable>
-        </div>
-
-        {/* Col 3: Località — paese · città · CAP */}
+        {/* Col 2: AZIENDA + Contatto/Ruolo (BCA-style, prima colonna larga) */}
         <div className="min-w-0 overflow-hidden leading-tight">
-          <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="block truncate text-sm text-foreground font-semibold">
-            {cCountry ? capitalizeLabel(cCountry) : <span className="text-foreground/50">—</span>}
-          </Filterable>
-          <div className="flex items-center gap-1 min-w-0 mt-0.5">
-            {cCity ? (
-              <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-xs text-foreground/70">
-                {capitalizeLabel(cCity)}
-              </Filterable>
-            ) : (
-              <span className="text-foreground/40 text-xs">—</span>
-            )}
-            {cZip && (
-              <Filterable field="zip" value={cZip} onFilterClick={onFilterClick} className="text-xs font-mono text-foreground/60 shrink-0">
-                · {cZip}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {flag && (
+              <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="text-base leading-none shrink-0">
+                <span aria-hidden>{flag}</span>
               </Filterable>
             )}
-          </div>
-        </div>
-
-        {/* Col 4: Azienda + Ruolo + Origine */}
-        <div className="min-w-0 overflow-hidden leading-tight">
-          <div className="flex items-center gap-1 min-w-0">
             <Filterable field="company" value={rawCompany} onFilterClick={onFilterClick}
               className={cn(
                 "font-bold truncate text-sm",
@@ -157,12 +135,20 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
             {quality === "poor" && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+            {displayContact ? (
+              <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
+                <User className="w-3 h-3 text-foreground/60 shrink-0" />
+                <span className="truncate text-xs text-foreground/80 font-medium">{displayContact}</span>
+              </Filterable>
+            ) : null}
             {cPosition && (
-              <span className="text-xs text-foreground/70 truncate">{capitalizeLabel(cPosition)}</span>
+              <span className="text-[11px] text-foreground/60 truncate">
+                {displayContact ? "· " : ""}{capitalizeLabel(cPosition)}
+              </span>
             )}
             {cOrigin && (
               <Filterable field="origin" value={cOrigin} onFilterClick={onFilterClick}>
-                <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-semibold ml-auto shrink-0 uppercase tracking-wide">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-semibold ml-auto shrink-0 uppercase tracking-wide">
                   {capitalizeLabel(cOrigin)}
                 </span>
               </Filterable>
@@ -170,29 +156,52 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           </div>
         </div>
 
-        {/* Col 5: Contatto + Email */}
+        {/* Col 3: Località compatta (paese · città · CAP). Vuota se non si sa nulla. */}
         <div className="min-w-0 overflow-hidden leading-tight">
-          {displayContact ? (
-            <Filterable field="name" value={displayContact} onFilterClick={onFilterClick} className="flex items-center gap-1 min-w-0">
-              <User className="w-3.5 h-3.5 text-foreground/60 shrink-0" />
-              <span className="truncate text-sm text-foreground font-medium">{displayContact}</span>
-            </Filterable>
-          ) : (
-            <span className="text-foreground/40 text-xs">—</span>
-          )}
-          <div className="flex items-center gap-1 min-w-0 mt-0.5">
-            {cEmail ? (
-              <>
-                <Mail className="w-3 h-3 text-foreground/60 shrink-0" />
-                <span className="text-foreground/80 truncate text-xs">{cEmail}</span>
-              </>
-            ) : (
-              <span className="text-foreground/40 italic text-xs">no email</span>
-            )}
-          </div>
+          {(cCountry || cCity || cZip) ? (
+            <div className="flex items-center gap-1 min-w-0 flex-wrap">
+              {cCountry && (
+                <Filterable field="country" value={cCountry} onFilterClick={onFilterClick} className="truncate text-xs text-foreground/85 font-medium">
+                  {capitalizeLabel(cCountry)}
+                </Filterable>
+              )}
+              {cCity && (
+                <>
+                  {cCountry && <span className="text-foreground/40 text-xs">·</span>}
+                  <Filterable field="city" value={cCity} onFilterClick={onFilterClick} className="truncate text-xs text-foreground/70">
+                    {capitalizeLabel(cCity)}
+                  </Filterable>
+                </>
+              )}
+              {cZip && (
+                <>
+                  {(cCountry || cCity) && <span className="text-foreground/40 text-xs">·</span>}
+                  <Filterable field="zip" value={cZip} onFilterClick={onFilterClick} className="text-xs font-mono text-foreground/60 shrink-0">
+                    {cZip}
+                  </Filterable>
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        {/* Col 6: Stato + Score + indicatori */}
+        {/* Col 4: Email + Telefono */}
+        <div className="min-w-0 overflow-hidden leading-tight">
+          {cEmail ? (
+            <div className="flex items-center gap-1 min-w-0">
+              <Mail className="w-3 h-3 text-foreground/60 shrink-0" />
+              <span className="text-foreground/85 truncate text-xs">{cEmail}</span>
+            </div>
+          ) : null}
+          {cPhone && (
+            <div className="flex items-center gap-1 min-w-0 mt-0.5">
+              <Phone className="w-3 h-3 text-foreground/60 shrink-0" />
+              <span className="text-foreground/70 truncate text-[11px]">{cPhone}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Col 5: Stato + Score + indicatori */}
         <div className="min-w-0 overflow-hidden flex flex-col gap-1">
           <div className="flex items-center gap-1 min-w-0">
             <HoldingPatternIndicator status={c.lead_status as LeadStatus} compact />
@@ -233,7 +242,7 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
           </div>
         </div>
 
-        {/* Col 7: Azioni */}
+        {/* Col 6: Azioni */}
         <div className="flex items-center justify-end gap-0.5" data-no-filter>
           <button
             onClick={(e) => { e.stopPropagation(); onViewDetail?.(); }}
