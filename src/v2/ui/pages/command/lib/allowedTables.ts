@@ -17,6 +17,9 @@ export interface AllowedTable {
 
 export const ALLOWED_TABLES_LIST: readonly AllowedTable[] = [
   { name: "partners", defaultSort: { column: "rating", ascending: false } },
+  { name: "partner_networks", defaultSort: { column: "network_name", ascending: true } },
+  { name: "network_configs", defaultSort: { column: "network_name", ascending: true } },
+  { name: "partner_services", defaultSort: { column: "created_at", ascending: false } },
   { name: "imported_contacts", defaultSort: { column: "created_at", ascending: false } },
   { name: "outreach_queue", defaultSort: { column: "created_at", ascending: false } },
   { name: "activities", defaultSort: { column: "due_date", ascending: true } },

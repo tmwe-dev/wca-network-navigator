@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ScrollText, Database, Search } from "lucide-react";
+import { ChevronRight, ScrollText, Database, Search, Columns3 } from "lucide-react";
 import type { MessageAudit } from "../constants";
 
 interface Props {
@@ -27,12 +27,14 @@ const refKindLabel: Record<NonNullable<MessageAudit["references"]>[number]["kind
   "playbook": "Playbook",
   "context": "Contesto",
   "table": "Tabella",
+  "column": "Colonna",
   "keyword": "Keyword",
 };
 
 /** Stile per i nuovi badge "tabella" e "keyword" — distinti da quelli generici. */
 const refKindStyle: Partial<Record<NonNullable<MessageAudit["references"]>[number]["kind"], string>> = {
   table: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200/95",
+  column: "border-primary/30 bg-primary/10 text-primary/95",
   keyword: "border-amber-400/30 bg-amber-400/10 text-amber-200/95",
 };
 
@@ -145,6 +147,7 @@ export default function MessageAuditPanel({ audit }: Props) {
                         title={r.value ?? ""}
                       >
                         {r.kind === "table" && <Database className="w-2.5 h-2.5 opacity-80" />}
+                        {r.kind === "column" && <Columns3 className="w-2.5 h-2.5 opacity-80" />}
                         {r.kind === "keyword" && <Search className="w-2.5 h-2.5 opacity-80" />}
                         <span className="text-primary/80 font-mono uppercase text-[8px] tracking-wider">
                           {refKindLabel[r.kind]}
