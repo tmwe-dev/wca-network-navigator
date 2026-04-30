@@ -10,7 +10,8 @@
 import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
+import { PageHeaderUnified, type PageHeaderTab } from "@/v2/ui/templates/PageHeaderUnified";
+import { Briefcase } from "lucide-react";
 import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 import { AgendaPage } from "@/v2/ui/pages/AgendaPage";
 import { Campaigns as CampaignsPage } from "@/v2/ui/pages/CampaignsPage";
@@ -27,7 +28,7 @@ const DuplicateDetector = lazy(() =>
   })),
 );
 
-const TABS: readonly SectionTab[] = [
+const TABS: readonly PageHeaderTab[] = [
   { key: "contacts",   label: "Contatti CRM", to: "/v2/pipeline/contacts"   },
   { key: "kanban",     label: "Kanban",       to: "/v2/pipeline/kanban"     },
   { key: "biglietti",  label: "Biglietti",    to: "/v2/pipeline/biglietti"  },
@@ -43,7 +44,13 @@ function TabFallback() {
 export function PipelineSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <SectionTabs tabs={TABS} rootPath="/v2/pipeline" contentOverflow="contain">
+      <PageHeaderUnified
+        sectionIcon={Briefcase}
+        sectionLabel="Pipeline"
+        tabs={TABS}
+        rootPath="/v2/pipeline"
+      />
+      <div className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
           <Route path="contacts"  element={<ContactsPage />} />
@@ -77,7 +84,7 @@ export function PipelineSection(): React.ReactElement {
           <Route path="deals"     element={<Navigate to="/v2/pipeline/kanban" replace />} />
           <Route path="*"         element={<Navigate to="/v2/pipeline/contacts" replace />} />
         </Routes>
-      </SectionTabs>
+      </div>
     </div>
   );
 }

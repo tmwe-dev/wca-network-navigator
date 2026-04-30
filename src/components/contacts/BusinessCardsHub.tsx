@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Handshake, Loader2, ImagePlus, LayoutGrid, LayoutList, Rows3,
+  Handshake, Loader2, ImagePlus, LayoutGrid, LayoutList, Rows3, Upload,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
@@ -22,7 +22,7 @@ import { isImageFile, isDataFile } from "@/lib/businessCardFileParser";
 // Sub-components
 import { CompactRow, CardGridItem, ExpandedCardItem } from "./bca/BCACardRenderers";
 import { BusinessCardDetailPanel } from "./bca/BCADetailPanel";
-import { useUploadAndParse, DropZone } from "./bca/BCAUpload";
+import { useUploadAndParse } from "./bca/BCAUpload";
 import { googleLogoSearchUrl } from "./bca/bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { deleteBusinessCards } from "@/data/businessCards";
@@ -155,9 +155,35 @@ export default function BusinessCardsHub() {
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className={cn("flex-1 min-w-0 overflow-y-auto p-3 space-y-3", showPanel && "border-r border-border/50")}>
-          <DropZone onFiles={handleFiles} uploading={uploading} progress={progress} />
-
           <div className="flex items-center gap-2 flex-wrap">
+            <label
+              className={cn(
+                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11px] font-semibold border cursor-pointer transition-colors",
+                uploading
+                  ? "bg-muted/30 text-muted-foreground border-border/40 cursor-wait"
+                  : "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20",
+              )}
+              title="Importa biglietti da foto o file dati"
+            >
+              {uploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              {uploading ? `${progress}%` : "Importa biglietti"}
+              <input
+                type="file"
+                multiple
+                accept="image/*,.csv,.xlsx,.xls,.json"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) handleFiles(files);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="h-7 w-[120px] text-[11px]"><SelectValue placeholder="Tutti" /></SelectTrigger>
               <SelectContent>
