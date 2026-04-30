@@ -24,6 +24,7 @@ import {
   serializeJournalistReview,
   type PipelineChannel,
 } from "../_shared/postGenerationReview.ts";
+import { createPipelineTracer } from "../_shared/pipelineTracer.ts";
 
 async function checkWhatsAppConsent(
   supabase: ReturnType<typeof createClient>,
@@ -49,6 +50,7 @@ serve(async (req) => {
   const dynCors = getCorsHeaders(origin);
 
   try {
+    const tracer = createPipelineTracer();
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -98,12 +100,15 @@ serve(async (req) => {
     const quality: Quality = (["fast", "standard", "premium"].includes(rawQuality) ? rawQuality : "standard") as Quality;
 
     // ── Assemble context ──
+    tracer.start("oracle");
     let ctx;
     try {
       ctx = await assembleOutreachContext(supabase, userId, ch, quality, {
         company_name, contact_name, contact_email, country_code, linkedin_profile, email_type_id,
       });
+      tracer.end("oracle", "done", `KB:${(ctx.salesKBSections || []).length} stage:${ctx.relationshipStage}`);
     } catch (e: Record<string, unknown>) {
+      tracer.end("oracle", "error", String(e?.message || ""));
       if (e.code === "duplicate_branch") {
         return new Response(JSON.stringify({ error: "duplicate_branch", message: e.message, recent_contact: e.recentContact }), { status: 422, headers: { ...dynCors, "Content-Type": "application/json" } });
       }
@@ -246,6 +251,7 @@ DECISION ENGINE (raccomandazione automatica):
     const contractWarningsOutreach: string[] = [];
     let contractUsed = false;
     if (ch === "email" && ctx.partnerId) {
+      tracer.start("contract");
       const cr = await runEmailContract(supabase, userId, {
         engine: "command", // generate-outreach è invocato da Cockpit/Cadence/Agent
         operation: "generate",
@@ -262,14 +268,22 @@ DECISION ENGINE (raccomandazione automatica):
       contractWarningsOutreach.push(...cr.buildWarnings, ...cr.validationWarnings);
       typeResolutionOutreach = cr.typeResolution;
       if (cr.blocking && cr.blockingResponse) {
-        return new Response(JSON.stringify(cr.blockingResponse.body), {
+        tracer.end("contract", "error", "Contratto bloccante");
+        return new Response(JSON.stringify({ ...cr.blockingResponse.body, pipeline_trace: tracer.toArray() }), {
           status: cr.blockingResponse.status,
           headers: { ...dynCors, "Content-Type": "application/json" },
         });
       }
+      tracer.end("contract", contractWarningsOutreach.length > 0 ? "warn" : "done", contractWarningsOutreach[0]);
+      tracer.start("detector");
+      tracer.end("detector", "done", typeResolutionOutreach ? `Tipo: ${(typeResolutionOutreach as { resolved_type?: string })?.resolved_type ?? "—"}` : undefined);
     }
 
+    tracer.start("decision");
+    tracer.end("decision", "done", `${ctx.relationshipStage} · touch ${ctx.touchCount ?? 0}`);
+
     // ── Build prompts ──
+    tracer.start("prompt");
     let recipientName = "";
     if (contact_name && isLikelyPersonName(contact_name)) recipientName = contact_name;
 
@@ -318,15 +332,18 @@ DECISION ENGINE (raccomandazione automatica):
       ? await buildCalligrafiaSection(supabase, userId)
       : "";
     const finalSystemPrompt = `${baseFinalSystemPrompt}${calligrafiaSection ? "\n" + calligrafiaSection : ""}`;
+    tracer.end("prompt", "done", `${promptLab.appliedNames?.length ?? 0} prompt operativi · ${ch}`);
 
     // ── AI call ──
     const model = getModel(quality);
+    tracer.start("ai");
     const maxTokens = await getMaxTokensForFunction(supabase, userId, "ai_max_tokens_generate_outreach", 1200);
     const result = await aiChat({
       models: [model, "openai/gpt-5-mini"],
       messages: [{ role: "system", content: finalSystemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 40000, maxRetries: 1, max_tokens: maxTokens, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
     });
+    tracer.end("ai", "done", `${model} · ${result.usage?.completionTokens ?? "?"} tok`);
 
     // ── Credits ──
     const totalCredits = Math.max(1, Math.ceil((result.usage.promptTokens + result.usage.completionTokens * 2) / 1000));
@@ -341,6 +358,7 @@ DECISION ENGINE (raccomandazione automatica):
       ch === "whatsapp" ? "whatsapp" :
       ch === "linkedin" ? "linkedin" :
       "email";
+    tracer.start("journalist");
     const reviewResult = await runJournalistReview(supabase, userId, {
       channel: journalistChannel,
       draft: body,
@@ -364,6 +382,12 @@ DECISION ENGINE (raccomandazione automatica):
       kbSummary: (ctx.salesKBSections || []).join(", ") || null,
     });
     const finalBody = reviewResult.finalText || body;
+    tracer.end(
+      "journalist",
+      reviewResult.review?.verdict === "block" ? "error" : reviewResult.review?.verdict === "warn" ? "warn" : "done",
+      reviewResult.review?.reasoning_summary?.slice(0, 120),
+    );
+    tracer.mark("ready", "done", "Bozza pronta");
 
     const kbSource = ctx.salesKBSlice ? "kb_entries" : (ctx.settings.ai_sales_knowledge_base ? "legacy_monolithic_deprecated" : "none");
     const senderAlias = ctx.settings.ai_contact_alias || ctx.settings.ai_contact_name || "";
@@ -379,6 +403,7 @@ DECISION ENGINE (raccomandazione automatica):
       contract_used: contractUsed,
       contract_warnings: contractWarningsOutreach,
       type_resolution: typeResolutionOutreach,
+      pipeline_trace: tracer.toArray(),
       _debug: {
         model, quality, language_detected: detected.languageLabel, language_used: effectiveLanguage,
         country_code: country_code || "N/A", recipient_name_resolved: recipientName || "(generico)",

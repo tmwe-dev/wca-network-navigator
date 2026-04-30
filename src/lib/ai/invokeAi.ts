@@ -13,6 +13,13 @@
 import { invokeEdge, type InvokeEdgeOptions } from "@/lib/api/invokeEdge";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { Sentry } from "@/lib/sentry";
+import {
+  messagePipelineBus,
+  newPipelineId,
+  replayServerTrace,
+  type PipelineStageId,
+  type PipelineStageStatus,
+} from "@/lib/messaging/pipelineBus";
 
 export type AiScope =
   | "home"
@@ -120,8 +127,52 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
   const corr = traceCollector.startCorrelation();
   const route = typeof window !== "undefined" ? window.location.pathname : undefined;
   const start = Date.now();
+
+  // Pipeline tracker: only for message-generation endpoints. The user wants
+  // to "see the paper move from room to room" while a message is built.
+  const pipelineFnMap: Record<string, "email" | "whatsapp" | "linkedin" | "generic"> = {
+    "generate-email": "email",
+    "improve-email": "email",
+    "generate-outreach": "generic", // refined below from body.channel if present
+  };
+  const pipelineChannelHint = pipelineFnMap[functionName];
+  const pipelineId = pipelineChannelHint ? newPipelineId() : null;
+  if (pipelineId && pipelineChannelHint) {
+    const bodyAny = body as Record<string, unknown>;
+    const ch = (bodyAny?.channel as string | undefined) ?? pipelineChannelHint;
+    const channel: "email" | "whatsapp" | "linkedin" | "generic" =
+      ch === "whatsapp" || ch === "linkedin" || ch === "email" ? ch : "generic";
+    const labelHint =
+      (bodyAny?.subject as string | undefined) ||
+      (bodyAny?.recipient_name as string | undefined) ||
+      (context.extra?.label as string | undefined) ||
+      undefined;
+    messagePipelineBus.start({
+      pipelineId,
+      channel,
+      surface: context.source,
+      label: labelHint,
+    });
+    // Mark first stage as running optimistically so user sees movement immediately.
+    messagePipelineBus.update(pipelineId, "contract", { status: "running" });
+  }
+
   try {
     const res = await invokeEdge<TResponse>(functionName, invokeOpts);
+    // If the edge returned a pipeline_trace, replay it progressively.
+    if (pipelineId && res && typeof res === "object") {
+      const trace = (res as { pipeline_trace?: Array<{ stage: PipelineStageId; status: PipelineStageStatus; durationMs?: number; detail?: string }> })
+        .pipeline_trace;
+      if (Array.isArray(trace) && trace.length > 0) {
+        // Fire and forget — don't block the caller.
+        void replayServerTrace(pipelineId, trace).then(() => {
+          messagePipelineBus.end(pipelineId, "done");
+        });
+      } else {
+        // No trace from server: just close cleanly.
+        messagePipelineBus.end(pipelineId, "done");
+      }
+    }
     traceCollector.push({
       type: "ai.invoke",
       scope,
@@ -134,6 +185,9 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     });
     return res;
   } catch (err) {
+    if (pipelineId) {
+      messagePipelineBus.end(pipelineId, "error");
+    }
     const e = err as { message?: string; code?: string; httpStatus?: number };
     traceCollector.push({
       type: "ai.invoke",

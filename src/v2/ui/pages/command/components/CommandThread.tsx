@@ -12,6 +12,8 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import type { Message, FlowPhase, ToolPhase } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
 import PlanTimeline from "./PlanTimeline";
+import MessagePipelineTracker from "@/components/messaging/MessagePipelineTracker";
+import { useMessagePipeline } from "@/hooks/useMessagePipeline";
 import MessageAuditPanel from "./MessageAuditPanel";
 import MessageContent from "./MessageContent";
 
@@ -133,8 +135,24 @@ export default function CommandThread({
 
         <ExecutionFlow visible={flowPhase === "executing" && (!planState || !planState.stepStates?.length)} steps={execSteps} progress={execProgress} />
 
+        {/* Pipeline Tracker — mostra in-thread la "stanza" attuale di ogni email in produzione */}
+        <InlineCommandPipelines />
+
         <div ref={chatEndRef} />
       </div>
+    </div>
+  );
+}
+
+function InlineCommandPipelines() {
+  const all = useMessagePipeline();
+  const active = all.filter((s) => !s.endedAt || Date.now() - (s.endedAt ?? 0) < 5000);
+  if (active.length === 0) return null;
+  return (
+    <div className="space-y-2 my-2">
+      {active.map((snap) => (
+        <MessagePipelineTracker key={snap.pipelineId} snapshot={snap} />
+      ))}
     </div>
   );
 }

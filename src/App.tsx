@@ -19,6 +19,7 @@ import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
+import MessagePipelineGlobalOverlay from "@/components/messaging/MessagePipelineGlobalOverlay";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { TraceConsole } from "@/v2/observability/TraceConsole";
@@ -124,6 +125,7 @@ const App = () => (
                 <ConnectionBanner />
                 <RuntimeDiagnosticPanel />
                 <TraceConsole />
+                <MessagePipelineGlobalOverlay />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />

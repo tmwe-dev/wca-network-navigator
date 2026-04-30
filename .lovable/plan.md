@@ -1,95 +1,55 @@
-## Audit della pipeline email/outreach — stato attuale
+## Pipeline Tracker visuale per generazione email/messaggi
 
-Mappa di tutti i punti dove l'app prepara messaggi (email, WA, LinkedIn) e di **quali fasi della pipeline ufficiale** ciascuno applica oggi:
+Aggiungo un sistema globale che mostra in tempo reale i passaggi (le "stanze") che ogni email attraversa: **Contract → Type Detector → Oracle Context → Decision Engine → Prompt Lab → AI Generation → Journalist Review → Ready**. Badge animati in stile Command (icona + label + stato pulse/done/error), visibili ovunque si generi un messaggio.
+
+### Cosa vedrai
+
+Un componente `<MessagePipelineTracker />` con badge orizzontali che si illuminano in sequenza mentre la mail "passa da una stanza all'altra":
 
 ```text
-Pipeline ufficiale dichiarata:
-1) Email Contract       (buildEmailContract → validateEmailContract)
-2) Type Detector        (detectEmailType: blocca conflitti tipo/storia)
-3) Oracolo / Context    (assembleContextBlocks: KB + history + warmth + decisione)
-4) Decision Engine      (azione, tono, journalist consigliato)
-5) Prompt Lab           (loadOperativePrompts + Calligrafia)
-6) AI Gateway           (model + retry)
-7) Giornalista finale   (journalistReview: edit / warn / block)
-8) Audit + Credits      (supervisor_audit_log, deduct_credits)
+[✓ Contract] → [✓ Detector] → [● Oracle…] → [○ Decision] → [○ Prompt] → [○ AI] → [○ Journalist]
 ```
 
-| # | Superficie / Hook | Edge function chiamata | Contract | Detector | Oracolo | Decision | Prompt Lab | Giornalista | Note |
-|---|-------------------|------------------------|:--------:|:--------:|:-------:|:--------:|:----------:|:-----------:|------|
-| A | Command — `composeEmail` (singolo + batch country-wide) | `generate-email` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| B | Command — `ComposerCanvas.handleGenerate` (rigenera batch + singolo) | `generate-email` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| C | Email Composer V1 / `/v2/communicate/compose` (`useEmailComposerState.handleAIGenerate`) | `generate-content` → `generate-email` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK (via proxy) |
-| D | Email Composer V1 — Improve (`handleAIImprove`) | `improve-email` | ✅ | ✅ | ✅ | ➖ | ✅ | ✅ | OK (Decision non applicabile) |
-| E | Email Forge (`useEmailForge`) | `generate-email` (`_debug_return_prompt`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK + ispezione prompt |
-| F | Pending Actions Panel — Regenerate draft (AI Control) | `generate-email` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| G | Sorting / Activity AI draft (`useEmailGenerator`) | `generate-content` → `generate-email` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| H | **Cockpit AI Draft Studio** — canali WA / LinkedIn / Email cold (`useOutreachGenerator`) | `generate-content` → `generate-outreach` | **❌** | **❌** | ✅ | ✅ | ✅ | **❌** | Mancano Contratto + Giornalista anche per il canale email |
-| I | **Cadence Engine** (campagne automatiche, qualsiasi canale) | `generate-outreach` (fetch diretto) | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | Idem |
-| J | **Agent Execute** (LUCA autonomo) — `send_email_to_partner` / `send_outreach` | `generate-outreach` (fetch diretto) | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | Idem |
-| K | **Outreach platform tool** (esposto agli agenti) | `generate-outreach` | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | Idem |
-| L | Bulk LinkedIn Dispatch (`useBulkLinkedInDispatch`) | `send-linkedin` direttamente | n/a | n/a | n/a | n/a | n/a | n/a | Invia testo già preparato (non genera) |
+Stati: `pending` (grigio), `running` (pulsing primary), `done` (verde check), `warn` (giallo), `error/block` (rosso). Hover/click → tooltip con dettagli e tempo di elaborazione.
 
-### Verdetto rapido
-- Tutto ciò che passa per `generate-email` (singolo, batch, composer, AI Control, Email Forge) è **conforme**.
-- Tutto ciò che passa per `generate-outreach` (Cockpit canali, Cadence Engine, agente autonomo, platform tool) **salta due livelli del nostro processo**: l'**Email Contract / Type Detector** (che blocca conflitti tipo/stato/blacklist) e il **Giornalista finale** (caporedattore, edits + verdetto block/warn).
-- Conseguenza concreta: una mail cold generata dal Cockpit, una sequenza spedita dal Cadence o un'azione autonoma di LUCA può uscire **senza il giro di controllo del Giornalista** e senza la validazione del contratto. Questo spiega anche perché alcune mail "cockpit" risultano stilisticamente diverse da quelle dell'Email Forge a parità di partner.
+### Architettura
 
-### Plus / debiti collaterali rilevati durante l'audit (non bloccanti)
-1. **Cockpit canale "email"**: `useOutreachGenerator` viene usato anche per il canale email all'interno dell'AIDraftStudio → genera bozze email **fuori** dalla pipeline `generate-email`.
-2. **Calligrafia** è iniettata in entrambe le edge function ma il **Journalist** è solo in `generate-email`/`improve-email` → asimmetria.
-3. **`useEmailComposerState.handleAIGenerate`** monta un `effectiveGoal` con etichetta "ISTRUZIONI SPECIFICHE DELL'UTENTE" — ok, ma resta hard-coded nel client invece di essere un prompt operativo del Prompt Lab.
+1. **Bus eventi globale** `messagePipelineBus` (singleton, basato su EventTarget) — emette eventi `pipeline:start | stage:update | pipeline:end` con un `pipelineId` univoco.
+2. **Hook `useMessagePipeline(pipelineId?)`** — sottoscrive il bus e restituisce gli stadi correnti.
+3. **Componente `<MessagePipelineTracker />`** in `src/components/messaging/` — riusa lo stile dei badge `AgentTimeline` (stesso design system, lucide icons, motion-pulse via Tailwind).
+4. **Wrapper lato server**: `generate-email` e `generate-outreach` già loggano le fasi → aggiungo header SSE-style oppure restituiscono `pipeline_trace[]` nel payload con timing per stadio.
+5. **Wrapper lato client**: `invokeAi`/i wrapper di `generate-email` e `generate-outreach` emettono eventi sul bus prima/dopo ogni fase (già lo sappiamo da `journalist_review`, `contract_warnings`, ecc. nel response).
+6. **Mount globale** del tracker in:
+   - Command (`CommandThread` sopra il messaggio in costruzione)
+   - Email Composer (`AIDraftStudio`)
+   - Cockpit Outreach (canvas WA/LI/Email)
+   - Bulk actions (modal di generazione)
+   - AI Control Center / Pending Actions
+   - Cadence Engine UI (live feed)
+   - Email Forge tab Generate
 
----
+### Dettagli tecnici
 
-## Piano di intervento
+- **File nuovi**:
+  - `src/lib/messaging/pipelineBus.ts` — EventTarget singleton + tipi `PipelineStage`, `PipelineEvent`.
+  - `src/hooks/useMessagePipeline.ts` — hook reattivo.
+  - `src/components/messaging/MessagePipelineTracker.tsx` — UI badge animati (semantic tokens, no colori hardcoded).
+  - `src/components/messaging/MessagePipelineGlobalOverlay.tsx` — overlay floating opzionale per le pagine non-chat (toast-like, in alto a destra).
+- **Edge functions**: `generate-email/index.ts` e `generate-outreach/index.ts` aggiungono `pipeline_trace` nel response JSON (array di `{stage, status, durationMs, detail?}`). `_shared/postGenerationReview.ts` accetta callback `onStage` per emettere fasi granulari.
+- **Client wrappers**: `invokeAi` con `scope` email/outreach genera un `pipelineId`, emette `pipeline:start`, applica le tracce dal response e chiude con `pipeline:end`. Per fasi server-only il client riceve il trace finale e replay le emette progressivamente (≈80ms apart) per mantenere l'effetto "movimento attraverso le stanze".
+- **Mount globale**: `<MessagePipelineGlobalOverlay />` in `App.tsx` come singleton (rispetta il pattern global-singleton già in uso). Le pagine specifiche possono inline `<MessagePipelineTracker pipelineId={id} />` per visibilità contestuale.
+- **Stati visivi**: usa `bg-primary/20 animate-pulse` per running, `bg-success/20` per done, `bg-warning/20` per warn, `bg-destructive/20` per block. Semantic tokens da `index.css`.
 
-Nessuna modifica al comportamento percepito dall'utente sulle superfici già conformi. L'obiettivo è **chiudere il gap su `generate-outreach`** in modo trasparente, così che ogni superficie applichi le stesse fasi.
+### Out of scope (ora)
 
-### Step 1 — Estrarre Journalist + Contract come hook condiviso
-- Wrappare l'attuale logica già presente in `generate-email/index.ts` (blocco "GIORNALISTA AI — Caporedattore Finale" + costruzione contratto/detector) in un modulo `_shared/postGenerationReview.ts` con due funzioni:
-  - `runEmailContract(supabase, userId, args)` → `{ contract, typeResolution, warnings, error? }`
-  - `runJournalistReview(supabase, userId, draft, ctx, channel)` → `{ verdict, edited_text, warnings, edits, quality_score, journalist }`
-- Comportamento per canale:
-  - `email` → contract + journalist obbligatori (come oggi).
-  - `whatsapp` / `linkedin` → contract opzionale (no validazione email/blacklist se non applicabile), journalist obbligatorio con strictness ridotta (rispetta limiti caratteri, no HTML).
+- Persistenza storico pipeline su DB (resta in `supervisor_audit_log` come oggi).
+- Replay temporale di pipeline passate (eventuale fase 2 in Prompt Lab).
+- Tracker per non-AI flows (es. invio diretto SMTP senza generazione).
 
-### Step 2 — Integrare in `generate-outreach`
-- Dopo `parseOutreachResponse`, invocare `runJournalistReview` con il canale corretto.
-- Per canale `email`, invocare anche `runEmailContract` prima della build dei prompt (come fa `generate-email`).
-- Restituire nel JSON di risposta `journalist_review` e `contract_used` / `contract_warnings` / `type_resolution`, allineati a `generate-email`.
-- Mantenere retro-compat: il client che ignora questi campi continua a funzionare.
+### Validazione
 
-### Step 3 — Esporre il verdetto al Cockpit / AI Control
-- `useOutreachGenerator`: salvare `journalist_review` accanto a `result`; in caso di `verdict === "block"`, mostrare un toast di warning e disabilitare il pulsante "Invia" finché l'utente non conferma override.
-- `AIDraftStudio`: pannello inline con i suggerimenti del Giornalista (riusare il componente già usato dall'Email Forge se esiste).
+- Test unit per `pipelineBus` (subscribe/emit/cleanup).
+- Test componente con stadi mock (pending/running/done/warn/block).
+- Smoke manuale: generazione email da Command, Composer, Cockpit → vedere badge che si animano in sequenza.
 
-### Step 4 — Cadence Engine + Agent Execute
-- Niente UI: leggere `journalist_review.verdict` lato server.
-  - `block` → il messaggio non viene inviato; si crea un'`ai_pending_actions` per revisione umana (riusa il flusso esistente).
-  - `warn` → invio consentito ma loggato in `supervisor_audit_log` con dettaglio warning.
-  - `pass_with_edits` → si usa `edited_text`.
-
-### Step 5 — Telemetria pipeline
-- Nuova tabella o vista `pipeline_audit` (oppure colonna `pipeline_phases` su `supervisor_audit_log`) che salvi per ogni generazione: `{contract_ok, type_resolution, journalist_verdict, prompt_lab_ids, model}`.
-- Permette a Prompt Lab → tab "Catalog" di mostrare per ogni superficie quante volte le fasi sono state effettivamente applicate (oggi non è tracciato per `generate-outreach`).
-
-### Step 6 — Pulizia minore
-- Allineare il commento "no side effects" su `generate_outreach` nel `systemManifest.ts` (oggi dichiara "no side effects": vero per il draft, ma con journalist=block diventa indirettamente input al Decision Engine — aggiornare la riga).
-- Aggiungere test su `_shared/postGenerationReview.ts` (verdetto block per email senza saluto, verdetto pass per WA con limite caratteri rispettato).
-
----
-
-## Dettagli tecnici (per la fase di build)
-
-- **File toccati lato edge**: `supabase/functions/_shared/postGenerationReview.ts` (nuovo), `supabase/functions/generate-outreach/index.ts`, `supabase/functions/generate-email/index.ts` (refactor che importa il nuovo modulo, comportamento invariato), `supabase/functions/cadence-engine/index.ts`, `supabase/functions/agent-execute/toolHandlers/emailTools.ts`, `supabase/functions/_shared/platformTools/outreachHandler.ts`, `supabase/functions/_shared/platformToolHandlers/outreachTools.ts`, `supabase/functions/_shared/toolHandlersWrite.ts`.
-- **File toccati lato client**: `src/hooks/useOutreachGenerator.ts` (espone `journalist_review`), `src/components/cockpit/AIDraftStudio.tsx` (UI verdetto), `src/v2/ui/pages/prompt-lab/utils/systemManifest.ts` (riga 134).
-- **Migrazione DB**: opzionale, solo se confermiamo Step 5 (telemetria). Niente RLS nuovi: la riga eredita le policy di `supervisor_audit_log`.
-- **Backward compatibility**: i campi nuovi sono additivi; i client vecchi continueranno a funzionare. Nessun rename di endpoint.
-
-## Cosa NON è in scope
-- Riscrittura del Prompt Lab.
-- Modifica del routing del Command (già sistemato nei round precedenti).
-- Cambi al motore di invio (`send-email`, `send-whatsapp`, `send-linkedin`).
-- Tocco a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria: vietato senza autorizzazione).
-
-Confermi questo piano? Se sì, procedo dallo Step 1 (modulo `_shared/postGenerationReview.ts`) e poi Step 2 (`generate-outreach`).
+Confermi e procedo con l'implementazione?
