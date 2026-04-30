@@ -142,6 +142,7 @@ serve(async (req) => {
         supabase,
         dynCors,
         commandPromptBlock,
+        (context?.activeContext as Record<string, unknown> | null) ?? null,
       );
       endMetrics(metrics, true, 200);
       return result;
@@ -178,6 +179,7 @@ serve(async (req) => {
         supabase,
         dynCors,
         commandPromptBlock,
+        (context?.activeContext as Record<string, unknown> | null) ?? null,
       );
       endMetrics(metrics, true, 200);
       return result;
