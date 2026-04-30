@@ -90,46 +90,48 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden p-2 md:p-3 gap-2">
-      <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-shrink-0">
-        <BrainCircuit className="h-4 w-4 text-primary" />
-        Email Intelligence
-      </h1>
-
+    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden">
       <Tabs defaultValue="manual" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto flex-shrink-0">
-          <TabsTrigger value="manual" className="gap-1.5 text-xs">
-            <HandMetal className="h-3.5 w-3.5" />
-            Gestione Manuale
-            {uncategorizedCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{uncategorizedCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="ai-suggestions" className="gap-1.5 text-xs">
-            <Sparkles className="h-3.5 w-3.5" />
-            Suggerimenti AI
-            {aiSuggestionsCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{aiSuggestionsCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="auto-classify" className="gap-1.5 text-xs">
-            <BrainCircuit className="h-3.5 w-3.5" />
-            Auto-Classificazione
-            {classifyTodayCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{classifyTodayCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="rules" className="gap-1.5 text-xs">
-            <Settings2 className="h-3.5 w-3.5" />
-            Regole & Azioni
-            {activeRulesCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{activeRulesCount}</Badge>}
-          </TabsTrigger>
-        </TabsList>
+        {/* Riga unica: titolo a sinistra + tab a destra (recupero verticale) */}
+        <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border/40 bg-card/30 flex-shrink-0 flex-wrap">
+          <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 mr-1">
+            <BrainCircuit className="h-4 w-4 text-primary" />
+            Email Intelligence
+          </h1>
+          <TabsList className="bg-transparent border-0 h-auto p-0 gap-0.5">
+            <TabsTrigger value="manual" className="gap-1.5 text-xs h-7 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <HandMetal className="h-3.5 w-3.5" />
+              Gestione Manuale
+              {uncategorizedCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{uncategorizedCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="ai-suggestions" className="gap-1.5 text-xs h-7 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Suggerimenti AI
+              {aiSuggestionsCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{aiSuggestionsCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="auto-classify" className="gap-1.5 text-xs h-7 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <BrainCircuit className="h-3.5 w-3.5" />
+              Auto-Classificazione
+              {classifyTodayCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{classifyTodayCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="gap-1.5 text-xs h-7 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              <Settings2 className="h-3.5 w-3.5" />
+              Regole & Azioni
+              {activeRulesCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{activeRulesCount}</Badge>}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="manual" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="manual" className="flex-1 mt-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><ManualGroupingTab /></Suspense>
         </TabsContent>
-        <TabsContent value="ai-suggestions" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="ai-suggestions" className="flex-1 mt-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><AISuggestionsTab /></Suspense>
         </TabsContent>
-        <TabsContent value="auto-classify" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="auto-classify" className="flex-1 mt-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
         </TabsContent>
-        <TabsContent value="rules" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="rules" className="flex-1 mt-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
           <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
         </TabsContent>
       </Tabs>
