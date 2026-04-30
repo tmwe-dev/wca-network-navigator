@@ -1,104 +1,114 @@
-
 ## Obiettivo
 
-Rendere le card di **Contatti CRM** e **Network** chiare, leggibili e ergonomiche, prendendo come riferimento di pulizia la vista **BCA** (che resta intoccata). Eliminare il "grigio su scuro", aumentare i font, ingrandire la bandiera, sfruttare meglio lo spazio orizzontale e ridurre l'altezza dell'header del CRM (oggi i sottomenu si mangiano un terzo della pagina).
+Replicare l'ergonomia del **Kanban** (pulito, colorato, denso, leggibile) su **tutte** le pagine di gestione contatti, e dare all'utente un'evidenza chiara di **dove si trova** — senza più 4-5 righe orizzontali sopra al contenuto.
 
-## Diagnosi attuale (dagli screenshot + codice)
+## Problemi da eliminare (confermati dagli screenshot)
 
-**CRM `/v2/pipeline/contacts`** — il caso più critico:
-- Bandiera renderizzata come emoji 🏳 a `text-base` (~16px) invisibile a colpo d'occhio.
-- Tutti i testi a `text-[10px]` / `text-[11px]` (10–11px) → illeggibili sopra i 50.
-- Località, città, ruolo, email tutti in `text-muted-foreground` (grigio chiaro su sfondo scuro) → contrasto basso.
-- Header impilato: tabs orizzontali (Contatti CRM / Kanban / Bigliet... / Duplicati / Campagne / Agenda) + breadcrumb + barra contatori + chip di gruppo "Paese AF/AL/AO…" → ~5 righe verticali prima di vedere un solo contatto.
-- Origine (campo critico per capire "dove l'ho preso") è solo un piccolo chip `text-[9px]` quando presente, spesso non visibile.
-- Colonna "Stato" satura di micro-icone monocrome non distinguibili.
+1. **Stratificazione verticale** che divora 30% di schermo: app-header → section-tabs → breadcrumb → page-tabs → counters/filters → grid-header.
+2. **Nessun indicatore di pagina corrente** forte (titolo + icona della sezione assenti).
+3. Bandiere micro (text-base), testo grigio scuro su scuro, badge poco leggibili.
+4. **Biglietti**: enorme dropzone "Trasferisci o file dati" sprecata in cima, mentre l'import vive nella sua pagina dedicata.
+5. Inconsistenza tra CRM / Biglietti / Network (ognuna con header diverso).
 
-**Network `/v2/explore/network`** — situazione media:
-- Stessa emoji-bandiera piccola, testi `text-[10px]` nella griglia paesi.
-- Nelle righe partner i marker verdi-puntini (Col 5) non si capiscono.
-- Le card sono comunque più respirate del CRM.
+## Soluzione: il "Page Header Kanban-style" come template unico
 
-**BCA** → riferimento, **non toccare**.
+Una **singola riga compatta (h-12)** sostituisce breadcrumb + section-tabs + page-tabs + counters separati.
 
-## Proposta visiva
-
-### Scala tipografica nuova (applicata solo a CRM + Network)
-
-```
-Primario riga         text-sm  (14px)  font-medium  text-foreground
-Secondario riga       text-xs  (12px)               text-foreground/80
-Meta/decor            text-xs  (12px)               text-muted-foreground
-Header colonna        text-xs  (12px)  uppercase    text-foreground/70
-```
-Niente più `text-[10px]` né `text-[9px]` per dati utente. Le sole eccezioni: numeri di sequenza `#1` e contatori in pillole.
-
-### Bandiera
-
-- Da `text-base` (~16px) a **`text-3xl` (~30px)** — 3x come richiesto — in un quadrato 36×36 con leggero ring, cliccabile per filtrare per paese.
-- Su mobile/dense scende a `text-2xl` (24px).
-
-### Card CRM ridisegnata (riga lista)
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ #1 ☐ │ 🇮🇹  ITALIA          │ AZIENDA SRL          WCA  │ Sigra Elena       │ ●●● │
-│      │ 36px Milano · 20019  │ Sales Manager  [CSV]      │ ✉ a@b.it          │     │
-└──────────────────────────────────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ [icon] Pipeline · Contatti CRM     ▸ Kanban  Contatti  Biglietti  Duplicati  ⋯  │
+│        11.349 contatti · 🟣Tutti · ✈️ Fuori circuito                  [+ Nuovo] │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Cambiamenti chiave:
-- **Bandiera 36×36 px** in slot dedicato a sinistra del blocco Località.
-- Paese **`text-sm font-semibold text-foreground`** (non più muted).
-- Città · CAP **`text-xs text-foreground/70`** (leggibile, non grigio fantasma).
-- Azienda **`text-sm font-bold uppercase text-foreground`**, ruolo `text-xs text-foreground/70`.
-- **Origine**: badge ad alto contrasto sempre visibile (anche se vuoto → "—") accanto al nome azienda, colorato in base alla fonte (CSV viola, WCA verde, Manuale ambra, Import giallo). Cliccabile per filtrare.
-- Contatto: nome `text-sm`, email `text-xs text-foreground/80` (non muted).
-- Stato: la colonna mantiene Score + status, ma le micro-icone (LinkedIn / Globe / Handshake) diventano badge 18×18 con tooltip, raggruppate; niente più puntini illeggibili.
-- Altezza riga: da ~44px attuali a ~60px → più aria, più leggibilità, scroll virtualizzato già attivo.
+**Riga 1 (h-7)** — Identità + tabs sorelle:
+- A sinistra: icona sezione colorata (12px) + `Sezione · Pagina corrente` in `text-sm font-bold` (la pagina corrente in colore primary). Sostituisce breadcrumb e tab strip separati.
+- Tabs sorelle inline a destra dell'identità (Kanban / Contatti / Biglietti / Duplicati / Campagne / Agenda) come pill compatte, quella attiva ha background primary/15.
+- A destra dell'header: `[+ Nuovo]`, `Segmenti`, kebab `⋯` per azioni secondarie.
 
-### Compattazione header CRM
+**Riga 2 (h-7)** — Stato contestuale (counter + chip filtri attivi):
+- Counter principale `11.349 contatti` in `text-sm font-semibold`.
+- Chip filtri sempre visibili e cliccabili: `Tutti / WCA / Solo CRM / Fuori circuito`.
+- I chip rimangono SEMPRE visibili (no menu), perché sono lo stato dell'elenco.
 
-Tre azioni per recuperare ~80–100px verticali:
-1. **Tabs orizzontali** (Contatti CRM / Kanban / …) → restano, ma diventano `h-9` con underline sottile invece di pill, e il breadcrumb sotto viene **rimosso** (ridondante: la tab attiva è il breadcrumb).
-2. **Barra contatori + segmenti + WCA filter + Nuovo** → tutto su **una sola riga** `h-9` invece di due. "Fuori circuito" e "Solo CRM" diventano toggle compatti accanto al conteggio.
-3. **Chip paesi** (Tutti / AF (1) / AL (1) / AO (6)…) → diventa **scrollabile orizzontale h-8** sempre con bandiera grande accanto al codice. Resta sempre visibile ma occupa una sola riga.
+Totale verticale: **≈ 56px** invece degli attuali ~180-220px.
 
-Risultato: prima del primo contatto si vedono **2 righe** invece di 5.
+## Pagine impattate
 
-### Network — interventi mirati
+### A. CRM (Contatti / Kanban / Biglietti / Duplicati / Campagne / Agenda)
+File: `src/v2/ui/pages/CRMPage.tsx` + sotto-pagine.
+- Sostituire `GoldenHeaderBar` + `SectionTabs` + header della singola pagina con un **unico componente** `<PageHeaderUnified />`.
+- Tabs Kanban/Contatti/Biglietti/Duplicati spostate dentro l'header unificato.
+- Breadcrumb rimosso (l'identità "Pipeline · Pagina" lo sostituisce).
 
-- `CountryGridV2`: bandiera da `text-sm` a **`text-2xl`**, contatore `text-sm font-bold`, etichetta aria con nome paese completo (non solo codice ISO).
-- Lista partner sotto (`Tutti i paesi · 12286 partner`): righe con stessa nuova scala (bandiera 36px, nome azienda `text-sm font-semibold`, città `text-xs text-foreground/70`).
-- I tre puntini `●●●` di stato vengono sostituiti da 3 badge etichettati ("Email", "WCA", "Attività") con colore semaforo + tooltip.
+### B. Biglietti (`/v2/pipeline/biglietti`)
+- **Rimuovere completamente** la dropzone "Trasferisci o file dati" dal top.
+- Sostituirla con un piccolo bottone secondario `↓ Importa` nell'header che linka alla pagina Import dedicata.
+- Le card biglietto ricevono lo stesso trattamento delle card contatto (vedi sotto).
 
-### BCA
+### C. Network (`/v2/explore/network`)
+- Header unificato: `🛰 Esplora · Network` con tabs `WCA Partner / Mappa / Sherlock` inline.
+- Card "Tutti i paesi" e griglia paesi: bandiere `text-3xl` (vs `text-2xl` attuale), counters `text-base font-bold`, eliminare il box "Ordine: Nome" che spreca riga (passa a kebab azioni).
 
-Nessuna modifica. Resta riferimento.
+### D. Card lista contatto/partner — riallineamento "Kanban-style"
+Riferimento: la card `Mario Rossi / TestCorp / mario@test.com / 0 interazioni` del Kanban (ultima foto), che è esattamente il livello di pulizia richiesto.
 
-## Filtri cliccabili (chiarimento richiesto)
+Modifiche a `ContactCard.tsx` / `PartnerVirtualList.tsx`:
+- Bandiera `text-4xl` (48px) in slot dedicato 56×56 (oggi 36px in slot 48px → troppo piccola).
+- Nome azienda `text-base font-bold text-foreground` (oggi text-sm).
+- Sotto-riga: `Persona · Ruolo` in `text-sm text-foreground/85`.
+- Email/telefono in `text-xs text-foreground/70` con icona inline.
+- Badge origine (CSV/WCA/BCA) in `text-[11px] uppercase font-bold` con bg colorato pieno (non outline).
+- Sfondo card: gradient sottile `from-card to-card/60` come le colonne Kanban, bordo `border-border/40`, `rounded-xl`.
+- Hover: lift `+1px` + bordo `border-primary/40`.
 
-Il pattern `Filterable` (clicca un valore in card → aggiunge filtro) **già esiste** ed è attivo su country, city, company, name, origin, leadStatus, zip. Lo rendiamo più scopribile:
-- Underline tratteggiato sostituito da **hover background pill** (`bg-primary/10 rounded`) — meno rumore visivo costante, feedback chiaro al passaggio.
-- Cursor pointer + tooltip "Aggiungi al filtro".
-- I chip di filtro attivo in alto già ci sono e già hanno la X per rimuoverli.
+### E. Sezione "indicatore pagina globale"
+Nella sidebar laterale a sinistra (`LayoutSidebarNav`), evidenziare con barra primary spessa 3px a sinistra l'icona della pagina corrente (oggi è solo un cambio di colore tenue) → l'utente capisce a colpo d'occhio dove si trova anche dalla nav.
 
-## Dettagli tecnici (per chi sviluppa)
+## Nuovo componente
 
-File toccati:
-- `src/components/contacts/ContactCard.tsx` — nuovo layout righe, bandiera grande, scala font, badge origine, stato pulito.
-- `src/components/contacts/contactGridLayout.ts` — `CONTACT_GRID_COLS` ricalibrato: `64px 56px minmax(180px,220px) minmax(180px,1.2fr) minmax(180px,1.4fr) minmax(140px,160px) 72px` (slot bandiera dedicato + colonne più ariose).
-- `src/components/contacts/ContactListPanel.tsx` — header compattato (tabs `h-9`, riga unica contatori, chip paesi `h-8`), font header colonne `text-xs`, rimozione breadcrumb ridondante.
-- `src/v2/ui/organisms/network/CountryGridV2.tsx` — bandiera `text-2xl`, count `text-sm font-bold`.
-- `src/v2/ui/organisms/network/BusinessCardsViewV2.tsx` — **non toccato** (già BCA-style).
-- Lista partner Network (componente in `src/components/network/` o equivalente — da identificare al primo passo dell'implementazione) — stessa scala CRM.
+`src/v2/ui/templates/PageHeaderUnified.tsx`
 
-Non si tocca:
-- Logica dati, hook (`useContactListPanel`), DAL, query keys.
-- Sidebar filtri (rivista nel turno precedente).
-- Routing, breadcrumb config globale.
+```tsx
+interface PageHeaderUnifiedProps {
+  sectionIcon: LucideIcon;
+  sectionLabel: string;          // "Pipeline"
+  pageLabel: string;             // "Contatti CRM"
+  siblingTabs: { key, label, to, count? }[];
+  counter?: { value: number, label: string };
+  filterChips?: { key, label, icon?, active, onClick }[];
+  primaryAction?: { label, icon, onClick };
+  secondaryActions?: ReactNode;  // kebab content
+}
+```
 
-## Fuori scope
+Una sola implementazione, riutilizzata da CRM, Network, Biglietti, Outreach, Campagne, Agenda.
 
-- Refactor del Kanban / Duplicati / Campagne / Agenda (tabs sorelle).
-- Vista mobile dedicata (le breakpoint Tailwind esistenti restano).
-- Dark/light theme (semantic tokens già rispettati).
+## File da modificare
+
+- **Nuovo**: `src/v2/ui/templates/PageHeaderUnified.tsx`
+- `src/v2/ui/pages/CRMPage.tsx` — adottare PageHeaderUnified, rimuovere SectionTabs.
+- `src/v2/ui/pages/ContactsPage.tsx` — togliere il proprio header interno (delegato).
+- `src/components/contacts/ContactListPanel.tsx` — togliere riga counter+chips (passa all'header unificato).
+- `src/components/contacts/BusinessCardsHub.tsx` (Biglietti) — **rimuovere dropzone** in top, sostituire con bottone Import nell'header.
+- `src/v2/ui/pages/NetworkPage.tsx` — adottare PageHeaderUnified.
+- `src/v2/ui/organisms/network/CountryGridV2.tsx` — bandiere `text-3xl`, rimuovere box "Ordine: Nome" dal contenuto.
+- `src/components/contacts/ContactCard.tsx` — applicare scala "Kanban-style" (bandiere 48px, nome `text-base font-bold`, gradient sottile).
+- `src/components/operations/PartnerVirtualList.tsx` — stessa scala.
+- `src/v2/ui/templates/LayoutSidebarNav.tsx` — barra attiva 3px primary a sinistra sulla pagina corrente.
+- `src/v2/ui/templates/SectionTabs.tsx` — deprecato per le pagine con PageHeaderUnified (resta per le altre).
+
+## Cosa NON tocco
+
+- BCA `BusinessCardsViewV2.tsx` (già il riferimento visivo).
+- Logica/stato (filtri, query, drag&drop Kanban).
+- Sidebar a scomparsa filtri (già ok dopo l'ultimo intervento).
+- LayoutHeader globale (già compatto a h-11).
+
+## Risultato atteso
+
+- Header pagina passa da **~200px verticali** a **~56px**.
+- Pagina corrente sempre evidente (icona+colore in header + barra in sidebar).
+- Card leggibili "a 60 anni" con bandiere triple.
+- Stessa identità visiva su Contatti / Kanban / Biglietti / Duplicati / Network.
+
