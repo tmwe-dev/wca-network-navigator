@@ -12,6 +12,18 @@ function AgentChatRedirect() {
   const agentId = searchParams.get("agent");
   return <Navigate to={agentId ? `/v2/agents?agent=${agentId}` : "/v2/agents"} replace />;
 }
+
+/**
+ * Redirect che PRESERVA `location.state` (es. `prefilledRecipient`) e i
+ * query params durante un redirect. Senza questo, `<Navigate>` perde lo
+ * state passato via `navigate(path, { state: ... })` — bug critico per il
+ * flusso "Invia email" dal CRM, che nav-state contiene email/contact.
+ */
+function RedirectWithState({ to }: { to: string }) {
+  const location = useLocation();
+  const search = location.search || "";
+  return <Navigate to={`${to}${search}`} replace state={location.state} />;
+}
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -230,9 +242,9 @@ export function V2Routes(): React.ReactElement {
 
           {/* Outreach + figli */}
           <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
-          <Route path="outreach/composer" element={<Navigate to="/v2/communicate/compose" replace />} />
+          <Route path="outreach/composer" element={<RedirectWithState to="/v2/communicate/compose" />} />
           <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
-          <Route path="email-composer" element={<Navigate to="/v2/communicate/compose" replace />} />
+          <Route path="email-composer" element={<RedirectWithState to="/v2/communicate/compose" />} />
           <Route path="agenda" element={<Navigate to="/v2/pipeline/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
