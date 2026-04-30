@@ -479,21 +479,23 @@ export default function ComposerCanvas({
             </motion.button>
           )}
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSendClick}
-            disabled={isSending || isGenerating}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success/80 hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
-            style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
-          >
-            {isSending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Send className="w-3.5 h-3.5" />
-            )}
-            {isBatch ? "Rivedi questa" : "Invia"}
-          </motion.button>
+          {!isBatch && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSendClick}
+              disabled={isSending || isGenerating}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[11px] font-light bg-success/10 text-success/80 hover:bg-success/15 transition-all duration-300 disabled:opacity-50"
+              style={{ border: "1px solid hsl(152 60% 45% / 0.15)" }}
+            >
+              {isSending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              Invia
+            </motion.button>
+          )}
         </div>
       </div>
 
