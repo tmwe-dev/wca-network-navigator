@@ -92,6 +92,16 @@ export function serializeResultForAI(result: ToolResult): string {
         to: result.initialTo,
         subject: result.initialSubject,
         bodyPreview: result.initialBody.slice(0, 300),
+        batch: result.drafts && result.drafts.length > 1
+          ? {
+              count: result.drafts.length,
+              ok: result.drafts.filter((d) => d.status === "ok").length,
+              tone: result.detectedTone ?? "professionale",
+              countryCode: result.countryCode,
+              partners: result.drafts.slice(0, 5).map((d) => d.partnerName),
+            }
+          : undefined,
+        tone: result.detectedTone,
       });
     case "approval":
       return JSON.stringify({
