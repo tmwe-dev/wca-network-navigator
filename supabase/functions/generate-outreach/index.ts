@@ -332,7 +332,7 @@ DECISION ENGINE (raccomandazione automatica):
       ? await buildCalligrafiaSection(supabase, userId)
       : "";
     const finalSystemPrompt = `${baseFinalSystemPrompt}${calligrafiaSection ? "\n" + calligrafiaSection : ""}`;
-    tracer.end("prompt", "done", `${promptLab.applied?.length ?? 0} prompt operativi · ${ch}`);
+    tracer.end("prompt", "done", `${promptLab.appliedNames?.length ?? 0} prompt operativi · ${ch}`);
 
     // ── AI call ──
     const model = getModel(quality);
