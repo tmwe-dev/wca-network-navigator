@@ -620,6 +620,8 @@ export const composeEmailTool: Tool = {
       auditRefs.push({ kind: "model", label: "AI model", value: usedModel });
     }
     auditRefs.push({ kind: "context", label: "Lead status", value: partner.lead_status ?? "n/d" });
+    auditRefs.push({ kind: "context", label: "Tono detectato", value: tone });
+    notes.push(`Tono: ${toneLabel(tone)}.`);
 
     return {
       kind: "composer",
@@ -636,6 +638,7 @@ export const composeEmailTool: Tool = {
       partnerId: partner.id,
       recipientName,
       emailType,
+      detectedTone: tone,
       dossier: {
         partnerName: partner.company_name,
         contactName: recipientName,
