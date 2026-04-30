@@ -1,10 +1,13 @@
 /** Shared grid layout for ContactCard and ContactListPanel header.
  *
  * Single-row, high-density layout (apr 2026 redesign — BCA-aligned):
- *   [#☐] [AZIENDA + Contatto/Ruolo] [Località compatta] [Email/Telefono] [Stato · Score] [Azioni]
+ *   [#☐] [AZIENDA + Contatto/Ruolo] [Località] [Email/Telefono] [Origine] [Stato · Score] [Azioni]
+ *
+ * Origine ha colonna propria (apr 2026 update): sortabile, filtrabile,
+ * sempre visibile. Esempi: "csv", "wca", "linkedin", "manual", "biglietti".
  */
 export const CONTACT_GRID_COLS =
-  "64px minmax(220px,1.6fr) minmax(160px,200px) minmax(180px,1.2fr) minmax(140px,160px) 72px";
+  "60px minmax(200px,1.5fr) minmax(150px,190px) minmax(170px,1.1fr) 100px minmax(130px,150px) 64px";
 export const CONTACT_GRID_CLASS = "grid items-center gap-x-3";
 
 /** Capitalize first letter, rest lowercase */
