@@ -42,6 +42,7 @@ import { isSynthesisIntent } from "../lib/intentDetector";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
 import { getAiComment } from "../aiBridge";
+import { getActiveComposerContextSummary } from "../lib/composerContext";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -290,7 +291,11 @@ export function useCommandSubmit(state: CommandStateApi) {
       }, 600);
 
       try {
-        const planRes = await planExecution(text, TOOL_METADATA, buildHistory());
+        // Inietta il contesto attivo (es. batch composer) nel router AI.
+        // L'AI legge questa descrizione e decide se la richiesta corrente
+        // è un follow-up sul contesto vivo o un nuovo argomento.
+        const activeCtx = getActiveComposerContextSummary();
+        const planRes = await planExecution(text, TOOL_METADATA, buildHistory(), activeCtx);
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));
         setToolPhase("active");
