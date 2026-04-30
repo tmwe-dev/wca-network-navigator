@@ -36,6 +36,7 @@ import {
   contextHint as buildContextHint,
   isContextFresh,
   isElliptical,
+  refersToWorkingSet,
   type QueryContext,
 } from "../lib/queryContext";
 import { isSynthesisIntent } from "../lib/intentDetector";
@@ -93,8 +94,9 @@ export function useCommandSubmit(state: CommandStateApi) {
   const { looksLikeSimpleQuery } = usePromptAnalysis();
   const { commentOnResult } = useResultCommentary({
     addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+    getQueryContext: () => queryContext,
   });
-  const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
+  const { updateQueryContextFromLastPlan, updateConstraintsFromPrompt, isContextUsable } = useQueryContext({
     setQueryContext, queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
@@ -246,6 +248,32 @@ export function useCommandSubmit(state: CommandStateApi) {
 
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
+
+      // ── CONSTRAINTS DETECTION ──
+      // Aggiorna i vincoli sticky della sessione PRIMA di pianificare. Così
+      // un divieto "non usare LinkedIn" si propaga immediatamente al prossimo
+      // hint del planner e al fallback aiBridge.
+      updateConstraintsFromPrompt(text);
+
+      // ── SCOPE EXPLOSION GUARDRAIL ──
+      // Se l'utente fa riferimento al working set ma il contesto è scaduto o
+      // non esiste, fermiamo PRIMA di chiamare il planner: meglio chiedere
+      // chi sono "questi" che generare un piano su 12k record.
+      if (refersToWorkingSet(text)) {
+        const ctx = isContextFresh(queryContext) ? queryContext : null;
+        const hasWorkingSet = ctx?.workingSetIds && ctx.workingSetIds.length > 0;
+        if (!hasWorkingSet) {
+          addMessage({
+            role: "assistant",
+            content: "Mi fermo: stai facendo riferimento a un gruppo di record (\"questi\", \"loro\", \"i selezionati\"), ma in questa sessione non ho un set attivo. Rifai prima la query (es. \"trova i partner di Malta\") e poi torna a chiedere su quel risultato.",
+            agentName: "Orchestratore",
+            timestamp: ts(),
+          });
+          setFlowPhase("idle");
+          setShowTools(false);
+          return;
+        }
+      }
 
       // ── SYNTHESIS BRANCH ───────────────────────────────────────────────
       // The user asks for a summary/explanation of what we already returned.
