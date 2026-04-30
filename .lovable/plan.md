@@ -1,66 +1,93 @@
 ## Obiettivo
 
-Eliminare la confusione tra "stanze" che sembrano fare la stessa cosa. Niente nuove maschere, niente nuove tabelle, niente cambi al modo in cui le email vengono prodotte e inviate. Solo **pulizia di navigazione**.
+Unificare WCA Partners, CRM Contatti e Biglietti da Visita in **una sola pipeline** con tre **origini dati** selezionabili in cima. Stessa UX, stessi tab, stessi strumenti — un solo posto da imparare e da manutenere.
 
-## Cosa cambia (lato utente)
+Il primo tab di ogni origine è **l'elenco contatti con dettaglio a destra**. Gli altri tab restano gli attuali (li snelliremo in un secondo passaggio, come da tua indicazione).
 
-### 1. Outreach → "In Uscita" — semplificato
-Oggi ha 4 sotto-tab: **Da Inviare**, **Inviati**, **Programmati**, **Falliti**.
-Domani avrà 2 sotto-tab: **Da Inviare**, **Inviati**.
+## Cosa cambia per te
 
-I sotto-tab "Programmati" e "Falliti" leggevano dalla tabella sbagliata (`cockpit_queue`, che non è una coda di invio): erano fuorvianti. Vengono nascosti dalla UI.
+### Menu di navigazione
+Oggi nel menu vedi 3 voci separate:
+- WCA Partner
+- Contatti CRM
+- Biglietti da visita
 
-I **badge contatori in alto** del tab vengono riallineati: oggi contano dalla tabella sbagliata, vanno fatti puntare alle stesse fonti dei sotto-tab rimasti (attività + missioni + storico).
+Diventa **1 sola voce**: **Contatti** → porta alla pipeline unica.
 
-### 2. AI Control Center → "Pending Actions" — rimossa
-Mostrava le stesse cose della "Coda AI" di Outreach. Tieni solo **Outreach → Coda AI** come unico posto per le azioni AI in attesa di approvazione. La sub-view "pending" sparisce dal menu di AI Control Center.
+### Dentro la pipeline unica
+In alto, **3 pillole/tab di "origine"** sempre visibili:
 
-### 3. Pagine fantasma — nascoste dai menu
+```text
+[ WCA Partner ] [ Contatti ] [ Biglietti ]   ← scegli la fonte dei record
+─────────────────────────────────────────────
+[ Elenco | Kanban | Duplicati | Campagne | Agenda ]   ← tab di lavoro (stessi per tutte e 3)
+─────────────────────────────────────────────
+| Lista record (filtrata per origine) | Dettaglio a destra |
+```
 
-- **`/v2/campaigns/jobs`** (pagina vuota, vecchio sistema): rimossa dalla navigazione e dai link interni. Se uno arriva con il vecchio URL, viene rediretto a `/v2/campaigns`.
-- **Componente `CampagneTab`**: nessuno lo importava già — viene marcato come deprecato nel commento di testa (in linea con la regola "non eliminare codice in `src/components/`").
-- **Hook V2 mai usati** (`useCampaignDraftsV2`, `useCampaignStatsV2`, `useEmailCampaignQueueV2`): marcati come deprecati nel commento di testa.
+- **Origine** = quale dataset stai guardando (partner WCA, contatti CRM, biglietti).
+- **Tab di lavoro** = sempre gli stessi 5, indipendentemente dall'origine.
+- **Primo tab "Elenco"** = lista a sinistra + pannello dettaglio a destra (come una mailbox).
 
-### 4. Cosa NON cambia
+La parola "Pipeline" sparisce sia dal menu sia dall'header. L'icona resta la stessa.
 
-- Il **CampaignQueueMonitor dentro il Command Canvas** resta esattamente com'è: continui a vedere lì le tue mail batch in coda, con Avvia / Pausa / Cancel.
-- Le tabelle `email_drafts` e `email_campaign_queue` non vengono toccate: i tuoi 5 draft + 4 record in coda restano.
-- La pipeline di creazione/autorizzazione/invio email non viene toccata in questo intervento. Quella la decidiamo dopo, separatamente.
-- Nessuna `cockpit_queue` viene cancellata — è solo nascosta dai sotto-tab che la mostravano in modo fuorviante.
+## Tab di lavoro — fase 1 (replica gli attuali)
 
-## Dettaglio tecnico (per riferimento)
+Mantengo per ora i tab esistenti, così non rompo nulla:
+- **Elenco** (nuovo: lista + dettaglio a destra)
+- **Kanban** (drag-and-drop per stadi)
+- **Duplicati**
+- **Campagne**
+- **Agenda**
 
-### File modificati
+Quando l'avrai usata, decidiamo insieme quali togliere (la tua scelta "Decidiamo dopo").
 
-| File | Cambio |
-|---|---|
-| `src/components/outreach/InUscitaTab.tsx` | Lascia solo i sotto-tab `da-inviare` e `inviati`; ricalcola i badge contatori dalle stesse fonti dei sotto-tab |
-| `src/v2/ui/pages/AIControlCenterPage.tsx` | Rimuove la sub-view `pending` dal menu interno |
-| `src/v2/routes.tsx` | `/v2/campaigns/jobs` → redirect a `/v2/campaigns` |
-| `src/v2/ui/templates/OrphanPagesNav.tsx` | Rimuove la voce "Campaign Jobs" |
-| `src/App.tsx` | Rimuove l'alias di redirect `campaign-jobs → /v2/campaigns/jobs` |
-| `src/components/outreach/ProgrammatiSubTab.tsx` | Header del file: marcato `@deprecated` (codice intatto) |
-| `src/components/outreach/FallitiSubTab.tsx` | Header del file: marcato `@deprecated` |
-| `src/components/outreach/CampagneTab.tsx` | Header del file: marcato `@deprecated` |
-| `src/v2/hooks/useCampaignDraftsV2.ts` | Header del file: marcato `@deprecated` |
-| `src/v2/hooks/useCampaignStatsV2.ts` (se presente nello stesso file sopra) | idem |
-| `src/v2/hooks/useEmailCampaignQueueV2.ts` | Header del file: marcato `@deprecated` |
+## Redirect — nessun link rotto
 
-### File NON toccati (importanti)
+Tutti i vecchi URL continuano a funzionare e portano alla nuova pipeline con l'origine giusta pre-selezionata:
 
-- `supabase/functions/send-email`, `process-email-queue`, `generate-email`, `improve-email`, `journalistReview*`
-- `email_drafts`, `email_campaign_queue`, `cockpit_queue`, `outreach_queue`, `ai_pending_actions`, `campaign_jobs` (nessuna migrazione DB)
-- `CampaignQueueMonitor.tsx` (resta funzionante nel Command Canvas)
+| Vecchio URL                        | Nuovo URL                                  |
+|-----------------------------------|--------------------------------------------|
+| `/v2/explore/network` (WCA Partner) | `/v2/contatti?origine=wca`                |
+| `/v2/pipeline/contacts`            | `/v2/contatti?origine=crm`                 |
+| `/v2/pipeline/biglietti`           | `/v2/contatti?origine=biglietti`           |
+| `/v2/pipeline/kanban`              | `/v2/contatti/kanban?origine=crm`          |
+| `/v2/pipeline/duplicati`           | `/v2/contatti/duplicati?origine=crm`       |
+| `/v2/pipeline/campaigns`           | `/v2/contatti/campagne?origine=crm`        |
+| `/v2/pipeline/agenda`              | `/v2/contatti/agenda?origine=crm`          |
+| `/v2/crm/*`, `/v2/contacts`, `/v2/business-cards` | redirect equivalenti      |
 
-### Verifica post-modifica
+## Cosa NON cambia
 
-- Apertura `/v2/outreach` → tab "In Uscita" mostra solo Da Inviare + Inviati, badge contatori coerenti
-- Apertura `/v2/ai-control` → niente sub-view "pending", restano le altre
-- Apertura `/v2/campaigns/jobs` → redirect a `/v2/campaigns`
-- Apertura `/v2/command` → CampaignQueueMonitor continua ad apparire quando crei una bozza batch
+- Database, RLS, edge function: zero modifiche.
+- Logica di business (stadi, holding pattern, lead scoring, scoring BCA): invariata.
+- Componenti `ContactPipelineView`, `BusinessCardsHub`, `DuplicateDetector`, `ContactsPage`, `CountryGridV2`, `NetworkPage`: invariati internamente — vengono solo **riposizionati** sotto la nuova shell.
+- Filtri laterali (`ContextFiltersRail`): si attivano in base all'origine corrente (WCA → filtri network, CRM/Biglietti → filtri contatti). Già pronti.
+- Nessuna eliminazione di codice — solo cambio di rotte e menu.
 
-## Cosa decideremo DOPO (non in questo intervento)
+## Dettagli tecnici
 
-- Se trasformare il `CampaignQueueMonitor` in una maschera fissa nel menu (oggi hai detto "no, basta dov'è").
-- Se ricollegare `outreach_queue` come coda multicanale unificata (oggi vuota, è una scelta architetturale separata).
-- Se introdurre lo step "Autorizza" obbligatorio prima dell'invio per le mail batch — discusso nel turno precedente, da affrontare a parte.
+File toccati (solo UI/routing, zero logica):
+
+1. `src/v2/ui/pages/sections/PipelineSection.tsx` → rinominato concettualmente in `ContattiSection`. Tab "origine" in cima (state `?origine=wca|crm|biglietti`), tab di lavoro sotto.
+2. `src/v2/ui/pages/ContactsPage.tsx` → resa "origine-aware" (mostra elenco WCA, CRM o biglietti in base al param). I componenti tabella interni restano gli stessi.
+3. `src/v2/routes.tsx` → aggiunge `pipeline/*` come alias del nuovo `contatti/*` per retro-compatibilità; redirect da `/v2/explore/network` → `/v2/contatti?origine=wca`.
+4. `src/v2/ui/templates/navConfig.tsx` → da 3 voci (`wca_partners`, `crm_contacts`, `business_cards`) a **1 sola** (`Contatti` → `/v2/contatti`).
+5. `src/v2/ui/templates/breadcrumbConfig.ts` → label `pipeline` → `Contatti`; rimossa label `Pipeline`.
+6. `src/v2/ui/templates/PageHeaderUnified.tsx` → `sectionLabel="Contatti"` (al posto di "Pipeline"), icona `Users`.
+7. `src/v2/ui/templates/ContextFiltersRail.tsx` → si aggancia al param `?origine=` per scegliere il pannello filtri corretto.
+
+Nessuna nuova tabella DB, nessuna nuova edge function, nessun nuovo hook di business. Tutto il lavoro è di **riorganizzazione UI**.
+
+## Verifica post-implementazione
+
+- I 3 vecchi link nel menu non esistono più → al loro posto c'è "Contatti".
+- Aprendo "Contatti" parte sull'origine **CRM**, primo tab **Elenco**, dettaglio a destra.
+- Cliccando l'origine **WCA** vedi i partner WCA con gli stessi tab di lavoro.
+- Cliccando **Biglietti** vedi i biglietti da visita con gli stessi tab.
+- Tutti i vecchi URL fanno redirect corretto, niente 404.
+- Il `CampaignQueueMonitor` nel Command Canvas continua a funzionare come prima.
+
+## Fase 2 (da decidere insieme dopo che usi la nuova UI)
+
+Quali tab di lavoro tenere/togliere per origine (es. forse Kanban non ha senso per i Biglietti, forse Duplicati va spostato in Config). Lo decidiamo a sistema funzionante, come hai chiesto.
