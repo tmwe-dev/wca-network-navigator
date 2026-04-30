@@ -67,6 +67,27 @@ export function ContextFiltersRail(): React.ReactElement | null {
   const [searchParams] = useSearchParams();
   const context = getFilterContext(pathname, searchParams.get("origine"));
   const [open, setOpen] = React.useState<boolean>(readInitialOpen);
+  // Stato della sidebar principale (collassata = icone). Quando la sidebar è
+  // espansa la linguetta filtri viene nascosta per non sovrapporsi al menu.
+  const [navCollapsed, setNavCollapsed] = React.useState<boolean>(() => {
+    try { return (localStorage.getItem("dl_sidebar_collapsed") ?? "1") === "1"; }
+    catch { return true; }
+  });
+  React.useEffect(() => {
+    const onSidebar = (e: Event) => {
+      const detail = (e as CustomEvent<{ collapsed: boolean }>).detail;
+      if (detail && typeof detail.collapsed === "boolean") setNavCollapsed(detail.collapsed);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "dl_sidebar_collapsed") setNavCollapsed((e.newValue ?? "1") === "1");
+    };
+    window.addEventListener("dl-sidebar-toggle", onSidebar);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("dl-sidebar-toggle", onSidebar);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
   const asideRef = React.useRef<HTMLElement | null>(null);
   const tabRef = React.useRef<HTMLButtonElement | null>(null);
 
@@ -117,6 +138,10 @@ export function ContextFiltersRail(): React.ReactElement | null {
 
   if (!context) return null;
 
+  // Quando la sidebar è espansa, chiudiamo il pannello e nascondiamo la linguetta
+  // per evitare la sovrapposizione visiva con il menu principale.
+  const navExpanded = !navCollapsed;
+
   return (
     <>
       {/* Pannello overlay fixed (desktop md+). Non sposta il contenuto sotto. */}
@@ -124,10 +149,10 @@ export function ContextFiltersRail(): React.ReactElement | null {
         ref={asideRef}
         className={cn(
           "hidden md:flex fixed top-0 bottom-0 left-14 z-[55] w-80 flex-col border-r border-border/40 bg-card/95 backdrop-blur-xl shadow-2xl transition-transform duration-200 ease-out",
-          open ? "translate-x-0" : "-translate-x-[120%] pointer-events-none",
+          open && !navExpanded ? "translate-x-0" : "-translate-x-[120%] pointer-events-none",
         )}
         aria-label={context.title}
-        aria-hidden={!open}
+        aria-hidden={!open || navExpanded}
       >
         <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
           <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -173,7 +198,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "hidden md:flex fixed left-14 top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-r-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer",
-          open && "opacity-0 pointer-events-none",
+          (open || navExpanded) && "opacity-0 pointer-events-none",
         )}
         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
         aria-label={open ? `Chiudi ${context.title}` : `Apri ${context.title}`}

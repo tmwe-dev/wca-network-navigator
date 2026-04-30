@@ -78,9 +78,10 @@ export function ContactCard({ c, isActive, isSelected, hasBusinessCard, onSelect
   const handleRowClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('[data-no-filter]')) return;
-    if (rawCompany && onFilterClick) {
-      onFilterClick("company", rawCompany);
-    }
+    // Click sulla riga apre il dettaglio (parità con Biglietti da visita).
+    // I chip "Filterable" (azienda, paese, città, ecc.) gestiscono già il filtro
+    // tramite stopPropagation, quindi non vengono intercettati qui.
+    onViewDetail?.();
   };
 
   return (
