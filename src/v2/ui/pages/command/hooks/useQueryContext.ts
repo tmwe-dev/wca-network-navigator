@@ -2,11 +2,12 @@
  * useQueryContext — Manage conversational query context for follow-ups
  */
 import { useCallback } from "react";
-import type { QueryContext } from "../lib/queryContext";
+import type { QueryContext, SessionConstraints } from "../lib/queryContext";
 import {
   buildContextFromPlan,
   buildContextWithRows,
   isContextFresh,
+  deriveConstraints,
 } from "../lib/queryContext";
 import { getLastSuccessfulQueryPlan, clearLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import type { ToolResult } from "../tools/types";
@@ -27,6 +28,7 @@ export function useQueryContext(deps: QueryContextDeps) {
    *  When `result` is provided and is a table, rows are snapshotted (capped). */
   const updateQueryContextFromLastPlan = useCallback((result?: ToolResult) => {
     const plan = getLastSuccessfulQueryPlan();
+    const carryConstraints: SessionConstraints | undefined = queryContext?.constraints;
     if (plan && plan.table !== "INVALID") {
       // Bridge per compose-email: salva il country (se presente nei filtri)
       // e il conteggio righe, così follow-up tipo "scrivi a tutti loro"
@@ -44,21 +46,41 @@ export function useQueryContext(deps: QueryContextDeps) {
         rowCount,
       });
       if (result && result.kind === "table") {
-        setQueryContext(buildContextWithRows(plan, result.rows, result.title));
+        const ctx = buildContextWithRows(plan, result.rows, result.title);
+        setQueryContext({ ...ctx, constraints: carryConstraints });
       } else if (result && result.kind === "multi") {
         // Snapshot the first non-error part (mirrors aiQueryTool cache behaviour).
         const firstOk = result.parts.find((p) => !p.error);
         if (firstOk) {
-          setQueryContext(buildContextWithRows(plan, firstOk.rows, firstOk.title));
+          const ctx = buildContextWithRows(plan, firstOk.rows, firstOk.title);
+          setQueryContext({ ...ctx, constraints: carryConstraints });
         } else {
-          setQueryContext(buildContextFromPlan(plan));
+          setQueryContext({ ...buildContextFromPlan(plan), constraints: carryConstraints });
         }
       } else {
-        setQueryContext(buildContextFromPlan(plan));
+        setQueryContext({ ...buildContextFromPlan(plan), constraints: carryConstraints });
       }
     }
     clearLastSuccessfulQueryPlan();
-  }, [setQueryContext]);
+  }, [setQueryContext, queryContext?.constraints]);
+
+  /** Aggiorna i constraint sticky basandosi sull'ultimo prompt utente. */
+  const updateConstraintsFromPrompt = useCallback((prompt: string) => {
+    const next = deriveConstraints(queryContext?.constraints, prompt);
+    if (queryContext) {
+      setQueryContext({ ...queryContext, constraints: next });
+    } else {
+      // Crea un contesto minimale che porta solo i vincoli, in modo che le
+      // proposte successive (anche prima della prima query) siano coerenti.
+      setQueryContext({
+        table: "_constraints_only",
+        filters: [],
+        mode: "list",
+        ts: Date.now(),
+        constraints: next,
+      });
+    }
+  }, [queryContext, setQueryContext]);
 
   /** Check if query context is still fresh and usable */
   const isContextUsable = useCallback((): boolean => {
@@ -67,6 +89,7 @@ export function useQueryContext(deps: QueryContextDeps) {
 
   return {
     updateQueryContextFromLastPlan,
+    updateConstraintsFromPrompt,
     isContextUsable,
     queryContext,
   };
