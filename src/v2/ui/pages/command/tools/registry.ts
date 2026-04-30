@@ -147,10 +147,17 @@ export async function resolveTool(
 
   // AI fallback
   try {
+    // Lazy-import per evitare cicli (composerContext usa toneDetector che è
+    // già caricato qui). Il router AI riceve il summary dello stato vivo
+    // così può scegliere `compose-email` per follow-up senza regex.
+    const { getActiveComposerContextSummary } = await import("../lib/composerContext");
+    const activeContext = getActiveComposerContextSummary();
+
     const decision = await decideToolFromPrompt(
       prompt,
       TOOLS.map((t) => ({ id: t.id, label: t.label, description: t.description })),
       history,
+      activeContext,
     );
 
     if (decision._tag === "Err" || decision.value.toolId === "none") {
