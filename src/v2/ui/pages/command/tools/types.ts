@@ -120,6 +120,16 @@ export type ToolResult =
       readonly recipientName?: string | null;
       /** Resolved oracle email type (e.g. "primo_contatto"). */
       readonly emailType?: string;
+      /**
+       * Country-wide batch: una bozza pre-personalizzata per ciascun partner.
+       * Quando presente con length > 1 il Canvas mostra le frecce di navigazione
+       * e abilita "Invia tutte" / "Rigenera tutte".
+       */
+      readonly drafts?: ReadonlyArray<ComposerDraft>;
+      /** Tono detectato dal prompt operatore (default "professionale"). */
+      readonly detectedTone?: "amichevole" | "professionale" | "diretto" | "informale";
+      /** Codice paese ereditato/usato (es. "MT"). Per UI batch e contesto follow-up. */
+      readonly countryCode?: string;
     }
   | {
       readonly kind: "approval";
@@ -163,6 +173,20 @@ export interface MultiResultPart {
   readonly error?: string;
   /** Durata della singola query (ms). */
   readonly durationMs?: number;
+}
+
+/**
+ * Singola bozza pre-personalizzata in un batch country-wide.
+ */
+export interface ComposerDraft {
+  readonly partnerId: string;
+  readonly partnerName: string;
+  readonly contactName: string | null;
+  readonly contactEmail: string;
+  readonly subject: string;
+  readonly body: string;
+  readonly status: "ok" | "no_email" | "ai_error";
+  readonly errorMessage?: string;
 }
 
 export interface ToolContext {
