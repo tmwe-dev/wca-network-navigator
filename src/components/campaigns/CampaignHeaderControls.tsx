@@ -7,8 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Building2, Send, Check, ChevronsUpDown, Briefcase, CreditCard } from "lucide-react";
+import { RefreshCw, Send, Check, ChevronsUpDown, Briefcase } from "lucide-react";
 import { WCA_COUNTRIES_MAP } from "@/data/wcaCountries";
 import { getCountryFlag } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -29,7 +28,7 @@ interface Props {
 
 export function CampaignHeaderControls({
   countries, selectedCountry, onCountrySelect, countriesWithPartners,
-  totalPartners, campaignPartners, onGenerateJobs, source, onSourceChange,
+  totalPartners, campaignPartners, onGenerateJobs, source,
   bcaCountryCounts,
 }: Props) {
   const [comboOpen, setComboOpen] = useState(false);
@@ -58,19 +57,6 @@ export function CampaignHeaderControls({
 
   return (
     <>
-      <Tabs value={source} onValueChange={(v) => onSourceChange(v as CampaignSource)}>
-        <TabsList className="bg-card/50 border border-border">
-          <TabsTrigger value="partners" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-            <Building2 className="w-3.5 h-3.5 mr-1" />Partner
-          </TabsTrigger>
-          <TabsTrigger value="bca" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-            <CreditCard className="w-3.5 h-3.5 mr-1" />BCA
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="w-px h-6 bg-border" />
-
       <Popover open={comboOpen} onOpenChange={setComboOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" role="combobox" aria-expanded={comboOpen} className="w-56 justify-between">
