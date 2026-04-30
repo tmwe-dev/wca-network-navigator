@@ -28,6 +28,14 @@ export interface AiCommentRequest {
   resultSummary: string;
   /** Recent conversation context (last N turns) */
   history?: { role: "user" | "assistant"; content: string }[];
+  /** Optional sticky session constraints (LinkedIn ban, web search ban, etc.) */
+  constraints?: {
+    noLinkedIn?: boolean;
+    noWebSearch?: boolean;
+    onlyOfficialWebsites?: boolean;
+  };
+  /** Working set descriptor to keep proposals on the active selection. */
+  workingSet?: { count: number; label?: string };
 }
 
 export interface SuggestedAction {
@@ -152,7 +160,19 @@ export function serializeResultForAI(result: ToolResult): string {
 export async function getAiComment(
   req: AiCommentRequest,
 ): Promise<AiCommentResponse> {
-  const { userPrompt, toolId, toolLabel, resultSummary, history = [] } = req;
+  const { userPrompt, toolId, toolLabel, resultSummary, history = [], constraints, workingSet } = req;
+
+  const constraintBlock = constraints
+    ? `\nVINCOLI DI SESSIONE (rispettali sempre, NON proporre nulla che li violi):\n${[
+        constraints.noLinkedIn ? "- Vietato proporre o eseguire ricerche/azioni LinkedIn." : null,
+        constraints.noWebSearch ? "- Vietata la ricerca web esterna." : null,
+        constraints.onlyOfficialWebsites ? "- Lavora esclusivamente sui siti ufficiali dei partner." : null,
+      ].filter(Boolean).join("\n")}\n`
+    : "";
+
+  const workingSetBlock = workingSet && workingSet.count > 0
+    ? `\nWORKING SET ATTIVO: ${workingSet.count} record (${workingSet.label ?? "selezione corrente"}). Le tue proposte DEVONO riferirsi a questo set, NON allargarle a tutta la tabella.\n`
+    : "";
 
   const userTurn = `L'utente ti ha chiesto:
 > "${userPrompt}"
@@ -161,7 +181,7 @@ Hai i dati pronti (li vedi tu, l'utente li vede nel canvas a fianco):
 \`\`\`json
 ${resultSummary}
 \`\`\`
-
+${constraintBlock}${workingSetBlock}
 Rispondi come stai PARLANDO con un collega, non come stai presentando un report.
 
 REGOLE FERREE:
@@ -248,14 +268,20 @@ Rispondi SOLO con questo JSON valido, niente altro testo:
     }
   } catch (e: unknown) {
     log.warn("[aiBridge] getAiComment failed:", { error: e });
-    return fallbackComment(toolLabel);
+    return fallbackComment(toolLabel, constraints);
   }
 }
 
-function fallbackComment(toolLabel: string): AiCommentResponse {
-  return {
+function fallbackComment(
+  toolLabel: string,
+  constraints?: AiCommentRequest["constraints"],
+): AiCommentResponse {
+  const base: AiCommentResponse = {
     message: `✅ **${toolLabel}** completato. Risultato disponibile nel canvas.`,
     spokenSummary: `${toolLabel} completato.`,
     suggestedActions: [],
   };
+  // I fallback non possono inventare azioni; ci limitiamo a non proporre LinkedIn.
+  if (constraints?.noLinkedIn) base.suggestedActions = [];
+  return base;
 }
