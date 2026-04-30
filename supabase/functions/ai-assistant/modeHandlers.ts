@@ -53,15 +53,15 @@ export async function handleToolDecisionMode(
     .join("\n");
 
   const activeContextBlock = activeContext
-    ? `\n\n🟢 CONTESTO ATTIVO NELLA UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
+    ? `\n\nCONTESTO VIVO IN UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
 ${activeContext.description ?? ""}
 
-REGOLA: se la richiesta dell'utente fa riferimento — anche implicito — a questo contesto vivo (modifiche, rivisitazioni, riapertura, conferme, follow-up senza nuova entità nominata, richieste di formato/lunghezza/tono), scegli toolId="${activeContext.toolId}". Solo se l'utente cambia chiaramente argomento (nuova entità, nuovo paese, nuova ricerca esplicita) scegli un altro tool.`
+Principio: se la richiesta dell'utente è una continuazione naturale di questo contesto (modifica, rivisitazione, conferma, follow-up coreferenziale), resta sul tool del contesto. Solo se introduce una nuova entità o cambia argomento, cambia tool.`
     : "";
 
-  const decisionSystemPrompt = `Sei un router di tool intelligente. Interpreta SEMANTICAMENTE la richiesta dell'utente (non cercare parole chiave fisse) e scegli il tool più appropriato.
-Rispondi SOLO con un JSON valido: {"toolId": "<id>", "reasoning": "<spiegazione breve>"}
-Se nessun tool è adatto, rispondi: {"toolId": "none", "reasoning": "<motivo>"}
+  const decisionSystemPrompt = `Sei un router di tool. Interpreta semanticamente la richiesta dell'utente nel suo contesto conversazionale e scegli il tool più adatto. NON cercare parole chiave: ragiona sull'intento.
+Rispondi SOLO con JSON: {"toolId": "<id>", "reasoning": "<breve>"}
+Se nessun tool è adatto: {"toolId": "none", "reasoning": "<motivo>"}
 
 Tool disponibili:
 ${toolDescriptions}
@@ -152,20 +152,24 @@ export async function handlePlanExecutionMode(
     .join("\n");
 
   const activeContextBlock = activeContext
-    ? `\n\n🟢 CONTESTO ATTIVO NELLA UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
+    ? `\n\nCONTESTO VIVO IN UI (TTL ~${activeContext.ttlSecondsLeft ?? "?"}s):
 ${activeContext.description ?? ""}
 
-REGOLA CRITICA: se la richiesta dell'utente fa riferimento — anche implicito — a questo contesto vivo (modifiche di lunghezza/tono/formato/contenuto, "riducile", "compattale", "più sintetiche", "in 4-5 righe", "mostrameli", "riapri", conferme, follow-up senza nuova entità), produci UN SOLO STEP con toolId="${activeContext.toolId}" e params {prompt: "<prompt utente integrale>"}. Solo se l'utente cambia chiaramente argomento usa un altro tool.`
+Principio: se la richiesta è una continuazione naturale di questo contesto (modifica, rivisitazione, conferma, follow-up coreferenziale), produci UN SOLO STEP con toolId="${activeContext.toolId}" e passa il prompt utente integrale + un flag context_followup:true nei params. Solo se cambia argomento, cambia tool.`
     : "";
 
-  const planSystemPrompt = `Sei un orchestratore intelligente. Interpreta SEMANTICAMENTE la richiesta dell'utente (non cercare parole chiave fisse) e decomponi il task in una sequenza ordinata di tool. Ogni step ha: stepNumber, toolId, reasoning, params. Se uno step dipende dall'output di uno precedente, usa {{step1.result.partnerId}}. Ritorna SOLO JSON: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "..." }. Se eseguibile con UN solo tool, ritorna 1 step. Se non eseguibile, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
+  const planSystemPrompt = `Sei un orchestratore. Interpreta semanticamente la richiesta dell'utente e decomponila in una sequenza ordinata di tool.
 
-REGOLE OPERATIVE IMPORTANTI:
-- Prompt tipo "scrivi/manda/prepara mail/email a (tutti) i partner di <PAESE>" → UN SOLO STEP con toolId "compose-email" e params {prompt: "<prompt utente originale integrale>"}. Il tool risolve internamente il fan-out per paese e prepara una bozza-template. NON spezzare in ai-query + compose-email: produrresti due step disconnessi che NON si passano i destinatari.
-- Prompt tipo "scrivi mail a <PERSONA> di <AZIENDA>" → UN SOLO STEP "compose-email" con params {prompt: "<prompt integrale>"}.
-- Prompt tipo "quanti partner abbiamo a <LUOGO>" / "mostra/elenca/cerca …" → UN SOLO STEP "ai-query" con params {prompt: "<prompt integrale>"}.
-- Per i tool single-step (compose-email, ai-query) passa SEMPRE il prompt utente originale come params.prompt: i tool sanno auto-risolvere il contesto.
-- Usa multi-step SOLO quando un'azione di scrittura dipende davvero dall'id puntuale di una entity restituita al passo precedente (es. "trova partner X poi crea attività su quell'id").
+PRINCIPI (no keyword matching, ragiona sull'intento):
+1. Preferisci UN SOLO STEP. Multi-step SOLO se uno step richiede davvero l'id puntuale di un risultato precedente.
+2. Per ogni tool, passa SEMPRE \`params.prompt\` = prompt utente integrale. I tool single-step sanno auto-risolvere il contesto.
+3. Se l'utente fa riferimento (anche implicito) a risultati appena mostrati nella conversazione (es. "scrivi a tutti loro", "mandala anche a quelli", "compattale") usa UN SOLO STEP del tool che produce l'azione richiesta e aggiungi \`params.context_followup\` = true: il tool erediterà il target dal contesto vivo, non serve duplicarlo nei params.
+4. Per richieste di scrittura/composizione/invio messaggi → tool di composizione (es. compose-email per email). NON spezzare prima in ricerca + composizione: il tool di composizione fa il fan-out internamente.
+5. Per richieste di ricerca/lettura/conteggio → tool di query (es. ai-query).
+6. Se non hai un tool adatto, ritorna { "steps": [], "summary": "Nessun piano possibile" }.
+
+Output JSON: { "steps": [{"stepNumber": N, "toolId": "...", "reasoning": "...", "params": {...}}], "summary": "..." }
+Placeholder per dipendenze tra step: {{step1.result.partnerId}}.
 
 Tool disponibili:
 ${toolDescriptions}
