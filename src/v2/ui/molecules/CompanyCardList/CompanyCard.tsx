@@ -3,8 +3,9 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plane, Trophy, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, Plane, Trophy, MoreHorizontal, Star, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { EntityRow, type EntityRowTone } from "@/v2/ui/atoms/EntityRow";
 import { ContactSubCard } from "./ContactSubCard";
@@ -23,6 +24,10 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   expanded: boolean;
   /** Toggle apertura. */
   onToggleExpand: (id: string) => void;
+  /** True quando l'azienda è multi-selezionata. */
+  selected?: boolean;
+  /** Toggle selezione (checkbox). */
+  onToggleSelect?: (id: string) => void;
 }
 
 export function CompanyCard({
@@ -31,10 +36,42 @@ export function CompanyCard({
   onToggleExpand,
   onOpenCompany,
   onOpenContact,
+  selected,
+  onToggleSelect,
 }: CompanyCardProps): React.ReactElement {
-  const { name, city, countryCode, badge, contacts, contactsCount, meta, source, score, primaryContact, channels, hasBca } = company;
+  const { name, city, countryCode, badge, contacts, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const tone = sourceTone(source);
+
+  const recency = React.useMemo(() => {
+    if (!lastInteractionAt) return { label: "mai", tone: "muted" as const };
+    const t = new Date(lastInteractionAt).getTime();
+    if (Number.isNaN(t)) return { label: "mai", tone: "muted" as const };
+    const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+    if (days < 1) return { label: "oggi", tone: "ok" as const };
+    if (days < 7) return { label: `${days}g fa`, tone: "ok" as const };
+    if (days < 30) return { label: `${days}g fa`, tone: "warn" as const };
+    if (days < 90) return { label: `${days}g fa`, tone: "warn" as const };
+    return { label: `${days}g fa`, tone: "alert" as const };
+  }, [lastInteractionAt]);
+
+  const leadStatusBadge = (() => {
+    if (!leadStatus || leadStatus === "new") return null;
+    const map: Record<string, { label: string; cls: string }> = {
+      contacted: { label: "Contattato", cls: "bg-chart-2/15 text-chart-2 border-chart-2/30" },
+      qualified: { label: "Qualificato", cls: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" },
+      holding: { label: "In attesa", cls: "bg-primary/15 text-primary border-primary/30" },
+      archived: { label: "Archiviato", cls: "bg-muted/40 text-muted-foreground border-border/40" },
+      blacklisted: { label: "Blacklist", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    };
+    const m = map[leadStatus];
+    if (!m) return null;
+    return (
+      <Badge variant="outline" className={cn("text-[9px] flex-shrink-0 px-1 py-0 h-4", m.cls)}>
+        {m.label}
+      </Badge>
+    );
+  })();
 
   const titleSlot = (
     <>
@@ -60,14 +97,30 @@ export function CompanyCard({
       )}
       {hasBca && (
         <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
-          BCA
+          BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
         </Badge>
+      )}
+      {leadStatusBadge}
+      {isFavorite && (
+        <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />
       )}
       {meta?.holding && (
         <span title="In circuito di attesa">
           <Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
         </span>
       )}
+      <span
+        className={cn(
+          "ml-auto inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded flex-shrink-0",
+          recency.tone === "ok" && "text-emerald-500",
+          recency.tone === "warn" && "text-amber-500",
+          recency.tone === "alert" && "text-destructive",
+          recency.tone === "muted" && "text-muted-foreground/50"
+        )}
+        title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
+      >
+        <Clock className="w-2.5 h-2.5" /> {recency.label}
+      </span>
     </>
   );
 
@@ -94,12 +147,24 @@ export function CompanyCard({
     <div
       className={cn(
         "rounded-xl overflow-hidden transition-all",
-        expanded && "ring-1 ring-border/40 bg-card/20"
+        expanded && "ring-1 ring-border/40 bg-card/20",
+        selected && "ring-1 ring-primary/60 bg-primary/[0.05]"
       )}
     >
       <EntityRow
         tone={tone}
         countryCode={countryCode}
+        selected={selected}
+        checkboxSlot={
+          onToggleSelect ? (
+            <Checkbox
+              checked={!!selected}
+              onCheckedChange={() => onToggleSelect(company.id)}
+              aria-label={`Seleziona ${company.name}`}
+              className="h-3.5 w-3.5"
+            />
+          ) : undefined
+        }
         chevronSlot={
           <button
             type="button"
