@@ -1,76 +1,48 @@
 ## Obiettivo
 
-Unificare l'accesso alle 3 viste anagrafiche (WCA Partner, Biglietti, CRM) attraverso **icone in top bar** sullo stile di "WCA Partner" (globo che gira + contatore), eliminando 2 voci dalla sidebar e ripulendo l'header pesante della pagina Network.
+Sostituire la vista attuale di **Pipeline → Biglietti** (`BusinessCardsHub.tsx`) con la stessa, identica vista che era dentro Network → BCA: **`BusinessCardsView`**, già completa di sidebar paesi, dashboard qualità, raggruppamento per azienda e 3 view-mode (compact / grid / **expanded ← default richiesto "più grande"**) + Timeline Evento.
+
+L'utente preferisce quella resa visiva — più ricca, raggruppata, con bandiere paese leggibili e contatti raggruppati per azienda — e vuole che sia il **formato grande (expanded)** quello mostrato di default.
 
 ---
 
-## Parte A — Top bar: 3 icone "Anagrafica" (con contatori)
+## Cosa cambia
 
-Oggi la top bar ha già uno slot dinamico (`#campaign-header-controls`) in cui la pagina Network inietta il blocco "🌐 WCA Partner · 12286 partner".
+### 1. Routing della tab "Biglietti"
 
-**Nuovo comportamento:** quando l'utente è su una qualsiasi delle 3 viste anagrafiche, la top bar mostra **3 pill cliccabili affiancate**, una per ciascuna anagrafica, con icona animata + label + contatore + indicatore della pill attiva:
+`src/v2/ui/pages/sections/PipelineSection.tsx` — la rotta `/v2/pipeline/biglietti` oggi monta `BusinessCardsHub`. La cambiamo per montare la vista grande:
 
 ```text
-[ 🌐  WCA Partner  · 12.286 ]   [ 🪪  Biglietti · 1.342 ]   [ 👥  CRM · 11.349 ]
-   (attiva, sottolineata)            (cliccabile)              (cliccabile)
+biglietti → <BusinessCardsView />   (al posto di BusinessCardsHub)
 ```
 
-- **WCA Partner** → 🌐 globo che gira (icona attuale, invariata) → naviga `/v2/explore/network`
-- **Biglietti** → 🪪 `Contact` (lucide) con micro-pulsazione → naviga `/v2/pipeline/biglietti`
-- **CRM** → 👥 `Users` con micro-pulsazione → naviga `/v2/pipeline/contacts`
+`BusinessCardsView` è già implementata e funzionante: era usata in Network prima della rimozione del toggle Partner/BCA. Non va riscritta, solo riattaccata alla nuova rotta.
 
-I tre contatori (`partners.total`, `business_cards.total`, `imported_contacts.total`) vengono caricati una sola volta tramite un nuovo hook `useAnagraphicsCounts` (cache TanStack Query, staleTime 5 min, già copre i 3 endpoint che le viste interne richiamano).
+### 2. View-mode di default = "expanded"
 
-La pill attiva è evidenziata con sottolineatura primary + sfondo `bg-primary/10`; le altre due restano cliccabili con hover discreto. Le label scompaiono sotto i 768px (rimangono solo icona + numero).
+In `src/components/operations/bca/useBcaGrouping.ts` (o nel componente `BusinessCardsView` stesso, dove viene inizializzato `viewMode`) impostare il default a `"expanded"` invece di `"compact"`. Verifico la sede esatta in fase di implementazione: se l'init è dentro `useBcaGrouping`, lo cambio lì; altrimenti aggiungo un override in `BusinessCardsView` al primo mount.
 
----
+Le 3 view-mode (compact / grid / expanded) restano selezionabili dalla sidebar: cambia solo il default.
 
-## Parte B — Sidebar: rimuovere 2 voci
+### 3. Pulizie correlate
 
-Nel file `navConfig.tsx` la lista oggi contiene 11 voci. Rimuoviamo:
+- **Mantenere** la pill `AnagraphicsPills active="biglietti"` nella top bar: la monta `BusinessCardsView` aggiungendo `<AnagraphicsPillsPortal active="biglietti" />` come prima riga del JSX (analogo a come già fa `BusinessCardsHub` oggi).
+- **Mantenere** il pulsante **Sincronizza** già presente nella toolbar di `BusinessCardsView` (non c'è importazione file: la sync-business-cards edge function popola dal feed condiviso, coerente con la richiesta precedente di eliminare l'upload manuale).
+- `BusinessCardsHub.tsx` **non viene cancellato** dal repository (rispetta la regola "non eliminare codice in `src/components/`"); resta orfano e potremo riusarlo o rimuoverlo in seguito.
 
-- ❌ `nav.crm_contacts` → `/v2/pipeline/contacts`
-- ❌ `nav.business_cards` → `/v2/pipeline/biglietti`
+### 4. Dimensione "più grande"
 
-Resta `nav.wca_partners` come "Anagrafica" (unico ingresso da menu, le altre due si raggiungono dalla top bar). I due path restano ovviamente raggiungibili da:
-1. le pill della top bar (Parte A);
-2. il tab "Biglietti" interno alla sezione Pipeline (per chi entra dalla pipeline);
-3. i deep-link interni esistenti.
-
-Risultato: sidebar passa da 11 a 9 voci.
-
----
-
-## Parte C — Pulizia "riga inutile" su Network (`PartnerListPanel`)
-
-Oggi la prima riga del pannello ripete: bandiera + "Tutti i paesi" + "12286 partner" + filtro Deep Search. Tutto duplicato rispetto alla top bar.
-
-**Cosa cambia:**
-
-1. **Eliminata** la prima riga "🌍 Tutti i paesi · 12286 partner" → quando non c'è una selezione di paese, la riga non appare. Quando l'utente seleziona uno o più paesi, riappare in forma minimale: `🇮🇹 Italia · 234 partner` (solo se filtro paese attivo, perché in quel caso aggiunge informazione).
-2. **Eliminato** il duplicato del totale partner (è in top bar).
-3. **Riga 3 "Tutti / Nascondi in circuito"** viene **promossa in alto** (subito sotto i tab Mappa/Sherlock) e diventa più evidente:
-   - lo switch "Nascondi in circuito (N)" usa testo più leggibile e sfondo `bg-card/40 border` per dargli rilievo;
-   - "Seleziona tutti" resta a sinistra dello switch.
-4. **Mantenuto**: chip filtri attivi (search, paesi, qualità) + dropdown ordinamento + pulsante reset + counter `N / totale`. Questa è l'unica riga "operativa" che resta.
-
-Rispetto a oggi: da 3 righe header a **1 riga di filtri + 1 riga toggle "in circuito"** (oppure 0+1 se nessun filtro attivo).
-
----
-
-## Parte D — Allineamento estetico Biglietti & CRM
-
-Per coerenza visiva con Network, anche `BusinessCardsHub` e `ContactListPanel` perdono eventuali ripetizioni del totale globale e, dove presente, della riga "Tutti i paesi" (lavoro analogo a Parte C, scope limitato alla rimozione dei duplicati: **niente refactor invasivi** della logica filtri).
+L'utente ha specificato "nella versione più grande". La view `expanded` di `BcaExpandedCard` è già il rendering più grande (card a piena larghezza con avatar, contatti, badge, azioni inline). Sarà quella di default. Se nel rendering attuale `expanded` risultasse comunque troppo compatta nella tab Pipeline (causa contenitore stretto), aumenterò leggermente padding/icon-size del solo `BcaExpandedCard` per dare più respiro, senza toccare l'uso che ne fa Network (modifica retrocompatibile).
 
 ---
 
 ## Dettagli tecnici
 
-- **Nuovo file** `src/v2/ui/templates/header/AnagraphicsPills.tsx` — componente che renderizza le 3 pill, riceve i 3 conteggi e l'attiva (derivata da `useLocation`).
-- **Nuovo hook** `src/v2/hooks/useAnagraphicsCounts.ts` — query parallele `count()` su `partners`, `business_cards`, `imported_contacts`.
-- **Modificato** `src/components/operations/OperationsView.tsx` (`HeaderBarPortal`) — sostituisce il blocco "WCA Partner" attuale con `<AnagraphicsPills active="partners" />`.
-- **Aggiunto** un equivalente `HeaderBarPortal` in `BusinessCardsHub.tsx` e nella vista `Contatti CRM` (`ContactListPanel.tsx` o wrapper) per montare le stesse pill con `active="biglietti"` / `active="crm"`.
-- **Modificato** `navConfig.tsx` — rimosse le 2 voci.
-- **Modificato** `PartnerListPanel.tsx` — eliminata la prima riga header come da Parte C.
+| File | Modifica |
+|---|---|
+| `src/v2/ui/pages/sections/PipelineSection.tsx` | sostituire `lazy(() => import(".../BusinessCardsHub"))` con `lazy(() => import(".../operations/BusinessCardsView").then(m => ({ default: m.BusinessCardsView })))` |
+| `src/components/operations/BusinessCardsView.tsx` | aggiungere in cima al JSX `<AnagraphicsPillsPortal active="biglietti" />` per mantenere la pill attiva nella top bar |
+| `src/components/operations/bca/useBcaGrouping.ts` | cambiare `useState<ViewMode>("compact")` → `useState<ViewMode>("expanded")` |
+| `src/components/operations/bca/BcaCardRenderers.tsx` | (eventuale) micro-tuning di `BcaExpandedCard` per renderlo più "grande" se serve, mantenendo retrocompatibilità |
 
-Nessuna modifica a logica di business, RLS, edge functions o DAL.
+Nessuna modifica a edge functions, DAL, RLS, hook dati o logica di business. Solo presentazione.

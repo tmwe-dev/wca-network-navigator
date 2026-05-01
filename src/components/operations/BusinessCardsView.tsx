@@ -25,6 +25,7 @@ import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "./bca/BcaCardRende
 import { countryCodeToFlag } from "./bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { queryKeys } from "@/lib/queryKeys";
+import { AnagraphicsPillsPortal } from "@/v2/ui/templates/header/AnagraphicsPillsPortal";
 
 const log = createLogger("BusinessCardsView");
 
@@ -93,6 +94,7 @@ export function BusinessCardsView() {
 
   return (
     <div className="flex-1 min-h-0 flex overflow-hidden">
+      <AnagraphicsPillsPortal active="biglietti" />
       {/* Sidebar */}
       <div className={cn("flex-shrink-0 border-r border-border/40 bg-muted/20 flex flex-col transition-all duration-200 overflow-hidden", g.sidebarOpen ? "w-52" : "w-0")}>
         {g.sidebarOpen && (
