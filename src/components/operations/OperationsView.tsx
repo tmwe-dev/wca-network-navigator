@@ -268,7 +268,6 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
               </div>
             )}
           </div>
-          )}
         </div>
       </div>
       
