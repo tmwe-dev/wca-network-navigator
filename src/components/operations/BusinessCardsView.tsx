@@ -92,9 +92,9 @@ export function BusinessCardsView() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 overflow-hidden">
       {/* Sidebar */}
-      <div className={cn("flex-shrink-0 border-r border-border/40 bg-muted/20 flex flex-col transition-all duration-200 overflow-hidden", g.sidebarOpen ? "w-52" : "w-0")}>
+      <div className={cn("flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-border/40 bg-muted/20 transition-all duration-200", g.sidebarOpen ? "w-52" : "w-0")}>
         {g.sidebarOpen && (
           <BcaCountrySidebar
             countries={g.countries} totalCompanies={g.totalCompanies} totalContacts={cards.length}
@@ -113,7 +113,7 @@ export function BusinessCardsView() {
       </button>
 
       {/* Main content */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col px-4 pb-3 gap-3 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-3">
         {/* Toolbar */}
         <div className="flex items-center gap-3 pt-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
@@ -172,7 +172,7 @@ export function BusinessCardsView() {
         </div>
 
         {/* Card list or timeline */}
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {timelineMode ? (
             <BCAEventTimeline cards={g.filtered} />
           ) : g.groups.length === 0 ? (

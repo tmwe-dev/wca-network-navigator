@@ -37,8 +37,8 @@ export function BcaCountrySidebar({
   viewMode, onSetViewMode,
 }: BcaCountrySidebarProps) {
   return (
-    <>
-      <div className="px-3 pt-3 pb-2 border-b border-border/30 flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/30 px-3 pb-2 pt-3">
         <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
           <Globe className="w-3.5 h-3.5 text-primary" /> Paesi
         </span>
@@ -47,7 +47,7 @@ export function BcaCountrySidebar({
 
       <button
         onClick={() => onSelectCountry(null)}
-        className={cn("flex items-center gap-2 px-3 py-2 text-left border-b border-border/20 transition-all", selectedCountry === null ? "bg-primary/10 text-primary" : "hover:bg-muted/40 text-foreground")}
+        className={cn("flex shrink-0 items-center gap-2 border-b border-border/20 px-3 py-2 text-left transition-all", selectedCountry === null ? "bg-primary/10 text-primary" : "hover:bg-muted/40 text-foreground")}
       >
         <span className="text-sm">🌍</span>
         <div className="flex-1 min-w-0">
@@ -56,7 +56,7 @@ export function BcaCountrySidebar({
         </div>
       </button>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {countries.map(c => {
           const isActive = selectedCountry === (c.code ?? "__none__");
           return (
@@ -75,7 +75,7 @@ export function BcaCountrySidebar({
         })}
       </div>
 
-      <div className="border-t border-border/30 p-3 space-y-2.5">
+      <div className="shrink-0 space-y-2.5 border-t border-border/30 p-3">
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           <SlidersHorizontal className="w-3 h-3" /> Filtri
         </div>
@@ -125,6 +125,6 @@ export function BcaCountrySidebar({
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
