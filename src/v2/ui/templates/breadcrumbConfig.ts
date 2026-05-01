@@ -49,7 +49,7 @@ const SUB_LABELS: Record<string, string> = {
   analytics: "Analytics",
   map: "Mappa",
   search: "Cerca",
-  "deep-search": "Deep Search",
+  "deep-search": "Sherlock",
   campaigns: "Campagne",
   network: "Network",
   globe: "Mappa",
