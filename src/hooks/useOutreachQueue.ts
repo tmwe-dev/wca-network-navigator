@@ -149,21 +149,29 @@ export function useOutreachQueue() {
     } finally { processingRef.current = false; setProcessing(false); }
   }, [processItem]);
 
+  // Hold latest processQueue in a ref so polling/realtime effects can stay
+  // mounted with empty deps even when processQueue's identity changes due to
+  // unstable bridge returns (wa/li). Without this, the interval was being
+  // re-created on every render, piling up dozens of concurrent fetches.
+  const processQueueRef = useRef(processQueue);
+  useEffect(() => { processQueueRef.current = processQueue; }, [processQueue]);
+
   useEffect(() => {
-    const interval = setInterval(() => { if (!pausedRef.current) processQueue(); }, 5000);
-    processQueue();
+    const tick = () => { if (!pausedRef.current) processQueueRef.current(); };
+    const interval = setInterval(tick, 5000);
+    tick();
     return () => clearInterval(interval);
-  }, [processQueue]);
+  }, []);
 
   useEffect(() => {
     const channel = supabase
       .channel("outreach-queue-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "outreach_queue" }, () => {
-        if (!pausedRef.current) setTimeout(() => processQueue(), 1000);
+        if (!pausedRef.current) setTimeout(() => processQueueRef.current(), 1000);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [processQueue]);
+  }, []);
 
   return { pendingCount, processing, paused, setPaused };
 }

@@ -36,8 +36,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { createLogger } from "@/lib/log";
-import { useBcaGrouping } from "@/components/operations/bca/useBcaGrouping";
-import { useBcaFilters } from "./BcaFiltersContext";
+import { useBcaFiltersStrict } from "./BcaFiltersContext";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "@/components/operations/bca/BcaCardRenderers";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -62,10 +61,10 @@ export default function BCAUnifiedHub() {
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
 
   // Stato filtri condiviso con la linguetta globale (`ContextFiltersRail`).
-  // Se per qualche motivo il provider non è montato, fallback sicuro locale.
-  const ctx = useBcaFilters();
-  const local = useBcaGrouping(cards);
-  const g = ctx ?? local;
+  // Il `BcaFiltersGate` in `AuthenticatedLayout` garantisce il provider sulle
+  // route biglietti, quindi qui usiamo la versione strict ed evitiamo di
+  // ricalcolare due volte le stesse memo pesanti (groups/filtered/...).
+  const g = useBcaFiltersStrict();
 
   const cardsById = useMemo(() => {
     const m = new Map<string, BusinessCardWithPartner>();

@@ -55,7 +55,7 @@ function useBcaDragActive(): boolean {
   return active;
 }
 
-export function BCADragDropOverlay({ resolveCard }: Props) {
+export const BCADragDropOverlay = React.forwardRef<HTMLDivElement, Props>(function BCADragDropOverlay({ resolveCard }, _ref) {
   const active = useBcaDragActive();
   const navigate = useAppNavigate();
 
@@ -163,7 +163,7 @@ export function BCADragDropOverlay({ resolveCard }: Props) {
     </div>,
     document.body,
   );
-}
+});
 
 /* ───────────── Big drop tile ───────────── */
 
