@@ -120,9 +120,9 @@ export default function BCAUnifiedHub() {
   const showPanel = !!detailCard;
 
   return (
-    <div className="flex-1 min-h-0 flex overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 overflow-hidden">
       {/* Sidebar paesi */}
-      <div className={cn("flex-shrink-0 border-r border-border/40 bg-muted/20 flex flex-col transition-all duration-200 overflow-hidden", g.sidebarOpen ? "w-52" : "w-0")}>
+      <div className={cn("flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-border/40 bg-muted/20 transition-all duration-200", g.sidebarOpen ? "w-52" : "w-0")}>
         {g.sidebarOpen && (
           <BcaCountrySidebar
             countries={g.countries} totalCompanies={g.totalCompanies} totalContacts={cards.length}
@@ -141,7 +141,7 @@ export default function BCAUnifiedHub() {
       </button>
 
       {/* Main */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col px-4 pb-3 gap-3 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-3">
         {/* Toolbar */}
         <div className="flex items-center gap-3 pt-3 flex-wrap">
           <div className="relative flex-1 max-w-md">
@@ -227,8 +227,8 @@ export default function BCAUnifiedHub() {
         </div>
 
         {/* Two-column body: list + detail panel */}
-        <div className="flex-1 min-h-0 flex overflow-hidden gap-3">
-          <div className={cn("flex-1 min-w-0 overflow-auto", showPanel && "border-r border-border/40 pr-3")}>
+        <div className="flex min-h-0 flex-1 overflow-hidden gap-3">
+          <div className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain", showPanel && "border-r border-border/40 pr-3")}>
             {timelineMode ? (
               <BCAEventTimeline cards={g.filtered} />
             ) : g.groups.length === 0 ? (
