@@ -1,203 +1,29 @@
 /**
- * BCAUnifiedDetailPanel — Detail panel for the unified CRM › Biglietti page.
+ * BCAUnifiedDetailPanel — Wrapper sottile sul `BusinessCardDetailPanel`.
  *
- * Wraps the standard `BusinessCardDetailPanel` and adds a prominent "Azioni
- * intelligenti" grid (Cockpit · Deep Search · LinkedIn · Campagna) where each
- * action is an INDEPENDENT drop target.
+ * Storia: in passato qui c'era una HERO grid 2x2 di drop-target sempre visibile
+ * che duplicava le azioni e occupava metà pannello. Ora il drag&drop è gestito
+ * dall'overlay globale `BCADragDropOverlay`, che appare solo durante il drag.
+ * Le azioni click sono nel pannello sotto, in due gruppi compatti
+ * (Comunicazione + AI), niente duplicati.
  *
- * Drop semantics:
- *  - Each tile registers its own onDragEnter/Leave/Drop handlers.
- *  - A tile highlights only when the pointer is inside its own bounds,
- *    using a ref-counter pattern to avoid flicker on child enter/leave.
- *  - Dropping a card on a tile triggers that tile's action against the
- *    dropped card (resolved via id from the parent-provided lookup).
+ * `resolveCard` non serve più qui — è usato dall'overlay tramite il parent.
  */
-import * as React from "react";
-import { useCallback, useRef, useState } from "react";
-import { useAppNavigate } from "@/hooks/useAppNavigate";
-import { ArrowRight, Search, Linkedin, Megaphone } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { BusinessCardDetailPanel } from "./BCADetailPanel";
-import { BCA_DRAG_MIME } from "./bcaDragContext";
-import { supabase } from "@/integrations/supabase/client";
-import { insertCockpitQueueItems } from "@/data/cockpitQueue";
-import { invokeEdge } from "@/lib/api/invokeEdge";
-import { toast } from "@/hooks/use-toast";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
-
-type ActionKind = "cockpit" | "deep_search" | "linkedin" | "campaign";
 
 interface Props {
   card: BusinessCardWithPartner;
   onClose: () => void;
-  /** Resolves a dragged card id back to the full record (from the parent list). */
-  resolveCard: (id: string) => BusinessCardWithPartner | undefined;
 }
 
-export function BCAUnifiedDetailPanel({ card, onClose, resolveCard }: Props) {
-  const navigate = useAppNavigate();
-
-  const runAction = useCallback(
-    async (kind: ActionKind, target: BusinessCardWithPartner) => {
-      try {
-        if (kind === "cockpit") {
-          const { data: { session: __s } } = await supabase.auth.getSession();
-          const user = __s?.user ?? null;
-          if (!user) { toast({ title: "Sessione assente", variant: "destructive" }); return; }
-          await insertCockpitQueueItems([{
-            source_id: target.id,
-            source_type: "business_card",
-            user_id: user.id,
-            partner_id: target.matched_partner_id || null,
-          }]);
-          toast({ title: "✅ Inviato al Cockpit", description: target.contact_name || target.company_name || undefined });
-          return;
-        }
-        if (kind === "deep_search") {
-          if (!target.matched_partner_id) {
-            toast({ title: "Nessun partner WCA associato", description: "Associa prima un partner per la Deep Search.", variant: "destructive" });
-            return;
-          }
-          await invokeEdge("ai-utility", {
-            body: { action: "deep_search", partnerIds: [target.matched_partner_id] },
-            context: "BCAUnifiedDetailPanel.deep_search",
-          });
-          toast({ title: "🔍 Deep Search avviata" });
-          return;
-        }
-        if (kind === "linkedin") {
-          const query = [target.contact_name, target.company_name].filter(Boolean).join(" ");
-          if (!query) { toast({ title: "Dati insufficienti per LinkedIn", variant: "destructive" }); return; }
-          window.open(`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(query)}`, "_blank");
-          return;
-        }
-        if (kind === "campaign") {
-          if (!target.email) { toast({ title: "Email mancante", variant: "destructive" }); return; }
-          navigate("/v2/email-composer", {
-            state: {
-              prefilledRecipient: {
-                email: target.email,
-                name: target.contact_name || undefined,
-                company: target.company_name || undefined,
-                partnerId: target.matched_partner_id || undefined,
-              },
-            },
-          });
-          return;
-        }
-      } catch (e: unknown) {
-        toast({ title: "Errore", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-      }
-    },
-    [navigate],
-  );
-
+export function BCAUnifiedDetailPanel({ card, onClose }: Props) {
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Smart actions HERO grid — drop targets */}
-      <div className="px-3 pt-3 pb-2 border-b border-border/40 bg-gradient-to-b from-primary/[0.04] to-transparent shrink-0">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 px-1">
-          Azioni intelligenti · trascina qui un contatto
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <DropTarget
-            kind="cockpit"
-            label="Cockpit"
-            sublabel="Aggiungi al cockpit"
-            icon={<ArrowRight className="w-5 h-5" />}
-            color="primary"
-            onClick={() => runAction("cockpit", card)}
-            onDropCard={(id) => {
-              const rec = resolveCard(id) ?? card;
-              runAction("cockpit", rec);
-            }}
-          />
-          <DropTarget
-            kind="deep_search"
-            label="Deep Search"
-            sublabel="Arricchimento AI"
-            icon={<Search className="w-5 h-5" />}
-            color="primary"
-            onClick={() => runAction("deep_search", card)}
-            onDropCard={(id) => {
-              const rec = resolveCard(id) ?? card;
-              runAction("deep_search", rec);
-            }}
-          />
-          <DropTarget
-            kind="linkedin"
-            label="LinkedIn"
-            sublabel="Apri ricerca"
-            icon={<Linkedin className="w-5 h-5" />}
-            color="blue"
-            onClick={() => runAction("linkedin", card)}
-            onDropCard={(id) => {
-              const rec = resolveCard(id) ?? card;
-              runAction("linkedin", rec);
-            }}
-          />
-          <DropTarget
-            kind="campaign"
-            label="Campagna"
-            sublabel="Email composer"
-            icon={<Megaphone className="w-5 h-5" />}
-            color="amber"
-            onClick={() => runAction("campaign", card)}
-            onDropCard={(id) => {
-              const rec = resolveCard(id) ?? card;
-              runAction("campaign", rec);
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Standard detail */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <BusinessCardDetailPanel card={card} onClose={onClose} />
-      </div>
+    <div className="h-full overflow-hidden">
+      <BusinessCardDetailPanel card={card} onClose={onClose} />
     </div>
   );
 }
-
-/* ───────────── DropTarget tile ───────────── */
-
-interface DropTargetProps {
-  kind: ActionKind;
-  label: string;
-  sublabel: string;
-  icon: React.ReactNode;
-  color: "primary" | "blue" | "amber";
-  onClick: () => void;
-  onDropCard: (cardId: string) => void;
-}
-
-function DropTarget({ label, sublabel, icon, color, onClick, onDropCard }: DropTargetProps) {
-  const counter = useRef(0);
-  const [hot, setHot] = useState(false);
-
-  const accepts = (e: React.DragEvent) =>
-    e.dataTransfer.types.includes(BCA_DRAG_MIME);
-
-  const onDragEnter = (e: React.DragEvent) => {
-    if (!accepts(e)) return;
-    e.preventDefault();
-    counter.current += 1;
-    if (counter.current === 1) setHot(true);
-  };
-  const onDragOver = (e: React.DragEvent) => {
-    if (!accepts(e)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  };
-  const onDragLeave = (e: React.DragEvent) => {
-    if (!accepts(e)) return;
-    counter.current = Math.max(0, counter.current - 1);
-    if (counter.current === 0) setHot(false);
-  };
-  const onDrop = (e: React.DragEvent) => {
-    if (!accepts(e)) return;
-    e.preventDefault();
-    counter.current = 0;
     setHot(false);
     const id = e.dataTransfer.getData(BCA_DRAG_MIME) || e.dataTransfer.getData("text/plain");
     if (id) onDropCard(id);
