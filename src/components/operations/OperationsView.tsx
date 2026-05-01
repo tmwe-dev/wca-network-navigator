@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Eye } from "lucide-react";
+import { Eye, Users } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
@@ -199,10 +199,7 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
 
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* Portal into global header */}
-          <HeaderBarPortal
-            globalStats={globalStats}
-            deepSearch={deepSearch}
-          />
+          <HeaderBarPortal deepSearch={deepSearch} />
 
           {/* ═══ MAIN ═══ */}
           <div className={cn(
