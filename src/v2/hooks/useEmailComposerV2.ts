@@ -131,13 +131,19 @@ export function useEmailComposerV2() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (!userId) throw new Error("Sessione non valida");
+      // email_campaign_queue.partner_id è NOT NULL: il composer richiede
+      // che ogni destinatario sia agganciato a un partner.
+      const missing = recipients.filter((r) => !r.partnerId);
+      if (missing.length > 0) {
+        throw new Error(`Manca il partner per: ${missing.map((m) => m.email).join(", ")}. Aggiungi il destinatario dalla rubrica partner.`);
+      }
       const result = await createCampaignDraftQueue({
         userId,
         subject,
         htmlBody: body,
-        partnerIds: recipients.map((r) => r.partnerId).filter((id): id is string => Boolean(id)),
+        partnerIds: recipients.map((r) => r.partnerId as string),
         recipients: recipients.map((r) => ({
-          partner_id: r.partnerId ?? "00000000-0000-0000-0000-000000000000",
+          partner_id: r.partnerId as string,
           email: r.email,
           name: r.name,
           subject,
