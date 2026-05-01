@@ -6,7 +6,7 @@ import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFilters
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
 
 function getFilterContext(pathname: string, networkView: "partners" | "bca"): { title: string; content: React.ReactNode } | null {
-  if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network") {
+  if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network" || pathname.startsWith("/v2/partner-hub")) {
     // Network › BCA: la sidebar interna è stata rimossa, qui ospitiamo
     // direttamente paesi + filtri qualità + ordinamento + selettore vista.
     if (networkView === "bca") {
@@ -58,6 +58,15 @@ export function ContextFiltersRail(): React.ReactElement | null {
   React.useEffect(() => {
     setIsOpen(false);
   }, [pathname, networkView]);
+
+  React.useEffect(() => {
+    const onOpenDrawer = (e: Event) => {
+      const detail = (e as CustomEvent<{ drawer?: string }>).detail;
+      if (detail?.drawer === "filters") setIsOpen(true);
+    };
+    window.addEventListener("open-drawer", onOpenDrawer);
+    return () => window.removeEventListener("open-drawer", onOpenDrawer);
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
