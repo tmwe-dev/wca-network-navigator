@@ -11,7 +11,6 @@ import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
-import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 import { AgendaPage } from "@/v2/ui/pages/AgendaPage";
 import { Campaigns as CampaignsPage } from "@/v2/ui/pages/CampaignsPage";
 
@@ -20,7 +19,6 @@ const ContactPipelineView = lazy(() =>
     default: m.ContactPipelineView,
   })),
 );
-const BCAUnifiedHub = lazy(() => import("@/components/contacts/bca/BCAUnifiedHub"));
 const DuplicateDetector = lazy(() =>
   import("@/components/contacts/DuplicateDetector").then((m) => ({
     default: m.DuplicateDetector,
@@ -28,7 +26,6 @@ const DuplicateDetector = lazy(() =>
 );
 
 const TABS: readonly SectionTab[] = [
-  { key: "contacts",   label: "Contatti CRM", to: "/v2/pipeline/contacts"   },
   { key: "kanban",     label: "Kanban",       to: "/v2/pipeline/kanban"     },
   { key: "duplicati",  label: "Duplicati",    to: "/v2/pipeline/duplicati"  },
   { key: "campaigns",  label: "Campagne",     to: "/v2/pipeline/campaigns"  },
@@ -44,21 +41,15 @@ export function PipelineSection(): React.ReactElement {
     <div className="flex flex-col h-full overflow-hidden">
       <SectionTabs tabs={TABS} rootPath="/v2/pipeline" contentOverflow="contain">
         <Routes>
-          <Route index element={<Navigate to="/v2/pipeline/contacts" replace />} />
-          <Route path="contacts"  element={<ContactsPage />} />
+          <Route index element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          {/* Moved to /v2/explore — keep redirects for backward compat */}
+          <Route path="contacts"  element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="biglietti" element={<Navigate to="/v2/explore/biglietti" replace />} />
           <Route
             path="kanban"
             element={
               <Suspense fallback={<TabFallback />}>
                 <ContactPipelineView />
-              </Suspense>
-            }
-          />
-          <Route
-            path="biglietti"
-            element={
-              <Suspense fallback={<TabFallback />}>
-                <BCAUnifiedHub />
               </Suspense>
             }
           />
@@ -74,7 +65,7 @@ export function PipelineSection(): React.ReactElement {
           <Route path="agenda"    element={<AgendaPage />} />
           {/* Legacy: deals removed → redirect to default */}
           <Route path="deals"     element={<Navigate to="/v2/pipeline/kanban" replace />} />
-          <Route path="*"         element={<Navigate to="/v2/pipeline/contacts" replace />} />
+          <Route path="*"         element={<Navigate to="/v2/pipeline/kanban" replace />} />
         </Routes>
       </SectionTabs>
     </div>

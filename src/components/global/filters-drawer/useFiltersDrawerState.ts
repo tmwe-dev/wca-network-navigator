@@ -15,8 +15,8 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const seg = route.replace(/^\/v2/, "");
   const isOutreach = seg === `/${ROUTE_OUTREACH}`;
   const isNetwork = seg === `/${ROUTE_NETWORK}` || seg.startsWith("/explore/network");
-  const isCrmContactsRoute = seg === `/${ROUTE_CRM}` || seg === "/contacts" || seg.startsWith("/crm/contacts") || seg.startsWith("/pipeline/contacts") || seg.startsWith("/pipeline/kanban");
-  const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti");
+  const isCrmContactsRoute = seg === `/${ROUTE_CRM}` || seg === "/contacts" || seg.startsWith("/crm/contacts") || seg.startsWith("/pipeline/contacts") || seg.startsWith("/pipeline/kanban") || seg.startsWith("/explore/contacts");
+  const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti") || seg.startsWith("/explore/biglietti");
   const isCRM = isCrmContactsRoute || isBcaRoute;
   const crmDrawerTab = isBcaRoute ? "biglietti" : "contatti";
   const isAgenda = seg === `/${ROUTE_AGENDA}`;

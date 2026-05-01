@@ -433,6 +433,7 @@ function BcaFiltersGate({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const isBca =
     pathname.startsWith("/v2/pipeline/biglietti") ||
+    pathname.startsWith("/v2/explore/biglietti") ||
     pathname.startsWith("/v2/explore/network") ||
     pathname === "/v2/network";
   if (!isBca) return <>{children}</>;

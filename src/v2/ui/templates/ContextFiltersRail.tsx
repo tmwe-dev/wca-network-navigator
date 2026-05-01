@@ -15,13 +15,20 @@ function getFilterContext(pathname: string, networkView: "partners" | "bca"): { 
     return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
   }
 
-  if (pathname.startsWith("/v2/pipeline/contacts") || pathname.startsWith("/v2/pipeline/kanban") || pathname.startsWith("/v2/crm/contacts") || pathname === "/v2/crm" || pathname === "/v2/contacts") {
+  if (
+    pathname.startsWith("/v2/pipeline/contacts") ||
+    pathname.startsWith("/v2/pipeline/kanban") ||
+    pathname.startsWith("/v2/explore/contacts") ||
+    pathname.startsWith("/v2/crm/contacts") ||
+    pathname === "/v2/crm" ||
+    pathname === "/v2/contacts"
+  ) {
     return { title: "Filtri Contatti CRM", content: <CRMFiltersSection /> };
   }
 
   // CRM › Biglietti: i filtri vivono nella linguetta globale (rail) come
   // per WCA Partner. La pagina non ha più la propria sidebar interna.
-  if (pathname.startsWith("/v2/pipeline/biglietti")) {
+  if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/explore/biglietti")) {
     return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent /> };
   }
 
