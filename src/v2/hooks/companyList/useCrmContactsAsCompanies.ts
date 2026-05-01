@@ -168,6 +168,26 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
           phone: contacts.some((c) => c.channels.phone),
         },
         meta: { holding: inHolding },
+        leadStatus: ((): string | null => {
+          // Prendi lo status più "avanzato" disponibile nel gruppo
+          const order = ["blacklisted", "archived", "holding", "qualified", "contacted", "new"];
+          for (const s of order) {
+            if (g.rows.some((r) => (r as Record<string, unknown>).lead_status === s)) return s;
+          }
+          return null;
+        })(),
+        isFavorite: g.rows.some((r) => (r as Record<string, unknown>).is_favorite === true),
+        lastInteractionAt: ((): string | null => {
+          const ts = g.rows
+            .map((r) => (r as Record<string, unknown>).last_interaction_at as string | null | undefined)
+            .filter((v): v is string => !!v)
+            .sort()
+            .reverse();
+          return ts[0] ?? null;
+        })(),
+        interactionCount: g.rows.reduce((s, r) => s + (Number((r as Record<string, unknown>).interaction_count) || 0), 0),
+        hasBca: g.rows.some((r) => !!(r as Record<string, unknown>).business_card_id),
+        bcaCount: g.rows.filter((r) => !!(r as Record<string, unknown>).business_card_id).length,
         raw: { rows: g.rows },
       });
     }

@@ -49,7 +49,7 @@ export function PartnerDetailDrawer({ partnerId, onClose, onToggleFavorite }: Pr
   );
 }
 
-function PartnerContent({ partner, onToggleFavorite }: {
+export function PartnerContent({ partner, onToggleFavorite }: {
   readonly partner: PartnerV2;
   readonly onToggleFavorite?: (partner: PartnerV2) => void;
 }): React.ReactElement {

@@ -57,12 +57,23 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
   const ratingRaw = (p as unknown as { rating?: number | null }).rating ?? null;
   const score =
     ratingRaw != null ? Math.max(0, Math.min(100, Math.round(ratingRaw * 20))) : null;
+  const pAny = p as unknown as Record<string, unknown>;
+  const website = (pAny.website as string | null | undefined) ?? null;
+  const services = Array.isArray(pAny.partner_services)
+    ? (pAny.partner_services as Array<{ service_category?: string }>).map((s) => s.service_category || "").filter(Boolean)
+    : [];
+  const certifications = Array.isArray(pAny.partner_certifications)
+    ? (pAny.partner_certifications as Array<{ certification?: string }>).map((c) => c.certification || "").filter(Boolean)
+    : [];
+  const networks = Array.isArray(pAny.partner_networks)
+    ? (pAny.partner_networks as Array<{ network_name?: string }>).map((n) => n.network_name || "").filter(Boolean)
+    : [];
   const aggChannels = {
     email: !!p.email || contacts.some((c) => c.channels.email),
     whatsapp: contacts.some((c) => c.channels.whatsapp),
     linkedin: contacts.some((c) => c.channels.linkedin),
     phone: !!p.phone || contacts.some((c) => c.channels.phone),
-    website: !!(p as unknown as { website?: string | null }).website,
+    website: !!website,
   };
   return {
     id: p.id,
@@ -83,6 +94,21 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
       logoUrl: p.logo_url ?? null,
       holding: p.lead_status === "holding",
     },
+    leadStatus: (pAny.lead_status as string | null | undefined) ?? null,
+    isFavorite: !!pAny.is_favorite,
+    isActive: pAny.is_active !== false,
+    officeType: (pAny.office_type as string | null | undefined) ?? null,
+    partnerType: (pAny.partner_type as string | null | undefined) ?? null,
+    lastInteractionAt: (pAny.last_interaction_at as string | null | undefined) ?? null,
+    interactionCount: typeof pAny.interaction_count === "number" ? (pAny.interaction_count as number) : 0,
+    enrichedAt: (pAny.enriched_at as string | null | undefined) ?? null,
+    membershipExpires: (pAny.membership_expires as string | null | undefined) ?? null,
+    services,
+    certifications,
+    networks,
+    hasWebsite: !!website,
+    hasLinkedin: false,
+    hasLogo: !!p.logo_url,
     raw: p,
   };
 }

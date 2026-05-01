@@ -1,101 +1,178 @@
 ## Obiettivo
 
-Le tre liste — **WCA Partner**, **Contatti CRM**, **Biglietti da visita** — devono usare **lo stesso template visivo** ispirato alla card BCA (`ExpandedCardItem`), ricco e leggibile. Sopra ogni lista una **toolbar di ordinamento + filtri rapidi** identica. Niente bandiere doppie, allineamenti a colonne fisse, dettagli sempre visibili (città, contatto principale, canali, status, anni WCA, evento BCA, score).
+Eliminare la doppia vista "Card-azienda / Classica" su **WCA Partner** e **CRM**: una sola vista ovunque, con la stessa ergonomia dei **Biglietti da visita** (lista a sinistra con checkbox + dettaglio a destra), card densa di informazioni e barra strumenti che permette di **ordinare e filtrare per ogni dato visibile**.
 
-## Diagnosi del problema attuale
+---
 
-Dallo screenshot `/v2/explore/network` → **Classica**:
-- Riga troppo "magra": solo nome azienda + bandiera + città a destra. Niente referente, niente score, niente canali oltre a un'icona email grigia.
-- Nessuna toolbar in alto: il chip "Ordine: Nome" è inerte; non si può ordinare per città, per anni WCA, per ultimo contatto, per stato.
-- Nessun chip di filtro attivo visibile sulla lista (solo nella sidebar).
-- Layout a "due blocchi" (sinistra/destra) senza griglia: città fluttua, le icone sono mute, non si capisce cosa sia cliccabile.
-- Vista "Card-azienda" esiste (`CompanyCard`) ma è ancora minimale: usa flag piccolo inline, niente colonna città dedicata, niente score, niente toolbar.
+## 1. Tutti i dati che possiamo mostrare e usare per filtrare/ordinare
 
-## Template unico — "BCA Expanded Row"
+Per ogni partner WCA (e l'equivalente CRM dove pertinente) abbiamo già in DB:
 
-Layout a **5 colonne fisse** allineate (grid CSS, non flex liquidi) per dare un risultato tabellare ma elegante come le BCA:
+**Identità**
+- Bandiera + codice paese (ISO) + nome paese
+- Nome azienda + alias
+- Logo (`logo_url`) — fallback iniziali
+- Tipo ufficio (`office_type`: HQ / Branch)
+- Tipo partner (`partner_type`)
+- Città · Indirizzo
+
+**Affiliazione WCA**
+- 🏆 Anni in WCA (da `member_since`)
+- Scadenza membership (`membership_expires`) — badge "scade fra X mesi"
+- Network di appartenenza (`partner_networks[]`: WCA, FCL, Pet Movers, …) — chip multipli
+- ⭐ Rating WCA (0-5 → score 0-100)
+
+**Contatti & canali**
+- Numero referenti (`partner_contacts.length`)
+- Referente principale (nome + ruolo)
+- Canali aggregati: 📧 email · 💬 WhatsApp · 🔗 LinkedIn · ☎ telefono · 🌐 sito
+- Email/telefono diretti azienda
+
+**Stato commerciale**
+- `lead_status`: new / contacted / qualified / holding / archived / blacklisted
+- ✈️ Holding pattern (badge pulsante)
+- ⏱ Ultimo contatto (`last_interaction_at`) + recency color (verde <7gg, giallo <30gg, rosso >90gg)
+- # interazioni (`interaction_count`)
+- ⭐ Preferito (`is_favorite`)
+- 🟢/⚫ Attivo (`is_active`)
+
+**Arricchimento & qualità dato**
+- 🔍 Deep Search fatto (`enriched_at` valorizzato) + data
+- Confidence enrichment
+- Ha logo · Ha sito · Ha LinkedIn · Ha descrizione
+
+**Servizi & certificazioni** (dai join già caricati)
+- `partner_services[]` (Air / Sea / Customs / Warehousing…) → chip
+- `partner_certifications[]` (AEO, ISO9001…) → chip
+
+**BCA**
+- 🪪 Ha biglietto da visita collegato (`hasBca`) + numero biglietti
+- Match confidence se matchato
+
+**Tutti questi campi diventano sia colonne visibili che filtri/ordinatori** nella toolbar superiore.
+
+---
+
+## 2. Layout unico — stesso modello dei Biglietti da visita
 
 ```text
-┌────┬──────┬─────────────────────────────────────────┬──────────────────────┬──────────┐
-│ ☑  │ 🏳   │ COMPANY NAME  [WCA 🏆12] [BCA] ✈        │ Shanghai · CN        │  ⋯ menu  │
-│    │ ISO  │ Mario Rossi · Sales Manager             │ 📧 💬 🔗 ☎  · score  │ ▸ apri   │
-└────┴──────┴─────────────────────────────────────────┴──────────────────────┴──────────┘
-  44px  56px            flex (min 0)                          200px              90px
+┌──────────────────────────── PAGINA (WCA / CRM / BCA) ─────────────────────────────┐
+│ TOOLBAR                                                                            │
+│ [☑ Tutti 50/12k]  🔎 cerca…   [Sort: Nome ▾]  [⚙ Filtri]   [⋯ Bulk actions]      │
+│ Ordina: Nome · Città · Paese · Anni WCA · Score · Ultimo contatto · # contatti    │
+│ Filtri attivi (chip rimovibili): 🇷🇴 RO · ✈ in attesa · 🏆≥3 anni · ha email     │
+├─────────────────────────────────────────────┬──────────────────────────────────────┤
+│ LISTA (40-45%)                              │ DETTAGLIO (55-60%)                   │
+│ ┌─────────────────────────────────────────┐ │  Stesso pannello dei Biglietti:     │
+│ │ ☑ │ 🇷🇴 │ Side Logistic SRL  [WCA] 🏆3 │ │  - Header (nome, paese, città)      │
+│ │ RO│    │ Ms. Buharu · Transport +1     │ │  - Azioni rapide: Email/WA/Call/Web │
+│ │   │    │ Cluj-Napoca  📧💬🔗  ⭐72     │ │  - Cockpit / Deep / LinkedIn/Camp.  │
+│ │   │    │ ⏱ 3gg fa · ✈                 │ │  - Lista contatti (4)               │
+│ ├─────────────────────────────────────────┤ │  - Timeline interazioni             │
+│ │ ☑ │ 🇷🇴 │ Black Sea Brokers …          │ │  - Servizi · Certificazioni · Reti  │
+│ └─────────────────────────────────────────┘ │                                     │
+│  +carica altri…                             │  (vuoto = empty state con icona)    │
+└─────────────────────────────────────────────┴──────────────────────────────────────┘
 ```
 
-Regole rigide:
-- **Una sola bandiera per riga**, 28-32px, con codice ISO sotto (atomo `EntityRowFlag` già esistente).
-- Striscia verticale colorata 3px a sinistra (come BCA `accent.border`) → tono dipende dalla sorgente:
-  - WCA → `primary`
-  - CRM → `chart-2`
-  - BCA → gradient esistente (matched/unmatched)
-- Riga 1 header: nome azienda **bold**, badge sorgente, badge `WCA 🏆<anni>`, badge `BCA` se ha biglietti, `✈` pulsante se in holding.
-- Riga 2 sub-header: referente principale + ruolo (in CRM/BCA) o "Nessun referente" in grigio (WCA senza contatti).
-- Colonna città: città in alto, sotto riga icone canali (Mail/WA/LinkedIn/Phone/Web) + `score 0-100` in pill sottile.
-- Colonna azioni: Quick actions (apri drawer, ⋯ menu) — riusabile da `BCAQuickActions`.
+**Selezione multipla** (come BCA): se sono selezionati 2+, il pannello destro mostra il **bulk panel** ("N elementi selezionati · Aggiungi al Cockpit · Deep Search batch · Crea campagna · Soft-delete") invece del dettaglio singolo.
 
-Espansione (chevron a sinistra del checkbox) mostra le **sub-card contatti** già esistenti (`ContactSubCard`) in grid 2 colonne.
+---
 
-## Toolbar unificata — sopra ogni lista
-
-Componente nuovo `ListToolbar` (atomo V2), incollato in cima alle tre viste:
+## 3. Card riga — anatomia (densità BCA)
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ ☑ Tutti (50/12k)   ↕ Ordina ▾   🔎 Cerca…   ⚙ Filtri attivi: [3]      │
-│ Ordina per:  Nome · Città · Anni WCA · Ultimo contatto · Score · Stato │
-│ Chips filtri: [🇨🇳 China ✕] [Con email ✕] [Holding ✕]                  │
-└─────────────────────────────────────────────────────────────────────────┘
+☑  🇷🇴   COMPANY NAME           [WCA] [Network] 🏆3  ⭐72   🌟         ⋯
+   RO    Ms. Ilaria Buharu · Transport Manager  +3 contatti
+         📍 Cluj-Napoca       📧 💬 🔗 ☎ 🌐    ⏱ 3gg · ✈ in attesa
 ```
 
-- Bottoni d'ordinamento sono **pillole cliccabili** con freccia ▲▼ per direzione.
-- Cerca locale (debounced) sopra l'elenco visibile.
-- Chips filtri attivi (riusa `ActiveFiltersBar` già esistente) — cliccando ✕ li rimuove.
-- Persistenza ordine/filtri in `localStorage` per chiave (`list:wca`, `list:crm`, `list:bca`).
+**6 zone**:
+1. Checkbox (selezione multipla)
+2. Bandiera 32px + ISO
+3. Identità: nome + chip (WCA, network, BCA, partner_type, HQ/Branch)
+4. Sub-header: referente principale · ruolo · "+N contatti"
+5. Footer riga: città · canali attivi · score pill · recency · ✈ holding · ⭐ fav
+6. Azioni: ⋯ (apri, preferito, deep, soft-delete)
 
-## Mappatura colonne per sorgente
+Click sul body → seleziona e apre il dettaglio. Click sul checkbox → multi-select, pannello destro diventa bulk.
 
-| Slot         | WCA Partner                  | CRM Contact                | BCA                         |
-|--------------|------------------------------|----------------------------|-----------------------------|
-| Bandiera     | `country_code` partner       | `country` contatto         | `country` partner/biglietto |
-| Titolo       | `company_name`               | `company` o nome contatto  | `company_name` BCA          |
-| Badge        | `WCA 🏆 anni` + alias        | `Lead status` colorato     | `match_status` + WCA anno   |
-| Sub-header   | Referente top (se presente)  | `name · position`          | `contact_name · position`   |
-| Città        | `city` partner               | `city` contatto            | `location` o partner.city   |
-| Canali       | email/phone/web partner      | email/phone/wa/li contatto | email/phone biglietto       |
-| Score        | `rating * 20`                | `lead_score` 0-100         | `match_confidence`          |
-| Sort options | Nome · Città · Anni · Score  | Nome · Città · Score · Stato · Ultimo contatto | Nome · Evento · Match · Data |
+---
 
-## File interessati
+## 4. Toolbar superiore — ordinamento & filtri completi
 
-**Nuovi (atomi V2 condivisi)**
-- `src/v2/ui/atoms/EntityRow.tsx` — riga template a 5 colonne (sostituisce header `CompanyCard`).
-- `src/v2/ui/molecules/ListToolbar/ListToolbar.tsx` — toolbar ordinamento + ricerca + chips.
-- `src/v2/ui/molecules/ListToolbar/useListSort.ts` — hook stato (sortKey, sortDir) con persistenza.
-- `src/v2/ui/atoms/ScorePill.tsx` — pill score 0-100 con tono dinamico.
+**Pillole sort** (toggle asc/desc): Nome · Paese · Città · Anni WCA · Score · Ultimo contatto · # contatti · Ultima sync.
 
-**Refactor (presentazione, niente logica business)**
-- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` → header riscritto su `EntityRow`, sub-card contatti invariate.
-- `src/v2/ui/molecules/CompanyCardList/types.ts` → aggiungere `score?: number`, `primaryContact?: {name, role}`, `channels?: ContactChannels`, `wcaYears?: number`, `hasBca?: boolean` a `CompanyEntity`.
-- `src/v2/hooks/companyList/useWcaPartnersAsCompanies.ts` → popolare i nuovi campi (rating→score, top contatto, canali aggregati, flag BCA).
-- `src/v2/hooks/companyList/useCrmContactsAsCompanies.ts` → idem per CRM.
-- `src/v2/ui/pages/NetworkPage.tsx` → `ListToolbar` sopra `CompanyCardList`, default view = "Card-azienda" (rimuovere toggle `Classica` o relegare a tab nascosto). 
-- `src/v2/ui/pages/CRMPage.tsx` → stessa toolbar + `CompanyCardList source="crm"`.
-- `src/components/contacts/bca/BCAUnifiedHub.tsx` → adottare `ListToolbar` (sostituire la barra ordinamento esistente) per coerenza.
+**Pannello filtri** (drawer "⚙ Filtri" che si apre da destra) — multi-selezione:
+- Paese (multi)
+- Network WCA (chip)
+- Tipo ufficio (HQ / Branch)
+- `lead_status` (multi)
+- ✈ Holding pattern (in / out / tutti)
+- Anni WCA (range slider)
+- Score / Rating (range)
+- Ha email · Ha telefono · Ha LinkedIn · Ha sito · Ha logo (toggle)
+- Ha BCA collegato
+- Deep Search fatto (sì / no / mai)
+- Servizi (multi-chip da `partner_services`)
+- Certificazioni (multi-chip)
+- Ultimo contatto (mai / <7g / <30g / >90g)
+- Preferiti
 
-**Rimozioni / pulizia**
-- `src/components/operations/PartnerVirtualList.tsx` (riga "Classica" attuale) → marcato deprecato; vista "Classica" rimossa dal toggle in `NetworkPage` (codice preservato dietro `?legacy=1` per debug).
+I filtri attivi appaiono come **chip rimovibili** sotto la toolbar (riga 3) — uguale alla `ActiveFiltersBar` esistente.
 
-## Performance
-- Tutto resta dentro `CompanyCardList` virtualizzato (`@tanstack/react-virtual`).
-- Score/canali calcolati nei mapper hook (memo) — nessun fetch extra.
-- Espansione lazy invariata.
+---
 
-## Ordine di lavoro consigliato
-1. Atomi nuovi: `EntityRow`, `ScorePill`, `ListToolbar`, `useListSort`.
-2. Estensione `CompanyEntity` + 2 hook adapter (WCA + CRM).
-3. Riscrittura header `CompanyCard` su `EntityRow`.
-4. Integrazione `ListToolbar` in NetworkPage, CRMPage, BCAUnifiedHub.
-5. Smoke test visivo + screenshot QA.
+## 5. Unificazione delle viste (rimozione "Classica")
 
-Confermi e procediamo? Posso anche partire **solo dalla WCA** (Fase 1-3 + integrazione su NetworkPage) per validare lo stile prima di replicarlo su CRM e BCA.
+- **Eliminare** il toggle "Card-azienda / Classica" su `NetworkPage` e `ContactsPage`.
+- La vista Card diventa **l'unica vista**.
+- Le funzionalità della "Classica" che mancano (sync WCA, Deep Search canvas, mappa) restano accessibili tramite **azioni nella toolbar** (`⋯ Bulk` + pulsanti dedicati `Sincronizza`, `Mappa`, `Deep Search`) — non come vista separata.
+- Componenti `Operations`, `ContactListPanel` classici → conservati ma non più routati (fade-out graduale).
+
+---
+
+## 6. Dettaglio a destra (Golden Layout esteso a WCA)
+
+Su `NetworkPage` introduciamo lo stesso `GoldenLayout` già usato in `ContactsPage`:
+- Lista a sinistra (la nostra `CompanyCardList` con checkbox).
+- Drawer a destra: riusa il **Partner Detail Drawer** esistente (già visibile nello screenshot 2 — Comunicazione, Azioni AI, Contatti, ecc.).
+- Quando 2+ selezionati → **BulkActionsPanel** condiviso (clone della UI BCA dello screenshot 3): "N selezionati · Aggiungi al Cockpit · Deep Search batch · Crea campagna · Soft-delete".
+
+---
+
+## 7. Sezione tecnica (per Lovable/dev)
+
+**File da creare**
+- `src/v2/ui/molecules/CompanyCardList/CompanyCardSelectable.tsx` — variante con checkbox controllato + click body = select.
+- `src/v2/ui/organisms/EntityListWithDetail.tsx` — wrapper riusabile (lista virtualizzata + GoldenLayout + bulk panel).
+- `src/v2/ui/organisms/BulkActionsPanel.tsx` — pannello destro per N selezionati (Cockpit / Deep batch / Campagna / Soft-delete).
+- `src/v2/ui/organisms/EntityFiltersDrawer.tsx` — drawer filtri "⚙" con tutti i predicati elencati al §4 (definizione dei filtri passata come schema dichiarativo per riusarlo su WCA/CRM/BCA).
+- `src/v2/hooks/companyList/useCompanySelection.ts` — Set<id> + helpers selectAll / clear / toggle.
+- `src/v2/hooks/companyList/useCompanyFilters.ts` — predicati pure-function applicati lato client sopra `companies` + chips derivati.
+
+**File da estendere**
+- `CompanyEntity` (`types.ts`): aggiungere `lastInteractionAt`, `interactionCount`, `leadStatus`, `isFavorite`, `services[]`, `certifications[]`, `networks[]`, `enrichedAt`, `membershipExpires`, `officeType`, `partnerType`, `hasWebsite`, `hasLinkedin`, `bcaCount`.
+- `useWcaPartnersAsCompanies` + `useCrmContactsAsCompanies`: popolare i nuovi campi (i join sono già caricati dalla DAL).
+- `EntityRow`: 6° slot opzionale per riga "footer" (recency + holding + fav).
+- `NetworkPage`: rimuovere toggle, montare `EntityListWithDetail` con `source="wca"`.
+- `ContactsPage`: idem, con `source="crm"`.
+- `ListToolbar`: aggiungere bottone "⚙ Filtri" che apre `EntityFiltersDrawer`; aggiungere pillole sort estese.
+
+**Vincoli architetturali** (rispettati)
+- Tutta la logica nei hook (`src/v2/hooks/companyList/`), UI logic-less.
+- Nessuna chiamata diretta a `supabase.from(...)`: solo DAL `src/data/partners.ts` / `src/data/contacts.ts` (già fatto).
+- Nessuna nuova migration: tutti i campi richiesti esistono già in DB.
+- Query keys centralizzati in `queryKeys.ts`.
+- Filtri lato client su pagine già caricate (per WCA: il dataset è scoped sui paesi selezionati, per CRM: su pagine paginated).
+
+**Out of scope** (questa iterazione)
+- Modifiche a edge functions, RLS, schema DB.
+- Modifiche al drawer di dettaglio partner — viene riusato così com'è.
+- Modifiche alla logica holding pattern / lead status (solo visualizzazione).
+
+---
+
+## 8. Domanda di verifica
+
+Confermi: **vista unica ovunque** (eliminiamo "Classica" da WCA e CRM) e **drawer dettaglio = identico ai Biglietti da visita**, con bulk panel quando selezioni 2+?
