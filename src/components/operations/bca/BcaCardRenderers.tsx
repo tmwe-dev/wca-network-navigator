@@ -5,6 +5,65 @@ import { cn } from "@/lib/utils";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
 import { BCA_DRAG_MIME } from "@/components/contacts/bca/bcaDragContext";
 
+/**
+ * Formatta il testo OCR/notes del biglietto in righe leggibili.
+ * Riconosce coppie "Label: valore" separate da `|` o `;` e evidenzia
+ * le etichette in azzurro fosforescente. Il resto (rumore OCR) viene
+ * mostrato come paragrafo grigio in fondo.
+ */
+function BcaNotesFormatted({ text }: { text: string }) {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  // split principale su `|` poi su `;`
+  const segments = cleaned
+    .split(/\s*\|\s*|\s*;\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const KNOWN = /^(Evento|Event|Data|Date|Indirizzo|Address|Location|Sito|Website|Tel|Phone|Mobile|Email|Note|Notes|Company|Azienda|Ruolo|Position|Settore|Industry|Stand|Booth|Hall|Padiglione)\b/i;
+
+  const structured: Array<{ label: string; value: string }> = [];
+  const noise: string[] = [];
+
+  for (const seg of segments) {
+    const m = seg.match(/^([A-Za-zÀ-ÿ ]{2,30})\s*[:=]\s*(.+)$/);
+    if (m && KNOWN.test(m[1].trim())) {
+      structured.push({ label: m[1].trim(), value: m[2].trim() });
+    } else if (seg.length > 0) {
+      noise.push(seg);
+    }
+  }
+
+  if (structured.length === 0 && noise.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-1.5 rounded-md border border-border/30 bg-background/40 p-2.5">
+      {structured.length > 0 && (
+        <dl className="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
+          {structured.map((row, i) => (
+            <div key={i} className="contents">
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-cyan-400 [text-shadow:0_0_6px_hsl(190_100%_60%/0.6)]">
+                {row.label}
+              </dt>
+              <dd className="text-[11px] text-foreground/90 break-words">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {noise.length > 0 && (
+        <details className="group">
+          <summary className="cursor-pointer text-[10px] text-muted-foreground/60 hover:text-muted-foreground list-none flex items-center gap-1">
+            <span className="text-cyan-400/70">▸</span>
+            <span>Testo OCR grezzo ({noise.length} frammenti)</span>
+          </summary>
+          <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground/50 italic break-words">
+            {noise.join(" · ")}
+          </p>
+        </details>
+      )}
+    </div>
+  );
+}
+
 interface CardProps {
   card: BusinessCardWithPartner;
   isSelected: boolean;
@@ -148,7 +207,7 @@ export function BcaExpandedCard({ card, isSelected, onToggle, groupCompanyName, 
         </div>
         {card.event_name && <div className="text-[10px] text-muted-foreground/60 mt-1">📍 {card.event_name}</div>}
         {card.location && <div className="text-[10px] text-muted-foreground/60">📌 {card.location}</div>}
-        {card.notes && <div className="text-[10px] text-muted-foreground/50 italic mt-1">{card.notes}</div>}
+        {card.notes && <BcaNotesFormatted text={card.notes} />}
       </div>
     </div>
   );
