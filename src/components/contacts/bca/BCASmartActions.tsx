@@ -4,7 +4,7 @@
 import { useCallback } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
-import { Search, Linkedin, Megaphone, ArrowRight } from "lucide-react";
+import { Search, Linkedin, Megaphone, ArrowRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -74,7 +74,7 @@ export function BCASmartActions({ card }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Azioni intelligenti</p>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Sparkles className="w-3 h-3" /> Azioni AI</p>
       <div className="grid grid-cols-2 gap-1.5">
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleCockpitWithContext}>
           <ArrowRight className="w-3.5 h-3.5 text-primary shrink-0" />
