@@ -49,6 +49,9 @@ function normalizeCompanyKey(name: string | null | undefined, email: string | nu
 }
 
 function toContactEntity(c: RawContact, companyId: string): ContactEntity {
+  const row = c as unknown as Record<string, unknown>;
+  const inHolding =
+    row.in_holding_pattern === true || row.lead_status === "holding";
   return {
     id: c.id,
     name: c.name || c.email || "—",
@@ -62,6 +65,7 @@ function toContactEntity(c: RawContact, companyId: string): ContactEntity {
       phone: !!(c.phone || c.mobile),
     },
     unreadCount: typeof c.unread_count === "number" ? c.unread_count : undefined,
+    inHolding,
     companyId,
     raw: c,
   };
