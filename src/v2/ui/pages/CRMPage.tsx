@@ -3,7 +3,7 @@
  */
 import { lazy, Suspense, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { UserCheck, ContactRound, Sparkles, Kanban, Copy, Calculator, Loader2, Download } from "lucide-react";
+import { UserCheck, Sparkles, Kanban, Copy, Calculator, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
 import { ExportDialog } from "@/components/export/ExportDialog";
@@ -18,7 +18,6 @@ import { useNavigate } from "react-router-dom";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 
 const Contacts = lazy(() => import("./ContactsPage").then((m) => ({ default: m.ContactsPage })));
-const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 const ContactPipelineView = lazy(() => import("@/components/contacts/ContactPipelineView").then((m) => ({ default: m.ContactPipelineView })));
 const DuplicateDetector = lazy(() => import("@/components/contacts/DuplicateDetector").then((m) => ({ default: m.DuplicateDetector })));
 
@@ -74,7 +73,6 @@ export function CRMPage(): React.ReactElement {
   const tabs = [
     { value: "contatti", label: "Contatti", icon: UserCheck },
     { value: "pipeline", label: "Pipeline", icon: Kanban },
-    { value: "biglietti", label: "Biglietti", icon: ContactRound },
     { value: "duplicati", label: "Duplicati", icon: Copy },
   ];
 
@@ -134,11 +132,6 @@ export function CRMPage(): React.ReactElement {
         {tab === "pipeline" && (
           <Suspense fallback={<TabFallback />}>
             <ContactPipelineView />
-          </Suspense>
-        )}
-        {tab === "biglietti" && (
-          <Suspense fallback={<TabFallback />}>
-            <BusinessCardsHub />
           </Suspense>
         )}
         {tab === "duplicati" && (
