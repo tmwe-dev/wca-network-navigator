@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight, Clock, X, LayoutList, LayoutGrid, Rows3,
+  Clock, X, LayoutList, LayoutGrid, Rows3,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { BCAQualityDashboard } from "@/components/operations/bca/BCAQualityDashboard";
@@ -30,13 +30,14 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { createLogger } from "@/lib/log";
 import { useBcaGrouping } from "@/components/operations/bca/useBcaGrouping";
-import { BcaCountrySidebar } from "@/components/operations/bca/BcaCountrySidebar";
+import { useBcaFilters } from "./BcaFiltersContext";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "@/components/operations/bca/BcaCardRenderers";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -57,7 +58,11 @@ export default function BCAUnifiedHub() {
   const [timelineMode, setTimelineMode] = useState(false);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
 
-  const g = useBcaGrouping(cards);
+  // Stato filtri condiviso con la linguetta globale (`ContextFiltersRail`).
+  // Se per qualche motivo il provider non è montato, fallback sicuro locale.
+  const ctx = useBcaFilters();
+  const local = useBcaGrouping(cards);
+  const g = ctx ?? local;
 
   const cardsById = useMemo(() => {
     const m = new Map<string, BusinessCardWithPartner>();
