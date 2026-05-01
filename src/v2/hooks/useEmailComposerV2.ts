@@ -8,6 +8,7 @@ import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { createCampaignDraftQueue } from "@/data/emailCampaigns";
 
 export interface EmailRecipient {
   readonly email: string;
@@ -123,15 +124,31 @@ export function useEmailComposerV2() {
       if (!subject) throw new Error("Oggetto mancante");
       if (!body) throw new Error("Corpo mancante");
 
-      for (const r of recipients) {
-        await invokeEdge("send-email", {
-          body: { to: r.email, subject, html: body },
-          context: "emailComposerV2Send",
-        });
-      }
+      // REGOLA UNICA: nessun invio diretto dal frontend.
+      // Tutte le email — singole o batch — vengono accodate in
+      // email_campaign_queue con status='pending' e partono SOLO dopo
+      // autorizzazione umana dalla coda "In Uscita".
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Sessione non valida");
+      const result = await createCampaignDraftQueue({
+        userId,
+        subject,
+        htmlBody: body,
+        partnerIds: recipients.map((r) => r.partnerId).filter((id): id is string => Boolean(id)),
+        recipients: recipients.map((r) => ({
+          partner_id: r.partnerId ?? "00000000-0000-0000-0000-000000000000",
+          email: r.email,
+          name: r.name,
+          subject,
+          html: body,
+        })),
+      });
+      return result;
     },
-    onSuccess: () => {
-      toast.success(`Email inviata a ${recipients.length} destinatar${recipients.length > 1 ? "i" : "io"}`);
+    onSuccess: (result) => {
+      const n = result?.queued ?? recipients.length;
+      toast.success(`${n} email messa in uscita. Conferma l'invio dalla coda "In Uscita".`);
       setRecipients([]);
       setSubject("");
       setBody("");
