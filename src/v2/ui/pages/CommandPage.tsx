@@ -78,7 +78,13 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
-  const { data: recentPrompts = [] } = useRecentCommandPrompts();
+  const { data: recentPromptsRaw = [] } = useRecentCommandPrompts();
+  // Filtra i suggerimenti: Command è il copilota dell'ufficio commerciale.
+  // Mostriamo solo prompt riconducibili a email / messaggi / partner /
+  // contatti / outreach / follow-up. Se nessuno matcha, lasciamo il campo
+  // vuoto: sarà l'utente a scrivere quello che vuole.
+  const COMMERCIAL_RX = /\b(mail|email|messagg|outreach|follow[- ]?up|contatt|partner|cliente|client[ie]|prospect|lead|invia|scrivi|propon|campagna|pipeline|trattativ|offert|preventiv|appuntament|riunion|meeting|whatsapp|linkedin|chiama|telefon)/i;
+  const recentPrompts = recentPromptsRaw.filter((p) => COMMERCIAL_RX.test(p));
   const briefing = useCommandBriefing();
 
   useEffect(() => {
@@ -209,7 +215,6 @@ const CommandPage = () => {
         >
           {isEmpty ? (
             <>
-              <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
               <CommandHistory
                 messages={[]}
                 isEmpty
@@ -217,6 +222,9 @@ const CommandPage = () => {
                 onQuickPrompt={(p) => handleSend(p)}
                 chatEndRef={state.chatEndRef}
               />
+              {briefing.hasSignals && (
+                <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
+              )}
             </>
           ) : (
             <CommandThread
