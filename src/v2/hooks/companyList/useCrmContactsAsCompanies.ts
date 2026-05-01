@@ -151,6 +151,22 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
           : { label: "CRM", tone: "neutral" },
         contactsCount: contacts.length,
         contacts,
+        score: (() => {
+          const scores = g.rows
+            .map((r) => (r as unknown as { lead_score?: number | null }).lead_score)
+            .filter((s): s is number => typeof s === "number");
+          if (!scores.length) return null;
+          return Math.max(...scores);
+        })(),
+        primaryContact: contacts[0]
+          ? { name: contacts[0].name, role: contacts[0].role ?? null }
+          : null,
+        channels: {
+          email: contacts.some((c) => c.channels.email),
+          whatsapp: contacts.some((c) => c.channels.whatsapp),
+          linkedin: contacts.some((c) => c.channels.linkedin),
+          phone: contacts.some((c) => c.channels.phone),
+        },
         meta: { holding: inHolding },
         raw: { rows: g.rows },
       });

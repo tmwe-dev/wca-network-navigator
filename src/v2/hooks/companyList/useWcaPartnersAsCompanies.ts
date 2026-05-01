@@ -53,6 +53,17 @@ function mapContacts(p: PartnerWithRelations): ContactEntity[] {
 function mapPartner(p: PartnerWithRelations): CompanyEntity {
   const contacts = mapContacts(p);
   const wcaYears = yearsSince(p.member_since ?? null);
+  const top = contacts[0];
+  const ratingRaw = (p as unknown as { rating?: number | null }).rating ?? null;
+  const score =
+    ratingRaw != null ? Math.max(0, Math.min(100, Math.round(ratingRaw * 20))) : null;
+  const aggChannels = {
+    email: !!p.email || contacts.some((c) => c.channels.email),
+    whatsapp: contacts.some((c) => c.channels.whatsapp),
+    linkedin: contacts.some((c) => c.channels.linkedin),
+    phone: !!p.phone || contacts.some((c) => c.channels.phone),
+    website: !!(p as unknown as { website?: string | null }).website,
+  };
   return {
     id: p.id,
     name: p.company_alias || p.company_name,
@@ -62,6 +73,11 @@ function mapPartner(p: PartnerWithRelations): CompanyEntity {
     badge: { label: "WCA", tone: "wca" },
     contactsCount: contacts.length,
     contacts,
+    score,
+    primaryContact: top
+      ? { name: top.name, role: top.role ?? null }
+      : null,
+    channels: aggChannels,
     meta: {
       wcaYears,
       logoUrl: p.logo_url ?? null,
