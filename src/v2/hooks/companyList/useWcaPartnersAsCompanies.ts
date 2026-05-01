@@ -26,21 +26,28 @@ function yearsSince(dateIso: string | null | undefined): number | undefined {
 
 function mapContacts(p: PartnerWithRelations): ContactEntity[] {
   const list = p.partner_contacts ?? [];
-  return list.map((c) => ({
-    id: c.id,
-    name: c.contact_alias || c.name || "—",
-    role: c.title,
-    email: c.email,
-    phone: c.direct_phone || c.mobile,
-    channels: {
-      email: !!c.email,
-      whatsapp: !!(c.mobile && c.mobile.length > 4),
-      linkedin: false,
-      phone: !!(c.direct_phone || c.mobile),
-    },
-    companyId: p.id,
-    raw: c,
-  }));
+  const partnerInHolding = p.lead_status === "holding";
+  return list.map((c) => {
+    const row = c as unknown as Record<string, unknown>;
+    const contactInHolding =
+      row.in_holding_pattern === true || partnerInHolding;
+    return {
+      id: c.id,
+      name: c.contact_alias || c.name || "—",
+      role: c.title,
+      email: c.email,
+      phone: c.direct_phone || c.mobile,
+      channels: {
+        email: !!c.email,
+        whatsapp: !!(c.mobile && c.mobile.length > 4),
+        linkedin: false,
+        phone: !!(c.direct_phone || c.mobile),
+      },
+      inHolding: contactInHolding,
+      companyId: p.id,
+      raw: c,
+    };
+  });
 }
 
 function mapPartner(p: PartnerWithRelations): CompanyEntity {

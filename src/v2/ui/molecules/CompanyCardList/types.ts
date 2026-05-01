@@ -21,6 +21,8 @@ export interface ContactEntity {
   phone?: string | null;
   channels: ContactChannels;
   unreadCount?: number;
+  /** True se il contatto è nel circuito di attesa (Holding Pattern). */
+  inHolding?: boolean;
   /**
    * Identificatore opzionale dell'azienda di appartenenza (utile per merge).
    */

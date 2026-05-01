@@ -3,7 +3,7 @@
  * Componente puramente presentazionale.
  */
 import * as React from "react";
-import { Mail, MessageCircle, Linkedin, Phone, User } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Phone, User, Plane } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ContactEntity, CompanyEntity } from "./types";
 
@@ -37,6 +37,11 @@ export function ContactSubCard({ contact, company, onOpen }: ContactSubCardProps
         )}
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
+        {contact.inHolding && (
+          <span title="Contatto in circuito di attesa">
+            <Plane className="w-3 h-3 text-primary animate-pulse" />
+          </span>
+        )}
         {channels.email && <Mail className="w-3 h-3 text-primary/70" />}
         {channels.whatsapp && <MessageCircle className="w-3 h-3 text-emerald-500/80" />}
         {channels.linkedin && <Linkedin className="w-3 h-3 text-sky-500/80" />}
