@@ -19,14 +19,33 @@ function BcaNotesFormatted({ text }: { text: string }) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const KNOWN = /^(Evento|Event|Data|Date|Indirizzo|Address|Location|Sito|Website|Tel|Phone|Mobile|Email|Note|Notes|Company|Azienda|Ruolo|Position|Settore|Industry|Stand|Booth|Hall|Padiglione)\b/i;
+  // Solo info contestuali della fiera che NON hanno già un chip dedicato sopra.
+  // Tel/Mobile/Email/Address/Position/Company sono volutamente esclusi: sono
+  // mostrati puliti nei chip principali e qui arriverebbero solo come duplicati
+  // sporcati dall'OCR.
+  const KNOWN = /^(Evento|Event|Data|Date|Stand|Booth|Hall|Padiglione|Pavilion)\b/i;
+
+  /** Scarta valori che sembrano rumore OCR (troppi caratteri non-alfanumerici, frammenti corti illeggibili). */
+  const isOcrNoise = (v: string): boolean => {
+    if (v.length < 2) return true;
+    const nonAlnum = (v.match(/[^a-zA-Z0-9À-ÿ\s.,\-/]/g) || []).length;
+    if (nonAlnum / v.length > 0.25) return true;
+    // troppi token di 1 carattere = probabile allucinazione OCR
+    const tokens = v.split(/\s+/);
+    const tinyTokens = tokens.filter((t) => t.length === 1).length;
+    if (tokens.length >= 3 && tinyTokens / tokens.length > 0.4) return true;
+    return false;
+  };
 
   const structured: Array<{ label: string; value: string }> = [];
 
   for (const seg of segments) {
     const m = seg.match(/^([A-Za-zÀ-ÿ ]{2,30})\s*[:=]\s*(.+)$/);
     if (m && KNOWN.test(m[1].trim())) {
-      structured.push({ label: m[1].trim(), value: m[2].trim() });
+      const value = m[2].trim();
+      if (!isOcrNoise(value)) {
+        structured.push({ label: m[1].trim(), value });
+      }
     }
     // Frammenti OCR non strutturati: ignorati (rumore inutile per l'utente)
   }
