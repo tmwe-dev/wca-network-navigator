@@ -1,91 +1,103 @@
+## Obiettivi
 
-## Obiettivo
+1. Risparmiare ~25% di altezza nella maschera **Biglietti** (sia in CRM › Biglietti sia in Network › BCA), perché con il pannello dettaglio aperto a destra l'area scrollabile è troppo piccola.
+2. Spostare l'intera colonna sinistra dei Biglietti (paesi + filtri qualità + ordinamento + selettore vista) **dentro la sidebar globale a scomparsa** ("linguetta"), come avviene per WCA Partner.
+3. Standardizzare l'header in alto su tutte le sezioni con il pattern già visto in Network (icona di sezione + nome sezione + sub-toggle + contatore).
+4. Rimuovere duplicazioni nelle "righe orizzontali" sotto l'header.
 
-La pagina **CRM › Biglietti** (`/v2/pipeline/biglietti`) viene sostituita da una versione **ibrida** che unisce:
+## Stato attuale (problemi)
 
-- **Layout principale** = come la pagina Network › BCA (gruppi per azienda, sidebar paesi, 3 viewMode, Quality Dashboard, Timeline Evento, sincronizzazione WCA).
-- **Detail panel a destra** = come quello attuale CRM (foto, OCR confidence, dati contatto), **ma con le 4 azioni intelligenti molto più grandi** e che funzionano anche da **drop target** del drag&drop.
-- **Drag & drop**: dalle card della view "media" (grid) si trascina il contatto e lo si rilascia su una delle 4 azioni intelligenti del pannello laterale; **il bersaglio è la punta del mouse**, non la card sorgente.
-
-Niente cambia nelle altre pagine. La pagina BCA dentro Network resta com'è (è la stessa identica esperienza, solo letta da un altro tab).
-
----
-
-## Conferma di comprensione (per evitare un altro disastro)
-
-1. Il tab **CRM › Biglietti** oggi mostra `BusinessCardsHub` (lista piatta + dettaglio piccolo). Va **sostituito** con il formato di `BusinessCardsView` (quello già visibile in Network).
-2. Le due pagine **hanno funzioni differenti**: Network apre menù inline e raggruppa per azienda; CRM/Biglietti apre il dettaglio a destra. La nuova pagina **deve avere entrambe**: layout Network + detail panel CRM.
-3. Le 3 modalità di vista (compact / media / expanded) restano, ma **solo dalla "media" si può trascinare** un contatto sulle azioni intelligenti del pannello.
-4. Il drag handle è un'icona a **6 puntini** (drag handle) sulla card — non si trascina prendendo tutta la card ovunque.
-5. Le 4 azioni intelligenti (**Cockpit, Deep Search, LinkedIn, Campagna**) diventano grandi card-target nel detail panel, e si **illuminano singolarmente** in base alla posizione del puntatore al momento del drop.
-
----
-
-## Cosa cambia (passo per passo)
-
-### 1. Routing
-- `src/v2/ui/pages/sections/PipelineSection.tsx`: la route `biglietti` smette di importare `BusinessCardsHub` e importa il nuovo componente unificato.
-
-### 2. Nuovo componente unificato
-- Crea `src/components/contacts/bca/BCAUnifiedHub.tsx` basato su `BusinessCardsView` (versione Network), con in più:
-  - `selectedDetailCard` state per aprire il pannello laterale al click su una card.
-  - Drop zone overlay del pannello laterale, sensibile al puntatore.
-  - Riutilizzo di `BCAUpload` (drop foto/file) e del dialog "Dettagli incontro" già esistenti in `BusinessCardsHub`.
-
-### 3. Detail panel "potenziato"
-- Crea `src/components/contacts/bca/BCAUnifiedDetailPanel.tsx` derivato da `BCADetailPanel`, con una sezione **Azioni Intelligenti** ridisegnata: 4 grandi card grid 2×2, ognuna è anche **drop target** indipendente. Ogni target:
-  - si illumina solo quando il puntatore è dentro i suoi bounds (`onDragEnter`/`onDragLeave` per singolo target — niente "card madre" che cattura tutto);
-  - mostra il tipo di azione che eseguirà sul contatto droppato;
-  - all'`onDrop` esegue l'azione del file `BCASmartActions` esistente (Cockpit, Deep Search, LinkedIn, Campagna) usando l'id del contatto trascinato.
-
-### 4. Drag handle a 6 puntini
-- Nei renderer della view "media" (`BcaGridCard` in `src/components/operations/bca/BcaCardRenderers.tsx`) aggiungi un'icona `GripVertical` doppia (visualmente "dots six") in alto a sinistra della card, marcata `draggable=true` con `dataTransfer` che porta `cardId`. Solo quell'icona avvia il drag (la card resta cliccabile per aprire il dettaglio).
-- Le altre due viewMode (compact, expanded) **non** abilitano il drag, come richiesto.
-
-### 5. Pulizia
-- `BusinessCardsHub.tsx` resta in repo come legacy ma non viene più importato (zero rimozione di codice esterno, riduce il rischio di regressioni).
-
----
-
-## Layout finale della nuova pagina CRM › Biglietti
+In `BCAUnifiedHub` (usato sia dal CRM che dal Network via `BusinessCardsView`) la verticalità è occupata da **6 fasce orizzontali** sopra la lista:
 
 ```text
-+------------------------------------------------------------------+
-|  Toolbar (cerca · sel. tutti · sync · contatori)                 |
-+--------+----------------------------------------+----------------+
-| Sidebar| Quality Dashboard                       | DETAIL PANEL  |
-| Paesi  +-----------------------------------------+ (al click)    |
-|        | [ Gruppo Azienda 1 ] WCA  ✈ ...         |               |
-|        |   - Card contatto (compact/media/exp.)  |  Foto + OCR   |
-|        |   - Card contatto                       |               |
-|        | [ Gruppo Azienda 2 ] ...                |  AZIONI       |
-|        |                                         |  INTELLIGENTI |
-|        |                                         |  +----+ +---+ |
-|        |                                         |  |Cock| |D.S| |
-|        |                                         |  +----+ +---+ |
-|        |                                         |  +----+ +---+ |
-|        |                                         |  | LI | |Cmp| |
-|        |                                         |  +----+ +---+ |
-+--------+-----------------------------------------+---------------+
+[ GoldenHeaderBar 44px breadcrumbs ]   ← header globale
+[ SectionTabs 36px ]                   ← Contatti / Kanban / Biglietti …
+[ Toolbar: search + sel. tutti + count + Sincronizza ]
+[ "Vista:" Compatta / Media / Espansa ]
+[ BCAQualityDashboard "Qualità Portfolio BCA" ]
+[ Timeline Evento + hint "Clicca una card…" ]
+─────────────────────────────────────  ← solo qui inizia la lista scrollabile
 ```
 
-Drop dei contatti dalle card "media" → atterra **esattamente** sulla card-azione sotto il mouse.
+A destra il pannello dettaglio fissa header + 4 azioni intelligenti, e la parte dati grezzi si riduce a poche righe.
 
----
+La sidebar paesi (320px) è duplicata: c'è già una linguetta globale (`ContextFiltersRail`) che però per `/v2/pipeline/biglietti` ritorna `null` e per Network/BCA viene esplicitamente nascosta. Il risultato è che i Biglietti hanno la propria sidebar interna ma la "linguetta" globale resta inutilizzata.
 
-## Dettagli tecnici
+## Piano
 
-- **File nuovi**: `BCAUnifiedHub.tsx`, `BCAUnifiedDetailPanel.tsx`.
-- **File modificati**: `PipelineSection.tsx` (routing), `BcaCardRenderers.tsx` (drag handle solo su `BcaGridCard`).
-- **Drag&Drop**: HTML5 nativo (`draggable`, `dataTransfer.setData("text/bca-card-id", id)`); ogni drop target ha i propri handler — niente delega su parent — così "il bersaglio è il puntatore". Per evitare il flicker di `dragleave` su figli si usa un counter pattern.
-- **Tokens design**: tutti i colori vengono dai semantic tokens di `index.css` (primary, accent, border, muted, …). Niente colori hardcoded.
-- **Nessuna modifica a edge functions, schema DB, hook dati, RLS, code path di Network/BCA.** Il lavoro è puramente UI/presentational, secondo le istruzioni di base.
+### A) Spostare la sidebar paesi dei Biglietti dentro la linguetta globale
 
----
+- In `ContextFiltersRail.tsx`: aggiungere il caso "biglietti" (sia `/v2/pipeline/biglietti` sia Network con `networkView === "bca"`). La linguetta riapre una colonna 320px che contiene un nuovo componente `BCAFiltersRailContent` con: ricerca, lista paesi (count), toggle "Solo WCA match" / "Solo con email" / "Nascondi in circuito", ordinamento, selettore vista (Compatta/Media/Espansa).
+- Il nuovo componente legge/scrive lo stato via context (vedi sotto).
+- Rimuovere dal corpo di `BCAUnifiedHub.tsx` e di `BusinessCardsView.tsx` la `BcaCountrySidebar` interna e il chevron di toggle.
 
-## Cosa NON faccio (per essere chiari)
+Per condividere lo stato tra la rail e la pagina senza prop-drilling tra route diverse: estrarre `useBcaGrouping` in un piccolo provider `BcaFiltersProvider` (Context) montato da `PipelineSection` (rotta biglietti) e da `OperationsView` (Network BCA). La rail e il body consumano lo stesso hook.
 
-- Non tocco la pagina Network › BCA (`BusinessCardsView`) — resta identica.
-- Non modifico `BCASmartActions` né le edge function chiamate dalle azioni intelligenti.
-- Non cambio i renderer compact/expanded (drag solo su grid/media).
-- Non rimuovo `BusinessCardsHub` (resta come fallback finché non confermi).
+### B) Compattare le fasce orizzontali della pagina Biglietti
+
+Riducendo da 6 a 2 fasce sopra la lista (target: −25% di altezza occupata):
+
+```text
+[ Toolbar unica 36px:
+    🔎 search · vista [▦▤▥] · 372 biglietti · 302 aziende ·
+    ✓ Seleziona tutti · ⏱ Timeline · ⟳ Sincronizza ]
+
+[ Qualità Portfolio BCA — collassato in una pill 24px,
+    cliccabile per espandere il pannello ricco esistente ]
+```
+
+Dettagli:
+- Spostare il selettore vista (Compatta/Media/Espansa) **dentro la toolbar** (icone-only con tooltip).
+- Spostare "Timeline Evento" e "Sincronizza" come bottoni icona nella stessa toolbar.
+- Il contatore "biglietti · aziende · selezionati" diventa testo inline nella toolbar.
+- L'hint "Clicca una card…" diventa un piccolo tooltip sull'icona vista, non più una riga dedicata.
+- `BCAQualityDashboard`: trasformare il render di default in barra compatta `383 · 269 match · 369 con email` con chevron per espandere on-demand. Il componente ricco resta intatto, viene solo wrappato in un `<details>` collassabile chiuso di default.
+
+Stesse modifiche valide per `BusinessCardsView` (Network › BCA), così il comportamento è univoco.
+
+### C) Standardizzare l'header in alto (pattern Network)
+
+Applicare ovunque il pattern dello screenshot di riferimento:
+
+```text
+[ ☰  • [icon-sezione] Nome sezione  [pill switch sub-view]   ⏱… 12.286 record   🔔 utente  … ]
+[ Home › Esplora › Network ]                                             ← breadcrumb
+[ WCA Partner | Mappa | Sherlock ]                                       ← SectionTabs
+```
+
+Operativo:
+- Creare un piccolo helper `<SectionHeaderIcon section="crm" />` mappato a icona + label (`crm`→Users, `pipeline`→Workflow, `intelligence`→Brain, `communicate`→Mail, ecc.).
+- `GoldenHeaderBar` resta per il breadcrumb.
+- Esporre lo stesso slot `#campaign-header-controls` già usato da Network anche nelle altre sezioni (rinominato `#section-header-controls`), così ogni sezione può portare il proprio sub-toggle (es. Pipeline: stessa pillola Contatti/Kanban se usata in toolbar?), e il contatore globale.
+
+### D) Eliminazione duplicati sotto l'header
+
+Audit rapido per sezione:
+- **Pipeline › Contatti CRM**: oggi mostra GoldenHeaderBar + SectionTabs + (dentro `ContactsPage`) un proprio toolbar con search + filtri + counter; spesso doppione del rail. Proposta: search + counter restano nella toolbar di pagina; togliere la riga "FILTRI" interna ridondante (i filtri vivono nella linguetta globale).
+- **Pipeline › Biglietti**: vedi sezione B.
+- **Network › WCA Partner**: già pulito, solo verificare che `StatPill` fluttuanti non si duplichino col counter del header.
+- **Pipeline › Kanban / Duplicati / Campagne / Agenda**: verificare che ognuna non ridichiari un proprio breadcrumb interno.
+
+## File toccati (stima)
+
+```text
+src/v2/ui/templates/ContextFiltersRail.tsx          (+ caso biglietti)
+src/components/contacts/bca/BCAFiltersRailContent.tsx  (NEW)
+src/components/contacts/bca/BcaFiltersProvider.tsx     (NEW)
+src/components/contacts/bca/BCAUnifiedHub.tsx       (toolbar compatta, no sidebar interna)
+src/components/operations/BusinessCardsView.tsx     (idem, no sidebar interna)
+src/components/operations/bca/BCAQualityDashboard.tsx  (modalità compact + expand)
+src/v2/ui/pages/sections/PipelineSection.tsx       (wrap biglietti in BcaFiltersProvider)
+src/components/operations/OperationsView.tsx       (wrap BCA in BcaFiltersProvider)
+src/v2/ui/templates/SectionHeaderIcon.tsx          (NEW, helper icona+label sezione)
+src/v2/ui/pages/sections/{Pipeline,Intelligence,Communicate,Config}Section.tsx
+   (aggiunta header standard come ExploreSection)
+```
+
+Nessuna modifica di business logic / DAL / edge. Tutto frontend/presentazionale.
+
+## Risultato atteso
+
+- Pannello dettaglio destra: la zona scroll dei dati grezzi recupera ~120-160px verticali (≈25% in più).
+- Una sola sidebar a scomparsa per i Biglietti, identica a quella di WCA Partner.
+- Header coerente in tutte le sezioni (icona + nome + sub-toggle + breadcrumb + tab).

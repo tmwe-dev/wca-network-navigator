@@ -41,6 +41,7 @@ import { LayoutHeader } from "./LayoutHeader";
 import { ContextFiltersRail } from "./ContextFiltersRail";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
+import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -347,6 +348,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </button>
 
                       {/* Main content */}
+                      <BcaFiltersGate>
                       <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
@@ -377,6 +379,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                         </div>
                       </div>
+                      </BcaFiltersGate>
                     </div>
 
                     {/* Overlays */}
@@ -418,4 +421,20 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       </QueryClientProvider>
     </GlobalErrorBoundary>
   );
+}
+
+/**
+ * BcaFiltersGate — monta il `BcaFiltersProvider` solo nelle route in cui la
+ * maschera Biglietti è visibile (CRM › Biglietti, Network › BCA), così la
+ * linguetta globale `ContextFiltersRail` può accedere allo stesso stato
+ * filtri usato dalla pagina.
+ */
+function BcaFiltersGate({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const isBca =
+    pathname.startsWith("/v2/pipeline/biglietti") ||
+    pathname.startsWith("/v2/explore/network") ||
+    pathname === "/v2/network";
+  if (!isBca) return <>{children}</>;
+  return <BcaFiltersProvider>{children}</BcaFiltersProvider>;
 }

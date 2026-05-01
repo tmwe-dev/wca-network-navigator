@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight, Clock, X, LayoutList, LayoutGrid, Rows3,
+  Clock, X, LayoutList, LayoutGrid, Rows3,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { BCAQualityDashboard } from "@/components/operations/bca/BCAQualityDashboard";
@@ -30,13 +30,14 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { createLogger } from "@/lib/log";
 import { useBcaGrouping } from "@/components/operations/bca/useBcaGrouping";
-import { BcaCountrySidebar } from "@/components/operations/bca/BcaCountrySidebar";
+import { useBcaFilters } from "./BcaFiltersContext";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "@/components/operations/bca/BcaCardRenderers";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -57,7 +58,11 @@ export default function BCAUnifiedHub() {
   const [timelineMode, setTimelineMode] = useState(false);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
 
-  const g = useBcaGrouping(cards);
+  // Stato filtri condiviso con la linguetta globale (`ContextFiltersRail`).
+  // Se per qualche motivo il provider non è montato, fallback sicuro locale.
+  const ctx = useBcaFilters();
+  const local = useBcaGrouping(cards);
+  const g = ctx ?? local;
 
   const cardsById = useMemo(() => {
     const m = new Map<string, BusinessCardWithPartner>();
@@ -121,35 +126,43 @@ export default function BCAUnifiedHub() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-      {/* Sidebar paesi */}
-      <div className={cn("flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-border/40 bg-muted/20 transition-all duration-200", g.sidebarOpen ? "w-52" : "w-0")}>
-        {g.sidebarOpen && (
-          <BcaCountrySidebar
-            countries={g.countries} totalCompanies={g.totalCompanies} totalContacts={cards.length}
-            selectedCountry={g.selectedCountry} onSelectCountry={g.setSelectedCountry}
-            onlyMatched={g.onlyMatched} onSetOnlyMatched={g.setOnlyMatched}
-            onlyWithEmail={g.onlyWithEmail} onSetOnlyWithEmail={g.setOnlyWithEmail}
-            hideHolding={g.hideHolding} holdingCount={g.holdingCount} onSetHideHolding={g.setHideHolding}
-            sortMode={g.sortMode} onSetSortMode={g.setSortMode}
-            viewMode={g.viewMode} onSetViewMode={g.setViewMode}
-          />
-        )}
-      </div>
-
-      <button onClick={() => g.setSidebarOpen(p => !p)} className="flex-shrink-0 w-5 flex items-center justify-center border-r border-border/30 hover:bg-muted/40 transition-colors text-muted-foreground hover:text-foreground">
-        {g.sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-      </button>
-
       {/* Main */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-3">
-        {/* Toolbar */}
-        <div className="flex items-center gap-3 pt-3 flex-wrap">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-4 pb-3">
+        {/* Toolbar unica — search + vista + counter + bulk + timeline + sync */}
+        <div className="flex items-center gap-2 pt-2 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
           </div>
-          <button onClick={toggleAll} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
-            <CheckSquare className="w-3.5 h-3.5" /> {allSelected ? "Deseleziona" : "Seleziona tutti"}
+          <TooltipProvider delayDuration={200}>
+            <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5">
+              {([
+                ["compact", LayoutList, "Compatta"],
+                ["card", LayoutGrid, "Media"],
+                ["expanded", Rows3, "Espansa"],
+              ] as const).map(([mode, Icon, label]) => (
+                <Tooltip key={mode}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => g.setViewMode(mode)}
+                      className={cn(
+                        "p-1 rounded transition-all",
+                        g.viewMode === mode
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                      )}
+                      aria-label={label}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">{label}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+          <button onClick={toggleAll} className={cn("flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
+            <CheckSquare className="w-3 h-3" /> {allSelected ? "Deseleziona" : "Tutti"}
           </button>
           <span className="text-xs text-muted-foreground">
             {g.filtered.length} biglietti · {g.groups.length} aziende
@@ -182,49 +195,19 @@ export default function BCAUnifiedHub() {
               />
             </div>
           )}
-          <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
-            <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
-          </Button>
-        </div>
-
-        {/* View mode switcher — sempre visibile in alto */}
-        <div className="flex items-center gap-2 -mt-1">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Vista:</span>
-          <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/40 bg-muted/30 p-0.5">
-            {([
-              ["compact", LayoutList, "Compatta"],
-              ["card", LayoutGrid, "Media"],
-              ["expanded", Rows3, "Espansa"],
-            ] as const).map(([mode, Icon, label]) => (
-              <button
-                key={mode}
-                onClick={() => g.setViewMode(mode)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
-                  g.viewMode === mode
-                    ? "bg-primary/15 text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-                )}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{label}</span>
-              </button>
-            ))}
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-[11px] gap-1" onClick={() => setTimelineMode(!timelineMode)} title="Timeline evento">
+              <Clock className="w-3 h-3" /> Timeline
+            </Button>
+            <Button size="sm" className="h-7 text-[11px] gap-1" variant="outline" onClick={handleSync} disabled={syncing} title="Sincronizza biglietti">
+              <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+            </Button>
           </div>
         </div>
 
         <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
 
         <BCAQualityDashboard cards={cards} />
-
-        <div className="flex items-center gap-2">
-          <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => setTimelineMode(!timelineMode)}>
-            <Clock className="w-3 h-3" /> Timeline Evento
-          </Button>
-          <span className="text-[10px] text-muted-foreground italic">
-            💡 Clicca una card per aprire il dettaglio · trascina dai 6 puntini sulle azioni intelligenti
-          </span>
-        </div>
 
         {/* Two-column body: list + detail panel */}
         <div className="flex min-h-0 flex-1 overflow-hidden gap-3">
