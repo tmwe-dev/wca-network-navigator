@@ -25,6 +25,11 @@ export interface CountryEntry {
   contactCount: number;
 }
 
+export interface EventEntry {
+  name: string;
+  count: number;
+}
+
 interface CardWithCountry extends BusinessCardWithPartner {
   _country: string | null;
 }
@@ -38,6 +43,7 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
   const [onlyMatched, setOnlyMatched] = useState(false);
   const [onlyWithEmail, setOnlyWithEmail] = useState(false);
   const [hideHolding, setHideHolding] = useState(true);
+  const [eventFilter, setEventFilter] = useState<string | null>(null);
 
   const cardsWithCountry: CardWithCountry[] = useMemo(() => {
     return cards.map(c => ({
@@ -77,6 +83,18 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
     return s.size;
   }, [cardsWithCountry]);
 
+  const events = useMemo<EventEntry[]>(() => {
+    const counts = new Map<string, number>();
+    for (const c of cardsWithCountry) {
+      const name = (c.event_name || "").trim();
+      if (!name) continue;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [cardsWithCountry]);
+
   const filtered = useMemo(() => {
     let list: CardWithCountry[] = cardsWithCountry;
     if (selectedCountry !== null) {
@@ -85,6 +103,9 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
       } else {
         list = list.filter(c => c._country === selectedCountry);
       }
+    }
+    if (eventFilter) {
+      list = list.filter(c => (c.event_name || "").trim() === eventFilter);
     }
     if (search) {
       const q = search.toLowerCase();
@@ -98,7 +119,7 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
     if (onlyWithEmail) list = list.filter(c => !!c.email);
     if (hideHolding) list = list.filter(c => !c.lead_status || c.lead_status === "new");
     return list;
-  }, [cardsWithCountry, selectedCountry, search, onlyMatched, onlyWithEmail, hideHolding]);
+  }, [cardsWithCountry, selectedCountry, eventFilter, search, onlyMatched, onlyWithEmail, hideHolding]);
 
   const holdingCount = useMemo(() => {
     return cardsWithCountry.filter(c => c.lead_status && c.lead_status !== "new").length;
@@ -147,6 +168,7 @@ export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
     onlyMatched, setOnlyMatched,
     onlyWithEmail, setOnlyWithEmail,
     hideHolding, setHideHolding,
+    eventFilter, setEventFilter, events,
     cardsWithCountry, countries, totalCompanies, filtered, holdingCount, groups,
   };
 }
