@@ -3,82 +3,38 @@
  * List left (40%) + Detail right (60%) with auto breadcrumb and resizable handle.
  */
 import { useState, useCallback, useEffect } from "react";
-import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
-import { Users, X, LayoutGrid, Settings2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Users, X } from "lucide-react";
 import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
+import { toast } from "sonner";
 import type { ContactDetail } from "@/hooks/useContactDetail";
-import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
-import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useCrmContactsAsCompanies } from "@/v2/hooks/companyList/useCrmContactsAsCompanies";
 import { useCrmActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
-import { ListToolbar, useListSort, type SortOption } from "@/v2/ui/molecules/ListToolbar";
-import { useSortedCompanies, type CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
+import { type SortOption } from "@/v2/ui/molecules/ListToolbar";
+import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
+import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
+import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 
 const log = createLogger("Contacts");
 
 const CRM_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
   { key: "name", label: "Nome" },
+  { key: "country", label: "Paese" },
   { key: "city", label: "Città" },
   { key: "score", label: "Score" },
+  { key: "lastInteraction", label: "Ultimo contatto" },
+  { key: "interactions", label: "# interazioni" },
   { key: "contactsCount", label: "Contatti" },
 ];
-
-function CrmCardListBody(): React.ReactElement {
-  const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
-  const chips = useCrmActiveFilterChips();
-  const { sortKey, sortDir, cycle } = useListSort<CompanySortKey>("list:crm", "name");
-  const [search, setSearch] = useState("");
-  const sorted = useSortedCompanies(companies, sortKey, sortDir, search);
-  return (
-    <div className="flex flex-col h-full min-h-0 pb-3">
-      <ListToolbar<CompanySortKey>
-        countLabel={`${sorted.length}/${companies.length} aziende`}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        sortOptions={CRM_SORT_OPTIONS}
-        onCycleSort={cycle}
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Cerca contatto, azienda, città…"
-        chips={chips}
-      />
-      <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
-      <CompanyCardList
-        companies={sorted}
-        isLoading={isLoading}
-        emptyMessage="Nessun contatto"
-        onOpenContact={(contact) => {
-          window.dispatchEvent(
-            new CustomEvent("crm-select-contact", {
-              detail: { contactId: contact.id },
-            })
-          );
-        }}
-      />
-      </div>
-      {hasMore && (
-        <div className="pt-2 flex justify-center">
-          <button
-            onClick={() => void fetchNextPage()}
-            className="px-3 py-1.5 rounded-md text-[11px] bg-muted/40 hover:bg-muted/60 text-muted-foreground border border-border/40"
-          >
-            Carica altri
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<ContactDetail | null>(null);
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
-  const [view, setView] = useState<"cards" | "classic">("cards");
+  const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
+  const chips = useCrmActiveFilterChips();
 
   const loadContactById = useCallback(async (id: string) => {
     try {
@@ -100,11 +56,6 @@ export function ContactsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlContactId]);
 
-  const handleSelect = useCallback((contact: Record<string, unknown>) => {
-    setSelectedContact(contact as unknown as ContactDetail);
-    if (contact?.id) setUrlContactId(String(contact.id));
-  }, [setUrlContactId]);
-
   const handleContactUpdated = useCallback((updated: Record<string, unknown>) => {
     setSelectedContact(updated as unknown as ContactDetail);
   }, []);
@@ -125,50 +76,30 @@ export function ContactsPage() {
     return () => window.removeEventListener("crm-select-contact", handler);
   }, [setUrlContactId, loadContactById]);
 
-  const viewToggle = (
-    <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5 m-2">
-      <button
-        onClick={() => setView("cards")}
-        className={cn(
-          "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
-          view === "cards"
-            ? "bg-primary/15 text-primary"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-        )}
-        title="Vista card-azienda"
-      >
-        <LayoutGrid className="w-3 h-3" /> Card-azienda
-      </button>
-      <button
-        onClick={() => setView("classic")}
-        className={cn(
-          "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
-          view === "classic"
-            ? "bg-primary/15 text-primary"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-        )}
-        title="Vista tabella classica"
-      >
-        <Settings2 className="w-3 h-3" /> Classica
-      </button>
-    </div>
+  const handleOpenContact = useCallback(
+    (contact: { id: string; raw?: unknown }) => {
+      setUrlContactId(contact.id);
+      void loadContactById(contact.id);
+    },
+    [setUrlContactId, loadContactById]
   );
 
-  const list = (
-    <div className="flex flex-col h-full min-h-0">
-      {viewToggle}
-      <div className="flex-1 min-h-0">
-        {view === "cards" ? (
-          <CrmCardListBody />
-        ) : (
-          <ContactListPanel
-            selectedId={selectedContact?.id ?? null}
-            onSelect={handleSelect}
-          />
-        )}
-      </div>
-    </div>
-  );
+  const handleBulkAddToCockpit = useCallback((sel: CompanyEntity[]) => {
+    window.dispatchEvent(
+      new CustomEvent("cockpit-add-bulk-contacts", { detail: { companyIds: sel.map((s) => s.id) } })
+    );
+    toast.success(`${sel.length} aziende aggiunte al Cockpit`);
+  }, []);
+
+  const handleBulkCampaign = useCallback((sel: CompanyEntity[]) => {
+    const withEmail = sel.filter((s) => s.channels?.email);
+    window.dispatchEvent(
+      new CustomEvent("campaign-create-bulk", {
+        detail: { companyIds: withEmail.map((s) => s.id), source: "crm" },
+      })
+    );
+    toast.success(`Campagna creata per ${withEmail.length} destinatari`);
+  }, []);
 
   const detail = selectedContact ? (
     <div className="h-full bg-card relative">
@@ -187,23 +118,34 @@ export function ContactsPage() {
     </div>
   ) : null;
 
-  // Trailing breadcrumb shows the selected contact name when present.
-  const trailingLabel = selectedContact
-    ? (selectedContact as unknown as { name?: string; full_name?: string; email?: string })
-        .name ??
-      (selectedContact as unknown as { full_name?: string }).full_name ??
-      (selectedContact as unknown as { email?: string }).email ??
-      null
-    : null;
-
   return (
-    <GoldenLayout
-      testId="page-contacts-hub"
-      list={list}
-      detail={detail}
-      trailingLabel={trailingLabel}
-      hideHeader
-    />
+    <div data-testid="page-contacts-hub" className="flex flex-col h-full min-h-0 overflow-hidden">
+      <EntityListWithDetail
+        source="crm"
+        companies={companies}
+        isLoading={isLoading}
+        emptyMessage="Nessun contatto"
+        sortStorageKey="list:crm"
+        sortOptions={CRM_SORT_OPTIONS}
+        globalChips={chips}
+        searchPlaceholder="Cerca contatto, azienda, città…"
+        onOpenContact={handleOpenContact}
+        detailSlot={detail}
+        onBulkAddToCockpit={handleBulkAddToCockpit}
+        onBulkCreateCampaign={handleBulkCampaign}
+        toolbarRightSlot={
+          hasMore ? (
+            <button
+              onClick={() => void fetchNextPage()}
+              className="h-7 px-2 rounded-md text-[11px] bg-muted/40 hover:bg-muted/60 text-muted-foreground border border-border/40"
+              title="Carica altri contatti"
+            >
+              Carica altri
+            </button>
+          ) : null
+        }
+      />
+    </div>
   );
 }
 
