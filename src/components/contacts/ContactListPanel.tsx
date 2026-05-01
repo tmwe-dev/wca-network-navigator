@@ -14,6 +14,7 @@ import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ContactSegments, type SegmentKey } from "@/components/contacts/ContactSegments";
+import { AnagraphicsPillsPortal } from "@/v2/ui/templates/header/AnagraphicsPillsPortal";
 
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 const BulkLinkedInDialog = lazy(() => import("@/components/workspace/BulkLinkedInDialog"));
@@ -71,6 +72,7 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   return (
     <PageErrorBoundary>
     <div className="flex flex-col h-full min-h-0">
+      <AnagraphicsPillsPortal active="crm" />
       {/* Header */}
       <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">

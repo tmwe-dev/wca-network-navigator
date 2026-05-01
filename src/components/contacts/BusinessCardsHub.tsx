@@ -138,6 +138,7 @@ export default function BusinessCardsHub() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <AnagraphicsPillsPortal active="biglietti" />
       <UnifiedBulkActionBar
         count={selectedIds.size} sourceType="business_card"
         onClear={() => setSelectedIds(new Set())} onEmail={handleBulkEmail} onWhatsApp={handleBulkWhatsApp}
