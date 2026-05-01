@@ -76,19 +76,16 @@ export function DeepSearchPage(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Header con form */}
+      {/* Form (titolo gestito dall'ExploreContextHeader in alto) */}
       <div className="border-b border-border/50 bg-gradient-to-b from-primary/[0.03] to-transparent p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Search className="w-5 h-5 text-primary" />
-          <h2 className="text-base font-semibold">Sherlock Investigator</h2>
-          <Badge variant="outline" className="text-[10px]">3 livelli</Badge>
-          {sherlock.running && (
-            <Badge className="ml-auto bg-primary/10 text-primary border-primary/20">
+        {sherlock.running && (
+          <div className="flex items-center justify-end">
+            <Badge className="bg-primary/10 text-primary border-primary/20">
               <Loader2 className="w-3 h-3 animate-spin mr-1" />
               Indagine in corso · Liv. {sherlock.currentLevel}
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div>
