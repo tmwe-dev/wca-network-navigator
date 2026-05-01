@@ -195,11 +195,9 @@ export default function BCAUnifiedHub() {
           <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => setTimelineMode(!timelineMode)}>
             <Clock className="w-3 h-3" /> Timeline Evento
           </Button>
-          {g.viewMode === "card" && (
-            <span className="text-[10px] text-muted-foreground italic">
-              💡 Suggerimento: trascina una card sulle azioni intelligenti del pannello a destra
-            </span>
-          )}
+          <span className="text-[10px] text-muted-foreground italic">
+            💡 Clicca una card per aprire il dettaglio · trascina dai 6 puntini sulle azioni intelligenti
+          </span>
         </div>
 
         {/* Two-column body: list + detail panel */}
