@@ -1,82 +1,76 @@
-## Cosa ho verificato (situazione reale)
+## Obiettivo
 
-**1. Biglietti da visita — dove compaiono oggi**
-
-| Posizione | Cosa mostra | Verdetto |
-|---|---|---|
-| `/v2/pipeline/biglietti` | `BusinessCardsHub` — pagina dedicata BCA | ✅ Casa madre |
-| `/v2/explore/network` (WCA Partner) | `OperationsView` ha un toggle interno **Partner / BCA** che monta `BusinessCardsView` | ❌ **Duplicato reale** — stessa pagina dentro Network |
-| `/v2/pipeline/contacts` (Contatti CRM) | **Non mostra biglietti come entità.** Mostra solo i filtri "WCA ✓ / Solo CRM" sui contatti | ✅ Nessun duplicato (sono contatti, non biglietti) |
-
-→ Da rimuovere: il toggle "BCA" dentro Network. I biglietti vivono solo in Pipeline › Biglietti.
-
-**2. Menu a 3 righe in Contatti CRM (screenshot 1)**
-
-Le righe accumulate sono:
-1. **Tabs sezione** (Contatti / Kanban / Biglietti / Duplicati / Campagne / Agenda) — `SectionTabs`
-2. **Breadcrumb** "Home › Pipeline › Contatti CRM" — `GoldenHeaderBar`
-3. **Barra contatori + filtri** "11349 contatti · Fuori circuito · Tutti · WCA ✓ · Solo CRM · Segmenti · Nuovo"
-4. **Barra gruppi paese** con bandierine
-5. **Header colonne** (Azienda / Contatto / Città / Origine)
-
-Il problema vero: 1 + 2 sono ridondanti (i tabs già dicono dove sei). 3 + 4 sono due barre di filtri che potrebbero stare insieme.
-
-**3. Kanban che piace (screenshot 3)**
-
-`ContactPipelineView` ha: una sola riga di KPI con icone colorate e contatore inline, sotto la barra di funnel con percentuali, poi le colonne. **Niente breadcrumb, niente filtri ripetuti, tutto leggibile a colpo d'occhio.** Questo è lo standard da estendere.
+Unificare l'accesso alle 3 viste anagrafiche (WCA Partner, Biglietti, CRM) attraverso **icone in top bar** sullo stile di "WCA Partner" (globo che gira + contatore), eliminando 2 voci dalla sidebar e ripulendo l'header pesante della pagina Network.
 
 ---
 
-## Piano (3 step, uno per volta come chiede l'utente)
+## Parte A — Top bar: 3 icone "Anagrafica" (con contatori)
 
-### Step A — Rimuovere il duplicato Biglietti da Network
-- In `src/components/operations/OperationsView.tsx`: togliere il toggle Partner/BCA e il branch che renderizza `BusinessCardsView`. `NetworkPage` mostra **solo partner**.
-- Aggiungere in `BusinessCardsHub` un pulsante "Sync da Network" (la stessa azione `sync-business-cards`) così la funzione non si perde.
-- `/v2/network` resta = WCA Partner. I biglietti si gestiscono solo in `/v2/pipeline/biglietti`.
+Oggi la top bar ha già uno slot dinamico (`#campaign-header-controls`) in cui la pagina Network inietta il blocco "🌐 WCA Partner · 12286 partner".
 
-### Step B — Compattare l'header di Contatti CRM in una sola riga "Kanban-style"
-Adottare la grammatica visiva del Kanban su tutta la sezione Pipeline:
+**Nuovo comportamento:** quando l'utente è su una qualsiasi delle 3 viste anagrafiche, la top bar mostra **3 pill cliccabili affiancate**, una per ciascuna anagrafica, con icona animata + label + contatore + indicatore della pill attiva:
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ Tabs sezione (Contatti CRM | Kanban | Biglietti | …)                 │  ← unica navigazione
-├──────────────────────────────────────────────────────────────────────┤
-│ 11 349 contatti  ✈ 0  📩 1  ⏰ 0  ❄ 1  ⭐ 0  🤝 0      ⚙ Filtri  + │  ← riga KPI+azioni
-├──────────────────────────────────────────────────────────────────────┤
-│ Paese ▾  Tutti  🇦🇫 AF (1)  🇦🇱 AL (1)  🇦🇴 AO (6)  …                │  ← gruppi (resta)
-└──────────────────────────────────────────────────────────────────────┘
+[ 🌐  WCA Partner  · 12.286 ]   [ 🪪  Biglietti · 1.342 ]   [ 👥  CRM · 11.349 ]
+   (attiva, sottolineata)            (cliccabile)              (cliccabile)
 ```
 
-Cosa cambia concretamente:
-- **Nascondere il `GoldenHeaderBar` (breadcrumb) sulle pagine Pipeline**: i tabs di sezione sono già il "dove sei". Una prop `hideBreadcrumb` su `PipelineSection` o omissione del componente.
-- **Fondere la riga "11349 contatti + Fuori circuito + WCA✓/Solo CRM + Segmenti + Nuovo" in una singola toolbar Kanban-style**: contatore a sinistra, mini-KPI con icona (come il Kanban: 👤 0  📨 1  ⏰ 0  ❄ 1), filtri WCA come pill compatte, "Segmenti" e "+ Nuovo" a destra.
-- **Mantenere la barra Paese** (è informativa, non duplicata).
-- **Rimuovere la riga "header colonne sortabili"** quando lo spazio è stretto: il sort si attiva da un menu kebab sulla colonna, oppure si tiene ma con padding ridotto.
+- **WCA Partner** → 🌐 globo che gira (icona attuale, invariata) → naviga `/v2/explore/network`
+- **Biglietti** → 🪪 `Contact` (lucide) con micro-pulsazione → naviga `/v2/pipeline/biglietti`
+- **CRM** → 👥 `Users` con micro-pulsazione → naviga `/v2/pipeline/contacts`
 
-Risultato: da 5 righe → **3 righe** (tabs + toolbar unica + gruppi paese).
+I tre contatori (`partners.total`, `business_cards.total`, `imported_contacts.total`) vengono caricati una sola volta tramite un nuovo hook `useAnagraphicsCounts` (cache TanStack Query, staleTime 5 min, già copre i 3 endpoint che le viste interne richiamano).
 
-### Step C — Estendere lo stile Kanban anche a Network e Biglietti
-Una volta validato in Contatti CRM, applico la stessa toolbar compatta a:
-- `BusinessCardsHub` (Pipeline › Biglietti)
-- `OperationsView` (Network › WCA Partner)
-
-Stessa regola: una sola riga di KPI con icone semantiche colorate, niente breadcrumb ridondante, filtri come chip inline.
+La pill attiva è evidenziata con sottolineatura primary + sfondo `bg-primary/10`; le altre due restano cliccabili con hover discreto. Le label scompaiono sotto i 768px (rimangono solo icona + numero).
 
 ---
 
-## Dettagli tecnici (per chi legge il codice)
+## Parte B — Sidebar: rimuovere 2 voci
 
-- **Toggle BCA da rimuovere**: `OperationsView.tsx` righe ~43-98 (`networkView` state + `<CreditCard /> BCA` button + branch `activeView === "bca"`).
-- **Breadcrumb da nascondere in Pipeline**: `PipelineSection.tsx` non monta direttamente `GoldenHeaderBar`, ma lo eredita dal layout. Aggiungere `hideHeader` o un flag locale; altrimenti rimuovere `GoldenHeaderBar` dal layout per la route `/v2/pipeline/*`.
-- **Toolbar unificata**: nuova `ContactsToolbar` (compact) che assorbe l'attuale "Header" (riga 75-100 di `ContactListPanel.tsx`) + `ContactSegments` + KPI da `useContactListPanel` (totalCount, holdingPattern, ecc.).
-- **Niente modifiche a logica/dati**: solo presentazione. Filtri WCA, segmenti, ordinamento e selezione restano gli stessi hook.
+Nel file `navConfig.tsx` la lista oggi contiene 11 voci. Rimuoviamo:
+
+- ❌ `nav.crm_contacts` → `/v2/pipeline/contacts`
+- ❌ `nav.business_cards` → `/v2/pipeline/biglietti`
+
+Resta `nav.wca_partners` come "Anagrafica" (unico ingresso da menu, le altre due si raggiungono dalla top bar). I due path restano ovviamente raggiungibili da:
+1. le pill della top bar (Parte A);
+2. il tab "Biglietti" interno alla sezione Pipeline (per chi entra dalla pipeline);
+3. i deep-link interni esistenti.
+
+Risultato: sidebar passa da 11 a 9 voci.
 
 ---
 
-## Cosa NON faccio in questo piano
-- Non tocco la logica di filtro contatti, RLS, hook dati.
-- Non cambio il routing (`/v2/pipeline/biglietti` resta).
-- Non rinomino tabs.
-- Non tocco il Kanban (ti piace così com'è).
+## Parte C — Pulizia "riga inutile" su Network (`PartnerListPanel`)
 
-Procedo step-by-step: **prima Step A** (rimuovere duplicato Biglietti da Network), poi mi confermi e passo a Step B.
+Oggi la prima riga del pannello ripete: bandiera + "Tutti i paesi" + "12286 partner" + filtro Deep Search. Tutto duplicato rispetto alla top bar.
+
+**Cosa cambia:**
+
+1. **Eliminata** la prima riga "🌍 Tutti i paesi · 12286 partner" → quando non c'è una selezione di paese, la riga non appare. Quando l'utente seleziona uno o più paesi, riappare in forma minimale: `🇮🇹 Italia · 234 partner` (solo se filtro paese attivo, perché in quel caso aggiunge informazione).
+2. **Eliminato** il duplicato del totale partner (è in top bar).
+3. **Riga 3 "Tutti / Nascondi in circuito"** viene **promossa in alto** (subito sotto i tab Mappa/Sherlock) e diventa più evidente:
+   - lo switch "Nascondi in circuito (N)" usa testo più leggibile e sfondo `bg-card/40 border` per dargli rilievo;
+   - "Seleziona tutti" resta a sinistra dello switch.
+4. **Mantenuto**: chip filtri attivi (search, paesi, qualità) + dropdown ordinamento + pulsante reset + counter `N / totale`. Questa è l'unica riga "operativa" che resta.
+
+Rispetto a oggi: da 3 righe header a **1 riga di filtri + 1 riga toggle "in circuito"** (oppure 0+1 se nessun filtro attivo).
+
+---
+
+## Parte D — Allineamento estetico Biglietti & CRM
+
+Per coerenza visiva con Network, anche `BusinessCardsHub` e `ContactListPanel` perdono eventuali ripetizioni del totale globale e, dove presente, della riga "Tutti i paesi" (lavoro analogo a Parte C, scope limitato alla rimozione dei duplicati: **niente refactor invasivi** della logica filtri).
+
+---
+
+## Dettagli tecnici
+
+- **Nuovo file** `src/v2/ui/templates/header/AnagraphicsPills.tsx` — componente che renderizza le 3 pill, riceve i 3 conteggi e l'attiva (derivata da `useLocation`).
+- **Nuovo hook** `src/v2/hooks/useAnagraphicsCounts.ts` — query parallele `count()` su `partners`, `business_cards`, `imported_contacts`.
+- **Modificato** `src/components/operations/OperationsView.tsx` (`HeaderBarPortal`) — sostituisce il blocco "WCA Partner" attuale con `<AnagraphicsPills active="partners" />`.
+- **Aggiunto** un equivalente `HeaderBarPortal` in `BusinessCardsHub.tsx` e nella vista `Contatti CRM` (`ContactListPanel.tsx` o wrapper) per montare le stesse pill con `active="biglietti"` / `active="crm"`.
+- **Modificato** `navConfig.tsx` — rimosse le 2 voci.
+- **Modificato** `PartnerListPanel.tsx` — eliminata la prima riga header come da Parte C.
+
+Nessuna modifica a logica di business, RLS, edge functions o DAL.

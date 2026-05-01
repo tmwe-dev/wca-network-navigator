@@ -26,6 +26,7 @@ import { useUploadAndParse, DropZone } from "./bca/BCAUpload";
 import { googleLogoSearchUrl } from "./bca/bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { deleteBusinessCards } from "@/data/businessCards";
+import { AnagraphicsPillsPortal } from "@/v2/ui/templates/header/AnagraphicsPillsPortal";
 
 type ViewMode = "compact" | "card" | "expanded";
 
@@ -137,6 +138,7 @@ export default function BusinessCardsHub() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <AnagraphicsPillsPortal active="biglietti" />
       <UnifiedBulkActionBar
         count={selectedIds.size} sourceType="business_card"
         onClear={() => setSelectedIds(new Set())} onEmail={handleBulkEmail} onWhatsApp={handleBulkWhatsApp}
