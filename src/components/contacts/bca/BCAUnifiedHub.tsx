@@ -190,6 +190,7 @@ export default function BCAUnifiedHub() {
                 onClear={() => setSelectedBca(new Set())}
                 onCockpit={handleSendToCockpit}
                 onDeepSearch={handleBcaDeepSearch}
+                onDelete={handleBulkDelete}
                 onWorkspace={() => {
                   const selected = g.filtered.filter(c => selectedBca.has(c.id) && c.email);
                   if (selected.length === 0) { toast.warning("Nessun contatto con email"); return; }
