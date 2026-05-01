@@ -77,12 +77,6 @@ export function AttivitaTab() {
     completed: all.filter((a) => a.status === "completed").length,
   };
 
-  const priorityColor = (p: string) => {
-    if (p === "high" || p === "urgent") return "text-destructive";
-    if (p === "medium") return "text-primary";
-    return "text-muted-foreground";
-  };
-
   const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
     pending: { label: "In attesa", color: "text-primary", bg: "bg-primary/15", icon: Clock },
     in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
