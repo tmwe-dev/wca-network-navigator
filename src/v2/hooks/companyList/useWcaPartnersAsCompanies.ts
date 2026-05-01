@@ -71,12 +71,12 @@ export interface UseWcaPartnersAsCompaniesResult {
 }
 
 export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
-  const { state } = useGlobalFilters();
-  const countries = useMemo(
-    () => Array.from(state.networkSelectedCountries ?? new Set<string>()),
-    [state.networkSelectedCountries]
+  const { filters } = useGlobalFilters();
+  const countries = useMemo<string[]>(
+    () => Array.from(filters.networkSelectedCountries ?? new Set<string>()) as string[],
+    [filters.networkSelectedCountries]
   );
-  const search = state.networkSearch || "";
+  const search = filters.networkSearch || "";
 
   const filterKey = useMemo(
     () => ({ countries, search }),
