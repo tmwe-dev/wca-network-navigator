@@ -135,10 +135,10 @@ export function HoldingPatternCommandCenter() {
       <TabIntroBanner
         id="circuito"
         icon={Plane}
-        title="Risposte in arrivo"
-        purpose="Messaggi RICEVUTI (Email, WhatsApp, LinkedIn) che aspettano una risposta. Non è ciò che parte: è ciò che è arrivato."
-        origin="Inbox cross‑canale (IMAP, WA bridge, LinkedIn bridge)"
-        actions="Approvare risposta, ignorare, escalation telefonica"
+        title="Risposte"
+        purpose="Posta in arrivo cross‑canale: messaggi che TI HANNO SCRITTO (Email + WhatsApp + LinkedIn) e aspettano una mossa da parte tua."
+        origin="Inbox IMAP, bridge WhatsApp, bridge LinkedIn — tutti messaggi REALI ricevuti dai tuoi contatti"
+        actions="Approvare la risposta (l'AI prepara una bozza che finisce in In Uscita), ignorare, escalation a chiamata"
         tone="emerald"
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">

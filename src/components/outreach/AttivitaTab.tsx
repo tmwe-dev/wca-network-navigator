@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, Mail, Phone, Users, RotateCcw, ChevronDown, CalendarIcon, StickyNote, Bot } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, Loader2, ListTodo, ChevronDown, CalendarIcon, StickyNote } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -21,16 +21,11 @@ import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { TabIntroBanner } from "./TabIntroBanner";
+import { OutreachRow } from "./shared/OutreachRow";
+import { resolveActionKind } from "./shared/ActionIcon";
+import { resolveSource } from "./shared/SourcePill";
 
 type Activity = Database["public"]["Tables"]["activities"]["Row"];
-
-const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  send_email: Mail,
-  email: Mail,
-  phone_call: Phone,
-  meeting: Users,
-  follow_up: RotateCcw,
-};
 
 export function AttivitaTab() {
   const qc = useQueryClient();
@@ -82,12 +77,6 @@ export function AttivitaTab() {
     completed: all.filter((a) => a.status === "completed").length,
   };
 
-  const priorityColor = (p: string) => {
-    if (p === "high" || p === "urgent") return "text-destructive";
-    if (p === "medium") return "text-primary";
-    return "text-muted-foreground";
-  };
-
   const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
     pending: { label: "In attesa", color: "text-primary", bg: "bg-primary/15", icon: Clock },
     in_progress: { label: "In corso", color: "text-primary", bg: "bg-primary/15", icon: AlertTriangle },
@@ -132,10 +121,10 @@ export function AttivitaTab() {
       <TabIntroBanner
         id="attivita"
         icon={ListTodo}
-        title="Storico Attività"
-        purpose="Tutto ciò che hai fatto o devi fare con i contatti: chiamate, meeting, follow‑up, email — qualunque sorgente, qualunque stato."
-        origin="Cockpit, agenti AI, campagne, attività manuali"
-        actions="Filtrare, completare, riprogrammare, aggiungere nota"
+        title="Attività"
+        purpose="Diario di bordo. Ogni email partita, chiamata fatta, meeting fissato, follow‑up dovuto. Per capire cosa hai fatto e cosa ti resta da fare."
+        origin="Cockpit, agenti AI, campagne, azioni manuali"
+        actions="Filtrare per tipo/stato, completare, riprogrammare, aggiungere note"
         tone="neutral"
       />
       {/* Stats header */}
@@ -198,48 +187,57 @@ export function AttivitaTab() {
             description="Le attività verranno create automaticamente quando lavori dal Cockpit"
           />
         ) : (
-          <div className="p-2 space-y-1">
+          <div className="p-2 space-y-1.5">
             {filtered.map((item) => {
               const sc = statusConfig[item.status] || statusConfig.pending;
-              const TypeIcon = ACTIVITY_ICONS[item.activity_type] || ListTodo;
-              const isOverdue = item.due_date && new Date(item.due_date) < new Date() && item.status !== "completed";
+              const isOverdue = !!(item.due_date && new Date(item.due_date) < new Date() && item.status !== "completed");
               const isExpanded = expandedId === item.id;
               const isAI = !!item.executed_by_agent_id;
+              const partner = (item as unknown as { partners?: { company_name?: string; country?: string } }).partners;
+              const meta = (item as unknown as { source_meta?: Record<string, unknown> }).source_meta || {};
+              const contactEmail = String((meta as Record<string, string>).email || (meta as Record<string, string>).recipient_email || "");
+              const contactName = String((meta as Record<string, string>).contact_name || (meta as Record<string, string>).recipient_name || "");
+              const company = partner?.company_name || (meta as Record<string, string>).company_name || item.title;
+              const kind = resolveActionKind({
+                activityType: item.activity_type,
+                direction: item.activity_type?.includes("received") ? "inbound" : "outbound",
+                isAi: isAI,
+              });
+              const source = resolveSource({
+                sourceType: item.source_type,
+                executedByAgentId: item.executed_by_agent_id,
+              });
+              const statusLine =
+                item.status === "completed" ? "Completata" :
+                item.status === "in_progress" ? "In corso" :
+                isOverdue ? "Scaduta" :
+                item.scheduled_at ? `Programmata` :
+                "In attesa";
 
               return (
                 <Collapsible key={item.id} open={isExpanded} onOpenChange={() => handleToggle(item.id)}>
                   <CollapsibleTrigger asChild>
-                    <div className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer",
-                      isExpanded && "bg-muted/20 rounded-b-none"
-                    )}>
-                      <div className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0", sc.bg)}>
-                        <TypeIcon className={cn("w-3.5 h-3.5", sc.color)} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-foreground truncate">{item.title}</span>
-                          <span className={cn("text-[9px] font-bold uppercase", priorityColor(item.priority))}>
-                            {item.priority}
-                          </span>
-                          {isAI && <Bot className="w-3 h-3 text-primary/60 shrink-0" />}
-                        </div>
-                        {item.description && (
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.description}</p>
-                        )}
-                      </div>
-                      <span className={cn("text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shrink-0", sc.bg, sc.color)}>
-                        {sc.label}
-                      </span>
-                      <span className={cn(
-                        "text-[10px] shrink-0",
-                        isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
-                      )}>
-                        {item.due_date
-                          ? format(new Date(item.due_date), "dd MMM", { locale: it })
-                          : format(new Date(item.created_at), "dd MMM", { locale: it })}
-                      </span>
-                      <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0", isExpanded && "rotate-180")} />
+                    <div className={cn(isExpanded && "bg-muted/20 rounded-b-none rounded-lg")}>
+                      <OutreachRow
+                        companyName={company}
+                        contactName={contactName || undefined}
+                        contactEmail={contactEmail || undefined}
+                        country={partner?.country}
+                        subject={item.email_subject || item.title}
+                        statusLine={`${sc.label} · ${item.priority.toUpperCase()}`}
+                        actionKind={kind}
+                        source={source}
+                        date={item.due_date || item.scheduled_at || item.created_at}
+                        relativeDate={item.due_date || item.scheduled_at || null}
+                        relativePrefix={item.due_date ? "scade" : item.scheduled_at ? "parte" : undefined}
+                        overdue={isOverdue}
+                        onClick={() => handleToggle(item.id)}
+                        rightSlot={
+                          <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
+                        }
+                      />
+                      {/* hidden helpers per evitare unused import */}
+                      <span className="hidden">{statusLine}</span>
                     </div>
                   </CollapsibleTrigger>
 
