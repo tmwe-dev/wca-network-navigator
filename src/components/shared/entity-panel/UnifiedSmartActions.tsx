@@ -43,6 +43,8 @@ interface Props extends UnifiedActionHandlers, UnifiedActionFlags {
   /** Compatto = h-8; ultra = h-7. Default: compact. */
   density?: "compact" | "ultra";
   className?: string;
+  /** Quali sezioni mostrare. Default: entrambe. */
+  sections?: ReadonlyArray<"comms" | "ai">;
 }
 
 function ActionBtn({
@@ -85,12 +87,14 @@ export function UnifiedSmartActions(props: Props) {
     hasEmail, hasPhone, hasWhatsApp, waSending = false, waAvailable = true,
     onEmail, onWhatsApp, onCall, onWorkspace,
     onCockpit, onDeepSearch, onLinkedIn, onCampaign,
-    density = "compact", className,
+    density = "compact", className, sections = ["comms", "ai"],
   } = props;
+  const showComms = sections.includes("comms");
+  const showAI = sections.includes("ai");
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* COMUNICAZIONE */}
+      {showComms && (
       <div className="space-y-1.5">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
           <Send className="w-3 h-3" /> Comunicazione
@@ -102,8 +106,9 @@ export function UnifiedSmartActions(props: Props) {
           <ActionBtn icon={Briefcase}     label="Workspace" tone="primary" density={density} onClick={hasEmail ? onWorkspace : undefined} disabled={!hasEmail} />
         </div>
       </div>
+      )}
 
-      {/* AZIONI AI */}
+      {showAI && (
       <div className="space-y-1.5">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1">
           <Sparkles className="w-3 h-3" /> Azioni AI
@@ -115,6 +120,7 @@ export function UnifiedSmartActions(props: Props) {
           <ActionBtn icon={Megaphone}  label="Campagna"    tone="amber"   density={density} onClick={onCampaign} />
         </div>
       </div>
+      )}
     </div>
   );
 }
