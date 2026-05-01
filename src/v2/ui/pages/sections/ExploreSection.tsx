@@ -1,7 +1,6 @@
 import * as React from "react";
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { ExploreContextHeader } from "@/v2/ui/templates/explore/ExploreContextHeader";
 import { GlobePage } from "@/v2/ui/pages/GlobePage";
 import { NetworkPage } from "@/v2/ui/pages/NetworkPage";
 import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
@@ -16,7 +15,6 @@ function TabFallback() {
 export function ExploreSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <ExploreContextHeader />
       <div className="flex-1 min-h-0 overflow-hidden">
         <Routes>
           <Route index element={<Navigate to="/v2/explore/network" replace />} />
