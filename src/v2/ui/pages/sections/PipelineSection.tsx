@@ -30,7 +30,6 @@ const DuplicateDetector = lazy(() =>
 const TABS: readonly SectionTab[] = [
   { key: "contacts",   label: "Contatti CRM", to: "/v2/pipeline/contacts"   },
   { key: "kanban",     label: "Kanban",       to: "/v2/pipeline/kanban"     },
-  { key: "biglietti",  label: "Biglietti",    to: "/v2/pipeline/biglietti"  },
   { key: "duplicati",  label: "Duplicati",    to: "/v2/pipeline/duplicati"  },
   { key: "campaigns",  label: "Campagne",     to: "/v2/pipeline/campaigns"  },
   { key: "agenda",     label: "Agenda",       to: "/v2/pipeline/agenda"     },
