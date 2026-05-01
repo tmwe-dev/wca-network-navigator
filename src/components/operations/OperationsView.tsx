@@ -200,16 +200,11 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* Portal into global header */}
           <HeaderBarPortal
-            networkView={networkView}
-            setNetworkView={setNetworkView}
             globalStats={globalStats}
             deepSearch={deepSearch}
           />
 
           {/* ═══ MAIN ═══ */}
-          {networkView === "bca" ? (
-            <BusinessCardsView />
-          ) : (
           <div className={cn(
             "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
             isMobile ? "flex flex-col" : "flex"
