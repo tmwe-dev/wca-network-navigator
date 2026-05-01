@@ -1,84 +1,118 @@
 ## Obiettivo
 
-Trasformare l'header della sezione **Esplora** in un'unica barra superiore che mostri SEMPRE, in modo dinamico, il contesto della tab attiva (icona/GIF + nome + contatore), eliminando la riga ridondante "Home › Esplora › …" e il menu a tab statico. La navigazione tra WCA Partner, Contatti CRM, Biglietti, Mappa e Sherlock avverrà cliccando direttamente sul titolo (ciclo) o tramite un piccolo cycler a chevron.
+Adottare il layout dei **Biglietti da visita** (card-azienda + sub-card dei contatti annidati) come standard unico per tutti gli elenchi: **WCA Partner**, **Contatti CRM** e **Biglietti**. Il merge "raggruppa contatti sotto stessa azienda" resta confinato alla pagina dedicata già esistente (deduplicatePartners — Plancia di Comando).
 
-Inoltre rinominare la pagina **Deep Search → Sherlock** in tutti i punti di navigazione (breadcrumb e label di pagina), mantenendo il termine tecnico `deep_search` nelle funzionalità di arricchimento (che è cosa diversa).
+## Diagnosi dello stato attuale
 
-## Stato attuale
+| Pagina | Layout di oggi | Problema |
+|---|---|---|
+| WCA Partner (`/v2/explore/network`) | Riga sottile per partner. Contatti referenti visibili **solo** nel drawer destro al click. | I contatti sono nascosti: per vedere chi contattare devi aprire il drawer uno per uno. |
+| Contatti CRM (`/v2/explore/contacts`) | Tabella piatta densa: # / Azienda / Contatto / Città / Origine / barra-stato. | Stessa azienda appare N volte come righe separate (es. "Sigra elena", "Sig ravelli", "Paola" tutti senza colonna azienda compilata). Caos visivo. |
+| Biglietti (`/v2/explore/biglietti`) | Card-azienda grande con badge WCA + sub-card grigliata dei contatti dentro. | Layout corretto, è il modello da estendere. |
 
-```text
-┌─ LayoutHeader (h-11) ─────────────────────────────────────────────┐
-│ ☰  StatusPill                          🔔  Operatore  ⋯  ✨        │
-└────────────────────────────────────────────────────────────────────┘
-┌─ GoldenHeaderBar (h-8)  ← da rimuovere in Esplora ────────────────┐
-│ Home › Esplora › Network                                           │
-└────────────────────────────────────────────────────────────────────┘
-┌─ SectionTabs (h-9)  ← da sostituire con header contestuale ───────┐
-│ WCA Partner | Contatti CRM | Biglietti | Mappa | Sherlock          │
-└────────────────────────────────────────────────────────────────────┘
-┌─ Header interno OperationsView (solo Network) ────────────────────┐
-│ 🌐 Network · Partner WCA   👥 12286 partner                         │
-└────────────────────────────────────────────────────────────────────┘
+Il merge contatti/aziende rimane sulla pagina dedicata già presente nei tool della Plancia (`deduplicatePartners`).
+
+## Cosa costruire
+
+### 1. Componente generico `CompanyCardList`
+Estraggo la logica visuale di `BCAUnifiedHub` in un componente riusabile in `src/v2/ui/molecules/CompanyCardList/`:
+
+- **CompanyCard** — header azienda: bandiera + nome + città + badge sorgente (WCA / CRM / BCA) + counter contatti + azioni (⋯, Seleziona).
+- **ContactSubCard** — riga interna: nome + ruolo + icone canale (✉️ 💬 📞) + dot stato + counter messaggi.
+- **EmptyContactsSlot** — quando l'azienda non ha contatti, mostra "Nessun contatto · Aggiungi".
+
+Contratto dati (interfaccia comune):
+```ts
+type CompanyEntity = {
+  id: string;
+  name: string;
+  city?: string;
+  countryCode?: string;
+  source: "wca" | "crm" | "bca";
+  badge?: { label: string; tone: "wca" | "neutral" }; // es. "8 anni WCA"
+  contacts: ContactEntity[];
+  meta?: { wcaYears?: number; status?: "active"|"holding"|"cold" };
+};
+type ContactEntity = {
+  id: string;
+  name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  channels: { email: boolean; whatsapp: boolean; linkedin: boolean };
+  unreadCount?: number;
+};
 ```
 
-Solo la pagina Network ha il proprio header con icona + titolo + count. ContactsPage, Biglietti, Mappa, Sherlock NON hanno nulla in alto: il titolo "sparisce" e il breadcrumb "Esplora › Contatti CRM" è ridondante.
+### 2. Adapter per ciascuna sorgente
+Tre piccoli hook in `src/v2/hooks/companyList/` che producono `CompanyEntity[]` partendo dai dati esistenti, senza toccare la DAL:
 
-## Stato target
+- `useWcaPartnersAsCompanies()` — raggruppa partner WCA. Ogni partner = una company. Contatti = referenti già caricati nel drawer (lazy-load on-expand per non caricare 12k×N).
+- `useCrmContactsAsCompanies()` — raggruppa contatti CRM per `company_name` (fallback dominio email se manca). Aziende senza nome finiscono in gruppo "Senza azienda".
+- `useBcaCardsAsCompanies()` — adapter sul grouping BCA esistente (`useBcaGrouping`). Solo wrapper, zero logica nuova.
+
+### 3. Performance per WCA Partner (12k aziende)
+- **Card collassate di default**: in lista mostro solo l'header azienda; contatti caricati on-expand.
+- **Virtualizzazione** con `react-window` (già nel progetto) sulla lista delle 12k card.
+- Skeleton per le sub-card durante il fetch on-demand.
+
+### 4. Sostituzione nelle pagine
+- `NetworkPage.tsx` → renderizza `<CompanyCardList source="wca" />` al posto della lista riga-per-riga attuale.
+- `ContactsPage.tsx` → renderizza `<CompanyCardList source="crm" />` al posto della tabella densa.
+- `BCAUnifiedHub.tsx` → riusa internamente `<CompanyCardList source="bca" />` mantenendo drag-drop, bulk actions, OCR confidence (tutto già attaccato al componente esistente).
+
+### 5. Coerenza con il resto del sistema
+- Conservo i filtri esistenti (`GlobalFiltersProvider`, `BcaFiltersProvider`, sidebar paesi).
+- Conservo il drawer destro per il dettaglio (apertura on-click su card).
+- Conservo le azioni AI esistenti (Cockpit / Deep Search / LinkedIn / Campagna) come kebab menu sulla card.
+- Nessuna modifica al merge: rimane su `/v2/command` → tool `deduplicatePartners`.
+
+## Cosa NON fa questo piano
+- Non tocca la DAL né lo schema DB.
+- Non modifica il merge (resta dov'è).
+- Non aggiunge una vista tabella alternativa: la card-azienda è l'unica vista.
+- Non altera il drawer destro né i pannelli di dettaglio già esistenti.
+
+## Dettagli tecnici
+
+**File nuovi:**
+- `src/v2/ui/molecules/CompanyCardList/CompanyCardList.tsx`
+- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx`
+- `src/v2/ui/molecules/CompanyCardList/ContactSubCard.tsx`
+- `src/v2/ui/molecules/CompanyCardList/types.ts`
+- `src/v2/hooks/companyList/useWcaPartnersAsCompanies.ts`
+- `src/v2/hooks/companyList/useCrmContactsAsCompanies.ts`
+- `src/v2/hooks/companyList/useBcaCardsAsCompanies.ts`
+
+**File modificati:**
+- `src/v2/ui/pages/NetworkPage.tsx` — sostituzione body lista.
+- `src/v2/ui/pages/ContactsPage.tsx` — sostituzione body tabella.
+- `src/components/contacts/bca/BCAUnifiedHub.tsx` — refactor per usare `CompanyCardList` internamente (mantiene drag-drop esistente).
+
+**Query keys:** centralizzate in `src/lib/queryKeys.ts` come da rule (`companyList.wca`, `companyList.crm`, `companyList.bca`).
+
+**Vincoli rispettati:**
+- DAL-only access (no `supabase.from()` diretti nei nuovi hook).
+- No `any` (tipi stretti).
+- V2 UI logic-less: gli hook contengono la logica, i componenti sono presentazionali.
+- Centralizzazione query keys.
+
+## Risultato atteso
+
+Le tre pagine `/v2/explore/network`, `/v2/explore/contacts` e `/v2/explore/biglietti` mostrano lo stesso identico layout:
 
 ```text
-┌─ LayoutHeader (h-11) ─────────────────────────────────────────────┐
-│ ☰  StatusPill                          🔔  Operatore  ⋯  ✨        │
-└────────────────────────────────────────────────────────────────────┘
-┌─ ExploreContextHeader (h-10) ← UNICA riga, dinamica ──────────────┐
-│ ‹ 🌐 WCA Partner · 12.286 partner ›    [actions slot della pagina] │
-└────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│ 🇲🇾 Dahnay Logistics Sdn. Bhd.  [WCA] · 4 con. │  ← CompanyCard header
+│ ┌──────────────────┐ ┌──────────────────┐       │
+│ │ M. Ram Kumar     │ │ J. Varadarajan   │       │  ← ContactSubCard
+│ │ Manager          │ │ Senior Manager   │       │
+│ │ ✉ 💬             │ │ ✉ 💬             │       │
+│ └──────────────────┘ └──────────────────┘       │
+│ ┌──────────────────┐ ┌──────────────────┐       │
+│ │ Mohan Raj H      │ │ V. Balaji        │       │
+│ └──────────────────┘ └──────────────────┘       │
+└─────────────────────────────────────────────────┘
 ```
 
-- Il blocco centrale (icona + titolo + counter) è cliccabile: click avanza alla tab successiva nel ciclo. Le frecce `‹ ›` permettono navigazione esplicita avanti/indietro. Tooltip mostra le tab disponibili.
-- Counter dinamico per ogni tab: WCA Partner=#partner, Contatti CRM=#contatti, Biglietti=#biglietti, Mappa=#paesi attivi, Sherlock=nessun counter (mostra livello selezionato).
-- Niente più `GoldenHeaderBar` (breadcrumb) né `SectionTabs` in Esplora. Le altre sezioni (Pipeline, Comunica, ecc.) restano invariate per ora.
-
-## Cambiamenti tecnici
-
-### 1. Nuovo componente `ExploreContextHeader.tsx`
-Path: `src/v2/ui/templates/explore/ExploreContextHeader.tsx`
-- Definisce internamente l'array TABS (key, label, icon, route, useCounter hook).
-- Determina la tab attiva da `useLocation()`.
-- Espone uno slot `actions` (a destra) usato dalle pagine via React Portal opzionale (id `explore-header-actions`) — pattern già usato per `campaign-header-controls`.
-- Click sul titolo → naviga alla tab successiva. Frecce `‹ ›` → prev/next esplicito.
-- Counter caricati da hook leggeri esistenti:
-  - `useCountryStats()` → totalPartners (già usato in OperationsView)
-  - `useContactsCount()` o select count su `contacts` (verifico DAL esistente)
-  - Biglietti: query count su `business_cards`
-  - Mappa: stesso `useCountryStats`
-  - Sherlock: nessun counter
-
-### 2. Modificare `ExploreSection.tsx`
-- Rimuovere `<GoldenHeaderBar />` e `<SectionTabs>` per la sezione Esplora.
-- Sostituire con `<ExploreContextHeader />` + `<Routes>` diretto.
-
-### 3. Rimuovere header duplicato in `OperationsView.tsx`
-- Rimuovere il blocco riga 50-70 (`<Globe /> Network · Partner WCA · {count} partner`) ora che il titolo+count vivono nell'`ExploreContextHeader`.
-- Mantenere il bottone Deep Search/Mission in uno slot actions portato sull'header.
-
-### 4. Rinomina "Deep Search" → "Sherlock" nei punti di navigazione
-- `src/v2/ui/templates/breadcrumbConfig.ts` riga 52: `"deep-search": "Sherlock"`.
-- Verificare eventuali label di tab/sidebar che riferiscono ancora la pagina (non le funzionalità di arricchimento). Lasciare invariate le occorrenze in:
-  - `MissionDrawer`, `OracleContextPanel`, `ContextSummary`, `ContactInteractionTimeline`, ecc. (riferiscono l'azione tecnica `deep_search` di arricchimento, non la pagina Sherlock).
-
-### 5. Counter hook condiviso
-Path: `src/v2/hooks/useExploreTabCounters.ts`
-- Restituisce `{ network, contacts, biglietti, map }` con valori già formattati (`it-IT`).
-- Usa React Query con `staleTime: 60_000` per non hammerare il DB.
-
-## Fuori scopo
-
-- Non si tocca la sidebar globale (rail filtri) né le altre sezioni (Pipeline/Comunica/Intelligence).
-- Non si modifica la `UnifiedListToolbar` introdotta nelle iterazioni precedenti per le viste lista (filtri/chip).
-- Non si rinomina la funzione tecnica `deep_search` di arricchimento partner.
-
-## Rischi & verifiche
-
-- **Counter**: la query count su 12k+ contatti deve essere `head: true, count: 'exact'` per evitare di scaricare righe.
-- **Mobile**: header deve restare leggibile <640px → nascondere counter, mostrare solo icona+nome.
-- **Persistenza tab**: il "click sul titolo per ciclare" può confondere se la pagina è lenta a caricare → animazione leggera + aria-label esplicito ("Vai a tab successiva: Contatti CRM").
+Vista identica, dati diversi, performance preservata (collasso + virtualizzazione su WCA).
