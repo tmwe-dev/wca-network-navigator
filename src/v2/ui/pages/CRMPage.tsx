@@ -2,7 +2,7 @@
  * CRMPage V2 — Standalone V1 content migration (NO wrapper)
  */
 import { lazy, Suspense, useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { UserCheck, Sparkles, Kanban, Copy, Calculator, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIMatchDialog } from "@/components/contacts/AIMatchDialog";
@@ -14,7 +14,6 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { useNavigate } from "react-router-dom";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 
 const Contacts = lazy(() => import("./ContactsPage").then((m) => ({ default: m.ContactsPage })));
@@ -34,6 +33,13 @@ export function CRMPage(): React.ReactElement {
   const { setCrmActiveTab } = useGlobalFilters();
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  // Legacy: la tab "Biglietti" è stata spostata su /v2/pipeline/biglietti
+  useEffect(() => {
+    if (tab === "biglietti") {
+      navigate("/v2/pipeline/biglietti", { replace: true });
+    }
+  }, [tab, navigate]);
 
   const scoreMutation = useMutation({
     mutationFn: () => invokeEdge("calculate-lead-scores", { body: {}, context: "CRM.recalcScore" }),
