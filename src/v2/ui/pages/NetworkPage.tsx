@@ -16,17 +16,40 @@ import { LayoutGrid, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useWcaPartnersAsCompanies } from "@/v2/hooks/companyList/useWcaPartnersAsCompanies";
-import { ActiveFiltersBar } from "@/v2/ui/molecules/ActiveFiltersBar";
 import { useWcaActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
+import { ListToolbar, useListSort, type SortOption } from "@/v2/ui/molecules/ListToolbar";
+import { useSortedCompanies, type CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
+
+const WCA_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
+  { key: "name", label: "Nome" },
+  { key: "city", label: "Città" },
+  { key: "wcaYears", label: "Anni WCA" },
+  { key: "score", label: "Score" },
+  { key: "contactsCount", label: "Contatti" },
+];
 
 function CardListBody(): React.ReactElement {
   const { companies, isLoading } = useWcaPartnersAsCompanies();
   const chips = useWcaActiveFilterChips();
+  const { sortKey, sortDir, cycle } = useListSort<CompanySortKey>("list:wca", "name");
+  const [search, setSearch] = useState("");
+  const sorted = useSortedCompanies(companies, sortKey, sortDir, search);
   return (
-    <div className="flex flex-col h-full min-h-0 px-4 pb-3 pt-2">
-      <ActiveFiltersBar chips={chips} className="mb-2 -mx-4" />
+    <div className="flex flex-col h-full min-h-0 pb-3">
+      <ListToolbar<CompanySortKey>
+        countLabel={`${sorted.length}/${companies.length} aziende`}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        sortOptions={WCA_SORT_OPTIONS}
+        onCycleSort={cycle}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cerca partner, città, referente…"
+        chips={chips}
+      />
+      <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
       <CompanyCardList
-        companies={companies}
+        companies={sorted}
         isLoading={isLoading}
         emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
         onOpenCompany={(c) => {
@@ -43,6 +66,7 @@ function CardListBody(): React.ReactElement {
           );
         }}
       />
+      </div>
     </div>
   );
 }
