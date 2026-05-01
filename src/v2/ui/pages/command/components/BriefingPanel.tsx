@@ -21,7 +21,7 @@ export function BriefingPanel({ briefing, onPromptSelect }: Props) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-      className="mx-auto w-full max-w-2xl px-6 pt-6"
+      className="mx-auto w-full max-w-2xl px-6 pb-4"
     >
       <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm px-5 py-4">
         <div className="flex items-center gap-2 mb-2">
