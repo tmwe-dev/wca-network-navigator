@@ -73,16 +73,15 @@ export function BCASmartActions({ card }: Props) {
     });
   }, [card, navigate]);
 
-  // Solo blocco AI; Comunicazione è già renderizzato dal parent BCADetailPanel.
+  // Solo blocco AI: Comunicazione è già renderizzato dal parent BCADetailPanel.
   return (
     <UnifiedSmartActions
+      sections={["ai"]}
       hasEmail={false} hasPhone={false} hasWhatsApp={false}
       onCockpit={handleCockpitWithContext}
       onDeepSearch={handleDeepSearch}
       onLinkedIn={handleLinkedIn}
       onCampaign={handleCampaign}
-      // Hide comm block by rendering only the AI part: trick = pass empty handlers + flags false → render entrambi.
-      // Per evitare duplicazione visiva uso un componente dedicato sotto.
     />
   );
 }
