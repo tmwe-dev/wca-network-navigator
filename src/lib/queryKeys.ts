@@ -90,6 +90,11 @@ export const queryKeys = {
     campaign: (...args: unknown[]) => ["bca-campaign", ...args] as const,
   },
 
+  // ── Explore section counters (header) ─────────────────
+  explore: {
+    counters: ["explore", "tab-counters"] as const,
+  },
+
   // ── Activities ────────────────────────────────────────
   activities: {
     all: ["activities"] as const,
