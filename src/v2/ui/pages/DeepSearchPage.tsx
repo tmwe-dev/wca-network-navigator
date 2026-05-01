@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Search, Loader2, CheckCircle2, AlertCircle, Square, FileText,
+  Loader2, CheckCircle2, AlertCircle, Square, FileText,
   Sparkles, SkipForward, Globe, ListChecks,
 } from "lucide-react";
 import { LazyMarkdown } from "@/components/ui/lazy-markdown";
