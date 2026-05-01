@@ -1,146 +1,82 @@
-## Obiettivo
+## Cosa ho verificato (situazione reale)
 
-Rendere Outreach **leggibile e logico**. Oggi i tab funzionano ma "non si capisce un cazzo": le righe mostrano "reply received email" anziché *con chi* hai parlato, le sequenze non si capisce a cosa servano, Coda AI / Risposte in arrivo / Storico Attività si confondono.
+**1. Biglietti da visita — dove compaiono oggi**
 
-Riduciamo a **due soli contenitori operativi** + due viste di consultazione, e ridisegniamo le righe per mettere al centro **azienda → cosa è successo → quando**.
+| Posizione | Cosa mostra | Verdetto |
+|---|---|---|
+| `/v2/pipeline/biglietti` | `BusinessCardsHub` — pagina dedicata BCA | ✅ Casa madre |
+| `/v2/explore/network` (WCA Partner) | `OperationsView` ha un toggle interno **Partner / BCA** che monta `BusinessCardsView` | ❌ **Duplicato reale** — stessa pagina dentro Network |
+| `/v2/pipeline/contacts` (Contatti CRM) | **Non mostra biglietti come entità.** Mostra solo i filtri "WCA ✓ / Solo CRM" sui contatti | ✅ Nessun duplicato (sono contatti, non biglietti) |
+
+→ Da rimuovere: il toggle "BCA" dentro Network. I biglietti vivono solo in Pipeline › Biglietti.
+
+**2. Menu a 3 righe in Contatti CRM (screenshot 1)**
+
+Le righe accumulate sono:
+1. **Tabs sezione** (Contatti / Kanban / Biglietti / Duplicati / Campagne / Agenda) — `SectionTabs`
+2. **Breadcrumb** "Home › Pipeline › Contatti CRM" — `GoldenHeaderBar`
+3. **Barra contatori + filtri** "11349 contatti · Fuori circuito · Tutti · WCA ✓ · Solo CRM · Segmenti · Nuovo"
+4. **Barra gruppi paese** con bandierine
+5. **Header colonne** (Azienda / Contatto / Città / Origine)
+
+Il problema vero: 1 + 2 sono ridondanti (i tabs già dicono dove sei). 3 + 4 sono due barre di filtri che potrebbero stare insieme.
+
+**3. Kanban che piace (screenshot 3)**
+
+`ContactPipelineView` ha: una sola riga di KPI con icone colorate e contatore inline, sotto la barra di funnel con percentuali, poi le colonne. **Niente breadcrumb, niente filtri ripetuti, tutto leggibile a colpo d'occhio.** Questo è lo standard da estendere.
 
 ---
 
-## 1. La nuova mappa mentale di Outreach
+## Piano (3 step, uno per volta come chiede l'utente)
 
-Solo **4 tab visibili**, ognuno con uno scopo univoco:
+### Step A — Rimuovere il duplicato Biglietti da Network
+- In `src/components/operations/OperationsView.tsx`: togliere il toggle Partner/BCA e il branch che renderizza `BusinessCardsView`. `NetworkPage` mostra **solo partner**.
+- Aggiungere in `BusinessCardsHub` un pulsante "Sync da Network" (la stessa azione `sync-business-cards`) così la funzione non si perde.
+- `/v2/network` resta = WCA Partner. I biglietti si gestiscono solo in `/v2/pipeline/biglietti`.
+
+### Step B — Compattare l'header di Contatti CRM in una sola riga "Kanban-style"
+Adottare la grammatica visiva del Kanban su tutta la sezione Pipeline:
 
 ```text
-COCKPIT        → Sala produzione: scelgo contatti, l'AI mi prepara messaggi.
-                 Esce sempre una BOZZA (mai invio diretto).
-
-IN USCITA      → Sala spedizioni: tutto ciò che è pronto e attende l'OK.
-                 Sotto-tab:
-                   • Da approvare  (bozze: manuali + AI + campagna)
-                   • Pianificate   (autorizzate, in attesa del loro orario)
-                   • Inviate       (storico spedizioni)
-                   • Fallite       (errori da rivedere)
-
-RISPOSTE       → Posta in arrivo cross-canale (Email + WA + LinkedIn).
-                 Messaggi ARRIVATI da clienti/partner che aspettano una mossa.
-
-ATTIVITÀ       → Diario di bordo: tutto quello che è accaduto + cosa devi fare
-                 (chiamate, meeting, follow-up, invii completati).
-                 Filtri per tipo, stato, sorgente.
+┌──────────────────────────────────────────────────────────────────────┐
+│ Tabs sezione (Contatti CRM | Kanban | Biglietti | …)                 │  ← unica navigazione
+├──────────────────────────────────────────────────────────────────────┤
+│ 11 349 contatti  ✈ 0  📩 1  ⏰ 0  ❄ 1  ⭐ 0  🤝 0      ⚙ Filtri  + │  ← riga KPI+azioni
+├──────────────────────────────────────────────────────────────────────┤
+│ Paese ▾  Tutti  🇦🇫 AF (1)  🇦🇱 AL (1)  🇦🇴 AO (6)  …                │  ← gruppi (resta)
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Spariscono come tab autonomi:**
-- *Coda AI* → si fonde dentro **In Uscita › Da approvare** (le proposte AI sono bozze come le altre, con badge "🤖 AI" e tooltip "Proposta da Luca / Sherlock").
-- *Sequenze* → si sposta dentro **Cockpit** come pannello laterale "Applica una cadenza" (è uno strumento di produzione, non un tab).
-- *A/B Test* → si sposta sotto **Cockpit › Strumenti**.
+Cosa cambia concretamente:
+- **Nascondere il `GoldenHeaderBar` (breadcrumb) sulle pagine Pipeline**: i tabs di sezione sono già il "dove sei". Una prop `hideBreadcrumb` su `PipelineSection` o omissione del componente.
+- **Fondere la riga "11349 contatti + Fuori circuito + WCA✓/Solo CRM + Segmenti + Nuovo" in una singola toolbar Kanban-style**: contatore a sinistra, mini-KPI con icona (come il Kanban: 👤 0  📨 1  ⏰ 0  ❄ 1), filtri WCA come pill compatte, "Segmenti" e "+ Nuovo" a destra.
+- **Mantenere la barra Paese** (è informativa, non duplicata).
+- **Rimuovere la riga "header colonne sortabili"** quando lo spazio è stretto: il sort si attiva da un menu kebab sulla colonna, oppure si tiene ma con padding ridotto.
 
-Risultato: 7 tab → **4 tab**. Niente più contenitori che sembrano duplicati.
+Risultato: da 5 righe → **3 righe** (tabs + toolbar unica + gruppi paese).
 
----
+### Step C — Estendere lo stile Kanban anche a Network e Biglietti
+Una volta validato in Contatti CRM, applico la stessa toolbar compatta a:
+- `BusinessCardsHub` (Pipeline › Biglietti)
+- `OperationsView` (Network › WCA Partner)
 
-## 2. La riga unica "leggibile" (usata in tutti i tab)
-
-Oggi vedi: `Reply: received email — oversea1@asl-corp.com.vn`. Inutile.
-
-Nuova riga (stessa anatomia in In Uscita / Risposte / Attività):
-
-```text
-[LOGO]  Acme Logistics · Vietnam               [↗ Email]   ⏰ 24 apr 09:20
-        Maria Nguyen <maria@acme.vn>                       👤 Manuale
-        ✉️  "Re: Quotation for Hanoi-Genoa route"
-        Aspetta la tua risposta · ricevuta 2h fa
-                                              [Approva] [Rispondi] [⋯]
-```
-
-Componenti chiave per ogni riga:
-- **Logo azienda** (favicon dal dominio email, fallback: iniziale colorata).
-- **Azienda + paese** in grassetto come titolo (non l'oggetto tecnico).
-- **Persona + email** sotto, in piccolo.
-- **Icona-azione** colorata che dice *cosa è successo*: ✉️ inviata, ↩️ risposta ricevuta, 📞 chiamata, 🤝 meeting, 🤖 proposta AI, 🔄 follow-up, 🗓️ pianificata.
-- **Badge sorgente**: 👤 Manuale · 🤖 AI (Luca) · 📧 Campagna · 🎯 Missione · 🔁 Sequenza.
-- **Frase in italiano** che spiega *cosa fare/cosa è successo* ("Aspetta la tua risposta", "Pronta per partire alle 10:30", "Follow-up scaduto da 2 giorni").
-- **Data + ora** sempre esplicite, mai solo "24 apr".
-
-Su click → si apre il pannello laterale già esistente (`EmailPreviewPane`) con corpo completo, thread e azioni.
+Stessa regola: una sola riga di KPI con icone semantiche colorate, niente breadcrumb ridondante, filtri come chip inline.
 
 ---
 
-## 3. Cosa cambia in concreto, tab per tab
+## Dettagli tecnici (per chi legge il codice)
 
-### Cockpit (resta produzione)
-- Aggiungere pannello laterale "**Applica una cadenza**" che mostra i template di Sequenze (Primo Contatto, Follow-up, Nurturing…) e permette di lanciarli sui contatti selezionati.
-- Banner di intro: *"Qui prepari i messaggi. Ogni cosa che invii da qui finisce in **In Uscita › Da approvare** prima di partire."*
-
-### In Uscita (cuore operativo, unificato)
-- **Da approvare** = bozze manuali + AI (ex Coda AI) + campagne, tutte insieme con badge sorgente.
-- Header del sotto-tab: contatori chiari (`12 da approvare · 3 AI · 2 campagne`).
-- Riga ridisegnata come sopra.
-- `EmailPreviewPane` mostra in alto la "**provenienza**": "Generata da Luca AI il 24 apr · su missione Vietnam Q2" oppure "Scritta da te nel Cockpit".
-
-### Risposte (ex "Risposte in arrivo / Circuito")
-- Banner: *"Messaggi che ti hanno scritto. Da qui decidi: rispondi (l'AI prepara una bozza che finisce in **In Uscita**), ignori, o escali a chiamata."*
-- Riga ridisegnata: **Azienda + persona**, anteprima testo, "ricevuto 2h fa", azioni rapide.
-- Tab interni canale: 📧 Email · 💬 WhatsApp · 💼 LinkedIn con contatori.
-
-### Attività (ex Storico Attività)
-- Banner: *"Diario completo: ogni chiamata, email inviata, meeting, follow-up. Filtra per capire cosa hai fatto e cosa devi ancora fare."*
-- Riga ridisegnata: niente più "send_email" tecnico → **icona + frase italiana** ("✉️ Email inviata a Acme · 24 apr 09:20").
-- Per le attività AI: tag "🤖 fatto da Luca" con tooltip che spiega perché.
+- **Toggle BCA da rimuovere**: `OperationsView.tsx` righe ~43-98 (`networkView` state + `<CreditCard /> BCA` button + branch `activeView === "bca"`).
+- **Breadcrumb da nascondere in Pipeline**: `PipelineSection.tsx` non monta direttamente `GoldenHeaderBar`, ma lo eredita dal layout. Aggiungere `hideHeader` o un flag locale; altrimenti rimuovere `GoldenHeaderBar` dal layout per la route `/v2/pipeline/*`.
+- **Toolbar unificata**: nuova `ContactsToolbar` (compact) che assorbe l'attuale "Header" (riga 75-100 di `ContactListPanel.tsx`) + `ContactSegments` + KPI da `useContactListPanel` (totalCount, holdingPattern, ecc.).
+- **Niente modifiche a logica/dati**: solo presentazione. Filtri WCA, segmenti, ordinamento e selezione restano gli stessi hook.
 
 ---
 
-## 4. Sequenze: come funzionano e dove vanno
+## Cosa NON faccio in questo piano
+- Non tocco la logica di filtro contatti, RLS, hook dati.
+- Non cambio il routing (`/v2/pipeline/biglietti` resta).
+- Non rinomino tabs.
+- Non tocco il Kanban (ti piace così com'è).
 
-Una **Sequenza** = ricetta multi-step (es. *Email giorno 0 → LinkedIn giorno 3 → Email giorno 7 → Telefono giorno 14*). Si crea una volta, si applica a *N contatti*.
-
-Spostamento e chiarimento:
-- Le sequenze diventano un **wizard dentro Cockpit** ("Applica cadenza ai contatti selezionati"), non un tab separato.
-- I template di sistema sono visibili e duplicabili. Crearne uno nuovo = wizard in 3 step (obiettivo, sorgente contatti, step della cadenza).
-- Una sequenza attiva genera invii singoli che compaiono in **In Uscita › Da approvare** (mai automatica al 100%): tu vedi `🔁 Sequenza "Primo Contatto" · step 2 di 4`.
-- Pannello "Sequenze attive" come collassabile dentro Cockpit (vedi quante stanno girando, su quanti contatti, quante hanno risposto).
-
----
-
-## 5. Componenti tecnici da creare/modificare
-
-**Nuovi componenti UI (presentazione):**
-- `OutreachRow.tsx` — riga unificata (logo + azienda + icona-azione + frase + data + sorgente).
-- `CompanyAvatar.tsx` — logo da favicon dominio con fallback iniziali colorate.
-- `ActionIcon.tsx` — mappa azione → icona + colore + label italiana.
-- `SourcePill.tsx` — badge sorgente standard (Manuale / AI / Campagna / Missione / Sequenza).
-- `RelativeTime.tsx` — "ricevuta 2h fa", "fra 3 giorni", "scaduto da ieri".
-
-**Modificati:**
-- `OutreachPage.tsx` — riduce a 4 tab, sposta A/B Test e Sequenze.
-- `CockpitPage.tsx` — aggiunge pannello laterale "Applica cadenza" + "Sequenze attive".
-- `DaInviareSubTab.tsx` — assorbe le proposte AI (query unificata activities + agent_tasks pending).
-- `AttivitaTab.tsx` — nuova riga, frasi italiane, icone per tipo.
-- `HoldingPatternCommandCenter.tsx` — rinominato "Risposte", nuova riga.
-- `TabIntroBanner.tsx` — testi rivisti con tono didattico (spiega da dove arriva il dato e che azioni puoi fare).
-
-**Eliminati come tab (codice preservato):**
-- `CodaAITab.tsx` — logica fusa in `DaInviareSubTab`.
-- `SchedulingTab.tsx` — diventa pannello dentro Cockpit.
-
-**Nessuna modifica al DB e nessuna modifica al motore di invio.** Solo presentazione + riorganizzazione tab.
-
----
-
-## 6. Microcopy che vedrai ovunque (tono)
-
-- "Niente parte senza il tuo OK."
-- "Da qui prepari → da **In Uscita** autorizzi → in **Attività** vedi cosa è successo."
-- "Questa l'ha proposta Luca AI il 24 apr per la missione Vietnam Q2."
-- "Maria di Acme ti ha scritto 2 ore fa. Vuoi che Luca prepari la risposta?"
-
----
-
-## 7. Cosa NON tocchiamo
-
-- Schema DB, edge functions, motore invio, regole RLS, sistema permessi.
-- Logica di approvazione/coda (resta `email_campaign_queue` + `pending` come stabilito).
-- Soft-delete, holding pattern governance, AI Invocation Charter.
-
----
-
-Confermi e procedo a implementare? Se vuoi cambiamenti (es. mantenere Coda AI separato, o lasciare Sequenze come tab), dimmelo prima e adatto il piano.
+Procedo step-by-step: **prima Step A** (rimuovere duplicato Biglietti da Network), poi mi confermi e passo a Step B.

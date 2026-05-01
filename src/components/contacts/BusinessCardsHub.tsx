@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Handshake, Loader2, ImagePlus, LayoutGrid, LayoutList, Rows3,
+  Handshake, Loader2, ImagePlus, LayoutGrid, LayoutList, Rows3, RefreshCw,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
@@ -41,6 +41,7 @@ export default function BusinessCardsHub() {
   const [eventName, setEventName] = useState("");
   const [metAt, setMetAt] = useState("");
   const [location, setLocation] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const { handleSendEmail, handleSendWhatsApp, waAvailable: _waAvailable } = useDirectContactActions();
   const { processFiles, uploading, progress } = useUploadAndParse();
@@ -52,6 +53,22 @@ export default function BusinessCardsHub() {
   const eventNames = [...new Set(cards.map((c) => c.event_name).filter(Boolean))] as string[];
   const pendingImages = pendingFiles.filter(isImageFile).length;
   const pendingData = pendingFiles.filter(isDataFile).length;
+
+  const handleSync = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const data = await invokeEdge<Record<string, number>>("sync-business-cards", {
+        context: "BusinessCardsHub.sync_business_cards",
+      });
+      toast({ title: `Sincronizzazione completata: ${data?.upserted ?? 0} biglietti aggiornati` });
+      await refetch();
+    } catch (e: unknown) {
+      toast({ title: e instanceof Error ? e.message : "Errore sincronizzazione" });
+    } finally {
+      setSyncing(false);
+    }
+  }, [syncing, refetch]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
@@ -189,6 +206,20 @@ export default function BusinessCardsHub() {
             <Badge variant="outline" className="text-[10px] h-7 px-2 border-primary/15">{cards.length} biglietti</Badge>
 
             <div className="ml-auto flex items-center gap-0.5 bg-muted/40 rounded-md p-0.5">
+              <TooltipProvider>
+                <Tooltip><TooltipTrigger asChild>
+                  <button
+                    onClick={handleSync}
+                    disabled={syncing}
+                    className="p-1.5 rounded transition-colors hover:bg-muted/60 disabled:opacity-50"
+                  >
+                    {syncing
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <RefreshCw className="w-3.5 h-3.5" />}
+                  </button>
+                </TooltipTrigger><TooltipContent side="bottom" className="text-xs">Sincronizza biglietti dal Network</TooltipContent></Tooltip>
+              </TooltipProvider>
+              <span className="w-px h-4 bg-border/40 mx-0.5" />
               {([
                 { mode: "compact" as ViewMode, icon: LayoutList, label: "Lista" },
                 { mode: "card" as ViewMode, icon: LayoutGrid, label: "Card" },
