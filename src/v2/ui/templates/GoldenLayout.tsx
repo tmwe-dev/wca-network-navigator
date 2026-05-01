@@ -57,7 +57,17 @@ export function GoldenLayout({
 
       {/* Desktop: 40/60 resizable split */}
       <div className="flex-1 min-h-0 hidden md:block">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/*
+          Force remount when the panel count changes. react-resizable-panels
+          stores layout per Group instance; mounting/unmounting a child panel
+          on the fly leads to "Previous layout not found for panel index -1".
+          Keying on hasDetail recreates the group cleanly on selection toggle.
+        */}
+        <ResizablePanelGroup
+          key={hasDetail ? "split" : "list-only"}
+          direction="horizontal"
+          className="h-full"
+        >
           <ResizablePanel
             defaultSize={hasDetail ? 40 : 100}
             minSize={hasDetail ? 30 : 100}
