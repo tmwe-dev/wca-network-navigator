@@ -48,3 +48,70 @@ export async function countEmailDrafts() {
   if (error) throw error;
   return count ?? 0;
 }
+
+export interface CampaignQueueRecipient {
+  readonly partner_id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly subject: string;
+  readonly html: string;
+}
+
+export interface CreateCampaignDraftQueueInput {
+  readonly userId: string;
+  readonly subject: string;
+  readonly htmlBody: string;
+  readonly partnerIds: ReadonlyArray<string>;
+  readonly recipients: ReadonlyArray<CampaignQueueRecipient>;
+}
+
+export interface CreateCampaignDraftQueueResult {
+  readonly draftId: string;
+  readonly queued: number;
+}
+
+/**
+ * Crea un email_drafts (status=ready) e accoda i destinatari in
+ * email_campaign_queue (status=pending). Nessun invio diretto: l'utente
+ * autorizzerà l'invio dalla coda "In Uscita".
+ */
+export async function createCampaignDraftQueue(
+  input: CreateCampaignDraftQueueInput,
+): Promise<CreateCampaignDraftQueueResult> {
+  const { userId, subject, htmlBody, partnerIds, recipients } = input;
+
+  const draftPayload = {
+    user_id: userId,
+    subject,
+    html_body: htmlBody,
+    body: htmlBody,
+    status: "ready",
+    partner_ids: partnerIds as unknown as string[],
+    recipient_count: recipients.length,
+  } as unknown as Record<string, unknown>;
+
+  const { data: draftRow, error: draftErr } = await supabase
+    .from("email_drafts")
+    .insert(draftPayload as never)
+    .select("id")
+    .maybeSingle();
+  if (draftErr) throw draftErr;
+  const draftId = (draftRow as { id?: string } | null)?.id;
+  if (!draftId) throw new Error("Impossibile creare la bozza email");
+
+  const items: QueueInsert[] = recipients.map((r, idx) => ({
+    draft_id: draftId,
+    user_id: userId,
+    partner_id: r.partner_id,
+    email_address: r.email,
+    recipient_name: r.name,
+    subject: r.subject,
+    html_body: r.html,
+    status: "pending",
+    position: idx,
+  } as unknown as QueueInsert));
+
+  await insertCampaignQueueBatch(items);
+
+  return { draftId, queued: items.length };
+}
