@@ -126,6 +126,16 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
       const id = `crm:${key}`;
       const contacts = g.rows.map((row) => toContactEntity(row, id));
       const matched = g.rows.some((r) => !!r.wca_partner_id);
+      // Holding: vero se ALMENO un contatto del gruppo risulta in attesa.
+      // Supporta sia il flag esplicito `in_holding_pattern` sia il
+      // `lead_status === 'holding'` (compatibilità con la pipeline lead).
+      const inHolding = g.rows.some((r) => {
+        const row = r as Record<string, unknown>;
+        return (
+          row.in_holding_pattern === true ||
+          row.lead_status === "holding"
+        );
+      });
       out.push({
         id,
         name: g.display,
@@ -137,6 +147,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
           : { label: "CRM", tone: "neutral" },
         contactsCount: contacts.length,
         contacts,
+        meta: { holding: inHolding },
         raw: { rows: g.rows },
       });
     }
