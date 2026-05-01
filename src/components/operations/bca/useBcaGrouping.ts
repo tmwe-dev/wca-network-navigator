@@ -31,7 +31,7 @@ interface CardWithCountry extends BusinessCardWithPartner {
 
 export function useBcaGrouping(cards: BusinessCardWithPartner[]) {
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("expanded");
+  const [viewMode, setViewMode] = useState<ViewMode>("card");
   const [sortMode, setSortMode] = useState<SortMode>("matched_first");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);

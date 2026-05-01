@@ -231,46 +231,30 @@ export function PartnerListPanel({
       <div className="h-full min-h-0 flex flex-col overflow-hidden">
         {/* ═══ COMPACT HEADER ═══ */}
         <div className="px-3 pt-2.5 pb-1 flex-shrink-0 space-y-2">
-          {/* ROW 1 (condizionata): visibile solo quando c'è un filtro paese attivo.
-              Il totale globale è già in top bar (AnagraphicsPills). */}
-          {hasSelectedCountries && (
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                {countryCodes.slice(0, 5).map(cc => (
-                  <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
-                ))}
-                {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>+{countryCodes.length - 5}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-sm font-bold truncate text-foreground">{headerTitle}</h2>
-                <span className="text-[10px] font-mono text-muted-foreground">{stats.total} partner</span>
-              </div>
-              <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
-            </div>
-          )}
-
-          {/* ROW 0 — Toggle "Nascondi in circuito" promosso in alto, evidente */}
-          <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-card/40 px-2.5 py-1.5">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={filteredPartners.length > 0 && selectedIds.size === filteredPartners.length}
-                onCheckedChange={(checked) => {
-                  if (checked) setSelectedIds(new Set(filteredPartners.map((p: { id: string }) => p.id)));
-                  else setSelectedIds(new Set());
-                }}
-                aria-label="Seleziona tutti"
-                className="shrink-0"
-              />
-              <span className="text-[11px] text-muted-foreground">Seleziona tutti</span>
-              {!hasSelectedCountries && (
-                <span className="text-[10px] font-mono text-muted-foreground/70 ml-1">· senza filtro paese</span>
+          {/* ROW 1: Country + count + deep search filter */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {hasSelectedCountries ? (
+                <>
+                  {countryCodes.slice(0, 5).map(cc => (
+                    <span key={cc} className="text-lg leading-none">{getCountryFlag(cc)}</span>
+                  ))}
+                  {countryCodes.length > 5 && <span className={cn("text-[10px] font-bold ml-0.5", "text-muted-foreground")}>+{countryCodes.length - 5}</span>}
+                </>
+              ) : (
+                <span className="text-lg leading-none">🌍</span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Plane className={cn("w-3.5 h-3.5", hideHolding ? "text-sky-500" : "text-muted-foreground")} />
-              <span className="text-[11px] font-medium text-foreground">Nascondi in circuito ({holdingCount})</span>
-              <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-bold truncate text-foreground">
+                {headerTitle}
+              </h2>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {stats.total} partner
+              </span>
             </div>
+            {/* Deep Search filter only */}
+            <IconIndicator icon={Telescope} count={stats.total - stats.withDeep} label="Senza Deep Search" isDark={isDark} onClick={() => toggleProgressFilter("deep")} active={progressFilter === "deep"} verified={verified.deep} />
           </div>
 
           {/* ROW 2: Active filters summary + Reset */}
@@ -365,6 +349,25 @@ export function PartnerListPanel({
               aliasGenerating={aliasGenerating}
             />
           )}
+
+          {/* ROW 3: Select all + Hide holding pattern toggle */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={filteredPartners.length > 0 && selectedIds.size === filteredPartners.length}
+              onCheckedChange={(checked) => {
+                if (checked) setSelectedIds(new Set(filteredPartners.map((p: { id: string }) => p.id)));
+                else setSelectedIds(new Set());
+              }}
+              aria-label="Seleziona tutti"
+              className="shrink-0"
+            />
+            <span className="text-[10px] text-muted-foreground">Tutti</span>
+            <div className="w-px h-3 bg-border/50 mx-1" />
+            <Switch checked={hideHolding} onCheckedChange={setHideHolding} className="scale-75" />
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Plane className="w-3 h-3" />Nascondi in circuito ({holdingCount})
+            </span>
+          </div>
 
           {/* SELECTION ACTION BAR */}
           {selectedIds.size > 0 && (

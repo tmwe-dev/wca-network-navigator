@@ -20,11 +20,7 @@ const ContactPipelineView = lazy(() =>
     default: m.ContactPipelineView,
   })),
 );
-const BusinessCardsView = lazy(() =>
-  import("@/components/operations/BusinessCardsView").then((m) => ({
-    default: m.BusinessCardsView,
-  })),
-);
+const BusinessCardsHub = lazy(() => import("@/components/contacts/BusinessCardsHub"));
 const DuplicateDetector = lazy(() =>
   import("@/components/contacts/DuplicateDetector").then((m) => ({
     default: m.DuplicateDetector,
@@ -63,7 +59,7 @@ export function PipelineSection(): React.ReactElement {
             path="biglietti"
             element={
               <Suspense fallback={<TabFallback />}>
-                <BusinessCardsView />
+                <BusinessCardsHub />
               </Suspense>
             }
           />
