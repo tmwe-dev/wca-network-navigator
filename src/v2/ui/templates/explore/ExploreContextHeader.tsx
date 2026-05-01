@@ -14,7 +14,6 @@
  * in LayoutHeader (`campaign-header-controls`).
  */
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Globe, Users, IdCard, Map as MapIcon, SearchCheck, ChevronLeft, ChevronRight,
@@ -52,30 +51,16 @@ function findActiveIndex(pathname: string): number {
   return idx === -1 ? 0 : idx;
 }
 
-export function ExploreContextHeader(): React.ReactElement {
+/**
+ * ExploreContextHeader — montato direttamente nel LayoutHeader.
+ * Si auto-nasconde fuori dalla sezione /v2/explore.
+ */
+export function ExploreContextHeader(): React.ReactElement | null {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const counters = useExploreTabCounters();
-  const [container, setContainer] = React.useState<HTMLElement | null>(null);
-  const [actionsSlot, setActionsSlot] = React.useState<HTMLElement | null>(null);
 
-  React.useEffect(() => {
-    // Riprova per qualche frame finché LayoutHeader non monta lo slot
-    let cancelled = false;
-    let tries = 0;
-    const tick = () => {
-      if (cancelled) return;
-      const el = document.getElementById("campaign-header-controls");
-      if (el) {
-        setContainer(el);
-        return;
-      }
-      if (tries++ < 30) requestAnimationFrame(tick);
-    };
-    tick();
-    return () => { cancelled = true; };
-  }, []);
-
+  const inExplore = pathname.startsWith("/v2/explore");
   const activeIdx = findActiveIndex(pathname);
   const active = TABS[activeIdx];
   const Icon = active.icon;
@@ -85,14 +70,16 @@ export function ExploreContextHeader(): React.ReactElement {
     navigate(TABS[next].to);
   }, [activeIdx, navigate]);
 
+  if (!inExplore) return null;
+
   const counterValue = active.counterKey ? counters[active.counterKey] : null;
   const showCounter = active.counterKey !== undefined;
 
   const nextTab = TABS[(activeIdx + 1) % TABS.length];
 
-  const headerContent = (
+  return (
     <div
-      className="flex items-center gap-1 min-w-0 flex-1"
+      className="flex items-center gap-1 min-w-0"
       data-testid="explore-context-header"
     >
       <button
@@ -140,17 +127,11 @@ export function ExploreContextHeader(): React.ReactElement {
 
       {/* Slot azioni iniettato dalle pagine via Portal (id stabile) */}
       <div
-        ref={(el) => setActionsSlot(el)}
         id="explore-header-actions"
-        className="flex items-center gap-2 shrink-0 min-w-0 ml-2"
+        className="flex items-center gap-2 shrink-0 ml-2"
       />
     </div>
   );
-
-  void actionsSlot;
-
-  if (!container) return <></>;
-  return createPortal(headerContent, container);
 }
 
 export default ExploreContextHeader;
