@@ -35,7 +35,7 @@ interface TabDef {
 }
 
 const TABS: readonly TabDef[] = [
-  { key: "network",   label: "WCA Partner",   to: "/v2/explore/network",     icon: Globe,       counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/explore/network", "/v2/explore"] },
+  { key: "network",   label: "WCA Partner",   to: "/v2/explore/network",     icon: Globe,       counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/explore/network"] },
   { key: "contacts",  label: "Contatti CRM",  to: "/v2/explore/contacts",    icon: Users,       counterKey: "contacts",  unitLabel: "contatti", matchPaths: ["/v2/explore/contacts"] },
   { key: "biglietti", label: "Biglietti",     to: "/v2/explore/biglietti",   icon: IdCard,      counterKey: "biglietti", unitLabel: "biglietti", matchPaths: ["/v2/explore/biglietti"] },
   { key: "map",       label: "Mappa",         to: "/v2/explore/map",         icon: MapIcon,     counterKey: "map",       unitLabel: "paesi",    matchPaths: ["/v2/explore/map"] },
