@@ -33,6 +33,9 @@ export function BCAFiltersRailContent() {
       onSetSortMode={g.setSortMode}
       viewMode={g.viewMode}
       onSetViewMode={g.setViewMode}
+      events={g.events}
+      eventFilter={g.eventFilter}
+      onSetEventFilter={g.setEventFilter}
     />
   );
 }

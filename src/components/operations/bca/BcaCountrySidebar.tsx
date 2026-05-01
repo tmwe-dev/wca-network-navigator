@@ -1,12 +1,12 @@
 import {
   Globe, SlidersHorizontal, Plane,
-  LayoutList, LayoutGrid, Rows3,
+  LayoutList, LayoutGrid, Rows3, Calendar,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { CountryEntry, ViewMode, SortMode } from "./useBcaGrouping";
+import type { CountryEntry, EventEntry, ViewMode, SortMode } from "./useBcaGrouping";
 
 interface BcaCountrySidebarProps {
   countries: CountryEntry[];
@@ -25,6 +25,9 @@ interface BcaCountrySidebarProps {
   onSetSortMode: (v: SortMode) => void;
   viewMode: ViewMode;
   onSetViewMode: (v: ViewMode) => void;
+  events?: EventEntry[];
+  eventFilter?: string | null;
+  onSetEventFilter?: (v: string | null) => void;
 }
 
 export function BcaCountrySidebar({
@@ -35,6 +38,7 @@ export function BcaCountrySidebar({
   hideHolding, holdingCount, onSetHideHolding,
   sortMode, onSetSortMode,
   viewMode, onSetViewMode,
+  events = [], eventFilter = null, onSetEventFilter,
 }: BcaCountrySidebarProps) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -93,6 +97,28 @@ export function BcaCountrySidebar({
             <Switch checked={hideHolding} onCheckedChange={onSetHideHolding} className="scale-[0.65]" />
           </div>
         </div>
+
+        {onSetEventFilter && events.length > 0 && (
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> Evento
+            </span>
+            <Select
+              value={eventFilter ?? "__all__"}
+              onValueChange={(v) => onSetEventFilter(v === "__all__" ? null : v)}
+            >
+              <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__" className="text-xs">Tutti gli eventi</SelectItem>
+                {events.map((e) => (
+                  <SelectItem key={e.name} value={e.name} className="text-xs">
+                    {e.name} ({e.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-1">
           <span className="text-[10px] text-muted-foreground">Ordina per</span>
