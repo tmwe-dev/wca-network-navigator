@@ -51,11 +51,11 @@ export function InUscitaTab({ onNavigate }: InUscitaTabProps = {}) {
       <TabIntroBanner
         id="inuscita"
         icon={ArrowUpFromLine}
-        title="In Uscita"
-        purpose="Tutto ciò che sta per partire (email/WA/LinkedIn). Niente parte senza la tua autorizzazione."
-        origin="Bozze manuali, Cockpit, agenti AI, campagne, sequenze"
-        actions="Aprire l'anteprima, autorizzare l'invio, riprogrammare, annullare"
-        relatedLink={onNavigate ? { label: "Vedi cadenze in Sequenze", onClick: () => onNavigate("programmazione") } : undefined}
+        title="In Uscita — sala spedizioni"
+        purpose="Tutto ciò che è pronto per partire. Niente parte senza il tuo OK. Bozze manuali, proposte AI, campagne e step di sequenza arrivano TUTTI qui."
+        origin="Cockpit (manuali), Coda AI (proposte agenti), campagne, sequenze attive"
+        actions="Anteprima a destra, autorizza l'invio, riprogramma, annulla"
+        relatedLink={onNavigate ? { label: "Vedi le cadenze in Strumenti › Sequenze", onClick: () => onNavigate("strumenti") } : undefined}
         tone="primary"
       />
       <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40 flex items-center justify-between">
