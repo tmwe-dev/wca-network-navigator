@@ -195,11 +195,9 @@ export default function BCAUnifiedHub() {
           <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => setTimelineMode(!timelineMode)}>
             <Clock className="w-3 h-3" /> Timeline Evento
           </Button>
-          {g.viewMode === "card" && (
-            <span className="text-[10px] text-muted-foreground italic">
-              💡 Suggerimento: trascina una card sulle azioni intelligenti del pannello a destra
-            </span>
-          )}
+          <span className="text-[10px] text-muted-foreground italic">
+            💡 Clicca una card per aprire il dettaglio · trascina dai 6 puntini sulle azioni intelligenti
+          </span>
         </div>
 
         {/* Two-column body: list + detail panel */}
@@ -242,26 +240,33 @@ export default function BCAUnifiedHub() {
                     {g.viewMode === "compact" ? (
                       <div className="divide-y divide-border/20">
                         {group.cards.map(card => (
-                          <div key={card.id} className="cursor-pointer" onClickCapture={(e) => {
-                            // open detail unless click is on a control inside the row
-                            const t = e.target as HTMLElement;
-                            if (t.closest("button,input,a")) return;
-                            setDetailCardId(card.id);
-                          }}>
-                            <BcaCompactCard card={card} isSelected={selectedBca.has(card.id)} onToggle={toggleBca} groupCompanyName={group.companyName} onSendEmail={handleSendEmail} onSendWhatsApp={handleSendWhatsApp} />
-                          </div>
+                          <BcaCompactCard
+                            key={card.id}
+                            card={card}
+                            isSelected={selectedBca.has(card.id)}
+                            onToggle={toggleBca}
+                            onOpenDetail={(id) => setDetailCardId(id)}
+                            enableDrag
+                            groupCompanyName={group.companyName}
+                            onSendEmail={handleSendEmail}
+                            onSendWhatsApp={handleSendWhatsApp}
+                          />
                         ))}
                       </div>
                     ) : g.viewMode === "expanded" ? (
                       <div className="space-y-2 p-3">
                         {group.cards.map(card => (
-                          <div key={card.id} onClickCapture={(e) => {
-                            const t = e.target as HTMLElement;
-                            if (t.closest("button,input,a")) return;
-                            setDetailCardId(card.id);
-                          }}>
-                            <BcaExpandedCard card={card} isSelected={selectedBca.has(card.id)} onToggle={toggleBca} groupCompanyName={group.companyName} onSendEmail={handleSendEmail} onSendWhatsApp={handleSendWhatsApp} />
-                          </div>
+                          <BcaExpandedCard
+                            key={card.id}
+                            card={card}
+                            isSelected={selectedBca.has(card.id)}
+                            onToggle={toggleBca}
+                            onOpenDetail={(id) => setDetailCardId(id)}
+                            enableDrag
+                            groupCompanyName={group.companyName}
+                            onSendEmail={handleSendEmail}
+                            onSendWhatsApp={handleSendWhatsApp}
+                          />
                         ))}
                       </div>
                     ) : (

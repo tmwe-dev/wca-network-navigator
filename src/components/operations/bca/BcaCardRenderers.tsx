@@ -18,10 +18,32 @@ interface CardProps {
   enableDrag?: boolean;
 }
 
-export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp }: CardProps) {
+export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+  const handleClick = () => {
+    if (onOpenDetail) onOpenDetail(card.id);
+    else onToggle(card.id);
+  };
   return (
-    <div className={cn("flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-primary/[0.06]" : "hover:bg-muted/20")} onClick={() => onToggle(card.id)}>
-      <Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} className="w-3 h-3" />
+    <div className={cn("group relative flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-all", isSelected ? "bg-primary/[0.06]" : "hover:bg-muted/20")} onClick={handleClick}>
+      {enableDrag && (
+        <button
+          type="button"
+          draggable
+          aria-label="Trascina sul pannello azioni"
+          title="Trascina sulle azioni intelligenti"
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = "copy";
+            e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
+            e.dataTransfer.setData("text/plain", card.id);
+          }}
+          className="inline-flex items-center justify-center w-4 h-4 rounded text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        >
+          <GripVertical className="w-3 h-3" />
+        </button>
+      )}
+      <Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} onClick={(e) => e.stopPropagation()} className="w-3 h-3" />
       <span className="text-xs font-medium text-foreground truncate flex-1">{card.contact_name || "—"}</span>
       {card.position && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{card.position}</span>}
       <div className="flex items-center gap-1 flex-shrink-0">
@@ -88,11 +110,36 @@ export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSe
   );
 }
 
-export function BcaExpandedCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp }: CardProps) {
+export function BcaExpandedCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+  const handleClick = () => {
+    if (onOpenDetail) onOpenDetail(card.id);
+    else onToggle(card.id);
+  };
   return (
-    <div className={cn("relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => onToggle(card.id)}>
-      <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} className="w-3.5 h-3.5" /></div>
-      <div className="space-y-2 pr-6">
+    <div className={cn("group relative rounded-lg border p-4 cursor-pointer transition-all hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06]" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={handleClick}>
+      {enableDrag && (
+        <button
+          type="button"
+          draggable
+          aria-label="Trascina sul pannello azioni"
+          title="Trascina sulle azioni intelligenti"
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = "copy";
+            e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
+            e.dataTransfer.setData("text/plain", card.id);
+          }}
+          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
+        >
+          <span className="relative inline-flex">
+            <GripVertical className="w-3 h-3" />
+            <GripVertical className="w-3 h-3 -ml-1.5" />
+          </span>
+        </button>
+      )}
+      <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5" /></div>
+      <div className={cn("space-y-2 pr-6", enableDrag && "pl-5")}>
         <div className="text-sm font-semibold text-foreground">{card.contact_name || "—"}</div>
         {card.position && <div className="text-xs text-muted-foreground">{card.position}</div>}
         <div className="flex flex-wrap gap-2 mt-1">
