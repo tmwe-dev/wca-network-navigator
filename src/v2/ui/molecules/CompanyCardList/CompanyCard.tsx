@@ -3,13 +3,19 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { ChevronDown, ChevronRight, Building2, Brain, Plane } from "lucide-react";
+import { ChevronDown, ChevronRight, Plane, Trophy, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { OptimizedImage } from "@/components/shared/OptimizedImage";
-import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
+import { EntityRow, type EntityRowTone } from "@/v2/ui/atoms/EntityRow";
 import { ContactSubCard } from "./ContactSubCard";
-import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
+import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
+
+function sourceTone(source: CompanySource): EntityRowTone {
+  if (source === "wca") return "wca";
+  if (source === "crm") return "crm";
+  if (source === "bca") return "bca";
+  return "neutral";
+}
 
 export interface CompanyCardProps extends CompanyCardListCallbacks {
   company: CompanyEntity;
@@ -26,109 +32,106 @@ export function CompanyCard({
   onOpenCompany,
   onOpenContact,
 }: CompanyCardProps): React.ReactElement {
-  const { name, city, countryCode, badge, contacts, contactsCount, meta, source } = company;
+  const { name, city, countryCode, badge, contacts, contactsCount, meta, source, score, primaryContact, channels, hasBca } = company;
   const Chevron = expanded ? ChevronDown : ChevronRight;
+  const tone = sourceTone(source);
 
-  const headerToneMatched =
-    badge?.tone === "wca" || source === "wca";
+  const titleSlot = (
+    <>
+      <span className="truncate text-foreground">{name || "—"}</span>
+      {badge && (
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[9px] flex-shrink-0 px-1 py-0 h-4",
+            badge.tone === "wca" && "bg-primary/15 text-primary border-primary/30",
+            badge.tone === "primary" && "bg-primary/15 text-primary border-primary/30",
+            badge.tone === "neutral" && "bg-muted/40 text-muted-foreground border-border/40"
+          )}
+        >
+          {badge.label}
+        </Badge>
+      )}
+      {meta?.wcaYears != null && (
+        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-amber-500/10 text-amber-500 border-amber-500/30 gap-0.5">
+          <Trophy className="w-2.5 h-2.5" />
+          {meta.wcaYears}
+        </Badge>
+      )}
+      {hasBca && (
+        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+          BCA
+        </Badge>
+      )}
+      {meta?.holding && (
+        <span title="In circuito di attesa">
+          <Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
+        </span>
+      )}
+    </>
+  );
+
+  const subTitleSlot = primaryContact ? (
+    <>
+      <span className="truncate font-medium text-foreground/70">{primaryContact.name}</span>
+      {primaryContact.role && (
+        <>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="truncate">{primaryContact.role}</span>
+        </>
+      )}
+      {contactsCount > 1 && (
+        <span className="text-muted-foreground/60 flex-shrink-0">+{contactsCount - 1}</span>
+      )}
+    </>
+  ) : (
+    <span className="italic text-muted-foreground/50">
+      {contactsCount === 0 ? "Nessun referente" : `${contactsCount} contatt${contactsCount === 1 ? "o" : "i"}`}
+    </span>
+  );
 
   return (
     <div
       className={cn(
-        "rounded-xl border overflow-hidden transition-all",
-        headerToneMatched
-          ? "border-primary/30 bg-primary/[0.03]"
-          : "border-border/60 bg-card/40"
+        "rounded-xl overflow-hidden transition-all",
+        expanded && "ring-1 ring-border/40 bg-card/20"
       )}
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30">
-        <button
-          type="button"
-          onClick={() => onToggleExpand(company.id)}
-          className="flex-shrink-0 p-1 rounded hover:bg-muted/40 text-muted-foreground"
-          aria-label={expanded ? "Comprimi" : "Espandi"}
-        >
-          <Chevron className="w-3.5 h-3.5" />
-        </button>
-        <div
-          className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border",
-            headerToneMatched
-              ? "border-primary/30 bg-primary/10"
-              : "border-border/40 bg-muted/30"
-          )}
-        >
-          {meta?.logoUrl ? (
-            <OptimizedImage
-              src={meta.logoUrl}
-              alt=""
-              className="w-7 h-7 rounded object-contain"
-            />
-          ) : (
-            <Building2
-              className={cn(
-                "w-4 h-4",
-                headerToneMatched ? "text-primary/60" : "text-muted-foreground/40"
-              )}
-            />
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => onOpenCompany?.(company)}
-          className="flex-1 min-w-0 text-left group"
-        >
-          <div className="flex items-center gap-2">
-            {countryCode && (
-              <span className="text-lg leading-none flex-shrink-0">
-                {countryCodeToFlag(countryCode)}
-              </span>
-            )}
-            <span className="text-sm font-semibold text-foreground truncate group-hover:text-primary">
-              {name || "—"}
-            </span>
-            {badge && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[9px] flex-shrink-0",
-                  badge.tone === "wca" &&
-                    "bg-primary/15 text-primary border-primary/30",
-                  badge.tone === "primary" &&
-                    "bg-primary/15 text-primary border-primary/30",
-                  badge.tone === "neutral" &&
-                    "bg-muted/40 text-muted-foreground border-border/40"
-                )}
-              >
-                {badge.label}
-              </Badge>
-            )}
-            {meta?.holding && (
-              <span title="In circuito di attesa">
-                <Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
-              </span>
-            )}
-          </div>
-          <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-            {city && <span className="truncate">{city}</span>}
-            <span>·</span>
-            <span>
-              {contactsCount} contatt{contactsCount === 1 ? "o" : "i"}
-            </span>
-            {meta?.wcaYears != null && (
-              <>
-                <span>·</span>
-                <span className="text-primary/70">{meta.wcaYears} anni WCA</span>
-              </>
-            )}
-          </div>
-        </button>
-      </div>
+      <EntityRow
+        tone={tone}
+        countryCode={countryCode}
+        chevronSlot={
+          <button
+            type="button"
+            onClick={() => onToggleExpand(company.id)}
+            className="p-0.5 rounded hover:bg-muted/40 text-muted-foreground"
+            aria-label={expanded ? "Comprimi" : "Espandi"}
+          >
+            <Chevron className="w-3.5 h-3.5" />
+          </button>
+        }
+        titleSlot={titleSlot}
+        subTitleSlot={subTitleSlot}
+        city={city}
+        channels={channels}
+        score={score ?? null}
+        actionsSlot={
+          <button
+            type="button"
+            onClick={() => onOpenCompany?.(company)}
+            className="p-1 rounded hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+            aria-label="Apri dettaglio"
+            title="Apri dettaglio"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        }
+        onClick={() => onOpenCompany?.(company)}
+      />
 
       {/* Sub-cards contatti */}
       {expanded && (
-        <div className="p-3">
+        <div className="px-3 py-2 border-t border-border/30">
           {contacts === undefined ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {Array.from({ length: Math.min(contactsCount || 2, 4) }).map((_, i) => (

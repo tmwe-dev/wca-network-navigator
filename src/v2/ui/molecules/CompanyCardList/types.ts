@@ -57,6 +57,24 @@ export interface CompanyEntity {
     logoUrl?: string | null;
   };
   /**
+   * Score sintetico 0-100 (rating WCA, lead score CRM, match confidence BCA).
+   * Quando assente la pill score non viene mostrata.
+   */
+  score?: number | null;
+  /**
+   * Referente principale da mostrare in sub-header (riga 2 dell'header).
+   * Per WCA: primo `partner_contacts`. Per CRM: primo contatto del gruppo.
+   * Per BCA: `contact_name + position` del biglietto.
+   */
+  primaryContact?: { name: string; role?: string | null } | null;
+  /**
+   * Canali di contatto aggregati a livello azienda (per la riga compatta).
+   * Indipendente da quelli dei singoli `contacts`.
+   */
+  channels?: ContactChannels & { website?: boolean };
+  /** True se l'azienda ha almeno un biglietto BCA collegato. */
+  hasBca?: boolean;
+  /**
    * Payload originale per le azioni (apertura drawer, ⋯).
    */
   raw?: unknown;
