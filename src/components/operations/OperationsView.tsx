@@ -126,6 +126,10 @@ export default function Operations(_props?: { activeView?: "partners" | "bca" })
     scannedCountries: dirTotals?.scannedCountries || 0,
     totalDirectory: dirTotals?.totalDirectory || 0,
   } : null;
+  // globalStats è ora derivato ma non più mostrato qui (titolo+counter
+  // gestiti dall'ExploreContextHeader). Mantengo il calcolo per eventuali
+  // futuri consumer e per evitare regressioni di cache.
+  void globalStats;
 
   const toggleFavorite = useToggleFavorite();
 
