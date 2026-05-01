@@ -31,6 +31,8 @@ function getFilterContext(pathname: string, networkView: "partners" | "bca"): { 
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
+  const asideRef = React.useRef<HTMLElement | null>(null);
+  const toggleRef = React.useRef<HTMLButtonElement | null>(null);
   const [networkView, setNetworkView] = React.useState<"partners" | "bca">(() => {
     try { return (sessionStorage.getItem("network-view") as "partners" | "bca") || "partners"; }
     catch { return "partners"; }
@@ -53,12 +55,30 @@ export function ContextFiltersRail(): React.ReactElement | null {
     setIsOpen(false);
   }, [pathname, networkView]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (asideRef.current?.contains(target)) return;
+      if (toggleRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isOpen]);
+
   if (!context) return null;
 
   if (useCollapsible) {
     return (
       <div className={isOpen ? "hidden lg:flex w-80 shrink-0" : "hidden lg:block w-0 shrink-0"}>
         <button
+          ref={toggleRef}
           type="button"
           onClick={() => setIsOpen((open) => !open)}
           className={[
@@ -72,7 +92,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
         </button>
 
         {isOpen && (
-          <aside className="flex h-full w-80 shrink-0 flex-col border-r border-border/40 bg-card/45 backdrop-blur-sm" aria-label={context.title}>
+          <aside ref={asideRef} className="flex h-full w-80 shrink-0 flex-col border-r border-border/40 bg-card/45 backdrop-blur-sm" aria-label={context.title}>
             <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
               <SlidersHorizontal className="h-4 w-4 text-primary" />
               <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
