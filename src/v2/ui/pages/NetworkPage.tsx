@@ -16,11 +16,15 @@ import { LayoutGrid, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useWcaPartnersAsCompanies } from "@/v2/hooks/companyList/useWcaPartnersAsCompanies";
+import { ActiveFiltersBar } from "@/v2/ui/molecules/ActiveFiltersBar";
+import { useWcaActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
 
 function CardListBody(): React.ReactElement {
   const { companies, isLoading } = useWcaPartnersAsCompanies();
+  const chips = useWcaActiveFilterChips();
   return (
     <div className="flex flex-col h-full min-h-0 px-4 pb-3 pt-2">
+      <ActiveFiltersBar chips={chips} className="mb-2 -mx-4" />
       <CompanyCardList
         companies={companies}
         isLoading={isLoading}

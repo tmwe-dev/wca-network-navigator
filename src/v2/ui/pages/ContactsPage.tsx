@@ -15,13 +15,17 @@ import type { ContactDetail } from "@/hooks/useContactDetail";
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useCrmContactsAsCompanies } from "@/v2/hooks/companyList/useCrmContactsAsCompanies";
+import { ActiveFiltersBar } from "@/v2/ui/molecules/ActiveFiltersBar";
+import { useCrmActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
 
 const log = createLogger("Contacts");
 
 function CrmCardListBody(): React.ReactElement {
   const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
+  const chips = useCrmActiveFilterChips();
   return (
     <div className="flex flex-col h-full min-h-0 px-4 pb-3 pt-2">
+      <ActiveFiltersBar chips={chips} className="mb-2 -mx-4" />
       <CompanyCardList
         companies={companies}
         isLoading={isLoading}
