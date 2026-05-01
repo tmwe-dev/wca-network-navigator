@@ -3,7 +3,7 @@ import { useAppNavigate } from "@/hooks/useAppNavigate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Mail, Phone, MessageCircle, Send, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2 } from "lucide-react";
+import { Building2, Mail, Phone, MessageCircle, Send, Handshake, Globe, Loader2, Search, Briefcase, CheckCircle2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BCAOcrConfidence } from "./BCAOcrConfidence";
 import { BCACreateContact } from "./BCACreateContact";
@@ -125,7 +125,7 @@ export function BusinessCardDetailPanel({ card, onClose: _onClose }: { card: Bus
 
       {/* Quick actions */}
       <div className="space-y-1.5">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Send className="w-3 h-3" /> Azioni rapide</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Send className="w-3 h-3" /> Comunicazione</p>
         <div className="grid grid-cols-2 gap-1.5">
           {card.email && (
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start"
