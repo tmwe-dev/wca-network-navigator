@@ -9601,6 +9601,30 @@ export type Database = {
           title: string
         }[]
       }
+      merge_duplicate_imported_contacts: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
+        }[]
+      }
+      merge_duplicate_partner_contacts: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
+        }[]
+      }
+      merge_duplicate_partners: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
+        }[]
+      }
       purge_inbound_activities: {
         Args: { p_only_orphans?: boolean }
         Returns: Json
