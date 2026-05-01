@@ -43,6 +43,7 @@ import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { queryKeys } from "@/lib/queryKeys";
 import { BCAUnifiedDetailPanel } from "./BCAUnifiedDetailPanel";
+import { deleteBusinessCards } from "@/data/businessCards";
 
 const log = createLogger("BCAUnifiedHub");
 
@@ -116,6 +117,20 @@ export default function BCAUnifiedHub() {
     }
     if (partnerIds.size === 0) { toast.warning("Nessun biglietto associato a un partner."); return; }
     deepSearch.start(Array.from(partnerIds), true);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedBca);
+    if (!ids.length) return;
+    if (!confirm(`Eliminare ${ids.length} biglietti da visita?`)) return;
+    try {
+      await deleteBusinessCards(ids);
+      toast.success(`${ids.length} biglietti eliminati`);
+      setSelectedBca(new Set());
+      qc.invalidateQueries({ queryKey: queryKeys.businessCards.all });
+    } catch (e: unknown) {
+      toast.error("Errore eliminazione: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   if (isLoading) {
