@@ -29,7 +29,7 @@ import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy
 traceCollector.init();
 installSupabaseTraceProxy();
 
-const DEFAULT_HOME_ROUTE = "/v2/partner-hub?country=JO";
+const DEFAULT_HOME_ROUTE = "/v2/command";
 
 function appendLocationParts(target: string, search: string, hash: string): string {
   if (!search) return `${target}${hash}`;

@@ -17,11 +17,12 @@ import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Globe, Users, IdCard, Map as MapIcon, SearchCheck, ChevronLeft, ChevronRight,
+  LayoutDashboard, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExploreTabCounters, type ExploreTabCounters } from "@/v2/hooks/useExploreTabCounters";
 
-type TabKey = "network" | "contacts" | "biglietti" | "map" | "deep";
+type TabKey = "command" | "partner-hub" | "network" | "contacts" | "biglietti" | "map" | "deep";
 
 interface TabDef {
   readonly key: TabKey;
@@ -34,6 +35,8 @@ interface TabDef {
 }
 
 const TABS: readonly TabDef[] = [
+  { key: "command",   label: "Plancia di Comando", to: "/v2/command",          icon: LayoutDashboard,                                              matchPaths: ["/v2/command"] },
+  { key: "partner-hub", label: "Partner Hub",      to: "/v2/partner-hub",       icon: Building2,    counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/partner-hub"] },
   { key: "network",   label: "WCA Partner",   to: "/v2/explore/network",     icon: Globe,       counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/explore/network"] },
   { key: "contacts",  label: "Contatti CRM",  to: "/v2/explore/contacts",    icon: Users,       counterKey: "contacts",  unitLabel: "contatti", matchPaths: ["/v2/explore/contacts"] },
   { key: "biglietti", label: "Biglietti",     to: "/v2/explore/biglietti",   icon: IdCard,      counterKey: "biglietti", unitLabel: "biglietti", matchPaths: ["/v2/explore/biglietti"] },
@@ -47,8 +50,7 @@ function formatNumber(n: number | null): string {
 }
 
 function findActiveIndex(pathname: string): number {
-  const idx = TABS.findIndex((t) => t.matchPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
-  return idx === -1 ? 0 : idx;
+  return TABS.findIndex((t) => t.matchPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
 }
 
 /**
@@ -60,17 +62,17 @@ export function ExploreContextHeader(): React.ReactElement | null {
   const navigate = useNavigate();
   const counters = useExploreTabCounters();
 
-  const inExplore = pathname.startsWith("/v2/explore");
   const activeIdx = findActiveIndex(pathname);
+  // Se la rotta corrente non è nel cycler, nascondiamo la barra (es. /settings, /agents)
+  if (activeIdx === -1) return null;
   const active = TABS[activeIdx];
   const Icon = active.icon;
 
   const goTo = React.useCallback((delta: number) => {
-    const next = (activeIdx + delta + TABS.length) % TABS.length;
+    const safeIdx = activeIdx < 0 ? 0 : activeIdx;
+    const next = (safeIdx + delta + TABS.length) % TABS.length;
     navigate(TABS[next].to);
   }, [activeIdx, navigate]);
-
-  if (!inExplore) return null;
 
   const counterValue = active.counterKey ? counters[active.counterKey] : null;
   const showCounter = active.counterKey !== undefined;
