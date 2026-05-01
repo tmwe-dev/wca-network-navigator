@@ -17,7 +17,7 @@ interface InUscitaTabProps {
   readonly onNavigate?: (tab: string) => void;
 }
 
-export function InUscitaTab({ onNavigate }: InUscitaTabProps = {}) {
+export function InUscitaTab(_props: InUscitaTabProps = {}) {
   const [sub, setSub] = useState("da-inviare");
 
   const { data: counts } = useQuery({

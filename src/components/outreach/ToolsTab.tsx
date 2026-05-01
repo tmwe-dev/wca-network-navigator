@@ -5,7 +5,7 @@
  */
 import { Suspense, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Bot, FlaskConical, Wrench } from "lucide-react";
+import { Clock, Bot, FlaskConical } from "lucide-react";
 import { lazyRetry } from "@/lib/lazyRetry";
 
 const SchedulingTab = lazyRetry(() => import("./SchedulingTab").then(m => ({ default: m.SchedulingTab })));
