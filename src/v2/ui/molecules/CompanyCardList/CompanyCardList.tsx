@@ -25,6 +25,10 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   defaultExpanded?: boolean;
   /** Stima altezza per virtualizzazione (header collassato). */
   estimateRowSize?: number;
+  /** IDs delle aziende selezionate (multi-select). */
+  selectedIds?: Set<string>;
+  /** Callback toggle selezione. Se assente, niente checkbox. */
+  onToggleSelect?: (id: string) => void;
 }
 
 const COLLAPSED_ROW = 60;        // header card (px)
@@ -40,6 +44,8 @@ export function CompanyCardList({
   onOpenCompany,
   onOpenContact,
   onExpand,
+  selectedIds,
+  onToggleSelect,
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -143,6 +149,8 @@ export function CompanyCardList({
                   onToggleExpand={handleToggleExpand}
                   onOpenCompany={onOpenCompany}
                   onOpenContact={onOpenContact}
+                  selected={selectedIds?.has(company.id) ?? false}
+                  onToggleSelect={onToggleSelect}
                 />
               </div>
             );
