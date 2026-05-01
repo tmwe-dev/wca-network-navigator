@@ -84,11 +84,10 @@ export async function createCampaignDraftQueue(
     user_id: userId,
     subject,
     html_body: htmlBody,
-    body: htmlBody,
     status: "ready",
-    partner_ids: partnerIds as unknown as string[],
-    recipient_count: recipients.length,
+    total_count: recipients.length,
   } as unknown as Record<string, unknown>;
+  void partnerIds;
 
   const { data: draftRow, error: draftErr } = await supabase
     .from("email_drafts")
@@ -103,7 +102,7 @@ export async function createCampaignDraftQueue(
     draft_id: draftId,
     user_id: userId,
     partner_id: r.partner_id,
-    email_address: r.email,
+    recipient_email: r.email,
     recipient_name: r.name,
     subject: r.subject,
     html_body: r.html,
