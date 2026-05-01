@@ -27,6 +27,9 @@ export function EntityRowFlag({
   const flag = code ? countryCodeToFlag(code) : "";
   const text = (label ?? code).toUpperCase().slice(0, 3);
   const flagSize = size === "lg" ? "text-[26px]" : "text-lg";
+  // Mai mostrare il "mondino" 🌐: se manca il codice paese rendiamo un
+  // placeholder neutro così la card resta pulita.
+  const hasFlag = !!flag;
   return (
     <div
       className={cn(
@@ -35,8 +38,20 @@ export function EntityRowFlag({
       )}
       aria-label={code || "Paese sconosciuto"}
     >
-      <span className={cn(flagSize, "leading-none")}>{flag || "🌐"}</span>
-      {text && (
+      {hasFlag ? (
+        <span className={cn(flagSize, "leading-none")}>{flag}</span>
+      ) : (
+        <span
+          className={cn(
+            flagSize,
+            "leading-none text-muted-foreground/30 font-light"
+          )}
+          aria-hidden
+        >
+          ·
+        </span>
+      )}
+      {hasFlag && text && (
         <span className="text-[8px] text-muted-foreground/80 font-semibold tracking-wide mt-0.5">
           {text}
         </span>

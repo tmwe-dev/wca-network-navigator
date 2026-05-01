@@ -3,12 +3,11 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plane, Trophy, MoreHorizontal, Star, Clock } from "lucide-react";
+import { Plane, Trophy, MoreHorizontal, Star, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { EntityRow, type EntityRowTone } from "@/v2/ui/atoms/EntityRow";
-import { ContactSubCard } from "./ContactSubCard";
 import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
 
 function sourceTone(source: CompanySource): EntityRowTone {
@@ -20,10 +19,6 @@ function sourceTone(source: CompanySource): EntityRowTone {
 
 export interface CompanyCardProps extends CompanyCardListCallbacks {
   company: CompanyEntity;
-  /** True quando la card è aperta (contatti visibili). */
-  expanded: boolean;
-  /** Toggle apertura. */
-  onToggleExpand: (id: string) => void;
   /** True quando l'azienda è multi-selezionata. */
   selected?: boolean;
   /** Toggle selezione (checkbox). */
@@ -32,15 +27,11 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
 
 export function CompanyCard({
   company,
-  expanded,
-  onToggleExpand,
   onOpenCompany,
-  onOpenContact,
   selected,
   onToggleSelect,
 }: CompanyCardProps): React.ReactElement {
-  const { name, city, countryCode, badge, contacts, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
-  const Chevron = expanded ? ChevronDown : ChevronRight;
+  const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
   const tone = sourceTone(source);
 
   const recency = React.useMemo(() => {
@@ -147,7 +138,6 @@ export function CompanyCard({
     <div
       className={cn(
         "rounded-xl overflow-hidden transition-all",
-        expanded && "ring-1 ring-border/40 bg-card/20",
         selected && "ring-1 ring-primary/60 bg-primary/[0.05]"
       )}
     >
@@ -164,16 +154,6 @@ export function CompanyCard({
               className="h-3.5 w-3.5"
             />
           ) : undefined
-        }
-        chevronSlot={
-          <button
-            type="button"
-            onClick={() => onToggleExpand(company.id)}
-            className="p-0.5 rounded hover:bg-muted/40 text-muted-foreground"
-            aria-label={expanded ? "Comprimi" : "Espandi"}
-          >
-            <Chevron className="w-3.5 h-3.5" />
-          </button>
         }
         titleSlot={titleSlot}
         subTitleSlot={subTitleSlot}
@@ -193,37 +173,6 @@ export function CompanyCard({
         }
         onClick={() => onOpenCompany?.(company)}
       />
-
-      {/* Sub-cards contatti */}
-      {expanded && (
-        <div className="px-3 py-2 border-t border-border/30">
-          {contacts === undefined ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {Array.from({ length: Math.min(contactsCount || 2, 4) }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-12 rounded-lg border border-border/40 bg-muted/20 animate-pulse"
-                />
-              ))}
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="text-[11px] text-muted-foreground/70 italic px-1 py-2">
-              Nessun contatto · Apri l'azienda per aggiungerne uno
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {contacts.map((c) => (
-                <ContactSubCard
-                  key={c.id}
-                  contact={c}
-                  company={company}
-                  onOpen={onOpenContact}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

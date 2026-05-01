@@ -168,7 +168,6 @@ export function EntityListWithDetail({
           selectedIds={selection.selectedIds}
           onToggleSelect={selection.toggle}
           onOpenCompany={onOpenCompany}
-          onOpenContact={onOpenContact ? (c, comp) => onOpenContact({ id: c.id, raw: c.raw }, comp) : undefined}
         />
       </div>
 
