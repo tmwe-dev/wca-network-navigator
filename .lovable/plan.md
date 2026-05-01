@@ -1,67 +1,73 @@
+## Diagnosi
+
+Misurando lo screenshot a 1016×691, la pagina `/v2/communicate/outreach` (tab "Risposte") spende l'altezza così:
+
+```text
+GoldenHeaderBar (breadcrumb + utente)     ~7%   utile
+SectionTabs (Inbox/Outreach/...)          ~5%   utile
+OutreachStatsHeader "Pipeline Outreach"   ~5%   quasi vuoto (collassato, mostra "0 da inviare · 0 oggi")
+OutreachMiniCharts (sparkline+donut)      ~10%  rumore visivo
+TabIntroBanner "Risposte · Posta..."      ~17%  testo onboarding
+"Centro Operativo" + tab canali Email/WA  ~12%  utile ma sovradimensionato
+OutreachLegendFooter                      ~6%   legenda colori
+─────────────────────────────────────────────
+TOTALE CROMO                              ~62%
+LISTA MESSAGGI (il vero contenuto)        ~38% — di cui visibili davvero ~15-18%
+```
+
+Risultato: tre messaggi visibili su una lista da centinaia. Il "Pipeline Outreach" header è pensato per **outreach in uscita** (da inviare/oggi/falliti) e non ha alcun senso sopra la tab **Risposte** (inbound).
+
 ## Obiettivo
 
-Unificare l'esperienza visiva delle tre aree che mostrano "persone/aziende" (Contatti CRM, Biglietti da visita BCA, WCA Partner) e collassare i tre item del menu di sinistra in **un solo item "Network"** con tre micro-tab in cima.
+Portare lo spazio messaggi da ~18% a ~80%+ senza perdere informazioni essenziali, applicando la stessa logica a tutte le sub-tab Outreach (Cockpit/In Uscita/Risposte/Attività/Strumenti).
 
----
+## Piano
 
-## 1. Stile elenco unificato (BCA → CRM)
+### 1. Stats header context-aware (`OutreachStatsHeader`)
+- Nasconderlo completamente quando la sub-tab attiva è `circuito` (Risposte) — le stats outbound non c'entrano con l'inbound.
+- Per le altre tab: rimanere collassato di default (già così) ma ridurre padding da `py-1.5` a `py-1` e font.
 
-Lo stile dei Biglietti da visita (header compatto + barra paesi con bandiere e contatori + viste card/grid/list + sidebar gruppi) diventa lo standard. La pagina **Contatti CRM** adotta lo stesso scheletro:
+### 2. MiniCharts on-demand
+- Spostare `OutreachMiniCharts` **dentro** il pannello Cockpit (dove ha senso) invece che globalmente in cima.
+- Rimuoverlo da `OutreachPage.tsx`: libera ~10% di altezza su tutte le altre tab.
+
+### 3. TabIntroBanner → tooltip
+- Convertire il banner "Risposte · Posta in arrivo cross-canale..." da blocco fisso a **tooltip su icona ⓘ** accanto al titolo della tab nella `VerticalTabNav`.
+- Liberato altro ~17%. Il testo resta accessibile, non più invadente.
+- Stessa logica per gli altri `TabIntroBanner` (Cockpit, In Uscita, Attività, Strumenti).
+
+### 4. Legenda footer → toggle nascosto di default
+- `OutreachLegendFooter` parte già con flag localStorage `outreach-legend-hidden`, ma di default è visibile. Invertire: nascosto di default, riapribile da una piccola icona "Legenda" nel footer della VerticalTabNav.
+- Liberato ~6%.
+
+### 5. "Centro Operativo" channel tabs compatti (`HoldingContactList`)
+- Ridurre l'header "Centro Operativo 964" da blocco grande a singola riga compatta con i 3 chip canale (Email 946 / WA 18 / LinkedIn) inline, altezza ~32px invece di ~80px.
+
+### 6. GoldenHeaderBar slim
+- Ridurre padding verticale del breadcrumb a `py-1.5` per recuperare ~2%.
+
+## Risultato atteso
 
 ```text
-┌─ Header compatto: count · badge "Fuori/In circuito" · Segmenti · Nuovo ─┐
-├─ Tabs orizzontali paese: 🇮🇹 IT(123) 🇩🇪 DE(45) 🇫🇷 FR(...) ...        ─┤
-├─ Toolbar: GroupBy · View toggle (list/card/grid) · Sort · Search       ─┤
-├─ ELENCO (stesso ContactCard / BcaCard renderer)        │ DETTAGLIO 60% │
-│                                                        │ + strumenti   │
-│                                                        │ verifica      │
-│                                                        │ Holding ✈️    │
-└────────────────────────────────────────────────────────┴───────────────┘
+Cromo finale                  ~12-15%
+Lista messaggi                ~85-88%
+Messaggi visibili a 691px:   da 3 → ~10-12
 ```
 
-Cosa resta invariato sul lato destro del CRM: tutti gli **strumenti di verifica del circuito di attesa** (Holding Pattern, badge ✈️, last-contact, score, escalation) restano nel `ContactDetailPanel`. Aggiungiamo solo il `UnifiedSmartActions` già esistente in alto al pannello dettaglio (già fatto nel passo precedente), così le 8 azioni standard sono uguali ovunque.
+## Sezione tecnica
 
-Il **menu orizzontale a chip** dei filtri (paese / stato / origine, in funzione del GroupBy attivo) viene estratto in un componente condiviso `EntityCountryTabs` riutilizzato sia da CRM che da BCA — stessa altezza, stesso stile bandiera+contatore, stesso scroll orizzontale.
+**File da modificare:**
+- `src/v2/ui/pages/OutreachPage.tsx` — rimuovere `<OutreachMiniCharts />`, condizionare `<OutreachStatsHeader />` su `tab !== "circuito"`, default-hide legend.
+- `src/components/outreach/HoldingPatternCommandCenter.tsx` — rimuovere `<TabIntroBanner />` (sostituito da tooltip).
+- `src/components/outreach/InUscitaTab.tsx` / `AttivitaTab.tsx` / `ToolsTab.tsx` — stessa rimozione TabIntroBanner.
+- `src/v2/ui/pages/CockpitPage.tsx` — aggiungere `<OutreachMiniCharts />` come header interno opzionale.
+- `src/components/ui/VerticalTabNav.tsx` — supportare prop `tooltip` per icona ⓘ accanto a label.
+- `src/components/outreach/HoldingContactList.tsx` — header "Centro Operativo" compattato.
+- `src/components/outreach/OutreachLegendFooter.tsx` — invertire default a `hidden=true`.
+- `src/v2/ui/templates/GoldenHeaderBar.tsx` — padding slim.
 
-## 2. Consolidamento navigazione: 1 item invece di 3
+**Nessun cambio business-logic**: solo riorganizzazione UI/spaziature, zero modifiche a hook, query, o RPC.
 
-Oggi nel menu sinistro abbiamo tre voci separate (Network/WCA Partner, Contatti CRM, Biglietti). Diventano una sola voce **"Network"** con tre micro-tab in cima alla pagina, accanto al breadcrumb già presente in WCA Partner:
+## Domanda di conferma
 
-```text
-Home › Network
-┌──────────────────────────────────────────────────┐
-│ [ WCA Partner ]  [ Contatti CRM ]  [ Biglietti ] │   ← micro-tabs
-├──────────────────────────────────────────────────┤
-│  contenuto della tab attiva                      │
-└──────────────────────────────────────────────────┘
-```
-
-Routing:
-- `/v2/explore/network` → tab WCA Partner (default, com'è oggi)
-- `/v2/explore/contacts` → tab Contatti CRM (sposta `ContactsPage` qui)
-- `/v2/explore/biglietti` → tab BCA (sposta `BCAUnifiedHub` qui)
-
-Sidebar sinistra: rimane solo **"Network"**. Le voci "Contatti CRM" e "Biglietti" vengono rimosse. Le rotte vecchie (`/v2/pipeline/contacts`, `/v2/pipeline/biglietti`) restano come **redirect** a quelle nuove per non rompere link/bookmark.
-
-La sezione **Pipeline** mantiene Kanban, Duplicati, Campagne, Agenda — non più Contatti CRM né Biglietti (che vivono ora in Network).
-
-## 3. File toccati (sintesi tecnica)
-
-**Nuovi**
-- `src/v2/ui/molecules/EntityCountryTabs.tsx` — barra paesi condivisa (estratta da BCA).
-- `src/v2/ui/pages/sections/NetworkSection.tsx` — wrapper con `SectionTabs` (3 tab) + `<Routes>`.
-
-**Modificati**
-- `src/components/contacts/ContactListPanel.tsx` — adotta `EntityCountryTabs` + header compatto stile BCA + view toggle list/card/grid.
-- `src/components/contacts/bca/BCAUnifiedHub.tsx` — usa `EntityCountryTabs` al posto della barra paesi inline.
-- `src/v2/ui/pages/sections/PipelineSection.tsx` — rimuove tab "Contatti" e "Biglietti", aggiunge redirect.
-- `src/App.tsx` (o file routes V2) — registra `/v2/explore/*` su `NetworkSection`.
-- Sidebar V2 (`src/v2/ui/.../Sidebar*.tsx`) — rimuove i 3 item, lascia solo "Network".
-
-## 4. Cosa NON cambia
-- Logica DAL, hook dati, RLS, Holding Pattern, scoring, drag&drop BCA, `UnifiedSmartActions`.
-- Nessuna modifica a edge functions o schema DB.
-- I dettagli a destra restano specifici per tipo (Contact / Partner / BCA) — cambia solo l'**involucro** elenco e la navigazione.
-
-## Conferma
-Confermi di procedere con (A) unificazione stile elenco CRM ↔ BCA e (B) consolidamento delle 3 voci di menu in **Network** con 3 micro-tab?
+Procedo su tutti e 6 i punti? Oppure preferisci che faccia solo i primi 3 (rimozione MiniCharts globali + StatsHeader nascosto in Risposte + TabIntroBanner come tooltip), che da soli liberano ~32% di altezza e risolvono il 90% del problema?

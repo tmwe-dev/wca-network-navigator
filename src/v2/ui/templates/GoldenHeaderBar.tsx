@@ -31,7 +31,7 @@ export function GoldenHeaderBar({
   return (
     <div
       className={cn(
-        "h-11 flex items-center justify-between gap-3 px-4 border-b border-border/40 bg-card/40 backdrop-blur-sm shrink-0",
+        "h-8 flex items-center justify-between gap-3 px-4 border-b border-border/40 bg-card/40 backdrop-blur-sm shrink-0",
         className,
       )}
       data-testid="golden-header-bar"

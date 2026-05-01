@@ -5,9 +5,8 @@
  */
 import { Suspense, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Bot, FlaskConical, Wrench } from "lucide-react";
+import { Clock, Bot, FlaskConical } from "lucide-react";
 import { lazyRetry } from "@/lib/lazyRetry";
-import { TabIntroBanner } from "./TabIntroBanner";
 
 const SchedulingTab = lazyRetry(() => import("./SchedulingTab").then(m => ({ default: m.SchedulingTab })));
 const CodaAITab = lazyRetry(() => import("./CodaAITab").then(m => ({ default: m.CodaAITab })));
@@ -22,16 +21,6 @@ export function ToolsTab({ onNavigate }: ToolsTabProps = {}) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TabIntroBanner
-        id="strumenti"
-        icon={Wrench}
-        title="Strumenti"
-        purpose="Strumenti che lavorano insieme a Outreach: cadenze multi-step, proposte degli agenti AI, esperimenti A/B."
-        origin="Configurazione: tu + sistema"
-        actions="Creare sequenze, approvare proposte AI, leggere risultati A/B"
-        relatedLink={onNavigate ? { label: "Tutto ciò che parte è in In Uscita", onClick: () => onNavigate("inuscita") } : undefined}
-        tone="neutral"
-      />
       <div className="shrink-0 px-4 py-2 border-b border-border/30">
         <Tabs value={section} onValueChange={(v) => setSection(v as typeof section)}>
           <TabsList className="bg-muted/40 h-8">

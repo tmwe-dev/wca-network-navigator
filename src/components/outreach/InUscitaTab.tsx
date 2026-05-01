@@ -12,14 +12,12 @@ import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
 import { FallitiSubTab } from "./FallitiSubTab";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
-import { TabIntroBanner } from "./TabIntroBanner";
-import { ArrowUpFromLine } from "lucide-react";
 
 interface InUscitaTabProps {
   readonly onNavigate?: (tab: string) => void;
 }
 
-export function InUscitaTab({ onNavigate }: InUscitaTabProps = {}) {
+export function InUscitaTab(_props: InUscitaTabProps = {}) {
   const [sub, setSub] = useState("da-inviare");
 
   const { data: counts } = useQuery({
@@ -48,16 +46,6 @@ export function InUscitaTab({ onNavigate }: InUscitaTabProps = {}) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TabIntroBanner
-        id="inuscita"
-        icon={ArrowUpFromLine}
-        title="In Uscita — sala spedizioni"
-        purpose="Tutto ciò che è pronto per partire. Niente parte senza il tuo OK. Bozze manuali, proposte AI, campagne e step di sequenza arrivano TUTTI qui."
-        origin="Cockpit (manuali), Coda AI (proposte agenti), campagne, sequenze attive"
-        actions="Anteprima a destra, autorizza l'invio, riprogramma, annulla"
-        relatedLink={onNavigate ? { label: "Vedi le cadenze in Strumenti › Sequenze", onClick: () => onNavigate("strumenti") } : undefined}
-        tone="primary"
-      />
       <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40 flex items-center justify-between">
         <Tabs value={sub} onValueChange={setSub}>
           <TabsList className="bg-muted/40 h-8">

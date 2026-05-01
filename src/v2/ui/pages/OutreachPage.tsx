@@ -9,7 +9,6 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
 import { OutreachLegendFooter } from "@/components/outreach/OutreachLegendFooter";
 
-const OutreachMiniCharts = lazyRetry(() => import("@/components/analytics/OutreachMiniCharts").then(m => ({ default: m.OutreachMiniCharts })));
 const CockpitContent = lazyRetry(() => import("./CockpitPage").then(m => ({ default: m.CockpitPage })));
 const InUscitaTab = lazyRetry(() => import("@/components/outreach/InUscitaTab").then(m => ({ default: m.InUscitaTab })));
 const AttivitaTab = lazyRetry(() => import("@/components/outreach/AttivitaTab").then(m => ({ default: m.AttivitaTab })));
@@ -27,20 +26,19 @@ export function OutreachPage() {
   useEffect(() => { setOutreachTab(tab); }, [tab, setOutreachTab]);
 
   const tabs: VerticalTab[] = [
-    { value: "cockpit",  label: "Cockpit",   icon: Rocket },
-    { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
-    { value: "circuito", label: "Risposte",  icon: Plane },
-    { value: "attivita", label: "Attività",  icon: ListTodo },
-    { value: "strumenti", label: "Strumenti", icon: Wrench },
+    { value: "cockpit",  label: "Cockpit",   icon: Rocket, tooltip: "Centro di comando outreach: stats, mini-grafici e azioni rapide." },
+    { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine, tooltip: "Coda dei messaggi pronti per essere inviati o programmati." },
+    { value: "circuito", label: "Risposte",  icon: Plane, tooltip: "Posta in arrivo cross-canale (Email + WhatsApp + LinkedIn): messaggi che ti hanno scritto e aspettano una mossa. Puoi approvare la risposta AI, ignorare o fare escalation a chiamata." },
+    { value: "attivita", label: "Attività",  icon: ListTodo, tooltip: "Tasks e follow-up generati da campagne, missioni e azioni manuali." },
+    { value: "strumenti", label: "Strumenti", icon: Wrench, tooltip: "Strumenti avanzati: A/B test, scheduling, coda AI." },
   ];
+
+  // StatsHeader ha senso solo per outreach OUTBOUND, non sulla tab Risposte
+  const showStatsHeader = tab !== "circuito";
 
   return (
     <div data-testid="page-outreach" className="flex flex-col h-full overflow-hidden">
-      <OutreachStatsHeader />
-
-      <Suspense fallback={<div className="h-24 animate-pulse bg-muted rounded-lg" />}>
-        <OutreachMiniCharts />
-      </Suspense>
+      {showStatsHeader && <OutreachStatsHeader />}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />

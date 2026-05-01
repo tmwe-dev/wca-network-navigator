@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
-import { TabIntroBanner } from "./TabIntroBanner";
 import { OutreachRow } from "./shared/OutreachRow";
 import { resolveActionKind } from "./shared/ActionIcon";
 import { resolveSource } from "./shared/SourcePill";
@@ -118,15 +117,6 @@ export function AttivitaTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <TabIntroBanner
-        id="attivita"
-        icon={ListTodo}
-        title="Attività"
-        purpose="Diario di bordo. Ogni email partita, chiamata fatta, meeting fissato, follow‑up dovuto. Per capire cosa hai fatto e cosa ti resta da fare."
-        origin="Cockpit, agenti AI, campagne, azioni manuali"
-        actions="Filtrare per tipo/stato, completare, riprogrammare, aggiungere note"
-        tone="neutral"
-      />
       {/* Stats header */}
       <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2">
         <ListTodo className="w-3.5 h-3.5 text-primary" />

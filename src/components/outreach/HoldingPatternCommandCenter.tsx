@@ -21,8 +21,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { HoldingContactList } from "./HoldingContactList";
 import { HoldingActionBar } from "./HoldingActionBar";
 import { HoldingMessageThread } from "./HoldingMessageThread";
-import { TabIntroBanner } from "./TabIntroBanner";
-import { Plane } from "lucide-react";
 
 export function HoldingPatternCommandCenter() {
   const [channel, setChannel] = useState<HoldingChannel>("email");
@@ -132,15 +130,6 @@ export function HoldingPatternCommandCenter() {
 
   return (
     <div className="flex flex-col h-full">
-      <TabIntroBanner
-        id="circuito"
-        icon={Plane}
-        title="Risposte"
-        purpose="Posta in arrivo cross‑canale: messaggi che TI HANNO SCRITTO (Email + WhatsApp + LinkedIn) e aspettano una mossa da parte tua."
-        origin="Inbox IMAP, bridge WhatsApp, bridge LinkedIn — tutti messaggi REALI ricevuti dai tuoi contatti"
-        actions="Approvare la risposta (l'AI prepara una bozza che finisce in In Uscita), ignorare, escalation a chiamata"
-        tone="emerald"
-      />
       <div className="flex flex-1 min-h-0 overflow-hidden">
       <HoldingContactList
         channel={channel}
