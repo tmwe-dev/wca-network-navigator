@@ -9618,11 +9618,10 @@ export type Database = {
         }[]
       }
       merge_duplicate_partners: {
-        Args: { batch_size?: number }
+        Args: { _batch_size?: number }
         Returns: {
-          batch_id: string
-          groups_processed: number
-          rows_merged: number
+          merged_groups: number
+          merged_rows: number
         }[]
       }
       purge_inbound_activities: {
