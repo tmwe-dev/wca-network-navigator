@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { X, Menu, Command, Sparkles, Target } from "lucide-react";
+import { X, Menu, Command, Sparkles, SlidersHorizontal, Target } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { ClaudeBadge } from "@/components/system/ClaudeBadge";
 import { Toaster } from "@/components/ui/toaster";
@@ -63,27 +63,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Desktop sidebar: sempre visibile, può essere "collapsed" (stretta a icone).
-  // Stato persistito in localStorage. `sidebarOpen` mantenuto come alias di
-  // "expanded" per compatibilità con i listener esistenti.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem("dl_sidebar_collapsed");
-      // Default: collapsed (icone visibili). Solo "0" esplicito apre la sidebar.
-      return stored === null ? true : stored === "1";
-    } catch { return true; }
-  });
-  const sidebarOpen = !sidebarCollapsed;
-  const toggleSidebar = () => {
-    setSidebarCollapsed((c) => {
-      const next = !c;
-      try { localStorage.setItem("dl_sidebar_collapsed", next ? "1" : "0"); } catch { /* noop */ }
-      try {
-        window.dispatchEvent(new CustomEvent("dl-sidebar-toggle", { detail: { collapsed: next } }));
-      } catch { /* noop */ }
-      return next;
-    });
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useAiBridgeListener();
 
@@ -92,7 +72,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     const segment = location.pathname.replace("/v2", "").replace(/^\//, "") || "dashboard";
     const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     document.title = `${title} — WCA Partners`;
-    // sidebar persistente: nessun reset al cambio rotta
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   // Session readiness sourced from centralized AuthProvider
@@ -266,29 +246,27 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       >
                         Vai al contenuto principale
                       </a>
-                       {/* Desktop sidebar — fissa, collassabile a icone */}
+                      {/* Desktop sidebar */}
                        <div
-                         className={cn(
-                           "hidden md:flex shrink-0 h-full flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-[width] duration-200 ease-out",
-                           sidebarCollapsed ? "w-14" : "w-56",
-                         )}
+                         className={`hidden md:block fixed left-0 top-0 z-50 h-full transition-transform duration-200 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+                         onMouseLeave={() => setSidebarOpen(false)}
                          role="navigation"
                          aria-label="Menu principale"
-                         data-collapsed={sidebarCollapsed ? "true" : "false"}
                        >
-                         <LayoutSidebarNav
-                           profileName={profile?.displayName}
-                           wcaStatusColor={wcaStatusColor}
-                           wcaStatusLabel={wcaStatusLabel}
-                           wcaSessionActive={wcaSession.sessionActive}
-                           onWcaReconnect={() => wcaSession.ensureSession()}
-                           isDark={isDark}
-                           onToggleTheme={toggleTheme}
-                           onSignOut={signOut}
-                           onOpenCommandPalette={() => setCommandOpen(true)}
-                           collapsed={sidebarCollapsed}
-                         />
-                       </div>
+                         <div className="w-56 h-full flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl">
+                           <LayoutSidebarNav
+                             profileName={profile?.displayName}
+                             wcaStatusColor={wcaStatusColor}
+                             wcaStatusLabel={wcaStatusLabel}
+                             wcaSessionActive={wcaSession.sessionActive}
+                             onWcaReconnect={() => wcaSession.ensureSession()}
+                             isDark={isDark}
+                             onToggleTheme={toggleTheme}
+                             onSignOut={signOut}
+                             onOpenCommandPalette={() => setCommandOpen(true)}
+                           />
+                        </div>
+                      </div>
 
                        {/* Mobile header */}
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
@@ -344,7 +322,18 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                       {/* Filtri contestuali a scomparsa: gestiti da <ContextFiltersRail /> con linguetta integrata. */}
+                      {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
+                      <button
+                        onClick={() => setFiltersOpen(true)}
+                        className={cn(
+                          `hidden md:flex lg:hidden fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
+                          filtersOpen && "opacity-0 pointer-events-none"
+                        )}
+                        style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
+                        aria-label="Apri filtri"
+                      >
+                        <SlidersHorizontal className="w-3 h-3 text-primary" />
+                      </button>
                       <button
                         onClick={() => setMissionOpen(true)}
                         className={cn(
@@ -365,7 +354,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <BackgroundServices>
                           {({ outreachQueue, globalSync }) => (
                             <LayoutHeader
-                              onToggleSidebar={toggleSidebar}
+                              onToggleSidebar={() => setSidebarOpen(o => !o)}
                               onOpenCommandPalette={() => setCommandOpen(true)}
                               onAiClick={() => setIntelliflowOpen(true)}
                               onAddContact={() => setAddContactOpen(true)}

@@ -12,10 +12,7 @@ import ToolActivationBar from "@/components/workspace/ToolActivationBar";
 import type { Message, FlowPhase, ToolPhase } from "../constants";
 import type { PlanExecutionState } from "../planRunner";
 import PlanTimeline from "./PlanTimeline";
-import MessagePipelineTracker from "@/components/messaging/MessagePipelineTracker";
-import { useMessagePipeline } from "@/hooks/useMessagePipeline";
 import MessageAuditPanel from "./MessageAuditPanel";
-import MessageContent from "./MessageContent";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -88,7 +85,13 @@ export default function CommandThread({
                       {msg.agentName}
                     </motion.div>
                   )}
-                  <MessageContent content={msg.content} />
+                  <div className="text-[14px] leading-[1.7] whitespace-pre-line font-light text-foreground/100">
+                    {msg.content.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                      part.startsWith("**") && part.endsWith("**")
+                        ? <span key={i} className="text-primary/92 font-mono text-[12px]">{part.slice(2, -2)}</span>
+                        : <span key={i}>{part}</span>
+                    )}
+                  </div>
                   {msg.suggestedActions && msg.suggestedActions.length > 0 && onSuggestedAction && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/[0.16]">
                       {msg.suggestedActions.map((action, i) => (
@@ -135,24 +138,8 @@ export default function CommandThread({
 
         <ExecutionFlow visible={flowPhase === "executing" && (!planState || !planState.stepStates?.length)} steps={execSteps} progress={execProgress} />
 
-        {/* Pipeline Tracker — mostra in-thread la "stanza" attuale di ogni email in produzione */}
-        <InlineCommandPipelines />
-
         <div ref={chatEndRef} />
       </div>
-    </div>
-  );
-}
-
-function InlineCommandPipelines() {
-  const all = useMessagePipeline();
-  const active = all.filter((s) => !s.endedAt || Date.now() - (s.endedAt ?? 0) < 5000);
-  if (active.length === 0) return null;
-  return (
-    <div className="space-y-2 my-2">
-      {active.map((snap) => (
-        <MessagePipelineTracker key={snap.pipelineId} snapshot={snap} />
-      ))}
     </div>
   );
 }

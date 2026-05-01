@@ -24,7 +24,7 @@ export interface TraceStep {
 }
 
 export interface TraceReference {
-  readonly kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context" | "table" | "column" | "keyword";
+  readonly kind: "operative-prompt" | "kb-section" | "model" | "playbook" | "context";
   readonly label: string;
   readonly value?: string;
 }

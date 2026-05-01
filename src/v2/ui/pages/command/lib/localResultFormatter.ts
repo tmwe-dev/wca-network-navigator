@@ -42,9 +42,6 @@ const COUNTRY_LABELS: Record<string, string> = {
 
 const TABLE_NOUN_SINGULAR: Record<string, string> = {
   partners: "partner",
-  partner_networks: "appartenenza network",
-  network_configs: "network configurato",
-  partner_services: "servizio partner",
   imported_contacts: "contatto",
   outreach_queue: "messaggio in coda",
   activities: "attività",
@@ -59,9 +56,6 @@ const TABLE_NOUN_SINGULAR: Record<string, string> = {
 
 const TABLE_NOUN_PLURAL: Record<string, string> = {
   partners: "partner",
-  partner_networks: "appartenenze network",
-  network_configs: "network configurati",
-  partner_services: "servizi partner",
   imported_contacts: "contatti",
   outreach_queue: "messaggi in coda",
   activities: "attività",
@@ -108,8 +102,6 @@ function describeFilters(filters: readonly FilterShape[]): string {
       }
     } else if (f.column === "office_type" && typeof f.value === "string") {
       parts.push(`tipo ${f.value}`);
-    } else if (f.column === "network_name" && typeof f.value === "string") {
-      parts.push(`nel network "${f.value}"`);
     }
   }
   return parts.join(" ");

@@ -4,8 +4,8 @@
 /**
  * Campaigns — Orchestrator using sub-components
  */
-import { lazy, Suspense, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useState, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 const CampaignAnalyticsTab = lazy(() => import("@/components/analytics/CampaignAnalyticsTab").then(m => ({ default: m.CampaignAnalyticsTab })));
 import { Button } from "@/components/ui/button";
 import { CompanyList } from "@/components/campaigns/CompanyList";
@@ -19,29 +19,28 @@ const CampaignGlobe = lazy(() => import("@/components/campaigns/CampaignGlobe").
 
 export function Campaigns() {
   const c = useCampaignData();
-  const [params] = useSearchParams();
-  const origine = (params.get("origine") ?? "crm").toLowerCase();
+  const [headerContainer, setHeaderContainer] = useState<HTMLElement | null>(null);
 
-  // Sincronizza la sorgente Partner/BCA con il selettore origine del PipelineSection
-  // (wca/crm → partners; biglietti → bca). Evita il toggle duplicato in barra.
   useEffect(() => {
-    const desired: "partners" | "bca" = origine === "biglietti" ? "bca" : "partners";
-    if (c.source !== desired) c.handleSourceChange(desired);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origine]);
+    setHeaderContainer(document.getElementById("campaign-header-controls"));
+  }, []);
 
   return (
     <div className="h-full min-h-0 relative overflow-hidden flex flex-col">
-      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20 flex-wrap">
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80 backdrop-blur-sm z-20">
         <Button variant={c.viewMode === "globe" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => c.setViewMode("globe")}>
           <Target className="w-3.5 h-3.5" />Mappa
         </Button>
         <Button variant={c.viewMode === "analytics" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => c.setViewMode("analytics")}>
           <BarChart3 className="w-3.5 h-3.5" />Analytics
         </Button>
-        {c.viewMode === "globe" && (
-          <>
-            <div className="w-px h-6 bg-border" />
+      </div>
+
+      {c.viewMode === "analytics" ? (
+        <div className="flex-1 min-h-0"><Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}><CampaignAnalyticsTab /></Suspense></div>
+      ) : (
+        <div className="flex-1 relative overflow-hidden">
+          {headerContainer && createPortal(
             <CampaignHeaderControls
               countries={c.countries}
               selectedCountry={c.selectedCountry}
@@ -53,15 +52,10 @@ export function Campaigns() {
               source={c.source}
               onSourceChange={c.handleSourceChange}
               bcaCountryCounts={c.bcaCountryCounts}
-            />
-          </>
-        )}
-      </div>
+            />,
+            headerContainer
+          )}
 
-      {c.viewMode === "analytics" ? (
-        <div className="flex-1 min-h-0"><Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-lg" />}><CampaignAnalyticsTab /></Suspense></div>
-      ) : (
-        <div className="flex-1 relative overflow-hidden">
           <div className="absolute inset-0">
             <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Caricamento globo...</div>}>
               <CampaignGlobe selectedCountry={c.selectedCountry} onCountrySelect={c.handleCountrySelect} />

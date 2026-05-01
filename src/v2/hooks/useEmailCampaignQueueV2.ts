@@ -1,7 +1,5 @@
 /**
- * useEmailCampaignQueueV2 — Campaign queue monitor.
- * @deprecated 2026-04-30 — Hook non importato da nessuna pagina.
- * Sostituito da `useEmailCampaignQueue` (V1) usato nel CampaignQueueMonitor.
+ * useEmailCampaignQueueV2 — Campaign queue monitor
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";

@@ -11,7 +11,7 @@
  * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
  * everywhere.
  */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
@@ -78,13 +78,7 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
-  const { data: recentPromptsRaw = [] } = useRecentCommandPrompts();
-  // Filtra i suggerimenti: Command è il copilota dell'ufficio commerciale.
-  // Mostriamo solo prompt riconducibili a email / messaggi / partner /
-  // contatti / outreach / follow-up. Se nessuno matcha, lasciamo il campo
-  // vuoto: sarà l'utente a scrivere quello che vuole.
-  const COMMERCIAL_RX = /\b(mail|email|messagg|outreach|follow[- ]?up|contatt|partner|cliente|client[ie]|prospect|lead|invia|scrivi|propon|campagna|pipeline|trattativ|offert|preventiv|appuntament|riunion|meeting|whatsapp|linkedin|chiama|telefon)/i;
-  const recentPrompts = recentPromptsRaw.filter((p) => COMMERCIAL_RX.test(p));
+  const { data: recentPrompts = [] } = useRecentCommandPrompts();
   const briefing = useCommandBriefing();
 
   useEffect(() => {
@@ -94,25 +88,6 @@ const CommandPage = () => {
   useEffect(() => {
     state.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages, state.chatEndRef]);
-
-  // ── PERSISTENZA CONVERSAZIONE ──────────────────────────────────────────
-  // Salva ogni messaggio user/Direttore in command_messages così il resume
-  // funziona davvero (non solo cache di pagina). Persistenza fire-and-forget,
-  // dedup per id già processato in questo lifecycle.
-  const persistedIdsRef = useRef<Set<number>>(new Set());
-  useEffect(() => {
-    for (const msg of state.messages) {
-      if (persistedIdsRef.current.has(msg.id)) continue;
-      if (msg.thinking) continue;
-      if (!msg.content || !msg.content.trim()) continue;
-      const isUser = msg.role === "user";
-      const isDirettore = msg.role === "assistant" && msg.agentName === "Direttore";
-      if (!isUser && !isDirettore) continue;
-      persistedIdsRef.current.add(msg.id);
-      // Fire-and-forget: lo storico DB non blocca l'UI.
-      void conv.addMessage({ role: msg.role, content: msg.content });
-    }
-  }, [state.messages, conv]);
 
   // TTS: read ONLY the conversational commentary produced by the "Direttore"
   // (i.e. the message that comments on the actual result). Skip technical
@@ -215,6 +190,7 @@ const CommandPage = () => {
         >
           {isEmpty ? (
             <>
+              <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
               <CommandHistory
                 messages={[]}
                 isEmpty
@@ -222,9 +198,6 @@ const CommandPage = () => {
                 onQuickPrompt={(p) => handleSend(p)}
                 chatEndRef={state.chatEndRef}
               />
-              {briefing.hasSignals && (
-                <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
-              )}
             </>
           ) : (
             <CommandThread

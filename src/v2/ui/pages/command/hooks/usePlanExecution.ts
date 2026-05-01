@@ -106,16 +106,12 @@ export function usePlanExecution(deps: PlanExecutionDeps) {
         agentName: "Automation",
         timestamp: ts(),
       });
-      const final = await executeApprovedStep(
-        planStateVal,
-        (s) => {
-          setPlanState(s);
-          const done = Object.keys(s.results).length;
-          const total = planStateVal.steps.length || 1;
-          setExecProgress(Math.round((done / total) * 100));
-        },
-        { originalPrompt: userPrompt, history: buildHistory() },
-      );
+      const final = await executeApprovedStep(planStateVal, (s) => {
+        setPlanState(s);
+        const done = Object.keys(s.results).length;
+        const total = planStateVal.steps.length || 1;
+        setExecProgress(Math.round((done / total) * 100));
+      });
       if (final.status === "awaiting-approval") {
         setFlowPhase("proposal");
         addMessage({

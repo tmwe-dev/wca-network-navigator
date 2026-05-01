@@ -15,12 +15,7 @@ export async function insertEmailDraft(draft: Record<string, unknown>) {
 }
 
 export async function insertEmailDraftReturning(draft: Record<string, unknown>) {
-  const { data, error } = await supabase
-    .from("email_drafts")
-    .insert(draft as never)
-    .select("id")
-    .maybeSingle();
+  const { data, error } = await supabase.from("email_drafts").insert(draft as never)
   if (error) throw error;
-  if (!data) throw new Error("Bozza email non creata");
   return data;
 }

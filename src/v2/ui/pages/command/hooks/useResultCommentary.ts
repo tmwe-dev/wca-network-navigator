@@ -11,7 +11,6 @@ import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 import { tryLocalComment, tryLocalCommentMulti } from "../lib/localResultFormatter";
 import { formatTraceLine, type TraceBuilder } from "../lib/toolTrace";
 import { buildAuditFromTrace } from "../lib/auditFromTrace";
-import type { QueryContext } from "../lib/queryContext";
 
 interface CommentaryDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -20,14 +19,11 @@ interface CommentaryDeps {
   ttsSpeak: (text: string) => void;
   setVoiceSpeaking: (v: boolean) => void;
   buildHistory: () => { role: "user" | "assistant"; content: string }[];
-  /** Live session context (for constraints + working set propagation). */
-  getQueryContext?: () => QueryContext | null;
 }
 
 export function useResultCommentary(deps: CommentaryDeps) {
   const {
     addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
-    getQueryContext,
   } = deps;
 
   /** After tool execution, comment on the result + suggest next actions.
@@ -54,13 +50,6 @@ export function useResultCommentary(deps: CommentaryDeps) {
           const finalTrace = trace?.finish();
           const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
           const audit = finalTrace ? buildAuditFromTrace(finalTrace) : undefined;
-          // Filtra eventuali azioni LinkedIn se il vincolo è attivo.
-          const ctx = getQueryContext?.();
-          const filteredActions = ctx?.constraints?.noLinkedIn
-            ? local.suggestedActions.filter(
-                (a) => !/linkedin/i.test(a.label) && !/linkedin/i.test(a.prompt),
-              )
-            : local.suggestedActions;
           addMessage({
             role: "assistant",
             content: local.message,
@@ -68,7 +57,7 @@ export function useResultCommentary(deps: CommentaryDeps) {
             timestamp: ts(),
             meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
             governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
-            suggestedActions: filteredActions,
+            suggestedActions: local.suggestedActions,
             spokenSummary: local.spokenSummary,
             audit,
           });
@@ -80,31 +69,18 @@ export function useResultCommentary(deps: CommentaryDeps) {
       // Fallback: full AI commentary
       const t0 = Date.now();
       const resultSummary = serializeResultForAI(result);
-      const ctx = getQueryContext?.();
       const comment = await getAiComment({
         userPrompt,
         toolId,
         toolLabel,
         resultSummary,
         history: buildHistory(),
-        constraints: ctx?.constraints,
-        workingSet:
-          ctx?.workingSetIds && ctx.workingSetIds.length > 0
-            ? { count: ctx.workingSetIds.length, label: ctx.setLabel }
-            : undefined,
       });
       trace?.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
 
       const finalTrace = trace?.finish();
       const traceMeta = finalTrace ? formatTraceLine(finalTrace) : undefined;
       const audit = finalTrace ? buildAuditFromTrace(finalTrace) : undefined;
-
-      // Filtra azioni LinkedIn anche dal commento AI se il vincolo è attivo.
-      const aiActions = ctx?.constraints?.noLinkedIn
-        ? comment.suggestedActions.filter(
-            (a) => !/linkedin/i.test(a.label) && !/linkedin/i.test(a.prompt),
-          )
-        : comment.suggestedActions;
 
       addMessage({
         role: "assistant",
@@ -113,13 +89,13 @@ export function useResultCommentary(deps: CommentaryDeps) {
         timestamp: ts(),
         meta: traceMeta ?? (result.meta?.sourceLabel ? `${result.meta.sourceLabel} · ${result.meta.count} record · LIVE` : undefined),
         governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
-        suggestedActions: aiActions,
+        suggestedActions: comment.suggestedActions,
         spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
         audit,
       });
       setVoiceSpeaking(false);
     },
-    [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak, getQueryContext],
+    [addMessage, buildHistory, governance, setVoiceSpeaking, ts, ttsSpeak],
   );
 
   return { commentOnResult };

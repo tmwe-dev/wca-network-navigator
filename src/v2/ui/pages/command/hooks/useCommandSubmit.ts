@@ -36,14 +36,10 @@ import {
   contextHint as buildContextHint,
   isContextFresh,
   isElliptical,
-  refersToWorkingSet,
   type QueryContext,
 } from "../lib/queryContext";
-import { isSynthesisIntent } from "../lib/intentDetector";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
-import { getAiComment } from "../aiBridge";
-import { getActiveComposerContextSummary } from "../lib/composerContext";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -94,9 +90,8 @@ export function useCommandSubmit(state: CommandStateApi) {
   const { looksLikeSimpleQuery } = usePromptAnalysis();
   const { commentOnResult } = useResultCommentary({
     addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
-    getQueryContext: () => queryContext,
   });
-  const { updateQueryContextFromLastPlan, updateConstraintsFromPrompt, isContextUsable } = useQueryContext({
+  const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
     setQueryContext, queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
@@ -117,9 +112,7 @@ export function useCommandSubmit(state: CommandStateApi) {
   const renderPlanWithContext = useCallback(
     async (userPrompt: string, final: PlanExecutionState, trace?: TraceBuilder) => {
       await renderPlanCompletion(userPrompt, final, commentOnResult, trace);
-      const lastStep = final.steps[final.steps.length - 1];
-      const lastResult = lastStep ? final.results[lastStep.stepNumber] : undefined;
-      updateQueryContextFromLastPlan(lastResult);
+      updateQueryContextFromLastPlan();
     },
     [renderPlanCompletion, commentOnResult, updateQueryContextFromLastPlan],
   );
@@ -176,68 +169,6 @@ export function useCommandSubmit(state: CommandStateApi) {
     });
   }, [addMessage, resetForNewMessage, ts]);
 
-  /** Synthesis: comment on the previous turn's snapshot WITHOUT touching the DB. */
-  const runSynthesis = useCallback(
-    async (userPrompt: string, ctx: QueryContext) => {
-      const trace = startTrace(userPrompt);
-      trace.setPhase("fast-lane");
-      trace.setDriver("ai-comment");
-
-      setFlowPhase("executing");
-      setShowTools(false);
-      addMessage({
-        role: "assistant",
-        content: `🔧 Sintesi turno precedente · ${ctx.lastResultRows?.length ?? 0} righe`,
-        agentName: "Automation",
-        timestamp: ts(),
-      });
-
-      const t0 = Date.now();
-      const snapshot = JSON.stringify({
-        kind: "table",
-        title: ctx.lastResultTitle ?? `Risultati precedenti · ${ctx.table}`,
-        totalRows: ctx.lastResultRows?.length ?? 0,
-        sample: ctx.lastResultRows ?? [],
-        meta: { count: ctx.lastResultRows?.length ?? 0, sourceLabel: `Snapshot · ${ctx.table}` },
-      });
-
-      try {
-        const comment = await getAiComment({
-          userPrompt: `${userPrompt}\n\n[NB: NON eseguire una nuova ricerca. Sintetizza i dati qui sotto, già recuperati al turno precedente.]`,
-          toolId: "ai-query",
-          toolLabel: `Sintesi · ${ctx.table}`,
-          resultSummary: snapshot,
-          history: buildHistory(),
-        });
-        trace.add({ source: "comment", label: "ai-comment", durationMs: Date.now() - t0 });
-        const finalTrace = trace.finish();
-        addMessage({
-          role: "assistant",
-          content: comment.message,
-          agentName: "Direttore",
-          timestamp: ts(),
-          meta: `⚡ ${(finalTrace.totalMs / 1000).toFixed(2)}s • ai-comment ${(finalTrace.totalMs / 1000).toFixed(2)}s · synthesis`,
-          governance: `Ruolo: ${governance.role} · Permesso: ${governance.permission} · Policy: ${governance.policy}`,
-          suggestedActions: comment.suggestedActions,
-          spokenSummary: comment.spokenSummary ?? comment.message.replace(/\*\*/g, "").slice(0, 200),
-        });
-        setFlowPhase("done");
-      } catch (err: unknown) {
-        trace.finish();
-        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
-        toast.error(msg);
-        addMessage({
-          role: "assistant",
-          content: `❌ Non sono riuscito a sintetizzare i risultati precedenti: ${msg}`,
-          agentName: "Orchestratore",
-          timestamp: ts(),
-        });
-        setFlowPhase("idle");
-      }
-    },
-    [addMessage, buildHistory, governance, setFlowPhase, setShowTools, ts],
-  );
-
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
@@ -249,51 +180,8 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
 
-      // ── CONSTRAINTS DETECTION ──
-      // Aggiorna i vincoli sticky della sessione PRIMA di pianificare. Così
-      // un divieto "non usare LinkedIn" si propaga immediatamente al prossimo
-      // hint del planner e al fallback aiBridge.
-      updateConstraintsFromPrompt(text);
-
-      // ── SCOPE EXPLOSION GUARDRAIL ──
-      // Se l'utente fa riferimento al working set ma il contesto è scaduto o
-      // non esiste, fermiamo PRIMA di chiamare il planner: meglio chiedere
-      // chi sono "questi" che generare un piano su 12k record.
-      if (refersToWorkingSet(text)) {
-        const ctx = isContextFresh(queryContext) ? queryContext : null;
-        const hasWorkingSet = ctx?.workingSetIds && ctx.workingSetIds.length > 0;
-        if (!hasWorkingSet) {
-          addMessage({
-            role: "assistant",
-            content: "Mi fermo: stai facendo riferimento a un gruppo di record (\"questi\", \"loro\", \"i selezionati\"), ma in questa sessione non ho un set attivo. Rifai prima la query (es. \"trova i partner di Malta\") e poi torna a chiedere su quel risultato.",
-            agentName: "Orchestratore",
-            timestamp: ts(),
-          });
-          setFlowPhase("idle");
-          setShowTools(false);
-          return;
-        }
-      }
-
-      // ── SYNTHESIS BRANCH ───────────────────────────────────────────────
-      // The user asks for a summary/explanation of what we already returned.
-      // Skip DB. Reuse the snapshot rows from queryContext + ai-comment.
-      if (
-        isSynthesisIntent(text) &&
-        isContextFresh(queryContext) &&
-        queryContext?.lastResultRows &&
-        queryContext.lastResultRows.length > 0
-      ) {
-        await runSynthesis(text, queryContext);
-        return;
-      }
-
-      // Build conversational hint from previous query context (if fresh).
-      // Pass the current prompt so inheritance is suppressed when intent changes.
-      const hint = buildContextHint(
-        isContextFresh(queryContext) ? queryContext : null,
-        text,
-      );
+      // Build conversational hint from previous query context (if fresh)
+      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
@@ -319,11 +207,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       }, 600);
 
       try {
-        // Inietta il contesto attivo (es. batch composer) nel router AI.
-        // L'AI legge questa descrizione e decide se la richiesta corrente
-        // è un follow-up sul contesto vivo o un nuovo argomento.
-        const activeCtx = getActiveComposerContextSummary();
-        const planRes = await planExecution(text, TOOL_METADATA, buildHistory(), activeCtx);
+        const planRes = await planExecution(text, TOOL_METADATA, buildHistory());
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));
         setToolPhase("active");
@@ -429,7 +313,6 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
-      runSynthesis,
     ],
   );
 

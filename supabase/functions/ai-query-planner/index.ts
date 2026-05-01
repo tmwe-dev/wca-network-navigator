@@ -16,26 +16,16 @@ import "../_shared/llmFetchInterceptor.ts";
  */
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { loadLiveSchema } from "../_shared/liveSchemaLoader.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 /**
- * Whitelist tecnica di sicurezza: tabelle business che l'AI può consultare.
- * Non è una "guida" per l'AI — è un guardrail. La SEMANTICA (cosa contiene
- * ogni tabella, dove vivono indirizzi/contatti, ecc.) sta nella KB entry
- * con tag `data_schema`, iniettata nel prompt.
+ * Lista tabelle business consultabili dall'AI. Unica fonte di verità: questa
+ * costante. Per aggiungerne una nuova: aggiungi qui + verifica che esista nel DB.
+ * Lo schema (colonne, enum) viene caricato live tramite RPC.
  */
 const ALLOWED_TABLES = [
   "partners",
-  "partner_networks",
-  "network_configs",
-  "partner_services",
-  "partner_contacts",
-  "prospects",
-  "prospect_contacts",
   "imported_contacts",
   "outreach_queue",
   "activities",
@@ -48,45 +38,30 @@ const ALLOWED_TABLES = [
   "campaign_jobs",
 ] as const;
 
-/** Cache 5 min per l'indice semantico KB (evita query ripetute). */
-let _kbIndexCache: { content: string; ts: number } | null = null;
-const KB_CACHE_TTL_MS = 5 * 60 * 1000;
+/** Hint di scopo per ciascuna tabella — una riga, non binari. L'AI sceglie. */
+const TABLE_PURPOSE: Record<string, string> = {
+  partners: "Partner della rete WCA (logistica/spedizionieri internazionali, ~25k record).",
+  imported_contacts: "Contatti CRM importati (clienti, lead, prospect).",
+  outreach_queue: "Coda messaggi outbound (email/whatsapp/linkedin).",
+  activities: "Attività CRM (chiamate, follow-up, meeting, reminder).",
+  channel_messages: "Messaggi sincronizzati inbound+outbound multicanale.",
+  agents: "Agenti AI configurati nel sistema.",
+  agent_tasks: "Task assegnati agli agenti AI.",
+  kb_entries: "Knowledge Base interna (doctrine, manuali).",
+  business_cards: "Biglietti da visita digitalizzati via OCR.",
+  download_jobs: "Job di sincronizzazione massiva da fonti esterne.",
+  campaign_jobs: "Job di campagne outbound assegnati a operatori.",
+};
 
-async function loadDataSchemaIndex(): Promise<string> {
-  const now = Date.now();
-  if (_kbIndexCache && now - _kbIndexCache.ts < KB_CACHE_TTL_MS) {
-    return _kbIndexCache.content;
-  }
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return "";
-  try {
-    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data } = await sb
-      .from("kb_entries")
-      .select("content")
-      .contains("tags", ["data_schema"])
-      .limit(1)
-      .maybeSingle();
-    const content = (data as { content?: string } | null)?.content ?? "";
-    _kbIndexCache = { content, ts: now };
-    return content;
-  } catch {
-    return "";
-  }
-}
-
-function buildSystemPrompt(liveSchema: string, kbIndex: string): string {
-  const tableList = ALLOWED_TABLES.map((t) => `  • ${t}`).join("\n");
+function buildSystemPrompt(liveSchema: string): string {
+  const tableList = ALLOWED_TABLES
+    .map((t) => `  • ${t} — ${TABLE_PURPOSE[t] ?? ""}`)
+    .join("\n");
 
   return `Sei un Query Planner per un CRM logistico. Ricevi una richiesta in linguaggio naturale e produci un piano di query SELECT in JSON.
 
-CONTESTO OPERATIVO:
-Il CRM gestisce partner logistici WCA e relative appartenenze a network/gruppi operativi. Quando l'utente parla di gruppi come "Time Critical", "Pharma", "Projects", "Relocations", "Dangerous Goods" o simili, cerca prioritariamente nella tabella delle appartenenze network, non nella Knowledge Base.
-
-TABELLE CONSULTABILI (whitelist di sicurezza — usa SOLO queste):
+TABELLE CONSULTABILI:
 ${tableList}
-
-INDICE SEMANTICO (cosa contiene ogni tabella, dove vivono indirizzi/contatti/biglietti):
-${kbIndex || "(indice non disponibile — usa nome tabella + schema reale per inferire)"}
 
 SCHEMA REALE (live dal DB — fidati di questo, NON di nomi che ricordi):
 ${liveSchema || "(schema non disponibile, usa solo i nomi tabella sopra)"}
@@ -126,7 +101,6 @@ VINCOLI HARD:
 
 LIBERTÀ:
 - Decidi tu la tabella più probabile. Se la richiesta è ambigua spiega in "rationale".
-- Per network/gruppi WCA usa \`partner_networks.network_name\` come fonte primaria. Se serve contare partner in un gruppo, pianifica su \`partner_networks\` filtrando \`network_name\`.
 - Se interpreti termini (es. "attive" → quali enum?), guarda i valori reali della colonna nello schema sopra e scegli quelli che semanticamente corrispondono.
 - Se la richiesta non è una query (è un'azione, una domanda generica, una richiesta di scrittura), rispondi: {"plans":[{"table":"INVALID","filters":[],"limit":1,"title":"Non è una query","rationale":"<motivo>"}]}.
 - Se ricevi CONTESTO TURNO PRECEDENTE (vedi sotto) e il prompt è ellittico ("e a Milano?", "solo gli attivi"), eredita tabella e filtri compatibili, sovrascrivi solo ciò che cambia.
@@ -162,11 +136,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Carica schema reale dal DB (cache 5min)
-    const [{ rendered: liveSchema }, kbIndex] = await Promise.all([
-      loadLiveSchema(ALLOWED_TABLES),
-      loadDataSchemaIndex(),
-    ]);
-    const baseSystem = buildSystemPrompt(liveSchema, kbIndex);
+    const { rendered: liveSchema } = await loadLiveSchema(ALLOWED_TABLES);
+    const baseSystem = buildSystemPrompt(liveSchema);
     const systemWithContext = baseSystem + (contextHint ? `\n\nCONTESTO TURNO PRECEDENTE:\n${contextHint}` : "");
 
     const messages = [

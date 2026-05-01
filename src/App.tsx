@@ -19,7 +19,6 @@ import { withFeatureBoundary } from "@/components/system/FeatureErrorBoundary";
 import { ConnectionBanner } from "@/components/system/ConnectionBanner";
 import { ViteChunkRecovery } from "@/components/system/ViteChunkRecovery";
 import { PWAUpdatePrompt } from "@/components/system/PWAUpdatePrompt";
-import MessagePipelineGlobalOverlay from "@/components/messaging/MessagePipelineGlobalOverlay";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { TraceConsole } from "@/v2/observability/TraceConsole";
@@ -54,7 +53,7 @@ const LEGACY_V1_REDIRECTS: Record<string, string> = {
   "ra/explorer": "/v2/ra-explorer",
   "ra/scraping": "/v2/ra-scraping",
   "campaigns": "/v2/campaigns",
-  "campaign-jobs": "/v2/campaigns",
+  "campaign-jobs": "/v2/campaigns/jobs",
   "diagnostics": "/v2/settings/diagnostics",
   "guida": "/v2/guida",
   "ai-lab": "/v2/ai-staff/lab",
@@ -125,7 +124,6 @@ const App = () => (
                 <ConnectionBanner />
                 <RuntimeDiagnosticPanel />
                 <TraceConsole />
-                <MessagePipelineGlobalOverlay />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />

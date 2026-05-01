@@ -2,14 +2,13 @@ import { lazy, Suspense, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane, Filter as FilterIcon } from "lucide-react";
+import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
@@ -24,20 +23,11 @@ interface Props {
   onSelect: (contact: Record<string, unknown>) => void;
 }
 
-/**
- * Column descriptor for the redesigned single-row layout.
- * `sortKey` matches the values accepted by useContactListPanel.serverSort.
- * `filterField` matches the field names accepted by addInlineFilter
- * (same field strings used by ContactCard's <Filterable>).
- */
-const COLUMNS: ReadonlyArray<{ key: string; label: string; sortKey?: string; filterField?: string }> = [
-  { key: "select", label: "" },
-  { key: "company", label: "Azienda · Contatto", sortKey: "company", filterField: "company" },
-  { key: "location", label: "Località", sortKey: "city", filterField: "country" },
-  { key: "email", label: "Email · Telefono", sortKey: "name", filterField: "name" },
-  { key: "origin", label: "Origine", sortKey: "origin", filterField: "origin" },
-  { key: "status", label: "Stato", filterField: "leadStatus" },
-  { key: "actions", label: "" },
+const SORT_COLUMNS = [
+  { field: "company", label: "Azienda", sortKey: "company" },
+  { field: "name", label: "Contatto", sortKey: "name" },
+  { field: "city", label: "Città", sortKey: "city" },
+  { field: "origin", label: "Origine", sortKey: "origin" },
 ];
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
@@ -45,8 +35,8 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const h = useContactListPanel();
   const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
     contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
-    actions, tabs, totalAllGroups, groupBy, activeGroupTab,
-    setCrmGroupTab, setGroupBy,
+    actions, tabs, totalAllGroups, groupBy, activeGroupTab, wcaMatch,
+    setCrmGroupTab, setCrmWcaMatch, setGroupBy,
     addInlineFilter, removeInlineFilter, handleSortClick, handleTabClick,
     handleDelete, handleDeduplicate, handleWcaMatch } = h;
 
@@ -82,18 +72,26 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
     <PageErrorBoundary>
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="px-3 py-1.5 border-b border-border/30 shrink-0">
+      <div className="px-3 py-2 border-b border-border/30 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{totalCount} <span className="text-foreground/60 font-normal">contatti</span></span>
-            {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30"><Plane className="w-3 h-3" /> Fuori circuito</span>}
-            {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-destructive/20 text-destructive border border-destructive/30"><Plane className="w-3 h-3 animate-pulse" /> In circuito</span>}
+            <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
+            {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20"><Plane className="w-2.5 h-2.5" /> Fuori circuito</span>}
+            {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20"><Plane className="w-2.5 h-2.5 animate-pulse" /> In circuito</span>}
+            <div className="flex gap-1">
+              {(["all", "matched", "unmatched"] as const).map(v => (
+                <button key={v} onClick={() => setCrmWcaMatch(v)}
+                  className={cn("text-[9px] px-1.5 py-0.5 rounded-full transition-colors", wcaMatch === v ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted")}>
+                  {v === "all" ? "Tutti" : v === "matched" ? "WCA ✓" : "Solo CRM"}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
             <Tooltip><TooltipTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-8 px-2.5 text-sm gap-1.5" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
-                <UserPlus className="w-4 h-4" /> Nuovo
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
+                <UserPlus className="w-3.5 h-3.5" /> Nuovo
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
           </div>
@@ -101,9 +99,9 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       </div>
 
       {/* Group tabs */}
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30 shrink-0">
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 shrink-0">
         <Select value={groupBy} onValueChange={(v) => { setGroupBy(v); setCrmGroupTab(""); }}>
-          <SelectTrigger className="h-8 w-[110px] text-xs border-border/40 bg-transparent"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-7 w-[100px] text-[10px] border-border/40 bg-transparent"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="country">Paese</SelectItem>
             <SelectItem value="origin">Origine</SelectItem>
@@ -112,13 +110,13 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
           </SelectContent>
         </Select>
         <div ref={tabsRef} className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-          <button onClick={() => setCrmGroupTab("")} className={cn("shrink-0 text-xs px-2.5 py-1 rounded-md whitespace-nowrap transition-colors font-medium", !activeGroupTab ? "bg-primary/25 text-primary font-semibold" : "text-foreground/70 hover:bg-muted/60")}>
+          <button onClick={() => setCrmGroupTab("")} className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", !activeGroupTab ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted/60")}>
             Tutti ({totalAllGroups})
           </button>
           {tabs.slice(0, 50).map(t => (
             <button key={t.group_key} onClick={() => handleTabClick(t.group_key)}
-              className={cn("shrink-0 text-xs px-2.5 py-1 rounded-md whitespace-nowrap transition-colors font-medium flex items-center gap-1", activeGroupTab === t.group_key ? "bg-primary/25 text-primary font-semibold" : "text-foreground/80 hover:bg-muted/60")}>
-              {groupBy === "country" ? <><span className="text-base leading-none">{countryFlag(t.group_key)}</span> {t.group_label}</> : t.group_label.toUpperCase()} ({t.contact_count})
+              className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", activeGroupTab === t.group_key ? "bg-primary/20 text-primary font-semibold" : "text-foreground/80 hover:bg-muted/60")}>
+              {groupBy === "country" ? `${countryFlag(t.group_key)} ${t.group_label}` : t.group_label.toUpperCase()} ({t.contact_count})
             </button>
           ))}
         </div>
@@ -126,66 +124,32 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
 
       {/* Inline filter chips */}
       {state.inlineFilters.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1.5 shrink-0">
+        <div className="px-3 py-1.5 border-b border-border/30 flex flex-wrap gap-1 shrink-0">
           {state.inlineFilters.map((f, i) => (
-            <span key={`${f.field}-${f.value}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
+            <span key={`${f.field}-${f.value}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary border border-primary/20">
               {f.value} ({totalCount})
-              <button onClick={() => removeInlineFilter(f.field, f.value)} className="ml-0.5 p-0.5 rounded-full hover:bg-primary/30 transition-colors"><X className="w-3 h-3" /></button>
+              <button onClick={() => removeInlineFilter(f.field, f.value)} className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"><X className="w-2.5 h-2.5" /></button>
             </span>
           ))}
-          <button onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })} className="text-xs text-foreground/60 hover:text-foreground ml-1 underline">Reset</button>
+          <button onClick={() => dispatch({ type: "CLEAR_INLINE_FILTERS" })} className="text-[9px] text-muted-foreground hover:text-foreground ml-1">Reset</button>
         </div>
       )}
 
-      {/* Sortable + filterable column header (single-row layout) */}
-      <div
-        className={cn(CONTACT_GRID_CLASS, "px-3 py-2 border-b border-border/40 shrink-0 bg-muted/40")}
-        style={{ gridTemplateColumns: CONTACT_GRID_COLS }}
-      >
-        {COLUMNS.map((col) => {
-          if (col.key === "select") {
-            return (
-              <div key="select" className="flex items-center">
-                <Checkbox
-                  checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
-                  onCheckedChange={(checked) => {
-                    if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id)));
-                    else selection.clear();
-                  }}
-                  aria-label="Seleziona tutti"
-                  className="shrink-0"
-                />
-              </div>
-            );
-          }
-          if (col.key === "flag") return <div key="flag" />;
-          if (col.key === "actions") return <div key="actions" />;
-          const isSorted = !!col.sortKey && state.sortField === col.sortKey && state.sortDir;
-          return (
-            <div key={col.key} className="flex items-center gap-1 min-w-0">
-              <button
-                onClick={() => col.sortKey && handleSortClick(col.sortKey)}
-                disabled={!col.sortKey}
-                className={cn(
-                  "flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide transition-colors text-left truncate",
-                  isSorted ? "text-primary" : "text-foreground/70 hover:text-foreground",
-                  !col.sortKey && "cursor-default",
-                )}
-              >
-                {col.label}
-                {col.sortKey && <SortIcon field={col.sortKey} />}
-              </button>
-              {col.filterField && (
-                <ColumnFilterPopover
-                  field={col.filterField}
-                  label={col.label}
-                  active={state.inlineFilters.some((f) => f.field === col.filterField)}
-                  onApply={(value) => addInlineFilter(col.filterField as string, value)}
-                />
-              )}
-            </div>
-          );
-        })}
+      {/* Sortable column header */}
+      <div className={cn(CONTACT_GRID_CLASS, "px-2 py-1 border-b border-border/30 shrink-0 bg-muted/30")} style={{ gridTemplateColumns: CONTACT_GRID_COLS }}>
+        <div className="flex items-center justify-center">
+          <Checkbox checked={contacts.length > 0 && selection.selectedIds.size === contacts.length}
+            onCheckedChange={(checked) => { if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id))); else selection.clear(); }}
+            aria-label="Seleziona tutti" className="shrink-0" />
+        </div>
+        <div />
+        {SORT_COLUMNS.map(col => (
+          <button key={col.field} onClick={() => handleSortClick(col.sortKey)}
+            className={cn("flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left", state.sortField === col.sortKey && state.sortDir ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+            {col.label} <SortIcon field={col.sortKey} />
+          </button>
+        ))}
+        <div />
       </div>
 
       {/* Bulk actions */}
@@ -277,59 +241,5 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
       )}
     </div>
     </PageErrorBoundary>
-  );
-}
-
-/** Small popover that lets the user type a value to filter inline on a column. */
-function ColumnFilterPopover({
-  field, label, active, onApply,
-}: {
-  field: string;
-  label: string;
-  active: boolean;
-  onApply: (value: string) => void;
-}): React.ReactElement {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className={cn(
-            "p-0.5 rounded hover:bg-primary/15 transition-colors",
-            active ? "text-primary" : "text-muted-foreground/60 hover:text-foreground",
-          )}
-          title={`Filtra per ${label}`}
-          aria-label={`Filtra per ${label}`}
-        >
-          <FilterIcon className="w-3 h-3" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-          Filtra: {label}
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = value.trim();
-            if (v) { onApply(v); setOpen(false); setValue(""); }
-          }}
-          className="flex gap-1"
-        >
-          <input
-            autoFocus
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={`es. ${label.toLowerCase()}…`}
-            className="flex-1 h-7 text-xs rounded border border-border bg-background px-2 outline-none focus:border-primary"
-          />
-          <Button type="submit" size="sm" className="h-7 px-2 text-xs">OK</Button>
-        </form>
-        <p className="text-[10px] text-muted-foreground mt-1.5">
-          Suggerimento: clicca un valore in lista per filtrarlo.
-        </p>
-      </PopoverContent>
-    </Popover>
   );
 }

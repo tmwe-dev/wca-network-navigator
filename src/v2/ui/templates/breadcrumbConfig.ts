@@ -12,13 +12,12 @@ export interface Crumb {
 const SECTION_LABELS: Record<string, string> = {
   "": "Home",
   explore: "Esplora",
-  pipeline: "Contatti",
-  contatti: "Contatti",
+  pipeline: "Pipeline",
   communicate: "Comunica",
   intelligence: "Intelligence",
   settings: "Config",
   // legacy roots that still resolve directly
-  crm: "Contatti",
+  crm: "Pipeline",
   contacts: "Contatti",
   outreach: "Comunica",
   inreach: "Comunica",
@@ -29,7 +28,7 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 const SUB_LABELS: Record<string, string> = {
-  contacts: "Elenco",
+  contacts: "Contatti CRM",
   kanban: "Kanban",
   biglietti: "Biglietti",
   duplicati: "Duplicati",

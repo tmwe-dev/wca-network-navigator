@@ -103,7 +103,6 @@ export function ContactsPage() {
       list={list}
       detail={detail}
       trailingLabel={trailingLabel}
-      hideHeader
     />
   );
 }

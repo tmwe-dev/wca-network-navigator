@@ -1,8 +1,5 @@
 /**
- * useCampaignDraftsV2 — Campaign drafts, queue, stats, pause/resume.
- * @deprecated 2026-04-30 — Hook non importato da nessuna pagina.
- * Le bozze batch sono gestite via `useEmailCampaignQueue` nel CampaignQueueMonitor
- * (Command Canvas). Mantenuto in archivio per riferimento.
+ * useCampaignDraftsV2 — Campaign drafts, queue, stats, pause/resume
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";

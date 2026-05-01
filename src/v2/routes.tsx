@@ -12,18 +12,6 @@ function AgentChatRedirect() {
   const agentId = searchParams.get("agent");
   return <Navigate to={agentId ? `/v2/agents?agent=${agentId}` : "/v2/agents"} replace />;
 }
-
-/**
- * Redirect che PRESERVA `location.state` (es. `prefilledRecipient`) e i
- * query params durante un redirect. Senza questo, `<Navigate>` perde lo
- * state passato via `navigate(path, { state: ... })` — bug critico per il
- * flusso "Invia email" dal CRM, che nav-state contiene email/contact.
- */
-function RedirectWithState({ to }: { to: string }) {
-  const location = useLocation();
-  const search = location.search || "";
-  return <Navigate to={`${to}${search}`} replace state={location.state} />;
-}
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -67,8 +55,7 @@ const EmailDownloadPage = lazy(() => import("./ui/pages/EmailDownloadPage").then
 const RAExplorerPage = lazy(() => import("./ui/pages/RAExplorerPage").then((m) => ({ default: m.RAExplorer })));
 const RAScrapingEnginePage = lazy(() => import("./ui/pages/RAScrapingEnginePage").then((m) => ({ default: m.RAScrapingEngine })));
 const RACompanyDetailPage = lazy(() => import("./ui/pages/RACompanyDetailPage").then((m) => ({ default: m.RACompanyDetailPage })));
-// 2026-04-30: CampaignJobsPage deprecata (campaign_jobs vuota da sempre).
-// Import rimosso, file mantenuto in src/v2/ui/pages/CampaignJobsPage.tsx.
+const CampaignJobsPage = lazy(() => import("./ui/pages/CampaignJobsPage").then((m) => ({ default: m.CampaignJobsPage })));
 const AdminUsersPage = lazy(() => import("./ui/pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
 const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) => ({ default: m.Onboarding })));
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
@@ -166,18 +153,6 @@ function PartnerHubAlias(): React.ReactElement {
   return guardedPage(NetworkPage, "PartnerHub");
 }
 
-/**
- * Alias /v2/contatti/* → /v2/pipeline/* preservando sub-path e query string.
- * Esempi:
- *   /v2/contatti/kanban?origine=crm → /v2/pipeline/kanban?origine=crm
- *   /v2/contatti/contacts            → /v2/pipeline/contacts
- */
-function ContattiAlias(): React.ReactElement {
-  const location = useLocation();
-  const subPath = location.pathname.replace(/^\/v2\/contatti/, "") || "/contacts";
-  return <Navigate to={`/v2/pipeline${subPath}${location.search}`} replace />;
-}
-
 // ── Router ───────────────────────────────────────────────────────────
 export function V2Routes(): React.ReactElement {
   return (
@@ -217,20 +192,16 @@ export function V2Routes(): React.ReactElement {
           <Route path="partner-hub" element={<PartnerHubAlias />} />
 
           {/* CRM + figli */}
-          {/* Tutti i vecchi alias rinviano alla pipeline unica con la giusta origine. */}
-          <Route path="crm" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
-          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
-          <Route path="crm/biglietti" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
-          <Route path="crm/business-cards" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
-          <Route path="crm/kanban" element={<Navigate to="/v2/pipeline/kanban?origine=crm" replace />} />
+          <Route path="crm" element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
+          <Route path="crm/biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
+          <Route path="crm/business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
+          <Route path="crm/kanban" element={<Navigate to="/v2/pipeline/kanban" replace />} />
           <Route path="crm/prospects" element={guardedPage(ProspectPage, "Prospects")} />
           <Route path="crm/acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
-          <Route path="business-cards" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
-          <Route path="biglietti" element={<Navigate to="/v2/pipeline/contacts?origine=biglietti" replace />} />
-          {/* Alias semantico: /v2/contatti/* → /v2/pipeline/* (preserva il path) */}
-          <Route path="contatti" element={<Navigate to="/v2/pipeline/contacts?origine=crm" replace />} />
-          <Route path="contatti/*" element={<ContattiAlias />} />
+          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
+          <Route path="business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
+          <Route path="biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
 
@@ -242,9 +213,9 @@ export function V2Routes(): React.ReactElement {
 
           {/* Outreach + figli */}
           <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
-          <Route path="outreach/composer" element={<RedirectWithState to="/v2/communicate/compose" />} />
+          <Route path="outreach/composer" element={<Navigate to="/v2/communicate/compose" replace />} />
           <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
-          <Route path="email-composer" element={<RedirectWithState to="/v2/communicate/compose" />} />
+          <Route path="email-composer" element={<Navigate to="/v2/communicate/compose" replace />} />
           <Route path="agenda" element={<Navigate to="/v2/pipeline/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
@@ -265,10 +236,8 @@ export function V2Routes(): React.ReactElement {
 
           {/* Campaigns + figli */}
           <Route path="campaigns" element={<Navigate to="/v2/explore/campaigns" replace />} />
-          {/* 2026-04-30: pagina fantasma — campaign_jobs vuota da sempre.
-              Redirect a /v2/campaigns. CampaignJobsPage resta nel codice. */}
-          <Route path="campaigns/jobs" element={<Navigate to="/v2/campaigns" replace />} />
-          <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns" replace />} />
+          <Route path="campaigns/jobs" element={guardedPage(CampaignJobsPage, "CampaignJobs")} />
+          <Route path="campaign-jobs" element={<Navigate to="/v2/campaigns/jobs" replace />} />
 
           {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />

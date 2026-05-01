@@ -59,45 +59,6 @@ function bulkActionsFor(table: string): readonly { id: string; label: string; pr
   }
 }
 
-/** Costruisce i riferimenti tracciabili (tabelle + keyword filtri) dai piani. */
-function buildAuditRefsFromPlans(plans: readonly QueryPlan[]): ToolResult["meta"] extends infer M ? M extends { auditRefs?: infer R } ? R : never : never {
-  const refs: { kind: "table" | "column" | "keyword"; label: string; value?: string }[] = [];
-  const seenTables = new Set<string>();
-  const seenColumns = new Set<string>();
-  const seenKeywords = new Set<string>();
-  for (const plan of plans) {
-    if (plan.table && plan.table !== "INVALID" && !seenTables.has(plan.table)) {
-      seenTables.add(plan.table);
-      refs.push({ kind: "table", label: plan.table, value: plan.rationale });
-    }
-    const columns = [
-      ...(plan.columns ?? []),
-      ...(plan.filters ?? []).map((f) => f.column),
-      ...(plan.sort ? [plan.sort.column] : []),
-    ];
-    for (const column of columns) {
-      const label = `${plan.table}.${column}`;
-      if (!seenColumns.has(label)) {
-        seenColumns.add(label);
-        refs.push({ kind: "column", label: column, value: label });
-      }
-    }
-    for (const f of plan.filters ?? []) {
-      const valueStr = Array.isArray(f.value)
-        ? f.value.join(",")
-        : f.value === null
-          ? "null"
-          : String(f.value);
-      const label = `${f.column} ${f.op} ${valueStr}`.slice(0, 60);
-      if (!seenKeywords.has(label)) {
-        seenKeywords.add(label);
-        refs.push({ kind: "keyword", label, value: `${plan.table}.${f.column}` });
-      }
-    }
-  }
-  return refs as never;
-}
-
 function formatCellValue(v: unknown): string | number | null {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "✓" : "✗";
@@ -109,78 +70,10 @@ function formatCellValue(v: unknown): string | number | null {
 }
 
 function humanLabel(col: string): string {
-  const overrides: Record<string, string> = {
-    company_name: "Azienda",
-    name: "Nome",
-    full_name: "Nome",
-    contact_name: "Contatto",
-    address: "Indirizzo",
-    street: "Indirizzo",
-    city: "Città",
-    region: "Regione",
-    state: "Regione",
-    postal_code: "CAP",
-    zip: "CAP",
-    country: "Paese",
-    country_name: "Paese",
-    country_code: "Paese",
-    email: "Email",
-    phone: "Telefono",
-    mobile: "Cellulare",
-    website: "Sito web",
-    lead_status: "Stato",
-    status: "Stato",
-    lead_score: "Score",
-    origin: "Origine",
-    source: "Origine",
-    created_at: "Creato",
-    updated_at: "Aggiornato",
-    last_contact_at: "Ultimo contatto",
-  };
-  if (overrides[col]) return overrides[col];
   return col
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
     .replace(/\bId\b/g, "ID");
-}
-
-/**
- * Ordine logico delle colonne per tabella (azienda → indirizzo → paese → contatti → meta).
- * Le colonne non elencate vengono accodate in ordine originale.
- * Questo allinea la presentazione del canvas alle tabelle business del CRM.
- */
-const COLUMN_PRIORITY: Record<string, string[]> = {
-  partners: [
-    "company_name", "name",
-    "address", "street", "city", "region", "state", "postal_code",
-    "country", "country_name", "country_code",
-    "contact_name", "email", "phone", "mobile", "website",
-    "lead_status", "status", "lead_score", "origin", "source",
-    "created_at", "updated_at", "last_contact_at",
-  ],
-  imported_contacts: [
-    "company_name", "name", "full_name",
-    "address", "city", "region", "country", "country_name",
-    "contact_name", "email", "phone", "mobile",
-    "lead_status", "status", "lead_score", "origin", "source",
-    "created_at", "updated_at", "last_contact_at",
-  ],
-  prospects: [
-    "company_name", "name",
-    "address", "city", "region", "country", "country_name",
-    "contact_name", "email", "phone", "website",
-    "status", "lead_score", "origin", "source",
-    "created_at", "updated_at",
-  ],
-};
-
-function reorderColumns(table: string, cols: string[]): string[] {
-  const priority = COLUMN_PRIORITY[table];
-  if (!priority) return cols;
-  const inSet = new Set(cols);
-  const ordered = priority.filter((c) => inSet.has(c));
-  const rest = cols.filter((c) => !ordered.includes(c));
-  return [...ordered, ...rest];
 }
 
 export const aiQueryTool: Tool = {
@@ -317,8 +210,7 @@ export const aiQueryTool: Tool = {
           durationMs,
         };
       }
-      const orderedAll = reorderColumns(exec.table, exec.columnsUsed.filter((c) => c !== idField));
-      const visibleCols = orderedAll.slice(0, 8);
+      const visibleCols = exec.columnsUsed.filter((c) => c !== idField).slice(0, 8);
       const columns: ToolResultColumn[] = visibleCols.map((c) => ({ key: c, label: humanLabel(c) }));
       const tableRows = exec.rows.map((r) => {
         const out: Record<string, string | number | null> = {};
@@ -368,7 +260,6 @@ export const aiQueryTool: Tool = {
         meta: {
           count: part.count,
           sourceLabel: `AI Query · ${part.table}${plan.rationale ? ` · ${plan.rationale}` : ""}`,
-          auditRefs: buildAuditRefsFromPlans([plan]),
         },
         selectable: true,
         idField,
@@ -392,7 +283,6 @@ export const aiQueryTool: Tool = {
       meta: {
         count: totalCount,
         sourceLabel: `AI Query · ${parts.length} entità · ${totalMs}ms`,
-        auditRefs: buildAuditRefsFromPlans(plans),
       },
     };
   },

@@ -183,12 +183,7 @@ export async function executePlan(
 
     try {
       const resolvedParams = resolveParams(step.params, current.results);
-      // FIX memoria conversazionale: passiamo al tool il prompt naturale
-      // dell'utente (originalPrompt) invece della serializzazione JSON dei
-      // params del planner. Senza questo, tool come `compose-email` perdono
-      // il testo originale e non riescono più a rilevare paese, follow-up
-      // o coreferenze ("questi partner", "tutti loro", ecc.).
-      const promptText = extras?.originalPrompt ?? JSON.stringify(resolvedParams);
+      const promptText = JSON.stringify(resolvedParams);
       const result = await withTimeout(
         tool.execute(promptText, {
           confirmed: false,
@@ -229,7 +224,6 @@ export async function executePlan(
 export async function executeApprovedStep(
   state: PlanExecutionState,
   onStepUpdate: (state: PlanExecutionState) => void,
-  extras?: PlanExecutionExtras,
 ): Promise<PlanExecutionState> {
   const stepNum = state.approvalStepNumber;
   if (!stepNum) return state;
@@ -253,15 +247,9 @@ export async function executeApprovedStep(
 
   try {
     const resolvedParams = resolveParams(step.params, current.results);
-    const promptText = extras?.originalPrompt ?? JSON.stringify(resolvedParams);
+    const promptText = JSON.stringify(resolvedParams);
     const result = await withTimeout(
-      tool.execute(promptText, {
-        confirmed: true,
-        payload: resolvedParams,
-        originalPrompt: extras?.originalPrompt,
-        contextHint: extras?.contextHint,
-        history: extras?.history,
-      }),
+      tool.execute(promptText, { confirmed: true, payload: resolvedParams }),
       STEP_TIMEOUT_MS,
       `Step ${step.stepNumber} (${step.toolId})`,
     );
@@ -291,5 +279,5 @@ export async function executeApprovedStep(
     return current;
   }
 
-  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber, extras);
+  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber);
 }

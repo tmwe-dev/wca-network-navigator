@@ -1,201 +1,157 @@
-# Audit Command AI: diagnosi e piano di intervento
+## Obiettivo
 
-## Problema confermato
-Il flusso visto nella conversazione non è un singolo bug: è un problema architetturale nella Command AI. Il sistema perde il target operativo tra un turno e l'altro, confonde query di lettura con azioni, non usa in modo affidabile i risultati appena selezionati e lascia che l'AI proponga tool incoerenti come LinkedIn anche quando l'utente lo vieta.
+Quando chiedi di scrivere una mail "amichevole, come vecchi compagni di scuola" ai partner di Malta, il Canvas deve mostrare **9 bozze pre-personalizzate sfogliabili** (una per partner). Quando dici "rifai più amichevole", la bozza visibile nel Canvas deve aggiornarsi **in-place** con il nuovo tono — senza ripartire da zero, senza perdere il contesto Malta, senza ritornare "0 partner trovati".
 
-## Cause principali trovate
+## Cosa NON tocco
 
-1. **La memoria conversazionale visibile non viene persistita davvero nel flusso corrente**
-   - `useConversation` esiste e salva/legge `command_conversations` e `command_messages`.
-   - Ma `CommandPage` usa solo `state.addMessage`, non `conv.addMessage` durante `sendMessage`.
-   - Risultato: la chat locale funziona finché la pagina è aperta, ma lo storico DB non viene aggiornato in tempo reale e il sistema non ha un resume affidabile.
+- `CommandPage.tsx` (layout, voce, sidebar, FloatingDock, briefing). 
+- `useCommandSubmit`, `useCommandState` (orchestrazione conversazione).
+- Edge function `generate-email` (la pipeline ufficiale resta quella che è).
+- `compose-email` come tool ID e i suoi label/governance.
 
-2. **La history passata ai modelli è troppo povera e rumorosa**
-   - `useCommandHistory` passa solo gli ultimi 6 messaggi locali.
-   - Dentro ci finiscono anche messaggi tecnici tipo `Ricerca AI · 12286`, non un riassunto strutturato dello stato.
-   - Il modello vede testo, non uno stato operativo: non sa che “questi cinque” sono i 5 partner di Marsa filtrati da Malta.
+Tutti i fix sono **interni** ai file di logica del tool e al Canvas Composer.
 
-3. **Il contesto strutturato salva solo tabella/filtri/righe, non il “working set”**
-   - `QueryContext` contiene `table`, `filters`, `mode`, `lastResultRows`.
-   - Non contiene una lista canonica di ID selezionati/risultanti, il nome del set, né vincoli negativi come `noLinkedIn`.
-   - `resetForNewMessage()` cancella `liveResult` e `selectedIds`, quindi il target operativo sparisce a ogni nuovo invio.
+## Diagnosi dei 3 bug attuali
 
-4. **La selezione UI non è collegata al linguaggio naturale**
-   - Il canvas consente selezione righe, ma `sendMessage()` non passa `selectedIds` né `liveResult` ai tool.
-   - Quando l'utente dice “partner selezionati” o “questi cinque”, il planner deve indovinare dal testo invece di ricevere gli ID.
+1. **Canvas mostra 1 sola bozza** invece di 9 → `composeEmail.ts` (ramo country-wide) chiama `generate-email` 1 volta su un partner-campione e mostra la lista degli altri 8 come testo nel dossier.
+2. **"Non vedo le nuove versioni" dopo "rifai amichevole"** → `ComposerCanvas` usa `useState(initializer)` per montare i valori iniziali (riga 47-56). L'initializer **non rigira mai** quando arrivano nuovi `initialSubject`/`initialBody` da un secondo turno: il Canvas resta inchiodato al primo testo.
+3. **"0 partner trovati" al 3° turno** → al messaggio "fammele vedere nel canvas", il match di compose-email triggera ma `detectCountryCode` non vede "Malta" e `extractPersonAndCompany` non trova azienda → cade nel ramo "single partner" → 0 risultati. Il tool **non eredita il contesto** del turno precedente (paese + lista partner).
+4. **Tono sempre "professionale"** → `oracle_tone: "professionale"` è hardcoded sia in `composeEmail.ts` (riga 220, 367) sia in `ComposerCanvas.handleGenerate` (riga 79). Il tono richiesto dall'utente nel `goal` non viene mai estratto né passato come parametro.
 
-5. **Mismatch whitelist client/server sulle tabelle**
-   - `ai-query-planner` server consente `partner_contacts` e `prospects`.
-   - `allowedTables.ts` client non contiene `partner_contacts` né `prospects`.
-   - Risultato: il planner può scegliere `partner_contacts`, ma il safe executor client la blocca o degrada; da qui messaggi tipo “non posso accedere a partner_contacts”.
+## Cosa cambio
 
-6. **Il planner non supporta join o lookup relazionali**
-   - La richiesta “verifica se questi cinque hanno contatti con email” richiede `partner_contacts.partner_id IN <5 ids>`.
-   - L'attuale `QueryPlan` può interrogare una tabella alla volta, ma non eredita gli ID del set precedente né fa join/relazione.
-   - Quindi ripiega su query generiche, spesso sbagliate.
+### 1. Tono dinamico estratto dal prompt utente
 
-7. **I tool di arricchimento richiedono un singolo UUID**
-   - `enrichPartnerFromWebsiteTool` e `enrichPartnerFromWebTool` estraggono un solo `partnerId` dal prompt/payload.
-   - Se il planner passa “questi 5 partner” senza UUID, il tool fallisce con `Partner ID non trovato. Specifica un UUID partner.`
-   - Non esiste un batch enrichment tool che accetti `partnerIds[]` dal working set.
+Nuovo modulo `src/v2/ui/pages/command/lib/toneDetector.ts`:
+- Funzione `detectTone(prompt: string): "amichevole" | "professionale" | "diretto" | "informale"`.
+- Pattern: "amichevole / vecchi compagni / informale / colloquiale / scuola / familiare" → `amichevole`; "diretto / breve / no fronzoli" → `diretto`; default `professionale`.
+- 6 unit test (vitest).
 
-8. **Il sistema propone LinkedIn senza rispettare i vincoli espliciti**
-   - I suggerimenti arrivano da `aiBridge` e `localResultFormatter` senza un registro dei vincoli conversazionali.
-   - “No LinkedIn” non viene salvato come policy temporanea della sessione.
-   - Per questo il sistema continua a proporre LinkedIn dopo un divieto esplicito.
+Userò `detectTone(prompt)` in `composeEmail.ts` e in `ComposerCanvas.handleGenerate` al posto del valore hardcoded.
 
-9. **Pericolo bulk: il sistema può allargare da 5 a migliaia di record**
-   - Nel caso “genera alias per questi partner”, la query è degradata fino a 12.286 record.
-   - Non c'è un guardrail frontend che blocchi qualunque azione quando il working set atteso è 5 ma il piano produce 12.286.
-   - I bulk cap hard esistono per tool di mutation, ma qui il danno nasce già nella fase di query/commento/preparazione.
+### 2. Bozze multiple pre-personalizzate (ramo country-wide)
 
-10. **La memoria/RAG backend ha un errore reale**
-   - Nei log edge `ai-assistant` risultano errori:
-     - `ragSearchMemory RPC error: operator does not exist: extensions.vector <=> extensions.vector`
-     - `ragSearchKb RPC error: operator does not exist: extensions.vector <=> extensions.vector`
-   - Quindi parte della memoria globale/KB vettoriale non sta funzionando correttamente.
+In `composeEmail.ts`, ramo `if (country && isCountryWideIntent(prompt))`:
 
-## Piano di rifondazione
+- Generare **9 bozze in parallelo** con `Promise.allSettled` su `generate-email` (cap a 10 per tutela costi, già rispetta i guard).
+- Ogni bozza con `partner_id` reale e `recipient_name` reale (primo `partner_contacts` con email del partner).
+- Aggiungere al risultato `composer` un nuovo campo `drafts: Draft[]` (vedi sotto in "Dettagli tecnici"). La bozza visibile inizialmente resta `initialSubject/initialBody` (= prima bozza dell'array).
 
-### 1. Introdurre un vero `CommandSessionContext`
-Creare uno stato strutturato unico, passato a planner, query planner, commentary e tool:
+### 3. Canvas sfogliabile
 
-```text
-CommandSessionContext
-- currentWorkingSet:
-  - entity: partners | partner_contacts | business_cards | imported_contacts
-  - ids: string[]
-  - label: "5 partner di Marsa, Malta"
-  - sourceTable
-  - filters
-  - rowCount
-  - rowsSnapshot
-- constraints:
-  - noLinkedIn: boolean
-  - onlyOfficialWebsites: boolean
-  - noExternalSearch: boolean
-- lastSuccessfulTool
-- lastUserIntent
-- lastResultSummary
+In `ComposerCanvas.tsx`:
+
+- Nuovo prop opzionale `drafts?: ReadonlyArray<{ partnerId, partnerName, contactName, contactEmail, subject, body }>`.
+- Se `drafts.length > 1`: header del composer mostra `‹ 1/9 ›` con frecce + nome azienda corrente. Cliccando la freccia, cambia `recipients/subject/body` con la bozza selezionata.
+- Bottone "**Rigenera tutte**" oltre al "Genera con AI": rifà l'array intero col nuovo tono (vedi punto 4).
+- Bottone "**Invia tutte (9)**" se `drafts.length > 1` → trasforma le bozze in una mini-campagna (riusa `enqueueOutreach` esistente in `src/v2/io/supabase/mutations/outreach-queue.ts`), oppure invia 1 a 1 in loop con `send-email` se l'utente preferisce; resta dietro `ApprovalPanel` come oggi.
+
+### 4. FIX BLOCCANTE: sync `initialSubject/initialBody` quando arrivano nuovi valori
+
+In `ComposerCanvas.tsx`:
+
+- Sostituire l'`useState(() => ...)` iniziale con un `useEffect([initialSubject, initialBody, drafts])` che scrive i nuovi valori nel composer **ogni volta che cambiano**.
+- Senza questo fix, qualunque rigenerazione resta invisibile nel Canvas.
+
+### 5. Contesto conversazionale per compose-email
+
+Estendere `useCommandState` con un piccolo store `lastComposerContext: { country?, partnerIds?, tone? } | null` (analogo a `queryContext` già esistente). 
+
+In `composeEmail.ts`:
+- Se il prompt non contiene paese/azienda MA il `lastComposerContext` è fresco (TTL 5 min, riusa la stessa logica di `queryContext`), **eredita** `country.code` e `partnerIds` per rigenerare le 9 bozze col nuovo tono.
+- Se l'utente dice "rifai amichevole / più breve / più formale", il tool detecta il tono nuovo e rigenera le 9 bozze sui partner ereditati invece di tornare 0 risultati.
+
+In `ComposerCanvas.handleGenerate`:
+- Se ci sono `drafts` con più di un elemento, rigenera tutte e 9 le bozze in parallelo con il nuovo tono detectato dal `promptHint` aggiornato (oppure da un piccolo input "tono" già nella toolbar — opzionale, posso ometterlo per semplicità).
+
+### 6. Messaggio del Direttore corretto
+
+In `useToolExecution.ts` (ramo `if (result.kind === "composer" && result.dossier)`), se `drafts.length > 1` cambiare il messaggio Oracolo da "Bozza pronta nel composer" a:
+
+> "9 bozze pronte nel canvas (sfoglia con le frecce). Tono: amichevole. Vuoi rivedere o invio?"
+
+### 7. Test
+
+- `composeEmail.test.ts`: country-wide → ritorna `drafts.length === N`; follow-up senza paese eredita contesto.
+- `toneDetector.test.ts`: 6 casi (amichevole / vecchi compagni / breve / formale / default).
+- `ComposerCanvas.test.tsx`: re-render con nuovi `initialSubject` aggiorna il body; navigazione frecce cambia bozza; `Rigenera tutte` chiama `generate-email` 9 volte.
+
+## Dettagli tecnici (per i tecnici)
+
+```ts
+// composeEmail.ts — nuovo shape ToolResult composer
+type ComposerDraft = Readonly<{
+  partnerId: string;
+  partnerName: string;
+  contactName: string | null;
+  contactEmail: string;
+  subject: string;
+  body: string;
+  status: "ok" | "no_email" | "ai_error";
+  errorMessage?: string;
+}>;
+
+interface ComposerToolResult {
+  kind: "composer";
+  // ...campi esistenti...
+  drafts?: ReadonlyArray<ComposerDraft>; // NEW: solo per batch country-wide
+  detectedTone: "amichevole" | "professionale" | "diretto" | "informale"; // NEW
+}
 ```
 
-Obiettivo: “questi cinque”, “partner selezionati”, “loro”, “questi partner” devono sempre risolversi agli ID reali, non a una nuova query larga.
+```ts
+// ComposerCanvas.tsx — fix critico
+useEffect(() => {
+  if (initialSubject) composer.setSubject(initialSubject);
+  if (initialBody) composer.setBody(initialBody);
+}, [initialSubject, initialBody]);
 
-### 2. Persistenza reale della conversazione
-Collegare `useCommandSubmit` a `conv.addMessage` oppure creare un adapter unico `addCommandMessage` che:
-
-- aggiorna UI locale;
-- salva in `command_messages`;
-- salva i `tool_result` reali per i messaggi tool;
-- aggiorna il contesto quando si ricarica una conversazione.
-
-Questo rende il resume vero, non solo una chat locale temporanea.
-
-### 3. Pulire la history passata all'AI
-Sostituire gli ultimi 6 messaggi grezzi con:
-
-```text
-- ultimi N messaggi utente/direttore puliti
-- esclusi messaggi Automation tecnici
-- più CommandSessionContext serializzato
+useEffect(() => {
+  if (drafts && drafts[currentIndex]) {
+    composer.setSubject(drafts[currentIndex].subject);
+    composer.setBody(drafts[currentIndex].body);
+    composer.clearRecipients();
+    composer.addRecipient({
+      email: drafts[currentIndex].contactEmail,
+      name: drafts[currentIndex].contactName ?? drafts[currentIndex].partnerName,
+    });
+  }
+}, [currentIndex, drafts]);
 ```
 
-Il modello deve vedere: “working set attivo = 5 partner di Marsa, ids=[...]”, non solo “Ricerca AI · 5”.
-
-### 4. Allineare whitelist e schema query
-Allineare `allowedTables.ts` con `ai-query-planner`:
-
-- aggiungere `partner_contacts`;
-- valutare `prospects`/`prospect_contacts` se ancora usati;
-- aggiungere priorità colonne e label per `partner_contacts`;
-- impedire che il planner scelga una tabella che il client poi blocca.
-
-### 5. Aggiungere query relazionali sicure per working set
-Estendere il planner/executor per richieste come:
-
-- “contatti dei partner selezionati”;
-- “email aziendali di questi partner”;
-- “biglietti collegati a questi partner”.
-
-Prima versione senza join arbitrari:
-
-- se `workingSet.entity === partners` e l'utente chiede contatti → query `partner_contacts` con `partner_id in workingSet.ids`;
-- se chiede email aziendali → query `partners` con `id in workingSet.ids`;
-- se chiede BCA → query `business_cards` con `matched_partner_id in workingSet.ids`.
-
-### 6. Batch enrichment controllato per siti ufficiali
-Creare/adeguare un tool che accetti `partnerIds[]` e non un solo UUID:
-
-```text
-enrich-selected-partners-websites
-- input: partnerIds[], mode: official_website_only
-- vieta LinkedIn se constraints.noLinkedIn=true
-- richiede approvazione se > 1 partner
-- mostra prima anteprima: aziende, siti, azione prevista
-- esegue max 5 automatici o chiede conferma esplicita per più record
+```ts
+// useCommandState — nuovo store contesto
+const [lastComposerContext, setLastComposerContext] = useState<{
+  countryCode: string;
+  partnerIds: string[];
+  tone: string;
+  ts: number;
+} | null>(null);
+// TTL: 5 min, riusa isContextFresh(...)
 ```
 
-Nessuna ricerca LinkedIn deve essere proposta o invocata se il vincolo è attivo.
-
-### 7. Guardrail anti-allargamento scope
-Aggiungere un controllo centrale prima di ogni azione su set:
-
-```text
-if user refers to working set of 5
-and planned target count > 5
-then block and ask confirmation/re-scope
+```ts
+// composeEmail.ts — eredità contesto
+if (!country && !company && !email) {
+  const ctx = getLastComposerContext(); // singleton modulo come getLastSuccessfulQueryPlan
+  if (ctx && isFresh(ctx)) {
+    // Rigenera N bozze sugli stessi partnerIds con tone aggiornato
+  }
+}
 ```
 
-Esempio messaggio corretto:
-“Mi fermo: stavo per operare su 12.286 record, ma il contesto attivo è 5 partner di Marsa. Vuoi limitare l'azione a quei 5?”
+## Files toccati
 
-### 8. Suggerimenti coerenti con vincoli e contesto
-Modificare `aiBridge` e `localResultFormatter` in modo che:
+- `src/v2/ui/pages/command/tools/composeEmail.ts` (modifica ramo country-wide + ramo follow-up)
+- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` (frecce + sync useEffect + invio batch)
+- `src/v2/ui/pages/command/lib/toneDetector.ts` (nuovo, ~40 righe)
+- `src/v2/ui/pages/command/lib/composerContext.ts` (nuovo, store + helper, ~30 righe, stesso pattern di `aiQueryTool.getLastSuccessfulQueryPlan`)
+- `src/v2/ui/pages/command/tools/types.ts` (estendere `ComposerToolResult` con `drafts` e `detectedTone`)
+- `src/v2/ui/pages/command/hooks/useToolExecution.ts` (testo messaggio Oracolo se `drafts.length > 1`)
+- 3 file di test sotto `src/v2/ui/pages/command/__tests__/`
 
-- ricevano `CommandSessionContext`;
-- non propongano LinkedIn quando `noLinkedIn=true`;
-- propongano azioni sui “5 partner selezionati”, non su tutto il paese;
-- non inventino capacità non disponibili.
+Nessuna modifica a `CommandPage.tsx`, alla pipeline `generate-email`, all'auth, al DAL, ai prompt operativi del Prompt Lab. Zero impatti su altre pagine.
 
-### 9. Fix memoria/RAG backend
-Analizzare e correggere le RPC `match_kb_entries` / `match_ai_memory` o equivalenti, perché oggi il confronto vettoriale fallisce con tipo `extensions.vector`.
+## Stima
 
-Obiettivo:
-- memoria globale e KB devono tornare interrogabili;
-- se RAG fallisce, il sistema deve loggare ma anche degradare in modo esplicito negli audit tecnici, non fingere memoria piena.
-
-### 10. Test regressione sul caso Malta/Marsa
-Aggiungere test mirati del flusso:
-
-1. “Trova i partner di Malta” → 9 partner, working set Malta.
-2. “filtra per città Marsa” → 5 partner, working set Marsa/Malta con 5 ID.
-3. “verifica se questi cinque hanno contatti con mail” → query `partner_contacts` con `partner_id in <5 ids>`.
-4. “non usare LinkedIn, cerca sui siti ufficiali” → constraint `noLinkedIn=true`, `onlyOfficialWebsites=true`.
-5. “arricchisci questi 5” → batch tool con 5 IDs, approvazione, nessun LinkedIn.
-6. “genera alias per questi partner” → massimo 5, mai 12.286.
-
-## File principali da modificare in implementazione
-
-- `src/v2/ui/pages/command/hooks/useCommandState.ts`
-- `src/v2/ui/pages/command/hooks/useCommandSubmit.ts`
-- `src/v2/ui/pages/command/hooks/useCommandHistory.ts`
-- `src/v2/ui/pages/command/hooks/useQueryContext.ts`
-- `src/v2/ui/pages/command/lib/queryContext.ts`
-- `src/v2/ui/pages/command/lib/allowedTables.ts`
-- `src/v2/ui/pages/command/lib/safeQueryExecutor.ts`
-- `src/v2/ui/pages/command/tools/aiQueryTool.ts`
-- `src/v2/ui/pages/command/tools/enrichPartnerFromWebsite.ts`
-- `src/v2/ui/pages/command/aiBridge.ts`
-- `supabase/functions/ai-query-planner/index.ts`
-- `supabase/functions/ai-assistant/modeHandlers.ts`
-- RPC/migrazioni memoria vettoriale se necessario
-
-## Risultato atteso
-Dopo l'intervento, la Command AI deve comportarsi come un operatore sequenziale:
-
-- mantiene il working set;
-- sa che “questi cinque” sono i 5 partner di Marsa;
-- non allarga mai a migliaia di record senza blocco;
-- non propone LinkedIn se vietato;
-- usa `partner_contacts` quando l'utente chiede contatti dei partner;
-- recupera la conversazione e il contesto anche dopo reload o riapertura.
+~250 righe nuove, ~80 modificate. Una sola sessione di build, test verdi prima di consegnare.

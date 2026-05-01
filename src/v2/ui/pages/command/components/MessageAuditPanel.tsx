@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ScrollText, Database, Search, Columns3 } from "lucide-react";
+import { ChevronRight, ScrollText } from "lucide-react";
 import type { MessageAudit } from "../constants";
 
 interface Props {
@@ -26,16 +26,6 @@ const refKindLabel: Record<NonNullable<MessageAudit["references"]>[number]["kind
   "model": "Model",
   "playbook": "Playbook",
   "context": "Contesto",
-  "table": "Tabella",
-  "column": "Colonna",
-  "keyword": "Keyword",
-};
-
-/** Stile per i nuovi badge "tabella" e "keyword" — distinti da quelli generici. */
-const refKindStyle: Partial<Record<NonNullable<MessageAudit["references"]>[number]["kind"], string>> = {
-  table: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200/95",
-  column: "border-primary/30 bg-primary/10 text-primary/95",
-  keyword: "border-amber-400/30 bg-amber-400/10 text-amber-200/95",
 };
 
 export default function MessageAuditPanel({ audit }: Props) {
@@ -136,24 +126,16 @@ export default function MessageAuditPanel({ audit }: Props) {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {audit.references!.map((r, i) => (
-                      <motion.span
+                      <span
                         key={i}
-                        initial={{ opacity: 0, scale: 0.85, y: 4 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.6) }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] ${
-                          refKindStyle[r.kind] ?? "border-primary/20 bg-primary/5"
-                        }`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-primary/20 bg-primary/5 text-[10px]"
                         title={r.value ?? ""}
                       >
-                        {r.kind === "table" && <Database className="w-2.5 h-2.5 opacity-80" />}
-                        {r.kind === "column" && <Columns3 className="w-2.5 h-2.5 opacity-80" />}
-                        {r.kind === "keyword" && <Search className="w-2.5 h-2.5 opacity-80" />}
                         <span className="text-primary/80 font-mono uppercase text-[8px] tracking-wider">
                           {refKindLabel[r.kind]}
                         </span>
                         <span className="text-foreground/90">{r.label}</span>
-                      </motion.span>
+                      </span>
                     ))}
                   </div>
                 </div>

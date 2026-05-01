@@ -131,10 +131,7 @@ send_email
   ✓ Updates outreach_queue entry status → completed
 
 generate_outreach
-  ✓ No DB modifications, ma applica Email Contract + Type Detector
-    (canale email con partner) e Caporedattore Finale (Giornalista AI) su
-    tutti i canali. Verdict "block" del Giornalista NON viene salvato:
-    sta al chiamante (Cadence/Agent) gestirlo (pending review).
+  ✓ No side effects (draft only, no DB modifications)
 
 improve_email
   ✓ No side effects (transformation only)

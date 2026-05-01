@@ -1,12 +1,12 @@
-import type { Tool, ToolResult, ComposerDraft, ToolContext } from "./types";
+import type { Tool, ToolResult, ComposerDraft } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
 import {
   getLastComposerContext,
+  isRegenerateIntent,
   setLastComposerContext,
 } from "../lib/composerContext";
-import { getLastQueryResultContext } from "../lib/lastQueryResultContext";
 
 /**
  * compose-email tool — risolve partner/contatto nel CRM e usa la pipeline
@@ -98,22 +98,8 @@ function detectCountryCode(prompt: string): { code: string; label: string } | nu
 
 function isCountryWideIntent(prompt: string): boolean {
   const lower = prompt.toLowerCase();
-  // Ampliato per intercettare follow-up coreferenziali dopo una query
-  // (es. "scrivi una mail a tutti quanti", "manda a tutti loro").
-  return (
-    /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower) ||
-    /\ba\s+tutti(?:\s+(?:quanti|loro))?\b/i.test(lower) ||
-    /\b(a|per)\s+(?:loro|ognuno|ciascuno)\b/i.test(lower)
-  );
-}
-
-/** Cerca un codice paese ISO-2 (case-insensitive) per ottenere l'etichetta human-readable. */
-function labelForCountryCode(code: string): string {
-  const upper = code.toUpperCase();
-  for (const [name, c] of Object.entries(COUNTRY_MAP)) {
-    if (c === upper) return name;
-  }
-  return upper;
+  // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
+  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
 }
 
 async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
@@ -390,46 +376,20 @@ export const composeEmailTool: Tool = {
     if (/(?:scrivi|componi|invia|prepara|manda).*(?:e-?mail|mail)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
       return true;
     }
-    // Follow-up: nessuna regex hand-coded sull'intento. Il routing al
-    // compose-email per modifiche/rivisitazioni avviene tramite il router AI
-    // contesto-aware (vedi `getActiveComposerContextSummary` iniettato in
-    // `decideToolFromPrompt`/`planExecution`). Il fast-path qui resta solo
-    // per il primo trigger esplicito.
+    // Follow-up rigenerazione: "rifai", "fammele vedere nel canvas", "non vedo le nuove versioni"…
+    if (isRegenerateIntent(prompt) && getLastComposerContext() !== null) {
+      return true;
+    }
     return false;
   },
 
-  async execute(prompt: string, context?: ToolContext): Promise<ToolResult> {
-    // ── 0pre) Decisione semantica del planner (no regex) ───────────────
-    // Il planner AI può passare nei payload params strutturati che ci
-    // dicono come trattare la richiesta, evitando di reinterpretarla qui:
-    //   - context_followup: true  → continuazione del batch attivo
-    //   - target: { table, countryCode } → batch country-wide diretto
-    // Se presenti, sono autoritativi rispetto alle euristiche legacy.
-    const payload = (context?.payload ?? {}) as Record<string, unknown>;
-    const aiContextFollowup = payload.context_followup === true;
-    const aiTarget = payload.target && typeof payload.target === "object"
-      ? (payload.target as Record<string, unknown>)
-      : null;
-    const aiCountryCode = aiTarget && typeof aiTarget.countryCode === "string"
-      ? (aiTarget.countryCode as string).toUpperCase()
-      : null;
-    // ── 0a) Follow-up sul batch attivo ─────────────────────────────────
-    // Se esiste un batch attivo (TTL 5 min) E il prompt non introduce una
-    // nuova entità (azienda/email/paese diverso), trattiamo la richiesta
-    // come modifica delle bozze esistenti. Niente regex sull'intento:
-    // il modello AI (router) ha già scelto compose-email leggendo il
-    // contesto attivo. Qui basta verificare che non ci sia un cambio chiaro
-    // di destinatario/azienda nel testo.
+  async execute(prompt: string): Promise<ToolResult> {
+    // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
+    // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
+    //         "non vedo le nuove versioni", "riscrivi più breve".
+    // Eredita country + partner dal contesto, applica il NUOVO tono detectato.
     const lastCtx = getLastComposerContext();
-    const newEntity = extractPersonAndCompany(prompt);
-    const newCountry = detectCountryCode(prompt);
-    const introducesNewTarget =
-      Boolean(newEntity.company) ||
-      Boolean(newEntity.email) ||
-      (newCountry && lastCtx && newCountry.code !== lastCtx.countryCode);
-    // Se l'AI ha esplicitamente segnalato follow-up, salta i controlli
-    // sintattici "introducesNewTarget" e tratta come modifica del batch.
-    if (lastCtx && (aiContextFollowup || !introducesNewTarget)) {
+    if (lastCtx && isRegenerateIntent(prompt)) {
       const tone = detectTone(prompt);
       const partners = await fetchPartnersByIds(lastCtx.partnerIds);
       if (partners.length === 0) {
@@ -445,14 +405,7 @@ export const composeEmailTool: Tool = {
           ],
         };
       }
-      // Concateno il goal originale + la richiesta corrente: in questo modo
-      // l'AI generatrice riceve "obiettivo iniziale" + "modifica richiesta"
-      // (es. "riducile a 4-5 righe", "compattale", "più sintetiche") e
-      // interpreta lei in linguaggio naturale.
-      const enrichedGoal = lastCtx.originalGoal
-        ? `${lastCtx.originalGoal}\n\nMODIFICA RICHIESTA DALL'OPERATORE: ${prompt}`
-        : prompt;
-      const drafts = await generateDraftsBatch(partners, tone, enrichedGoal);
+      const drafts = await generateDraftsBatch(partners, tone, lastCtx.originalGoal || prompt);
       setLastComposerContext({
         countryCode: lastCtx.countryCode,
         countryLabel: lastCtx.countryLabel,
@@ -476,54 +429,8 @@ export const composeEmailTool: Tool = {
     // In questo caso NON cerchiamo una singola azienda: generiamo UNA bozza
     // pre-personalizzata per ciascun partner (Promise.allSettled, cap 12),
     // sfogliabili nel Canvas con frecce.
-    // Priorità: target esplicito dal planner > detection regex > query precedente.
-    let country: { code: string; label: string } | null = aiCountryCode
-      ? { code: aiCountryCode, label: labelForCountryCode(aiCountryCode) }
-      : detectCountryCode(prompt);
-    const countryWide = Boolean(aiCountryCode) || isCountryWideIntent(prompt);
-
-    // Coreferenza con l'ultima query (ponte ai-query → compose-email).
-    // Es. utente ha appena chiesto "quanti partner in Arabia Saudita?" e ora
-    // dice "scrivi una mail a tutti quanti": eredita country dalla query.
-    if (!country && countryWide) {
-      const lastQ = getLastQueryResultContext();
-      if (lastQ?.countryCode && lastQ.table === "partners") {
-        country = { code: lastQ.countryCode, label: labelForCountryCode(lastQ.countryCode) };
-      }
-    }
-
-    // Fallback ulteriore: scansiona la cronologia conversazionale recente
-    // per trovare un riferimento esplicito a un paese. Copre il caso in cui
-    // `lastQueryResultContext` sia stato sovrascritto da query intermedie
-    // per città (es. "Trova partner di Malta" → "marsa" → "questi partner").
-    if (!country) {
-      const history = context?.history ?? [];
-      // Scorri dal più recente al più vecchio, max 6 messaggi
-      for (let i = history.length - 1; i >= 0 && i >= history.length - 6; i--) {
-        const msg = history[i];
-        if (!msg?.content) continue;
-        const detected = detectCountryCode(msg.content);
-        if (detected) {
-          country = detected;
-          break;
-        }
-      }
-    }
-
-    // Se abbiamo un country ma il prompt non è chiaramente country-wide,
-    // assumiamo country-wide quando il testo contiene riferimenti coreferenziali
-    // ("questi partner", "loro", "tutti") — già coperti da isCountryWideIntent —
-    // oppure quando il prompt è una richiesta generica di scrittura email senza
-    // un destinatario specifico (no azienda/persona/email estratti).
-    const hasExplicitTarget =
-      Boolean(extractPersonAndCompany(prompt).company) ||
-      Boolean(extractPersonAndCompany(prompt).email) ||
-      Boolean(extractPersonAndCompany(prompt).person);
-    const inferredCountryWide =
-      countryWide ||
-      (Boolean(country) && !hasExplicitTarget && /\b(quest[oi]|loro|partner)\b/i.test(prompt));
-
-    if (country && inferredCountryWide) {
+    const country = detectCountryCode(prompt);
+    if (country && isCountryWideIntent(prompt)) {
       const partners = await searchPartnersByCountry(country.code);
       if (partners.length === 0) {
         return {

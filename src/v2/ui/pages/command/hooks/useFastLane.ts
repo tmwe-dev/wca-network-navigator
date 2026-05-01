@@ -37,7 +37,7 @@ export function useFastLane(deps: FastLaneDeps) {
       userPrompt: string,
       hint: string,
       onCommentNeeded: (userPrompt: string, toolId: string, result: ToolResult, trace?: TraceBuilder) => Promise<void>,
-      onContextUpdate: (result?: ToolResult) => void,
+      onContextUpdate: () => void,
     ) => {
       setActiveToolKey("ai-query");
       setShowTools(true);
@@ -96,8 +96,8 @@ export function useFastLane(deps: FastLaneDeps) {
         setExecProgress(100);
         setShowTools(false);
 
-        // Update query context (with result snapshot for synthesis follow-ups)
-        onContextUpdate(result);
+        // Update query context
+        onContextUpdate();
 
         // Show step recap
         const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
