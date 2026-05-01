@@ -74,6 +74,38 @@ export interface CompanyEntity {
   channels?: ContactChannels & { website?: boolean };
   /** True se l'azienda ha almeno un biglietto BCA collegato. */
   hasBca?: boolean;
+  /** Numero di biglietti BCA collegati (>= 0). */
+  bcaCount?: number;
+  /** Stato commerciale (lead_status). */
+  leadStatus?: string | null;
+  /** Preferito stellato. */
+  isFavorite?: boolean;
+  /** Attivo nel network. */
+  isActive?: boolean;
+  /** Tipo ufficio (HQ / Branch). */
+  officeType?: string | null;
+  /** Tipo partner. */
+  partnerType?: string | null;
+  /** ISO date dell'ultima interazione. */
+  lastInteractionAt?: string | null;
+  /** Numero interazioni totali. */
+  interactionCount?: number;
+  /** ISO date dell'ultima Deep Search / arricchimento. */
+  enrichedAt?: string | null;
+  /** ISO date di scadenza membership WCA. */
+  membershipExpires?: string | null;
+  /** Servizi (chip). */
+  services?: string[];
+  /** Certificazioni (chip). */
+  certifications?: string[];
+  /** Network di affiliazione (chip). */
+  networks?: string[];
+  /** True se ha un sito web valorizzato. */
+  hasWebsite?: boolean;
+  /** True se ha un profilo LinkedIn (azienda o referente). */
+  hasLinkedin?: boolean;
+  /** True se ha un logo. */
+  hasLogo?: boolean;
   /**
    * Payload originale per le azioni (apertura drawer, ⋯).
    */
