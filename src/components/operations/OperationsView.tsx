@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Globe, Users, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
@@ -37,38 +37,38 @@ function useDirectoryTotal() {
   });
 }
 
-/** Portal: renders Network controls into the global header slot */
-function HeaderBarPortal({ globalStats, deepSearch }: {
-  globalStats: { totalPartners: number } & Record<string, unknown> | null;
+/**
+ * Portal: renders Network actions (es. riapertura Deep Search canvas)
+ * into the ExploreContextHeader actions slot.
+ * Il titolo + counter sono ora gestiti dall'ExploreContextHeader stesso.
+ */
+function HeaderBarPortal({ deepSearch }: {
   deepSearch: DeepSearchState;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const el = document.getElementById("campaign-header-controls");
+    const el = document.getElementById("explore-header-actions");
     setContainer(el);
   }, []);
 
   if (!container) return null;
 
+  const showDeepBtn =
+    (deepSearch.running || deepSearch.results?.length > 0) &&
+    !deepSearch.canvasOpen;
+
+  if (!showDeepBtn) return null;
+
   return createPortal(
-    <div className="flex items-center gap-3 min-w-0 flex-1">
-      <Globe className="w-4 h-4 text-primary/70 animate-spin-slow flex-shrink-0" />
-      <span className="text-xs font-semibold text-foreground hidden sm:inline">Network · Partner WCA</span>
-
-      {globalStats && (
-        <span className="hidden md:flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-          <Users className="w-3 h-3" />
-          <span className="font-mono">{globalStats.totalPartners}</span> partner
-        </span>
-      )}
-
-      {(deepSearch.running || deepSearch.results?.length > 0) && !deepSearch.canvasOpen && (
-        <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
-          <Eye className="w-3.5 h-3.5" />
-        </button>
-      )}
-    </div>,
-    container
+    <button
+      onClick={() => deepSearch.setCanvasOpen(true)}
+      className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground"
+      title="Riapri Deep Search"
+      aria-label="Riapri Deep Search"
+    >
+      <Eye className="w-3.5 h-3.5" />
+    </button>,
+    container,
   );
 }
 
