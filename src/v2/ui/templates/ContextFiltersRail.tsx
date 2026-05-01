@@ -3,10 +3,11 @@ import { useLocation } from "react-router-dom";
 import { SlidersHorizontal } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
-import { BCAFiltersSection } from "@/components/global/filters-drawer/BCAFiltersSection";
 
-function getFilterContext(pathname: string): { title: string; content: React.ReactNode } | null {
+function getFilterContext(pathname: string, networkView: "partners" | "bca"): { title: string; content: React.ReactNode } | null {
   if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network") {
+    // BCA tab inside Network has its own country sidebar inside the view — avoid duplicate.
+    if (networkView === "bca") return null;
     return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
   }
 
@@ -14,16 +15,28 @@ function getFilterContext(pathname: string): { title: string; content: React.Rea
     return { title: "Filtri Contatti CRM", content: <CRMFiltersSection /> };
   }
 
-  if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/crm/biglietti") || pathname.startsWith("/v2/crm/business-cards")) {
-    return { title: "Filtri Biglietti da visita", content: <BCAFiltersSection /> };
-  }
+  // CRM › Biglietti: la maschera (BCAUnifiedHub) ha già la sua sidebar paesi/filtri
+  // ricca e funzionante — niente rail esterno duplicato.
 
   return null;
 }
 
 export function ContextFiltersRail(): React.ReactElement | null {
   const { pathname } = useLocation();
-  const context = getFilterContext(pathname);
+  const [networkView, setNetworkView] = React.useState<"partners" | "bca">(() => {
+    try { return (sessionStorage.getItem("network-view") as "partners" | "bca") || "partners"; }
+    catch { return "partners"; }
+  });
+  React.useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ view: "partners" | "bca" }>).detail;
+      if (detail?.view === "partners" || detail?.view === "bca") setNetworkView(detail.view);
+    };
+    window.addEventListener("network-view-change", onChange);
+    return () => window.removeEventListener("network-view-change", onChange);
+  }, []);
+
+  const context = getFilterContext(pathname, networkView);
 
   if (!context) return null;
 
