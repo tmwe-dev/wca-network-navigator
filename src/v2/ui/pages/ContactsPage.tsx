@@ -5,19 +5,53 @@
 import { useState, useCallback, useEffect } from "react";
 import { ContactListPanel } from "@/components/contacts/ContactListPanel";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
-import { Users, X } from "lucide-react";
+import { Users, X, LayoutGrid, Settings2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getContactById } from "@/data/contacts";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
 import type { ContactDetail } from "@/hooks/useContactDetail";
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
+import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
+import { useCrmContactsAsCompanies } from "@/v2/hooks/companyList/useCrmContactsAsCompanies";
 
 const log = createLogger("Contacts");
+
+function CrmCardListBody(): React.ReactElement {
+  const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
+  return (
+    <div className="flex flex-col h-full min-h-0 px-4 pb-3 pt-2">
+      <CompanyCardList
+        companies={companies}
+        isLoading={isLoading}
+        emptyMessage="Nessun contatto"
+        onOpenContact={(contact) => {
+          window.dispatchEvent(
+            new CustomEvent("crm-select-contact", {
+              detail: { contactId: contact.id },
+            })
+          );
+        }}
+      />
+      {hasMore && (
+        <div className="pt-2 flex justify-center">
+          <button
+            onClick={() => void fetchNextPage()}
+            className="px-3 py-1.5 rounded-md text-[11px] bg-muted/40 hover:bg-muted/60 text-muted-foreground border border-border/40"
+          >
+            Carica altri
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<ContactDetail | null>(null);
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
+  const [view, setView] = useState<"cards" | "classic">("cards");
 
   const loadContactById = useCallback(async (id: string) => {
     try {
@@ -64,11 +98,49 @@ export function ContactsPage() {
     return () => window.removeEventListener("crm-select-contact", handler);
   }, [setUrlContactId, loadContactById]);
 
+  const viewToggle = (
+    <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5 m-2">
+      <button
+        onClick={() => setView("cards")}
+        className={cn(
+          "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
+          view === "cards"
+            ? "bg-primary/15 text-primary"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+        )}
+        title="Vista card-azienda"
+      >
+        <LayoutGrid className="w-3 h-3" /> Card-azienda
+      </button>
+      <button
+        onClick={() => setView("classic")}
+        className={cn(
+          "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
+          view === "classic"
+            ? "bg-primary/15 text-primary"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+        )}
+        title="Vista tabella classica"
+      >
+        <Settings2 className="w-3 h-3" /> Classica
+      </button>
+    </div>
+  );
+
   const list = (
-    <ContactListPanel
-      selectedId={selectedContact?.id ?? null}
-      onSelect={handleSelect}
-    />
+    <div className="flex flex-col h-full min-h-0">
+      {viewToggle}
+      <div className="flex-1 min-h-0">
+        {view === "cards" ? (
+          <CrmCardListBody />
+        ) : (
+          <ContactListPanel
+            selectedId={selectedContact?.id ?? null}
+            onSelect={handleSelect}
+          />
+        )}
+      </div>
+    </div>
   );
 
   const detail = selectedContact ? (
