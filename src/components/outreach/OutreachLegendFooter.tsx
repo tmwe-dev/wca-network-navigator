@@ -13,9 +13,14 @@ const LEGEND: ReadonlyArray<{ readonly label: string; readonly color: string; re
 ];
 
 export function OutreachLegendFooter() {
-  const [hidden, setHidden] = useState<boolean>(false);
+  // Default: nascosto. L'utente lo riapre esplicitamente settando "0".
+  const [hidden, setHidden] = useState<boolean>(true);
   useEffect(() => {
-    try { setHidden(localStorage.getItem("outreach-legend-hidden") === "1"); } catch { /* ignore */ }
+    try {
+      const v = localStorage.getItem("outreach-legend-hidden");
+      // Solo se l'utente ha esplicitamente messo "0" la mostriamo
+      setHidden(v !== "0");
+    } catch { /* ignore */ }
   }, []);
   if (hidden) return null;
   const close = () => {

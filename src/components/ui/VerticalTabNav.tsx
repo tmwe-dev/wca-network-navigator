@@ -1,12 +1,15 @@
 import { type LucideIcon } from "lucide-react";
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 export interface VerticalTab {
   value: string;
   label: string;
   icon: LucideIcon;
   badge?: number | string;
+  tooltip?: string;
 }
 
 interface VerticalTabNavProps {
@@ -21,6 +24,7 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTa
     <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 overflow-hidden">
       {/* Tab buttons */}
       <div className="py-1 flex-shrink-0">
+        <TooltipProvider delayDuration={200}>
         {tabs.map((tab) => {
           const active = value === tab.value;
           const Icon = tab.icon;
@@ -46,6 +50,22 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTa
                 <Icon className="w-3.5 h-3.5 shrink-0" />
               </span>
               <span className="truncate">{tab.label}</span>
+              {tab.tooltip && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="ml-1 text-muted-foreground/60 hover:text-foreground"
+                      aria-label="Info"
+                    >
+                      <Info className="w-3 h-3" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs text-[11px] leading-relaxed">
+                    {tab.tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {tab.badge != null && Number(tab.badge) > 0 && (
                 <span className="ml-auto bg-destructive text-destructive-foreground text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                   {Number(tab.badge) > 99 ? "99+" : tab.badge}
@@ -54,6 +74,7 @@ export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTa
             </button>
           );
         })}
+        </TooltipProvider>
       </div>
 
       {/* Dynamic filter slot — scrollable below tabs */}
