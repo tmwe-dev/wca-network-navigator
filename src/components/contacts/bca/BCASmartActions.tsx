@@ -1,20 +1,21 @@
 /**
- * BCASmartActions — Deep Search, LinkedIn, Campaign for BCA detail
+ * BCASmartActions — wrapper sul UnifiedSmartActions standard.
+ * Mantiene gli handler specifici BCA (Cockpit con context, Deep su matched_partner_id).
  */
 import { useCallback } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
-import { Button } from "@/components/ui/button";
-import { Search, Linkedin, Megaphone, ArrowRight, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { toast } from "@/hooks/use-toast";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
+import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
 
 interface Props {
   card: BusinessCardWithPartner;
 }
 
+/** Espone solo il blocco "Azioni AI" — il blocco Comunicazione resta nel pannello padre BCA per non duplicarsi. */
 export function BCASmartActions({ card }: Props) {
   const navigate = useAppNavigate();
 
@@ -72,27 +73,15 @@ export function BCASmartActions({ card }: Props) {
     });
   }, [card, navigate]);
 
+  // Solo blocco AI: Comunicazione è già renderizzato dal parent BCADetailPanel.
   return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-1"><Sparkles className="w-3 h-3" /> Azioni AI</p>
-      <div className="grid grid-cols-2 gap-1.5">
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleCockpitWithContext}>
-          <ArrowRight className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="truncate">Cockpit</span>
-        </Button>
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10 justify-start" onClick={handleDeepSearch}>
-          <Search className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="truncate">Deep Search</span>
-        </Button>
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-blue-500/15 hover:bg-blue-500/10 justify-start" onClick={handleLinkedIn}>
-          <Linkedin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-          <span className="truncate">LinkedIn</span>
-        </Button>
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-amber-500/15 hover:bg-amber-500/10 justify-start" onClick={handleCampaign}>
-          <Megaphone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="truncate">Campagna</span>
-        </Button>
-      </div>
-    </div>
+    <UnifiedSmartActions
+      sections={["ai"]}
+      hasEmail={false} hasPhone={false} hasWhatsApp={false}
+      onCockpit={handleCockpitWithContext}
+      onDeepSearch={handleDeepSearch}
+      onLinkedIn={handleLinkedIn}
+      onCampaign={handleCampaign}
+    />
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Globe, Users, Eye, CreditCard } from "lucide-react";
+import { Globe, Users, Eye } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
@@ -19,7 +19,6 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { BusinessCardsView } from "@/components/operations/BusinessCardsView";
 import { queryKeys } from "@/lib/queryKeys";
 
 /** Read directory totals — shares cache key with CountryGrid */
@@ -39,9 +38,7 @@ function useDirectoryTotal() {
 }
 
 /** Portal: renders Network controls into the global header slot */
-function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch }: {
-  networkView: "partners" | "bca";
-  setNetworkView: (v: "partners" | "bca") => void;
+function HeaderBarPortal({ globalStats, deepSearch }: {
   globalStats: { totalPartners: number } & Record<string, unknown> | null;
   deepSearch: DeepSearchState;
 }) {
@@ -56,26 +53,7 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
   return createPortal(
     <div className="flex items-center gap-3 min-w-0 flex-1">
       <Globe className="w-4 h-4 text-primary/70 animate-spin-slow flex-shrink-0" />
-      <span className="text-xs font-semibold text-foreground hidden sm:inline">Network</span>
-
-      <div className="flex items-center rounded-lg border border-border/60 bg-card/60 p-0.5">
-        <button
-          onClick={() => setNetworkView("partners")}
-          className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
-            networkView === "partners" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Users className="w-3 h-3" /> Partner
-        </button>
-        <button
-          onClick={() => setNetworkView("bca")}
-          className={cn("flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all",
-            networkView === "bca" ? "bg-accent/50 text-accent-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <CreditCard className="w-3 h-3" /> BCA
-        </button>
-      </div>
+      <span className="text-xs font-semibold text-foreground hidden sm:inline">Network · Partner WCA</span>
 
       {globalStats && (
         <span className="hidden md:flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -94,14 +72,13 @@ function HeaderBarPortal({ networkView, setNetworkView, globalStats, deepSearch 
   );
 }
 
-export default function Operations({ activeView }: { activeView?: "partners" | "bca" }) {
-  const [internalView, setInternalView] = useState<"partners" | "bca">("partners");
-  const networkView = activeView ?? internalView;
-  const setNetworkView = activeView ? (() => {}) as () => void : setInternalView;
+export default function Operations(_props?: { activeView?: "partners" | "bca" }) {
+  // BCA tab rimossa: Network mostra esclusivamente Partner WCA.
+  // L'accesso ai biglietti da visita resta unico, dal menu pinnato → /v2/pipeline/biglietti.
+  const networkView = "partners" as const;
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
 
-  // Broadcast networkView so the global ContextFiltersRail can hide itself on BCA tab
-  // (the BCA view already has its own rich country sidebar — no duplicate).
+  // Broadcast networkView (sempre "partners" ora) per compatibilità con i listener esterni.
   useEffect(() => {
     try {
       sessionStorage.setItem("network-view", networkView);
@@ -223,16 +200,11 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
         <div className="relative z-10 flex-1 min-h-0 flex flex-col">
           {/* Portal into global header */}
           <HeaderBarPortal
-            networkView={networkView}
-            setNetworkView={setNetworkView}
             globalStats={globalStats}
             deepSearch={deepSearch}
           />
 
           {/* ═══ MAIN ═══ */}
-          {networkView === "bca" ? (
-            <BusinessCardsView />
-          ) : (
           <div className={cn(
             "flex-1 min-h-0 px-4 pb-3 gap-3 overflow-hidden",
             isMobile ? "flex flex-col" : "flex"
@@ -296,7 +268,6 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
               </div>
             )}
           </div>
-          )}
         </div>
       </div>
       

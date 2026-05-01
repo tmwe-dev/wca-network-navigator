@@ -1,75 +1,131 @@
-# Riprogettazione pannello dettaglio BCA
+## Obiettivo
 
-## Problema attuale
-Il pannello destro del dettaglio biglietto presenta **due problemi noti**:
+Unificare le tre maschere di dettaglio (BCA, WCA Partner, CRM Contatti) usando come **standard l'esperienza già rifatta nei Biglietti da Visita (BCA)**, e rimuovere i due accessi duplicati ai Biglietti, lasciandone uno solo.
 
-1. **Duplicazione azioni**: i 4 bottoni Cockpit / Deep Search / LinkedIn / Campagna compaiono **due volte**:
-   - In alto come griglia grande 2×2 (drop-target per drag & drop)
-   - Più in basso come griglia piccola di soli click (sezione "Azioni intelligenti")
-2. **Spazio sprecato**: la HERO grid drop-target occupa ~40% del pannello anche quando l'utente non sta trascinando nulla, schiacciando in fondo le info utili (azienda matchata, contatti, timeline) che richiedono scroll.
+---
 
-## Soluzione
+## Diagnosi attuale
 
-### 1. Drop-zone come overlay popup (solo durante drag)
-- Eliminare la HERO grid sempre visibile in cima al pannello.
-- Quando l'utente **inizia a trascinare** un biglietto dalla lista, comparirà un **overlay fullscreen semi-trasparente** con i 4 grandi target (Cockpit / Deep Search / LinkedIn / Campagna) ben centrati e leggibili.
-- L'overlay svanisce automaticamente al rilascio o all'annullamento del drag (Esc o drop fuori target).
-- Vantaggio: zero spazio sprecato quando non serve, drop-target enormi e impossibili da sbagliare quando serve.
+Oggi le tre aree mostrano lo stesso oggetto (azienda + contatti) con tre layout completamente diversi:
 
-### 2. Pannello dettaglio riorganizzato (singolo biglietto)
-Dall'alto in basso, senza scroll per le info essenziali:
+| Area | Pannello dettaglio | Tool disponibili | Bulk | Drag & Drop |
+|---|---|---|---|---|
+| **CRM › Contatti** (`ContactDetailPanel`) | Compatto, header + stato + 0 interazioni + timeline | Solo Email / WhatsApp / Telefono / Genera Alias | No | No |
+| **Network › WCA Partner** (`PartnerDetailCompact`) | Header con bandiera, "X anni WCA", lista contatti del team, Deep | Solo bottone "Deep" + azioni di contatto per riga | No | No |
+| **CRM › Biglietti** (`BCAUnifiedDetailPanel` + `BCASmartActions` + `BCABulkActionsPanel` + `BCADragDropOverlay`) | Header ricco, blocco Comunicazione (Email / WA / Chiama / Workspace), blocco AI (Cockpit / Deep Search / LinkedIn / Campagna), timeline, dati Deep Search estesi, drag & drop overlay durante il trascinamento, pannello Bulk dedicato | 8 azioni + Deep Search esteso + Genera Alias | Sì (≥2) | Sì (overlay) |
 
-```text
-┌─ Header biglietto (nome, ruolo, chip email/tel) ────────┐
-├─ COMUNICAZIONE ─────────────────────────────────────────┤
-│  [Email]  [WhatsApp]  [Chiama]  [Workspace]            │  ← compatti, una riga
-├─ AZIONI AI ────────────────────────────────────────────┤
-│  [Cockpit]  [Deep Search]  [LinkedIn]  [Campagna]      │  ← compatti, una riga
-├─ AZIENDA MATCHATA ─────────────────────────────────────┤
-│  Logo + nome + badge WCA · contatti collegati          │
-├─ DETTAGLI BIGLIETTO ───────────────────────────────────┤
-│  Evento · Data · OCR confidence · note pulite          │
-├─ TIMELINE EVENTI ──────────────────────────────────────┤
-│  Ultimi touch (email, WA, deep search, ecc.)           │
-└─────────────────────────────────────────────────────────┘
-```
+Inoltre i Biglietti sono raggiungibili da **tre punti**:
+1. Tab "Biglietti" nel menu pinnato (`navConfig.tsx` → `nav.business_cards` → `/v2/pipeline/biglietti`)
+2. Tab dentro **CRM › Pipeline** (`PipelineSection.tsx`, voce "Biglietti")
+3. Toggle **Partner / BCA** dentro **Network** (`OperationsView.tsx` `HeaderBarPortal`, montaggio di `BusinessCardsView`)
 
-I due gruppi **Comunicazione** e **AI** restano visivamente separati ma compatti (righe da 4 bottoni con icona + label, h-8). La griglia HERO viene **rimossa dal layout statico**.
+---
 
-### 3. Pannello dedicato Bulk Actions
-Quando l'utente seleziona ≥2 biglietti dalla lista, il pannello destro **cambia layout** e mostra:
+## Decisioni di design
 
-```text
-┌─ N biglietti selezionati · M aziende uniche ──────────┐
-│  [Pulisci selezione]                                   │
-├─ AZIONI BULK ─────────────────────────────────────────┤
-│  • Aggiungi tutti al Cockpit         [N items]        │
-│  • Deep Search batch (solo matchati)  [K eligible]    │
-│  • Crea campagna multi-destinatario   [J con email]   │
-│  • Esporta CSV                                         │
-│  • Elimina selezionati (soft-delete)                  │
-├─ ANTEPRIMA SELEZIONE ─────────────────────────────────┤
-│  Lista compatta dei biglietti scelti con remove (×)   │
-└────────────────────────────────────────────────────────┘
-```
+1. **Unica maschera dettaglio condivisa** (`UnifiedEntityDetailPanel`) basata sul layout già usato in BCA, riusata identica in BCA / Partner / Contatto CRM.
+2. **Stessi tool ovunque**, con disabilitazione contestuale solo se mancano i dati (es. WhatsApp grigio se non c'è numero, LinkedIn grigio se non c'è URL):
+   - **Comunicazione**: Email · WhatsApp · Chiama · Workspace
+   - **AI**: Cockpit · Deep Search · LinkedIn (lookup) · Campagna
+3. **Bulk panel condiviso** (`UnifiedBulkActionsPanel`) per selezione ≥2 in tutte e tre le aree.
+4. **Drag & drop overlay condiviso** (`UnifiedDragDropOverlay`) attivo durante il trascinamento di una entità verso Cockpit / Deep / LinkedIn / Campagna in tutte e tre le liste.
+5. **Accesso Biglietti unico**: rimanere solo il tab pinnato del menu principale. Rimossi:
+   - Il tab "Biglietti" dentro `PipelineSection` (rimosso dall'array `TABS` e dalla rotta interna).
+   - Il toggle Partner / BCA in Network: la pagina mostra solo i Partner. La rotta `/v2/pipeline/biglietti` resta canonica e usata dal menu.
 
-Ogni azione mostra un contatore di quanti biglietti ne sono effettivamente eleggibili (es. la Deep Search vale solo per i matchati WCA, la campagna solo per chi ha email).
+---
 
-## Dettagli tecnici (per chi legge il codice)
+## Architettura tecnica
 
-- **File da modificare**:
-  - `src/components/contacts/bca/BCAUnifiedDetailPanel.tsx` — rimuovere la HERO grid, mantenere solo il wrapper.
-  - `src/components/contacts/bca/BCADetailPanel.tsx` — riordinare le sezioni nell'ordine sopra; integrare gruppo "Comunicazione".
-  - `src/components/contacts/bca/BCASmartActions.tsx` — diventa il **gruppo "AI"** della nuova sezione azioni; nessuna duplicazione.
-- **File nuovi**:
-  - `BCADragDropOverlay.tsx` — overlay fullscreen attivato dal `dragstart` globale BCA, ascolta `BCA_DRAG_MIME`, renderizza i 4 grandi target con le stesse azioni di `runAction`. Smonta su `dragend`/`drop`.
-  - `BCABulkActionsPanel.tsx` — sostituisce il dettaglio quando `selectedBca.size >= 2`.
-- **Hook drag globale**: `useBcaDragOverlay()` — listener su `window` per `dragstart`/`dragend` con filtro su `dataTransfer.types.includes(BCA_DRAG_MIME)`.
-- **In `BCAUnifiedHub.tsx`**: switch condizionato `selectedBca.size >= 2 ? <BCABulkActionsPanel/> : <BCAUnifiedDetailPanel/>`.
-- **Nessuna modifica a logica dati o DAL** — solo riarrangiamento UI e wiring di handler già esistenti.
-- **Compatibilità drag & drop esistente**: preservato il contratto `BCA_DRAG_MIME` per non rompere altri consumer.
+### Nuovi componenti condivisi (cartella `src/components/shared/entity-panel/`)
 
-## Cosa NON viene toccato in questo round
-- Logica di matching partner, OCR, timeline backend.
-- Lista biglietti a sinistra (compact/grid/expanded).
-- Filtri laterali e raggruppamento per azienda.
+- `UnifiedEntityDetailPanel.tsx` — generalizzazione di `BCAUnifiedDetailPanel`. Riceve un adapter `entity` con shape uniforme:
+  ```ts
+  type UnifiedEntity = {
+    kind: "bca" | "partner" | "contact";
+    id: string;
+    title: string;          // ragione sociale o nome contatto
+    subtitle?: string;      // contatto principale o ruolo
+    country?: { code: string; city?: string };
+    badges?: Array<{ label: string; tone: "info" | "warn" | "success" }>;
+    contacts: Array<{ name?: string; role?: string; email?: string; phone?: string; whatsapp?: string; linkedin?: string }>;
+    deepSearch?: { ranAt?: string; summary?: string; sources?: string[] };
+    timeline?: TimelineEvent[];
+    raw: unknown;           // payload originale per le mutation
+  };
+  ```
+- `UnifiedSmartActions.tsx` — i due gruppi (Comunicazione + AI), con stato disabled in base ai dati.
+- `UnifiedBulkActionsPanel.tsx` — generalizzazione di `BCABulkActionsPanel`.
+- `UnifiedDragDropOverlay.tsx` — generalizzazione di `BCADragDropOverlay` (MIME type per kind).
+- `useUnifiedEntityActions.ts` — hook che mappa `kind` → handler corretti (riusa hook già esistenti: `useDirectContactActions`, `useLogAction`, `useDeepSearchRunner`, mutation Cockpit/Campagna).
+
+### Adapter (cartella `src/components/shared/entity-panel/adapters/`)
+
+- `bcaAdapter.ts` — da `BusinessCard` a `UnifiedEntity`.
+- `partnerAdapter.ts` — da `Partner` (+ contatti del team) a `UnifiedEntity`.
+- `contactAdapter.ts` — da `ContactDetail` a `UnifiedEntity`.
+
+### Wiring sui tre detail container
+
+- `BCAUnifiedDetailPanel.tsx` → diventa thin wrapper che chiama `bcaAdapter` + `<UnifiedEntityDetailPanel/>`.
+- `PartnerDetailCompact.tsx` (usato da `OperationsView` quando `networkView === "partners"`) → sostituito dal nuovo wrapper Partner. `PartnerDetailFull.tsx` resta ma viene allineato ad usare lo stesso pannello in versione `dense`.
+- `ContactDetailPanel.tsx` → sostituito dal wrapper Contact (mantiene la tab Pipeline/timeline esistente).
+
+### Pulizia accessi Biglietti (3 → 1)
+
+- **`src/v2/ui/pages/sections/PipelineSection.tsx`**:
+  - Rimuovere `{ key: "biglietti", … }` dall'array `TABS`.
+  - Rimuovere la `<Route path="biglietti" …>` interna.
+  - Lasciare solo la redirect a livello router (`/v2/pipeline/biglietti` punta direttamente a `BCAUnifiedHub` in standalone, NON dentro le tab Pipeline).
+- **`src/v2/routes.tsx`**: aggiungere `<Route path="pipeline/biglietti" element={guardedPage(BCAUnifiedHub, "BCA")} />` fuori dal `PipelineSection`, così il menu pinnato continua a funzionare e viene mostrato come pagina top-level (con il proprio `GoldenHeaderBar`).
+- **`src/components/operations/OperationsView.tsx`**:
+  - Rimuovere il toggle Partner/BCA dal `HeaderBarPortal`.
+  - Rimuovere il branch `<BusinessCardsView />` e il prop `activeView`.
+  - `NetworkPage` resta solo "Partners view".
+- Aggiornare i test (`src/v2/test/...`) e `breadcrumbConfig.ts` se referenziano la sotto-tab biglietti.
+
+---
+
+## File toccati
+
+**Nuovi**
+- `src/components/shared/entity-panel/UnifiedEntityDetailPanel.tsx`
+- `src/components/shared/entity-panel/UnifiedSmartActions.tsx`
+- `src/components/shared/entity-panel/UnifiedBulkActionsPanel.tsx`
+- `src/components/shared/entity-panel/UnifiedDragDropOverlay.tsx`
+- `src/components/shared/entity-panel/useUnifiedEntityActions.ts`
+- `src/components/shared/entity-panel/adapters/{bca,partner,contact}Adapter.ts`
+
+**Modificati**
+- `src/components/contacts/bca/BCAUnifiedDetailPanel.tsx` (thin wrapper)
+- `src/components/contacts/bca/BCASmartActions.tsx` (delega a Unified)
+- `src/components/contacts/bca/BCABulkActionsPanel.tsx` (delega a Unified)
+- `src/components/contacts/bca/BCADragDropOverlay.tsx` (delega a Unified)
+- `src/components/contacts/bca/BCAUnifiedHub.tsx` (usa nuovo wrapper)
+- `src/components/partners/PartnerDetailCompact.tsx` (delega a Unified)
+- `src/components/partners/PartnerDetailFull.tsx` (densità "full" su Unified)
+- `src/components/contacts/ContactDetailPanel.tsx` (delega a Unified)
+- `src/components/operations/OperationsView.tsx` (rimosso toggle Partner/BCA)
+- `src/v2/ui/pages/sections/PipelineSection.tsx` (rimosso tab Biglietti)
+- `src/v2/routes.tsx` (montato `/v2/pipeline/biglietti` standalone)
+- `src/v2/ui/templates/breadcrumbConfig.ts` (allineamento label)
+
+---
+
+## Cosa NON viene toccato
+
+- Logica di business (mutation Cockpit, Deep Search, Campagna, soft-delete, holding pattern, lead status guard) — rimane invariata.
+- Schema DB e edge function.
+- Rotte di redirect legacy verso `/v2/pipeline/biglietti` — continuano a funzionare.
+- Filtri rail e contesto globale.
+
+---
+
+## Validazione
+
+1. Build TS pulita.
+2. Smoke check delle tre rotte:
+   - `/v2/pipeline/biglietti` (menu) → pannello unificato + drag/bulk.
+   - `/v2/pipeline/contacts` → pannello unificato con stessi tool, niente tab Biglietti nelle sub-tab.
+   - `/v2/explore/network` → solo Partner, niente toggle BCA, dettaglio Partner con stesso layout dei Biglietti.
+3. Verifica che disabilitazioni siano corrette (WhatsApp/LinkedIn grigi se assenti).

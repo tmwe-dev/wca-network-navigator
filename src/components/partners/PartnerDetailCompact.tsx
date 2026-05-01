@@ -38,6 +38,8 @@ import { getServiceIcon, TRANSPORT_SERVICES } from "@/components/partners/shared
 import { getBranchCountries } from "@/lib/partnerUtils";
 import { PartnerContactActionMenu } from "@/components/partners/PartnerContactActionMenu";
 import { queryKeys } from "@/lib/queryKeys";
+import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string; expires?: string | null }
@@ -80,6 +82,44 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
   const contacts = partner.partner_contacts || [];
   const services = partner.partner_services || [];
   const networks = partner.partner_networks || [];
+
+  // ── Primary contact for unified actions ──
+  const primaryContact = (contacts.find((c: ContactItem) => c.is_primary) ?? contacts[0]) as ContactItem | undefined;
+  const primaryEmail = primaryContact?.email || undefined;
+  const primaryPhone = primaryContact?.direct_phone || partner.phone || undefined;
+  const primaryWa = primaryContact?.mobile || primaryContact?.direct_phone || undefined;
+
+  const handleCockpit = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+      if (!user) return;
+      await insertCockpitQueueItems([{ source_id: partner.id, source_type: "partner", user_id: user.id, partner_id: partner.id }]);
+      toast.success("✅ Aggiunto al Cockpit");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Errore"); }
+  }, [partner.id]);
+
+  const handleLinkedIn = useCallback(() => {
+    const q = [primaryContact?.name, partner.company_name].filter(Boolean).join(" ");
+    window.open(`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(q || partner.company_name)}`, "_blank");
+  }, [primaryContact, partner.company_name]);
+
+  const handleCampaign = useCallback(() => {
+    if (!primaryEmail) { toast.error("Email contatto primario mancante"); return; }
+    navigate("/v2/email-composer", { state: { partnerIds: [partner.id], prefilledRecipient: { email: primaryEmail, name: primaryContact?.name, company: partner.company_name, partnerId: partner.id, contactId: primaryContact?.id } } });
+  }, [primaryEmail, primaryContact, partner, navigate]);
+
+  const handleUnifiedEmail = useCallback(() => {
+    if (!primaryContact) return;
+    handleSendEmail({ id: primaryContact.id, email: primaryContact.email ?? undefined, name: primaryContact.name });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryContact]);
+
+  const handleUnifiedWhatsApp = useCallback(() => {
+    if (!primaryContact) return;
+    handleSendWhatsApp(primaryContact as unknown as Record<string, unknown>);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryContact]);
 
   // ── Email: navigate to composer with contact pre-filled ──
   const handleSendEmail = useCallback((contact: { id?: string; email?: string; name?: string }) => {
@@ -190,6 +230,23 @@ export function PartnerDetailCompact({ partner, onBack, onToggleFavorite, isDark
           )}
         </div>
       </div>
+
+      {/* Pannello azioni unificato (stesso layout di Biglietti/Contatti) */}
+      <UnifiedSmartActions
+        hasEmail={!!primaryEmail}
+        hasPhone={!!primaryPhone}
+        hasWhatsApp={!!primaryWa}
+        waSending={!!waSending}
+        waAvailable={waAvailable}
+        onEmail={handleUnifiedEmail}
+        onWhatsApp={handleUnifiedWhatsApp}
+        onCall={primaryPhone ? () => window.open(`tel:${primaryPhone}`, "_self") : undefined}
+        onWorkspace={handleCampaign}
+        onCockpit={handleCockpit}
+        onDeepSearch={handleDeepSearch}
+        onLinkedIn={handleLinkedIn}
+        onCampaign={handleCampaign}
+      />
 
       {/* Enrichment — top priority */}
       <EnrichmentCard partner={partner as never} />

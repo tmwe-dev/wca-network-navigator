@@ -21,6 +21,13 @@ import { cn } from "@/lib/utils";
 import { useContactDetail, type ContactDetail } from "@/hooks/useContactDetail";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { UnifiedSmartActions } from "@/components/shared/entity-panel/UnifiedSmartActions";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
+import { supabase } from "@/integrations/supabase/client";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { toast as sonnerToast } from "sonner";
+import { useCallback } from "react";
 
 interface Props {
   contact: ContactDetail;
@@ -56,40 +63,70 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
   );
 }
 
-function ContactQuickActions({ contact: c }: { contact: ContactDetail }) {
+function ContactUnifiedActions({ contact: c }: { contact: ContactDetail }) {
+  const navigate = useAppNavigate();
   const { handleSendEmail, handleSendWhatsApp, waSending, waAvailable } = useDirectContactActions();
   const waPhone = c.mobile || c.phone;
+  const phone = c.phone || c.mobile;
   const ed = c.enrichment_data as Record<string, any> | null;
   const linkedinUrl: string | undefined = ed?.linkedin_url || ed?.linkedin_profile_url;
+  const partnerId = (c as { wca_partner_id?: string }).wca_partner_id;
+
+  const onEmail = useCallback(() => {
+    if (!c.email) return;
+    handleSendEmail({ email: c.email, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId });
+  }, [c, handleSendEmail, partnerId]);
+
+  const onWhatsApp = useCallback(() => {
+    if (!waPhone) return;
+    handleSendWhatsApp({ phone: waPhone, contactName: c.contact_alias || c.name || undefined, companyName: c.company_name || undefined, sourceType: "contact", sourceId: c.id });
+  }, [c, waPhone, handleSendWhatsApp]);
+
+  const onWorkspace = useCallback(() => {
+    if (!c.email) return;
+    navigate("/v2/email-composer", { state: { prefilledRecipient: { email: c.email, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId } } });
+  }, [c, navigate, partnerId]);
+
+  const onCockpit = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+      if (!user) return;
+      await insertCockpitQueueItems([{ source_id: c.id, source_type: "contact", user_id: user.id, partner_id: partnerId || null }]);
+      sonnerToast.success("✅ Aggiunto al Cockpit");
+    } catch (e: unknown) { sonnerToast.error(e instanceof Error ? e.message : "Errore"); }
+  }, [c.id, partnerId]);
+
+  const onDeepSearch = useCallback(async () => {
+    if (!partnerId) { sonnerToast.error("Nessun partner WCA associato"); return; }
+    try {
+      await invokeEdge("ai-utility", { body: { action: "deep_search", partnerIds: [partnerId] }, context: "ContactDetailPanel.deep_search" });
+      sonnerToast.success("🔍 Deep Search avviata");
+    } catch (e: unknown) { sonnerToast.error(e instanceof Error ? e.message : "Errore"); }
+  }, [partnerId]);
+
+  const onLinkedIn = useCallback(() => {
+    if (linkedinUrl) { window.open(linkedinUrl, "_blank", "noopener,noreferrer"); return; }
+    const q = [c.contact_alias || c.name, c.company_name].filter(Boolean).join(" ");
+    window.open(`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(q)}`, "_blank");
+  }, [linkedinUrl, c]);
+
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {c.email && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10"
-          onClick={() => handleSendEmail({ email: c.email!, name: c.contact_alias || c.name || undefined, company: c.company_name || undefined, contactId: c.id, partnerId: (c as { wca_partner_id?: string }).wca_partner_id || undefined })}>
-          <Mail className="w-3.5 h-3.5 text-primary" />
-          <span className="truncate max-w-[180px]">{c.email}</span>
-        </Button>
-      )}
-      {waPhone && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
-          disabled={waSending === c.id || !waAvailable}
-          onClick={() => handleSendWhatsApp({ phone: waPhone, contactName: c.contact_alias || c.name || undefined, companyName: c.company_name || undefined, sourceType: "contact", sourceId: c.id })}>
-          {waSending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />} WhatsApp
-        </Button>
-      )}
-      {linkedinUrl && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-[#0A66C2]/20 hover:bg-[#0A66C2]/10" asChild>
-          <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
-            <Linkedin className="w-3.5 h-3.5 text-[#0A66C2]" /> LinkedIn
-          </a>
-        </Button>
-      )}
-      {(c.phone || c.mobile) && (
-        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/15 hover:bg-primary/10" asChild>
-          <a href={`tel:${c.phone || c.mobile}`}><Phone className="w-3.5 h-3.5 text-primary" /> {c.phone || c.mobile}</a>
-        </Button>
-      )}
-    </div>
+    <UnifiedSmartActions
+      hasEmail={!!c.email}
+      hasPhone={!!phone}
+      hasWhatsApp={!!waPhone}
+      waSending={waSending === c.id}
+      waAvailable={waAvailable}
+      onEmail={onEmail}
+      onWhatsApp={onWhatsApp}
+      onCall={phone ? () => window.open(`tel:${phone}`, "_self") : undefined}
+      onWorkspace={onWorkspace}
+      onCockpit={onCockpit}
+      onDeepSearch={onDeepSearch}
+      onLinkedIn={onLinkedIn}
+      onCampaign={onWorkspace}
+    />
   );
 }
 
@@ -135,7 +172,7 @@ export function ContactDetailPanel({ contact, onContactUpdated }: Props) {
         )}
       </Section>
 
-      <ContactQuickActions contact={c} />
+      <ContactUnifiedActions contact={c} />
       <div className="flex flex-wrap gap-1.5">
         {c.company_name && (
           <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
