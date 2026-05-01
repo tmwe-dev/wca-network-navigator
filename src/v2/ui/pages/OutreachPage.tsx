@@ -7,6 +7,7 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
+import { OutreachLegendFooter } from "@/components/outreach/OutreachLegendFooter";
 
 const OutreachMiniCharts = lazyRetry(() => import("@/components/analytics/OutreachMiniCharts").then(m => ({ default: m.OutreachMiniCharts })));
 const CockpitContent = lazyRetry(() => import("./CockpitPage").then(m => ({ default: m.CockpitPage })));
@@ -30,9 +31,9 @@ export function OutreachPage() {
   const tabs: VerticalTab[] = [
     { value: "cockpit", label: "Cockpit", icon: Rocket },
     { value: "inuscita", label: "In Uscita", icon: ArrowUpFromLine },
-    { value: "programmazione", label: "Programmazione", icon: Clock },
-    { value: "attivita", label: "Attività", icon: ListTodo },
-    { value: "circuito", label: "Circuito", icon: Plane },
+    { value: "programmazione", label: "Sequenze", icon: Clock },
+    { value: "attivita", label: "Storico Attività", icon: ListTodo },
+    { value: "circuito", label: "Risposte in arrivo", icon: Plane },
     { value: "coda-ai", label: "Coda AI", icon: Bot },
     { value: "ab-test", label: "A/B Test", icon: FlaskConical },
   ];
@@ -50,15 +51,16 @@ export function OutreachPage() {
         <div className="flex-1 min-w-0 overflow-hidden">
           <Suspense fallback={<TabFallback />}>
             {tab === "cockpit" && <CockpitContent />}
-            {tab === "inuscita" && <InUscitaTab />}
-            {tab === "programmazione" && <SchedulingTab />}
+            {tab === "inuscita" && <InUscitaTab onNavigate={setTab} />}
+            {tab === "programmazione" && <SchedulingTab onNavigate={setTab} />}
             {tab === "attivita" && <AttivitaTab />}
             {tab === "circuito" && <HoldingPatternTab />}
-            {tab === "coda-ai" && <CodaAITab />}
+            {tab === "coda-ai" && <CodaAITab onNavigate={setTab} />}
             {tab === "ab-test" && <ABTestResultsTab />}
           </Suspense>
         </div>
       </div>
+      <OutreachLegendFooter />
     </div>
   );
 }

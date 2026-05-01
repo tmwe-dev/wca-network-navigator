@@ -21,6 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { HoldingContactList } from "./HoldingContactList";
 import { HoldingActionBar } from "./HoldingActionBar";
 import { HoldingMessageThread } from "./HoldingMessageThread";
+import { TabIntroBanner } from "./TabIntroBanner";
+import { Plane } from "lucide-react";
 
 export function HoldingPatternCommandCenter() {
   const [channel, setChannel] = useState<HoldingChannel>("email");
@@ -129,7 +131,17 @@ export function HoldingPatternCommandCenter() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col h-full">
+      <TabIntroBanner
+        id="circuito"
+        icon={Plane}
+        title="Risposte in arrivo"
+        purpose="Messaggi RICEVUTI (Email, WhatsApp, LinkedIn) che aspettano una risposta. Non è ciò che parte: è ciò che è arrivato."
+        origin="Inbox cross‑canale (IMAP, WA bridge, LinkedIn bridge)"
+        actions="Approvare risposta, ignorare, escalation telefonica"
+        tone="emerald"
+      />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       <HoldingContactList
         channel={channel}
         onChannelChange={(ch) => { setChannel(ch); setSelectedMessage(null); setSelectedGroup(null); resetStrategy(); }}
@@ -159,6 +171,7 @@ export function HoldingPatternCommandCenter() {
             onStrategyChange={setStrategy}
           />
         )}
+      </div>
       </div>
     </div>
   );

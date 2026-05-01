@@ -17,6 +17,7 @@ import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
+import { EmailPreviewPane, type EmailPreviewItem } from "./EmailPreviewPane";
 
 const CHANNEL_ICON: Record<string, typeof Mail> = { send_email: Mail, email: Mail, outreach: Mail, send_whatsapp: MessageCircle, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone };
 const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
@@ -38,6 +39,7 @@ interface UnifiedItem {
   scheduled_at: string | null;
   status: string;
   created_at: string;
+  body?: string;
 }
 
 export function DaInviareSubTab() {
@@ -45,6 +47,7 @@ export function DaInviareSubTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [channelFilter, setChannelFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [selectedPreviewId, setSelectedPreviewId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.outreach.pending(),
@@ -62,6 +65,7 @@ export function DaInviareSubTab() {
         partner_name: (a.partners as Record<string, string>)?.company_name || "—",
         channel: a.activity_type, subject: a.email_subject || a.title,
         source: a.source_type || "partner", scheduled_at: a.scheduled_at, status: a.status, created_at: a.created_at,
+        body: a.email_body || "",
       });
     }
     for (const ma of data.missionActions) {
@@ -71,6 +75,7 @@ export function DaInviareSubTab() {
         partner_name: (ma.metadata as Record<string, string>)?.company_name || ma.action_label || "—",
         channel: ma.action_type, subject: ma.action_label || "",
         source: "mission", scheduled_at: ma.scheduled_at, status: ma.status, created_at: ma.created_at,
+        body: (ma.metadata as Record<string, string>)?.email_body || "",
       });
     }
     for (const pa of data.pendingActions) {
@@ -80,6 +85,7 @@ export function DaInviareSubTab() {
         partner_name: (pa.action_payload as Record<string, string>)?.company_name || "—",
         channel: pa.action_type, subject: pa.suggested_content?.slice(0, 80) || pa.reasoning || "",
         source: pa.source || "ai_agent", scheduled_at: null, status: pa.status || "pending", created_at: pa.created_at || "",
+        body: pa.suggested_content || "",
       });
     }
 
@@ -132,6 +138,28 @@ export function DaInviareSubTab() {
     setSelected(new Set());
   };
 
+  const previewItem: EmailPreviewItem | null = (() => {
+    if (!selectedPreviewId) return null;
+    const it = items.find(i => i.id === selectedPreviewId);
+    if (!it) return null;
+    const sb = SOURCE_BADGE[it.source] || SOURCE_BADGE.partner;
+    const tone: EmailPreviewItem["sourceTone"] =
+      it.source === "ai_agent" ? "primary" :
+      it.source === "campaign" ? "blue" :
+      it.source === "mission" ? "amber" :
+      it.source === "cadence" ? "purple" : "muted";
+    return {
+      id: it.id,
+      recipientName: it.partner_name,
+      recipientEmail: it.email,
+      subject: it.subject,
+      htmlBody: it.body || "",
+      sourceLabel: sb.label,
+      sourceTone: tone,
+      scheduledAt: it.scheduled_at,
+    };
+  })();
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Filters + bulk */}
@@ -168,7 +196,8 @@ export function DaInviareSubTab() {
         )}
       </div>
 
-      <ScrollArea className="flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 min-w-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
         ) : filtered.length === 0 ? (
@@ -178,9 +207,17 @@ export function DaInviareSubTab() {
             {filtered.map((item) => {
               const ChannelIcon = CHANNEL_ICON[item.channel] || Mail;
               const sourceBadge = SOURCE_BADGE[item.source] || SOURCE_BADGE.partner;
+              const isSel = selectedPreviewId === item.id;
 
               return (
-                <div key={item.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors">
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedPreviewId(item.id)}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer",
+                    isSel && "bg-primary/10 ring-1 ring-primary/30"
+                  )}
+                >
                   <Checkbox checked={selected.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} className="shrink-0" />
                   <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
                     <ChannelIcon className="w-3.5 h-3.5 text-primary" />
@@ -201,13 +238,13 @@ export function DaInviareSubTab() {
                   <div className="flex items-center gap-1 shrink-0">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0"><CalendarIcon className="w-3 h-3 text-muted-foreground" /></Button>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => e.stopPropagation()}><CalendarIcon className="w-3 h-3 text-muted-foreground" /></Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="end">
                         <Calendar mode="single" onSelect={(d) => d && handleSchedule(item, d)} className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleCancel(item)}>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); handleCancel(item); }}>
                       <X className="w-3 h-3 text-destructive" />
                     </Button>
                   </div>
@@ -216,7 +253,22 @@ export function DaInviareSubTab() {
             })}
           </div>
         )}
-      </ScrollArea>
+        </ScrollArea>
+        <div className="w-[420px] shrink-0 hidden lg:block">
+          <EmailPreviewPane
+            item={previewItem}
+            onClose={() => setSelectedPreviewId(null)}
+            onCancel={(id) => {
+              const it = items.find(i => i.id === id);
+              if (it) { handleCancel(it); setSelectedPreviewId(null); }
+            }}
+            onReschedule={(id, date) => {
+              const it = items.find(i => i.id === id);
+              if (it) { handleSchedule(it, date); }
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

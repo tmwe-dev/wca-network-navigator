@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { approveActivity } from "@/data/activities";
 import { queryKeys } from "@/lib/queryKeys";
+import { TabIntroBanner } from "./TabIntroBanner";
 
 interface AgentAction {
   id: string;
@@ -40,7 +41,11 @@ const CHANNEL_ICONS: Record<string, typeof Mail> = {
   linkedin_message: Linkedin,
 };
 
-export function CodaAITab() {
+interface CodaAITabProps {
+  readonly onNavigate?: (tab: string) => void;
+}
+
+export function CodaAITab({ onNavigate }: CodaAITabProps = {}) {
   const queryClient = useQueryClient();
   const [previewAction, setPreviewAction] = useState<AgentAction | null>(null);
 
@@ -155,6 +160,16 @@ export function CodaAITab() {
 
   return (
     <div className="flex flex-col h-full">
+      <TabIntroBanner
+        id="coda-ai"
+        icon={Bot}
+        title="Coda AI"
+        purpose="Azioni che gli agenti AI vorrebbero eseguire (email, follow-up, escalation): aspettano la tua approvazione."
+        origin="Agenti autonomi (Luca, Sherlock…) e missioni in corso"
+        actions="Approvare, rifiutare, vedere l'anteprima"
+        relatedLink={onNavigate ? { label: "Le approvate finiscono in In Uscita › Da Inviare", onClick: () => onNavigate("inuscita") } : undefined}
+        tone="primary"
+      />
       {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b border-border/40 flex items-center justify-between">
         <div className="flex items-center gap-2">

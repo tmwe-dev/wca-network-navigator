@@ -12,8 +12,14 @@ import { ProgrammatiSubTab } from "./ProgrammatiSubTab";
 import { FallitiSubTab } from "./FallitiSubTab";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { TabIntroBanner } from "./TabIntroBanner";
+import { ArrowUpFromLine } from "lucide-react";
 
-export function InUscitaTab() {
+interface InUscitaTabProps {
+  readonly onNavigate?: (tab: string) => void;
+}
+
+export function InUscitaTab({ onNavigate }: InUscitaTabProps = {}) {
   const [sub, setSub] = useState("da-inviare");
 
   const { data: counts } = useQuery({
@@ -42,6 +48,16 @@ export function InUscitaTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <TabIntroBanner
+        id="inuscita"
+        icon={ArrowUpFromLine}
+        title="In Uscita"
+        purpose="Tutto ciò che sta per partire (email/WA/LinkedIn). Niente parte senza la tua autorizzazione."
+        origin="Bozze manuali, Cockpit, agenti AI, campagne, sequenze"
+        actions="Aprire l'anteprima, autorizzare l'invio, riprogrammare, annullare"
+        relatedLink={onNavigate ? { label: "Vedi cadenze in Sequenze", onClick: () => onNavigate("programmazione") } : undefined}
+        tone="primary"
+      />
       <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40 flex items-center justify-between">
         <Tabs value={sub} onValueChange={setSub}>
           <TabsList className="bg-muted/40 h-8">
@@ -60,7 +76,7 @@ export function InUscitaTab() {
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="programmati" className="gap-1.5 text-xs h-7">
-              <Calendar className="w-3 h-3" /> Programmati
+              <Calendar className="w-3 h-3" /> Pianificati
               {scheduledCount > 0 && (
                 <Badge variant="secondary" className="text-[9px] h-4 min-w-[16px] px-1 ml-1">
                   {scheduledCount}

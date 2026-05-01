@@ -1,157 +1,99 @@
-## Obiettivo
+## 1. Cos'è oggi ogni tab di `/v2/communicate/outreach` (verità tecnica)
 
-Quando chiedi di scrivere una mail "amichevole, come vecchi compagni di scuola" ai partner di Malta, il Canvas deve mostrare **9 bozze pre-personalizzate sfogliabili** (una per partner). Quando dici "rifai più amichevole", la bozza visibile nel Canvas deve aggiornarsi **in-place** con il nuovo tono — senza ripartire da zero, senza perdere il contesto Malta, senza ritornare "0 partner trovati".
+Letta direttamente dal codice — questa è la mappa che mancava:
 
-## Cosa NON tocco
+| Tab | Cosa contiene davvero (nel DB) | A cosa serve |
+|---|---|---|
+| **Cockpit** | Non è una lista. È una **scrivania di produzione**: a sinistra contatti filtrati, al centro drop‑zone (Email/LinkedIn/WhatsApp/Phone) per generare bozze AI. Non legge code. | Produrre nuove bozze AI partendo da contatti scelti. |
+| **In Uscita** | Unione di 3 tabelle: `activities` (manuali/AI), `mission_actions` (orchestrate da agenti), `pending_actions` (proposte agente non ancora attività). Sotto‑tab: **Da Inviare** (pending), **Inviati** (completed), **Programmati** (scheduled), **Falliti** (failed). | Vedere/autorizzare/cancellare/riprogrammare ciò che parte. |
+| **Programmazione** | **Template di sequenze multi‑step** (`outreach_timing_templates`): es. "Primo Contatto WCA = Email gg0 → LinkedIn gg2 → Email gg5 → telefonata gg7". Più sotto‑tab "Attive" che mostra le sequenze già lanciate (`mission_actions` con `cadence_rule`). | Lanciare cadenze/sequenze su una lista di contatti. È il "motore di campagna multi‑step". |
+| **Attività** | Tutta la tabella `activities` (200 righe più recenti) — qualunque tipo, qualunque stato, qualunque sorgente. | Storico generale: chiamate, meeting, follow‑up, email — non solo email. |
+| **Circuito** | `HoldingPatternCommandCenter`: messaggi inbound (Email/WA/LI) **ricevuti** in attesa di risposta. Non è "ciò che parte", è **ciò che è arrivato**. | Triage dell'inbox cross‑canale: rispondi / ignora / escalation telefonica. |
+| **Coda AI** | `activities.status='pending' AND executed_by_agent_id NOT NULL` + `agent_tasks` proposti. | Approvare/rifiutare le azioni che gli agenti propongono autonomamente. |
+| **A/B Test** | Varianti di subject/body in test. | Solo lab, non produce invii diretti. |
 
-- `CommandPage.tsx` (layout, voce, sidebar, FloatingDock, briefing). 
-- `useCommandSubmit`, `useCommandState` (orchestrazione conversazione).
-- Edge function `generate-email` (la pipeline ufficiale resta quella che è).
-- `compose-email` come tool ID e i suoi label/governance.
+**Doppione confermato:** "In Uscita → Da Inviare" e "Attività → filtro pending+email" mostrano in pratica gli stessi record. Anche "Programmati" (sotto‑tab) e "Programmazione" sono nomi che si confondono ma fanno cose diverse.
 
-Tutti i fix sono **interni** ai file di logica del tool e al Canvas Composer.
+---
 
-## Diagnosi dei 3 bug attuali
+## 2. Cosa cambiamo (solo chiarezza, niente ridisegno)
 
-1. **Canvas mostra 1 sola bozza** invece di 9 → `composeEmail.ts` (ramo country-wide) chiama `generate-email` 1 volta su un partner-campione e mostra la lista degli altri 8 come testo nel dossier.
-2. **"Non vedo le nuove versioni" dopo "rifai amichevole"** → `ComposerCanvas` usa `useState(initializer)` per montare i valori iniziali (riga 47-56). L'initializer **non rigira mai** quando arrivano nuovi `initialSubject`/`initialBody` da un secondo turno: il Canvas resta inchiodato al primo testo.
-3. **"0 partner trovati" al 3° turno** → al messaggio "fammele vedere nel canvas", il match di compose-email triggera ma `detectCountryCode` non vede "Malta" e `extractPersonAndCompany` non trova azienda → cade nel ramo "single partner" → 0 risultati. Il tool **non eredita il contesto** del turno precedente (paese + lista partner).
-4. **Tono sempre "professionale"** → `oracle_tone: "professionale"` è hardcoded sia in `composeEmail.ts` (riga 220, 367) sia in `ComposerCanvas.handleGenerate` (riga 79). Il tono richiesto dall'utente nel `goal` non viene mai estratto né passato come parametro.
+### A. Pannello introduttivo "Cosa stai vedendo"
+In ogni tab della sidebar, **in alto, sopra la lista**, una banda compatta che spiega in **una frase**:
+- icona + titolo del tab
+- frase di scopo ("Qui trovi…")
+- da quale fonte arriva il dato ("Origine: campagne, missioni AI, manuali")
+- cosa puoi fare ("Approva · Riprogramma · Annulla")
+- link "→ vai a X" verso il tab gemello quando esiste (es. da Coda AI → "Le azioni approvate finiscono in *In Uscita › Da Inviare*").
 
-## Cosa cambio
+### B. Rinominazioni mirate
+Per togliere ambiguità senza rivoluzionare:
+- **Programmazione** → **Sequenze** (sottotitolo: "Cadenze multi‑step e template")
+- **In Uscita › Programmati** → **In Uscita › Pianificati** (data futura impostata dall'utente)
+- **Cockpit** resta com'è (è la scrivania di produzione, distinta da Outreach come confermato).
+- **Circuito** → **Risposte in arrivo** (sottotitolo: "Email/WA/LinkedIn da gestire")
 
-### 1. Tono dinamico estratto dal prompt utente
+### C. **Anteprima email nel pannello laterale** (la cosa più importante per te)
+Su **In Uscita › Da Inviare** la lista diventa **split‑view**:
+- a sinistra: lista contatti con check, canale, sorgente (come ora)
+- a destra: pannello che si apre al click sulla riga e mostra:
+  - destinatario (nome + email + azienda)
+  - **oggetto reale**
+  - **corpo reale della mail** (HTML sanitizzato)
+  - **sorgente/percorso**: "Generata da Cockpit", "Bozza AI agente Luca", "Step 2/5 della sequenza Primo Contatto WCA", ecc.
+  - se è parte di una sequenza: i passi precedenti già fatti e i prossimi
+  - bottoni: **Autorizza invio** · **Riprogramma** · **Annulla** · **Apri composer per modifica**
 
-Nuovo modulo `src/v2/ui/pages/command/lib/toneDetector.ts`:
-- Funzione `detectTone(prompt: string): "amichevole" | "professionale" | "diretto" | "informale"`.
-- Pattern: "amichevole / vecchi compagni / informale / colloquiale / scuola / familiare" → `amichevole`; "diretto / breve / no fronzoli" → `diretto`; default `professionale`.
-- 6 unit test (vitest).
+Stessa preview‑pane verrà riusata per **Programmati** e **Falliti** (con motivo del fallimento + bottone "Riprova").
 
-Userò `detectTone(prompt)` in `composeEmail.ts` e in `ComposerCanvas.handleGenerate` al posto del valore hardcoded.
+### D. Banda "Origine record" su ogni riga
+Pillola colorata sempre visibile: **Manuale · AI · Campagna · Missione · Sequenza** — così a colpo d'occhio sai da dove arriva ogni messaggio. Già presente in parte, la rendiamo coerente in **tutti** i tab.
 
-### 2. Bozze multiple pre-personalizzate (ramo country-wide)
+### E. Mini‑legenda fissa nel footer del pannello
+Una riga sottile in basso al pannello Outreach con la legenda dei badge (cosa significa "Cadence", "Missione", "Manuale"). Puoi nasconderla con una X — lo stato resta in localStorage.
 
-In `composeEmail.ts`, ramo `if (country && isCountryWideIntent(prompt))`:
+### F. "Avvia Programmazione" (Sequenze) — chiarire da dove arrivano i template
+Sopra la griglia template, una banda esplicativa:
+- **Sistema**: preset forniti di default (badge grigio "Sistema")
+- **Custom**: creati da te o dal tuo team (badge viola)
+- **Bottone "Nuovo Template"** → apre il builder
+- **Bottone "Avvia"** su ogni card → wizard che chiede: *quali contatti* + *data inizio* + *canali abilitati* → crea le righe in `mission_actions` che poi vedrai in "Sequenze › Attive" e i singoli invii in "In Uscita".
 
-- Generare **9 bozze in parallelo** con `Promise.allSettled` su `generate-email` (cap a 10 per tutela costi, già rispetta i guard).
-- Ogni bozza con `partner_id` reale e `recipient_name` reale (primo `partner_contacts` con email del partner).
-- Aggiungere al risultato `composer` un nuovo campo `drafts: Draft[]` (vedi sotto in "Dettagli tecnici"). La bozza visibile inizialmente resta `initialSubject/initialBody` (= prima bozza dell'array).
+---
 
-### 3. Canvas sfogliabile
+## 3. Cosa NON tocchiamo in questo passaggio
 
-In `ComposerCanvas.tsx`:
+- Logica di invio / coda / autorizzazione: già sistemata nel turno precedente (tutte le mail → `email_campaign_queue` in stato `pending`).
+- Cockpit: resta separato come scrivania di produzione (tua scelta).
+- Circuito: resta funzionalmente identico, cambia solo il nome e l'intestazione esplicativa.
+- Nessun pannello "Approval" duplicato viene rimosso (come da tuo precedente input "non rimuovere niente adesso").
 
-- Nuovo prop opzionale `drafts?: ReadonlyArray<{ partnerId, partnerName, contactName, contactEmail, subject, body }>`.
-- Se `drafts.length > 1`: header del composer mostra `‹ 1/9 ›` con frecce + nome azienda corrente. Cliccando la freccia, cambia `recipients/subject/body` con la bozza selezionata.
-- Bottone "**Rigenera tutte**" oltre al "Genera con AI": rifà l'array intero col nuovo tono (vedi punto 4).
-- Bottone "**Invia tutte (9)**" se `drafts.length > 1` → trasforma le bozze in una mini-campagna (riusa `enqueueOutreach` esistente in `src/v2/io/supabase/mutations/outreach-queue.ts`), oppure invia 1 a 1 in loop con `send-email` se l'utente preferisce; resta dietro `ApprovalPanel` come oggi.
+---
 
-### 4. FIX BLOCCANTE: sync `initialSubject/initialBody` quando arrivano nuovi valori
+## 4. File toccati (frontend, presentational)
 
-In `ComposerCanvas.tsx`:
+```text
+src/components/outreach/
+  ├─ TabIntroBanner.tsx            (NUOVO — banda esplicativa riusabile)
+  ├─ OutreachLegendFooter.tsx      (NUOVO — legenda badge)
+  ├─ EmailPreviewPane.tsx          (NUOVO — pannello laterale preview)
+  ├─ DaInviareSubTab.tsx           (split-view + integrazione preview pane)
+  ├─ ProgrammatiSubTab.tsx         (idem)
+  ├─ FallitiSubTab.tsx             (idem + motivo errore + Riprova)
+  ├─ InviatiSubTab.tsx             (preview read-only)
+  ├─ SchedulingTab.tsx             (banda "Sistema vs Custom" + intestazione "Sequenze")
+  ├─ AttivitaTab.tsx               (banda intro + chiarisce che è uno storico)
+  ├─ CodaAITab.tsx                 (banda intro: "le approvate vanno in In Uscita")
+  └─ HoldingPatternCommandCenter.tsx (banda intro: "messaggi RICEVUTI da gestire")
 
-- Sostituire l'`useState(() => ...)` iniziale con un `useEffect([initialSubject, initialBody, drafts])` che scrive i nuovi valori nel composer **ogni volta che cambiano**.
-- Senza questo fix, qualunque rigenerazione resta invisibile nel Canvas.
-
-### 5. Contesto conversazionale per compose-email
-
-Estendere `useCommandState` con un piccolo store `lastComposerContext: { country?, partnerIds?, tone? } | null` (analogo a `queryContext` già esistente). 
-
-In `composeEmail.ts`:
-- Se il prompt non contiene paese/azienda MA il `lastComposerContext` è fresco (TTL 5 min, riusa la stessa logica di `queryContext`), **eredita** `country.code` e `partnerIds` per rigenerare le 9 bozze col nuovo tono.
-- Se l'utente dice "rifai amichevole / più breve / più formale", il tool detecta il tono nuovo e rigenera le 9 bozze sui partner ereditati invece di tornare 0 risultati.
-
-In `ComposerCanvas.handleGenerate`:
-- Se ci sono `drafts` con più di un elemento, rigenera tutte e 9 le bozze in parallelo con il nuovo tono detectato dal `promptHint` aggiornato (oppure da un piccolo input "tono" già nella toolbar — opzionale, posso ometterlo per semplicità).
-
-### 6. Messaggio del Direttore corretto
-
-In `useToolExecution.ts` (ramo `if (result.kind === "composer" && result.dossier)`), se `drafts.length > 1` cambiare il messaggio Oracolo da "Bozza pronta nel composer" a:
-
-> "9 bozze pronte nel canvas (sfoglia con le frecce). Tono: amichevole. Vuoi rivedere o invio?"
-
-### 7. Test
-
-- `composeEmail.test.ts`: country-wide → ritorna `drafts.length === N`; follow-up senza paese eredita contesto.
-- `toneDetector.test.ts`: 6 casi (amichevole / vecchi compagni / breve / formale / default).
-- `ComposerCanvas.test.tsx`: re-render con nuovi `initialSubject` aggiorna il body; navigazione frecce cambia bozza; `Rigenera tutte` chiama `generate-email` 9 volte.
-
-## Dettagli tecnici (per i tecnici)
-
-```ts
-// composeEmail.ts — nuovo shape ToolResult composer
-type ComposerDraft = Readonly<{
-  partnerId: string;
-  partnerName: string;
-  contactName: string | null;
-  contactEmail: string;
-  subject: string;
-  body: string;
-  status: "ok" | "no_email" | "ai_error";
-  errorMessage?: string;
-}>;
-
-interface ComposerToolResult {
-  kind: "composer";
-  // ...campi esistenti...
-  drafts?: ReadonlyArray<ComposerDraft>; // NEW: solo per batch country-wide
-  detectedTone: "amichevole" | "professionale" | "diretto" | "informale"; // NEW
-}
+src/v2/ui/pages/communicate/OutreachPage.tsx
+  └─ etichette tab: Programmazione→Sequenze, Circuito→Risposte in arrivo
 ```
 
-```ts
-// ComposerCanvas.tsx — fix critico
-useEffect(() => {
-  if (initialSubject) composer.setSubject(initialSubject);
-  if (initialBody) composer.setBody(initialBody);
-}, [initialSubject, initialBody]);
+Nessuna modifica a DB, edge functions, hook di business, query keys.
 
-useEffect(() => {
-  if (drafts && drafts[currentIndex]) {
-    composer.setSubject(drafts[currentIndex].subject);
-    composer.setBody(drafts[currentIndex].body);
-    composer.clearRecipients();
-    composer.addRecipient({
-      email: drafts[currentIndex].contactEmail,
-      name: drafts[currentIndex].contactName ?? drafts[currentIndex].partnerName,
-    });
-  }
-}, [currentIndex, drafts]);
-```
+---
 
-```ts
-// useCommandState — nuovo store contesto
-const [lastComposerContext, setLastComposerContext] = useState<{
-  countryCode: string;
-  partnerIds: string[];
-  tone: string;
-  ts: number;
-} | null>(null);
-// TTL: 5 min, riusa isContextFresh(...)
-```
+## 5. Come saprai che è chiaro
 
-```ts
-// composeEmail.ts — eredità contesto
-if (!country && !company && !email) {
-  const ctx = getLastComposerContext(); // singleton modulo come getLastSuccessfulQueryPlan
-  if (ctx && isFresh(ctx)) {
-    // Rigenera N bozze sugli stessi partnerIds con tone aggiornato
-  }
-}
-```
-
-## Files toccati
-
-- `src/v2/ui/pages/command/tools/composeEmail.ts` (modifica ramo country-wide + ramo follow-up)
-- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` (frecce + sync useEffect + invio batch)
-- `src/v2/ui/pages/command/lib/toneDetector.ts` (nuovo, ~40 righe)
-- `src/v2/ui/pages/command/lib/composerContext.ts` (nuovo, store + helper, ~30 righe, stesso pattern di `aiQueryTool.getLastSuccessfulQueryPlan`)
-- `src/v2/ui/pages/command/tools/types.ts` (estendere `ComposerToolResult` con `drafts` e `detectedTone`)
-- `src/v2/ui/pages/command/hooks/useToolExecution.ts` (testo messaggio Oracolo se `drafts.length > 1`)
-- 3 file di test sotto `src/v2/ui/pages/command/__tests__/`
-
-Nessuna modifica a `CommandPage.tsx`, alla pipeline `generate-email`, all'auth, al DAL, ai prompt operativi del Prompt Lab. Zero impatti su altre pagine.
-
-## Stima
-
-~250 righe nuove, ~80 modificate. Una sola sessione di build, test verdi prima di consegnare.
+Apri `/v2/communicate/outreach`, clicchi un tab a caso: **in alto vedi una frase che ti dice cosa stai guardando, da dove arriva e cosa puoi farci**. Clicchi una riga in "Da Inviare": **a destra si apre la mail intera** con sorgente e bottoni di azione. Apri "Sequenze": capisci subito differenza tra template **Sistema** e **Custom** e dove finiscono gli invii quando avvii.
