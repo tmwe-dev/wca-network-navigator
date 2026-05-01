@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateActivitySchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
+import { TabIntroBanner } from "./TabIntroBanner";
 
 type Activity = Database["public"]["Tables"]["activities"]["Row"];
 
@@ -128,6 +129,15 @@ export function AttivitaTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <TabIntroBanner
+        id="attivita"
+        icon={ListTodo}
+        title="Storico Attività"
+        purpose="Tutto ciò che hai fatto o devi fare con i contatti: chiamate, meeting, follow‑up, email — qualunque sorgente, qualunque stato."
+        origin="Cockpit, agenti AI, campagne, attività manuali"
+        actions="Filtrare, completare, riprogrammare, aggiungere nota"
+        tone="neutral"
+      />
       {/* Stats header */}
       <div className="shrink-0 px-4 py-2 border-b border-border/40 flex items-center gap-2">
         <ListTodo className="w-3.5 h-3.5 text-primary" />

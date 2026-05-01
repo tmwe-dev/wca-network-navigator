@@ -16,6 +16,8 @@ import { TemplateBuilderDialog } from "./scheduling/TemplateBuilderDialog";
 import { SchedulingWizard } from "./scheduling/SchedulingWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
+import { TabIntroBanner } from "./TabIntroBanner";
+import { Clock } from "lucide-react";
 
 const GOAL_COLORS: Record<string, string> = {
   primo_contatto: "bg-primary/15 text-primary",
@@ -44,7 +46,11 @@ const SOURCE_LABELS: Record<string, string> = {
   mixed: "Misto",
 };
 
-export function SchedulingTab() {
+interface SchedulingTabProps {
+  readonly onNavigate?: (tab: string) => void;
+}
+
+export function SchedulingTab({ onNavigate }: SchedulingTabProps = {}) {
   const qc = useQueryClient();
   const [section, setSection] = useState("templates");
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -92,6 +98,16 @@ export function SchedulingTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <TabIntroBanner
+        id="sequenze"
+        icon={Clock}
+        title="Sequenze"
+        purpose="Cadenze multi‑step (es: Email → LinkedIn → Email → Telefono) salvate come template e applicate a un gruppo di contatti."
+        origin="Template Sistema (preset) + Custom (creati da te). Le sequenze attive generano singoli invii visibili in 'In Uscita'."
+        actions="Creare/duplicare template, avviare una programmazione su una lista di contatti"
+        relatedLink={onNavigate ? { label: "Vedi gli invii prodotti in In Uscita", onClick: () => onNavigate("inuscita") } : undefined}
+        tone="amber"
+      />
       {/* Header */}
       <div className="shrink-0 px-4 py-2 border-b border-border/30 flex items-center gap-2">
         <Tabs value={section} onValueChange={setSection}>
