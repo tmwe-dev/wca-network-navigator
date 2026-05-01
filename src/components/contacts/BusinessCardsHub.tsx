@@ -26,6 +26,7 @@ import { useUploadAndParse, DropZone } from "./bca/BCAUpload";
 import { googleLogoSearchUrl } from "./bca/bcaUtils";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { deleteBusinessCards } from "@/data/businessCards";
+import { AnagraphicsPillsPortal } from "@/v2/ui/templates/header/AnagraphicsPillsPortal";
 
 type ViewMode = "compact" | "card" | "expanded";
 
