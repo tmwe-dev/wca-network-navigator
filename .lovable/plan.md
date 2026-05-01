@@ -1,57 +1,75 @@
+# Riprogettazione pannello dettaglio BCA
 
-## Confronto pannelli di dettaglio BCA
+## Problema attuale
+Il pannello destro del dettaglio biglietto presenta **due problemi noti**:
 
-Esistono **2 detail panel** e **3 viste hub** che leggono tutti dalla stessa tabella `business_cards`. Ecco cosa fa cosa.
+1. **Duplicazione azioni**: i 4 bottoni Cockpit / Deep Search / LinkedIn / Campagna compaiono **due volte**:
+   - In alto come griglia grande 2×2 (drop-target per drag & drop)
+   - Più in basso come griglia piccola di soli click (sezione "Azioni intelligenti")
+2. **Spazio sprecato**: la HERO grid drop-target occupa ~40% del pannello anche quando l'utente non sta trascinando nulla, schiacciando in fondo le info utili (azienda matchata, contatti, timeline) che richiedono scroll.
 
-### Detail Panel — solo 2 file, uno è wrapper dell'altro
+## Soluzione
 
-| File | Cosa contiene | Usato da |
-|---|---|---|
-| `BCADetailPanel.tsx` (213 righe) — esporta `BusinessCardDetailPanel` | Header azienda + logo partner WCA matchato · foto biglietto · **azioni rapide** (Email, WhatsApp, Chiama, Workspace) · `BCASmartActions` · `BCAOcrConfidence` · `BCACreateContact` · dettagli contatto · evento/data/luogo · stato match + confidenza · tags · note · "Cerca logo Google" · `ManualPartnerMatcher` (ricerca + conferma match) | `BusinessCardsHub` (CRM legacy) |
-| `BCAUnifiedDetailPanel.tsx` (248 righe) | **Wrappa** `BusinessCardDetailPanel` aggiungendo SOPRA una hero grid 2×2 di "Azioni intelligenti" (Cockpit · Deep Search · LinkedIn · Campagna). Ogni tile è un drop target indipendente con ref-counter per non flickerare | `BCAUnifiedHub` (Pipeline /v2/pipeline/biglietti) |
+### 1. Drop-zone come overlay popup (solo durante drag)
+- Eliminare la HERO grid sempre visibile in cima al pannello.
+- Quando l'utente **inizia a trascinare** un biglietto dalla lista, comparirà un **overlay fullscreen semi-trasparente** con i 4 grandi target (Cockpit / Deep Search / LinkedIn / Campagna) ben centrati e leggibili.
+- L'overlay svanisce automaticamente al rilascio o all'annullamento del drag (Esc o drop fuori target).
+- Vantaggio: zero spazio sprecato quando non serve, drop-target enormi e impossibili da sbagliare quando serve.
 
-**Conclusione:** non c'è duplicazione di logica. `BCAUnifiedDetailPanel` = `BCADetailPanel` + hero drop-target. È già il superset corretto.
+### 2. Pannello dettaglio riorganizzato (singolo biglietto)
+Dall'alto in basso, senza scroll per le info essenziali:
 
-### Viste Hub — qui sì c'è duplicazione
+```text
+┌─ Header biglietto (nome, ruolo, chip email/tel) ────────┐
+├─ COMUNICAZIONE ─────────────────────────────────────────┤
+│  [Email]  [WhatsApp]  [Chiama]  [Workspace]            │  ← compatti, una riga
+├─ AZIONI AI ────────────────────────────────────────────┤
+│  [Cockpit]  [Deep Search]  [LinkedIn]  [Campagna]      │  ← compatti, una riga
+├─ AZIENDA MATCHATA ─────────────────────────────────────┤
+│  Logo + nome + badge WCA · contatti collegati          │
+├─ DETTAGLI BIGLIETTO ───────────────────────────────────┤
+│  Evento · Data · OCR confidence · note pulite          │
+├─ TIMELINE EVENTI ──────────────────────────────────────┤
+│  Ultimi touch (email, WA, deep search, ecc.)           │
+└─────────────────────────────────────────────────────────┘
+```
 
-| File | Layout | Filtro evento | Bulk Delete | Upload | Detail panel |
-|---|---|---|---|---|---|
-| `BCAUnifiedHub` (Pipeline) | Gruppi azienda + 3 view + Quality + Timeline + Sync | ❌ (manca) | ❌ (manca) | ❌ | `BCAUnifiedDetailPanel` |
-| `BusinessCardsHub` (CRM tab legacy) | Lista flat + 3 view | ✅ (Select inline) | ✅ (in `UnifiedBulkActionBar`) | ✅ DropZone + Dialog evento | `BusinessCardDetailPanel` (no smart actions) |
-| `BusinessCardsView` (Operations) | Identico a `BCAUnifiedHub` ma senza panel | ❌ | ❌ | ❌ | nessuno |
+I due gruppi **Comunicazione** e **AI** restano visivamente separati ma compatti (righe da 4 bottoni con icona + label, h-8). La griglia HERO viene **rimossa dal layout statico**.
 
-### Cosa manca a `BCAUnifiedHub` (target ufficiale)
+### 3. Pannello dedicato Bulk Actions
+Quando l'utente seleziona ≥2 biglietti dalla lista, il pannello destro **cambia layout** e mostra:
 
-1. **Bulk Delete** — esiste in `BusinessCardsHub.handleBulkDelete` (riga 109): chiama `deleteBusinessCards(ids)` da `@/data/businessCards` + conferma + invalidate. Va portato uguale in `BCAUnifiedHub` e passato come `onDelete` al `UnifiedBulkActionBar` (già presente in JSX, basta aggiungere la prop).
-2. **Filtro Evento dentro la sidebar** — la `BCAFiltersSection` globale (`src/components/global/filters-drawer/BCAFiltersSection.tsx`) ha già "Stato match" + "Evento" come ChipGroup, ma è disconnessa dal `BcaFiltersContext` (usa state locale). Va cablata al provider `BcaFiltersContext` così che i chip cambino realmente `g.filtered`. In alternativa va creata una sezione equivalente in `BCAFiltersRailContent.tsx` (già esistente, da estendere) collegata al contesto.
-3. **Rimozione Upload** — eliminare `BCAUpload.tsx` (DropZone + useUploadAndParse) e ogni traccia dialog evento. Visto che l'unico consumer è `BusinessCardsHub`, la rimozione è naturale insieme alla deprecazione di quel hub.
+```text
+┌─ N biglietti selezionati · M aziende uniche ──────────┐
+│  [Pulisci selezione]                                   │
+├─ AZIONI BULK ─────────────────────────────────────────┤
+│  • Aggiungi tutti al Cockpit         [N items]        │
+│  • Deep Search batch (solo matchati)  [K eligible]    │
+│  • Crea campagna multi-destinatario   [J con email]   │
+│  • Esporta CSV                                         │
+│  • Elimina selezionati (soft-delete)                  │
+├─ ANTEPRIMA SELEZIONE ─────────────────────────────────┤
+│  Lista compatta dei biglietti scelti con remove (×)   │
+└────────────────────────────────────────────────────────┘
+```
 
-## Piano operativo
+Ogni azione mostra un contatore di quanti biglietti ne sono effettivamente eleggibili (es. la Deep Search vale solo per i matchati WCA, la campagna solo per chi ha email).
 
-### Step 1 — Estendere `BCAUnifiedHub` con Bulk Delete
-- Importare `deleteBusinessCards` da `@/data/businessCards`.
-- Aggiungere `handleBulkDelete` (conferma → delete → toast → reset selezione → `qc.invalidateQueries(queryKeys.businessCards.all)`).
-- Passare `onDelete={handleBulkDelete}` al `<UnifiedBulkActionBar>`.
+## Dettagli tecnici (per chi legge il codice)
 
-### Step 2 — Filtro Evento nella side rail
-- In `BcaFiltersContext.tsx` esporre già `eventFilter` / `setEventFilter` (verificare; se assente, aggiungere allo stato e applicarlo dentro `useBcaGrouping`).
-- In `BCAFiltersRailContent.tsx` aggiungere una `FilterSection icon={Users} label="Evento"` con chips dinamici derivati da `cards.map(c => c.event_name)` (lista unica + count), collegati al setter del contesto.
-- Rimuovere il "Sync"-only e mantenere solo i filtri (la sync resta nella toolbar dell'hub).
+- **File da modificare**:
+  - `src/components/contacts/bca/BCAUnifiedDetailPanel.tsx` — rimuovere la HERO grid, mantenere solo il wrapper.
+  - `src/components/contacts/bca/BCADetailPanel.tsx` — riordinare le sezioni nell'ordine sopra; integrare gruppo "Comunicazione".
+  - `src/components/contacts/bca/BCASmartActions.tsx` — diventa il **gruppo "AI"** della nuova sezione azioni; nessuna duplicazione.
+- **File nuovi**:
+  - `BCADragDropOverlay.tsx` — overlay fullscreen attivato dal `dragstart` globale BCA, ascolta `BCA_DRAG_MIME`, renderizza i 4 grandi target con le stesse azioni di `runAction`. Smonta su `dragend`/`drop`.
+  - `BCABulkActionsPanel.tsx` — sostituisce il dettaglio quando `selectedBca.size >= 2`.
+- **Hook drag globale**: `useBcaDragOverlay()` — listener su `window` per `dragstart`/`dragend` con filtro su `dataTransfer.types.includes(BCA_DRAG_MIME)`.
+- **In `BCAUnifiedHub.tsx`**: switch condizionato `selectedBca.size >= 2 ? <BCABulkActionsPanel/> : <BCAUnifiedDetailPanel/>`.
+- **Nessuna modifica a logica dati o DAL** — solo riarrangiamento UI e wiring di handler già esistenti.
+- **Compatibilità drag & drop esistente**: preservato il contratto `BCA_DRAG_MIME` per non rompere altri consumer.
 
-### Step 3 — Rimuovere upload e CRM legacy hub
-- Eliminare `src/components/contacts/BusinessCardsHub.tsx`.
-- Eliminare `src/components/contacts/bca/BCAUpload.tsx` (DropZone + useUploadAndParse).
-- In `src/v2/ui/pages/CRMPage.tsx`: rimuovere `lazy(() => import("@/components/contacts/BusinessCardsHub"))` e l'eventuale tab "Biglietti" del CRM, oppure sostituirla con un redirect a `/v2/pipeline/biglietti` (consigliato: redirect, così se l'utente arriva da link vecchi finisce sull'hub canonico).
-- Rimuovere import correlati da `CRMPage` e ripulire eventuali tab labels.
-
-### Step 4 — Memoria
-- Aggiornare `mem://features/bca-quality-and-automation.md` (o creare nuova memoria `bca-canonical-hub`) con: "BCAUnifiedHub è la vista ufficiale; BusinessCardsHub e BCAUpload deprecati e rimossi; upload biglietti non più disponibile dall'UI (resta `parse-business-card` edge function lato API se serve)."
-
-## Note tecniche
-
-- `BusinessCardsView` (Operations) NON viene toccato in questo piano — è già senza panel e gestito separatamente. Se vuoi consolidarlo anche lui, fai sapere.
-- `BusinessCardsViewV2` orfano (78 righe, Network) lo lascio com'è salvo richiesta esplicita.
-- Il pannello `BCAUnifiedDetailPanel` resta invariato: è già la versione completa.
-- Bulk Delete passa per `deleteBusinessCards` che fa `DELETE` SQL — il trigger globale di soft-delete (memoria `no-physical-delete`) lo intercetta automaticamente in `UPDATE deleted_at`, quindi nessun rischio di perdita dati.
-
-Confermi di procedere con questo piano?
+## Cosa NON viene toccato in questo round
+- Logica di matching partner, OCR, timeline backend.
+- Lista biglietti a sinistra (compact/grid/expanded).
+- Filtri laterali e raggruppamento per azienda.
