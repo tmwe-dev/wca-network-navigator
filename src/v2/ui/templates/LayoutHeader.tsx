@@ -15,6 +15,7 @@ import { NotificationCenter } from "@/components/notifications/NotificationCente
 import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
+import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { Menu, Sparkles } from "lucide-react";
 
 interface OutreachQueue {
@@ -81,6 +82,9 @@ export function LayoutHeader({
           outreachQueue={outreachQueue}
           globalSync={globalSync}
         />
+
+        {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
+        <ExploreContextHeader />
 
         {/* Slot dinamico per controlli pagina (campagne, ecc.) — riservato ma compresso */}
         <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
