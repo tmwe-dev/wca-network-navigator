@@ -2,18 +2,19 @@ import { lazy, Suspense, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown, Plane } from "lucide-react";
+import { Search, Loader2, X, UserPlus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { countryFlag } from "./contactHelpers";
 import { ContactCard } from "./ContactCard";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CONTACT_GRID_COLS, CONTACT_GRID_CLASS } from "./contactGridLayout";
 import { useContactListPanel } from "@/hooks/useContactListPanel";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { ListSkeleton } from "@/components/ui/ListSkeleton";
 import { ContactSegments, type SegmentKey } from "@/components/contacts/ContactSegments";
+import { UnifiedListToolbar } from "@/components/shared/entity-toolbar/UnifiedListToolbar";
+import { useActiveFilterChips } from "@/components/shared/entity-toolbar/useActiveFilterChips";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const AddContactDialog = lazy(() => import("@/components/shared/AddContactDialog"));
 const BulkLinkedInDialog = lazy(() => import("@/components/workspace/BulkLinkedInDialog"));
@@ -35,13 +36,36 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   const h = useContactListPanel();
   const { state, dispatch, gf, selection, linkedInLookup, parentRef, tabsRef,
     contacts, totalCount, isLoading, isFetchingNextPage, loadMoreRef, virtualizer,
-    actions, tabs, totalAllGroups, groupBy, activeGroupTab, wcaMatch,
-    setCrmGroupTab, setCrmWcaMatch, setGroupBy,
+    actions,
     addInlineFilter, removeInlineFilter, handleSortClick, handleTabClick,
     handleDelete, handleDeduplicate, handleWcaMatch } = h;
+  // Mark intentionally-unused legacy fields to keep destructure stable.
+  void tabsRef; void handleTabClick;
 
   const isBulk = selection.count > 0;
   const [bulkLiOpen, setBulkLiOpen] = useState(false);
+  const chips = useActiveFilterChips("crm");
+  const { setSortBy } = useGlobalFilters();
+
+  const SORT_OPTIONS = [
+    { value: "name", label: "Contatto" },
+    { value: "company", label: "Azienda" },
+    { value: "city", label: "Città" },
+    { value: "origin", label: "Origine" },
+    { value: "recent", label: "Più recenti" },
+  ];
+  const sortValue = SORT_OPTIONS.some((o) => o.value === gf.sortBy) ? gf.sortBy : state.sortField;
+  const sortDir: "asc" | "desc" = state.sortDir === "desc" ? "desc" : "asc";
+  const handleSortChange = (v: string) => {
+    setSortBy(v);
+    if (v !== "recent") handleSortClick(v);
+  };
+  const handleSortToggleDir = () => {
+    if (sortValue && sortValue !== "recent") handleSortClick(sortValue);
+  };
+  const openFiltersDrawer = () => {
+    window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }));
+  };
 
   const bulkLiTargets = useMemo(() => {
     if (!isBulk) return [];
@@ -71,56 +95,29 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
   return (
     <PageErrorBoundary>
     <div className="flex flex-col h-full min-h-0">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-border/30 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{totalCount} contatti</span>
-            {gf.holdingPattern === "out" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/20"><Plane className="w-2.5 h-2.5" /> Fuori circuito</span>}
-            {gf.holdingPattern === "in" && <span className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/20"><Plane className="w-2.5 h-2.5 animate-pulse" /> In circuito</span>}
-            <div className="flex gap-1">
-              {(["all", "matched", "unmatched"] as const).map(v => (
-                <button key={v} onClick={() => setCrmWcaMatch(v)}
-                  className={cn("text-[9px] px-1.5 py-0.5 rounded-full transition-colors", wcaMatch === v ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted")}>
-                  {v === "all" ? "Tutti" : v === "matched" ? "WCA ✓" : "Solo CRM"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
+      {/* Unified Toolbar — counter + active-filter chips + sort + actions */}
+      <UnifiedListToolbar
+        counter={<span>{totalCount.toLocaleString("it-IT")} contatti</span>}
+        chips={chips}
+        onOpenFilters={openFiltersDrawer}
+        sort={{
+          options: SORT_OPTIONS,
+          value: sortValue,
+          direction: sortDir,
+          onChange: handleSortChange,
+          onToggleDirection: handleSortToggleDir,
+        }}
+        actions={
+          <>
             <ContactSegments activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
             <Tooltip><TooltipTrigger asChild>
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => dispatch({ type: "SET_ADD_OPEN", value: true })}>
                 <UserPlus className="w-3.5 h-3.5" /> Nuovo
               </Button>
             </TooltipTrigger><TooltipContent className="text-xs">Inserisci contatto manualmente</TooltipContent></Tooltip>
-          </div>
-        </div>
-      </div>
-
-      {/* Group tabs */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border/30 shrink-0">
-        <Select value={groupBy} onValueChange={(v) => { setGroupBy(v); setCrmGroupTab(""); }}>
-          <SelectTrigger className="h-7 w-[100px] text-[10px] border-border/40 bg-transparent"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="country">Paese</SelectItem>
-            <SelectItem value="origin">Origine</SelectItem>
-            <SelectItem value="status">Stato</SelectItem>
-            <SelectItem value="date">Data</SelectItem>
-          </SelectContent>
-        </Select>
-        <div ref={tabsRef} className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-          <button onClick={() => setCrmGroupTab("")} className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", !activeGroupTab ? "bg-primary/20 text-primary font-semibold" : "text-muted-foreground hover:bg-muted/60")}>
-            Tutti ({totalAllGroups})
-          </button>
-          {tabs.slice(0, 50).map(t => (
-            <button key={t.group_key} onClick={() => handleTabClick(t.group_key)}
-              className={cn("shrink-0 text-[10px] px-2 py-1 rounded-md whitespace-nowrap transition-colors", activeGroupTab === t.group_key ? "bg-primary/20 text-primary font-semibold" : "text-foreground/80 hover:bg-muted/60")}>
-              {groupBy === "country" ? `${countryFlag(t.group_key)} ${t.group_label}` : t.group_label.toUpperCase()} ({t.contact_count})
-            </button>
-          ))}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Inline filter chips */}
       {state.inlineFilters.length > 0 && (
