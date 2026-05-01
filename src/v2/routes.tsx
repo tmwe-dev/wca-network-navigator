@@ -143,13 +143,20 @@ function RACompanyRedirect(): React.ReactElement {
 /**
  * Redirect legacy: /v2/partner-hub era un alias di NetworkPage.
  * Ora consolidato in /v2/explore/network. Preserviamo `?country=XX`
- * così i vecchi bookmark/deep-link continuano a funzionare.
+ * applicando il filtro paese globale prima del redirect, così i vecchi
+ * bookmark/deep-link continuano a pre-selezionare il paese.
  */
 function PartnerHubAlias(): React.ReactElement {
   const [searchParams] = useSearchParams();
+  const { batchUpdate } = useGlobalFilters();
   const country = searchParams.get("country")?.trim().toUpperCase();
-  const target = country ? `/v2/explore/network?country=${country}` : "/v2/explore/network";
-  return <Navigate to={target} replace />;
+
+  useEffect(() => {
+    if (!country) return;
+    batchUpdate({ networkSelectedCountries: new Set([country]) });
+  }, [batchUpdate, country]);
+
+  return <Navigate to="/v2/explore/network" replace />;
 }
 
 // ── Router ───────────────────────────────────────────────────────────
