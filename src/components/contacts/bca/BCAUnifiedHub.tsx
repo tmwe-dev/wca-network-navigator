@@ -43,6 +43,8 @@ import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import { queryKeys } from "@/lib/queryKeys";
 import { BCAUnifiedDetailPanel } from "./BCAUnifiedDetailPanel";
+import { BCADragDropOverlay } from "./BCADragDropOverlay";
+import { BCABulkActionsPanel } from "./BCABulkActionsPanel";
 import { deleteBusinessCards } from "@/data/businessCards";
 
 const log = createLogger("BCAUnifiedHub");
@@ -137,7 +139,8 @@ export default function BCAUnifiedHub() {
     return <div className="flex-1 flex items-center justify-center"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
 
-  const showPanel = !!detailCard;
+  const bulkMode = selectedBca.size >= 2;
+  const showPanel = bulkMode || !!detailCard;
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
@@ -320,18 +323,35 @@ export default function BCAUnifiedHub() {
           {showPanel && detailCard && (
             <div className="w-[360px] shrink-0 bg-card/40 backdrop-blur-sm flex flex-col h-full overflow-hidden rounded-xl border border-border/40">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 shrink-0">
-                <span className="text-xs font-medium text-muted-foreground">Dettaglio biglietto</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {bulkMode ? `${selectedBca.size} biglietti selezionati` : "Dettaglio biglietto"}
+                </span>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setDetailCardId(null)}>
                   <X className="w-3.5 h-3.5" />
                 </Button>
               </div>
               <div className="flex-1 min-h-0 overflow-hidden">
-                <BCAUnifiedDetailPanel card={detailCard} onClose={() => setDetailCardId(null)} resolveCard={resolveCard} />
+                {bulkMode ? (
+                  <BCABulkActionsPanel
+                    cards={Array.from(selectedBca).map(id => cardsById.get(id)).filter((c): c is BusinessCardWithPartner => !!c)}
+                    onClear={() => setSelectedBca(new Set())}
+                    onRemove={(id) => setSelectedBca(prev => { const n = new Set(prev); n.delete(id); return n; })}
+                    onCockpit={handleSendToCockpit}
+                    onDeepSearch={handleBcaDeepSearch}
+                    onDelete={handleBulkDelete}
+                  />
+                ) : detailCard ? (
+                  <BCAUnifiedDetailPanel card={detailCard} onClose={() => setDetailCardId(null)} />
+                ) : null}
               </div>
             </div>
           )}
+          {/* When only bulk is active (no single detail) we still need to render the panel */}
+          {bulkMode && !detailCard && null}
         </div>
       </div>
+      {/* Overlay drag&drop globale (visibile solo durante il drag di un biglietto) */}
+      <BCADragDropOverlay resolveCard={resolveCard} />
     </div>
   );
 }
