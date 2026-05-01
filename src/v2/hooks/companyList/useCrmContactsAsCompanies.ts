@@ -13,6 +13,7 @@
 import { useMemo } from "react";
 import { useContactsPaginated } from "@/hooks/useContactsPaginated";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { deriveCountryCode } from "./countryHints";
 import type {
   CompanyEntity,
   ContactEntity,
@@ -144,7 +145,7 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
         id,
         name: g.display,
         city: first.city ?? null,
-        countryCode: first.country ?? null,
+        countryCode: deriveCountryCode(first.country, first.city),
         source: "crm",
         badge: matched
           ? { label: "WCA", tone: "wca" }
