@@ -98,35 +98,43 @@ export function BusinessCardsView() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-      {/* Sidebar */}
-      <div className={cn("flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-border/40 bg-muted/20 transition-all duration-200", g.sidebarOpen ? "w-52" : "w-0")}>
-        {g.sidebarOpen && (
-          <BcaCountrySidebar
-            countries={g.countries} totalCompanies={g.totalCompanies} totalContacts={cards.length}
-            selectedCountry={g.selectedCountry} onSelectCountry={g.setSelectedCountry}
-            onlyMatched={g.onlyMatched} onSetOnlyMatched={g.setOnlyMatched}
-            onlyWithEmail={g.onlyWithEmail} onSetOnlyWithEmail={g.setOnlyWithEmail}
-            hideHolding={g.hideHolding} holdingCount={g.holdingCount} onSetHideHolding={g.setHideHolding}
-            sortMode={g.sortMode} onSetSortMode={g.setSortMode}
-            viewMode={g.viewMode} onSetViewMode={g.setViewMode}
-          />
-        )}
-      </div>
-
-      <button onClick={() => g.setSidebarOpen(p => !p)} className="flex-shrink-0 w-5 flex items-center justify-center border-r border-border/30 hover:bg-muted/40 transition-colors text-muted-foreground hover:text-foreground">
-        {g.sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-      </button>
-
       {/* Main content */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-3">
-        {/* Toolbar */}
-        <div className="flex items-center gap-3 pt-3 flex-wrap">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-4 pb-3">
+        {/* Toolbar unica */}
+        <div className="flex items-center gap-2 pt-2 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-8 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            <input type="text" value={g.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca biglietto..." className="w-full h-7 pl-8 pr-3 rounded-md bg-muted/30 border border-border/40 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40" />
           </div>
-          <button onClick={toggleAll} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
-            <CheckSquare className="w-3.5 h-3.5" /> {allSelected ? "Deseleziona" : "Seleziona tutti"}
+          <TooltipProvider delayDuration={200}>
+            <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5">
+              {([
+                ["compact", LayoutList, "Compatta"],
+                ["card", LayoutGrid, "Media"],
+                ["expanded", Rows3, "Espansa"],
+              ] as const).map(([mode, Icon, label]) => (
+                <Tooltip key={mode}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => g.setViewMode(mode)}
+                      className={cn(
+                        "p-1 rounded transition-all",
+                        g.viewMode === mode
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                      )}
+                      aria-label={label}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">{label}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+          <button onClick={toggleAll} className={cn("flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all", allSelected ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted/50")}>
+            <CheckSquare className="w-3 h-3" /> {allSelected ? "Deseleziona" : "Tutti"}
           </button>
           <span className="text-xs text-muted-foreground">
             {g.filtered.length} biglietti · {g.groups.length} aziende
@@ -159,22 +167,20 @@ export function BusinessCardsView() {
               />
             </div>
           )}
-          <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
-            <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
-          </Button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-[11px] gap-1" onClick={() => setTimelineMode(!timelineMode)} title="Timeline evento">
+              <Clock className="w-3 h-3" /> Timeline
+            </Button>
+            <Button size="sm" className="h-7 text-[11px] gap-1" variant="outline" onClick={handleSync} disabled={syncing} title="Sincronizza biglietti">
+              <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
+            </Button>
+          </div>
         </div>
 
         <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
 
         {/* Quality Dashboard */}
         <BCAQualityDashboard cards={cards} />
-
-        {/* Timeline toggle */}
-        <div className="flex items-center gap-2">
-          <Button variant={timelineMode ? "default" : "outline"} size="sm" className="h-7 text-xs gap-1.5" onClick={() => setTimelineMode(!timelineMode)}>
-            <Clock className="w-3 h-3" /> Timeline Evento
-          </Button>
-        </div>
 
         {/* Card list or timeline */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
