@@ -7,11 +7,15 @@
  */
 import { useMemo } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import { COUNTRY_NAMES } from "@/utils/countries";
+import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import type { ActiveFilterChip } from "@/v2/ui/molecules/ActiveFiltersBar";
 
 function countryLabel(code: string): string {
-  return (COUNTRY_NAMES as Record<string, string>)[code] || code;
+  // Mostra bandiera + codice ISO (es. "🇨🇳 CN").
+  // Il nome esteso non è disponibile come mappa centralizzata: il codice ISO
+  // è universale e immediatamente riconoscibile.
+  const flag = countryCodeToFlag(code);
+  return flag ? `${flag} ${code.toUpperCase()}` : code.toUpperCase();
 }
 
 function holdingChip(value: string | undefined): ActiveFilterChip | null {
