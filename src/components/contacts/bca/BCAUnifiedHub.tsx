@@ -242,26 +242,33 @@ export default function BCAUnifiedHub() {
                     {g.viewMode === "compact" ? (
                       <div className="divide-y divide-border/20">
                         {group.cards.map(card => (
-                          <div key={card.id} className="cursor-pointer" onClickCapture={(e) => {
-                            // open detail unless click is on a control inside the row
-                            const t = e.target as HTMLElement;
-                            if (t.closest("button,input,a")) return;
-                            setDetailCardId(card.id);
-                          }}>
-                            <BcaCompactCard card={card} isSelected={selectedBca.has(card.id)} onToggle={toggleBca} groupCompanyName={group.companyName} onSendEmail={handleSendEmail} onSendWhatsApp={handleSendWhatsApp} />
-                          </div>
+                          <BcaCompactCard
+                            key={card.id}
+                            card={card}
+                            isSelected={selectedBca.has(card.id)}
+                            onToggle={toggleBca}
+                            onOpenDetail={(id) => setDetailCardId(id)}
+                            enableDrag
+                            groupCompanyName={group.companyName}
+                            onSendEmail={handleSendEmail}
+                            onSendWhatsApp={handleSendWhatsApp}
+                          />
                         ))}
                       </div>
                     ) : g.viewMode === "expanded" ? (
                       <div className="space-y-2 p-3">
                         {group.cards.map(card => (
-                          <div key={card.id} onClickCapture={(e) => {
-                            const t = e.target as HTMLElement;
-                            if (t.closest("button,input,a")) return;
-                            setDetailCardId(card.id);
-                          }}>
-                            <BcaExpandedCard card={card} isSelected={selectedBca.has(card.id)} onToggle={toggleBca} groupCompanyName={group.companyName} onSendEmail={handleSendEmail} onSendWhatsApp={handleSendWhatsApp} />
-                          </div>
+                          <BcaExpandedCard
+                            key={card.id}
+                            card={card}
+                            isSelected={selectedBca.has(card.id)}
+                            onToggle={toggleBca}
+                            onOpenDetail={(id) => setDetailCardId(id)}
+                            enableDrag
+                            groupCompanyName={group.companyName}
+                            onSendEmail={handleSendEmail}
+                            onSendWhatsApp={handleSendWhatsApp}
+                          />
                         ))}
                       </div>
                     ) : (
