@@ -100,6 +100,15 @@ export default function Operations({ activeView }: { activeView?: "partners" | "
   const setNetworkView = activeView ? (() => {}) as () => void : setInternalView;
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
 
+  // Broadcast networkView so the global ContextFiltersRail can hide itself on BCA tab
+  // (the BCA view already has its own rich country sidebar — no duplicate).
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("network-view", networkView);
+      window.dispatchEvent(new CustomEvent("network-view-change", { detail: { view: networkView } }));
+    } catch { /* sessionStorage may be unavailable */ }
+  }, [networkView]);
+
   // Sync with external theme changes (e.g. from V2 sidebar toggle)
   useEffect(() => {
     const observer = new MutationObserver(() => {
