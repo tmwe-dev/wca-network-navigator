@@ -15,19 +15,41 @@ import type { ContactDetail } from "@/hooks/useContactDetail";
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useCrmContactsAsCompanies } from "@/v2/hooks/companyList/useCrmContactsAsCompanies";
-import { ActiveFiltersBar } from "@/v2/ui/molecules/ActiveFiltersBar";
 import { useCrmActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
+import { ListToolbar, useListSort, type SortOption } from "@/v2/ui/molecules/ListToolbar";
+import { useSortedCompanies, type CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 
 const log = createLogger("Contacts");
+
+const CRM_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
+  { key: "name", label: "Nome" },
+  { key: "city", label: "Città" },
+  { key: "score", label: "Score" },
+  { key: "contactsCount", label: "Contatti" },
+];
 
 function CrmCardListBody(): React.ReactElement {
   const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
   const chips = useCrmActiveFilterChips();
+  const { sortKey, sortDir, cycle } = useListSort<CompanySortKey>("list:crm", "name");
+  const [search, setSearch] = useState("");
+  const sorted = useSortedCompanies(companies, sortKey, sortDir, search);
   return (
-    <div className="flex flex-col h-full min-h-0 px-4 pb-3 pt-2">
-      <ActiveFiltersBar chips={chips} className="mb-2 -mx-4" />
+    <div className="flex flex-col h-full min-h-0 pb-3">
+      <ListToolbar<CompanySortKey>
+        countLabel={`${sorted.length}/${companies.length} aziende`}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        sortOptions={CRM_SORT_OPTIONS}
+        onCycleSort={cycle}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cerca contatto, azienda, città…"
+        chips={chips}
+      />
+      <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
       <CompanyCardList
-        companies={companies}
+        companies={sorted}
         isLoading={isLoading}
         emptyMessage="Nessun contatto"
         onOpenContact={(contact) => {
@@ -38,6 +60,7 @@ function CrmCardListBody(): React.ReactElement {
           );
         }}
       />
+      </div>
       {hasMore && (
         <div className="pt-2 flex justify-center">
           <button
