@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight, Clock, X,
+  ChevronLeft, ChevronRight, Clock, X, LayoutList, LayoutGrid, Rows3,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { BCAQualityDashboard } from "@/components/operations/bca/BCAQualityDashboard";
@@ -185,6 +185,32 @@ export default function BCAUnifiedHub() {
           <Button size="sm" className="h-7 text-xs gap-1.5 ml-auto" variant="outline" onClick={handleSync} disabled={syncing}>
             <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} /> {syncing ? "Sync..." : "Sincronizza"}
           </Button>
+        </div>
+
+        {/* View mode switcher — sempre visibile in alto */}
+        <div className="flex items-center gap-2 -mt-1">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Vista:</span>
+          <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/40 bg-muted/30 p-0.5">
+            {([
+              ["compact", LayoutList, "Compatta"],
+              ["card", LayoutGrid, "Media"],
+              ["expanded", Rows3, "Espansa"],
+            ] as const).map(([mode, Icon, label]) => (
+              <button
+                key={mode}
+                onClick={() => g.setViewMode(mode)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
+                  g.viewMode === mode
+                    ? "bg-primary/15 text-primary shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <DeepSearchCanvas open={deepSearch.canvasOpen} onClose={() => deepSearch.setCanvasOpen(false)} onStop={() => deepSearch.stop()} current={deepSearch.current} results={deepSearch.results} running={deepSearch.running} isDark={true} />
