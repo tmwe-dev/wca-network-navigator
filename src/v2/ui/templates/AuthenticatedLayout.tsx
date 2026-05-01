@@ -422,3 +422,19 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     </GlobalErrorBoundary>
   );
 }
+
+/**
+ * BcaFiltersGate — monta il `BcaFiltersProvider` solo nelle route in cui la
+ * maschera Biglietti è visibile (CRM › Biglietti, Network › BCA), così la
+ * linguetta globale `ContextFiltersRail` può accedere allo stesso stato
+ * filtri usato dalla pagina.
+ */
+function BcaFiltersGate({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const isBca =
+    pathname.startsWith("/v2/pipeline/biglietti") ||
+    pathname.startsWith("/v2/explore/network") ||
+    pathname === "/v2/network";
+  if (!isBca) return <>{children}</>;
+  return <BcaFiltersProvider>{children}</BcaFiltersProvider>;
+}
