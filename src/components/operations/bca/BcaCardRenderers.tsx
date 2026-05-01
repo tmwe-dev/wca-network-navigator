@@ -1,8 +1,9 @@
-import { Mail, MessageCircle } from "lucide-react";
+import { Mail, MessageCircle, GripVertical } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { BusinessCardWithPartner } from "@/hooks/useBusinessCards";
+import { BCA_DRAG_MIME } from "@/components/contacts/bca/bcaDragContext";
 
 interface CardProps {
   card: BusinessCardWithPartner;
@@ -11,6 +12,10 @@ interface CardProps {
   groupCompanyName: string;
   onSendEmail: (params: { email: string; name?: string; company: string }) => void;
   onSendWhatsApp: (params: { phone: string; contactName?: string; companyName?: string; sourceType?: "contact" | "partner" | "prospect"; sourceId?: string }) => void;
+  /** When true, the card opens the detail panel (instead of toggling selection). Used by the unified hub. */
+  onOpenDetail?: (id: string) => void;
+  /** When true, the grid card exposes a 6-dots drag handle that drags this card by id. */
+  enableDrag?: boolean;
 }
 
 export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp }: CardProps) {
@@ -31,11 +36,42 @@ export function BcaCompactCard({ card, isSelected, onToggle, groupCompanyName, o
   );
 }
 
-export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp }: CardProps) {
+export function BcaGridCard({ card, isSelected, onToggle, groupCompanyName, onSendEmail, onSendWhatsApp, onOpenDetail, enableDrag }: CardProps) {
+  const handleClick = () => {
+    if (onOpenDetail) onOpenDetail(card.id);
+    else onToggle(card.id);
+  };
   return (
-    <div className={cn("relative rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:shadow-sm", isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60")} onClick={() => onToggle(card.id)}>
-      <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} className="w-3.5 h-3.5" /></div>
-      <div className="space-y-1.5 pr-6">
+    <div
+      className={cn(
+        "group relative rounded-lg border p-3 transition-all duration-150 hover:shadow-sm cursor-pointer",
+        isSelected ? "border-primary/40 bg-primary/[0.06] shadow-sm" : "border-border/40 bg-card/30 hover:border-border/60",
+      )}
+      onClick={handleClick}
+    >
+      {enableDrag && (
+        <button
+          type="button"
+          draggable
+          aria-label="Trascina sul pannello azioni"
+          title="Trascina sulle azioni intelligenti"
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = "copy";
+            e.dataTransfer.setData(BCA_DRAG_MIME, card.id);
+            e.dataTransfer.setData("text/plain", card.id);
+          }}
+          className="absolute top-1.5 left-1.5 z-10 inline-flex items-center justify-center w-5 h-5 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-primary/10 cursor-grab active:cursor-grabbing opacity-60 group-hover:opacity-100 transition-opacity"
+        >
+          <span className="relative inline-flex">
+            <GripVertical className="w-3 h-3" />
+            <GripVertical className="w-3 h-3 -ml-1.5" />
+          </span>
+        </button>
+      )}
+      <div className="absolute top-2 right-2"><Checkbox checked={isSelected} onCheckedChange={() => onToggle(card.id)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5" /></div>
+      <div className={cn("space-y-1.5 pr-6", enableDrag && "pl-5")}>
         <div className="text-xs font-semibold text-foreground truncate">{card.contact_name || "—"}</div>
         {card.position && <div className="text-[10px] text-muted-foreground truncate">{card.position}</div>}
         <div className="flex items-center gap-1 mt-1">
