@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react"; // restored
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Globe, Users, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { useDeepSearch, type DeepSearchState } from "@/hooks/useDeepSearchRunner";
@@ -20,6 +20,7 @@ import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryKeys";
+import { AnagraphicsPills } from "@/v2/ui/templates/header/AnagraphicsPills";
 
 /** Read directory totals — shares cache key with CountryGrid */
 function useDirectoryTotal() {
@@ -37,10 +38,8 @@ function useDirectoryTotal() {
   });
 }
 
-/** Portal: renders Network controls into the global header slot.
- *  Network = WCA Partner only. I biglietti da visita vivono in /v2/pipeline/biglietti. */
-function HeaderBarPortal({ globalStats, deepSearch }: {
-  globalStats: { totalPartners: number } & Record<string, unknown> | null;
+/** Portal: renders the 3 anagraphics pills + Network-specific Deep Search shortcut. */
+function HeaderBarPortal({ deepSearch }: {
   deepSearch: DeepSearchState;
 }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -53,15 +52,7 @@ function HeaderBarPortal({ globalStats, deepSearch }: {
 
   return createPortal(
     <div className="flex items-center gap-3 min-w-0 flex-1">
-      <Globe className="w-4 h-4 text-primary/70 animate-spin-slow flex-shrink-0" />
-      <span className="text-xs font-semibold text-foreground hidden sm:inline">WCA Partner</span>
-
-      {globalStats && (
-        <span className="hidden md:flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-          <Users className="w-3 h-3" />
-          <span className="font-mono">{globalStats.totalPartners}</span> partner
-        </span>
-      )}
+      <AnagraphicsPills active="partners" />
 
       {(deepSearch.running || deepSearch.results?.length > 0) && !deepSearch.canvasOpen && (
         <button onClick={() => deepSearch.setCanvasOpen(true)} className="p-1 rounded-md bg-accent/20 hover:bg-accent/30 text-accent-foreground" title="Deep Search">
