@@ -17,12 +17,12 @@ import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Globe, Users, IdCard, Map as MapIcon, SearchCheck, ChevronLeft, ChevronRight,
-  LayoutDashboard, Building2,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExploreTabCounters, type ExploreTabCounters } from "@/v2/hooks/useExploreTabCounters";
 
-type TabKey = "command" | "partner-hub" | "network" | "contacts" | "biglietti" | "map" | "deep";
+type TabKey = "command" | "network" | "contacts" | "biglietti" | "map" | "deep";
 
 interface TabDef {
   readonly key: TabKey;
@@ -36,7 +36,6 @@ interface TabDef {
 
 const TABS: readonly TabDef[] = [
   { key: "command",   label: "Plancia di Comando", to: "/v2/command",          icon: LayoutDashboard,                                              matchPaths: ["/v2/command"] },
-  { key: "partner-hub", label: "Partner Hub",      to: "/v2/partner-hub",       icon: Building2,    counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/partner-hub"] },
   { key: "network",   label: "WCA Partner",   to: "/v2/explore/network",     icon: Globe,       counterKey: "network",   unitLabel: "partner",  matchPaths: ["/v2/explore/network"] },
   { key: "contacts",  label: "Contatti CRM",  to: "/v2/explore/contacts",    icon: Users,       counterKey: "contacts",  unitLabel: "contatti", matchPaths: ["/v2/explore/contacts"] },
   { key: "biglietti", label: "Biglietti",     to: "/v2/explore/biglietti",   icon: IdCard,      counterKey: "biglietti", unitLabel: "biglietti", matchPaths: ["/v2/explore/biglietti"] },
