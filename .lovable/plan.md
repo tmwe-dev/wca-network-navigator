@@ -1,99 +1,146 @@
-## 1. Cos'è oggi ogni tab di `/v2/communicate/outreach` (verità tecnica)
+## Obiettivo
 
-Letta direttamente dal codice — questa è la mappa che mancava:
+Rendere Outreach **leggibile e logico**. Oggi i tab funzionano ma "non si capisce un cazzo": le righe mostrano "reply received email" anziché *con chi* hai parlato, le sequenze non si capisce a cosa servano, Coda AI / Risposte in arrivo / Storico Attività si confondono.
 
-| Tab | Cosa contiene davvero (nel DB) | A cosa serve |
-|---|---|---|
-| **Cockpit** | Non è una lista. È una **scrivania di produzione**: a sinistra contatti filtrati, al centro drop‑zone (Email/LinkedIn/WhatsApp/Phone) per generare bozze AI. Non legge code. | Produrre nuove bozze AI partendo da contatti scelti. |
-| **In Uscita** | Unione di 3 tabelle: `activities` (manuali/AI), `mission_actions` (orchestrate da agenti), `pending_actions` (proposte agente non ancora attività). Sotto‑tab: **Da Inviare** (pending), **Inviati** (completed), **Programmati** (scheduled), **Falliti** (failed). | Vedere/autorizzare/cancellare/riprogrammare ciò che parte. |
-| **Programmazione** | **Template di sequenze multi‑step** (`outreach_timing_templates`): es. "Primo Contatto WCA = Email gg0 → LinkedIn gg2 → Email gg5 → telefonata gg7". Più sotto‑tab "Attive" che mostra le sequenze già lanciate (`mission_actions` con `cadence_rule`). | Lanciare cadenze/sequenze su una lista di contatti. È il "motore di campagna multi‑step". |
-| **Attività** | Tutta la tabella `activities` (200 righe più recenti) — qualunque tipo, qualunque stato, qualunque sorgente. | Storico generale: chiamate, meeting, follow‑up, email — non solo email. |
-| **Circuito** | `HoldingPatternCommandCenter`: messaggi inbound (Email/WA/LI) **ricevuti** in attesa di risposta. Non è "ciò che parte", è **ciò che è arrivato**. | Triage dell'inbox cross‑canale: rispondi / ignora / escalation telefonica. |
-| **Coda AI** | `activities.status='pending' AND executed_by_agent_id NOT NULL` + `agent_tasks` proposti. | Approvare/rifiutare le azioni che gli agenti propongono autonomamente. |
-| **A/B Test** | Varianti di subject/body in test. | Solo lab, non produce invii diretti. |
-
-**Doppione confermato:** "In Uscita → Da Inviare" e "Attività → filtro pending+email" mostrano in pratica gli stessi record. Anche "Programmati" (sotto‑tab) e "Programmazione" sono nomi che si confondono ma fanno cose diverse.
+Riduciamo a **due soli contenitori operativi** + due viste di consultazione, e ridisegniamo le righe per mettere al centro **azienda → cosa è successo → quando**.
 
 ---
 
-## 2. Cosa cambiamo (solo chiarezza, niente ridisegno)
+## 1. La nuova mappa mentale di Outreach
 
-### A. Pannello introduttivo "Cosa stai vedendo"
-In ogni tab della sidebar, **in alto, sopra la lista**, una banda compatta che spiega in **una frase**:
-- icona + titolo del tab
-- frase di scopo ("Qui trovi…")
-- da quale fonte arriva il dato ("Origine: campagne, missioni AI, manuali")
-- cosa puoi fare ("Approva · Riprogramma · Annulla")
-- link "→ vai a X" verso il tab gemello quando esiste (es. da Coda AI → "Le azioni approvate finiscono in *In Uscita › Da Inviare*").
-
-### B. Rinominazioni mirate
-Per togliere ambiguità senza rivoluzionare:
-- **Programmazione** → **Sequenze** (sottotitolo: "Cadenze multi‑step e template")
-- **In Uscita › Programmati** → **In Uscita › Pianificati** (data futura impostata dall'utente)
-- **Cockpit** resta com'è (è la scrivania di produzione, distinta da Outreach come confermato).
-- **Circuito** → **Risposte in arrivo** (sottotitolo: "Email/WA/LinkedIn da gestire")
-
-### C. **Anteprima email nel pannello laterale** (la cosa più importante per te)
-Su **In Uscita › Da Inviare** la lista diventa **split‑view**:
-- a sinistra: lista contatti con check, canale, sorgente (come ora)
-- a destra: pannello che si apre al click sulla riga e mostra:
-  - destinatario (nome + email + azienda)
-  - **oggetto reale**
-  - **corpo reale della mail** (HTML sanitizzato)
-  - **sorgente/percorso**: "Generata da Cockpit", "Bozza AI agente Luca", "Step 2/5 della sequenza Primo Contatto WCA", ecc.
-  - se è parte di una sequenza: i passi precedenti già fatti e i prossimi
-  - bottoni: **Autorizza invio** · **Riprogramma** · **Annulla** · **Apri composer per modifica**
-
-Stessa preview‑pane verrà riusata per **Programmati** e **Falliti** (con motivo del fallimento + bottone "Riprova").
-
-### D. Banda "Origine record" su ogni riga
-Pillola colorata sempre visibile: **Manuale · AI · Campagna · Missione · Sequenza** — così a colpo d'occhio sai da dove arriva ogni messaggio. Già presente in parte, la rendiamo coerente in **tutti** i tab.
-
-### E. Mini‑legenda fissa nel footer del pannello
-Una riga sottile in basso al pannello Outreach con la legenda dei badge (cosa significa "Cadence", "Missione", "Manuale"). Puoi nasconderla con una X — lo stato resta in localStorage.
-
-### F. "Avvia Programmazione" (Sequenze) — chiarire da dove arrivano i template
-Sopra la griglia template, una banda esplicativa:
-- **Sistema**: preset forniti di default (badge grigio "Sistema")
-- **Custom**: creati da te o dal tuo team (badge viola)
-- **Bottone "Nuovo Template"** → apre il builder
-- **Bottone "Avvia"** su ogni card → wizard che chiede: *quali contatti* + *data inizio* + *canali abilitati* → crea le righe in `mission_actions` che poi vedrai in "Sequenze › Attive" e i singoli invii in "In Uscita".
-
----
-
-## 3. Cosa NON tocchiamo in questo passaggio
-
-- Logica di invio / coda / autorizzazione: già sistemata nel turno precedente (tutte le mail → `email_campaign_queue` in stato `pending`).
-- Cockpit: resta separato come scrivania di produzione (tua scelta).
-- Circuito: resta funzionalmente identico, cambia solo il nome e l'intestazione esplicativa.
-- Nessun pannello "Approval" duplicato viene rimosso (come da tuo precedente input "non rimuovere niente adesso").
-
----
-
-## 4. File toccati (frontend, presentational)
+Solo **4 tab visibili**, ognuno con uno scopo univoco:
 
 ```text
-src/components/outreach/
-  ├─ TabIntroBanner.tsx            (NUOVO — banda esplicativa riusabile)
-  ├─ OutreachLegendFooter.tsx      (NUOVO — legenda badge)
-  ├─ EmailPreviewPane.tsx          (NUOVO — pannello laterale preview)
-  ├─ DaInviareSubTab.tsx           (split-view + integrazione preview pane)
-  ├─ ProgrammatiSubTab.tsx         (idem)
-  ├─ FallitiSubTab.tsx             (idem + motivo errore + Riprova)
-  ├─ InviatiSubTab.tsx             (preview read-only)
-  ├─ SchedulingTab.tsx             (banda "Sistema vs Custom" + intestazione "Sequenze")
-  ├─ AttivitaTab.tsx               (banda intro + chiarisce che è uno storico)
-  ├─ CodaAITab.tsx                 (banda intro: "le approvate vanno in In Uscita")
-  └─ HoldingPatternCommandCenter.tsx (banda intro: "messaggi RICEVUTI da gestire")
+COCKPIT        → Sala produzione: scelgo contatti, l'AI mi prepara messaggi.
+                 Esce sempre una BOZZA (mai invio diretto).
 
-src/v2/ui/pages/communicate/OutreachPage.tsx
-  └─ etichette tab: Programmazione→Sequenze, Circuito→Risposte in arrivo
+IN USCITA      → Sala spedizioni: tutto ciò che è pronto e attende l'OK.
+                 Sotto-tab:
+                   • Da approvare  (bozze: manuali + AI + campagna)
+                   • Pianificate   (autorizzate, in attesa del loro orario)
+                   • Inviate       (storico spedizioni)
+                   • Fallite       (errori da rivedere)
+
+RISPOSTE       → Posta in arrivo cross-canale (Email + WA + LinkedIn).
+                 Messaggi ARRIVATI da clienti/partner che aspettano una mossa.
+
+ATTIVITÀ       → Diario di bordo: tutto quello che è accaduto + cosa devi fare
+                 (chiamate, meeting, follow-up, invii completati).
+                 Filtri per tipo, stato, sorgente.
 ```
 
-Nessuna modifica a DB, edge functions, hook di business, query keys.
+**Spariscono come tab autonomi:**
+- *Coda AI* → si fonde dentro **In Uscita › Da approvare** (le proposte AI sono bozze come le altre, con badge "🤖 AI" e tooltip "Proposta da Luca / Sherlock").
+- *Sequenze* → si sposta dentro **Cockpit** come pannello laterale "Applica una cadenza" (è uno strumento di produzione, non un tab).
+- *A/B Test* → si sposta sotto **Cockpit › Strumenti**.
+
+Risultato: 7 tab → **4 tab**. Niente più contenitori che sembrano duplicati.
 
 ---
 
-## 5. Come saprai che è chiaro
+## 2. La riga unica "leggibile" (usata in tutti i tab)
 
-Apri `/v2/communicate/outreach`, clicchi un tab a caso: **in alto vedi una frase che ti dice cosa stai guardando, da dove arriva e cosa puoi farci**. Clicchi una riga in "Da Inviare": **a destra si apre la mail intera** con sorgente e bottoni di azione. Apri "Sequenze": capisci subito differenza tra template **Sistema** e **Custom** e dove finiscono gli invii quando avvii.
+Oggi vedi: `Reply: received email — oversea1@asl-corp.com.vn`. Inutile.
+
+Nuova riga (stessa anatomia in In Uscita / Risposte / Attività):
+
+```text
+[LOGO]  Acme Logistics · Vietnam               [↗ Email]   ⏰ 24 apr 09:20
+        Maria Nguyen <maria@acme.vn>                       👤 Manuale
+        ✉️  "Re: Quotation for Hanoi-Genoa route"
+        Aspetta la tua risposta · ricevuta 2h fa
+                                              [Approva] [Rispondi] [⋯]
+```
+
+Componenti chiave per ogni riga:
+- **Logo azienda** (favicon dal dominio email, fallback: iniziale colorata).
+- **Azienda + paese** in grassetto come titolo (non l'oggetto tecnico).
+- **Persona + email** sotto, in piccolo.
+- **Icona-azione** colorata che dice *cosa è successo*: ✉️ inviata, ↩️ risposta ricevuta, 📞 chiamata, 🤝 meeting, 🤖 proposta AI, 🔄 follow-up, 🗓️ pianificata.
+- **Badge sorgente**: 👤 Manuale · 🤖 AI (Luca) · 📧 Campagna · 🎯 Missione · 🔁 Sequenza.
+- **Frase in italiano** che spiega *cosa fare/cosa è successo* ("Aspetta la tua risposta", "Pronta per partire alle 10:30", "Follow-up scaduto da 2 giorni").
+- **Data + ora** sempre esplicite, mai solo "24 apr".
+
+Su click → si apre il pannello laterale già esistente (`EmailPreviewPane`) con corpo completo, thread e azioni.
+
+---
+
+## 3. Cosa cambia in concreto, tab per tab
+
+### Cockpit (resta produzione)
+- Aggiungere pannello laterale "**Applica una cadenza**" che mostra i template di Sequenze (Primo Contatto, Follow-up, Nurturing…) e permette di lanciarli sui contatti selezionati.
+- Banner di intro: *"Qui prepari i messaggi. Ogni cosa che invii da qui finisce in **In Uscita › Da approvare** prima di partire."*
+
+### In Uscita (cuore operativo, unificato)
+- **Da approvare** = bozze manuali + AI (ex Coda AI) + campagne, tutte insieme con badge sorgente.
+- Header del sotto-tab: contatori chiari (`12 da approvare · 3 AI · 2 campagne`).
+- Riga ridisegnata come sopra.
+- `EmailPreviewPane` mostra in alto la "**provenienza**": "Generata da Luca AI il 24 apr · su missione Vietnam Q2" oppure "Scritta da te nel Cockpit".
+
+### Risposte (ex "Risposte in arrivo / Circuito")
+- Banner: *"Messaggi che ti hanno scritto. Da qui decidi: rispondi (l'AI prepara una bozza che finisce in **In Uscita**), ignori, o escali a chiamata."*
+- Riga ridisegnata: **Azienda + persona**, anteprima testo, "ricevuto 2h fa", azioni rapide.
+- Tab interni canale: 📧 Email · 💬 WhatsApp · 💼 LinkedIn con contatori.
+
+### Attività (ex Storico Attività)
+- Banner: *"Diario completo: ogni chiamata, email inviata, meeting, follow-up. Filtra per capire cosa hai fatto e cosa devi ancora fare."*
+- Riga ridisegnata: niente più "send_email" tecnico → **icona + frase italiana** ("✉️ Email inviata a Acme · 24 apr 09:20").
+- Per le attività AI: tag "🤖 fatto da Luca" con tooltip che spiega perché.
+
+---
+
+## 4. Sequenze: come funzionano e dove vanno
+
+Una **Sequenza** = ricetta multi-step (es. *Email giorno 0 → LinkedIn giorno 3 → Email giorno 7 → Telefono giorno 14*). Si crea una volta, si applica a *N contatti*.
+
+Spostamento e chiarimento:
+- Le sequenze diventano un **wizard dentro Cockpit** ("Applica cadenza ai contatti selezionati"), non un tab separato.
+- I template di sistema sono visibili e duplicabili. Crearne uno nuovo = wizard in 3 step (obiettivo, sorgente contatti, step della cadenza).
+- Una sequenza attiva genera invii singoli che compaiono in **In Uscita › Da approvare** (mai automatica al 100%): tu vedi `🔁 Sequenza "Primo Contatto" · step 2 di 4`.
+- Pannello "Sequenze attive" come collassabile dentro Cockpit (vedi quante stanno girando, su quanti contatti, quante hanno risposto).
+
+---
+
+## 5. Componenti tecnici da creare/modificare
+
+**Nuovi componenti UI (presentazione):**
+- `OutreachRow.tsx` — riga unificata (logo + azienda + icona-azione + frase + data + sorgente).
+- `CompanyAvatar.tsx` — logo da favicon dominio con fallback iniziali colorate.
+- `ActionIcon.tsx` — mappa azione → icona + colore + label italiana.
+- `SourcePill.tsx` — badge sorgente standard (Manuale / AI / Campagna / Missione / Sequenza).
+- `RelativeTime.tsx` — "ricevuta 2h fa", "fra 3 giorni", "scaduto da ieri".
+
+**Modificati:**
+- `OutreachPage.tsx` — riduce a 4 tab, sposta A/B Test e Sequenze.
+- `CockpitPage.tsx` — aggiunge pannello laterale "Applica cadenza" + "Sequenze attive".
+- `DaInviareSubTab.tsx` — assorbe le proposte AI (query unificata activities + agent_tasks pending).
+- `AttivitaTab.tsx` — nuova riga, frasi italiane, icone per tipo.
+- `HoldingPatternCommandCenter.tsx` — rinominato "Risposte", nuova riga.
+- `TabIntroBanner.tsx` — testi rivisti con tono didattico (spiega da dove arriva il dato e che azioni puoi fare).
+
+**Eliminati come tab (codice preservato):**
+- `CodaAITab.tsx` — logica fusa in `DaInviareSubTab`.
+- `SchedulingTab.tsx` — diventa pannello dentro Cockpit.
+
+**Nessuna modifica al DB e nessuna modifica al motore di invio.** Solo presentazione + riorganizzazione tab.
+
+---
+
+## 6. Microcopy che vedrai ovunque (tono)
+
+- "Niente parte senza il tuo OK."
+- "Da qui prepari → da **In Uscita** autorizzi → in **Attività** vedi cosa è successo."
+- "Questa l'ha proposta Luca AI il 24 apr per la missione Vietnam Q2."
+- "Maria di Acme ti ha scritto 2 ore fa. Vuoi che Luca prepari la risposta?"
+
+---
+
+## 7. Cosa NON tocchiamo
+
+- Schema DB, edge functions, motore invio, regole RLS, sistema permessi.
+- Logica di approvazione/coda (resta `email_campaign_queue` + `pending` come stabilito).
+- Soft-delete, holding pattern governance, AI Invocation Charter.
+
+---
+
+Confermi e procedo a implementare? Se vuoi cambiamenti (es. mantenere Coda AI separato, o lasciare Sequenze come tab), dimmelo prima e adatto il piano.
