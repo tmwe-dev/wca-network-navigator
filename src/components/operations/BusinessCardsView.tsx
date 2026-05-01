@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import {
   Building2, CreditCard, Brain, Search, RefreshCw, CheckSquare, Plane,
-  ChevronLeft, ChevronRight, Clock,
+  Clock, LayoutList, LayoutGrid, Rows3,
 } from "lucide-react";
 import { UnifiedBulkActionBar } from "@/components/shared/UnifiedBulkActionBar";
 import { BCAQualityDashboard } from "./bca/BCAQualityDashboard";
@@ -14,13 +14,14 @@ import { useDeepSearch } from "@/hooks/useDeepSearchRunner";
 import { DeepSearchCanvas } from "@/components/operations/DeepSearchCanvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { createLogger } from "@/lib/log";
 import { useBcaGrouping } from "./bca/useBcaGrouping";
-import { BcaCountrySidebar } from "./bca/BcaCountrySidebar";
+import { useBcaFilters } from "@/components/contacts/bca/BcaFiltersContext";
 import { BcaCompactCard, BcaGridCard, BcaExpandedCard } from "./bca/BcaCardRenderers";
 import { countryCodeToFlag } from "./bca/bcaUtils";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
@@ -39,7 +40,11 @@ export function BusinessCardsView() {
   const [syncing, setSyncing] = useState(false);
   const [timelineMode, setTimelineMode] = useState(false);
 
-  const g = useBcaGrouping(cards);
+  // Stato filtri condiviso con la rail globale; fallback locale se il
+  // provider non è montato (es. uso isolato in test).
+  const ctx = useBcaFilters();
+  const local = useBcaGrouping(cards);
+  const g = ctx ?? local;
 
   const handleSync = async () => {
     setSyncing(true);
