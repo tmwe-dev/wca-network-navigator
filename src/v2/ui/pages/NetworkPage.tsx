@@ -6,74 +6,40 @@
  * accessibile via toggle "Vista classica" per non perdere features avanzate
  * (sync WCA, deep search canvas, ecc.) finché non vengono migrate.
  */
+/**
+ * NetworkPage V2 — Vista unica WCA Partner (no più toggle "Classica").
+ * Lista a sinistra (CompanyCardList ricca + checkbox + filtri/sort) +
+ * dettaglio inline a destra. Selezione 2+ → BulkActionsPanel.
+ */
 import * as React from "react";
-import { useState } from "react";
-import Operations from "@/components/operations/OperationsView";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
-import { toast } from "sonner";
-import { LayoutGrid, Settings2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import { useWcaPartnersAsCompanies } from "@/v2/hooks/companyList/useWcaPartnersAsCompanies";
 import { useWcaActiveFilterChips } from "@/v2/hooks/companyList/useActiveFilterChips";
-import { ListToolbar, useListSort, type SortOption } from "@/v2/ui/molecules/ListToolbar";
-import { useSortedCompanies, type CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
+import { type SortOption } from "@/v2/ui/molecules/ListToolbar";
+import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
+import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
+import { PartnerDetailInline } from "@/v2/ui/organisms/PartnerDetailInline";
+import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 
 const WCA_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
   { key: "name", label: "Nome" },
+  { key: "country", label: "Paese" },
   { key: "city", label: "Città" },
   { key: "wcaYears", label: "Anni WCA" },
   { key: "score", label: "Score" },
+  { key: "lastInteraction", label: "Ultimo contatto" },
+  { key: "interactions", label: "# interazioni" },
   { key: "contactsCount", label: "Contatti" },
 ];
 
-function CardListBody(): React.ReactElement {
-  const { companies, isLoading } = useWcaPartnersAsCompanies();
-  const chips = useWcaActiveFilterChips();
-  const { sortKey, sortDir, cycle } = useListSort<CompanySortKey>("list:wca", "name");
-  const [search, setSearch] = useState("");
-  const sorted = useSortedCompanies(companies, sortKey, sortDir, search);
-  return (
-    <div className="flex flex-col h-full min-h-0 pb-3">
-      <ListToolbar<CompanySortKey>
-        countLabel={`${sorted.length}/${companies.length} aziende`}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        sortOptions={WCA_SORT_OPTIONS}
-        onCycleSort={cycle}
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Cerca partner, città, referente…"
-        chips={chips}
-      />
-      <div className="flex-1 min-h-0 px-3 pt-2 overflow-hidden">
-      <CompanyCardList
-        companies={sorted}
-        isLoading={isLoading}
-        emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
-        onOpenCompany={(c) => {
-          // Dispatch evento globale: il drawer V2 esistente intercetta partner
-          window.dispatchEvent(
-            new CustomEvent("v2-open-partner", { detail: { partnerId: c.id } })
-          );
-        }}
-        onOpenContact={(contact) => {
-          window.dispatchEvent(
-            new CustomEvent("crm-select-contact", {
-              detail: { contactId: contact.id },
-            })
-          );
-        }}
-      />
-      </div>
-    </div>
-  );
-}
-
 export function NetworkPage(): React.ReactElement {
   useTrackPage("network");
-  const [view, setView] = useState<"cards" | "classic">("cards");
+  const { companies, isLoading } = useWcaPartnersAsCompanies();
+  const chips = useWcaActiveFilterChips();
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
 
   useMissionDrawerEvents({
     "deep-search-country": () => {
@@ -89,39 +55,68 @@ export function NetworkPage(): React.ReactElement {
     },
   });
 
+  // Listener globale per aperture esterne (drawer AI / cockpit).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.partnerId;
+      if (id) setSelectedPartnerId(String(id));
+    };
+    window.addEventListener("v2-open-partner", handler);
+    return () => window.removeEventListener("v2-open-partner", handler);
+  }, []);
+
+  const handleOpenCompany = useCallback((c: CompanyEntity) => {
+    setSelectedPartnerId(c.id);
+  }, []);
+
+  const handleBulkAddToCockpit = useCallback((sel: CompanyEntity[]) => {
+    window.dispatchEvent(
+      new CustomEvent("cockpit-add-bulk", { detail: { partnerIds: sel.map((s) => s.id) } })
+    );
+    toast.success(`${sel.length} partner aggiunti al Cockpit`);
+  }, []);
+
+  const handleBulkDeepSearch = useCallback((sel: CompanyEntity[]) => {
+    window.dispatchEvent(
+      new CustomEvent("network-trigger-deep-search-batch", { detail: { partnerIds: sel.map((s) => s.id) } })
+    );
+    toast.info(`Deep Search avviato su ${sel.length} partner`);
+  }, []);
+
+  const handleBulkCampaign = useCallback((sel: CompanyEntity[]) => {
+    const withEmail = sel.filter((s) => s.channels?.email);
+    window.dispatchEvent(
+      new CustomEvent("campaign-create-bulk", {
+        detail: { partnerIds: withEmail.map((s) => s.id), source: "wca" },
+      })
+    );
+    toast.success(`Campagna creata per ${withEmail.length} destinatari`);
+  }, []);
+
   return (
     <div data-testid="page-network" className="flex flex-col h-full min-h-0 overflow-hidden">
-      <div className="flex items-center gap-1 px-4 pt-2">
-        <div className="inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-muted/30 p-0.5">
-          <button
-            onClick={() => setView("cards")}
-            className={cn(
-              "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
-              view === "cards"
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            )}
-            title="Vista card-azienda"
-          >
-            <LayoutGrid className="w-3 h-3" /> Card-azienda
-          </button>
-          <button
-            onClick={() => setView("classic")}
-            className={cn(
-              "px-2 py-1 rounded text-[11px] flex items-center gap-1 transition-all",
-              view === "classic"
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            )}
-            title="Vista classica (sync, deep search, mappa)"
-          >
-            <Settings2 className="w-3 h-3" /> Classica
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {view === "cards" ? <CardListBody /> : <Operations />}
-      </div>
+      <EntityListWithDetail
+        source="wca"
+        companies={companies}
+        isLoading={isLoading}
+        emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
+        sortStorageKey="list:wca"
+        sortOptions={WCA_SORT_OPTIONS}
+        globalChips={chips}
+        searchPlaceholder="Cerca partner, città, referente…"
+        onOpenCompany={handleOpenCompany}
+        detailSlot={
+          selectedPartnerId ? (
+            <PartnerDetailInline
+              partnerId={selectedPartnerId}
+              onClose={() => setSelectedPartnerId(null)}
+            />
+          ) : null
+        }
+        onBulkAddToCockpit={handleBulkAddToCockpit}
+        onBulkDeepSearch={handleBulkDeepSearch}
+        onBulkCreateCampaign={handleBulkCampaign}
+      />
     </div>
   );
 }
