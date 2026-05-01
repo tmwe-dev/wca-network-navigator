@@ -8,9 +8,12 @@ import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 export type CompanySortKey =
   | "name"
   | "city"
+  | "country"
   | "wcaYears"
   | "score"
-  | "contactsCount";
+  | "contactsCount"
+  | "lastInteraction"
+  | "interactions";
 
 function cmp<T>(a: T, b: T): number {
   if (a == null && b == null) return 0;
@@ -45,6 +48,9 @@ export function useSortedCompanies(
         case "city":
           r = cmp(a.city ?? "", b.city ?? "");
           break;
+        case "country":
+          r = cmp(a.countryCode ?? "", b.countryCode ?? "");
+          break;
         case "wcaYears":
           r = cmp(a.meta?.wcaYears ?? null, b.meta?.wcaYears ?? null);
           break;
@@ -53,6 +59,15 @@ export function useSortedCompanies(
           break;
         case "contactsCount":
           r = cmp(a.contactsCount, b.contactsCount);
+          break;
+        case "lastInteraction":
+          r = cmp(
+            a.lastInteractionAt ? new Date(a.lastInteractionAt).getTime() : null,
+            b.lastInteractionAt ? new Date(b.lastInteractionAt).getTime() : null
+          );
+          break;
+        case "interactions":
+          r = cmp(a.interactionCount ?? 0, b.interactionCount ?? 0);
           break;
       }
       return sortDir === "asc" ? r : -r;
