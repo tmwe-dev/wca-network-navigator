@@ -1,118 +1,73 @@
 ## Obiettivo
 
-Adottare il layout dei **Biglietti da visita** (card-azienda + sub-card dei contatti annidati) come standard unico per tutti gli elenchi: **WCA Partner**, **Contatti CRM** e **Biglietti**. Il merge "raggruppa contatti sotto stessa azienda" resta confinato alla pagina dedicata già esistente (deduplicatePartners — Plancia di Comando).
+Eliminare i duplicati nel database **senza perdere alcun dettaglio** e con un backup completo che permetta di ripristinare tutto se qualcosa va storto.
 
-## Diagnosi dello stato attuale
+## Stato reale del database (verificato adesso)
 
-| Pagina | Layout di oggi | Problema |
-|---|---|---|
-| WCA Partner (`/v2/explore/network`) | Riga sottile per partner. Contatti referenti visibili **solo** nel drawer destro al click. | I contatti sono nascosti: per vedere chi contattare devi aprire il drawer uno per uno. |
-| Contatti CRM (`/v2/explore/contacts`) | Tabella piatta densa: # / Azienda / Contatto / Città / Origine / barra-stato. | Stessa azienda appare N volte come righe separate (es. "Sigra elena", "Sig ravelli", "Paola" tutti senza colonna azienda compilata). Caos visivo. |
-| Biglietti (`/v2/explore/biglietti`) | Card-azienda grande con badge WCA + sub-card grigliata dei contatti dentro. | Layout corretto, è il modello da estendere. |
+| Tabella | Righe attive | Gruppi duplicati | Righe eliminabili | Caso peggiore |
+|---|---|---|---|---|
+| `partner_contacts` (referenti WCA) | 137.342 | 30.938 | **105.807** | 18 cloni stesso nome |
+| `partners` (aziende WCA) | 12.286 | 640 | **1.468** | 24 cloni stessa azienda |
+| `imported_contacts` (CRM) | 11.414 | 343 | **2.606** | — |
 
-Il merge contatti/aziende rimane sulla pagina dedicata già presente nei tool della Plancia (`deduplicatePartners`).
+Causa: tre import massivi del wca-bridge (4-7 aprile 2026) eseguiti senza `UPSERT` e senza vincoli `UNIQUE`. Il numero reale di persone/aziende è circa quello che ti aspettavi (~11k contatti CRM, ~10.800 partner unici, ~31k referenti WCA unici).
 
-## Cosa costruire
+## Piano in 4 fasi
 
-### 1. Componente generico `CompanyCardList`
-Estraggo la logica visuale di `BCAUnifiedHub` in un componente riusabile in `src/v2/ui/molecules/CompanyCardList/`:
+### Fase 1 — Backup completo (prerequisito assoluto)
 
-- **CompanyCard** — header azienda: bandiera + nome + città + badge sorgente (WCA / CRM / BCA) + counter contatti + azioni (⋯, Seleziona).
-- **ContactSubCard** — riga interna: nome + ruolo + icone canale (✉️ 💬 📞) + dot stato + counter messaggi.
-- **EmptyContactsSlot** — quando l'azienda non ha contatti, mostra "Nessun contatto · Aggiungi".
+Snapshot delle 3 tabelle in tabelle di backup nello stesso database, con timestamp:
 
-Contratto dati (interfaccia comune):
-```ts
-type CompanyEntity = {
-  id: string;
-  name: string;
-  city?: string;
-  countryCode?: string;
-  source: "wca" | "crm" | "bca";
-  badge?: { label: string; tone: "wca" | "neutral" }; // es. "8 anni WCA"
-  contacts: ContactEntity[];
-  meta?: { wcaYears?: number; status?: "active"|"holding"|"cold" };
-};
-type ContactEntity = {
-  id: string;
-  name: string;
-  role?: string;
-  email?: string;
-  phone?: string;
-  channels: { email: boolean; whatsapp: boolean; linkedin: boolean };
-  unreadCount?: number;
-};
-```
+- `_backup_partner_contacts_2026_05_01`
+- `_backup_partners_2026_05_01`
+- `_backup_imported_contacts_2026_05_01`
 
-### 2. Adapter per ciascuna sorgente
-Tre piccoli hook in `src/v2/hooks/companyList/` che producono `CompanyEntity[]` partendo dai dati esistenti, senza toccare la DAL:
+Sono copie 1:1 (CREATE TABLE … AS SELECT *). Restano nel DB finché non confermi che tutto funziona, poi si possono archiviare/eliminare. Da queste si può ripristinare qualsiasi riga in qualsiasi momento.
 
-- `useWcaPartnersAsCompanies()` — raggruppa partner WCA. Ogni partner = una company. Contatti = referenti già caricati nel drawer (lazy-load on-expand per non caricare 12k×N).
-- `useCrmContactsAsCompanies()` — raggruppa contatti CRM per `company_name` (fallback dominio email se manca). Aziende senza nome finiscono in gruppo "Senza azienda".
-- `useBcaCardsAsCompanies()` — adapter sul grouping BCA esistente (`useBcaGrouping`). Solo wrapper, zero logica nuova.
+### Fase 2 — Merge "loss-less" dei duplicati
 
-### 3. Performance per WCA Partner (12k aziende)
-- **Card collassate di default**: in lista mostro solo l'header azienda; contatti caricati on-expand.
-- **Virtualizzazione** con `react-window` (già nel progetto) sulla lista delle 12k card.
-- Skeleton per le sub-card durante il fetch on-demand.
+Per ogni gruppo di duplicati si tiene **un solo record "canonico"** (il più vecchio, che ha più storia/relazioni collegate) e si **fondono i dettagli** degli altri prima del soft-delete:
 
-### 4. Sostituzione nelle pagine
-- `NetworkPage.tsx` → renderizza `<CompanyCardList source="wca" />` al posto della lista riga-per-riga attuale.
-- `ContactsPage.tsx` → renderizza `<CompanyCardList source="crm" />` al posto della tabella densa.
-- `BCAUnifiedHub.tsx` → riusa internamente `<CompanyCardList source="bca" />` mantenendo drag-drop, bulk actions, OCR confidence (tutto già attaccato al componente esistente).
+1. **Coalesce dei campi**: per ogni colonna, se il canonico è vuoto e un duplicato ha un valore, il valore viene copiato sul canonico. Nessun dato testuale/contatto va perso.
+2. **Riassegnazione delle relazioni**: tutte le righe collegate (interazioni, email, biglietti BCA, note, log, holding pattern, lead_status…) vengono spostate dal duplicato al canonico via UPDATE delle FK.
+3. **Soft-delete dei duplicati**: i cloni vengono marcati `deleted_at = now()` con motivo `duplicate_merge_2026_05_01`. Restano nel DB e nel backup, recuperabili.
 
-### 5. Coerenza con il resto del sistema
-- Conservo i filtri esistenti (`GlobalFiltersProvider`, `BcaFiltersProvider`, sidebar paesi).
-- Conservo il drawer destro per il dettaglio (apertura on-click su card).
-- Conservo le azioni AI esistenti (Cockpit / Deep Search / LinkedIn / Campagna) come kebab menu sulla card.
-- Nessuna modifica al merge: rimane su `/v2/command` → tool `deduplicatePartners`.
+Ordine di esecuzione:
+1. Partner duplicati (640 gruppi → 1.468 righe da unire)
+2. Partner_contacts duplicati (30.938 gruppi → 105.807 righe da unire)
+3. Imported_contacts duplicati (343 gruppi → 2.606 righe da unire)
+
+Eseguito in **batch piccoli (500 gruppi alla volta)** dentro transazioni, con log dettagliato per ogni merge in una tabella `duplicate_merge_log` (vecchio_id → nuovo_id, campi unificati).
+
+### Fase 3 — Verifica e validazione
+
+- Conteggi prima/dopo con report
+- Spot-check su 20 casi noti (es. AMT Mozambique che citavi)
+- Verifica che nessuna interazione/email/biglietto sia rimasto orfano
+- Possibilità di **rollback completo** ripristinando dal backup di Fase 1 con un solo comando
+
+### Fase 4 — Prevenzione futura
+
+Dopo la pulizia, per evitare che il problema si ripresenti:
+
+- Indici `UNIQUE` su `partner_contacts(partner_id, lower(email), lower(name))` e `partners(lower(company_name), country_code)`
+- Refactor del `wca-bridge` e degli import per usare `UPSERT` (`ON CONFLICT DO UPDATE`)
+- Trigger di guardia che blocca futuri inserimenti duplicati
+
+## Garanzie
+
+- **Nessun dato testuale perso**: il merge fa coalesce campo per campo
+- **Nessuna relazione persa**: tutte le FK vengono riassegnate prima del soft-delete
+- **Reversibile al 100%**: backup tabelle + soft-delete + log dei merge
+- **Eseguito in batch**: niente lock lunghi, niente downtime
+- **Audit completo**: ogni merge tracciato in `duplicate_merge_log`
 
 ## Cosa NON fa questo piano
-- Non tocca la DAL né lo schema DB.
-- Non modifica il merge (resta dov'è).
-- Non aggiunge una vista tabella alternativa: la card-azienda è l'unica vista.
-- Non altera il drawer destro né i pannelli di dettaglio già esistenti.
 
-## Dettagli tecnici
+- Non tocca i biglietti BCA (sono già protetti, vengono solo riassegnati al partner canonico)
+- Non modifica la UI della pagina duplicati in questa fase (la pulizia è massiva e automatica; la pagina duplicati esistente resta per casi futuri singoli)
+- Non elimina fisicamente nulla finché non confermi che tutto è ok dopo Fase 3
 
-**File nuovi:**
-- `src/v2/ui/molecules/CompanyCardList/CompanyCardList.tsx`
-- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx`
-- `src/v2/ui/molecules/CompanyCardList/ContactSubCard.tsx`
-- `src/v2/ui/molecules/CompanyCardList/types.ts`
-- `src/v2/hooks/companyList/useWcaPartnersAsCompanies.ts`
-- `src/v2/hooks/companyList/useCrmContactsAsCompanies.ts`
-- `src/v2/hooks/companyList/useBcaCardsAsCompanies.ts`
+## Domanda prima di partire
 
-**File modificati:**
-- `src/v2/ui/pages/NetworkPage.tsx` — sostituzione body lista.
-- `src/v2/ui/pages/ContactsPage.tsx` — sostituzione body tabella.
-- `src/components/contacts/bca/BCAUnifiedHub.tsx` — refactor per usare `CompanyCardList` internamente (mantiene drag-drop esistente).
-
-**Query keys:** centralizzate in `src/lib/queryKeys.ts` come da rule (`companyList.wca`, `companyList.crm`, `companyList.bca`).
-
-**Vincoli rispettati:**
-- DAL-only access (no `supabase.from()` diretti nei nuovi hook).
-- No `any` (tipi stretti).
-- V2 UI logic-less: gli hook contengono la logica, i componenti sono presentazionali.
-- Centralizzazione query keys.
-
-## Risultato atteso
-
-Le tre pagine `/v2/explore/network`, `/v2/explore/contacts` e `/v2/explore/biglietti` mostrano lo stesso identico layout:
-
-```text
-┌─────────────────────────────────────────────────┐
-│ 🇲🇾 Dahnay Logistics Sdn. Bhd.  [WCA] · 4 con. │  ← CompanyCard header
-│ ┌──────────────────┐ ┌──────────────────┐       │
-│ │ M. Ram Kumar     │ │ J. Varadarajan   │       │  ← ContactSubCard
-│ │ Manager          │ │ Senior Manager   │       │
-│ │ ✉ 💬             │ │ ✉ 💬             │       │
-│ └──────────────────┘ └──────────────────┘       │
-│ ┌──────────────────┐ ┌──────────────────┐       │
-│ │ Mohan Raj H      │ │ V. Balaji        │       │
-│ └──────────────────┘ └──────────────────┘       │
-└─────────────────────────────────────────────────┘
-```
-
-Vista identica, dati diversi, performance preservata (collasso + virtualizzazione su WCA).
+Confermi che procedo con tutte e 4 le fasi in sequenza (backup → merge → verifica → prevenzione)?

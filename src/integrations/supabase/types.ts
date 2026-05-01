@@ -14,6 +14,330 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_imported_contacts_2026_05_01: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_alias: string | null
+          company_name: string | null
+          contact_alias: string | null
+          converted_at: string | null
+          country: string | null
+          created_at: string | null
+          deep_search_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          email: string | null
+          email_status: string | null
+          enrichment_data: Json | null
+          external_id: string | null
+          id: string | null
+          import_log_id: string | null
+          interaction_count: number | null
+          is_selected: boolean | null
+          is_transferred: boolean | null
+          last_interaction_at: string | null
+          lead_score: number | null
+          lead_score_breakdown: Json | null
+          lead_score_updated_at: string | null
+          lead_status: string | null
+          mobile: string | null
+          name: string | null
+          note: string | null
+          operator_id: string | null
+          origin: string | null
+          phone: string | null
+          position: string | null
+          raw_data: Json | null
+          row_number: number | null
+          status_reason: string | null
+          transferred_at: string | null
+          transferred_to_partner_id: string | null
+          user_id: string | null
+          wca_match_confidence: number | null
+          wca_partner_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          contact_alias?: string | null
+          converted_at?: string | null
+          country?: string | null
+          created_at?: string | null
+          deep_search_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          email_status?: string | null
+          enrichment_data?: Json | null
+          external_id?: string | null
+          id?: string | null
+          import_log_id?: string | null
+          interaction_count?: number | null
+          is_selected?: boolean | null
+          is_transferred?: boolean | null
+          last_interaction_at?: string | null
+          lead_score?: number | null
+          lead_score_breakdown?: Json | null
+          lead_score_updated_at?: string | null
+          lead_status?: string | null
+          mobile?: string | null
+          name?: string | null
+          note?: string | null
+          operator_id?: string | null
+          origin?: string | null
+          phone?: string | null
+          position?: string | null
+          raw_data?: Json | null
+          row_number?: number | null
+          status_reason?: string | null
+          transferred_at?: string | null
+          transferred_to_partner_id?: string | null
+          user_id?: string | null
+          wca_match_confidence?: number | null
+          wca_partner_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          contact_alias?: string | null
+          converted_at?: string | null
+          country?: string | null
+          created_at?: string | null
+          deep_search_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          email_status?: string | null
+          enrichment_data?: Json | null
+          external_id?: string | null
+          id?: string | null
+          import_log_id?: string | null
+          interaction_count?: number | null
+          is_selected?: boolean | null
+          is_transferred?: boolean | null
+          last_interaction_at?: string | null
+          lead_score?: number | null
+          lead_score_breakdown?: Json | null
+          lead_score_updated_at?: string | null
+          lead_status?: string | null
+          mobile?: string | null
+          name?: string | null
+          note?: string | null
+          operator_id?: string | null
+          origin?: string | null
+          phone?: string | null
+          position?: string | null
+          raw_data?: Json | null
+          row_number?: number | null
+          status_reason?: string | null
+          transferred_at?: string | null
+          transferred_to_partner_id?: string | null
+          user_id?: string | null
+          wca_match_confidence?: number | null
+          wca_partner_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      _backup_partner_contacts_2026_05_01: {
+        Row: {
+          contact_alias: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direct_phone: string | null
+          email: string | null
+          id: string | null
+          is_primary: boolean | null
+          mobile: string | null
+          name: string | null
+          operator_id: string | null
+          partner_id: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_alias?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direct_phone?: string | null
+          email?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          mobile?: string | null
+          name?: string | null
+          operator_id?: string | null
+          partner_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_alias?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direct_phone?: string | null
+          email?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          mobile?: string | null
+          name?: string | null
+          operator_id?: string | null
+          partner_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _backup_partners_2026_05_01: {
+        Row: {
+          address: string | null
+          ai_parsed_at: string | null
+          branch_cities: Json | null
+          city: string | null
+          company_alias: string | null
+          company_name: string | null
+          converted_at: string | null
+          country_code: string | null
+          country_name: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          email: string | null
+          email_status: string | null
+          emergency_phone: string | null
+          enriched_at: string | null
+          enrichment_data: Json | null
+          fax: string | null
+          has_branches: boolean | null
+          id: string | null
+          interaction_count: number | null
+          is_active: boolean | null
+          is_favorite: boolean | null
+          last_interaction_at: string | null
+          lead_status: string | null
+          linkedin_url: string | null
+          logo_url: string | null
+          member_since: string | null
+          membership_expires: string | null
+          mobile: string | null
+          office_type: Database["public"]["Enums"]["office_type"] | null
+          operator_id: string | null
+          partner_type: Database["public"]["Enums"]["partner_type"] | null
+          phone: string | null
+          profile_description: string | null
+          rating: number | null
+          rating_details: Json | null
+          raw_profile_html: string | null
+          raw_profile_markdown: string | null
+          status_reason: string | null
+          updated_at: string | null
+          user_id: string | null
+          wca_id: number | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          ai_parsed_at?: string | null
+          branch_cities?: Json | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          converted_at?: string | null
+          country_code?: string | null
+          country_name?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          email_status?: string | null
+          emergency_phone?: string | null
+          enriched_at?: string | null
+          enrichment_data?: Json | null
+          fax?: string | null
+          has_branches?: boolean | null
+          id?: string | null
+          interaction_count?: number | null
+          is_active?: boolean | null
+          is_favorite?: boolean | null
+          last_interaction_at?: string | null
+          lead_status?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          member_since?: string | null
+          membership_expires?: string | null
+          mobile?: string | null
+          office_type?: Database["public"]["Enums"]["office_type"] | null
+          operator_id?: string | null
+          partner_type?: Database["public"]["Enums"]["partner_type"] | null
+          phone?: string | null
+          profile_description?: string | null
+          rating?: number | null
+          rating_details?: Json | null
+          raw_profile_html?: string | null
+          raw_profile_markdown?: string | null
+          status_reason?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          wca_id?: number | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          ai_parsed_at?: string | null
+          branch_cities?: Json | null
+          city?: string | null
+          company_alias?: string | null
+          company_name?: string | null
+          converted_at?: string | null
+          country_code?: string | null
+          country_name?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          email_status?: string | null
+          emergency_phone?: string | null
+          enriched_at?: string | null
+          enrichment_data?: Json | null
+          fax?: string | null
+          has_branches?: boolean | null
+          id?: string | null
+          interaction_count?: number | null
+          is_active?: boolean | null
+          is_favorite?: boolean | null
+          last_interaction_at?: string | null
+          lead_status?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          member_since?: string | null
+          membership_expires?: string | null
+          mobile?: string | null
+          office_type?: Database["public"]["Enums"]["office_type"] | null
+          operator_id?: string | null
+          partner_type?: Database["public"]["Enums"]["partner_type"] | null
+          phone?: string | null
+          profile_description?: string | null
+          rating?: number | null
+          rating_details?: Json | null
+          raw_profile_html?: string | null
+          raw_profile_markdown?: string | null
+          status_reason?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          wca_id?: number | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       ab_tests: {
         Row: {
           completed_at: string | null
@@ -3706,6 +4030,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      duplicate_merge_log: {
+        Row: {
+          batch_id: string
+          canonical_id: string
+          duplicate_id: string
+          entity_type: string
+          executed_at: string
+          id: string
+          merged_fields: Json | null
+          reassigned_relations: Json | null
+        }
+        Insert: {
+          batch_id: string
+          canonical_id: string
+          duplicate_id: string
+          entity_type: string
+          executed_at?: string
+          id?: string
+          merged_fields?: Json | null
+          reassigned_relations?: Json | null
+        }
+        Update: {
+          batch_id?: string
+          canonical_id?: string
+          duplicate_id?: string
+          entity_type?: string
+          executed_at?: string
+          id?: string
+          merged_fields?: Json | null
+          reassigned_relations?: Json | null
+        }
+        Relationships: []
       }
       edge_function_logs: {
         Row: {
@@ -9242,6 +9599,30 @@ export type Database = {
           similarity: number
           tags: string[]
           title: string
+        }[]
+      }
+      merge_duplicate_imported_contacts: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
+        }[]
+      }
+      merge_duplicate_partner_contacts: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
+        }[]
+      }
+      merge_duplicate_partners: {
+        Args: { batch_size?: number }
+        Returns: {
+          batch_id: string
+          groups_processed: number
+          rows_merged: number
         }[]
       }
       purge_inbound_activities: {
