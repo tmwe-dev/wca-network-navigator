@@ -1,18 +1,13 @@
 /**
- * CompanyCardList — vista standard "Card-azienda con contatti dentro".
+ * CompanyCardList — vista standard "Card-azienda" header-only.
  *
- * Standard unico per:
- *  - WCA Partner   (`/v2/explore/network`)
- *  - Contatti CRM  (`/v2/explore/contacts`)
- *  - Biglietti     (`/v2/explore/biglietti`, già nativo in BCAUnifiedHub)
- *
- * Strategia performance:
- *  - Card collassate di default (header-only, 0 fetch contatti).
- *  - Virtualizzazione con @tanstack/react-virtual.
- *  - Lazy-load dei contatti on-expand tramite `onExpand`.
+ * Standard unico per WCA Partner, Contatti CRM, Biglietti.
+ * I contatti dell'azienda NON sono visualizzati nella riga: l'utente
+ * apre il dettaglio a destra (drawer) per vedere referenti e canali.
+ * Virtualizzazione con @tanstack/react-virtual + altezza riga fissa.
  */
 import * as React from "react";
-import { useRef, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CompanyCard } from "./CompanyCard";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
@@ -21,8 +16,6 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   companies: CompanyEntity[];
   isLoading?: boolean;
   emptyMessage?: string;
-  /** Espande tutte le card di default (sconsigliato per >200 elementi). */
-  defaultExpanded?: boolean;
   /** Stima altezza per virtualizzazione (header collassato). */
   estimateRowSize?: number;
   /** IDs delle aziende selezionate (multi-select). */
@@ -31,55 +24,19 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   onToggleSelect?: (id: string) => void;
 }
 
-const COLLAPSED_ROW = 60;        // header card (px)
-const EXPANDED_BASE = 60;        // header
-const EXPANDED_PER_CONTACT = 56; // ogni contatto in grid 2-col
+const ROW_HEIGHT = 60;        // header card (px)
 
 export function CompanyCardList({
   companies,
   isLoading = false,
   emptyMessage = "Nessun risultato",
-  defaultExpanded = false,
-  estimateRowSize = COLLAPSED_ROW,
+  estimateRowSize = ROW_HEIGHT,
   onOpenCompany,
-  onOpenContact,
-  onExpand,
   selectedIds,
   onToggleSelect,
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    if (!defaultExpanded) return new Set<string>();
-    return new Set(companies.map((c) => c.id));
-  });
-
-  const handleToggleExpand = useCallback(
-    (id: string) => {
-      setExpandedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-          const c = companies.find((x) => x.id === id);
-          if (c && c.contacts === undefined) onExpand?.(c);
-        }
-        return next;
-      });
-    },
-    [companies, onExpand]
-  );
-
-  const estimateSize = useCallback(
-    (index: number) => {
-      const c = companies[index];
-      if (!c) return estimateRowSize;
-      if (!expandedIds.has(c.id)) return COLLAPSED_ROW + 16; // + gap
-      const rows = Math.max(1, Math.ceil((c.contactsCount || 0) / 2));
-      return EXPANDED_BASE + rows * EXPANDED_PER_CONTACT + 24 + 16;
-    },
-    [companies, expandedIds, estimateRowSize]
-  );
+  const estimateSize = useCallback(() => estimateRowSize + 16, [estimateRowSize]); // + gap
 
   const virtualizer = useVirtualizer({
     count: companies.length,
@@ -145,10 +102,7 @@ export function CompanyCardList({
               >
                 <CompanyCard
                   company={company}
-                  expanded={expandedIds.has(company.id)}
-                  onToggleExpand={handleToggleExpand}
                   onOpenCompany={onOpenCompany}
-                  onOpenContact={onOpenContact}
                   selected={selectedIds?.has(company.id) ?? false}
                   onToggleSelect={onToggleSelect}
                 />
