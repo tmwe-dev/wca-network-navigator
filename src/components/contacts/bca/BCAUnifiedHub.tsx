@@ -335,7 +335,7 @@ export default function BCAUnifiedHub() {
                   <BCABulkActionsPanel
                     cards={Array.from(selectedBca).map(id => cardsById.get(id)).filter((c): c is BusinessCardWithPartner => !!c)}
                     onClear={() => setSelectedBca(new Set())}
-                    onRemove={(id) => setSelectedBca(prev => { const n = new Set(prev); n.delete(id); return n; })}
+                    onRemove={(id: string) => setSelectedBca(prev => { const n = new Set(prev); n.delete(id); return n; })}
                     onCockpit={handleSendToCockpit}
                     onDeepSearch={handleBcaDeepSearch}
                     onDelete={handleBulkDelete}
