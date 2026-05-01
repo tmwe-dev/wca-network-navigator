@@ -25,10 +25,9 @@ interface Props {
 }
 
 const SORT_COLUMNS = [
+  { field: "country", label: "Paese", sortKey: "country" },
   { field: "company", label: "Azienda", sortKey: "company" },
-  { field: "name", label: "Contatto", sortKey: "name" },
   { field: "city", label: "Città", sortKey: "city" },
-  { field: "origin", label: "Origine", sortKey: "origin" },
 ];
 
 export function ContactListPanel({ selectedId, onSelect }: Props) {
@@ -139,7 +138,6 @@ export function ContactListPanel({ selectedId, onSelect }: Props) {
             onCheckedChange={(checked) => { if (checked) selection.setSelectedIds(new Set(contacts.map((c) => c.id))); else selection.clear(); }}
             aria-label="Seleziona tutti" className="shrink-0" />
         </div>
-        <div />
         {SORT_COLUMNS.map(col => (
           <button key={col.field} onClick={() => handleSortClick(col.sortKey)}
             className={cn("flex items-center gap-0.5 text-[9px] font-medium transition-colors text-left", state.sortField === col.sortKey && state.sortDir ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
