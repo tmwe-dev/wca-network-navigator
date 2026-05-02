@@ -21,9 +21,9 @@ interface VerticalTabNavProps {
 
 export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTabNavProps) {
   return (
-    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 overflow-hidden">
-      {/* Tab buttons */}
-      <div className="py-1 flex-shrink-0">
+    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 min-h-0 h-full overflow-hidden">
+      {/* Tab buttons — scrollable when overflowing */}
+      <div className="py-1 flex-1 min-h-0 overflow-y-auto">
         <TooltipProvider delayDuration={200}>
         {tabs.map((tab) => {
           const active = value === tab.value;
