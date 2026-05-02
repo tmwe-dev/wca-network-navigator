@@ -78,6 +78,7 @@ import {
   History,
   Library,
   MoreHorizontal,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
