@@ -22,14 +22,14 @@ describe("lastQueryResultContext", () => {
     expect(ctx?.countryCode).toBe("MT");
   });
 
-  it("ignora set vuoti", () => {
+  it("mantiene il paese anche se la query conta senza righe/id", () => {
     setLastQueryResultContext({
       partnerIds: [],
-      countryCode: null,
-      countryLabel: null,
+      countryCode: "MT",
+      countryLabel: "malta",
       originalPrompt: "x",
     });
-    expect(getLastQueryResultContext()).toBeNull();
+    expect(getLastQueryResultContext()?.countryCode).toBe("MT");
   });
 });
 
@@ -71,6 +71,7 @@ describe("isProceedIntent", () => {
     "procedi",
     "ok procedi",
     "prepara la bozza",
+    "prepara una mail di invito a tutti questi partner",
     "scrivi la lettera",
     "fai la mail",
     "continua",

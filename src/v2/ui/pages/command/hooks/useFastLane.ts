@@ -103,10 +103,10 @@ export function useFastLane(deps: FastLaneDeps) {
         // Update query context
         onContextUpdate();
 
-        // Memorizza partnerIds per il successivo compose-email "vai avanti…".
+        // Memorizza partnerIds/paese per il successivo compose-email "vai avanti…".
         const partnerIds = extractPartnerIdsFromResult(result);
-        if (partnerIds.length > 0) {
-          const country = detectCountryFromPrompt(userPrompt);
+        const country = detectCountryFromPrompt(userPrompt);
+        if (partnerIds.length > 0 || country) {
           setLastQueryResultContext({
             partnerIds,
             countryCode: country?.code ?? null,
