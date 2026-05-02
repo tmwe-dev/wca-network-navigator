@@ -7,6 +7,10 @@ import {
   isRegenerateIntent,
   setLastComposerContext,
 } from "../lib/composerContext";
+import {
+  getLastQueryResultContext,
+  isProceedIntent,
+} from "../lib/lastQueryResultContext";
 
 /**
  * compose-email tool — risolve partner/contatto nel CRM e usa la pipeline
@@ -380,6 +384,11 @@ export const composeEmailTool: Tool = {
     if (isRegenerateIntent(prompt) && getLastComposerContext() !== null) {
       return true;
     }
+    // Follow-up "vai avanti / procedi / prepara la bozza" subito dopo una
+    // ricerca partner (Query Planner) → eredita la lista partner.
+    if (isProceedIntent(prompt) && getLastQueryResultContext() !== null) {
+      return true;
+    }
     return false;
   },
 
@@ -419,6 +428,46 @@ export const composeEmailTool: Tool = {
         tone,
         countryCode: lastCtx.countryCode,
         countryLabel: lastCtx.countryLabel,
+        prompt,
+      });
+    }
+
+    // ── 0b) Proceed-with-context: l'utente conferma ("vai avanti…") subito
+    // dopo una ricerca Query Planner che ha restituito partner. Eredita la
+    // lista partnerIds e genera il batch usando il prompt corrente come goal.
+    const queryCtx = getLastQueryResultContext();
+    if (queryCtx && queryCtx.partnerIds.length > 0 && isProceedIntent(prompt)) {
+      const partners = await fetchPartnersByIds(queryCtx.partnerIds);
+      if (partners.length === 0) {
+        return {
+          kind: "report",
+          title: "Lista partner non più disponibile",
+          meta: { count: 0, sourceLabel: "DB · partners" },
+          sections: [
+            {
+              heading: "Contesto perso",
+              body: `I partner trovati nella ricerca precedente non sono più recuperabili (potrebbero essere stati archiviati). Riformula la ricerca${queryCtx.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
+            },
+          ],
+        };
+      }
+      const tone = detectTone(prompt);
+      const drafts = await generateDraftsBatch(partners, tone, prompt);
+      const labelForCtx = queryCtx.countryLabel ?? "selezione";
+      const codeForCtx = queryCtx.countryCode ?? "—";
+      setLastComposerContext({
+        countryCode: codeForCtx,
+        countryLabel: labelForCtx,
+        partnerIds: partners.map((p) => p.id),
+        tone,
+        originalGoal: prompt,
+      });
+      return buildBatchComposerResult({
+        partners,
+        drafts,
+        tone,
+        countryCode: codeForCtx,
+        countryLabel: labelForCtx,
         prompt,
       });
     }

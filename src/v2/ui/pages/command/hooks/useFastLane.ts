@@ -8,6 +8,10 @@ import type { ToolResult } from "../tools/types";
 import type { ExecutionStep } from "@/components/workspace/ExecutionFlow";
 import { aiQueryTool } from "../tools/aiQueryTool";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
+import {
+  extractPartnerIdsFromResult,
+  setLastQueryResultContext,
+} from "../lib/lastQueryResultContext";
 
 interface FastLaneDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -99,6 +103,18 @@ export function useFastLane(deps: FastLaneDeps) {
         // Update query context
         onContextUpdate();
 
+        // Memorizza partnerIds per il successivo compose-email "vai avanti…".
+        const partnerIds = extractPartnerIdsFromResult(result);
+        if (partnerIds.length > 0) {
+          const country = detectCountryFromPrompt(userPrompt);
+          setLastQueryResultContext({
+            partnerIds,
+            countryCode: country?.code ?? null,
+            countryLabel: country?.label ?? null,
+            originalPrompt: userPrompt,
+          });
+        }
+
         // Show step recap
         const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
         addMessage({
@@ -134,4 +150,31 @@ export function useFastLane(deps: FastLaneDeps) {
   );
 
   return { runFastLane };
+}
+
+/* ─── Helpers ──────────────────────────────────────────────────────── */
+
+const COUNTRY_LOOKUP: Record<string, string> = {
+  malta: "MT", italia: "IT", italy: "IT", francia: "FR", france: "FR",
+  spagna: "ES", spain: "ES", germania: "DE", germany: "DE",
+  "regno unito": "GB", uk: "GB", inghilterra: "GB",
+  olanda: "NL", "paesi bassi": "NL", netherlands: "NL", belgio: "BE", belgium: "BE",
+  portogallo: "PT", portugal: "PT", grecia: "GR", greece: "GR",
+  svizzera: "CH", switzerland: "CH", austria: "AT",
+  polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
+  "stati uniti": "US", usa: "US", "united states": "US",
+  canada: "CA", brasile: "BR", brazil: "BR",
+  cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
+  emirati: "AE", uae: "AE", egitto: "EG", egypt: "EG",
+  marocco: "MA", morocco: "MA",
+  australia: "AU", singapore: "SG", "hong kong": "HK",
+};
+
+function detectCountryFromPrompt(prompt: string): { code: string; label: string } | null {
+  const lower = prompt.toLowerCase();
+  for (const [name, code] of Object.entries(COUNTRY_LOOKUP)) {
+    const re = new RegExp(`\\b${name}\\b`, "i");
+    if (re.test(lower)) return { code, label: name };
+  }
+  return null;
 }
