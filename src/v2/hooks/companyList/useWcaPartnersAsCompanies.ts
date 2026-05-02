@@ -126,6 +126,7 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
     [filters.networkSelectedCountries]
   );
   const search = filters.networkSearch || "";
+  const quality = filters.networkQuality || "all";
 
   const filterKey = useMemo(
     () => ({ countries, search }),
@@ -152,8 +153,24 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
   });
 
   const companies = useMemo(
-    () => (data ?? []).map(mapPartner),
-    [data]
+    () => {
+      const all = (data ?? []).map(mapPartner);
+      if (quality === "all") return all;
+      return all.filter((c) => {
+        switch (quality) {
+          case "with_email":    return c.channels?.email === true;
+          case "no_email":      return !c.channels?.email;
+          case "with_phone":    return c.channels?.phone === true;
+          case "no_phone":      return !c.channels?.phone;
+          case "with_profile":  return c.channels?.website === true || c.hasLinkedin === true;
+          case "no_profile":    return !(c.channels?.website || c.hasLinkedin);
+          case "with_contacts": return (c.contactsCount ?? 0) > 0;
+          case "no_contacts":   return (c.contactsCount ?? 0) === 0;
+          default:              return true;
+        }
+      });
+    },
+    [data, quality]
   );
 
   return { companies, isLoading, error };
