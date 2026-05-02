@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
-import { PanelLeftClose, SlidersHorizontal } from "lucide-react";
+import { PanelLeftClose, SlidersHorizontal, Check } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
@@ -68,22 +68,8 @@ export function ContextFiltersRail(): React.ReactElement | null {
     return () => window.removeEventListener("open-drawer", onOpenDrawer);
   }, []);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as Node | null;
-      if (!target) return;
-      if (asideRef.current?.contains(target)) return;
-      if (toggleRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-    };
-  }, [isOpen]);
+  // Nessun auto-close su click esterno: la sidebar è multi-selezione,
+  // l'utente la chiude esplicitamente con il tasto "Conferma" o la linguetta.
 
   if (!context) return null;
 
@@ -110,9 +96,26 @@ export function ContextFiltersRail(): React.ReactElement | null {
           <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              aria-label="Conferma e chiudi filtri"
+            >
+              <Check className="h-3 w-3" /> Conferma
+            </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-5 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
             {context.content}
+          </div>
+          <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <Check className="h-3.5 w-3.5" /> Conferma e chiudi
+            </button>
           </div>
         </aside>
       )}
