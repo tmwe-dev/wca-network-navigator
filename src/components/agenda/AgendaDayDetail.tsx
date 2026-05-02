@@ -35,6 +35,8 @@ interface AgendaDayDetailProps {
     activityType: ActivityTypeFilter;
     responseStatus: ResponseFilter;
   };
+  /** Testo libero: cerca in titolo, nome partner, nome contatto. */
+  search?: string;
   /** ID dell'attività attualmente selezionata nel pannello destro. */
   selectedActivityId?: string | null;
   /** Callback chiamata quando l'utente seleziona una card. */
@@ -100,6 +102,7 @@ function cleanTitle(title: string | null): string {
 export default function AgendaDayDetail({
   selectedDay,
   filters,
+  search = "",
   selectedActivityId = null,
   onSelectActivity,
 }: AgendaDayDetailProps) {
@@ -120,8 +123,18 @@ export default function AgendaDayDetail({
     } else if (filters.responseStatus === "no_response") {
       list = list.filter(a => a.partner_id && !respondedIds.has(a.partner_id));
     }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(a => {
+        const company = (a.partners?.company_name || "").toLowerCase();
+        const alias = (a.partners?.company_alias || "").toLowerCase();
+        const contact = (a.selected_contact?.name || "").toLowerCase();
+        const title = (a.title || "").toLowerCase();
+        return company.includes(q) || alias.includes(q) || contact.includes(q) || title.includes(q);
+      });
+    }
     return list;
-  }, [activities, filters, respondedIds]);
+  }, [activities, filters, respondedIds, search]);
 
   // Raggruppa per tipo di azione
   const grouped = useMemo(() => {
