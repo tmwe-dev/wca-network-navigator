@@ -154,7 +154,7 @@ const CommandPage = () => {
 
   return (
     <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
-      <CommandPageBackButton onBack={() => nav("/v2")} />
+      <CommandPageBackButton currentPath="/v2/command" />
       <CommandPageBackground />
       <CommandPageHeader
         flowPhase={state.flowPhase}
