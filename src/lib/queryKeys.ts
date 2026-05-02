@@ -600,5 +600,16 @@ export const queryKeys = {
     hasPermission: (permissionKey: string) => ["rbac-has-permission", permissionKey] as const,
   },
 
+  // ── Command Jobs (persistent agent agenda) ────────────
+  commandJobs: {
+    all: ["command-jobs"] as const,
+    open: ["command-jobs", "open"] as const,
+    byStatus: (status: string) => ["command-jobs", "status", status] as const,
+    byConversation: (conversationId?: string | null) =>
+      ["command-jobs", "conversation", conversationId ?? null] as const,
+    detail: (jobId: string) => ["command-job", jobId] as const,
+    steps: (jobId: string) => ["command-job-steps", jobId] as const,
+  },
+
   noop: ["noop"] as const,
 } as const;
