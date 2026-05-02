@@ -11,6 +11,24 @@ import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendEmail");
 
+/**
+ * Hard guard: il send singolo accetta UN SOLO destinatario.
+ * Per invii multipli usare il flusso bulk → email_campaign_queue (BulkActionMenu).
+ */
+function assertSingleRecipient(to: unknown): asserts to is string {
+  if (Array.isArray(to)) {
+    throw new Error("BULK_SEND_FORBIDDEN: useSendEmail accetta un solo destinatario. Usa il flusso bulk (Outreach → In Uscita).");
+  }
+  if (typeof to !== "string" || !to.trim()) {
+    throw new Error("Destinatario email mancante o non valido");
+  }
+  // Rifiuta liste mascherate da stringa: "a@x.com, b@y.com" o "a@x.com; b@y.com"
+  const recipients = to.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  if (recipients.length > 1) {
+    throw new Error("BULK_SEND_FORBIDDEN: rilevati più destinatari nella stringa. Usa il flusso bulk (Outreach → In Uscita).");
+  }
+}
+
 export function useSendEmail(draft: DraftState) {
   const [sending, setSending] = useState(false);
   // LOVABLE-93: Non serve useTrackActivity/useLogAction qui.
@@ -19,6 +37,14 @@ export function useSendEmail(draft: DraftState) {
   const handleSend = async () => {
     if (draft.channel !== "email" || !draft.contactEmail) {
       toast({ title: "Invio disponibile solo per email con indirizzo", variant: "destructive" });
+      return;
+    }
+    try {
+      assertSingleRecipient(draft.contactEmail);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error("bulk send blocked", { error: msg });
+      toast({ title: "Invio singolo non consentito", description: msg, variant: "destructive" });
       return;
     }
     setSending(true);
