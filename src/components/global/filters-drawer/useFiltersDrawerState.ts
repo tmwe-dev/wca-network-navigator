@@ -99,7 +99,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.agendaPriority !== "all") n++;
       if (g.filters.agendaChannel !== "all") n++;
       if (g.filters.agendaResponse !== "all") n++;
-      if (g.filters.agendaDay) n++;
+      if (g.filters.agendaDays.length > 0) n++;
     }
     if (isEmail) {
       if (g.filters.emailCategory !== "all") n++;
@@ -145,7 +145,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       g.setSearch("");
       g.setFilter("agendaChannel", "all");
       g.setFilter("agendaResponse", "all");
-      g.setFilter("agendaDay", null);
+      g.setFilter("agendaDays", []);
     }
     if (isEmail || isWhatsApp || isLinkedIn) { g.setSortingFilter("all"); g.setEmailCategory("all"); g.setEmailSort("date_desc"); g.setSortBy("date_desc"); g.setSortingSearch(""); }
     if (isWorkspace) { g.setWorkspaceFilters(new Set()); g.setEmailGenFilter("all"); g.setSearch(""); }
