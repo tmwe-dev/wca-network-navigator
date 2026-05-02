@@ -111,7 +111,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-5 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
             {context.content}
           </div>
         </aside>

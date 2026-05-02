@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown, Building2 } from "lucide-react";
+import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
@@ -85,15 +85,16 @@ export function NetworkFiltersSection() {
 
   return (
     <>
-      <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-          <Building2 className="h-3.5 w-3.5" /> WCA Partner
-        </div>
-        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">Tabella partner WCA ufficiali: aziende, paesi, profili e contatti partner.</p>
-      </div>
-
       <FilterSection icon={Search} label="Cerca">
-        <Input value={g.filters.networkSearch} onChange={e => g.setNetworkSearch(e.target.value)} placeholder="Partner, azienda, email..." className="h-8 text-xs bg-muted/30 border-border/40" />
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={g.filters.networkSearch}
+            onChange={e => g.setNetworkSearch(e.target.value)}
+            placeholder="Partner, azienda, email…"
+            className="h-9 pl-8 text-xs bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
+          />
+        </div>
         {networkSearchValue.trim().length >= 2 && (
           <div className="mt-2 max-h-[300px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 divide-y divide-border/20">
             {searching ? (
@@ -146,34 +147,57 @@ export function NetworkFiltersSection() {
         )}
       </FilterSection>
 
-      <FilterSection icon={Globe} label={`Paesi (${g.filters.networkSelectedCountries.size > 0 ? g.filters.networkSelectedCountries.size + ' selezionati' : 'tutti'})`}>
-        <p className="mb-2 text-[10px] text-muted-foreground">Clicca i paesi da includere nella lista partner.</p>
+      <FilterSection
+        icon={Globe}
+        label="Paesi"
+        trailing={
+          g.filters.networkSelectedCountries.size > 0 ? (
+            <button
+              onClick={() => g.setNetworkSelectedCountries(new Set())}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20"
+            >
+              {g.filters.networkSelectedCountries.size} attivi ✕
+            </button>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">Tutti</span>
+          )
+        }
+      >
         {selectedCountries.length > 0 && (
-          <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold text-primary">Paesi attivi</span>
-              <button onClick={() => g.setNetworkSelectedCountries(new Set())} className="text-[10px] text-destructive hover:underline">Deseleziona tutti</button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {selectedCountries.map((country) => (
-                <button key={country.code} onClick={() => toggleCountry(country.code)} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
-                  <span>{country.flag}</span>
-                  <span>{country.code}</span>
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1">
+            {selectedCountries.map((country) => (
+              <button
+                key={country.code}
+                onClick={() => toggleCountry(country.code)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20"
+              >
+                <span>{country.flag}</span>
+                <span>{country.code}</span>
+                <span className="opacity-60">✕</span>
+              </button>
+            ))}
           </div>
         )}
-        <Input value={countrySearch} onChange={e => setCountrySearch(e.target.value)} placeholder="Cerca paese..." className="h-7 text-xs bg-muted/30 border-border/40 mb-1.5" />
-        <div className="max-h-[280px] overflow-y-auto rounded-lg border border-border/40 bg-muted/10 p-1 pr-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <Input
+            value={countrySearch}
+            onChange={e => setCountrySearch(e.target.value)}
+            placeholder="Cerca paese…"
+            className="h-8 pl-7 text-xs bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
+          />
+        </div>
+        <div className="max-h-[280px] overflow-y-auto rounded-lg border border-border bg-background/40 p-1">
           <div className="space-y-0.5">
             {filteredCountries.map(c => (
               <button
                 key={c.code}
                 onClick={() => toggleCountry(c.code)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all",
-                  g.filters.networkSelectedCountries.has(c.code) ? "bg-primary/15 border border-primary/30 text-primary" : "hover:bg-muted/40 text-foreground"
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all border-l-2",
+                  g.filters.networkSelectedCountries.has(c.code)
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "border-transparent hover:bg-muted text-foreground"
                 )}
               >
                 <span className="text-base">{c.flag}</span>
@@ -190,19 +214,23 @@ export function NetworkFiltersSection() {
       </FilterSection>
 
       <FilterSection icon={Sparkles} label="Qualità dati">
-        <ChipGroup>
-          {NETWORK_QUALITY.map(o => <Chip key={o.value} active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>)}
+        <ChipGroup columns={2}>
+          {NETWORK_QUALITY.map(o => (
+            <Chip key={o.value} block active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>
+          ))}
         </ChipGroup>
       </FilterSection>
 
       <FilterSection icon={ArrowUpDown} label="Ordina partner">
-        <ChipGroup>
-          {NETWORK_SORT.map(o => <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>)}
+        <ChipGroup columns={3}>
+          {NETWORK_SORT.map(o => (
+            <Chip key={o.value} block active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>
+          ))}
         </ChipGroup>
       </FilterSection>
 
       <FilterSection icon={RefreshCw} label="Azioni">
-        <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-2" onClick={handleSyncWca}>
+        <Button variant="default" size="sm" className="w-full h-9 text-xs gap-2" onClick={handleSyncWca}>
           <RefreshCw className="w-3 h-3" /> Sincronizza WCA
         </Button>
       </FilterSection>
