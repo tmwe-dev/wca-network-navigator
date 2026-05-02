@@ -54,6 +54,12 @@ export interface EntityListWithDetailProps {
   /** Trailing label per il breadcrumb del GoldenLayout. */
   trailingLabel?: string | null;
   testId?: string;
+  /** Override esterno del sort (es. dalla sidebar globale). Se presente, ignora useListSort. */
+  sortOverride?: {
+    sortKey: CompanySortKey;
+    sortDir: "asc" | "desc";
+    onChange: (key: CompanySortKey, dir: "asc" | "desc") => void;
+  };
 }
 
 export function EntityListWithDetail({
@@ -75,8 +81,24 @@ export function EntityListWithDetail({
   toolbarRightSlot,
   trailingLabel,
   testId,
+  sortOverride,
 }: EntityListWithDetailProps): React.ReactElement {
-  const { sortKey, sortDir, cycle } = useListSort<CompanySortKey>(sortStorageKey, "name");
+  const internal = useListSort<CompanySortKey>(sortStorageKey, "name");
+  const sortKey = sortOverride?.sortKey ?? internal.sortKey;
+  const sortDir = sortOverride?.sortDir ?? internal.sortDir;
+  const cycle = (key: CompanySortKey) => {
+    if (sortOverride) {
+      const nextDir: "asc" | "desc" =
+        sortOverride.sortKey === key
+          ? sortOverride.sortDir === "asc"
+            ? "desc"
+            : "asc"
+          : "asc";
+      sortOverride.onChange(key, nextDir);
+    } else {
+      internal.cycle(key);
+    }
+  };
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<CompanyFiltersState>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
