@@ -370,6 +370,71 @@ function daysSince(iso: string | null): string {
   return `${d} giorni fa`;
 }
 
+/** Estrae il testo naturale da un prompt che può essere JSON serializzato
+ *  (planRunner) o testo libero. Se context.originalPrompt esiste, vince. */
+function resolveNaturalPrompt(
+  prompt: string,
+  context?: { originalPrompt?: string },
+): string {
+  const orig = (context?.originalPrompt ?? "").trim();
+  if (orig.length > 0) return orig;
+  const trimmed = (prompt ?? "").trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    try {
+      const obj = JSON.parse(trimmed) as Record<string, unknown>;
+      const hint =
+        (obj.prompt as string) ??
+        (obj.goal as string) ??
+        (obj.message as string) ??
+        (obj.text as string) ??
+        "";
+      if (typeof hint === "string" && hint.length > 0) return hint;
+    } catch {
+      /* keep raw */
+    }
+  }
+  return prompt;
+}
+
+/** Riesegue una query partners usando i filtri salvati nel contesto
+ *  (es. city=Amman). Usato dal ramo proceed-with-context come fallback
+ *  quando partnerIds non è disponibile. */
+async function fetchPartnersByFilters(
+  filters: ReadonlyArray<{ column: string; op: string; value: unknown }>,
+): Promise<PartnerRow[]> {
+  if (!filters.length) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = supabase
+    .from("partners")
+    .select("id, company_name, company_alias, country_code, city, email, website, lead_status, status_reason, last_interaction_at")
+    .eq("is_active", true)
+    .neq("lead_status", "blacklisted")
+    .limit(50);
+  for (const f of filters) {
+    switch (f.op) {
+      case "eq":
+        q = q.eq(f.column, f.value);
+        break;
+      case "neq":
+        q = q.neq(f.column, f.value);
+        break;
+      case "ilike":
+        q = q.ilike(f.column, `%${String(f.value).replace(/%/g, "")}%`);
+        break;
+      case "in":
+        if (Array.isArray(f.value)) q = q.in(f.column, f.value as (string | number)[]);
+        break;
+      case "is":
+        q = q.is(f.column, f.value as null | boolean);
+        break;
+      // gt/gte/lt/lte non utili per il fallback compose
+    }
+  }
+  const { data, error } = await q;
+  if (error) return [];
+  return (data ?? []) as PartnerRow[];
+}
+
 export const composeEmailTool: Tool = {
   id: "compose-email",
   label: "Componi email",
