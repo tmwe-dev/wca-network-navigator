@@ -113,10 +113,21 @@ export default function EmailCanvas({
 
   const handleSend = async () => {
     if (!displayEmail?.contactEmail) { toast({ title: "Nessun indirizzo email", variant: "destructive" }); return; }
+    // Hard guard: solo invio singolo. Multipli destinatari → flusso bulk (BulkActionMenu → email_campaign_queue).
+    const to = displayEmail.contactEmail;
+    if (Array.isArray(to)) {
+      toast({ title: "Invio singolo non consentito", description: "Per più destinatari usa il flusso bulk (Outreach → In Uscita).", variant: "destructive" });
+      return;
+    }
+    const recipients = String(to).split(/[,;]/).map(s => s.trim()).filter(Boolean);
+    if (recipients.length > 1) {
+      toast({ title: "Invio singolo non consentito", description: "Rilevati più destinatari. Usa il flusso bulk (Outreach → In Uscita).", variant: "destructive" });
+      return;
+    }
     setSending(true);
     try {
       const sanitizedHtml = DOMPurify.sanitize(displayBody.replace(/\n/g, "<br>"), { ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'], ALLOWED_ATTR: ['href', 'target', 'rel', 'style'] });
-      const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: displayEmail.contactEmail, subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
+      const data = await invokeEdge<Record<string, unknown>>("send-email", { body: { to: recipients[0], subject: displaySubject, html: sanitizedHtml }, context: "EmailCanvas.send_email" });
       if (data?.error) throw new Error(String(data.error));
       toast({ title: "Email inviata!", description: `A: ${displayEmail.contactEmail}` });
       // LOVABLE-93: tracking gestito da postSendPipeline dentro send-email edge
