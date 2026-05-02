@@ -10,7 +10,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { findPartners, type PartnerWithRelations } from "@/data/partners";
+import { findPartners, findPartnersPreview, type PartnerWithRelations } from "@/data/partners";
 import { queryKeys } from "@/lib/queryKeys";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { CompanyEntity, ContactEntity } from "@/v2/ui/molecules/CompanyCardList";
@@ -146,10 +146,12 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
       ...filterKey,
     } as Record<string, unknown>),
     queryFn: async () => {
-      // Per evitare di caricare 12k partner d'un colpo quando nessun paese
-      // è selezionato, restituiamo lista vuota: l'utente sceglie il paese
-      // dalla sidebar (UX coerente con l'attuale CountryGridV2).
-      if (countries.length === 0 && !search) return [] as PartnerWithRelations[];
+      // Default: nessun paese e nessuna ricerca → preview dei primi 50 partner
+      // ordinati per nome, così l'utente ha sempre qualcosa con cui lavorare
+      // entrando nella pagina (senza scaricare i 12k totali).
+      if (countries.length === 0 && !search) {
+        return await findPartnersPreview(50);
+      }
       const rows = await findPartners({
         countries: countries.length ? countries : undefined,
         search: search || undefined,
