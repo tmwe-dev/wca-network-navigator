@@ -1,9 +1,9 @@
-import { Search, ArrowUpDown, Database, Filter, Wifi, Sparkles, Plane } from "lucide-react";
+import { Search, Database, Filter, Wifi, Sparkles, Plane } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useGlobalFilters, type CockpitChannelFilter, type CockpitQualityFilter } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { COCKPIT_SORT, COCKPIT_ORIGIN, COCKPIT_CHANNEL, COCKPIT_QUALITY, COCKPIT_STATUS } from "./constants";
+import { COCKPIT_ORIGIN, COCKPIT_CHANNEL, COCKPIT_QUALITY, COCKPIT_STATUS } from "./constants";
 
 interface CockpitFiltersSectionProps {
   countryStats: Array<{ code: string; count: number; flag: string }>;
@@ -22,9 +22,6 @@ export function CockpitFiltersSection({
     <>
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca contatto, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
-      </FilterSection>
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>{COCKPIT_SORT.map(o => <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>)}</ChipGroup>
       </FilterSection>
       <FilterSection icon={Database} label="Origine">
         <ChipGroup>{COCKPIT_ORIGIN.map(o => <Chip key={o.value} active={g.filters.origin.has(o.value)} onClick={() => toggleOrigin(o.value)}>{o.label}</Chip>)}</ChipGroup>

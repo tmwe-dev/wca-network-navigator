@@ -1,25 +1,10 @@
-import { Search, ArrowUpDown, Filter, Sparkles } from "lucide-react";
+import { Search, Filter, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import { FilterSection, ChipGroup, Chip } from "./shared";
-
-const SORT_FIELDS: Array<{ value: "name" | "city" | "contacts"; label: string }> = [
-  { value: "name", label: "Nome" },
-  { value: "city", label: "Città" },
-  { value: "contacts", label: "Contatti" },
-];
+import { FilterSection } from "./shared";
 
 export function CampaignsFiltersSection() {
   const g = useGlobalFilters();
-
-  const toggleSort = (field: "name" | "city" | "contacts") => {
-    if (g.filters.campaignsSortField === field) {
-      g.setFilter("campaignsSortAsc", !g.filters.campaignsSortAsc);
-    } else {
-      g.setFilter("campaignsSortField", field);
-      g.setFilter("campaignsSortAsc", field !== "contacts");
-    }
-  };
 
   return (
     <>
@@ -30,21 +15,6 @@ export function CampaignsFiltersSection() {
           placeholder="Nome, città, email..."
           className="h-8 text-xs bg-muted/30 border-border/40"
         />
-      </FilterSection>
-
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {SORT_FIELDS.map((f) => (
-            <Chip
-              key={f.value}
-              active={g.filters.campaignsSortField === f.value}
-              onClick={() => toggleSort(f.value)}
-            >
-              {f.label}
-              {g.filters.campaignsSortField === f.value && (g.filters.campaignsSortAsc ? " ↑" : " ↓")}
-            </Chip>
-          ))}
-        </ChipGroup>
       </FilterSection>
 
       <FilterSection icon={Filter} label="Tipo partner">

@@ -9,9 +9,6 @@ import {
   Check,
   Users,
   RefreshCw,
-  ArrowUpDown,
-  ArrowDownAZ,
-  ArrowUpAZ,
 } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
@@ -19,15 +16,8 @@ import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection } from "./shared";
-import { NETWORK_QUALITY_TOGGLES, NETWORK_SORT } from "./constants";
+import { NETWORK_QUALITY_TOGGLES } from "./constants";
 import { createLogger } from "@/lib/log";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const log = createLogger("NetworkFiltersSection");
 
@@ -173,55 +163,7 @@ export function NetworkFiltersSection() {
 
   return (
     <>
-      {/* 1 — ORDINA: dropdown + direzione A/Z, in cima */}
-      <FilterSection icon={ArrowUpDown} label="Ordina partner">
-        <div className="flex items-center gap-2">
-          <Select
-            value={g.filters.networkSort}
-            onValueChange={(v) => g.setNetworkSort(v)}
-          >
-            <SelectTrigger className="h-9 flex-1 text-xs bg-background border-border">
-              <SelectValue placeholder="Ordina per…" />
-            </SelectTrigger>
-            <SelectContent>
-              {NETWORK_SORT.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <button
-            type="button"
-            onClick={() =>
-              g.setNetworkSortDir(
-                g.filters.networkSortDir === "asc" ? "desc" : "asc"
-              )
-            }
-            className="h-9 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
-            aria-label={
-              g.filters.networkSortDir === "asc"
-                ? "Ordine A→Z (clicca per Z→A)"
-                : "Ordine Z→A (clicca per A→Z)"
-            }
-            title={g.filters.networkSortDir === "asc" ? "A → Z" : "Z → A"}
-          >
-            {g.filters.networkSortDir === "asc" ? (
-              <>
-                <ArrowDownAZ className="w-3.5 h-3.5 text-primary" />
-                <span>A→Z</span>
-              </>
-            ) : (
-              <>
-                <ArrowUpAZ className="w-3.5 h-3.5 text-primary" />
-                <span>Z→A</span>
-              </>
-            )}
-          </button>
-        </div>
-      </FilterSection>
-
-      {/* 2 — PAESI */}
+      {/* 1 — PAESI */}
       <FilterSection
         icon={Globe}
         label="Paesi"

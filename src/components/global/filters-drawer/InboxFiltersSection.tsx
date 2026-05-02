@@ -1,8 +1,8 @@
-import { Search, ArrowUpDown, Tag } from "lucide-react";
+import { Search, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { EMAIL_CATEGORIES, EMAIL_SORT } from "./constants";
+import { EMAIL_CATEGORIES } from "./constants";
 
 interface InboxFiltersSectionProps {
   channel: "email" | "whatsapp" | "linkedin";
@@ -33,19 +33,6 @@ export function InboxFiltersSection({ channel, channelIcon: ChannelIcon }: Inbox
           </ChipGroup>
         </FilterSection>
       )}
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {isEmail ? (
-            EMAIL_SORT.map(o => <Chip key={o.value} active={g.filters.emailSort === o.value} onClick={() => g.setEmailSort(o.value)}>{o.label}</Chip>)
-          ) : (
-            <>
-              <Chip active={g.filters.sortBy === "date_desc"} onClick={() => g.setSortBy("date_desc")}>Più recenti</Chip>
-              <Chip active={g.filters.sortBy === "date_asc"} onClick={() => g.setSortBy("date_asc")}>Più vecchi</Chip>
-              <Chip active={g.filters.sortBy === "unread"} onClick={() => g.setSortBy("unread")}>Non letti prima</Chip>
-            </>
-          )}
-        </ChipGroup>
-      </FilterSection>
     </>
   );
 }

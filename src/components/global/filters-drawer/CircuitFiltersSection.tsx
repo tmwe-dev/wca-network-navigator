@@ -1,14 +1,8 @@
-import { Search, Plane, ArrowUpDown } from "lucide-react";
+import { Search, Plane } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { COCKPIT_STATUS } from "./constants";
-
-const CIRCUIT_SORT = [
-  { value: "name", label: "Nome" },
-  { value: "lastContact", label: "Ultimo contatto" },
-  { value: "company", label: "Azienda" },
-];
 
 export function CircuitFiltersSection() {
   const g = useGlobalFilters();
@@ -20,13 +14,6 @@ export function CircuitFiltersSection() {
       </FilterSection>
       <FilterSection icon={Plane} label="Fase">
         <ChipGroup>{COCKPIT_STATUS.map(o => <Chip key={o.value} active={g.filters.cockpitStatus === o.value} onClick={() => g.setCockpitStatus(o.value)}>{o.label}</Chip>)}</ChipGroup>
-      </FilterSection>
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {CIRCUIT_SORT.map(o => (
-            <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
       </FilterSection>
     </>
   );

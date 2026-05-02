@@ -1,4 +1,4 @@
-import { Search, Filter, EyeOff, ArrowUpDown, Sparkles } from "lucide-react";
+import { Search, Filter, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,6 @@ const VOLUME_OPTIONS = [
   { value: "5", label: ">5" },
   { value: "10", label: ">10" },
   { value: "50", label: ">50" },
-];
-
-const SORT_OPTIONS = [
-  { value: "name-asc", label: "A-Z", icon: null },
-  { value: "count-desc", label: "N. email", icon: null },
-  { value: "ai_group", label: "AI smart", icon: Sparkles },
 ];
 
 export function EmailIntelligenceFiltersSection() {
@@ -42,23 +36,6 @@ export function EmailIntelligenceFiltersSection() {
               {o.label}
             </Chip>
           ))}
-        </ChipGroup>
-      </FilterSection>
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {SORT_OPTIONS.map((o) => {
-            const Icon = o.icon;
-            return (
-              <Chip
-                key={o.value}
-                active={g.filters.emailIntelSort === o.value}
-                onClick={() => g.setFilter("emailIntelSort", o.value)}
-              >
-                {Icon ? <Icon className="h-3 w-3 mr-1 inline" /> : null}
-                {o.label}
-              </Chip>
-            );
-          })}
         </ChipGroup>
       </FilterSection>
       <FilterSection icon={EyeOff} label="Visualizzazione">

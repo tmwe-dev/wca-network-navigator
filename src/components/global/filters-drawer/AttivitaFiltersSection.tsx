@@ -1,14 +1,8 @@
-import { Search, ListTodo, Zap, ArrowUpDown } from "lucide-react";
+import { Search, ListTodo, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { ATTIVITA_STATUS, ATTIVITA_PRIORITY } from "./constants";
-
-const ATTIVITA_SORT = [
-  { value: "date_desc", label: "Più recenti" },
-  { value: "date_asc", label: "Più vecchi" },
-  { value: "priority", label: "Priorità" },
-];
 
 export function AttivitaFiltersSection() {
   const g = useGlobalFilters();
@@ -23,13 +17,6 @@ export function AttivitaFiltersSection() {
       </FilterSection>
       <FilterSection icon={Zap} label="Priorità">
         <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.attivitaPriority === o.value} onClick={() => g.setAttivitaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
-      </FilterSection>
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {ATTIVITA_SORT.map(o => (
-            <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
       </FilterSection>
     </>
   );
