@@ -3,8 +3,7 @@
  *
  * - Hash SHA256 del prompt completo (no plaintext).
  * - Snippet redatto della risposta (PII-safe, troncato).
- * - Metadati: scope, dominio KB, n. tool_calls, tempi, violazioni.
- * - Persiste in super_mario_invocations (auto-retention 30gg via cron).
+ * - Persiste in super_mario_invocations (auto-retention 30gg via expires_at).
  */
 
 // deno-lint-ignore no-explicit-any
@@ -28,19 +27,21 @@ function redact(text: string): string {
 }
 
 export interface AuditPayload {
-  user_id: string;
-  scope: string;
+  trace_id: string;
   conversation_id: string | null;
+  operator_id: string | null;
+  scope: string;
   domain: string;
   system_prompt: string;
   user_message: string;
   response_text: string;
-  tool_calls_count: number;
-  needs_confirmation: boolean;
+  tool_calls: Array<{ tool_name: string; arguments: Record<string, unknown> }>;
   loaded_kb_cards: Array<{ source: string; id: string; name: string }>;
   violations: Array<{ code: string; message: string; severity: string }>;
   preflight_warnings: string[];
   latency_ms: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
   model: string;
   ok: boolean;
   failure_reason?: string;
@@ -48,26 +49,34 @@ export interface AuditPayload {
 
 export async function logInvocation(supabase: SupabaseClient, p: AuditPayload): Promise<void> {
   try {
-    const promptHash = await sha256(p.system_prompt);
-    const responseSnippet = redact(p.response_text).slice(0, 500);
+    const promptHash = await sha256(p.system_prompt + p.user_message);
+    const redactedPrompt = redact(p.system_prompt + "\n---USER---\n" + p.user_message).slice(0, 4000);
+    const responseSnippet = redact(p.response_text).slice(0, 1000);
 
-    await supabase.from("super_mario_invocations").insert({
-      user_id: p.user_id,
-      scope: p.scope,
-      conversation_id: p.conversation_id,
-      domain: p.domain,
-      prompt_hash: promptHash,
-      prompt_size_chars: p.system_prompt.length + p.user_message.length,
-      response_snippet: responseSnippet,
-      tool_calls_count: p.tool_calls_count,
-      needs_confirmation: p.needs_confirmation,
-      loaded_kb_cards: p.loaded_kb_cards,
+    const auditWarnings = {
+      preflight: p.preflight_warnings,
       violations: p.violations,
-      preflight_warnings: p.preflight_warnings,
-      latency_ms: p.latency_ms,
-      model: p.model,
+      domain: p.domain,
+      loaded_kb_cards: p.loaded_kb_cards,
       ok: p.ok,
       failure_reason: p.failure_reason ?? null,
+    };
+
+    await supabase.from("super_mario_invocations").insert({
+      trace_id: p.trace_id,
+      conversation_id: p.conversation_id,
+      operator_id: p.operator_id,
+      scope: p.scope,
+      model: p.model,
+      prompt_tokens: p.prompt_tokens ?? 0,
+      completion_tokens: p.completion_tokens ?? 0,
+      latency_ms: p.latency_ms,
+      final_prompt_hash: promptHash,
+      final_prompt_redacted: redactedPrompt,
+      response_summary: responseSnippet,
+      tool_calls_json: p.tool_calls,
+      audit_warnings: auditWarnings,
+      error_code: p.ok ? null : (p.failure_reason ?? "unknown"),
     });
   } catch (e) {
     console.warn("[super-mario] audit log failed", { error: (e as Error).message });
