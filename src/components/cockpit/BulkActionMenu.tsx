@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   CheckCircle2, StickyNote, CalendarClock,
-  Phone, Users, MoreHorizontal, CalendarIcon, Zap,
+  Phone, Users, MoreHorizontal, CalendarIcon, Zap, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,9 @@ import { createLogger } from "@/lib/log";
 import { insertActivity } from "@/data/activities";
 import { deleteCockpitQueueItem } from "@/data/cockpitQueue";
 import { queryKeys } from "@/lib/queryKeys";
+import { Input } from "@/components/ui/input";
+import { createCampaignDraftQueue } from "@/data/emailCampaigns";
+import DOMPurify from "dompurify";
 
 const log = createLogger("BulkActionMenu");
 
@@ -54,6 +57,11 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
   const [scheduleDate, setScheduleDate] = useState<Date>();
   const [scheduleNote, setScheduleNote] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+
+  const eligibleEmailContacts = selectedContacts.filter(c => !!c.email && /@/.test(c.email));
 
   const autoAssignBulk = async (contacts: CockpitContact[]) => {
     const salesAgent = agents.find(a => a.is_active && (a.role === "sales" || a.role === "outreach"))
@@ -138,6 +146,56 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
     onComplete();
   };
 
+  const handleBulkEnqueueEmail = async () => {
+    if (!emailSubject.trim() || !emailBody.trim()) return;
+    if (eligibleEmailContacts.length < 2) {
+      toast.error("Servono almeno 2 contatti con email per l'invio bulk");
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) {
+      toast.error("Sessione scaduta");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const safeHtml = DOMPurify.sanitize(
+        emailBody.replace(/\n/g, "<br/>"),
+        {
+          ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'],
+          ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
+        },
+      );
+      const recipients = eligibleEmailContacts.map(c => ({
+        partner_id: c.partnerId || c.sourceId,
+        email: c.email,
+        name: c.name,
+        subject: emailSubject,
+        html: safeHtml,
+      }));
+      const { queued } = await createCampaignDraftQueue({
+        userId: user.id,
+        subject: emailSubject,
+        htmlBody: safeHtml,
+        partnerIds: recipients.map(r => r.partner_id),
+        recipients,
+      });
+      toast.success(`${queued} email accodate in "In Uscita"`);
+      setEmailOpen(false);
+      setEmailSubject("");
+      setEmailBody("");
+      qc.invalidateQueries({ queryKey: queryKeys.email.campaignQueue() });
+      qc.invalidateQueries({ queryKey: queryKeys.email.drafts() });
+      onComplete();
+    } catch (err) {
+      log.error("bulk email enqueue failed", { error: err instanceof Error ? err.message : String(err) });
+      toast.error("Errore nell'accodamento email");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -165,6 +223,15 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
           <DropdownMenuItem className="gap-2 text-xs" onClick={() => setNoteOpen(true)}>
             <StickyNote className="w-3.5 h-3.5 text-amber-500" />
             Aggiungi nota
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 text-xs"
+            disabled={eligibleEmailContacts.length < 2}
+            onClick={() => setEmailOpen(true)}
+          >
+            <Mail className="w-3.5 h-3.5 text-violet-500" />
+            Invia email ({eligibleEmailContacts.length})
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="gap-2 text-xs" onClick={() => setScheduleOpen(true)}>
@@ -230,6 +297,44 @@ export function BulkActionMenu({ selectedContacts, onComplete }: Props) {
             <Button variant="outline" size="sm" onClick={() => setScheduleOpen(false)}>Annulla</Button>
             <Button size="sm" onClick={handleBulkSchedule} disabled={!scheduleDate || isProcessing}>
               {isProcessing ? "..." : "Programma"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Email Enqueue Dialog */}
+      <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-sm">
+              Invia email a {eligibleEmailContacts.length} contatti
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground">
+              Le email verranno accodate in <b>Outreach → In Uscita</b> (passano dal review editoriale prima dell'invio SMTP). Nessun invio immediato.
+            </div>
+            <Input
+              value={emailSubject}
+              onChange={e => setEmailSubject(e.target.value)}
+              placeholder="Oggetto"
+              className="text-sm"
+            />
+            <Textarea
+              value={emailBody}
+              onChange={e => setEmailBody(e.target.value)}
+              placeholder="Corpo dell'email..."
+              className="min-h-[160px] text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEmailOpen(false)}>Annulla</Button>
+            <Button
+              size="sm"
+              onClick={handleBulkEnqueueEmail}
+              disabled={!emailSubject.trim() || !emailBody.trim() || isProcessing}
+            >
+              {isProcessing ? "Accodamento..." : "Accoda in Uscita"}
             </Button>
           </DialogFooter>
         </DialogContent>
