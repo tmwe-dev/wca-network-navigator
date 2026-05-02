@@ -271,11 +271,26 @@ export async function checkUserPermission(permissionKey: string): Promise<boolea
   const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
   if (!user) return false;
 
+  // Admin shortcut: app_role 'admin' bypasses granular RBAC.
+  // The granular system (roles/permissions/role_permissions) is optional;
+  // admins must always have full access regardless of its state.
+  try {
+    const { data: adminRow } = await untypedFrom("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (adminRow) return true;
+  } catch {
+    // ignore and fall through to granular check
+  }
+
   // Fetch user's roles
   const { data: userRoles, error: roleError } = await untypedFrom("user_roles")
     .select("role_id")
     .eq("user_id", user.id);
-  if (roleError) throw roleError;
+  // Granular RBAC may not be configured (column role_id missing): treat as no extra perms.
+  if (roleError) return false;
 
   const roleIds = ((userRoles ?? []) as UserRoleIdRow[]).map((ur) => ur.role_id);
   if (!roleIds.length) return false;
