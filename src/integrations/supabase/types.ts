@@ -3324,140 +3324,6 @@ export type Database = {
           },
         ]
       }
-      command_job_steps: {
-        Row: {
-          ai_reasoning: string | null
-          completed_at: string | null
-          created_at: string
-          duration_ms: number | null
-          error_message: string | null
-          id: string
-          job_id: string
-          params: Json
-          result: Json | null
-          started_at: string | null
-          status: Database["public"]["Enums"]["command_job_step_status"]
-          step_number: number
-          tool_id: string | null
-        }
-        Insert: {
-          ai_reasoning?: string | null
-          completed_at?: string | null
-          created_at?: string
-          duration_ms?: number | null
-          error_message?: string | null
-          id?: string
-          job_id: string
-          params?: Json
-          result?: Json | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["command_job_step_status"]
-          step_number: number
-          tool_id?: string | null
-        }
-        Update: {
-          ai_reasoning?: string | null
-          completed_at?: string | null
-          created_at?: string
-          duration_ms?: number | null
-          error_message?: string | null
-          id?: string
-          job_id?: string
-          params?: Json
-          result?: Json | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["command_job_step_status"]
-          step_number?: number
-          tool_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "command_job_steps_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "command_jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      command_jobs: {
-        Row: {
-          ai_summary: string | null
-          completed_at: string | null
-          conversation_id: string | null
-          created_at: string
-          deleted_at: string | null
-          goal: string | null
-          id: string
-          last_activity_at: string
-          operator_id: string | null
-          origin_prompt: string | null
-          phase: Database["public"]["Enums"]["command_job_phase"]
-          progress: Json
-          snapshot: Json
-          status: Database["public"]["Enums"]["command_job_status"]
-          tags: string[]
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ai_summary?: string | null
-          completed_at?: string | null
-          conversation_id?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          goal?: string | null
-          id?: string
-          last_activity_at?: string
-          operator_id?: string | null
-          origin_prompt?: string | null
-          phase?: Database["public"]["Enums"]["command_job_phase"]
-          progress?: Json
-          snapshot?: Json
-          status?: Database["public"]["Enums"]["command_job_status"]
-          tags?: string[]
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ai_summary?: string | null
-          completed_at?: string | null
-          conversation_id?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          goal?: string | null
-          id?: string
-          last_activity_at?: string
-          operator_id?: string | null
-          origin_prompt?: string | null
-          phase?: Database["public"]["Enums"]["command_job_phase"]
-          progress?: Json
-          snapshot?: Json
-          status?: Database["public"]["Enums"]["command_job_status"]
-          tags?: string[]
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "command_jobs_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "command_conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "command_jobs_operator_id_fkey"
-            columns: ["operator_id"]
-            isOneToOne: false
-            referencedRelation: "operators"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       command_messages: {
         Row: {
           content: string
@@ -9949,28 +9815,6 @@ export type Database = {
       campaign_job_status: "pending" | "in_progress" | "completed" | "skipped"
       campaign_job_type: "email" | "call"
       certification_type: "IATA" | "BASC" | "ISO" | "C-TPAT" | "AEO"
-      command_job_phase:
-        | "discovery"
-        | "planning"
-        | "awaiting_approval"
-        | "executing"
-        | "review"
-        | "done"
-      command_job_status:
-        | "open"
-        | "in_progress"
-        | "awaiting_approval"
-        | "paused"
-        | "done"
-        | "error"
-        | "cancelled"
-      command_job_step_status:
-        | "pending"
-        | "running"
-        | "awaiting_approval"
-        | "done"
-        | "error"
-        | "skipped"
       download_queue_status: "pending" | "in_progress" | "completed" | "paused"
       interaction_type: "call" | "email" | "meeting" | "note"
       office_type: "head_office" | "branch"
@@ -10146,31 +9990,6 @@ export const Constants = {
       campaign_job_status: ["pending", "in_progress", "completed", "skipped"],
       campaign_job_type: ["email", "call"],
       certification_type: ["IATA", "BASC", "ISO", "C-TPAT", "AEO"],
-      command_job_phase: [
-        "discovery",
-        "planning",
-        "awaiting_approval",
-        "executing",
-        "review",
-        "done",
-      ],
-      command_job_status: [
-        "open",
-        "in_progress",
-        "awaiting_approval",
-        "paused",
-        "done",
-        "error",
-        "cancelled",
-      ],
-      command_job_step_status: [
-        "pending",
-        "running",
-        "awaiting_approval",
-        "done",
-        "error",
-        "skipped",
-      ],
       download_queue_status: ["pending", "in_progress", "completed", "paused"],
       interaction_type: ["call", "email", "meeting", "note"],
       office_type: ["head_office", "branch"],

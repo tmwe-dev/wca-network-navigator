@@ -74,18 +74,6 @@ interface CommandStateApi {
   /** Conversational query context (for follow-ups) */
   queryContext: QueryContext | null;
   setQueryContext: (v: QueryContext | null) => void;
-  /** Persist a message to long-term storage (DB conversation). Optional. */
-  persistMessage?: (msg: {
-    role: "user" | "assistant" | "tool" | "system";
-    content: string;
-    tool_id?: string;
-    tool_result?: unknown;
-  }) => void;
-  /** Hook called once for each substantive user prompt (e.g. to open a Command Job). */
-  onUserPrompt?: (prompt: string) => void;
-  /** Returns an additional hint appended to the planner prompt
-   *  (e.g. snapshot of currently open Command Jobs / agenda). */
-  getExtraHint?: () => string;
 }
 
 export function useCommandSubmit(state: CommandStateApi) {
@@ -95,7 +83,6 @@ export function useCommandSubmit(state: CommandStateApi) {
     setPendingApproval, setPlanState, setActiveToolKey,
     setVoiceSpeaking, resetForNewMessage, ts, governance, ttsSpeak, messages,
     queryContext, setQueryContext,
-    persistMessage, onUserPrompt, getExtraHint,
   } = state;
 
   // Initialize sub-hooks
@@ -188,17 +175,13 @@ export function useCommandSubmit(state: CommandStateApi) {
       if (!rawText.trim()) return;
       // Show original (un-normalized) text in chat for UX honesty
       addMessage({ role: "user", content: rawText, timestamp: ts() });
-      persistMessage?.({ role: "user", content: rawText });
-      onUserPrompt?.(rawText);
       resetForNewMessage();
 
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
 
       // Build conversational hint from previous query context (if fresh)
-      const baseHint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
-      const extra = getExtraHint?.() ?? "";
-      const hint = extra ? `${baseHint}${extra}` : baseHint;
+      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
@@ -330,7 +313,6 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
-      persistMessage, onUserPrompt, getExtraHint,
     ],
   );
 
