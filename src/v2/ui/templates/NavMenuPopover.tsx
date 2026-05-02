@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
 
+/** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
+function sectionRoot(path: string): string {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 2) return "/v2";
+  return `/${parts[0]}/${parts[1]}`;
+}
+
 interface NavMenuPopoverProps {
   /** Trigger element (e.g. icon button). Renders inside <PopoverTrigger asChild>. */
   children: React.ReactNode;
@@ -39,6 +46,8 @@ export function NavMenuPopover({
     nav(path);
   };
 
+  const activeRoot = currentPath ? sectionRoot(currentPath) : null;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -49,7 +58,7 @@ export function NavMenuPopover({
       >
         <div className="flex flex-col">
           {navItemsDef
-            .filter((item) => item.path !== currentPath)
+            .filter((item) => sectionRoot(item.path) !== activeRoot)
             .map((item) => {
               const translated = t(item.labelKey);
               const label =
