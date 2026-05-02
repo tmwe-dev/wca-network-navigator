@@ -5,7 +5,7 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useReminders } from "@/hooks/useReminders";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { ATTIVITA_PRIORITY } from "./constants";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths,
