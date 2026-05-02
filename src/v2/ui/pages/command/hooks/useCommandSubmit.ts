@@ -50,6 +50,8 @@ import { usePlanExecution } from "./usePlanExecution";
 import { usePlanCompletion } from "./usePlanCompletion";
 import { useFastLane } from "./useFastLane";
 import { useApprovalHandler } from "./useApprovalHandler";
+import { useSuperMarioFlow } from "./useSuperMarioFlow";
+import { isSuperMarioEnabled } from "@/v2/ai/superMarioFlag";
 
 interface CommandStateApi {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -140,6 +142,12 @@ export function useCommandSubmit(state: CommandStateApi) {
     addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
   });
 
+  // Super Mario alternative flow (feature-flagged via localStorage).
+  const { runSuperMario } = useSuperMarioFlow({
+    addMessage: _addMessage, ts, setFlowPhase, setShowTools, setLiveResult, setCanvas,
+    setPendingApproval, messages, persistedMessages,
+  });
+
   // Wrapper for plan completion that updates query context
   const renderPlanWithContext = useCallback(
     async (userPrompt: string, final: PlanExecutionState, trace?: TraceBuilder) => {
@@ -208,6 +216,20 @@ export function useCommandSubmit(state: CommandStateApi) {
       // Show original (un-normalized) text in chat for UX honesty
       _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
+
+      // SUPER MARIO PATH (feature-flagged): bypass planner, regex e useResultCommentary.
+      // Su errore o tool non disponibile, ricade sul percorso classico.
+      if (isSuperMarioEnabled()) {
+        const sm = await runSuperMario(rawText);
+        if (sm.ok) return;
+        _addMessage({
+          role: "assistant",
+          content: `Super Mario non risponde (${sm.reason ?? "errore"}). Uso il percorso classico.`,
+          agentName: "Sistema",
+          timestamp: ts(),
+          meta: "fallback",
+        });
+      }
 
       // Lexical normalization (typo fix)
       const text = normalizePrompt(rawText);
