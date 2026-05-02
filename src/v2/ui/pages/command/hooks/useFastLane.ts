@@ -12,6 +12,7 @@ import {
   extractPartnerIdsFromResult,
   setLastQueryResultContext,
 } from "../lib/lastQueryResultContext";
+import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 
 interface FastLaneDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -108,6 +109,14 @@ export function useFastLane(deps: FastLaneDeps) {
         const country = detectCountryFromPrompt(userPrompt);
         // Estrai filtri/tabella/count dal risultato (table o multi → prima parte partners).
         const meta = extractQueryMetaFromResult(result);
+        // Per query single-table arricchiamo con i filtri reali dal plan.
+        if (!meta.filters.length) {
+          const plan = getLastSuccessfulQueryPlan();
+          if (plan && plan.table === (meta.table ?? plan.table)) {
+            meta.table = meta.table ?? plan.table;
+            meta.filters = plan.filters;
+          }
+        }
         const cityFilter = meta.filters.find(
           (f) => f.column === "city" && (f.op === "eq" || f.op === "ilike"),
         );
