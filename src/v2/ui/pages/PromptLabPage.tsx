@@ -80,6 +80,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
+import { PageTitleHint } from "@/v2/ui/atoms/PageTitleHint";
 
 const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
   core_ai: Brain,
