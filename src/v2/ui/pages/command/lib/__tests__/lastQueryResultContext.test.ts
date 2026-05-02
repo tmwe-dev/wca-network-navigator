@@ -31,6 +31,23 @@ describe("lastQueryResultContext", () => {
     });
     expect(getLastQueryResultContext()?.countryCode).toBe("MT");
   });
+
+  it("mantiene filtri+selectionLabel anche senza partnerIds e senza country", () => {
+    setLastQueryResultContext({
+      partnerIds: [],
+      countryCode: null,
+      countryLabel: null,
+      originalPrompt: "Dimmi quelli presenti ad Amman",
+      table: "partners",
+      filters: [{ column: "city", op: "ilike", value: "Amman" }],
+      count: 31,
+      selectionLabel: "partner a Amman",
+    });
+    const ctx = getLastQueryResultContext();
+    expect(ctx?.filters?.[0]).toMatchObject({ column: "city", value: "Amman" });
+    expect(ctx?.selectionLabel).toBe("partner a Amman");
+    expect(ctx?.count).toBe(31);
+  });
 });
 
 describe("extractPartnerIdsFromResult", () => {
@@ -76,6 +93,10 @@ describe("isProceedIntent", () => {
     "fai la mail",
     "continua",
     "prosegui",
+    "Ok adesso Prepara un invito a venire a fare una partita di calcio a giugno",
+    "invitali tutti a Milano",
+    "manda un invito a tutti",
+    "prepara invito a tutti questi partner",
   ])("riconosce: %s", (p) => {
     expect(isProceedIntent(p)).toBe(true);
   });
