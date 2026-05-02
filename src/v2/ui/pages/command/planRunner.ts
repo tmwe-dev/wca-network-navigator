@@ -286,5 +286,5 @@ export async function executeApprovedStep(
     return current;
   }
 
-  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber);
+  return executePlan(current, onStepUpdate, sorted[nextIdx].stepNumber, extras);
 }
