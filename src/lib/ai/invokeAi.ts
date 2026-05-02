@@ -62,6 +62,7 @@ export interface InvokeAiOptions<TBody = Record<string, unknown>> {
 /** Set delle edge function considerate "AI" — usato anche dal lint/audit. */
 export const AI_FUNCTION_NAMES = new Set<string>([
   "ai-assistant",
+  "super-mario",
   "agent-execute",
   "agent-loop",
   "agent-simulate",
