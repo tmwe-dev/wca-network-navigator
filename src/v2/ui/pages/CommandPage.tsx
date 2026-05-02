@@ -32,9 +32,9 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
-import { useRecentCommandPrompts } from "@/v2/hooks/useRecentCommandPrompts";
-import { useCommandBriefing } from "./command/hooks/useCommandBriefing";
-import BriefingPanel from "./command/components/BriefingPanel";
+// NB: BriefingPanel, useCommandBriefing e useRecentCommandPrompts intenzionalmente
+// non importati: lo stato vuoto della Command resta zen (solo titolo + orb + input).
+// I componenti restano sul filesystem per un futuro "next best action" ragionato.
 
 const CommandPage = () => {
   const nav = useNavigate();
