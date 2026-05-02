@@ -5,6 +5,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Archive, MessageSquare, PanelLeftClose, PanelLeft } from "lucide-react";
 import type { Conversation } from "@/v2/io/supabase/queries/conversations";
+import type { CommandJob } from "@/v2/io/supabase/queries/command-jobs";
+import CommandWorkQueue from "./components/CommandWorkQueue";
 
 interface Props {
   conversations: Conversation[];
@@ -12,6 +14,11 @@ interface Props {
   onSelect: (id: string) => void;
   onNew: () => void;
   onArchive: (id: string) => void;
+  jobs?: CommandJob[];
+  jobsLoading?: boolean;
+  activeJobId?: string | null;
+  onResumeJob?: (job: CommandJob) => void;
+  onArchiveJob?: (jobId: string) => void;
 }
 
 function timeAgo(iso: string): string {
@@ -31,6 +38,11 @@ export default function ConversationSidebar({
   onSelect,
   onNew,
   onArchive,
+  jobs = [],
+  jobsLoading = false,
+  activeJobId = null,
+  onResumeJob,
+  onArchiveJob,
 }: Props) {
   const [collapsed, setCollapsed] = useState(true);
 
@@ -74,8 +86,22 @@ export default function ConversationSidebar({
               </button>
             </div>
 
+            {/* Agenda lavori (Command Jobs) */}
+            {(onResumeJob || jobs.length > 0) && (
+              <CommandWorkQueue
+                jobs={jobs}
+                loading={jobsLoading}
+                activeJobId={activeJobId}
+                onResume={(j) => onResumeJob?.(j)}
+                onArchive={(id) => onArchiveJob?.(id)}
+              />
+            )}
+
             {/* List */}
             <div className="flex-1 overflow-y-auto px-2 pb-4">
+              <h3 className="px-3 pt-2 pb-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60 font-light">
+                Conversazioni
+              </h3>
               {conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center px-4">
                   <MessageSquare className="w-6 h-6 text-muted-foreground/30 mb-3" />
