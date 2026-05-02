@@ -490,6 +490,7 @@ export const composeEmailTool: Tool = {
     // Normalizza il prompt: se planRunner ha serializzato JSON, prendi il
     // testo naturale; se c'è originalPrompt nel context, ha priorità assoluta.
     prompt = resolveNaturalPrompt(prompt, context);
+    const payloadSelection = extractPartnersFromContextPayload(context?.payload);
     // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
     // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
     //         "non vedo le nuove versioni", "riscrivi più breve".
@@ -533,14 +534,18 @@ export const composeEmailTool: Tool = {
     // dopo una ricerca Query Planner che ha restituito partner. Eredita la
     // lista partnerIds e genera il batch usando il prompt corrente come goal.
     const queryCtx = getLastQueryResultContext();
-    if (queryCtx && isProceedIntent(prompt)) {
+    if ((queryCtx || payloadSelection.partnerIds.length > 0 || payloadSelection.countryCode) && isProceedIntent(prompt)) {
       let partners: PartnerRow[] = [];
-      if (queryCtx.partnerIds.length > 0) {
+      if (payloadSelection.partnerIds.length > 0) {
+        partners = await fetchPartnersByIds(payloadSelection.partnerIds);
+      } else if (queryCtx?.partnerIds.length) {
         partners = await fetchPartnersByIds(queryCtx.partnerIds);
-      } else if (queryCtx.filters && queryCtx.filters.length > 0) {
+      } else if (payloadSelection.countryCode) {
+        partners = await searchPartnersByCountry(payloadSelection.countryCode);
+      } else if (queryCtx?.filters && queryCtx.filters.length > 0) {
         // Rifa la query con i filtri reali (city=Amman, country_code=SA, …)
         partners = await fetchPartnersByFilters(queryCtx.filters);
-      } else if (queryCtx.countryCode) {
+      } else if (queryCtx?.countryCode) {
         partners = await searchPartnersByCountry(queryCtx.countryCode);
       }
       if (partners.length === 0) {
