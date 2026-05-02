@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown, Building2 } from "lucide-react";
+import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
