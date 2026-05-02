@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { findPendingOutreach, cancelActivity, cancelMissionAction, cancelPendingAction, updateActivitySchedule, updateMissionActionSchedule, logAuditEntry } from "@/data/outreachPipeline";
 import { queryKeys } from "@/lib/queryKeys";
 import { EmailPreviewPane, type EmailPreviewItem } from "./EmailPreviewPane";
+import { supabase } from "@/integrations/supabase/client";
 
 const CHANNEL_ICON: Record<string, typeof Mail> = { send_email: Mail, email: Mail, outreach: Mail, send_whatsapp: MessageCircle, whatsapp: MessageCircle, linkedin: Linkedin, phone: Phone };
 const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
@@ -26,11 +27,12 @@ const SOURCE_BADGE: Record<string, { label: string; color: string }> = {
   campaign: { label: "Campagna", color: "bg-blue-500/15 text-blue-400" },
   mission: { label: "Missione", color: "bg-amber-500/15 text-amber-500" },
   cadence: { label: "Cadence", color: "bg-purple-500/15 text-purple-400" },
+  bulk: { label: "Bulk", color: "bg-emerald-500/15 text-emerald-500" },
 };
 
 interface UnifiedItem {
   id: string;
-  type: "activity" | "mission_action" | "pending_action";
+  type: "activity" | "mission_action" | "pending_action" | "bulk_queue";
   email: string;
   partner_name: string;
   channel: string;
@@ -52,6 +54,20 @@ export function DaInviareSubTab() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.outreach.pending(),
     queryFn: findPendingOutreach,
+  });
+
+  const { data: bulkPending } = useQuery({
+    queryKey: ["outreach", "pending", "bulk"],
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from("email_campaign_queue")
+        .select("id, recipient_email, recipient_name, subject, html_body, status, scheduled_at, created_at, partner_id, draft_id")
+        .in("status", ["pending", "sending", "scheduled"])
+        .order("created_at", { ascending: false })
+        .limit(200);
+      return rows ?? [];
+    },
+    refetchInterval: 30000,
   });
 
   const items = useMemo((): UnifiedItem[] => {
@@ -88,6 +104,21 @@ export function DaInviareSubTab() {
         body: pa.suggested_content || "",
       });
     }
+    for (const b of bulkPending ?? []) {
+      result.push({
+        id: `bq-${b.id}`,
+        type: "bulk_queue",
+        email: b.recipient_email || "",
+        partner_name: b.recipient_name || "—",
+        channel: "send_email",
+        subject: b.subject || "(senza oggetto)",
+        source: "bulk",
+        scheduled_at: b.scheduled_at,
+        status: b.status,
+        created_at: b.created_at,
+        body: b.html_body || "",
+      });
+    }
 
     return result.sort((a, b) => {
       if (a.scheduled_at && b.scheduled_at) return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
@@ -95,7 +126,7 @@ export function DaInviareSubTab() {
       if (b.scheduled_at) return 1;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [data]);
+  }, [data, bulkPending]);
 
   const filtered = useMemo(() => {
     let list = items;
@@ -109,11 +140,15 @@ export function DaInviareSubTab() {
   const handleCancel = async (item: UnifiedItem) => {
     const realId = item.id.split("-").slice(1).join("-");
     try {
-      if (item.type === "activity") await cancelActivity(realId);
+      if (item.type === "bulk_queue") {
+        const { error } = await supabase.from("email_campaign_queue").update({ status: "cancelled" }).eq("id", realId);
+        if (error) throw error;
+      } else if (item.type === "activity") await cancelActivity(realId);
       else if (item.type === "mission_action") await cancelMissionAction(realId);
       else await cancelPendingAction(realId);
       await logAuditEntry({ action_category: "activity_deleted", action_detail: `Annullato: ${item.subject}`, decision_origin: "manual", target_type: item.type === "activity" ? "activity" : "mission" });
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending() });
+      qc.invalidateQueries({ queryKey: ["outreach", "pending", "bulk"] });
       toast.success("Annullato");
     } catch { toast.error("Errore annullamento"); }
   };
