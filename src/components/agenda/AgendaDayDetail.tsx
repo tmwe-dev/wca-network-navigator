@@ -20,8 +20,14 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { ActivityTypeFilter, ResponseFilter } from "./AgendaCalendarPage";
-export { ACTION_GROUPS, classifyAction } from "./agendaActionGroups";
 import type { AllActivity } from "@/hooks/useActivities";
+import {
+  ACTION_GROUPS,
+  classifyAction,
+  type ActionGroupDef,
+  type ActionGroupKey,
+} from "./agendaActionGroups";
+export { ACTION_GROUPS, classifyAction, verbForActivity } from "./agendaActionGroups";
 
 interface AgendaDayDetailProps {
   selectedDay: Date;
@@ -47,45 +53,6 @@ const channelIcon: Record<string, typeof Mail> = {
   phone_call: Phone,
   note: StickyNote,
 };
-
-/* ─────────────────────────────────────────────────────────────────────────────
- * Action grouping — l'agenda è organizzata per "cosa devi fare", non per tipo
- * tecnico. L'ordine dell'array determina anche l'ordine visivo dei gruppi.
- * ─────────────────────────────────────────────────────────────────────────── */
-type ActionGroupKey = "reply" | "send" | "call" | "decide";
-
-interface ActionGroupDef {
-  readonly key: ActionGroupKey;
-  readonly label: string;
-  readonly icon: typeof Mail;
-  readonly verb: string; // CTA azione primaria
-}
-
-const ACTION_GROUPS: readonly ActionGroupDef[] = [
-  { key: "reply",  label: "Da rispondere", icon: Reply,      verb: "Rispondi" },
-  { key: "send",   label: "Da inviare",    icon: Send,       verb: "Invia"    },
-  { key: "call",   label: "Da chiamare",   icon: PhoneCall,  verb: "Chiama"   },
-  { key: "decide", label: "Da decidere",   icon: HelpCircle, verb: "Apri"     },
-] as const;
-
-/**
- * Decide a quale gruppo appartiene un'attività.
- *
- * Heuristica:
- *  - 'reply':  l'attività rappresenta una risposta ricevuta a cui dobbiamo rispondere
- *              (titoli che cominciano con "Reply received" o tipo follow_up con
- *              il partner che ha risposto e l'attività ancora pending).
- *  - 'send':   send_email / follow_up pending in cui dobbiamo inviare noi.
- *  - 'call':   phone_call.
- *  - 'decide': tutto il resto (note, meeting, altro).
- */
-function classifyAction(a: AllActivity, partnerHasResponded: boolean): ActionGroupKey {
-  if (a.activity_type === "phone_call") return "call";
-  if (a.activity_type === "note" || a.activity_type === "meeting" || a.activity_type === "other") return "decide";
-  // email / follow_up / whatsapp / linkedin
-  if (partnerHasResponded || /^reply received/i.test(a.title || "")) return "reply";
-  return "send";
-}
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Priority by waiting time. La priorità nasce dal "da quanto aspetta", non da
