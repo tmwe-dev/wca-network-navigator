@@ -48,7 +48,8 @@ export type PromptLabTabId =
   | "operative_kb"
   | "administrative_kb"
   | "support_kb"
-  | "domain_routing"; // LOVABLE-93: coerenza Prompt Lab multi-dominio
+  | "domain_routing" // LOVABLE-93: coerenza Prompt Lab multi-dominio
+  | "super_mario";
 
 export interface PromptLabTabDef {
   id: PromptLabTabId;
@@ -78,6 +79,7 @@ export const PROMPT_LAB_TABS: readonly PromptLabTabDef[] = [
   { id: "administrative_kb", label: "Amministrativo", description: "KB procedure amministrative per dominio", activation: "Attive nel classify-email-response quando dominio = administrative: procedure fatture, pagamenti, autorizzazioni." },
   { id: "support_kb", label: "Supporto", description: "KB procedure supporto per dominio", activation: "Attive nel classify-email-response quando dominio = support: procedure reclami, assistenza, escalation." },
   { id: "domain_routing", label: "Routing Dominio", description: "Regole smistamento email per dominio", activation: "Attive nella classificazione email multi-dominio: mapping mittente/contenuto → dominio, priorità, SLA, agente specializzato." },
+  { id: "super_mario", label: "Super Mario", description: "AI Gateway unificato — toggle attivazione e osservatorio invocazioni", activation: "Quando attivo, sostituisce planner/regex del Command con super-mario edge: identità DB + KB filtrata per intent + memoria narrativa + hard guards + audit redatto in super_mario_invocations (retention 30gg)." },
 ] as const;
 
 /** Macroarea raggruppante (Livello 1 navigazione Prompt Lab). */
@@ -94,7 +96,7 @@ export interface PromptLabGroupDef {
 export const PROMPT_LAB_GROUPS: readonly PromptLabGroupDef[] = [
   { id: "core_ai", label: "Core AI", icon: "Brain", tabs: ["system_prompt", "kb_doctrine", "ai_profile", "journalists"] },
   { id: "communication", label: "Comunicazione", icon: "MessageSquare", tabs: ["email", "voice", "operative"] },
-  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "tests", "history", "audit", "routing"] },
+  { id: "strategy", label: "Strategia", icon: "Target", tabs: ["playbooks", "personas", "capabilities", "simulator", "tests", "history", "audit", "routing", "super_mario"] },
   // LOVABLE-93: coerenza Prompt Lab multi-dominio
   { id: "operations", label: "Operazioni", icon: "Package", tabs: ["operative_kb", "administrative_kb", "support_kb", "domain_routing"] },
 ] as const;
