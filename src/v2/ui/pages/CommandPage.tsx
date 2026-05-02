@@ -114,9 +114,27 @@ const CommandPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.messages.length]);
 
-  // Rehydrate visible chat from a selected stored conversation.
+  // Rehydrate visible chat ONLY when the user switches conversation
+  // (sidebar click / "Nuova conversazione"). We must NOT re-run on every
+  // `conv.messages.length` change, otherwise each new turn — which is now
+  // persisted via `conv.addMessage` — would overwrite the RAM messages with
+  // a duplicated DB snapshot, causing visible double-rendering.
+  const lastRehydratedConvIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!conv.conversationId || conv.messages.length === 0) return;
+    const id = conv.conversationId;
+    // Conversation cleared (new conversation): reset the marker so a future
+    // resume can rehydrate again.
+    if (!id) {
+      lastRehydratedConvIdRef.current = null;
+      return;
+    }
+    // Already rehydrated this conversation — do nothing on subsequent
+    // message appends (those are already in RAM via addMessage).
+    if (lastRehydratedConvIdRef.current === id) return;
+    if (conv.messages.length === 0) return;
+
+    lastRehydratedConvIdRef.current = id;
+
     const visible: Message[] = conv.messages
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m, idx) => ({
