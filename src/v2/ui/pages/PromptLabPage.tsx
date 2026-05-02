@@ -80,6 +80,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
+import { PageTitleHint } from "@/v2/ui/atoms/PageTitleHint";
 
 const GROUP_ICONS: Record<PromptLabGroupId, LucideIcon> = {
   core_ai: Brain,
@@ -176,13 +177,13 @@ export function PromptLabPage() {
               onValueChange={handleGroupChange}
               className="flex-1 flex flex-col min-h-0"
             >
+              <PageTitleHint
+                title="Prompt Lab"
+                hint="Configura i prompt operativi degli agenti AI. Modifica un blocco a sinistra, salva o chiedi di migliorarlo con AI. Le modifiche sono in produzione, usa Review prima di accettare suggerimenti automatici."
+                right={<MetricsSummaryBadge />}
+              />
               <div className="flex items-center justify-between border-b bg-background flex-shrink-0 pr-2">
                 <TabsList className="rounded-none justify-start h-auto p-0 bg-transparent gap-0">
-                  <div className="flex items-center gap-1.5 px-3 border-r border-border/40 mr-1">
-                    <FlaskConical className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[11px] font-semibold leading-none">Prompt Lab</span>
-                    <MetricsSummaryBadge />
-                  </div>
                   {PROMPT_LAB_GROUPS.map((g) => {
                     const Icon = GROUP_ICONS[g.id];
                     return (

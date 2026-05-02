@@ -252,14 +252,14 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
           <Route path="ai-staff/email-forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
-          <Route path="prompt-lab" element={<Navigate to="/v2/intelligence/prompt-lab" replace />} />
+          <Route path="prompt-lab" element={<Navigate to="/v2/settings/prompt-lab" replace />} />
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
           <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
           <Route path="ai-interactions-log" element={guardedPage(AiInteractionLogPage, "AiInteractionLog")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
-          <Route path="knowledge-base" element={<Navigate to="/v2/intelligence/kb" replace />} />
-          <Route path="kb-supervisor" element={<Navigate to="/v2/intelligence/kb" replace />} />
+          <Route path="knowledge-base" element={<Navigate to="/v2/settings/kb" replace />} />
+          <Route path="kb-supervisor" element={<Navigate to="/v2/settings/kb" replace />} />
           <Route path="ai-lab" element={<Navigate to="/v2/ai-staff/lab" replace />} />
 
           {/* Research */}

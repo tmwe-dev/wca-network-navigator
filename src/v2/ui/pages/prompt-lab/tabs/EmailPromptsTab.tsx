@@ -4,6 +4,8 @@
 import { useCallback, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { SplitBlockEditor } from "../SplitBlockEditor";
 import { usePromptLabBlocks } from "../hooks/usePromptLabBlocks";
 import { useLabAgent } from "../hooks/useLabAgent";
@@ -157,6 +159,9 @@ function AddressRulesSection() {
   const { user } = useAuth();
   const userId = user?.id ?? "";
   const [saving, setSaving] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
   const lab = useLabAgent();
 
   const state = usePromptLabBlocks(async (): Promise<Block[]> => {
@@ -207,17 +212,49 @@ function AddressRulesSection() {
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
   if (state.blocks.length === 0)
     return <div className="p-4 text-sm text-muted-foreground">Nessuna regola indirizzo configurata.</div>;
+
+  // Filtro: applicato solo se la query è ≥ 4 caratteri (su email/azienda nel label).
+  const q = query.trim().toLowerCase();
+  const filtered = q.length >= 4
+    ? state.blocks.filter((b) => b.label.toLowerCase().includes(q))
+    : state.blocks;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
   return (
-    <div className="h-full min-h-0">
-      <SplitBlockEditor
-        blocks={state.blocks}
-        onChange={state.updateContent}
-        onAccept={state.acceptImproved}
-        onDiscard={state.discardImproved}
-        onImprove={onImprove}
-        onSave={onSave}
-        saving={saving}
-      />
+    <div className="flex flex-col h-full min-h-0 gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0 px-1">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setPage(0); }}
+            placeholder="Cerca per email o azienda (min. 4 caratteri)…"
+            className="h-8 pl-7 text-xs"
+          />
+        </div>
+        <div className="text-[11px] text-muted-foreground whitespace-nowrap">
+          {filtered.length} regole · pagina {safePage + 1}/{totalPages}
+        </div>
+        <Button size="sm" variant="ghost" disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} className="h-7 px-2 text-xs">
+          ← Prec
+        </Button>
+        <Button size="sm" variant="ghost" disabled={safePage >= totalPages - 1} onClick={() => setPage((p) => p + 1)} className="h-7 px-2 text-xs">
+          Succ →
+        </Button>
+      </div>
+      <div className="flex-1 min-h-0">
+        <SplitBlockEditor
+          blocks={visible}
+          onChange={state.updateContent}
+          onAccept={state.acceptImproved}
+          onDiscard={state.discardImproved}
+          onImprove={onImprove}
+          onSave={onSave}
+          saving={saving}
+        />
+      </div>
     </div>
   );
 }
