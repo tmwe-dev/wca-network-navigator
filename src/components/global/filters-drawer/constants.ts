@@ -109,10 +109,23 @@ export const SORTING_FILTERS: { key: SortingFilterMode; label: string }[] = [
 
 export const NETWORK_SORT = [
   { value: "name", label: "Nome" },
+  { value: "country", label: "Paese" },
+  { value: "partner_count", label: "N° partner/paese" },
   { value: "rating", label: "Rating" },
   { value: "recent", label: "Più recenti" },
 ];
 
+// Toggle qualità: ogni voce ha "con" e "senza", esposti come righe verticali.
+// `withValue`/`withoutValue` sono i valori che vengono salvati in
+// `g.filters.networkQuality` (tristate: "all" | <withValue> | <withoutValue>).
+export const NETWORK_QUALITY_TOGGLES = [
+  { key: "email",    icon: "📧", label: "Email",    withValue: "with_email",    withoutValue: "no_email" },
+  { key: "phone",    icon: "📱", label: "Telefono", withValue: "with_phone",    withoutValue: "no_phone" },
+  { key: "profile",  icon: "🔗", label: "Profilo",  withValue: "with_profile",  withoutValue: "no_profile" },
+  { key: "contacts", icon: "👤", label: "Contatti", withValue: "with_contacts", withoutValue: "no_contacts" },
+] as const;
+
+// Manteniamo NETWORK_QUALITY per compat con NetworkFilterSlot legacy.
 export const NETWORK_QUALITY = [
   { value: "all", label: "Tutti" },
   { value: "with_email", label: "📧 Con email" },

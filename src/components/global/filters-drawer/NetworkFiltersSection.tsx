@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown } from "lucide-react";
+import { Search, Sparkles, Globe, Check, Users, RefreshCw, ArrowUpDown, Plus, Minus } from "lucide-react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
 import { useCountryStats } from "@/hooks/useCountryStats";
 import { getCountryFlag } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { NETWORK_QUALITY, NETWORK_SORT } from "./constants";
+import { NETWORK_QUALITY_TOGGLES, NETWORK_SORT } from "./constants";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("NetworkFiltersSection");
@@ -147,6 +147,14 @@ export function NetworkFiltersSection() {
         )}
       </FilterSection>
 
+      <FilterSection icon={ArrowUpDown} label="Ordina partner">
+        <ChipGroup columns={3}>
+          {NETWORK_SORT.map(o => (
+            <Chip key={o.value} block active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>
+          ))}
+        </ChipGroup>
+      </FilterSection>
+
       <FilterSection
         icon={Globe}
         label="Paesi"
@@ -213,20 +221,65 @@ export function NetworkFiltersSection() {
         </div>
       </FilterSection>
 
-      <FilterSection icon={Sparkles} label="Qualità dati">
-        <ChipGroup columns={2}>
-          {NETWORK_QUALITY.map(o => (
-            <Chip key={o.value} block active={g.filters.networkQuality === o.value} onClick={() => g.setNetworkQuality(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
-      <FilterSection icon={ArrowUpDown} label="Ordina partner">
-        <ChipGroup columns={3}>
-          {NETWORK_SORT.map(o => (
-            <Chip key={o.value} block active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
+      <FilterSection
+        icon={Sparkles}
+        label="Qualità dati"
+        trailing={
+          g.filters.networkQuality !== "all" ? (
+            <button
+              onClick={() => g.setNetworkQuality("all")}
+              className="text-[10px] font-semibold text-primary hover:underline"
+            >
+              Reset
+            </button>
+          ) : null
+        }
+      >
+        <div className="rounded-lg border border-border bg-background/40 overflow-hidden divide-y divide-border/40">
+          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-3 py-1.5 bg-muted/30 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Campo</span>
+            <span className="w-9 text-center">Con</span>
+            <span className="w-9 text-center">Senza</span>
+          </div>
+          {NETWORK_QUALITY_TOGGLES.map((t) => {
+            const isWith = g.filters.networkQuality === t.withValue;
+            const isWithout = g.filters.networkQuality === t.withoutValue;
+            return (
+              <div key={t.key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-3 py-1.5">
+                <div className="flex items-center gap-2 text-xs">
+                  <span>{t.icon}</span>
+                  <span className="font-medium">{t.label}</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Solo con ${t.label}`}
+                  onClick={() => g.setNetworkQuality(isWith ? "all" : t.withValue)}
+                  className={cn(
+                    "h-6 w-9 rounded-md border flex items-center justify-center transition-all",
+                    isWith
+                      ? "bg-primary/15 border-primary text-primary"
+                      : "border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Solo senza ${t.label}`}
+                  onClick={() => g.setNetworkQuality(isWithout ? "all" : t.withoutValue)}
+                  className={cn(
+                    "h-6 w-9 rounded-md border flex items-center justify-center transition-all",
+                    isWithout
+                      ? "bg-destructive/15 border-destructive text-destructive"
+                      : "border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </FilterSection>
 
       <FilterSection icon={RefreshCw} label="Azioni">
