@@ -155,6 +155,20 @@ export async function findPartnersByCountry(countryCode: string): Promise<Partne
   );
 }
 
+/**
+ * Preview lightweight: primi N partner ordinati per nome, senza paginazione totale.
+ * Usato come "default" quando non sono selezionati paesi (evita di scaricare 12k righe).
+ */
+export async function findPartnersPreview(limit = 50): Promise<PartnerWithRelations[]> {
+  const { data, error } = await supabase
+    .from("partners")
+    .select(PARTNER_LIST_SELECT)
+    .order("company_name", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as PartnerWithRelations[];
+}
+
 export async function getPartner(id: string) {
   const { data, error } = await supabase
     .from("partners")
