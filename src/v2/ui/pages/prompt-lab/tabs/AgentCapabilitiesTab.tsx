@@ -40,7 +40,7 @@ const EXEC_MODES = [
 ] as const;
 
 const MODELS = [
-  { value: "", label: "Default funzione (gemini-2.5-flash)" },
+  { value: "__default__", label: "Default funzione (gemini-2.5-flash)" },
   { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (veloce)" },
   { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (ragionamento)" },
   { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
