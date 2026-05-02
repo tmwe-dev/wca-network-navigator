@@ -33,8 +33,8 @@ export interface GlobalFilterState {
   agendaChannel: string;
   /** Agenda — stato risposta ("all" | "responded" | "no_response") */
   agendaResponse: string;
-  /** Agenda — giorno selezionato (ISO date string YYYY-MM-DD); null = oggi */
-  agendaDay: string | null;
+  /** Agenda — giorni selezionati (ISO YYYY-MM-DD); vuoto = oggi */
+  agendaDays: string[];
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
@@ -96,7 +96,7 @@ const defaults: GlobalFilterState = {
   agendaPriority: "all",
   agendaChannel: "all",
   agendaResponse: "all",
-  agendaDay: null,
+  agendaDays: [],
   networkSearch: "",
   networkQuality: "all",
   networkSort: "name",

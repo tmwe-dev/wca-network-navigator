@@ -1,11 +1,11 @@
-import { Search, ListTodo, Zap, Calendar as CalendarIcon, Mail, MessageCircle, Linkedin, Phone, StickyNote, MessageSquare } from "lucide-react";
+import { Search, Zap, Calendar as CalendarIcon, Mail, MessageCircle, Linkedin, Phone, StickyNote, MessageSquare, ListTodo } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useReminders } from "@/hooks/useReminders";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { ATTIVITA_PRIORITY } from "./constants";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths,
@@ -14,13 +14,6 @@ import {
 import { it } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const AGENDA_TYPES = [
-  { value: "all", label: "Tutti" },
-  { value: "reminder", label: "Promemoria" },
-  { value: "activity", label: "Attività" },
-  { value: "followup", label: "Follow-up" },
-];
 
 const CHANNEL_OPTIONS = [
   { value: "all", label: "Tutti", icon: Mail },
@@ -40,8 +33,10 @@ const RESPONSE_OPTIONS = [
 function MiniCalendar() {
   const g = useGlobalFilters();
   const { data: reminders } = useReminders();
-  const selectedDay = g.filters.agendaDay ? parseISO(g.filters.agendaDay) : new Date();
-  const [currentMonth, setCurrentMonth] = useState<Date>(selectedDay);
+  const selectedDays = g.filters.agendaDays;
+  const selectedSet = useMemo(() => new Set(selectedDays), [selectedDays]);
+  const anchorDay = selectedDays[0] ? parseISO(selectedDays[0]) : new Date();
+  const [currentMonth, setCurrentMonth] = useState<Date>(anchorDay);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -52,7 +47,17 @@ function MiniCalendar() {
   const getRemindersCount = (day: Date) =>
     reminders?.filter((r) => isSameDay(new Date(r.due_date), day)).length || 0;
 
-  const setDay = (d: Date) => g.setFilter("agendaDay", format(d, "yyyy-MM-dd"));
+  const toggleDay = (d: Date) => {
+    const key = format(d, "yyyy-MM-dd");
+    const next = selectedSet.has(key)
+      ? selectedDays.filter(x => x !== key)
+      : [...selectedDays, key].sort();
+    g.setFilter("agendaDays", next);
+  };
+  const goToday = () => {
+    setCurrentMonth(new Date());
+    g.setFilter("agendaDays", [format(new Date(), "yyyy-MM-dd")]);
+  };
 
   return (
     <div>
@@ -64,7 +69,7 @@ function MiniCalendar() {
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} aria-label="Mese precedente">
             <ChevronLeft className="w-3 h-3" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => { setCurrentMonth(new Date()); setDay(new Date()); }}>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={goToday}>
             Oggi
           </Button>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} aria-label="Mese successivo">
@@ -80,14 +85,15 @@ function MiniCalendar() {
       </div>
 
       <div className="grid grid-cols-7 gap-px">
-        {days.map((day) => {
-          const isSelected = isSameDay(day, selectedDay);
+          {days.map((day) => {
+            const key = format(day, "yyyy-MM-dd");
+            const isSelected = selectedSet.has(key) || (selectedDays.length === 0 && isToday(day));
           const isCurrent = isSameMonth(day, currentMonth);
           const count = getRemindersCount(day);
           return (
             <button
               key={day.toISOString()}
-              onClick={() => setDay(day)}
+                onClick={() => toggleDay(day)}
               className={cn(
                 "relative flex flex-col items-center py-1.5 rounded-md transition-all text-[11px]",
                 !isCurrent && "opacity-30",
@@ -104,6 +110,11 @@ function MiniCalendar() {
           );
         })}
       </div>
+      {selectedDays.length > 1 && (
+        <p className="text-[9px] text-muted-foreground mt-2 text-center">
+          {selectedDays.length} giorni selezionati · click per togliere
+        </p>
+      )}
     </div>
   );
 }
@@ -137,14 +148,6 @@ export function AgendaFiltersSection() {
             <Chip key={o.value} active={g.filters.agendaResponse === o.value} onClick={() => g.setFilter("agendaResponse", o.value)}>
               {o.label}
             </Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
-      <FilterSection icon={ListTodo} label="Tipo">
-        <ChipGroup>
-          {AGENDA_TYPES.map(o => (
-            <Chip key={o.value} active={g.filters.agendaType === o.value} onClick={() => g.setAgendaType(o.value)}>{o.label}</Chip>
           ))}
         </ChipGroup>
       </FilterSection>
