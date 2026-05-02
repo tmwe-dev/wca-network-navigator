@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
-  Calendar as CalendarIcon, ArrowUpRight, Reply, Send, PhoneCall, HelpCircle,
+  Calendar as CalendarIcon, ArrowUpRight,
   Check, Clock, UserPlus, Archive,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
