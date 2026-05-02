@@ -392,7 +392,10 @@ export const composeEmailTool: Tool = {
     return false;
   },
 
-  async execute(prompt: string): Promise<ToolResult> {
+  async execute(prompt: string, context): Promise<ToolResult> {
+    // Normalizza il prompt: se planRunner ha serializzato JSON, prendi il
+    // testo naturale; se c'è originalPrompt nel context, ha priorità assoluta.
+    prompt = resolveNaturalPrompt(prompt, context);
     // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
     // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
     //         "non vedo le nuove versioni", "riscrivi più breve".
