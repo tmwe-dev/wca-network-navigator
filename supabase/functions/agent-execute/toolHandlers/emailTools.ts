@@ -59,10 +59,10 @@ export async function handleSendEmail(
     }
   }
 
-  // ── GIORNALISTA AI: review pre-invio ──
+  // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
   try {
     const optimus = await loadOptimusSettings(supabase, userId);
-    if (optimus.enabled && args.html_body) {
+    if (args.html_body) {
       let leadStatus = "new";
       let companyName: string | null = null;
       if (partnerId) {
@@ -158,10 +158,10 @@ export async function handleSendWhatsApp(
     if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
   }
 
-  // ── GIORNALISTA AI: review pre-invio WhatsApp ──
+  // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
   try {
     const optimus = await loadOptimusSettings(supabase, userId);
-    if (optimus.enabled && args.message) {
+    if (args.message) {
       const review = await journalistReview(supabase, userId, {
         final_draft: String(args.message),
         resolved_brief: {},
