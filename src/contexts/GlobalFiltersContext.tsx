@@ -29,6 +29,12 @@ export interface GlobalFilterState {
   attivitaPriority: string;
   agendaType: string;
   agendaPriority: string;
+  /** Agenda — canale attività ("all" | "send_email" | "whatsapp" | "linkedin" | "phone_call" | "note") */
+  agendaChannel: string;
+  /** Agenda — stato risposta ("all" | "responded" | "no_response") */
+  agendaResponse: string;
+  /** Agenda — giorno selezionato (ISO date string YYYY-MM-DD); null = oggi */
+  agendaDay: string | null;
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
@@ -88,6 +94,9 @@ const defaults: GlobalFilterState = {
   attivitaPriority: "all",
   agendaType: "all",
   agendaPriority: "all",
+  agendaChannel: "all",
+  agendaResponse: "all",
+  agendaDay: null,
   networkSearch: "",
   networkQuality: "all",
   networkSort: "name",

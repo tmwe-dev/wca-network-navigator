@@ -19,7 +19,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti") || seg.startsWith("/explore/biglietti");
   const isCRM = isCrmContactsRoute || isBcaRoute;
   const crmDrawerTab = isBcaRoute ? "biglietti" : "contatti";
-  const isAgenda = seg === `/${ROUTE_AGENDA}`;
+  const isAgenda = seg === `/${ROUTE_AGENDA}` || seg.startsWith("/pipeline/agenda");
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
   const isCampaigns = seg === "/campaigns";
   const isInreach = seg === `/${ROUTE_INREACH}`;
@@ -97,6 +97,9 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isAgenda) {
       if (g.filters.agendaType !== "all") n++;
       if (g.filters.agendaPriority !== "all") n++;
+      if (g.filters.agendaChannel !== "all") n++;
+      if (g.filters.agendaResponse !== "all") n++;
+      if (g.filters.agendaDay) n++;
     }
     if (isEmail) {
       if (g.filters.emailCategory !== "all") n++;
@@ -136,7 +139,14 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isCodaAI) { g.setAttivitaPriority("all"); g.setSearch(""); }
     if (isABTest) { g.setSortingFilter("all"); g.setSearch(""); }
     if (isArena) { g.setSearch("all"); g.setInreachChannel("email"); }
-    if (isAgenda) { g.setAgendaType("all"); g.setAgendaPriority("all"); g.setSearch(""); }
+    if (isAgenda) {
+      g.setAgendaType("all");
+      g.setAgendaPriority("all");
+      g.setSearch("");
+      g.setFilter("agendaChannel", "all");
+      g.setFilter("agendaResponse", "all");
+      g.setFilter("agendaDay", null);
+    }
     if (isEmail || isWhatsApp || isLinkedIn) { g.setSortingFilter("all"); g.setEmailCategory("all"); g.setEmailSort("date_desc"); g.setSortBy("date_desc"); g.setSortingSearch(""); }
     if (isWorkspace) { g.setWorkspaceFilters(new Set()); g.setEmailGenFilter("all"); g.setSearch(""); }
     if (isInUscita) { g.setSortingFilter("all"); g.setSortingSearch(""); }
