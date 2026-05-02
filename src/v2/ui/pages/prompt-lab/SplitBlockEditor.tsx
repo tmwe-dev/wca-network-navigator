@@ -1,14 +1,16 @@
 /**
  * SplitBlockEditor — Componente core per Prompt Lab.
- * Carousel orizzontale: un blocco alla volta a piena altezza.
- * Sinistra: editabile. Destra: proposta AI con accept/discard.
+ * Layout: lista verticale dei blocchi a sinistra + editor full-width a destra.
+ * Quando l'AI propone una versione migliorata, mostra un diff inline (linee
+ * verdi/rosse) sotto/sopra l'editor invece di due colonne separate.
  */
 import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Check, X, Sparkles, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, X, Sparkles, Save } from "lucide-react";
 import type { Block } from "./types";
 import { cn } from "@/lib/utils";
+import { diffLines } from "diff";
 
 interface SplitBlockEditorProps {
   blocks: ReadonlyArray<Block>;
@@ -29,31 +31,19 @@ export function SplitBlockEditor({
   onSave,
   saving,
 }: SplitBlockEditorProps) {
-  const [index, setIndex] = React.useState(0);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [showDiff, setShowDiff] = React.useState(true);
 
-  // Clamp index quando la lista cambia
+  // Mantieni una selezione valida quando cambia la lista
   React.useEffect(() => {
-    if (index > blocks.length - 1) setIndex(Math.max(0, blocks.length - 1));
-  }, [blocks.length, index]);
-
-  const go = React.useCallback(
-    (delta: number) => {
-      if (blocks.length === 0) return;
-      setIndex((i) => (i + delta + blocks.length) % blocks.length);
-    },
-    [blocks.length],
-  );
-
-  // Navigazione tastiera (← →)
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && ["TEXTAREA", "INPUT"].includes(e.target.tagName)) return;
-      if (e.key === "ArrowLeft") go(-1);
-      else if (e.key === "ArrowRight") go(1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [go]);
+    if (blocks.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !blocks.some((b) => b.id === selectedId)) {
+      setSelectedId(blocks[0].id);
+    }
+  }, [blocks, selectedId]);
 
   if (blocks.length === 0) {
     return (
@@ -63,144 +53,182 @@ export function SplitBlockEditor({
     );
   }
 
-  const block = blocks[Math.min(index, blocks.length - 1)];
+  const block = blocks.find((b) => b.id === selectedId) ?? blocks[0];
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Toolbar carousel: prev / titolo+contatore / next */}
-      <div className="flex items-center justify-between gap-2 pb-1.5 border-b mb-2 flex-shrink-0">
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2"
-          onClick={() => go(-1)}
-          disabled={blocks.length < 2}
-          aria-label="Blocco precedente"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
-          <span className="text-xs font-semibold truncate">{block.label}</span>
-          {block.dirty && <span className="text-amber-600 text-xs">●</span>}
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {index + 1} / {blocks.length}
-          </span>
+    <div className="flex h-full min-h-0 gap-3">
+      {/* SIDEBAR — lista blocchi */}
+      <aside className="w-56 flex-shrink-0 flex flex-col min-h-0 border rounded-md bg-card/30">
+        <div className="px-2.5 py-1.5 border-b text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Blocchi · {blocks.length}
         </div>
-
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2"
-          onClick={() => go(1)}
-          disabled={blocks.length < 2}
-          aria-label="Blocco successivo"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Indicatori (puntini) — solo se pochi blocchi */}
-      {blocks.length > 1 && blocks.length <= 20 && (
-        <div className="flex items-center justify-center gap-1 pb-1.5 flex-shrink-0 flex-wrap">
-          {blocks.map((b, i) => (
-            <button
-              key={b.id}
-              onClick={() => setIndex(i)}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === index ? "w-6 bg-primary" : "w-1.5 bg-muted hover:bg-muted-foreground/40",
-              )}
-              aria-label={`Vai al blocco ${i + 1}: ${b.label}`}
-              title={b.label}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto p-1">
+          {blocks.map((b, i) => {
+            const isActive = b.id === block.id;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => setSelectedId(b.id)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors",
+                  isActive
+                    ? "bg-primary/15 text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                )}
+                title={b.label}
+              >
+                <span className="tabular-nums text-[10px] text-muted-foreground/70 w-4 flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span className="truncate flex-1">{b.label}</span>
+                {b.improved && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0"
+                    title="Versione migliorata pronta"
+                  />
+                )}
+                {b.dirty && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"
+                    title="Modifiche non salvate"
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </aside>
 
-      {/* Pannello blocco corrente — split sinistra/destra a piena altezza */}
-      <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
-        {/* LEFT: editable */}
-        <div className="flex flex-col min-h-0 gap-1">
-          <div className="flex items-center justify-between gap-2 flex-shrink-0">
-            <label className="text-xs font-medium text-muted-foreground">Originale</label>
-            <div className="flex items-center gap-1">
-              {onImprove && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => onImprove(block.id)}
-                >
-                  <Sparkles className="h-3 w-3" /> Migliora
-                </Button>
-              )}
-              {onSave && block.dirty && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs"
-                  disabled={saving === block.id}
-                  onClick={() => onSave(block.id)}
-                >
-                  <Save className="h-3 w-3" /> {saving === block.id ? "..." : "Salva"}
-                </Button>
-              )}
-            </div>
-          </div>
-          {block.hint && (
-            <p className="text-[10px] text-muted-foreground flex-shrink-0">{block.hint}</p>
-          )}
-          <Textarea
-            value={block.content}
-            onChange={(e) => onChange(block.id, e.target.value)}
-            className="font-mono text-[13px] leading-relaxed flex-1 min-h-0 resize-none p-3"
-          />
-        </div>
-
-        {/* RIGHT: improved */}
-        <div
-          className={cn(
-            "rounded-md p-3 relative border flex flex-col min-h-0",
-            block.improved
-              ? "bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800"
-              : "bg-muted/30 border-dashed",
-          )}
-        >
-          <label className="text-xs font-medium text-green-700 dark:text-green-400 flex-shrink-0 mb-1">
-            Versione migliorata
-          </label>
-          <div className="font-mono text-[13px] leading-relaxed whitespace-pre-wrap pr-16 flex-1 min-h-0 overflow-auto">
-            {block.improved ?? (
-              <span className="text-muted-foreground italic">
-                Nessun miglioramento — usa la chat o il pulsante Migliora
-              </span>
+      {/* MAIN — editor full-width + diff inline */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-0 gap-2">
+        {/* Toolbar blocco selezionato */}
+        <div className="flex items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-sm font-semibold truncate">{block.label}</h3>
+            {block.dirty && (
+              <span className="text-[10px] text-amber-600 font-medium">non salvato</span>
             )}
           </div>
-          {block.improved && (
-            <div className="absolute top-2 right-2 flex gap-1">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {block.improved && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => onAccept(block.id)}
-                title="Accetta"
+                className="h-7 px-2 text-xs"
+                onClick={() => setShowDiff((v) => !v)}
+                title="Mostra/nascondi diff"
               >
-                <Check className="h-3 w-3 text-green-700" />
+                {showDiff ? "Nascondi diff" : "Mostra diff"}
               </Button>
+            )}
+            {onImprove && (
               <Button
                 size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => onDiscard(block.id)}
-                title="Scarta"
+                variant="outline"
+                className="h-7 px-2.5 text-xs gap-1"
+                onClick={() => onImprove(block.id)}
+                disabled={saving === block.id}
               >
-                <X className="h-3 w-3 text-destructive" />
+                <Sparkles className="h-3 w-3" />
+                {saving === block.id ? "..." : "Migliora con AI"}
               </Button>
-            </div>
-          )}
+            )}
+            {onSave && (
+              <Button
+                size="sm"
+                className="h-7 px-2.5 text-xs gap-1"
+                disabled={!block.dirty || saving === block.id}
+                onClick={() => onSave(block.id)}
+              >
+                <Save className="h-3 w-3" />
+                Salva
+              </Button>
+            )}
+          </div>
         </div>
+
+        {block.hint && (
+          <p className="text-[10px] text-muted-foreground flex-shrink-0">{block.hint}</p>
+        )}
+
+        {/* Editor full-width */}
+        <Textarea
+          value={block.content}
+          onChange={(e) => onChange(block.id, e.target.value)}
+          className={cn(
+            "font-mono text-[13px] leading-relaxed resize-none p-3 min-h-0",
+            block.improved && showDiff ? "flex-[1.2]" : "flex-1",
+          )}
+        />
+
+        {/* Diff inline + accept/discard */}
+        {block.improved && showDiff && (
+          <div className="flex flex-col min-h-0 flex-[1.5] border border-green-300 dark:border-green-800 rounded-md bg-green-50/50 dark:bg-green-950/20 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-green-200 dark:border-green-900 bg-green-100/50 dark:bg-green-950/40 flex-shrink-0">
+              <span className="text-xs font-semibold text-green-800 dark:text-green-300">
+                Proposta AI · diff inline
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs gap-1 text-green-700 dark:text-green-400 hover:bg-green-200/50"
+                  onClick={() => onAccept(block.id)}
+                >
+                  <Check className="h-3 w-3" /> Accetta
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs gap-1 text-destructive hover:bg-destructive/10"
+                  onClick={() => onDiscard(block.id)}
+                >
+                  <X className="h-3 w-3" /> Scarta
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto font-mono text-[12px] leading-relaxed">
+              <InlineDiff original={block.content} improved={block.improved} />
+            </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Render diff line-by-line: verde (aggiunto), rosso (rimosso), neutro (invariato). */
+function InlineDiff({ original, improved }: { original: string; improved: string }): React.ReactElement {
+  const parts = React.useMemo(() => diffLines(original, improved), [original, improved]);
+  return (
+    <div className="divide-y divide-border/30">
+      {parts.map((p, i) => {
+        const lines = p.value.replace(/\n$/, "").split("\n");
+        const bg = p.added
+          ? "bg-green-100/70 dark:bg-green-900/30"
+          : p.removed
+            ? "bg-red-100/70 dark:bg-red-900/30"
+            : "bg-transparent";
+        const prefix = p.added ? "+" : p.removed ? "−" : " ";
+        const prefixColor = p.added
+          ? "text-green-700 dark:text-green-400"
+          : p.removed
+            ? "text-red-700 dark:text-red-400"
+            : "text-muted-foreground/40";
+        return (
+          <div key={i} className={cn("py-0.5", bg)}>
+            {lines.map((ln, j) => (
+              <div key={j} className="flex items-start px-3">
+                <span className={cn("inline-block w-4 select-none flex-shrink-0", prefixColor)}>{prefix}</span>
+                <span className={cn("whitespace-pre-wrap break-words flex-1", p.removed && "line-through opacity-70")}>
+                  {ln || "\u00A0"}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

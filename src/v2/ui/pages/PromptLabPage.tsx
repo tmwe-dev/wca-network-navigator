@@ -16,6 +16,14 @@ import { RunHistoryPanel } from "./prompt-lab/RunHistoryPanel";
 import { MetricsSummaryBadge } from "./prompt-lab/MetricsSummaryBadge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLabAgent } from "./prompt-lab/hooks/useLabAgent";
 import { useSuggestedImprovements } from "./prompt-lab/hooks/useSuggestedImprovements";
 import { useAuth } from "@/providers/AuthProvider";
@@ -67,6 +75,7 @@ import {
   TestTube2,
   History,
   Library,
+  MoreHorizontal,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -165,18 +174,8 @@ export function PromptLabPage() {
                 <FlaskConical className="h-4 w-4 text-primary flex-shrink-0" />
                 <h1 className="text-sm font-semibold leading-none">Prompt Lab</h1>
                 <MetricsSummaryBadge />
-                <span className="text-[11px] text-muted-foreground truncate hidden md:inline">— {activeTab.description}</span>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1.5"
-                  onClick={() => setCreateBlockOpen(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Nuovo
-                </Button>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
                   <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
                     <BookmarkPlus className="h-3.5 w-3.5" />
@@ -188,48 +187,52 @@ export function PromptLabPage() {
                     )}
                   </Link>
                 </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
-                  <Link to="/v2/prompt-lab/atlas" title="Mappa visuale agenti × prompt × KB">
-                    <Network className="h-3.5 w-3.5" />
-                    Atlas
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5">
-                  <Link to="/v2/prompt-lab/catalog" title="Catalogo prompt: versione, autore, orchestratori, input">
-                    <Library className="h-3.5 w-3.5" />
-                    Catalog
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 gap-1.5"
-                  onClick={() => setHistoryPanelOpen(true)}
-                  title="Storico dei run Migliora tutto"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  Storico
-                </Button>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-8 gap-1.5 px-4 font-semibold"
-                  onClick={() => setGlobalImproverOpen(true)}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Migliora tutto
-                </Button>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-8 gap-1.5 px-4 font-semibold bg-primary/90 hover:bg-primary"
-                  onClick={() => setHarmonizeOpen(true)}
-                  title="Refactor profondo del sistema: confronta DB reale vs libreria desiderata"
-                >
-                  <Layers className="h-4 w-4" />
-                  Armonizza tutto
-                </Button>
-                <ExportButton getSnapshot={handleExport} />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Altre azioni">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Azioni AI globali
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setGlobalImproverOpen(true)}>
+                      <Sparkles className="h-3.5 w-3.5 mr-2" /> Migliora tutto
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setHarmonizeOpen(true)}>
+                      <Layers className="h-3.5 w-3.5 mr-2" /> Armonizza tutto
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Gestione
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setCreateBlockOpen(true)}>
+                      <Plus className="h-3.5 w-3.5 mr-2" /> Nuovo blocco
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setHistoryPanelOpen(true)}>
+                      <Clock className="h-3.5 w-3.5 mr-2" /> Storico run
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Esplora
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link to="/v2/prompt-lab/atlas">
+                        <Network className="h-3.5 w-3.5 mr-2" /> Atlas
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/v2/prompt-lab/catalog">
+                        <Library className="h-3.5 w-3.5 mr-2" /> Catalog
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1">
+                      <ExportButton getSnapshot={handleExport} />
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </header>
 
@@ -263,9 +266,6 @@ export function PromptLabPage() {
                   onChange={(v) => setActiveTabId(v as PromptLabTabId)}
                 />
                 <div className="flex-1 px-3 pt-2 pb-3 min-w-0 min-h-0 flex flex-col overflow-hidden">
-                  <div className="mb-2 rounded border bg-muted/30 px-2.5 py-1 text-[11px] leading-tight text-muted-foreground flex-shrink-0">
-                    <span className="font-medium text-foreground">Dove si attiva:</span> {activeTab.activation}
-                  </div>
                   {activeTabId === "system_prompt" && <SystemPromptTab />}
                   {activeTabId === "kb_doctrine" && <KBDoctrineTab />}
                   {activeTabId === "operative" && <OperativePromptsTab />}

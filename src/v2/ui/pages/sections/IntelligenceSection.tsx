@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
-import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { AnalyticsPage } from "@/v2/ui/pages/AnalyticsPage";
 import { AgentsPage } from "@/v2/ui/pages/AgentsPage";
 import { PromptLabPage } from "@/v2/ui/pages/PromptLabPage";
@@ -19,8 +18,7 @@ const TABS: readonly SectionTab[] = [
 export function IntelligenceSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <GoldenHeaderBar />
-      <SectionTabs tabs={TABS} rootPath="/v2/intelligence">
+      <SectionTabs tabs={TABS} rootPath="/v2/intelligence" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/intelligence/analytics" replace />} />
           <Route path="analytics"  element={<AnalyticsPage />} />

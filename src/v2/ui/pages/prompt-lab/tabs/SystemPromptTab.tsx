@@ -10,6 +10,8 @@ import { getAppSetting, upsertAppSetting } from "@/data/appSettings";
 import { logSupervisorAudit } from "@/data/supervisorAuditLog";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { toast } from "sonner";
 
 const SETTING_KEY = "system_prompt_blocks";
@@ -76,15 +78,51 @@ export function SystemPromptTab() {
 
   if (state.loading) return <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>;
 
+  const dirtyCount = state.blocks.filter((b) => b.dirty).length;
+  const improvedCount = state.blocks.filter((b) => b.improved).length;
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-2">
-      <div className="flex items-center justify-between flex-shrink-0">
-        <p className="text-xs text-muted-foreground truncate">7 blocchi del system prompt globale (app_settings.{SETTING_KEY})</p>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button size="sm" variant="outline" onClick={state.acceptAll}>Accetta tutti</Button>
-          <Button size="sm" onClick={saveAll} disabled={saving === "__all__"}>
-            {saving === "__all__" ? "Salvo..." : "Salva tutto"}
-          </Button>
+      <div className="flex items-center justify-between flex-shrink-0 gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+          <span className="font-medium text-foreground">{state.blocks.length} blocchi</span>
+          {dirtyCount > 0 && (
+            <span className="text-amber-600">· {dirtyCount} non salvati</span>
+          )}
+          {improvedCount > 0 && (
+            <span className="text-green-600">· {improvedCount} con proposta AI</span>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground/70 hover:text-foreground transition-colors">
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs text-xs">
+                System prompt globale archiviato in <code>app_settings.{SETTING_KEY}</code>.
+                Attivo nel Command Center, AI Assistant, missioni agenti e generazioni operative
+                quando viene assemblato il contesto base dell'AI.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {improvedCount > 0 && (
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={state.acceptAll}>
+              Accetta tutte le proposte
+            </Button>
+          )}
+          {dirtyCount > 0 && (
+            <Button
+              size="sm"
+              className="h-7 px-3 text-xs"
+              onClick={saveAll}
+              disabled={saving === "__all__"}
+            >
+              {saving === "__all__" ? "Salvo..." : `Salva tutto (${dirtyCount})`}
+            </Button>
+          )}
         </div>
       </div>
       <div className="flex-1 min-h-0">
@@ -94,6 +132,7 @@ export function SystemPromptTab() {
           onAccept={state.acceptImproved}
           onDiscard={state.discardImproved}
           onImprove={onImprove}
+          onSave={async () => { await saveAll(); }}
           saving={saving}
         />
       </div>
