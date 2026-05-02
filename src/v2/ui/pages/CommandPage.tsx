@@ -11,7 +11,7 @@
  * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
  * everywhere.
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import FloatingDock from "@/components/layout/FloatingDock";
@@ -97,6 +97,27 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
+
+  // Persist assistant messages produced by sub-hooks (commentary, plan, fast-lane).
+  // The user message is persisted directly by useCommandSubmit.persistMessage.
+  const persistedRef = useRef<Set<number | string>>(new Set());
+  useEffect(() => {
+    for (const m of state.messages) {
+      if (m.role !== "assistant") continue;
+      if (m.thinking) continue;
+      if (!m.content || !m.content.trim()) continue;
+      if (persistedRef.current.has(m.id)) continue;
+      persistedRef.current.add(m.id);
+      void conv.addMessage({ role: "assistant", content: m.content });
+    }
+  }, [state.messages, conv]);
+
+  // When loading a stored conversation, prime the dedup set so we don't re-write.
+  useEffect(() => {
+    if (!conv.conversationId) {
+      persistedRef.current = new Set();
+    }
+  }, [conv.conversationId]);
 
   useEffect(() => {
     if (voice.error) sonnerToast.error(voice.error);
