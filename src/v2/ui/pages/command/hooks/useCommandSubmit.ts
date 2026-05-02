@@ -83,6 +83,9 @@ interface CommandStateApi {
   }) => void;
   /** Hook called once for each substantive user prompt (e.g. to open a Command Job). */
   onUserPrompt?: (prompt: string) => void;
+  /** Returns an additional hint appended to the planner prompt
+   *  (e.g. snapshot of currently open Command Jobs / agenda). */
+  getExtraHint?: () => string;
 }
 
 export function useCommandSubmit(state: CommandStateApi) {
@@ -92,7 +95,7 @@ export function useCommandSubmit(state: CommandStateApi) {
     setPendingApproval, setPlanState, setActiveToolKey,
     setVoiceSpeaking, resetForNewMessage, ts, governance, ttsSpeak, messages,
     queryContext, setQueryContext,
-    persistMessage, onUserPrompt,
+    persistMessage, onUserPrompt, getExtraHint,
   } = state;
 
   // Initialize sub-hooks
@@ -193,7 +196,9 @@ export function useCommandSubmit(state: CommandStateApi) {
       const text = normalizePrompt(rawText);
 
       // Build conversational hint from previous query context (if fresh)
-      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+      const baseHint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+      const extra = getExtraHint?.() ?? "";
+      const hint = extra ? `${baseHint}${extra}` : baseHint;
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
@@ -325,7 +330,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
-      persistMessage, onUserPrompt,
+      persistMessage, onUserPrompt, getExtraHint,
     ],
   );
 

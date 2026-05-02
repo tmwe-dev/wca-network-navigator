@@ -84,6 +84,15 @@ const CommandPage = () => {
         });
       })();
     },
+    getExtraHint: () => {
+      // Inject the operator's open agenda so the planner is aware of pending work.
+      const open = jobs.openJobs.slice(0, 8);
+      if (open.length === 0) return "";
+      const lines = open
+        .map((j, i) => `  ${i + 1}. [${j.status}/${j.phase}] ${j.title}`)
+        .join("\n");
+      return `\n\nAGENDA LAVORI APERTI (per consapevolezza, NON eseguire nulla senza che l'utente lo chieda esplicitamente):\n${lines}`;
+    },
   });
 
   const voice = useVoiceInput({
