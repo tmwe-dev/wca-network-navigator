@@ -32,9 +32,9 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
-import { useRecentCommandPrompts } from "@/v2/hooks/useRecentCommandPrompts";
-import { useCommandBriefing } from "./command/hooks/useCommandBriefing";
-import BriefingPanel from "./command/components/BriefingPanel";
+// NB: BriefingPanel, useCommandBriefing e useRecentCommandPrompts intenzionalmente
+// non importati: lo stato vuoto della Command resta zen (solo titolo + orb + input).
+// I componenti restano sul filesystem per un futuro "next best action" ragionato.
 
 const CommandPage = () => {
   const nav = useNavigate();
@@ -78,8 +78,6 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
-  const { data: recentPrompts = [] } = useRecentCommandPrompts();
-  const briefing = useCommandBriefing();
 
   useEffect(() => {
     if (voice.error) sonnerToast.error(voice.error);
@@ -189,16 +187,13 @@ const CommandPage = () => {
           }`}
         >
           {isEmpty ? (
-            <>
-              <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
-              <CommandHistory
-                messages={[]}
-                isEmpty
-                quickPrompts={recentPrompts}
-                onQuickPrompt={(p) => handleSend(p)}
-                chatEndRef={state.chatEndRef}
-              />
-            </>
+            <CommandHistory
+              messages={[]}
+              isEmpty
+              quickPrompts={[]}
+              onQuickPrompt={(p) => handleSend(p)}
+              chatEndRef={state.chatEndRef}
+            />
           ) : (
             <CommandThread
               messages={state.messages}
