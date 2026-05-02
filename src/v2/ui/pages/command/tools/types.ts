@@ -74,6 +74,8 @@ export type ToolResult =
       readonly idField?: string;
       /** Source kind for realtime auto-refresh (e.g. "partners", "outreach_queue") */
       readonly liveSource?: string;
+      /** Query filters applied by AI Query Planner; used by follow-up tools. */
+      readonly queryFilters?: ReadonlyArray<{ column: string; op: string; value: unknown }>;
     }
   | {
       readonly kind: "card-grid";
