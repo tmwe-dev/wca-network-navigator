@@ -459,7 +459,15 @@ export async function loadCompanyProfile(
   };
 }
 
-/** Carica impostazioni Optimus globali (toggle + mode + strictness). */
+/**
+ * Carica impostazioni Optimus globali.
+ *
+ * 🔒 EDITORIAL LAYER — INTOCCABILE
+ * `enabled` è SEMPRE true: il giornalista è obbligatorio per legge editoriale
+ * (vedi mem://tech/editorial-review-layer-mandatory). Nessun utente può
+ * disattivarlo. La chiave `journalist_optimus_enabled` in app_settings è
+ * IGNORATA — restano configurabili solo `mode` e `strictness`.
+ */
 // deno-lint-ignore no-explicit-any
 export async function loadOptimusSettings(
   supabase: any,
@@ -470,19 +478,16 @@ export async function loadOptimusSettings(
     .select("key, value")
     .eq("user_id", userId)
     .in("key", [
-      "journalist_optimus_enabled",
       "journalist_optimus_mode",
       "journalist_optimus_strictness",
     ]);
   const map = new Map<string, string>(
     (data || []).map((s: { key: string; value: string | null }) => [s.key, s.value || ""]),
   );
-  const enabledRaw = map.get("journalist_optimus_enabled") || "";
-  const enabled = enabledRaw === "true" || enabledRaw === "1";
   const modeRaw = map.get("journalist_optimus_mode") || "review_and_correct";
   const mode = (["review_and_correct", "review_only", "silent_audit"].includes(modeRaw)
     ? modeRaw
     : "review_and_correct") as "review_and_correct" | "review_only" | "silent_audit";
   const strictness = Math.max(1, Math.min(10, parseInt(map.get("journalist_optimus_strictness") || "7", 10) || 7));
-  return { enabled, mode, strictness };
+  return { enabled: true, mode, strictness };
 }
