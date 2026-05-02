@@ -9,6 +9,7 @@ import { useContinuousSpeech } from "@/hooks/useContinuousSpeech";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { createLogger } from "@/lib/log";
 import { invokeEdge } from "@/lib/api/invokeEdge";
+import { logAiInteraction } from "@/data/aiInteractionLog";
 
 const log = createLogger("GlobalChat");
 
@@ -50,11 +51,12 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-async function playTTS(text: string, voiceId: string): Promise<void> {
+async function playTTS(text: string, voiceId: string, surface = "global_chat"): Promise<void> {
   const cleanText = text.replace(/[#*_~`>\[\]()!|]/g, "").replace(/\n{2,}/g, ". ").trim();
   if (!cleanText || cleanText.length < 5) return;
   const truncated = cleanText.length > 500 ? cleanText.slice(0, 500) + "..." : cleanText;
 
+  const startedAt = Date.now();
   const resp = await fetch(TTS_URL, {
     method: "POST",
     headers: {
@@ -70,6 +72,15 @@ async function playTTS(text: string, voiceId: string): Promise<void> {
   const audio = new Audio(url);
   audio.onended = () => URL.revokeObjectURL(url);
   await audio.play();
+  void logAiInteraction({
+    interaction_type: "voice_tts",
+    role: "assistant",
+    content: truncated,
+    voice_id: voiceId,
+    surface,
+    duration_ms: Date.now() - startedAt,
+    metadata: { audio_bytes: blob.size, original_length: text.length },
+  });
 }
 
 interface UseGlobalChatOptions {

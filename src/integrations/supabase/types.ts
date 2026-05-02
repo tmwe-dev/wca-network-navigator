@@ -1426,6 +1426,69 @@ export type Database = {
           },
         ]
       }
+      ai_interaction_log: {
+        Row: {
+          agent_id: string | null
+          content: string
+          conversation_id: string | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          interaction_type: string
+          language: string | null
+          metadata: Json
+          model_id: string | null
+          operator_id: string | null
+          page_context: string | null
+          role: string
+          surface: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          content: string
+          conversation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          interaction_type: string
+          language?: string | null
+          metadata?: Json
+          model_id?: string | null
+          operator_id?: string | null
+          page_context?: string | null
+          role: string
+          surface?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          content?: string
+          conversation_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          interaction_type?: string
+          language?: string | null
+          metadata?: Json
+          model_id?: string | null
+          operator_id?: string | null
+          page_context?: string | null
+          role?: string
+          surface?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id?: string
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
       ai_invocation_audit: {
         Row: {
           block_reason: string | null
@@ -1672,6 +1735,41 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_message_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_id: string
+          note: string | null
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_id: string
+          note?: string | null
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_id?: string
+          note?: string | null
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_message_feedback_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "ai_interaction_log"
             referencedColumns: ["id"]
           },
         ]
