@@ -7,6 +7,7 @@ import { invokeEdge } from "@/lib/api/invokeEdge";
 import VoicePresence from "@/components/intelliflow/VoicePresence";
 import type { Agent } from "@/hooks/useAgents";
 import { createLogger } from "@/lib/log";
+import { logAiInteraction } from "@/data/aiInteractionLog";
 
 const log = createLogger("AgentVoiceCall");
 
@@ -18,10 +19,56 @@ interface Props {
 export function AgentVoiceCall({ agent, onClose }: Props) {
   const [isConnecting, setIsConnecting] = useState(false);
   const bridgeTokenRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const sessionStartRef = useRef<number>(0);
 
   const conversation = useConversation({
-    onConnect: () => setIsConnecting(false),
-    onDisconnect: () => onClose(),
+    onConnect: () => {
+      setIsConnecting(false);
+      sessionStartRef.current = Date.now();
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role: "system",
+        content: `Voice call started with agent ${agent.name}`,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        metadata: { event: "connect", agent_name: agent.name, agent_role: agent.role },
+      });
+    },
+    onDisconnect: () => {
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role: "system",
+        content: `Voice call ended with agent ${agent.name}`,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        duration_ms: sessionStartRef.current ? Date.now() - sessionStartRef.current : null,
+        metadata: { event: "disconnect" },
+      });
+      onClose();
+    },
+    onMessage: (message: unknown) => {
+      // Log every message exchanged in the voice conversation
+      const m = message as { source?: string; message?: string; type?: string };
+      const role: "user" | "assistant" =
+        m.source === "user" ? "user" : "assistant";
+      const text = typeof m.message === "string" ? m.message : "";
+      if (!text.trim()) return;
+      void logAiInteraction({
+        interaction_type: "voice_conversation",
+        role,
+        content: text,
+        agent_id: agent.id,
+        voice_id: agent.elevenlabs_agent_id ?? null,
+        surface: "agent_voice_call",
+        conversation_id: sessionIdRef.current,
+        metadata: { source: m.source, type: m.type },
+      });
+    },
     onError: (err) => {
       log.error("voice call error", { message: String(err) });
       setIsConnecting(false);
