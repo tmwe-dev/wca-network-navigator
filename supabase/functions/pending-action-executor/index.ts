@@ -213,8 +213,8 @@ async function executeAction(
           to: payload.to ?? payload.recipient_email ?? payload.email,
           subject: payload.subject ?? `Proposal from WCA Network`,
           html: payload.html ?? payload.body ?? payload.html_body ?? "",
-          user_id: action.user_id,
           partner_id: action.partner_id ?? payload.partner_id,
+          contact_id: payload.contact_id ?? null,
         }),
       });
       if (!resp.ok) {
@@ -229,10 +229,10 @@ async function executeAction(
         method: "POST",
         headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: payload.phone ?? payload.to,
-          message: payload.message ?? payload.body ?? "",
-          user_id: action.user_id,
+          recipient: payload.recipient ?? payload.phone ?? payload.to,
+          message_text: payload.message_text ?? payload.message ?? payload.body ?? "",
           partner_id: action.partner_id ?? payload.partner_id,
+          contact_id: payload.contact_id ?? null,
         }),
       });
       if (!resp.ok) {
@@ -247,10 +247,10 @@ async function executeAction(
         method: "POST",
         headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          profile_url: payload.profile_url ?? payload.to,
-          message: String(payload.message ?? payload.body ?? "").substring(0, 300),
-          user_id: action.user_id,
+          recipient: payload.recipient ?? payload.profile_url ?? payload.to,
+          message_text: String(payload.message_text ?? payload.message ?? payload.body ?? "").substring(0, 300),
           partner_id: action.partner_id ?? payload.partner_id,
+          contact_id: payload.contact_id ?? null,
         }),
       });
       if (!resp.ok) {

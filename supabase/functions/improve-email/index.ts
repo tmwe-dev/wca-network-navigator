@@ -440,8 +440,9 @@ ${html_body}`;
     // ── GIORNALISTA AI — Caporedattore Finale ──
     let journalistResult: JournalistReviewOutput | null = null;
     try {
+      // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
       const optimus = await loadOptimusSettings(supabase, userId);
-      if (optimus.enabled && improvedBody) {
+      if (improvedBody) {
         journalistResult = await journalistReview(supabase, userId, {
           final_draft: improvedBody,
           resolved_brief: {

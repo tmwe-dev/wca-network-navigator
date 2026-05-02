@@ -264,9 +264,9 @@ async function processAction(
               body: JSON.stringify({
                 to: targetEmail,
                 subject: genData.subject,
-                body: genData.body,
-                userId: action.user_id,
+                html: genData.body,
                 partnerId,
+                partner_id: partnerId,
                 source: "cadence_engine",
               }),
             },
