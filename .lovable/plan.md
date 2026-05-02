@@ -1,138 +1,119 @@
-# Audit deep pipeline produzione/invio messaggi
+## Obiettivo
 
-Ho mappato riga per riga ogni punto del codice che produce o invia un'email/WhatsApp/LinkedIn e ogni passaggio è stato confrontato con la pipeline ufficiale (Oracolo → Architetto → Prompt Lab → Knowledge Base → **Giornalista (caporedattore finale)** → Send).
+Aggiungere a Settings due pulsanti di **Download** (Prompt + Knowledge Base), eliminare i duplicati evidenti tra gli agenti, e definire lo **standard "professore"** che useremo per riscrivere ogni prompt — solo dopo tua approvazione caso per caso.
 
-## Sintesi: pipeline rispettata? Quasi, ma ci sono 5 buchi reali
-
-✅ **OK** — `generate-email`, `improve-email`, `send-email`, `send-whatsapp`, `send-linkedin`, `process-email-queue`, `agent-execute · send_email`, `agent-execute · send_whatsapp`. Il giornalista è invocato.
-
-❌ **BUCHI** — descritti sotto. Di questi, **#1 è il più grave** perché disattiva il giornalista su tutto il sistema in modo silenzioso.
+Nessuna riscrittura ora. Solo: estrazione, pulizia duplicati agenti, e documento dello standard.
 
 ---
 
-## I 5 buchi della pipeline
+## 1. Download da Settings (priorità immediata)
 
-### 🔴 BUG #1 — Kill-switch silenzioso `journalist_optimus_enabled=false`
+In `Settings → Prompt & KB` (sezione nuova, o dentro un tab esistente del Prompt Lab) aggiungo due pulsanti:
 
-In ogni punto in cui il giornalista è invocato (`generate-email`, `improve-email`, `agent-execute`, `send-email`, `send-whatsapp`, `send-linkedin`, `process-email-queue`) il codice fa:
+**A) Scarica tutti i Prompt**
+- Sorgenti unite in un unico archivio `.zip`:
+  - `operative_prompts/` — un file `.md` per ogni record DB (i 13 attivi + gli inattivi, separati in due cartelle), con frontmatter (name, context, priority, tags) + sezioni Objective / Procedure / Criteria / Examples.
+  - `core-prompts/` — i 10 file `src/v2/agent/prompts/core/*.ts` esportati come `.md` (estratto il template string).
+  - `agents/` — un `.md` per ogni record `agents` (system_prompt + knowledge_base inline).
+  - `INDEX.md` — tabella riassuntiva con conteggi e mappa "dove viene usato" (quale edge function lo carica).
+- Formato anche `.json` opzionale (toggle) per chi vuole reimportare.
 
-```ts
-const optimus = await loadOptimusSettings(supabase, userId);
-if (optimus.enabled && finalBody) {  // ← se enabled=false, salta TUTTO
-  await journalistReview(...);
-}
-```
+**B) Scarica tutta la KB**
+- `.zip` con:
+  - `kb_entries/{category}/{slug}.md` — un file per entry, frontmatter completo (category, chapter, tags, priority, is_active).
+  - `INDEX.csv` — riga per entry con: id, title, category, chapter, priority, char_count, used_by (lista di agentId/edge function che la caricano in base al filtro `kbCategories`).
+  - `DUPLICATES.md` — coppie di entry con titolo identico o contenuto sovrapposto >80% (similarity via trigram, server-side).
+  - `ORPHANS.md` — entry attive ma non incluse da nessuno dei filtri noti (`DEFAULT_KB_CATEGORIES`, `DOMAIN_KB_CATEGORIES`, super-mario, kbAssembler, command help, ecc.).
 
-Sul DB ho trovato:
-```
-user_id ae35ad39-…  →  journalist_optimus_enabled = "false"
-```
-
-**Conseguenza concreta:** per l'utente operativo il giornalista **non gira mai**. Email/WA/LI vanno fuori senza la review che abbiamo definito intoccabile. Mario, agent-execute, processo batch, send diretti — tutti bypassati.
-
-Questo viola direttamente la regola appena consolidata in `mem://tech/editorial-review-layer-mandatory`.
-
-### 🔴 BUG #2 — `agent-execute · handleSendLinkedIn` non invoca il giornalista
-
-In `supabase/functions/agent-execute/toolHandlers/emailTools.ts`:
-- `handleSendEmail` → giornalista ✅
-- `handleSendWhatsApp` → giornalista ✅
-- `handleSendLinkedIn` → **nessuna chiamata a `journalistReview`** ❌
-
-Quando un agente chiama il tool LinkedIn, il messaggio salta il caporedattore.
-
-### 🟠 BUG #3 — `pending-action-executor` chiama `send-email` con campi sbagliati
-
-In `pending-action-executor/index.ts:209-218`:
-```ts
-body: JSON.stringify({
-  to: ..., subject: ..., html: ...,
-  user_id: action.user_id,    // ← send-email NON legge user_id, lo prende dal JWT
-  partner_id: ...,
-  // manca: contact_id, lead_status hint
-})
-```
-La review parte (giusto), ma il contesto commerciale che riceve è **sempre `lead_status: "unknown"`** perché `send-email` legge solo `partner_id` parziale. Il giornalista valuta a vuoto. Stesso pattern in `cadence-engine` e in `mission-executor`.
-
-### 🟠 BUG #4 — `_shared/platformTools/outreachHandler.ts` e `_shared/platformToolHandlers/outreachTools.ts` (usati da `ai-assistant`)
-
-Questi 2 handler invocano `send-email` direttamente, ma:
-- non passano `partner_id` né `contact_id` al body;
-- non passano `journalist_reviewed`;
-- la review parte ma con contesto **vuoto** (`lead_status: "unknown"`, niente partner).
-
-Risultato: il giornalista funziona "a metà", non ha le informazioni per giudicare coerenza/fase/storia.
-
-### 🟡 BUG #5 — `_shared/toolHandlersWrite.ts · executeSendEmail`
-
-Stessa cosa del #4. Non passa `partner_id`/`contact_id` a send-email. Non riferisce nemmeno il post-send pipeline. Questo handler è chiamato da `ai-assistant` quando l'agente sceglie il tool generico `send_email`.
+Entrambi i download girano lato client (DAL già esistente per `operative_prompts` e `kb_entries`) + una piccola edge function `export-prompts-and-kb` che zippa server-side per evitare blob enormi nel browser.
 
 ---
 
-## Piano di fix (1 sola sessione, nessuna refactor strutturale)
+## 2. Pulizia duplicati agenti
 
-Tutto il fix è **server-side** (edge functions). Il frontend non viene toccato.
+Stato DB: **53 agenti**, di cui:
+- **Luca**: 4 record con nome esatto "Luca" + 2 "Luca — Director" → 6 totali per stessa identità.
+- **Marco**: 5 record ("marco" + 4 "Marco").
+- **Sara**: 2.
+- **Robin**: 2 + 1 "PROMPT ROBIN…" + 1 "ROBIN — Sales…".
+- **TMWE S.r.l.**: 4 record (chiaramente KB cards finite per errore nella tabella `agents`).
+- **Numeri di performance**: 2.
+- **Certificazioni & Network**: 2.
+- Vari record che sono KB cards travestite da agenti ("11. Glossario rapido", "5. Dizionario pronuncia", "8. Conoscenze di Base…", "Fatti Canonici TMWE", "LIBRERIA TMWE…").
 
-### F1 — Rendere il giornalista veramente intoccabile (chiude BUG #1)
+**Procedura:**
+1. Genero in `/mnt/documents/agents-cleanup-proposal.md` la lista completa con:
+   - per ogni cluster di duplicati, qual è il record canonico proposto (più recente con `system_prompt` non vuoto), e quali finiscono in soft-delete;
+   - per i record che sono KB cards (non agenti veri), spostamento in `kb_entries` con categoria appropriata prima del soft-delete.
+2. Tu lo leggi.
+3. Quando dai OK, eseguo i soft-delete in **un'unica transazione** tramite migration (il trigger `no_physical_delete` converte in `deleted_at`, quindi è reversibile).
 
-Sostituire la logica `if (optimus.enabled)` con: **il giornalista gira SEMPRE**. La chiave `journalist_optimus_enabled` resta utile solo per:
-- scegliere `mode` (review_and_correct vs review_only vs silent_audit);
-- scegliere `strictness` (1-10).
-
-Cambio in 6 file:
-- `supabase/functions/generate-email/index.ts` (riga 263)
-- `supabase/functions/improve-email/index.ts` (riga 444)
-- `supabase/functions/agent-execute/toolHandlers/emailTools.ts` (righe 65, 164)
-- `supabase/functions/send-email/index.ts` — già senza flag, OK
-- `supabase/functions/send-whatsapp/index.ts` — già senza flag, OK
-- `supabase/functions/send-linkedin/index.ts` — già senza flag, OK
-- `supabase/functions/process-email-queue/index.ts` — già senza flag, OK
-
-E in `_shared/journalistSelector.ts` aggiornare `loadOptimusSettings` per restituire sempre `enabled:true` con `mode`/`strictness` configurabili.
-
-In parallelo aggiorno `app_settings`:
-```sql
-UPDATE app_settings
-SET value = 'true'
-WHERE key = 'journalist_optimus_enabled';
-```
-così anche eventuali letture residue si comportano correttamente.
-
-### F2 — `handleSendLinkedIn` aggiunge giornalista (chiude BUG #2)
-
-Aggiungo in `agent-execute/toolHandlers/emailTools.ts` (handleSendLinkedIn) lo stesso blocco di `handleSendWhatsApp`, con `channel: "linkedin"`.
-
-### F3 — Propagare `partner_id` + `contact_id` a `send-email` da tutti gli orchestratori (chiude BUG #3, #4, #5)
-
-File da toccare:
-- `supabase/functions/pending-action-executor/index.ts`
-- `supabase/functions/cadence-engine/index.ts`
-- `supabase/functions/mission-executor/index.ts` (per la parte che già va a send via generate)
-- `supabase/functions/_shared/platformTools/outreachHandler.ts`
-- `supabase/functions/_shared/platformToolHandlers/outreachTools.ts`
-- `supabase/functions/_shared/toolHandlersWrite.ts` (executeSendEmail)
-
-In ognuno: aggiungo `partner_id` e `contact_id` (quando disponibili) al body inviato a `send-email`/`send-whatsapp`/`send-linkedin`. Così il giornalista riceve il contesto vero.
-
-### F4 — Test di regressione
-
-Aggiungo un test in `src/test/` che monta una mock di `journalistReview` e verifica che **ognuno dei 7 punti** della pipeline lo invochi (1 chiamata per punto).
-
-### F5 — Aggiorno la memoria
-
-Aggiorno `mem://tech/editorial-review-layer-mandatory` con:
-- "Il giornalista non ha più kill-switch utente. La sola configurazione utente sono `mode` e `strictness`."
-- Lista completa dei 9 punti coperti (aggiungo handleSendLinkedIn).
+Nessuna eliminazione fisica. Nessun touch su agenti dubbi: solo nomi identici o KB cards palesi.
 
 ---
 
-## Cosa NON tocco
+## 3. Standard "professore" (documento, niente codice)
 
-- I prompt e la KB (era il prossimo step concordato).
-- Il frontend (`composeEmail`, `sendEmailDirect`, `sendWhatsapp`, `sendLinkedin` del Command già non possono bypassare).
-- I tool di lettura, deep search, onboarding ecc.
-- `enrich-partner-website`, `parse-business-card`, `categorize-content` — non producono messaggi outbound.
+Creo `docs/prompt-standard.md` con la forma canonica che applicheremo a TUTTI i prompt (operative_prompts DB + core/*.ts).
 
-## Dopo questo fix
+**Schema fisso (max ~40 righe utili):**
 
-Procediamo con l'audit dei prompt operativi e della KB rispetto ai ruoli degli agenti, come avevi anticipato.
+```text
+1. IDENTITÀ          chi sei, in 2 righe
+2. OBIETTIVO         cosa devi ottenere, 1 frase
+3. METODO            il "professore":
+                     a) analizza richiesta + contesto fornito
+                     b) consulta memoria/storico (cosa è già stato detto/fatto)
+                     c) consulta KB pertinente (titoli iniettati, no full dump)
+                     d) usa gli strumenti disponibili per investigare
+                     e) produci diagnosi + piano azioni numerato
+                     f) eseguilo o proponilo per approvazione
+4. GUARDRAIL         cosa NON puoi fare (in negativo, no ricette)
+5. OUTPUT            forma minima richiesta dall'UI (JSON shape o testo libero)
+```
+
+**Vietato (e segnalato in audit):**
+- Codice inline (snippet TS/SQL nel prompt).
+- Liste di frasi proibite/obbligatorie ("non dire mai…", "inizia sempre con…").
+- Lunghezze fisse ("80-150 parole").
+- Step procedurali rigidi che ripetono regole già nel DB.
+- Doctrine duplicate tra prompt TS e operative_prompts DB.
+
+**Mappa applicazione (proposta, NON eseguita):**
+Per ogni prompt esistente produco un diff in `/mnt/documents/prompt-rewrite-proposals/{name}.md` con: versione attuale a sinistra, versione "professore" a destra, motivazioni delle modifiche. Tu approvi uno alla volta. Nessuna scrittura su DB o file `core/*.ts` senza tuo OK esplicito sul singolo prompt.
+
+---
+
+## 4. Audit KB (167 entry "doctrine" + 26 categorie)
+
+Output, scaricabile insieme al pacchetto KB del punto 1.B:
+
+- **Cluster semantico**: raggruppo le 167 entry doctrine per similarity di contenuto (trigram + cosine su embeddings esistenti se disponibili, altrimenti solo trigram). Output: gruppi di N entry candidate al merge.
+- **Mappa utilizzo**: per ogni entry indico quali agenti/edge function la caricano davvero. Cross-reference con:
+  - `assemblePrompt` (`DEFAULT_KB_CATEGORIES`, `DOMAIN_KB_CATEGORIES`)
+  - `super-mario/kbAssembler`
+  - `useCommandPromptsAndKb` (Command)
+  - eventuali altri loader trovati con ripgrep
+- **Orphans**: entry attive che non vengono caricate da nessun agente.
+- **Categorie inconsistenti**: es. 26 categorie diverse, di cui molte con 1-3 entry; propongo accorpamento in 6-8 categorie canoniche allineate alla doctrine "Cognitive Memory L1-L3".
+
+Nessuna entry viene cancellata o modificata in questa fase. Solo report.
+
+---
+
+## Ordine di esecuzione (passo dopo passo)
+
+1. **Pulsanti download in Settings** + edge function `export-prompts-and-kb` → tu scarichi e leggi.
+2. **Proposta pulizia agenti** in `/mnt/documents/agents-cleanup-proposal.md` → tu approvi → eseguo soft-delete.
+3. **Documento standard "professore"** in `docs/prompt-standard.md` → tu lo leggi e ne validi la forma.
+4. **Cartella `/mnt/documents/prompt-rewrite-proposals/`** con un diff per ogni prompt → approviamo uno per uno.
+5. **Report audit KB** (cluster + mappa + orphans + categorie) incluso nello zip del punto 1.
+
+---
+
+## Cosa NON faccio (per essere chiari)
+
+- Non riscrivo nessun prompt esistente prima del tuo OK sul singolo diff.
+- Non cancello nessuna entry KB.
+- Non tocco la pipeline editoriale (sanitizer, normalizer, injection guard, giornalista, post-send).
+- Non tocco gli agenti di cui non sono certo che siano duplicati esatti o KB-cards-mascherate.
