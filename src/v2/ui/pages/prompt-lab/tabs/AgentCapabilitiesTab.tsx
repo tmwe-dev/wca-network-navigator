@@ -130,13 +130,13 @@ export function AgentCapabilitiesTab() {
               <div>
                 <Label className="text-xs">Modello AI preferito</Label>
                 <Select
-                  value={draft.preferred_model ?? ""}
-                  onValueChange={(v) => setDraft({ ...draft, preferred_model: v || null })}
+                  value={draft.preferred_model ?? "__default__"}
+                  onValueChange={(v) => setDraft({ ...draft, preferred_model: v === "__default__" ? null : v })}
                 >
                   <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {MODELS.map((m) => (
-                      <SelectItem key={m.value || "default"} value={m.value}>{m.label}</SelectItem>
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
