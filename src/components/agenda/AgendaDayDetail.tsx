@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
-  Calendar as CalendarIcon, ArrowUpRight, Reply, Send, PhoneCall, HelpCircle,
+  Calendar as CalendarIcon, ArrowUpRight,
   Check, Clock, UserPlus, Archive,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
@@ -21,6 +21,13 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { ActivityTypeFilter, ResponseFilter } from "./AgendaCalendarPage";
 import type { AllActivity } from "@/hooks/useActivities";
+import {
+  ACTION_GROUPS,
+  classifyAction,
+  type ActionGroupDef,
+  type ActionGroupKey,
+} from "./agendaActionGroups";
+export { ACTION_GROUPS, classifyAction, verbForActivity } from "./agendaActionGroups";
 
 interface AgendaDayDetailProps {
   selectedDay: Date;
@@ -28,6 +35,10 @@ interface AgendaDayDetailProps {
     activityType: ActivityTypeFilter;
     responseStatus: ResponseFilter;
   };
+  /** ID dell'attività attualmente selezionata nel pannello destro. */
+  selectedActivityId?: string | null;
+  /** Callback chiamata quando l'utente seleziona una card. */
+  onSelectActivity?: (activity: AllActivity) => void;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -42,45 +53,6 @@ const channelIcon: Record<string, typeof Mail> = {
   phone_call: Phone,
   note: StickyNote,
 };
-
-/* ─────────────────────────────────────────────────────────────────────────────
- * Action grouping — l'agenda è organizzata per "cosa devi fare", non per tipo
- * tecnico. L'ordine dell'array determina anche l'ordine visivo dei gruppi.
- * ─────────────────────────────────────────────────────────────────────────── */
-type ActionGroupKey = "reply" | "send" | "call" | "decide";
-
-interface ActionGroupDef {
-  readonly key: ActionGroupKey;
-  readonly label: string;
-  readonly icon: typeof Mail;
-  readonly verb: string; // CTA azione primaria
-}
-
-const ACTION_GROUPS: readonly ActionGroupDef[] = [
-  { key: "reply",  label: "Da rispondere", icon: Reply,      verb: "Rispondi" },
-  { key: "send",   label: "Da inviare",    icon: Send,       verb: "Invia"    },
-  { key: "call",   label: "Da chiamare",   icon: PhoneCall,  verb: "Chiama"   },
-  { key: "decide", label: "Da decidere",   icon: HelpCircle, verb: "Apri"     },
-] as const;
-
-/**
- * Decide a quale gruppo appartiene un'attività.
- *
- * Heuristica:
- *  - 'reply':  l'attività rappresenta una risposta ricevuta a cui dobbiamo rispondere
- *              (titoli che cominciano con "Reply received" o tipo follow_up con
- *              il partner che ha risposto e l'attività ancora pending).
- *  - 'send':   send_email / follow_up pending in cui dobbiamo inviare noi.
- *  - 'call':   phone_call.
- *  - 'decide': tutto il resto (note, meeting, altro).
- */
-function classifyAction(a: AllActivity, partnerHasResponded: boolean): ActionGroupKey {
-  if (a.activity_type === "phone_call") return "call";
-  if (a.activity_type === "note" || a.activity_type === "meeting" || a.activity_type === "other") return "decide";
-  // email / follow_up / whatsapp / linkedin
-  if (partnerHasResponded || /^reply received/i.test(a.title || "")) return "reply";
-  return "send";
-}
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Priority by waiting time. La priorità nasce dal "da quanto aspetta", non da
@@ -125,7 +97,12 @@ function cleanTitle(title: string | null): string {
     .trim() || "—";
 }
 
-export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetailProps) {
+export default function AgendaDayDetail({
+  selectedDay,
+  filters,
+  selectedActivityId = null,
+  onSelectActivity,
+}: AgendaDayDetailProps) {
   const { data, isLoading } = useAgendaDayActivities(selectedDay);
   const activities = data?.activities || [];
   const reminders = data?.reminders || [];
@@ -207,6 +184,8 @@ export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetai
                 key={group.key}
                 def={group}
                 activities={items}
+                selectedActivityId={selectedActivityId}
+                onSelectActivity={onSelectActivity}
               />
             );
           })}
@@ -229,7 +208,17 @@ export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetai
 /* ─────────────────────────────────────────────────────────────────────────────
  * ActionGroup — intestazione di sezione + righe attività
  * ─────────────────────────────────────────────────────────────────────────── */
-function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: AllActivity[] }) {
+function ActionGroup({
+  def,
+  activities,
+  selectedActivityId,
+  onSelectActivity,
+}: {
+  def: ActionGroupDef;
+  activities: AllActivity[];
+  selectedActivityId: string | null;
+  onSelectActivity?: (activity: AllActivity) => void;
+}) {
   const Icon = def.icon;
   return (
     <section>
@@ -242,7 +231,13 @@ function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: All
       </header>
       <div className="space-y-1">
         {activities.map(a => (
-          <ActivityRow key={a.id} activity={a} verb={def.verb} />
+          <ActivityRow
+            key={a.id}
+            activity={a}
+            verb={def.verb}
+            isSelected={selectedActivityId === a.id}
+            onSelect={onSelectActivity}
+          />
         ))}
       </div>
     </section>
@@ -253,7 +248,17 @@ function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: All
  * ActivityRow — riga compatta, niente subject ripetuto, niente checkbox legacy.
  * Layout: [bordo colore] icona-canale · partner · "X tempo fa" · CTA azione · ⋯
  * ─────────────────────────────────────────────────────────────────────────── */
-function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }) {
+function ActivityRow({
+  activity,
+  verb,
+  isSelected,
+  onSelect,
+}: {
+  activity: AllActivity;
+  verb: string;
+  isSelected: boolean;
+  onSelect?: (activity: AllActivity) => void;
+}) {
   const ChannelIcon = channelIcon[activity.activity_type] || Mail;
   const urgency = urgencyFromAge(activity.created_at);
   const updateActivity = useUpdateActivity();
@@ -273,9 +278,20 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
 
   return (
     <div
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect ? () => onSelect(activity) : undefined}
+      onKeyDown={onSelect ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(activity);
+        }
+      } : undefined}
       className={cn(
         "group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-xl border border-border/30",
         "bg-card/40 hover:bg-card/60 transition-all border-l-2",
+        onSelect && "cursor-pointer",
+        isSelected && "ring-1 ring-primary border-primary/40 bg-primary/5",
         URGENCY_BORDER[urgency],
       )}
     >
@@ -298,8 +314,11 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
         </div>
       </div>
 
-      {/* CTA azione primaria */}
-      {activity.partner_id ? (
+      {/* CTA azione primaria — quando la riga è selezionabile, l'azione vive nel
+          pannello destro: qui mostriamo solo un badge con il verbo per chiarezza. */}
+      {onSelect ? (
+        <Badge variant="outline" className="text-[9px] shrink-0 opacity-70">{verb}</Badge>
+      ) : activity.partner_id ? (
         <Button asChild size="sm" variant="ghost" className="h-7 px-2.5 text-[10px] shrink-0">
           <Link to={`/partners/${activity.partner_id}`}>
             {verb} <ArrowUpRight className="w-3 h-3 ml-1" />
@@ -312,7 +331,13 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
       {/* Menu rapido: Fatto / Rimanda / Delega / Archivia */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="Altre azioni">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            aria-label="Altre azioni"
+            onClick={(e) => e.stopPropagation()}
+          >
             <MoreVertical className="w-3.5 h-3.5" />
           </Button>
         </DropdownMenuTrigger>

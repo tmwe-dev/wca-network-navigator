@@ -1,0 +1,240 @@
+/**
+ * AgendaActionPanel — Pannello operativo destro dell'Agenda.
+ *
+ * Quando l'utente seleziona una card a sinistra, qui appare il "tavolo di lavoro":
+ *   - Header partner + canale + età + status
+ *   - Contesto (titolo/oggetto, snippet)
+ *   - Azioni rapide (primaria contestuale + secondarie)
+ *
+ * Per la versione iniziale il pannello mostra contesto + azioni; il composer
+ * inline (rispondi via email) viene aperto navigando al partner per riusare il
+ * flusso esistente. Iterazioni future possono inlineare il composer qui.
+ */
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Mail, MessageCircle, Linkedin, Phone, StickyNote,
+  Reply, Send, PhoneCall, HelpCircle, Clock, Archive, UserPlus,
+  ArrowUpRight, MailX,
+} from "lucide-react";
+import { useUpdateActivity } from "@/hooks/useActivities";
+import { getCountryFlag } from "@/lib/countries";
+import { cn } from "@/lib/utils";
+import type { AllActivity } from "@/hooks/useActivities";
+
+const channelIcon: Record<string, typeof Mail> = {
+  send_email: Mail,
+  follow_up: Mail,
+  whatsapp: MessageCircle,
+  linkedin: Linkedin,
+  phone_call: Phone,
+  note: StickyNote,
+};
+
+const channelLabel: Record<string, string> = {
+  send_email: "Email",
+  follow_up: "Email (follow-up)",
+  whatsapp: "WhatsApp",
+  linkedin: "LinkedIn",
+  phone_call: "Chiamata",
+  note: "Nota",
+  meeting: "Meeting",
+  other: "Attività",
+};
+
+function relativeAge(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return "appena ora";
+  if (min < 60) return `${min}m fa`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h fa`;
+  const d = Math.floor(h / 24);
+  return `${d}g fa`;
+}
+
+function urgencyOf(iso: string): { label: string; cls: string } {
+  const h = (Date.now() - new Date(iso).getTime()) / 3_600_000;
+  if (h > 24) return { label: "in ritardo", cls: "text-rose-500 border-rose-500/30 bg-rose-500/10" };
+  if (h > 4) return { label: "oggi", cls: "text-amber-500 border-amber-500/30 bg-amber-500/10" };
+  return { label: "ok", cls: "text-emerald-500 border-emerald-500/30 bg-emerald-500/10" };
+}
+
+function cleanTitle(title: string | null): string {
+  if (!title) return "—";
+  return title
+    .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+    .replace(/^re:\s*/i, "")
+    .replace(/^fwd:\s*/i, "")
+    .trim() || "—";
+}
+
+interface AgendaActionPanelProps {
+  activity: AllActivity | null;
+  primaryVerb: string;
+  /** Quando l'azione viene completata via menu. Permette al parent di deselezionare. */
+  onActionDone?: () => void;
+}
+
+export default function AgendaActionPanel({ activity, primaryVerb, onActionDone }: AgendaActionPanelProps) {
+  const updateActivity = useUpdateActivity();
+
+  if (!activity) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground/60">
+        <MailX className="w-10 h-10 mb-3 opacity-30" />
+        <p className="text-sm">Seleziona un'attività a sinistra</p>
+        <p className="text-[11px] mt-1 opacity-70">
+          Qui appariranno il contesto e le azioni rapide per gestirla.
+        </p>
+      </div>
+    );
+  }
+
+  const ChannelIcon = channelIcon[activity.activity_type] || Mail;
+  const partnerName = activity.partners?.company_name || "Senza partner";
+  const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
+  const city = activity.partners?.city;
+  const country = activity.partners?.country_name;
+  const subject = cleanTitle(activity.title);
+  const urgency = urgencyOf(activity.created_at);
+  const description = activity.description ?? null;
+
+  const handleStatus = (status: "completed" | "cancelled") => {
+    updateActivity.mutate(
+      {
+        id: activity.id,
+        status,
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+      },
+      { onSuccess: () => onActionDone?.() },
+    );
+  };
+
+  const partnerHref = activity.partner_id ? `/partners/${activity.partner_id}` : null;
+  const PrimaryIcon =
+    primaryVerb === "Rispondi" ? Reply :
+    primaryVerb === "Chiama" ? PhoneCall :
+    primaryVerb === "Invia" ? Send : HelpCircle;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 px-5 py-4 border-b border-border/30">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            {flag && <span className="text-2xl shrink-0 mt-0.5">{flag}</span>}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-semibold truncate">{partnerName}</h2>
+                <Badge variant="outline" className={cn("text-[10px]", urgency.cls)}>
+                  {urgency.label}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                <ChannelIcon className="inline w-3 h-3 mr-1 -mt-0.5" />
+                {channelLabel[activity.activity_type] || activity.activity_type}
+                {(city || country) && <> · {[city, country].filter(Boolean).join(", ")}</>}
+                <> · </>
+                <Clock className="inline w-3 h-3 mr-0.5 -mt-0.5" />
+                {relativeAge(activity.created_at)}
+              </p>
+            </div>
+          </div>
+          {partnerHref && (
+            <Button asChild variant="ghost" size="sm" className="shrink-0 h-7 text-[11px]">
+              <Link to={partnerHref}>
+                Apri partner <ArrowUpRight className="w-3 h-3 ml-1" />
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Contesto */}
+      <ScrollArea className="flex-1">
+        <div className="p-5 space-y-4">
+          <section>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+              Oggetto
+            </p>
+            <p className="text-sm font-medium leading-snug">{subject}</p>
+          </section>
+
+          {description && (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Contesto
+              </p>
+              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                {description}
+              </p>
+            </section>
+          )}
+
+          {activity.selected_contact && (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Contatto coinvolto
+              </p>
+              <p className="text-xs">{activity.selected_contact.name}</p>
+            </section>
+          )}
+
+          {!description && !activity.selected_contact && (
+            <p className="text-xs text-muted-foreground italic">
+              Nessun contesto aggiuntivo. Apri il partner per la cronologia completa.
+            </p>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Azioni */}
+      <div className="shrink-0 border-t border-border/30 p-3 bg-card/30">
+        <div className="flex items-center gap-2 flex-wrap">
+          {partnerHref ? (
+            <Button asChild size="sm" className="h-9 text-xs gap-1.5">
+              <Link to={partnerHref}>
+                <PrimaryIcon className="w-3.5 h-3.5" />
+                {primaryVerb} ora
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" disabled className="h-9 text-xs gap-1.5">
+              <PrimaryIcon className="w-3.5 h-3.5" />
+              {primaryVerb} ora
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5"
+            disabled
+            title="Disponibile a breve"
+          >
+            <Clock className="w-3.5 h-3.5" /> Rimanda 24h
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5"
+            disabled
+            title="Disponibile a breve"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Delega
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5 ml-auto"
+            onClick={() => handleStatus("cancelled")}
+          >
+            <Archive className="w-3.5 h-3.5" /> Archivia
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
