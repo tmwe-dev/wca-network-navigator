@@ -75,7 +75,7 @@ const COUNTRY_MAP: Record<string, string> = {
   polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
   "stati uniti": "US", usa: "US", "united states": "US", america: "US",
   canada: "CA", messico: "MX", mexico: "MX", brasile: "BR", brazil: "BR",
-  argentina: "AR", cile: "CL", chile: "CL",
+  argentina: "AR", cile: "CL", chile: "CL", venezuela: "VE",
   cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
   emirati: "AE", uae: "AE", "arabia saudita": "SA", egitto: "EG", egypt: "EG",
   marocco: "MA", morocco: "MA", "sud africa": "ZA", "south africa": "ZA",
@@ -182,8 +182,8 @@ function leadStatusNote(s: string | null): string {
 
 /* ─── Batch draft generation (1 chiamata generate-email per partner) ───── */
 
-/** Cap di sicurezza per evitare costi imprevisti. Allineato a `searchPartnersByCountry` (limit 50). */
-const MAX_BATCH_DRAFTS = 12;
+/** Cap di sicurezza per evitare costi imprevisti mantenendo il caso operativo "20 lettere". */
+const MAX_BATCH_DRAFTS = 20;
 
 async function fetchPrimaryContact(partnerId: string): Promise<{ name: string | null; email: string | null }> {
   const { data } = await supabase
