@@ -4,15 +4,21 @@ import { PanelLeftClose, SlidersHorizontal, Check } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
+import { SidebarBanner } from "@/components/global/filters-drawer/SidebarBanner";
+import {
+  SIDEBAR_BANNER_REGISTRY,
+  type SidebarContextKey,
+} from "@/components/global/filters-drawer/sidebarContextRegistry";
 
-function getFilterContext(pathname: string, networkView: "partners" | "bca"): { title: string; content: React.ReactNode } | null {
+function getFilterContext(
+  pathname: string,
+  networkView: "partners" | "bca",
+): { title: string; content: React.ReactNode; bannerKey: SidebarContextKey } | null {
   if (pathname.startsWith("/v2/explore/network") || pathname === "/v2/network" || pathname.startsWith("/v2/partner-hub")) {
-    // Network › BCA: la sidebar interna è stata rimossa, qui ospitiamo
-    // direttamente paesi + filtri qualità + ordinamento + selettore vista.
     if (networkView === "bca") {
-      return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent /> };
+      return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
     }
-    return { title: "Filtri WCA Partner", content: <NetworkFiltersSection /> };
+    return { title: "Filtri WCA Partner", content: <NetworkFiltersSection />, bannerKey: "network" };
   }
 
   if (
@@ -23,13 +29,11 @@ function getFilterContext(pathname: string, networkView: "partners" | "bca"): { 
     pathname === "/v2/crm" ||
     pathname === "/v2/contacts"
   ) {
-    return { title: "Filtri Contatti CRM", content: <CRMFiltersSection /> };
+    return { title: "Filtri Contatti CRM", content: <CRMFiltersSection />, bannerKey: "crm-contacts" };
   }
 
-  // CRM › Biglietti: i filtri vivono nella linguetta globale (rail) come
-  // per WCA Partner. La pagina non ha più la propria sidebar interna.
   if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/explore/biglietti")) {
-    return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent /> };
+    return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
   }
 
   return null;
@@ -105,8 +109,21 @@ export function ContextFiltersRail(): React.ReactElement | null {
               <Check className="h-3 w-3" /> Conferma
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-5 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
-            {context.content}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {(() => {
+              const meta = SIDEBAR_BANNER_REGISTRY[context.bannerKey];
+              return (
+                <SidebarBanner
+                  icon={meta.icon}
+                  title={meta.title}
+                  description={meta.description}
+                  tone={meta.tone}
+                />
+              );
+            })()}
+            <div className="space-y-5 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
+              {context.content}
+            </div>
           </div>
           <div className="shrink-0 border-t border-border/40 bg-card/60 px-4 py-3">
             <button

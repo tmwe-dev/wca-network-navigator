@@ -24,6 +24,8 @@ import { ABTestFiltersSection } from "./ABTestFiltersSection";
 import { ArenaFiltersSection } from "./ArenaFiltersSection";
 import { EmailIntelligenceFiltersSection } from "./EmailIntelligenceFiltersSection";
 import { FilterSection, ChipGroup, Chip } from "./shared";
+import { SidebarBanner } from "./SidebarBanner";
+import { SIDEBAR_BANNER_REGISTRY, type SidebarContextKey } from "./sidebarContextRegistry";
 import type { FiltersDrawerProps } from "./types";
 
 export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
@@ -33,6 +35,49 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
   const defaultWidthClass = state.isEmailComposer || state.isEmailForge
     ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]"
     : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
+
+  const bannerKey: SidebarContextKey | null = state.isCockpit
+    ? "cockpit"
+    : state.isWorkspace
+      ? "workspace"
+      : state.isInUscita
+        ? "outgoing"
+        : state.isCircuito
+          ? "circuit"
+          : state.isAttivita
+            ? "attivita"
+            : state.isInreach
+              ? "inreach"
+              : state.isEmail
+                ? "inbox-email"
+                : state.isWhatsApp
+                  ? "inbox-whatsapp"
+                  : state.isLinkedIn
+                    ? "inbox-linkedin"
+                    : state.isNetwork
+                      ? "network"
+                      : state.isCRM
+                        ? state.crmDrawerTab === "biglietti" ? "bca" : "crm-contacts"
+                        : state.isAgenda
+                          ? "agenda"
+                          : state.isCampaigns
+                            ? "campaigns"
+                            : state.isEmailForge
+                              ? "email-forge"
+                              : state.isSorting
+                                ? "sorting"
+                                : state.isCodaAI
+                                  ? "coda-ai"
+                                  : state.isABTest
+                                    ? "ab-test"
+                                    : state.isArena
+                                      ? "arena"
+                                      : state.isEmailIntelligence
+                                        ? "email-intelligence"
+                                        : state.isEmailComposer
+                                          ? "email-composer"
+                                          : null;
+  const banner = bannerKey ? SIDEBAR_BANNER_REGISTRY[bannerKey] : null;
 
   return (
     <PageErrorBoundary>
@@ -63,6 +108,14 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {banner && (
+              <SidebarBanner
+                icon={banner.icon}
+                title={banner.title}
+                description={banner.description}
+                tone={banner.tone}
+              />
+            )}
             {state.isCockpit && (
               <CockpitFiltersSection
                 countryStats={state.countryStats}

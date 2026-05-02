@@ -223,34 +223,7 @@ export function CRMFiltersSection() {
         )}
       </FilterSection>
 
-      <FilterSection icon={Layers} label="Raggruppa per">
-        <ChipGroup columns={2}>
-          {CRM_GROUPBY.map(o => (
-            <Chip key={o.value} block active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
-      <div className="space-y-2">
-        <FilterDropdownMulti label="Origine" icon={Database} options={crmOrigins} selected={g.filters.crmOrigin} onToggle={toggleCrmOrigin} searchable placeholder="Cerca origine..." />
-        <FilterDropdownMulti label="Stato" icon={Users} options={statusOptions} selected={selectedStatus} onToggle={toggleLeadStatus} singleSelect capitalize={false} />
-        <FilterDropdownMulti label="Circuito" icon={Plane} options={holdingOptions} selected={selectedHolding} onToggle={toggleHolding} singleSelect capitalize={false} activeColor={g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"} />
-        <FilterDropdownMulti label="Canale" icon={Wifi} options={channelOptions} selected={selectedChannel} onToggle={toggleChannel} singleSelect capitalize={false} />
-        <FilterDropdownMulti label="Qualità" icon={Sparkles} options={qualityOptions} selected={selectedQualitySet} onToggle={toggleQuality} singleSelect capitalize={false} />
-      </div>
-
-      <FilterSection icon={Shield} label="Match WCA">
-        <ChipGroup columns={3}>
-          {[
-            { value: "all", label: "Tutti" },
-            { value: "matched", label: "Matchati" },
-            { value: "unmatched", label: "Non matchati" },
-          ].map(o => (
-            <Chip key={o.value} block active={g.filters.crmWcaMatch === o.value} onClick={() => g.setCrmWcaMatch(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
+      {/* PIVOT PRIMARIO — Paesi (template canonico: dopo Cerca) */}
       <FilterSection
         icon={Globe}
         label="Paesi"
@@ -307,6 +280,37 @@ export function CRMFiltersSection() {
           ))}
           {filteredCountries.length === 0 && <div className="px-2 py-3 text-[10px] text-muted-foreground text-center">Nessun paese trovato</div>}
         </div>
+      </FilterSection>
+
+      {/* PIVOT SECONDARI — stato/origine/canale/qualità in dropdown */}
+      <div className="space-y-2">
+        <FilterDropdownMulti label="Origine" icon={Database} options={crmOrigins} selected={g.filters.crmOrigin} onToggle={toggleCrmOrigin} searchable placeholder="Cerca origine..." />
+        <FilterDropdownMulti label="Stato" icon={Users} options={statusOptions} selected={selectedStatus} onToggle={toggleLeadStatus} singleSelect capitalize={false} />
+        <FilterDropdownMulti label="Circuito" icon={Plane} options={holdingOptions} selected={selectedHolding} onToggle={toggleHolding} singleSelect capitalize={false} activeColor={g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"} />
+        <FilterDropdownMulti label="Canale" icon={Wifi} options={channelOptions} selected={selectedChannel} onToggle={toggleChannel} singleSelect capitalize={false} />
+        <FilterDropdownMulti label="Qualità" icon={Sparkles} options={qualityOptions} selected={selectedQualitySet} onToggle={toggleQuality} singleSelect capitalize={false} />
+      </div>
+
+      {/* MATCH WCA — pivot specifico CRM */}
+      <FilterSection icon={Shield} label="Match WCA">
+        <ChipGroup columns={3}>
+          {[
+            { value: "all", label: "Tutti" },
+            { value: "matched", label: "Matchati" },
+            { value: "unmatched", label: "Non matchati" },
+          ].map(o => (
+            <Chip key={o.value} block active={g.filters.crmWcaMatch === o.value} onClick={() => g.setCrmWcaMatch(o.value)}>{o.label}</Chip>
+          ))}
+        </ChipGroup>
+      </FilterSection>
+
+      {/* RAGGRUPPA — sempre in fondo (template canonico) */}
+      <FilterSection icon={Layers} label="Raggruppa per">
+        <ChipGroup columns={2}>
+          {CRM_GROUPBY.map(o => (
+            <Chip key={o.value} block active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
+          ))}
+        </ChipGroup>
       </FilterSection>
     </>
   );
