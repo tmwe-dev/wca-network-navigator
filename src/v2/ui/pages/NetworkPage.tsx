@@ -23,7 +23,6 @@ import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
 import { PartnerDetailInline } from "@/v2/ui/organisms/PartnerDetailInline";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
-import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 const WCA_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
   { key: "name", label: "Nome" },
@@ -40,7 +39,6 @@ export function NetworkPage(): React.ReactElement {
   useTrackPage("network");
   const { companies, isLoading } = useWcaPartnersAsCompanies();
   const chips = useWcaActiveFilterChips();
-  const g = useGlobalFilters();
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
 
   useMissionDrawerEvents({
@@ -95,37 +93,6 @@ export function NetworkPage(): React.ReactElement {
     toast.success(`Campagna creata per ${withEmail.length} destinatari`);
   }, []);
 
-  // Mappa sidebar networkSort (NETWORK_SORT) → CompanySortKey della lista
-  const SIDEBAR_TO_LIST: Record<string, CompanySortKey> = {
-    name: "name",
-    country: "country",
-    partner_count: "country", // proxy: ordina per paese
-    rating: "score",
-    recent: "lastInteraction",
-  };
-  const sidebarKey = g.filters.networkSort;
-  const mappedKey: CompanySortKey = SIDEBAR_TO_LIST[sidebarKey] ?? "name";
-  const sortDir = g.filters.networkSortDir ?? "asc";
-
-  const handleSortChange = useCallback(
-    (key: CompanySortKey, dir: "asc" | "desc") => {
-      // Trova il primo entry sidebar che mappa a `key` (preferenza diretta)
-      const reverse: Record<CompanySortKey, string> = {
-        name: "name",
-        country: "country",
-        city: "country",
-        wcaYears: "recent",
-        score: "rating",
-        contactsCount: "name",
-        lastInteraction: "recent",
-        interactions: "recent",
-      };
-      g.setNetworkSort(reverse[key] ?? "name");
-      g.setNetworkSortDir(dir);
-    },
-    [g]
-  );
-
   return (
     <div data-testid="page-network" className="flex flex-col h-full min-h-0 overflow-hidden">
       <EntityListWithDetail
@@ -135,7 +102,6 @@ export function NetworkPage(): React.ReactElement {
         emptyMessage="Seleziona un paese dalla sidebar per vedere i partner"
         sortStorageKey="list:wca"
         sortOptions={WCA_SORT_OPTIONS}
-        sortOverride={{ sortKey: mappedKey, sortDir, onChange: handleSortChange }}
         globalChips={chips}
         searchPlaceholder="Cerca partner, città, referente…"
         onOpenCompany={handleOpenCompany}

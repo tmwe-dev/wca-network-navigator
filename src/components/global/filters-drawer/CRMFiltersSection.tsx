@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check, ArrowUpDown } from "lucide-react";
+import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getCountryFlag, resolveCountryCode } from "@/lib/countries";
 import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
-import { CRM_GROUPBY, CRM_SORT } from "./constants";
+import { CRM_GROUPBY } from "./constants";
 import { createLogger } from "@/lib/log";
 
 const log = createLogger("CRMFiltersSection");
@@ -227,14 +227,6 @@ export function CRMFiltersSection() {
         <ChipGroup columns={2}>
           {CRM_GROUPBY.map(o => (
             <Chip key={o.value} block active={g.filters.groupBy === o.value} onClick={() => g.setGroupBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
-
-      <FilterSection icon={ArrowUpDown} label="Ordina contatti">
-        <ChipGroup columns={3}>
-          {CRM_SORT.map(o => (
-            <Chip key={o.value} block active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
           ))}
         </ChipGroup>
       </FilterSection>

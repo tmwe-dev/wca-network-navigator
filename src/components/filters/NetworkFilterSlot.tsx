@@ -1,14 +1,7 @@
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { cn } from "@/lib/utils";
-import { Search, ArrowUpDown, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
-
-const SORT = [
-  { value: "name", label: "Nome" },
-  { value: "country", label: "Paese" },
-  { value: "contacts", label: "N° contatti" },
-  { value: "date_desc", label: "Più recenti" },
-];
 
 const QUALITY = [
   { value: "all", label: "Tutti" },
@@ -24,7 +17,6 @@ export function NetworkFilterSlot() {
 
   const activeCount = [
     g.filters.networkQuality !== "all",
-    g.filters.networkSort !== "name",
   ].filter(Boolean).length;
 
   return (
@@ -44,19 +36,9 @@ export function NetworkFilterSlot() {
           <span className="text-[10px] text-primary font-medium">{activeCount} filtri attivi</span>
           <button onClick={() => {
             g.setNetworkQuality("all");
-            g.setNetworkSort("name");
           }} className="text-[9px] text-muted-foreground hover:text-destructive">Reset</button>
         </div>
       )}
-
-      {/* Sort */}
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {SORT.map(o => (
-            <Chip key={o.value} active={g.filters.networkSort === o.value} onClick={() => g.setNetworkSort(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
-      </FilterSection>
 
       {/* Quality */}
       <FilterSection icon={Sparkles} label="Qualità dati">

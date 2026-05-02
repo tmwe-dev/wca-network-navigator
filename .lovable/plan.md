@@ -1,108 +1,50 @@
+## Principio
 
-# Proposta restyling sidebar filtri (WCA Partner + CRM)
+Le sidebar (filter rail) sono **solo filtri**. Tutti gli ordinamenti vivono **nella toolbar sopra la lista** della pagina, dove l'utente vede subito l'effetto del cambio.
 
-Obiettivo: rendere la sidebar leggibile, "respirata" e con campi/filtri chiaramente riconoscibili. Nessun cambio di logica o di dati — solo presentazione.
+## Cosa cambio
 
-## Problemi attuali (dallo screenshot)
+### 1. Rimuovo le sezioni "Ordina" da TUTTE le sidebar
 
-1. Tutto è incollato al bordo sinistro/destro: zero margine interno.
-2. Header "WCA Partner" + descrizione occupano spazio ma non aiutano.
-3. Gli `Input` (Cerca, Cerca paese) sono `bg-muted/30` su sfondo scuro → quasi invisibili, sembrano testo.
-4. Le label di sezione (CERCA, PAESI, QUALITÀ DATI, ORDINA PARTNER) sono micro-testo (10px) allineate a sinistra senza separatori → tutto sembra un blocco unico.
-5. I chip "Qualità dati" e "Ordina" sono sparsi a sinistra senza griglia → caotici, soprattutto "Senza email", "Senza contatti" che vanno a capo male.
-6. Nessuna gerarchia visiva tra "filtri primari" (paesi, ricerca) e "filtri secondari" (qualità, sort).
+File toccati (rimuovo solo il blocco `<FilterSection ... label="Ordina*">` e i relativi import inutilizzati):
 
-## Proposta visiva
+- `NetworkFiltersSection.tsx` — rimuovo "Ordina partner" (dropdown + A↔Z)
+- `CRMFiltersSection.tsx` — rimuovo "Ordina contatti"
+- `CockpitFiltersSection.tsx` — rimuovo "Ordina"
+- `AttivitaFiltersSection.tsx` — rimuovo "Ordina"
+- `AgendaFiltersSection.tsx` — rimuovo "Ordina"
+- `CircuitFiltersSection.tsx` — rimuovo "Ordina"
+- `SortingFiltersSection.tsx` — rimuovo "Ordina"
+- `InboxFiltersSection.tsx` — rimuovo "Ordina" (sia EMAIL_SORT sia i chip date_desc/date_asc/unread)
+- `EmailIntelligenceFiltersSection.tsx` — rimuovo "Ordina"
+- `CampaignsFiltersSection.tsx` — rimuovo "Ordina"
+- `NetworkFilterSlot.tsx` (legacy slot) — rimuovo il blocco Sort
 
-```text
-┌─────────────────────────────────────┐
-│  [icona] FILTRI WCA PARTNER         │  ← header compatto, 1 riga
-├─────────────────────────────────────┤
-│                                     │
-│   🔍  Cerca partner                 │  ← label sopra il campo
-│   ┌───────────────────────────────┐ │
-│   │ 🔍  Partner, azienda, email…  │ │  ← input con bordo visibile,
-│   └───────────────────────────────┘ │     bg più chiaro, h-9
-│                                     │
-│  ─────────────────────────────────  │  ← divider netto
-│                                     │
-│   🌍  Paesi          [3 attivi ✕]   │  ← contatore + reset inline
-│   ┌───────────────────────────────┐ │
-│   │ 🔍 Cerca paese…               │ │
-│   └───────────────────────────────┘ │
-│   ╔═══════════════════════════════╗ │
-│   ║ 🇨🇳 China              2.471  ║ │  ← lista in card con
-│   ║ 🇺🇸 United States      1.080  ║ │     bordo + righe alternate
-│   ║ 🇮🇳 India ✓              689  ║ │
-│   ╚═══════════════════════════════╝ │
-│                                     │
-│  ─────────────────────────────────  │
-│                                     │
-│   ✨  Qualità dati                  │
-│   ┌──────────┬──────────┬─────────┐ │  ← griglia 2-3 colonne,
-│   │  Tutti   │ 📧 Email │ 📱 Tel  │ │     chip uniformi
-│   ├──────────┼──────────┼─────────┤ │
-│   │🔗 Profilo│❌ No mail│👤 No ctt│ │
-│   └──────────┴──────────┴─────────┘ │
-│                                     │
-│  ─────────────────────────────────  │
-│                                     │
-│   ↕  Ordina                         │
-│   ┌──────────┬──────────┬─────────┐ │
-│   │  Nome    │  Rating  │ Recenti │ │
-│   └──────────┴──────────┴─────────┘ │
-│                                     │
-│  ─────────────────────────────────  │
-│                                     │
-│   ⚡  Azioni                        │
-│   [   🔄  Sincronizza WCA       ]   │
-│                                     │
-└─────────────────────────────────────┘
-```
+### 2. Aggiorno il counter dei filtri attivi
 
-## Modifiche concrete
+In `useFiltersDrawerState.ts` rimuovo i conteggi che incrementano `n` per `sortBy/networkSort/emailSort/emailIntelSort` ≠ default. L'ordinamento non è più un "filtro attivo".
+Mantengo i `setNetworkSort/setSortBy/...` nel reset solo per pulizia stato globale.
 
-### A. Container sidebar
-- `ContextFiltersRail`: aggiungere `px-4 py-3 space-y-4` al wrapper `.overflow-y-auto`.
-- Header sezione (`Filtri WCA Partner`) ridotto a 1 riga, niente descrizione.
+### 3. Network e Contacts: la toolbar resta sovrana
 
-### B. `FilterSection` (`shared.tsx`)
-- Label da `10px uppercase` → `11px font-semibold` con icona 14px e padding-bottom `mb-2`.
-- Aggiungere variante con "trailing slot" (per il contatore "3 attivi ✕" sui Paesi).
-- Aggiungere `<Separator />` automatico tra sezioni (oppure gestito dal container con `divide-y`).
+`NetworkPage` e `ContactsPage` hanno già `ListToolbar` con dropdown sort + direzione. Rimango invariati. In `NetworkPage` semplifico togliendo il `sortOverride` collegato alla sidebar (non più necessario): la toolbar usa il proprio stato locale `useSortedCompanies`.
 
-### C. Input (Cerca / Cerca paese)
-- Sostituire `bg-muted/30 border-border/40` → `bg-background border-border h-9` con `focus-visible:ring-1 ring-primary`.
-- Icona 🔍 dentro il campo a sinistra (`pl-9`), placeholder con opacità 60%.
-- Stessa altezza (h-9) per tutti i campi → coerenza.
+### 4. Stato globale: NON tocco lo schema
 
-### D. Lista paesi
-- Wrap in `Card` con `border` netto, niente `bg-muted/10`.
-- Riga selezionata: `bg-primary/10 border-l-2 border-primary` (ora è `bg-primary/15` pieno).
-- Hover più visibile: `hover:bg-muted`.
-- Pillola "Paesi attivi" sopra la lista come badge inline accanto al titolo, non come blocco a parte.
+`networkSort`, `networkSortDir`, `sortBy`, `emailSort`, `emailIntelSort` restano in `GlobalFiltersContext` perché alcune pagine non‑V2 li leggono ancora (`PartnerListPanel`, `EmailInboxView`, `manual-grouping/useFilterAndSort`). Restano valorizzati ai default; le pagine consumatrici continueranno a funzionare finché non aggiungeremo le rispettive toolbar (lavoro futuro, come da risposta dell'utente).
 
-### E. Chip gruppo (Qualità + Sort)
-- `ChipGroup` riceve prop `columns?: 2 | 3` e passa a `grid grid-cols-{n} gap-1.5`.
-- Chip: altezza fissa `h-8`, testo centrato, larghezza 100% della cella → niente più chip che vanno a capo storti.
-- Stato attivo: bordo `border-primary` pieno + `bg-primary/15`, non solo opacity.
+### 5. Toolbar mancanti — fuori scope
 
-### F. Pulsante azione (Sincronizza WCA)
-- Variant `default` (primary) invece di `outline` per dargli peso, full-width h-9.
+Per Inbox, Email Intelligence, Cockpit, Attività, Agenda, Circuit, Sorting, Campaigns, BCA aggiungeremo una toolbar con sort dropdown **in un secondo passaggio**, pagina per pagina, quando ci lavoreremo. Per ora: nessuna UI di ordinamento (lo stato ricade sul default già in `GlobalFiltersContext`).
 
-### G. CRM (`CRMFiltersSection`)
-Applicare lo stesso schema: padding container, input h-9 con bordo visibile, chip in grid 2 colonne, divider tra sezioni.
+## Risultato per l'utente
 
-## File toccati (solo UI/preset)
+- Le sidebar diventano più corte e coerenti: solo filtri (paesi, qualità, stato, canale, ricerca…).
+- Network e CRM continuano ad ordinare via la toolbar in cima alla lista.
+- Le altre pagine usano l'ordinamento di default finché non aggiungeremo la loro toolbar.
 
-- `src/components/global/filters-drawer/shared.tsx` — aggiornare `FilterSection`, `ChipGroup` (prop `columns`), `Chip` (h-8 full-width quando in grid).
-- `src/components/global/filters-drawer/NetworkFiltersSection.tsx` — header compatto, input con icona e bordo, contatore Paesi inline, chip in grid.
-- `src/components/global/filters-drawer/CRMFiltersSection.tsx` — stesso trattamento.
-- `src/components/contacts/bca/BCAFiltersRailContent.tsx` — allineare stile (container padding + chip grid).
-- `src/v2/ui/templates/ContextFiltersRail.tsx` — aggiungere `px-4 py-4 space-y-4 divide-y divide-border/40` al contenuto scrollabile + header sezione più compatto.
+## Note tecniche
 
-Nessuna modifica a hook, contesti o query: solo classi Tailwind e piccoli ritocchi di markup.
-
-## Domanda prima di procedere
-
-Vuoi che applichi anche **icone emoji native** dentro i chip qualità (📧 📱 🔗 ❌ 👤) per aumentare la riconoscibilità immediata, oppure preferisci un look più "enterprise" con sole icone Lucide monocrome a sinistra del testo?
+- Solo modifiche frontend/presentation.
+- Nessuna migrazione DB, nessun cambio business logic.
+- Nessuna rimozione di setter/state nel context (evita rotture nei consumer legacy).

@@ -1,4 +1,4 @@
-import { Search, ListTodo, Zap, ArrowUpDown } from "lucide-react";
+import { Search, ListTodo, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
@@ -9,12 +9,6 @@ const AGENDA_TYPES = [
   { value: "reminder", label: "Promemoria" },
   { value: "activity", label: "Attività" },
   { value: "followup", label: "Follow-up" },
-];
-
-const AGENDA_SORT = [
-  { value: "date_desc", label: "Più recenti" },
-  { value: "date_asc", label: "Più vecchi" },
-  { value: "priority", label: "Priorità" },
 ];
 
 export function AgendaFiltersSection() {
@@ -34,13 +28,6 @@ export function AgendaFiltersSection() {
       </FilterSection>
       <FilterSection icon={Zap} label="Priorità">
         <ChipGroup>{ATTIVITA_PRIORITY.map(o => <Chip key={o.value} active={g.filters.agendaPriority === o.value} onClick={() => g.setAgendaPriority(o.value)}>{o.label}</Chip>)}</ChipGroup>
-      </FilterSection>
-      <FilterSection icon={ArrowUpDown} label="Ordina">
-        <ChipGroup>
-          {AGENDA_SORT.map(o => (
-            <Chip key={o.value} active={g.filters.sortBy === o.value} onClick={() => g.setSortBy(o.value)}>{o.label}</Chip>
-          ))}
-        </ChipGroup>
       </FilterSection>
     </>
   );
