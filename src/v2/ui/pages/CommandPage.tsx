@@ -11,7 +11,7 @@
  * useCommandPageState) are intentionally NOT used here. Doctrine: one logic per task,
  * everywhere.
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import FloatingDock from "@/components/layout/FloatingDock";
