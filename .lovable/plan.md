@@ -1,51 +1,53 @@
-## Obiettivo
-Riordinare il menu V2 secondo le indicazioni: Command come prima voce (nuova "Home"), Esplora seconda, Home attuale nascosta, "Pipeline CRM" rinominata "Pipeline". Email Intelligence resta voce indipendente per ora (decisione rimandata insieme a Intelligence).
+# Command — pulizia totale dello stato vuoto
 
-## Nuovo ordine menu
+## Decisione di prodotto
+
+Lo stato vuoto della pagina `/v2/command` oggi è rumore. Le tue indicazioni:
+
+- **Niente briefing** ("Buongiorno, ho 4784 email…") — quei dati vivono già altrove (Inbox, Approval queue).
+- **Niente snapshot numerico** ("14 sorgenti · 12.847 contatti · 234 partner · 1.420 BCA") — distrae.
+- **Nessun suggerimento** ("Cerca i partner di Malta", "Scrivi mail a Luca Arcanà…") — meglio nulla che ultimi prompt buttati lì senza ragionamento commerciale. L'utente fa le sue ricerche.
+
+Risultato: una landing zen — solo titolo, l'orb AI, e l'input. L'utente arriva e *parla*.
+
+## Cosa resta visibile sullo stato vuoto
 
 ```text
-1. Command          (era #2 — diventa la nuova landing, etichetta resta "Command")
-2. Esplora          (era #4 — sale in alto)
-3. Pipeline         (era "Pipeline CRM" — rinominata)
-4. Comunica
-5. Email Intelligence
-6. Intelligence
-7. Config
+                  [ AI Orb pulsante ]
+
+                  Cosa vuoi ottenere?
+
+                ( input + microfono )
 ```
 
-Voce **Home** (path `/v2`, icona Dashboard) → **nascosta dal menu** (non rimossa: la rotta `/v2` resta funzionante per backward-compat e deep-link).
+Nient'altro. Niente chip, niente proposte, niente snapshot, niente briefing.
 
-## Modifiche
+## Modifiche tecniche
 
-### 1) `src/v2/ui/templates/navConfig.tsx`
-- Rimuovere la riga `nav.home` da `navItemsDef` (la rotta `/v2` resta nel router, solo non più in sidebar).
-- Riordinare le voci con i nuovi `pinOrder`:
-  - Command → 1
-  - Esplora → 2
-  - Pipeline → 3
-  - Comunica → 4
-  - Email Intelligence → 5
-  - Intelligence → 6
-  - Config → 7
-- Cambiare la `labelKey` di Pipeline da `nav.crm_pipeline` a `nav.pipeline` (nuova chiave i18n).
-- Aggiornare il commento di intestazione (Phase 1) da "6 destinations" a "7 destinations" e rimuovere il riferimento a Home.
-- In `mobileBottomNavPaths`, sostituire `"/v2"` con `"/v2/command"` come prima voce mobile.
+**File toccato**: `src/v2/ui/pages/CommandPage.tsx`
+- Rimuovere il render di `<BriefingPanel>` nel ramo `isEmpty` (riga ~193).
+- Rimuovere import `BriefingPanel` e `useCommandBriefing` se non più usati.
 
-### 2) `src/i18n/index.ts` (e file lingua collegati, se presenti)
-- Aggiungere nuova chiave `nav.pipeline` con valore "Pipeline" (IT) / "Pipeline" (EN).
-- Mantenere `nav.home` e `nav.crm_pipeline` definite (usate altrove o per rollback rapido).
+**File toccato**: `src/v2/ui/pages/command/components/CommandSuggestions.tsx`
+- Eliminare il blocco "allPrompts" (suggerimenti dinamici + fallback statici) e il blocco "capabilities".
+- Lasciare solo: AI orb + titolo "Cosa vuoi ottenere?". Niente sottotitolo con i numeri.
+- (In alternativa: eliminare il file e inline il minimo nello stato vuoto della CommandPage. Decido in implementazione, dipende da quanti consumer ha.)
 
-### 3) Verifiche dipendenze (solo lettura, nessun edit previsto se non emergono regressioni)
-- `MobileBottomNav.tsx`: deriva da `mobileBottomNavPaths` → si aggiorna automaticamente con la modifica al config.
-- `FloatingDock.tsx`: usa `pinnedNavItems` (derivato da `navItemsDef`) → si adegua automaticamente.
-- `CommandPalette.tsx`: ha lista propria `NAV_ITEMS` (Dashboard incluso) → **lasciato invariato** per ora; la palette è uno strumento di accesso rapido e può ancora navigare a `/v2`. Da rivalutare se l'utente vuole rimuoverla anche da lì.
-- Smoke test `e2e/smoke/08-v2-navigation.spec.ts`: include `/v2` come rotta da verificare. Resta valido perché la rotta non viene rimossa dal router.
+**File da archiviare (non eliminare)**:
+- `src/v2/ui/pages/command/components/BriefingPanel.tsx`
+- `src/v2/ui/pages/command/hooks/useCommandBriefing.ts`
 
-## Cosa NON viene toccato
-- Router (`src/v2/routes.tsx`): la rotta `/v2` (DashboardPage) resta registrata. Nessun redirect aggiunto.
-- Email Intelligence: resta voce di primo livello in attesa della discussione su Intelligence.
-- Pagina Command: nessuna modifica ai contenuti, solo cambio di posizione in sidebar.
+Restano sul filesystem (regola progetto: non cancellare componenti potenzialmente in sviluppo) ma non più importati. Se in futuro vorrai un "briefing intelligente" davvero ragionato, partiremo da lì.
 
-## Domande aperte (post-implementazione)
-- Vuoi anche che `/v2` rediriga automaticamente a `/v2/command` (così chi atterra sulla root va direttamente alla nuova "home")? Posso aggiungerlo se confermi.
-- Email Intelligence dentro Comunica come tab? Da decidere insieme al riordino di Intelligence.
+## Cosa NON tocco
+
+- Header alto della pagina (Dashboard, Sessione attiva, Monitor, Realtime, IT, "Cosa posso fare").
+- Composer / input / voice.
+- Logica conversazione, scenari, tool execution.
+- Bottom dock azioni (Source Unification, Search Partners, ecc.) — quello è un menu rapido strumenti, non un suggerimento commerciale: resta.
+
+## Nota sulla visione (per dopo)
+
+Hai detto chiaramente: *"il sistema deve assistere un ufficio commerciale autonomo"*. Quando vorrai reintrodurre proposte sotto il titolo, il pattern giusto sarà **regole DAL → AI ragiona → 1-2 next best action commerciali** (partner inattivi da X giorni, BCA mai contattate, missioni ferme). Lo apriremo come progetto a sé — `command-next-best-action` — non come patchwork di "ultimi prompt".
+
+Per ora: **silenzio pulito**.
