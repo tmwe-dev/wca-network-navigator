@@ -1,92 +1,138 @@
-## Cosa farò (3 azioni mirate, una per problema)
+# Audit deep pipeline produzione/invio messaggi
+
+Ho mappato riga per riga ogni punto del codice che produce o invia un'email/WhatsApp/LinkedIn e ogni passaggio è stato confrontato con la pipeline ufficiale (Oracolo → Architetto → Prompt Lab → Knowledge Base → **Giornalista (caporedattore finale)** → Send).
+
+## Sintesi: pipeline rispettata? Quasi, ma ci sono 5 buchi reali
+
+✅ **OK** — `generate-email`, `improve-email`, `send-email`, `send-whatsapp`, `send-linkedin`, `process-email-queue`, `agent-execute · send_email`, `agent-execute · send_whatsapp`. Il giornalista è invocato.
+
+❌ **BUCHI** — descritti sotto. Di questi, **#1 è il più grave** perché disattiva il giornalista su tutto il sistema in modo silenzioso.
 
 ---
 
-### 1) Pipeline filtri Giornalista/Revisore — consolidare e memorizzare come INTOCCABILE
+## I 5 buchi della pipeline
 
-**Verifica oggettiva fatta sul codice:**
+### 🔴 BUG #1 — Kill-switch silenzioso `journalist_optimus_enabled=false`
 
-Esiste UN layer editoriale unico (`_shared/journalistReviewLayer.ts`) ed è già attivo su TUTTI i punti di produzione/invio messaggi:
+In ogni punto in cui il giornalista è invocato (`generate-email`, `improve-email`, `agent-execute`, `send-email`, `send-whatsapp`, `send-linkedin`, `process-email-queue`) il codice fa:
 
-| Canale | Edge function | Journalist attivo |
-|---|---|---|
-| Email — generazione | `generate-email` | ✓ (line 270) |
-| Email — miglioramento | `improve-email` | ✓ (line 445) |
-| Email — coda outreach | `process-email-queue` | ✓ (line 225) |
-| Email — invio diretto | `send-email` | ✓ (line 346, doppio guard se `journalist_reviewed` mancante) |
-| WhatsApp — invio | `send-whatsapp` | ✓ (line 167) |
-| LinkedIn — invio | `send-linkedin` | ✓ (line 210) |
-| Mario · `send_email` (agent-execute) | `emailTools.ts` | ✓ (line 73) |
-| Mario · `send_whatsapp` (agent-execute) | `emailTools.ts` | ✓ (line 165) |
-| Mario · `compose-email` (Command) | usa `generate-email` → ✓ |
-| Mario · `send-linkedin` (Command) | usa edge `send-linkedin` → ✓ |
-| Mario · `send-whatsapp` (Command) | usa edge `send-whatsapp` → ✓ |
+```ts
+const optimus = await loadOptimusSettings(supabase, userId);
+if (optimus.enabled && finalBody) {  // ← se enabled=false, salta TUTTO
+  await journalistReview(...);
+}
+```
 
-**Smentita audit precedente:** avevo segnalato che `composeEmail` bypassava il revisore. Rileggendo il file, `composeEmail.ts` chiama `generate-email` (non più `unified-assistant`), quindi il giornalista È applicato. Pipeline già completa su tutti e 3 i canali.
+Sul DB ho trovato:
+```
+user_id ae35ad39-…  →  journalist_optimus_enabled = "false"
+```
 
-**Cosa farò:**
-1. Salvare in memoria persistente una nuova entry `mem://tech/editorial-review-layer-mandatory` che dichiara: layer `journalistReview` obbligatorio su ogni produzione/invio email/WA/LI; matrice canali sopra; vietato bypassarlo; ogni nuovo tool che produce o invia messaggi DEVE invocarlo o passare per un'edge che lo invoca.
-2. Aggiungere riga in `mem://index.md` Core: "Editorial review (journalistReview) obbligatorio su ogni email/WA/LI prodotti o inviati. Mai bypassarlo."
-3. Aggiungere commento `// 🔒 EDITORIAL LAYER — INTOCCABILE` in testa a `_shared/journalistReviewLayer.ts` per segnalarne lo stato di file critico.
+**Conseguenza concreta:** per l'utente operativo il giornalista **non gira mai**. Email/WA/LI vanno fuori senza la review che abbiamo definito intoccabile. Mario, agent-execute, processo batch, send diretti — tutti bypassati.
 
-Nessuna modifica funzionale al codice della pipeline (è già corretta).
+Questo viola direttamente la regola appena consolidata in `mem://tech/editorial-review-layer-mandatory`.
 
----
+### 🔴 BUG #2 — `agent-execute · handleSendLinkedIn` non invoca il giornalista
 
-### 2) Duplicati `operative_prompts` nel DB — pulizia oggettiva
+In `supabase/functions/agent-execute/toolHandlers/emailTools.ts`:
+- `handleSendEmail` → giornalista ✅
+- `handleSendWhatsApp` → giornalista ✅
+- `handleSendLinkedIn` → **nessuna chiamata a `journalistReview`** ❌
 
-**Verifica oggettiva fatta:** 6 gruppi distinti (context+tags), ognuno replicato esattamente 5 volte → 30 record, di cui 24 da rimuovere. Tutti hanno `updated_at` identico per gruppo (stessa migrazione li ha duplicati).
+Quando un agente chiama il tool LinkedIn, il messaggio salta il caporedattore.
 
-| Context | Tags | Copie | Da tenere | Da eliminare |
-|---|---|---|---|---|
-| classification | classification, lead-status, email-quality, universale | 5 | 1 | 4 |
-| command | OBBLIGATORIA, briefing | 5 | 1 | 4 |
-| command | OBBLIGATORIA, identita | 5 | 1 | 4 |
-| command | OBBLIGATORIA, memoria | 5 | 1 | 4 |
-| command | OBBLIGATORIA, proattivita | 5 | 1 | 4 |
-| command | OBBLIGATORIA, scheduling | 5 | 1 | 4 |
-| command | OBBLIGATORIA, voce | 5 | 1 | 4 |
-| command | tool-routing, router, OBBLIGATORIA | 5 | 1 | 4 |
-| command | tool-routing, whatsapp, linkedin, OBBLIGATORIA | 5 | 1 | 4 |
-| general | aliases, copywriting, universale | 5 | 1 | 4 |
-| outreach | outreach, email-quality, universale, OBBLIGATORIA | 5 | 1 | 4 |
-| outreach | outreach, multi-canale, holding-pattern, … | 5 | 1 | 4 |
+### 🟠 BUG #3 — `pending-action-executor` chiama `send-email` con campi sbagliati
 
-(in totale 12 gruppi × 5 = 60 record, di cui 48 da rimuovere — la query iniziale era troncata, controllerò esattamente prima di eseguire)
+In `pending-action-executor/index.ts:209-218`:
+```ts
+body: JSON.stringify({
+  to: ..., subject: ..., html: ...,
+  user_id: action.user_id,    // ← send-email NON legge user_id, lo prende dal JWT
+  partner_id: ...,
+  // manca: contact_id, lead_status hint
+})
+```
+La review parte (giusto), ma il contesto commerciale che riceve è **sempre `lead_status: "unknown"`** perché `send-email` legge solo `partner_id` parziale. Il giornalista valuta a vuoto. Stesso pattern in `cadence-engine` e in `mission-executor`.
 
-**Prima di eliminare farò una verifica oggettiva del CONTENUTO:**
-- Per ogni gruppo, leggerò il `body` di tutte le copie e verificherò che siano identiche o quasi-identiche.
-- Se sono identiche → elimino tenendo l'`id` più vecchio (per non perdere riferimenti).
-- Se NON sono identiche (anche se context+tags coincidono) → ti mostro le differenze e NON elimino nulla finché non decidi tu.
+### 🟠 BUG #4 — `_shared/platformTools/outreachHandler.ts` e `_shared/platformToolHandlers/outreachTools.ts` (usati da `ai-assistant`)
 
-Esecuzione tramite tool `supabase--insert` (DELETE su tabella business → trigger globale converte automaticamente in soft-delete `deleted_at`, come da policy `mem://constraints/no-physical-delete`).
+Questi 2 handler invocano `send-email` direttamente, ma:
+- non passano `partner_id` né `contact_id` al body;
+- non passano `journalist_reviewed`;
+- la review parte ma con contesto **vuoto** (`lead_status: "unknown"`, niente partner).
+
+Risultato: il giornalista funziona "a metà", non ha le informazioni per giudicare coerenza/fase/storia.
+
+### 🟡 BUG #5 — `_shared/toolHandlersWrite.ts · executeSendEmail`
+
+Stessa cosa del #4. Non passa `partner_id`/`contact_id` a send-email. Non riferisce nemmeno il post-send pipeline. Questo handler è chiamato da `ai-assistant` quando l'agente sceglie il tool generico `send_email`.
 
 ---
 
-### 3) Export KB/Prompt — confermare il link
+## Piano di fix (1 sola sessione, nessuna refactor strutturale)
 
-**Verifica fatta:** `AIExportPanel` è già esposto. Percorso: **Settings → tab "Backup & Export"** in `/v2/settings` (montato in `src/v2/ui/pages/SettingsPage.tsx` riga 206 via `BackupExportTab`).
+Tutto il fix è **server-side** (edge functions). Il frontend non viene toccato.
 
-Il pannello esporta uno ZIP leggibile (Markdown) con:
-- Tutti i prompt operativi
-- Tutte le KB entries
-- Agenti, capabilities, personas
-- Memoria
+### F1 — Rendere il giornalista veramente intoccabile (chiude BUG #1)
 
-**Cosa farò:** ti darò qui sotto il link diretto cliccabile alla pagina (`/v2/settings` → tab Backup & Export). Nessuna modifica codice.
+Sostituire la logica `if (optimus.enabled)` con: **il giornalista gira SEMPRE**. La chiave `journalist_optimus_enabled` resta utile solo per:
+- scegliere `mode` (review_and_correct vs review_only vs silent_audit);
+- scegliere `strictness` (1-10).
+
+Cambio in 6 file:
+- `supabase/functions/generate-email/index.ts` (riga 263)
+- `supabase/functions/improve-email/index.ts` (riga 444)
+- `supabase/functions/agent-execute/toolHandlers/emailTools.ts` (righe 65, 164)
+- `supabase/functions/send-email/index.ts` — già senza flag, OK
+- `supabase/functions/send-whatsapp/index.ts` — già senza flag, OK
+- `supabase/functions/send-linkedin/index.ts` — già senza flag, OK
+- `supabase/functions/process-email-queue/index.ts` — già senza flag, OK
+
+E in `_shared/journalistSelector.ts` aggiornare `loadOptimusSettings` per restituire sempre `enabled:true` con `mode`/`strictness` configurabili.
+
+In parallelo aggiorno `app_settings`:
+```sql
+UPDATE app_settings
+SET value = 'true'
+WHERE key = 'journalist_optimus_enabled';
+```
+così anche eventuali letture residue si comportano correttamente.
+
+### F2 — `handleSendLinkedIn` aggiunge giornalista (chiude BUG #2)
+
+Aggiungo in `agent-execute/toolHandlers/emailTools.ts` (handleSendLinkedIn) lo stesso blocco di `handleSendWhatsApp`, con `channel: "linkedin"`.
+
+### F3 — Propagare `partner_id` + `contact_id` a `send-email` da tutti gli orchestratori (chiude BUG #3, #4, #5)
+
+File da toccare:
+- `supabase/functions/pending-action-executor/index.ts`
+- `supabase/functions/cadence-engine/index.ts`
+- `supabase/functions/mission-executor/index.ts` (per la parte che già va a send via generate)
+- `supabase/functions/_shared/platformTools/outreachHandler.ts`
+- `supabase/functions/_shared/platformToolHandlers/outreachTools.ts`
+- `supabase/functions/_shared/toolHandlersWrite.ts` (executeSendEmail)
+
+In ognuno: aggiungo `partner_id` e `contact_id` (quando disponibili) al body inviato a `send-email`/`send-whatsapp`/`send-linkedin`. Così il giornalista riceve il contesto vero.
+
+### F4 — Test di regressione
+
+Aggiungo un test in `src/test/` che monta una mock di `journalistReview` e verifica che **ognuno dei 7 punti** della pipeline lo invochi (1 chiamata per punto).
+
+### F5 — Aggiorno la memoria
+
+Aggiorno `mem://tech/editorial-review-layer-mandatory` con:
+- "Il giornalista non ha più kill-switch utente. La sola configurazione utente sono `mode` e `strictness`."
+- Lista completa dei 9 punti coperti (aggiungo handleSendLinkedIn).
 
 ---
 
-## Cosa NON farò ora (rimandato come da tua richiesta)
+## Cosa NON tocco
 
-- Audit oggettivo riga-per-riga del CONTENUTO dei prompt e della KB rispetto ai ruoli degli agenti. Ne parliamo dopo, quando questi 3 punti sono chiusi.
+- I prompt e la KB (era il prossimo step concordato).
+- Il frontend (`composeEmail`, `sendEmailDirect`, `sendWhatsapp`, `sendLinkedin` del Command già non possono bypassare).
+- I tool di lettura, deep search, onboarding ecc.
+- `enrich-partner-website`, `parse-business-card`, `categorize-content` — non producono messaggi outbound.
 
----
+## Dopo questo fix
 
-## Ordine di esecuzione
-
-1. Salvo memoria "editorial layer intoccabile" + commento file.
-2. Leggo i body dei duplicati, confronto, ti mostro un riepilogo, poi elimino solo gli identici.
-3. Ti do il link `/v2/settings` (tab Backup & Export).
-
-Se confermi, procedo.
+Procediamo con l'audit dei prompt operativi e della KB rispetto ai ruoli degli agenti, come avevi anticipato.
