@@ -28,6 +28,10 @@ interface AgendaDayDetailProps {
     activityType: ActivityTypeFilter;
     responseStatus: ResponseFilter;
   };
+  /** ID dell'attività attualmente selezionata nel pannello destro. */
+  selectedActivityId?: string | null;
+  /** Callback chiamata quando l'utente seleziona una card. */
+  onSelectActivity?: (activity: AllActivity) => void;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -125,7 +129,12 @@ function cleanTitle(title: string | null): string {
     .trim() || "—";
 }
 
-export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetailProps) {
+export default function AgendaDayDetail({
+  selectedDay,
+  filters,
+  selectedActivityId = null,
+  onSelectActivity,
+}: AgendaDayDetailProps) {
   const { data, isLoading } = useAgendaDayActivities(selectedDay);
   const activities = data?.activities || [];
   const reminders = data?.reminders || [];
@@ -207,6 +216,8 @@ export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetai
                 key={group.key}
                 def={group}
                 activities={items}
+                selectedActivityId={selectedActivityId}
+                onSelectActivity={onSelectActivity}
               />
             );
           })}
@@ -229,7 +240,17 @@ export default function AgendaDayDetail({ selectedDay, filters }: AgendaDayDetai
 /* ─────────────────────────────────────────────────────────────────────────────
  * ActionGroup — intestazione di sezione + righe attività
  * ─────────────────────────────────────────────────────────────────────────── */
-function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: AllActivity[] }) {
+function ActionGroup({
+  def,
+  activities,
+  selectedActivityId,
+  onSelectActivity,
+}: {
+  def: ActionGroupDef;
+  activities: AllActivity[];
+  selectedActivityId: string | null;
+  onSelectActivity?: (activity: AllActivity) => void;
+}) {
   const Icon = def.icon;
   return (
     <section>
@@ -242,7 +263,13 @@ function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: All
       </header>
       <div className="space-y-1">
         {activities.map(a => (
-          <ActivityRow key={a.id} activity={a} verb={def.verb} />
+          <ActivityRow
+            key={a.id}
+            activity={a}
+            verb={def.verb}
+            isSelected={selectedActivityId === a.id}
+            onSelect={onSelectActivity}
+          />
         ))}
       </div>
     </section>
@@ -253,7 +280,17 @@ function ActionGroup({ def, activities }: { def: ActionGroupDef; activities: All
  * ActivityRow — riga compatta, niente subject ripetuto, niente checkbox legacy.
  * Layout: [bordo colore] icona-canale · partner · "X tempo fa" · CTA azione · ⋯
  * ─────────────────────────────────────────────────────────────────────────── */
-function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }) {
+function ActivityRow({
+  activity,
+  verb,
+  isSelected,
+  onSelect,
+}: {
+  activity: AllActivity;
+  verb: string;
+  isSelected: boolean;
+  onSelect?: (activity: AllActivity) => void;
+}) {
   const ChannelIcon = channelIcon[activity.activity_type] || Mail;
   const urgency = urgencyFromAge(activity.created_at);
   const updateActivity = useUpdateActivity();
@@ -273,9 +310,20 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
 
   return (
     <div
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect ? () => onSelect(activity) : undefined}
+      onKeyDown={onSelect ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(activity);
+        }
+      } : undefined}
       className={cn(
         "group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-xl border border-border/30",
         "bg-card/40 hover:bg-card/60 transition-all border-l-2",
+        onSelect && "cursor-pointer",
+        isSelected && "ring-1 ring-primary border-primary/40 bg-primary/5",
         URGENCY_BORDER[urgency],
       )}
     >
@@ -298,8 +346,11 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
         </div>
       </div>
 
-      {/* CTA azione primaria */}
-      {activity.partner_id ? (
+      {/* CTA azione primaria — quando la riga è selezionabile, l'azione vive nel
+          pannello destro: qui mostriamo solo un badge con il verbo per chiarezza. */}
+      {onSelect ? (
+        <Badge variant="outline" className="text-[9px] shrink-0 opacity-70">{verb}</Badge>
+      ) : activity.partner_id ? (
         <Button asChild size="sm" variant="ghost" className="h-7 px-2.5 text-[10px] shrink-0">
           <Link to={`/partners/${activity.partner_id}`}>
             {verb} <ArrowUpRight className="w-3 h-3 ml-1" />
@@ -312,7 +363,13 @@ function ActivityRow({ activity, verb }: { activity: AllActivity; verb: string }
       {/* Menu rapido: Fatto / Rimanda / Delega / Archivia */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="Altre azioni">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            aria-label="Altre azioni"
+            onClick={(e) => e.stopPropagation()}
+          >
             <MoreVertical className="w-3.5 h-3.5" />
           </Button>
         </DropdownMenuTrigger>
