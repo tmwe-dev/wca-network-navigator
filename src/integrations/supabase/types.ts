@@ -1786,12 +1786,17 @@ export type Database = {
           email_address: string | null
           execute_after: string | null
           executed_at: string | null
+          executing_since: string | null
+          execution_attempts: number
           expires_at: string | null
+          hard_gate_check: Json | null
           id: string
+          last_error: string | null
           operator_id: string | null
           partner_id: string | null
           priority: number | null
           reasoning: string | null
+          risk_level: Database["public"]["Enums"]["ai_action_risk"]
           source: string | null
           status: string | null
           suggested_content: string | null
@@ -1808,12 +1813,17 @@ export type Database = {
           email_address?: string | null
           execute_after?: string | null
           executed_at?: string | null
+          executing_since?: string | null
+          execution_attempts?: number
           expires_at?: string | null
+          hard_gate_check?: Json | null
           id?: string
+          last_error?: string | null
           operator_id?: string | null
           partner_id?: string | null
           priority?: number | null
           reasoning?: string | null
+          risk_level?: Database["public"]["Enums"]["ai_action_risk"]
           source?: string | null
           status?: string | null
           suggested_content?: string | null
@@ -1830,12 +1840,17 @@ export type Database = {
           email_address?: string | null
           execute_after?: string | null
           executed_at?: string | null
+          executing_since?: string | null
+          execution_attempts?: number
           expires_at?: string | null
+          hard_gate_check?: Json | null
           id?: string
+          last_error?: string | null
           operator_id?: string | null
           partner_id?: string | null
           priority?: number | null
           reasoning?: string | null
+          risk_level?: Database["public"]["Enums"]["ai_action_risk"]
           source?: string | null
           status?: string | null
           suggested_content?: string | null
@@ -9718,6 +9733,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      ai_action_hard_gate: {
+        Args: {
+          _contact_id: string
+          _partner_id: string
+          _risk: Database["public"]["Enums"]["ai_action_risk"]
+        }
+        Returns: Json
+      }
       ai_introspect_schema: { Args: { table_names: string[] }; Returns: Json }
       check_channel_rate_limit: {
         Args: { _channel: string; _user_id: string }
@@ -9731,6 +9754,7 @@ export type Database = {
           group_name: string
         }[]
       }
+      claim_pending_action: { Args: { _action_id: string }; Returns: boolean }
       cleanup_super_mario_invocations: { Args: never; Returns: number }
       count_inbound_activities: { Args: never; Returns: Json }
       cron_job_status: {
@@ -10045,6 +10069,7 @@ export type Database = {
         Returns: Json
       }
       purge_old_runtime_traces: { Args: never; Returns: undefined }
+      reap_stuck_executing_actions: { Args: never; Returns: number }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
       release_mission_slot: {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
@@ -10078,6 +10103,14 @@ export type Database = {
         | "other"
         | "whatsapp_message"
         | "linkedin_message"
+      ai_action_risk:
+        | "READ"
+        | "PREPARE"
+        | "WRITE"
+        | "SEND"
+        | "EXTERNAL_AUTOMATION"
+        | "BULK"
+        | "DESTRUCTIVE"
       app_role: "admin" | "moderator" | "user"
       campaign_job_status: "pending" | "in_progress" | "completed" | "skipped"
       campaign_job_type: "email" | "call"
@@ -10274,6 +10307,15 @@ export const Constants = {
         "other",
         "whatsapp_message",
         "linkedin_message",
+      ],
+      ai_action_risk: [
+        "READ",
+        "PREPARE",
+        "WRITE",
+        "SEND",
+        "EXTERNAL_AUTOMATION",
+        "BULK",
+        "DESTRUCTIVE",
       ],
       app_role: ["admin", "moderator", "user"],
       campaign_job_status: ["pending", "in_progress", "completed", "skipped"],
