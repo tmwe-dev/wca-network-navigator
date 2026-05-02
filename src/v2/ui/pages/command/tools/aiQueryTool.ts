@@ -265,6 +265,7 @@ export const aiQueryTool: Tool = {
         idField,
         liveSource: part.table,
         bulkActions: bulkActionsFor(part.table),
+        queryFilters: plan.filters,
       };
     }
 
