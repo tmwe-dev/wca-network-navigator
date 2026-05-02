@@ -34,6 +34,8 @@ export async function handleSendEmail(
       toName: args.to_name,
       subject: args.subject,
       html: args.html_body,
+      partner_id: args.partner_id ?? null,
+      contact_id: args.contact_id ?? null,
     }),
   });
   const data = await response.json();
