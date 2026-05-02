@@ -114,26 +114,29 @@ const CommandPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.messages.length]);
 
-  // Rehydrate visible chat ONLY when the user switches conversation
-  // (sidebar click / "Nuova conversazione"). We must NOT re-run on every
-  // `conv.messages.length` change, otherwise each new turn — which is now
-  // persisted via `conv.addMessage` — would overwrite the RAM messages with
-  // a duplicated DB snapshot, causing visible double-rendering.
+  // Rehydrate visible chat ONLY when the user explicitly loads a conversation
+  // from the sidebar. Do NOT rehydrate during normal message persistence:
+  // DB writes are async and can arrive after the live AI answer, otherwise they
+  // wipe the RAM thread and make assistant messages disappear.
   const lastRehydratedConvIdRef = useRef<string | null>(null);
+  const pendingConversationLoadRef = useRef<string | null>(null);
   useEffect(() => {
     const id = conv.conversationId;
     // Conversation cleared (new conversation): reset the marker so a future
     // resume can rehydrate again.
     if (!id) {
       lastRehydratedConvIdRef.current = null;
+      pendingConversationLoadRef.current = null;
       return;
     }
+    if (pendingConversationLoadRef.current !== id) return;
+    if (conv.loading) return;
     // Already rehydrated this conversation — do nothing on subsequent
     // message appends (those are already in RAM via addMessage).
     if (lastRehydratedConvIdRef.current === id) return;
-    if (conv.messages.length === 0) return;
 
     lastRehydratedConvIdRef.current = id;
+    pendingConversationLoadRef.current = null;
 
     const visible: Message[] = conv.messages
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -164,7 +167,7 @@ const CommandPage = () => {
       else if (kind === "report") state.setCanvas("live-report");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conv.conversationId, conv.messages.length]);
+  }, [conv.conversationId, conv.messages.length, conv.loading]);
 
   const handleSend = (text?: string) => {
     const content = (text ?? state.input).trim();
@@ -192,10 +195,12 @@ const CommandPage = () => {
             state.setCanvas(null);
             state.setLiveResult(null);
             state.setFlowPhase("idle");
+            pendingConversationLoadRef.current = id;
             void conv.loadConversation(id);
           }}
           onNew={() => {
             conv.newConversation();
+            pendingConversationLoadRef.current = null;
             state.setMessages([]);
             state.setCanvas(null);
             state.setFlowPhase("idle");
