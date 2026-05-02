@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { GoldenLayout } from "@/v2/ui/templates/GoldenLayout";
 import { CompanyCardList } from "@/v2/ui/molecules/CompanyCardList";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
-import { ListToolbar, useListSort, type SortOption } from "@/v2/ui/molecules/ListToolbar";
+import { ListToolbar, useListSort, type SortOption, type HoldingFilterMode } from "@/v2/ui/molecules/ListToolbar";
 import { useSortedCompanies, type CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 import { useCompanySelection } from "@/v2/hooks/companyList/useCompanySelection";
 import {
@@ -99,11 +99,48 @@ export function EntityListWithDetail({
       internal.cycle(key);
     }
   };
+  const handleSelectSortKey = (key: CompanySortKey) => {
+    if (sortOverride) {
+      sortOverride.onChange(key, "asc");
+    } else {
+      internal.setSortKey(key);
+    }
+  };
+  const handleToggleSortDir = () => {
+    if (sortOverride) {
+      sortOverride.onChange(sortOverride.sortKey, sortOverride.sortDir === "asc" ? "desc" : "asc");
+    } else {
+      internal.toggleDir();
+    }
+  };
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<CompanyFiltersState>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Default: escludi holding pattern. Persistito per source.
+  const holdingStorageKey = `list:${source}:holding`;
+  const [holdingFilter, setHoldingFilter] = useState<HoldingFilterMode>(() => {
+    if (typeof window === "undefined") return "exclude";
+    try {
+      const v = window.localStorage.getItem(holdingStorageKey);
+      return v === "include" || v === "only" ? v : "exclude";
+    } catch {
+      return "exclude";
+    }
+  });
+  const updateHoldingFilter = (m: HoldingFilterMode) => {
+    setHoldingFilter(m);
+    try { window.localStorage.setItem(holdingStorageKey, m); } catch { /* swallow */ }
+  };
 
-  const filtered = useFilteredCompanies(companies, filters);
+  // Step 0: filtro holding (sempre visibile/applicato).
+  const holdingFiltered = useMemo(() => {
+    if (holdingFilter === "include") return companies;
+    const isHolding = (c: CompanyEntity) =>
+      c.meta?.holding === true || c.leadStatus === "holding";
+    if (holdingFilter === "only") return companies.filter(isHolding);
+    return companies.filter((c) => !isHolding(c)); // exclude
+  }, [companies, holdingFilter]);
+  const filtered = useFilteredCompanies(holdingFiltered, filters);
   const sorted = useSortedCompanies(filtered, sortKey, sortDir, search);
 
   const selection = useCompanySelection();
@@ -170,10 +207,14 @@ export function EntityListWithDetail({
         sortDir={sortDir}
         sortOptions={sortOptions}
         onCycleSort={cycle}
+        onSelectSortKey={handleSelectSortKey}
+        onToggleSortDir={handleToggleSortDir}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={searchPlaceholder ?? "Cerca…"}
         chips={globalChips}
+        holdingFilter={holdingFilter}
+        onHoldingFilterChange={updateHoldingFilter}
         rightSlot={
           <>
             {selectAllButton}
