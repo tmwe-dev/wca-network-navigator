@@ -23,9 +23,7 @@ export function CockpitFiltersSection({
       <FilterSection icon={Search} label="Cerca">
         <Input value={g.filters.search} onChange={e => g.setSearch(e.target.value)} placeholder="Cerca contatto, azienda..." className="h-8 text-xs bg-muted/30 border-border/40" />
       </FilterSection>
-      <FilterSection icon={Database} label="Origine">
-        <ChipGroup>{COCKPIT_ORIGIN.map(o => <Chip key={o.value} active={g.filters.origin.has(o.value)} onClick={() => toggleOrigin(o.value)}>{o.label}</Chip>)}</ChipGroup>
-      </FilterSection>
+      {/* PIVOT PRIMARIO — Paese (sale dopo Cerca, template canonico) */}
       {countryStats.length > 0 && (
         <FilterSection icon={Filter} label="Paese">
           <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto">
@@ -37,6 +35,9 @@ export function CockpitFiltersSection({
           </div>
         </FilterSection>
       )}
+      <FilterSection icon={Database} label="Origine">
+        <ChipGroup>{COCKPIT_ORIGIN.map(o => <Chip key={o.value} active={g.filters.origin.has(o.value)} onClick={() => toggleOrigin(o.value)}>{o.label}</Chip>)}</ChipGroup>
+      </FilterSection>
       <FilterSection icon={Wifi} label="Canale">
         <ChipGroup>{COCKPIT_CHANNEL.map(o => <Chip key={o.key} active={g.filters.cockpitChannels.has(o.key)} onClick={() => toggleCockpitChannel(o.key)}>{o.icon} {o.label}</Chip>)}</ChipGroup>
       </FilterSection>
