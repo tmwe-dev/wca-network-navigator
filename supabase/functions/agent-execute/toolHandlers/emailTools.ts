@@ -212,10 +212,37 @@ export async function handleSendLinkedIn(
   ctx?: { agentId?: string }
 ): Promise<unknown> {
   const partnerId = args.partner_id ? String(args.partner_id) : null;
+  let leadStatus: string | null = null;
   if (partnerId) {
     const cgate = await checkCadenceGate(supabase, userId, partnerId, "linkedin");
     if (!cgate.allowed) return { error: `BLOCCATO: ${cgate.reason}`, blocked_by: "cadence_gate" };
+    const { data: p } = await supabase.from("partners").select("lead_status").eq("id", partnerId).maybeSingle();
+    leadStatus = (p as { lead_status?: string } | null)?.lead_status || null;
   }
+
+  // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
+  try {
+    const optimus = await loadOptimusSettings(supabase, userId);
+    if (args.message) {
+      const review = await journalistReview(supabase, userId, {
+        final_draft: String(args.message),
+        resolved_brief: {},
+        channel: "linkedin",
+        commercial_state: { lead_status: leadStatus || "new" },
+        partner: { id: partnerId, company_name: null },
+      }, { mode: optimus.mode, strictness: optimus.strictness });
+      if (review.verdict === "block") {
+        console.warn("[send_linkedin] BLOCKED by journalist:", JSON.stringify(review.warnings));
+        return { error: "Journalist Review ha bloccato questo messaggio.", blocked_by: "journalist_review", warnings: review.warnings };
+      }
+      if (review.verdict === "pass_with_edits" && review.edited_text) {
+        args.message = review.edited_text;
+      }
+    }
+  } catch (jerr) {
+    console.error("[send_linkedin] journalistReview failed:", jerr);
+  }
+
   await supabase.from("activities").insert({
     user_id: userId,
     partner_id: partnerId,
