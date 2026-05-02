@@ -110,18 +110,22 @@ function describeFilters(filters: readonly FilterShape[]): string {
 function suggestedActionsFor(table: string, filters: readonly FilterShape[]): SuggestedAction[] {
   const filtersDesc = describeFilters(filters);
   if (table === "partners") {
-    const country = filters.find((f) => f.column === "country_code");
-    const countryRef = country
-      ? country.op === "eq"
-        ? COUNTRY_LABELS[String(country.value)] ?? String(country.value)
-        : Array.isArray(country.value)
-          ? country.value.map((v) => COUNTRY_LABELS[String(v)] ?? String(v)).join(" e ")
-          : ""
-      : "";
+    // Comunicazione-first: il sistema serve a CONTATTARE i partner, non a
+    // proporre filtri. Le azioni esplorative (rating, deep search) restano
+    // disponibili via testo, ma NON come prime offerte.
     return [
-      { label: `🔍 Mostra i top rated`, prompt: `mostra i top 20 partner ${filtersDesc} per rating` },
-      { label: `🌐 Avvia deep search`, prompt: `avvia una deep search sui partner ${filtersDesc}` },
-      { label: `🏢 Arricchisci i siti web`, prompt: `arricchisci i siti web dei partner ${filtersDesc}` },
+      {
+        label: `📧 Email di presentazione`,
+        prompt: `prepara email di presentazione per questi partner ${filtersDesc}`.trim(),
+      },
+      {
+        label: `🤝 Email di collaborazione`,
+        prompt: `prepara email di collaborazione per questi partner ${filtersDesc}`.trim(),
+      },
+      {
+        label: `🏢 Arricchisci dati mancanti`,
+        prompt: `arricchisci i dati dei partner ${filtersDesc}`.trim(),
+      },
     ];
   }
   if (table === "imported_contacts") {

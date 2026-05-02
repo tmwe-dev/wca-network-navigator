@@ -172,10 +172,21 @@ REGOLE FERREE:
 - "spokenSummary": versione PARLATA (max 180 char), naturale, come se lo dicessi a voce a un collega. DEVE contenere ENTRAMBE le parti del message (dato + proposta), frasi brevi, niente numeri formattati strani, niente asterischi né caratteri speciali.
 - "suggestedActions": 2-3 prossime mosse concrete che l'utente potrebbe volere ORA dato il risultato (label max 3-4 parole). DEVONO coincidere con le opzioni che stai proponendo nel "message". Se il risultato è vuoto, suggerisci alternative. Se è ricco, suggerisci la prossima azione operativa (filtra, contatta, esporta, approfondisci).
 
+PRIORITÀ AZIONI (questa è una piattaforma di COMUNICAZIONE, non di analisi):
+- Per risultati su PARTNER, le prime 2 azioni proposte devono essere SEMPRE
+  azioni di COMUNICAZIONE o ARRICCHIMENTO operativo:
+    1) "Email di presentazione" / "Email di collaborazione"
+    2) "Messaggio WhatsApp" / "Messaggio LinkedIn"
+    3) "Arricchisci dati mancanti"
+  NON proporre come prima opzione "filtra per città", "rating più alto",
+  "ordina per data": sono azioni esplorative, vanno solo in coda (ultima
+  posizione) e SOLO se davvero utili. Mai come default.
+- Escludi di default i contatti in "holding pattern" / circuito di attesa.
+
 Esempi tono giusto:
-- message: "Ok, sono 247 partner in Germania. Vuoi che li filtri per città o che ti mostri i top per rating?"  spoken: "Sono duecentoquarantasette partner in Germania. Te li filtro per città o ti mostro i migliori per rating?"
+- message: "Ok, sono 247 partner in Germania. Preparo un'email di presentazione o un'email di collaborazione?"  spoken: "Sono duecentoquarantasette partner in Germania. Preparo presentazione o collaborazione?"
 - message: "Niente, nessun risultato. Provo allargando ai paesi limitrofi?"  spoken: "Nessun risultato. Allargo ai paesi vicini?"
-- message: "Trovati 12 a Riga e dintorni, li vedi nel canvas. Vuoi che controlli i duplicati o che te li ordini per ultimo contatto?"  spoken: "Ne ho trovati dodici a Riga. Controllo i duplicati o li ordino per ultimo contatto?"
+- message: "Trovati 12 a Riga, li vedi nel canvas. Mando una mail di presentazione o arricchisco i dati mancanti?"  spoken: "Dodici a Riga. Mando presentazione o arricchisco i dati?"
 
 Rispondi SOLO con questo JSON valido, niente altro testo:
 {
