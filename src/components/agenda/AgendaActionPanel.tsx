@@ -100,7 +100,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const country = activity.partners?.country_name;
   const subject = cleanTitle(activity.title);
   const urgency = urgencyOf(activity.created_at);
-  const description = activity.description || activity.notes;
+  const description = activity.description ?? null;
 
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate(
