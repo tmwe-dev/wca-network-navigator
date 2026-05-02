@@ -7,7 +7,8 @@
 import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { Check, X, Sparkles, Save } from "lucide-react";
 import type { Block } from "./types";
 import { cn } from "@/lib/utils";
@@ -71,7 +72,11 @@ export function SplitBlockEditor({
   const { tag: blockTag, title: blockTitle } = splitLabel(block.label);
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full min-h-0">
+    <PersistentResizablePanelGroup
+      direction="horizontal"
+      storageId="prompt-lab:blocks-vs-editor"
+      className="h-full min-h-0"
+    >
       {/* SIDEBAR — lista blocchi (resizable) */}
       <ResizablePanel defaultSize={22} minSize={12} maxSize={50}>
         <aside className="h-full flex flex-col min-h-0 border rounded-md bg-card/30 mr-1.5">
@@ -221,7 +226,7 @@ export function SplitBlockEditor({
         )}
         </div>
       </ResizablePanel>
-    </ResizablePanelGroup>
+    </PersistentResizablePanelGroup>
   );
 }
 
