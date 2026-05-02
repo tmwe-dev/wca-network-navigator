@@ -259,8 +259,9 @@ serve(async (req) => {
     let finalBody = body;
     let journalistResult: JournalistReviewOutput | null = null;
     try {
+      // 🔒 EDITORIAL LAYER — INTOCCABILE: gira SEMPRE se c'è contenuto.
       const optimus = await loadOptimusSettings(supabase, userId);
-      if (optimus.enabled && finalBody) {
+      if (finalBody) {
         // LOVABLE-93: Detect reply context
         const isReplyContext =
           (oracle_type && (oracle_type.includes("reply") || oracle_type.includes("risposta"))) ||
