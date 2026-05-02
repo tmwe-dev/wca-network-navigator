@@ -4,6 +4,7 @@ import { PanelLeftClose, SlidersHorizontal, Check } from "lucide-react";
 import { NetworkFiltersSection } from "@/components/global/filters-drawer/NetworkFiltersSection";
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
+import { EmailIntelligenceFiltersSection } from "@/components/global/filters-drawer/EmailIntelligenceFiltersSection";
 import { SidebarBanner } from "@/components/global/filters-drawer/SidebarBanner";
 import {
   SIDEBAR_BANNER_REGISTRY,
@@ -34,6 +35,14 @@ function getFilterContext(
 
   if (pathname.startsWith("/v2/pipeline/biglietti") || pathname.startsWith("/v2/explore/biglietti")) {
     return { title: "Filtri Biglietti BCA", content: <BCAFiltersRailContent />, bannerKey: "bca" };
+  }
+
+  if (pathname.startsWith("/v2/email-intelligence")) {
+    return {
+      title: "Filtri Email Intelligence",
+      content: <EmailIntelligenceFiltersSection />,
+      bannerKey: "email-intelligence",
+    };
   }
 
   return null;
