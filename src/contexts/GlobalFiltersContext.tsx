@@ -32,6 +32,7 @@ export interface GlobalFilterState {
   networkSearch: string;
   networkQuality: string;
   networkSort: string;
+  networkSortDir: "asc" | "desc";
   networkSelectedCountries: Set<string>;
   networkDirectoryOnly: boolean;
   emailCategory: string;
@@ -90,6 +91,7 @@ const defaults: GlobalFilterState = {
   networkSearch: "",
   networkQuality: "all",
   networkSort: "name",
+  networkSortDir: "asc",
   networkSelectedCountries: new Set<string>(),
   networkDirectoryOnly: false,
   emailCategory: "all",
