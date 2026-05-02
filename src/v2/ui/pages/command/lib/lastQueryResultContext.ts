@@ -12,6 +12,14 @@ export interface LastQueryResultContext {
   readonly countryCode: string | null;
   readonly countryLabel: string | null;
   readonly originalPrompt: string;
+  /** Tabella della query (es. "partners"). Opzionale per retro-compat. */
+  readonly table?: string | null;
+  /** Filtri reali applicati (city, country_code, lead_status, …). */
+  readonly filters?: ReadonlyArray<{ column: string; op: string; value: unknown }>;
+  /** Conteggio totale (anche se non sono presenti partnerIds). */
+  readonly count?: number | null;
+  /** Etichetta human del set selezionato, es. "partner ad Amman". */
+  readonly selectionLabel?: string | null;
   readonly ts: number;
 }
 
@@ -20,7 +28,10 @@ const TTL_MS = 5 * 60_000;
 let lastCtx: LastQueryResultContext | null = null;
 
 export function setLastQueryResultContext(ctx: Omit<LastQueryResultContext, "ts">): void {
-  if (ctx.partnerIds.length === 0 && !ctx.countryCode) return;
+  // Manteniamo il contesto se abbiamo partnerIds, country, o filtri reali
+  // (es. city=Amman senza country_code).
+  const hasFilters = (ctx.filters?.length ?? 0) > 0;
+  if (ctx.partnerIds.length === 0 && !ctx.countryCode && !hasFilters) return;
   lastCtx = { ...ctx, ts: Date.now() };
 }
 
@@ -91,6 +102,11 @@ export function isProceedIntent(prompt: string): boolean {
     /\b(vai\s+avanti|procedi|prosegui|continua|avanti|fai\s+pure|go\b|ok\s+procedi)\b/i.test(p) ||
     /\b(prepara|fai|scrivi|componi|genera)\s+(?:la|il|un|una)?\s*(bozza|lettera|mail|email|messaggio)\b/i.test(p) ||
     /\b(?:questi|quei|quelli|tutti\s+questi)\s+partner\b/i.test(p) ||
-    /\b(vai\s+avanti\s+con\s+(la\s+)?(bozza|lettera))\b/i.test(p)
+    /\b(vai\s+avanti\s+con\s+(la\s+)?(bozza|lettera))\b/i.test(p) ||
+    // Inviti generici: "prepara un invito", "invitali", "mandagli un invito"
+    /\b(prepara|fai|scrivi|manda|mandagli|invia|inviagli)\s+(?:un|una|gli|loro)?\s*(invito|invit[oa])\b/i.test(p) ||
+    /\binvit(?:ali|a)\b/i.test(p) ||
+    // "a tutti", "tutti ospiti", "quelli selezionati/trovati/visti"
+    /\b(a\s+tutti|tutti\s+ospiti|quelli\s+(selezionati|trovati|visti|sopra|elencati))\b/i.test(p)
   );
 }
