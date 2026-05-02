@@ -382,7 +382,14 @@ export function createWriteHandlers(supabase: SupabaseClient, isAgentContext = f
 
     const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader },
-      body: JSON.stringify({ to: args.to_email, toName: args.to_name, subject: args.subject, html: args.html_body }),
+      body: JSON.stringify({
+        to: args.to_email,
+        toName: args.to_name,
+        subject: args.subject,
+        html: args.html_body,
+        partner_id: args.partner_id ?? null,
+        contact_id: args.contact_id ?? null,
+      }),
     });
     const data = await response.json();
     if (!response.ok || data.error) return { error: data.error || "Errore invio email" };
