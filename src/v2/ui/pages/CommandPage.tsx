@@ -63,6 +63,11 @@ const CommandPage = () => {
     messages: state.messages,
     queryContext: state.queryContext,
     setQueryContext: state.setQueryContext,
+    // Persistent multi-turn memory: every user/assistant turn is appended to
+    // the DB-backed conversation, and the planner sees the FULL history (not
+    // just the last 6 RAM messages) on the next prompt.
+    persistedMessages: conv.messages,
+    persistMessage: conv.addMessage,
   });
 
   const voice = useVoiceInput({
