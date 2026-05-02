@@ -436,8 +436,12 @@ export const composeEmailTool: Tool = {
     // dopo una ricerca Query Planner che ha restituito partner. Eredita la
     // lista partnerIds e genera il batch usando il prompt corrente come goal.
     const queryCtx = getLastQueryResultContext();
-    if (queryCtx && queryCtx.partnerIds.length > 0 && isProceedIntent(prompt)) {
-      const partners = await fetchPartnersByIds(queryCtx.partnerIds);
+    if (queryCtx && isProceedIntent(prompt)) {
+      const partners = queryCtx.partnerIds.length > 0
+        ? await fetchPartnersByIds(queryCtx.partnerIds)
+        : queryCtx.countryCode
+          ? await searchPartnersByCountry(queryCtx.countryCode)
+          : [];
       if (partners.length === 0) {
         return {
           kind: "report",
