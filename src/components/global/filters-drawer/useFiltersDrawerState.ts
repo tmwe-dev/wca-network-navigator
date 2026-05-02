@@ -72,7 +72,6 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.cockpitChannels.size) n++;
       if (g.filters.cockpitQuality.size) n++;
       if (g.filters.cockpitStatus !== "all") n++;
-      if (g.filters.sortBy !== "name") n++;
       if (g.filters.origin.size < 4) n++;
     }
     if (isAttivita) {
@@ -82,7 +81,6 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isSorting) {
       if (g.filters.sortingFilter !== "all") n++;
       if (g.filters.sortingSearch.trim()) n++;
-      if (g.filters.sortBy !== "name") n++;
     }
     if (isCodaAI) {
       if (g.filters.attivitaPriority !== "all") n++;
@@ -107,13 +105,11 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isEmailIntelligence) {
       if (g.filters.emailIntelSearch.trim()) n++;
       if (g.filters.emailIntelVolume !== "all") n++;
-      if (g.filters.emailIntelSort !== "count-desc") n++;
       if (!g.filters.emailIntelHideClassified) n++;
     }
     if (isNetwork) {
       if (g.filters.networkSearch.trim()) n++;
       if (g.filters.networkQuality !== "all") n++;
-      if (g.filters.networkSort !== "name") n++;
       if (g.filters.networkSelectedCountries.size > 0) n++;
     }
     if (isCRM) {
@@ -126,7 +122,6 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.crmOrigin.size > 0) n++;
       if (g.filters.crmSelectedCountries.size > 0) n++;
       if (g.filters.groupBy !== "country") n++;
-      if (g.filters.sortBy !== "name") n++;
     }
     return n;
   }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence]);
