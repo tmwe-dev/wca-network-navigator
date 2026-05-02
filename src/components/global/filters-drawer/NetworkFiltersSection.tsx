@@ -173,7 +173,55 @@ export function NetworkFiltersSection() {
 
   return (
     <>
-      {/* 1 — PAESI in alto */}
+      {/* 1 — ORDINA: dropdown + direzione A/Z, in cima */}
+      <FilterSection icon={ArrowUpDown} label="Ordina partner">
+        <div className="flex items-center gap-2">
+          <Select
+            value={g.filters.networkSort}
+            onValueChange={(v) => g.setNetworkSort(v)}
+          >
+            <SelectTrigger className="h-9 flex-1 text-xs bg-background border-border">
+              <SelectValue placeholder="Ordina per…" />
+            </SelectTrigger>
+            <SelectContent>
+              {NETWORK_SORT.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() =>
+              g.setNetworkSortDir(
+                g.filters.networkSortDir === "asc" ? "desc" : "asc"
+              )
+            }
+            className="h-9 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+            aria-label={
+              g.filters.networkSortDir === "asc"
+                ? "Ordine A→Z (clicca per Z→A)"
+                : "Ordine Z→A (clicca per A→Z)"
+            }
+            title={g.filters.networkSortDir === "asc" ? "A → Z" : "Z → A"}
+          >
+            {g.filters.networkSortDir === "asc" ? (
+              <>
+                <ArrowDownAZ className="w-3.5 h-3.5 text-primary" />
+                <span>A→Z</span>
+              </>
+            ) : (
+              <>
+                <ArrowUpAZ className="w-3.5 h-3.5 text-primary" />
+                <span>Z→A</span>
+              </>
+            )}
+          </button>
+        </div>
+      </FilterSection>
+
+      {/* 2 — PAESI */}
       <FilterSection
         icon={Globe}
         label="Paesi"
@@ -251,7 +299,7 @@ export function NetworkFiltersSection() {
         </div>
       </FilterSection>
 
-      {/* 2 — CERCA PARTNER */}
+      {/* 3 — CERCA PARTNER */}
       <FilterSection icon={Search} label="Cerca partner">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -352,56 +400,6 @@ export function NetworkFiltersSection() {
             )}
           </div>
         )}
-      </FilterSection>
-
-      {/* 3 — ORDINA: dropdown + direzione A/Z */}
-      <FilterSection icon={ArrowUpDown} label="Ordina partner">
-        <div className="flex items-center gap-2">
-          <Select
-            value={g.filters.networkSort}
-            onValueChange={(v) => g.setNetworkSort(v)}
-          >
-            <SelectTrigger className="h-9 flex-1 text-xs bg-background border-border">
-              <SelectValue placeholder="Ordina per…" />
-            </SelectTrigger>
-            <SelectContent>
-              {NETWORK_SORT.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <button
-            type="button"
-            onClick={() =>
-              g.setNetworkSortDir(
-                g.filters.networkSortDir === "asc" ? "desc" : "asc"
-              )
-            }
-            className="h-9 px-3 rounded-md border border-border bg-background hover:bg-muted text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
-            aria-label={
-              g.filters.networkSortDir === "asc"
-                ? "Ordine A→Z (clicca per Z→A)"
-                : "Ordine Z→A (clicca per A→Z)"
-            }
-            title={
-              g.filters.networkSortDir === "asc" ? "A → Z" : "Z → A"
-            }
-          >
-            {g.filters.networkSortDir === "asc" ? (
-              <>
-                <ArrowDownAZ className="w-3.5 h-3.5 text-primary" />
-                <span>A→Z</span>
-              </>
-            ) : (
-              <>
-                <ArrowUpAZ className="w-3.5 h-3.5 text-primary" />
-                <span>Z→A</span>
-              </>
-            )}
-          </button>
-        </div>
       </FilterSection>
 
       {/* 4 — QUALITÀ DATI: toggle multi-select Con/Senza */}
