@@ -7,6 +7,7 @@
 import * as React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Check, X, Sparkles, Save } from "lucide-react";
 import type { Block } from "./types";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,19 @@ interface SplitBlockEditorProps {
   onImprove?: (id: string) => void;
   onSave?: (id: string) => void;
   saving?: string | null;
+}
+
+/**
+ * Estrae un eventuale tag prefisso `[xxx]` dal label del blocco e
+ * restituisce { tag, title } dove `title` è il label senza il tag.
+ * Esempi:
+ *   "[doctrine] Arsenale strategico" → { tag: "doctrine", title: "Arsenale strategico" }
+ *   "Golden Rules"                   → { tag: null, title: "Golden Rules" }
+ */
+function splitLabel(label: string): { tag: string | null; title: string } {
+  const m = label.match(/^\s*\[([^\]]+)\]\s*(.*)$/);
+  if (m && m[2]) return { tag: m[1].trim(), title: m[2].trim() };
+  return { tag: null, title: label };
 }
 
 export function SplitBlockEditor({
@@ -54,60 +68,72 @@ export function SplitBlockEditor({
   }
 
   const block = blocks.find((b) => b.id === selectedId) ?? blocks[0];
+  const { tag: blockTag, title: blockTitle } = splitLabel(block.label);
 
   return (
-    <div className="flex h-full min-h-0 gap-3">
-      {/* SIDEBAR — lista blocchi */}
-      <aside className="w-56 flex-shrink-0 flex flex-col min-h-0 border rounded-md bg-card/30">
-        <div className="px-2.5 py-1.5 border-b text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Blocchi · {blocks.length}
-        </div>
-        <div className="flex-1 overflow-y-auto p-1">
-          {blocks.map((b, i) => {
-            const isActive = b.id === block.id;
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => setSelectedId(b.id)}
-                className={cn(
-                  "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors",
-                  isActive
-                    ? "bg-primary/15 text-foreground font-medium"
-                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
-                )}
-                title={b.label}
-              >
-                <span className="tabular-nums text-[10px] text-muted-foreground/70 w-4 flex-shrink-0">
-                  {i + 1}
-                </span>
-                <span className="truncate flex-1">{b.label}</span>
-                {b.improved && (
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0"
-                    title="Versione migliorata pronta"
-                  />
-                )}
-                {b.dirty && (
-                  <span
-                    className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"
-                    title="Modifiche non salvate"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </aside>
+    <ResizablePanelGroup direction="horizontal" className="h-full min-h-0">
+      {/* SIDEBAR — lista blocchi (resizable) */}
+      <ResizablePanel defaultSize={22} minSize={12} maxSize={50}>
+        <aside className="h-full flex flex-col min-h-0 border rounded-md bg-card/30 mr-1.5">
+          <div className="px-2.5 py-1.5 border-b text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Blocchi · {blocks.length}
+          </div>
+          <div className="flex-1 overflow-y-auto p-1">
+            {blocks.map((b, i) => {
+              const isActive = b.id === block.id;
+              const { title } = splitLabel(b.label);
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setSelectedId(b.id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors",
+                    isActive
+                      ? "bg-primary/15 text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                  )}
+                  title={b.label}
+                >
+                  <span className="tabular-nums text-[10px] text-muted-foreground/70 w-4 flex-shrink-0">
+                    {i + 1}
+                  </span>
+                  <span className="truncate flex-1">{title}</span>
+                  {b.improved && (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0"
+                      title="Versione migliorata pronta"
+                    />
+                  )}
+                  {b.dirty && (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"
+                      title="Modifiche non salvate"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle className="bg-transparent hover:bg-border/60 transition-colors" />
 
       {/* MAIN — editor full-width + diff inline */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-0 gap-2">
+      <ResizablePanel defaultSize={78} minSize={40}>
+        <div className="h-full flex flex-col min-h-0 gap-2 ml-1.5">
         {/* Toolbar blocco selezionato */}
         <div className="flex items-center justify-between gap-2 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <h3 className="text-sm font-semibold truncate">{block.label}</h3>
+            {blockTag && (
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary flex-shrink-0">
+                {blockTag}
+              </span>
+            )}
+            <h3 className="text-sm font-semibold truncate">{blockTitle}</h3>
             {block.dirty && (
-              <span className="text-[10px] text-amber-600 font-medium">non salvato</span>
+              <span className="text-[10px] text-amber-600 font-medium flex-shrink-0">non salvato</span>
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -193,8 +219,9 @@ export function SplitBlockEditor({
             </div>
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
 
