@@ -556,15 +556,15 @@ export const composeEmailTool: Tool = {
           sections: [
             {
               heading: "Contesto perso",
-              body: `I partner trovati nella ricerca precedente non sono più recuperabili. Riformula la ricerca${queryCtx.selectionLabel ? ` (selezione precedente: "${queryCtx.selectionLabel}")` : queryCtx.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
+              body: `I partner trovati nella ricerca precedente non sono più recuperabili. Riformula la ricerca${queryCtx?.selectionLabel ? ` (selezione precedente: "${queryCtx.selectionLabel}")` : queryCtx?.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
             },
           ],
         };
       }
       const tone = detectTone(prompt);
       const drafts = await generateDraftsBatch(partners, tone, prompt);
-      const labelForCtx = queryCtx.selectionLabel ?? queryCtx.countryLabel ?? "selezione";
-      const codeForCtx = queryCtx.countryCode ?? "—";
+      const labelForCtx = queryCtx?.selectionLabel ?? queryCtx?.countryLabel ?? payloadSelection.countryCode ?? "selezione";
+      const codeForCtx = queryCtx?.countryCode ?? payloadSelection.countryCode ?? "—";
       setLastComposerContext({
         countryCode: codeForCtx,
         countryLabel: labelForCtx,
