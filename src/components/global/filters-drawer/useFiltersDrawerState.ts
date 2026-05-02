@@ -19,7 +19,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isBcaRoute = seg === "/biglietti" || seg === "/business-cards" || seg.startsWith("/crm/biglietti") || seg.startsWith("/crm/business-cards") || seg.startsWith("/pipeline/biglietti") || seg.startsWith("/explore/biglietti");
   const isCRM = isCrmContactsRoute || isBcaRoute;
   const crmDrawerTab = isBcaRoute ? "biglietti" : "contatti";
-  const isAgenda = seg === `/${ROUTE_AGENDA}`;
+  const isAgenda = seg === `/${ROUTE_AGENDA}` || seg.startsWith("/pipeline/agenda");
   const isEmailComposer = seg === `/${ROUTE_EMAIL_COMPOSER}`;
   const isCampaigns = seg === "/campaigns";
   const isInreach = seg === `/${ROUTE_INREACH}`;
