@@ -220,6 +220,7 @@ function extractQueryMetaFromResult(result: unknown): {
   const r = result as {
     kind?: string;
     meta?: { count?: number; sourceLabel?: string };
+    queryFilters?: ReadonlyArray<{ column: string; op: string; value: unknown }>;
     parts?: Array<{
       table?: string;
       filters?: ReadonlyArray<{ column: string; op: string; value: unknown }>;
@@ -241,9 +242,7 @@ function extractQueryMetaFromResult(result: unknown): {
     const table = m?.[1] ?? null;
     return {
       table,
-      // Ahimè kind:"table" non porta filtri esposti — passeremo per il path multi
-      // o resterà vuoto. Comunque table+count salvati per gli step successivi.
-      filters: [],
+      filters: r.queryFilters ?? [],
       count: r.meta?.count ?? (Array.isArray(r.rows) ? r.rows.length : null),
     };
   }
