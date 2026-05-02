@@ -126,7 +126,14 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
     [filters.networkSelectedCountries]
   );
   const search = filters.networkSearch || "";
-  const quality = filters.networkQuality || "all";
+  const qualityRaw = filters.networkQuality || "all";
+  const qualityTokens = useMemo(
+    () =>
+      qualityRaw === "all" || !qualityRaw
+        ? []
+        : qualityRaw.split(",").map((s) => s.trim()).filter(Boolean),
+    [qualityRaw]
+  );
 
   const filterKey = useMemo(
     () => ({ countries, search }),
@@ -155,9 +162,10 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
   const companies = useMemo(
     () => {
       const all = (data ?? []).map(mapPartner);
-      if (quality === "all") return all;
-      return all.filter((c) => {
-        switch (quality) {
+      if (qualityTokens.length === 0) return all;
+      // Multi-select AND: tutti i token devono matchare.
+      const test = (c: CompanyEntity, token: string): boolean => {
+        switch (token) {
           case "with_email":    return c.channels?.email === true;
           case "no_email":      return !c.channels?.email;
           case "with_phone":    return c.channels?.phone === true;
@@ -168,9 +176,10 @@ export function useWcaPartnersAsCompanies(): UseWcaPartnersAsCompaniesResult {
           case "no_contacts":   return (c.contactsCount ?? 0) === 0;
           default:              return true;
         }
-      });
+      };
+      return all.filter((c) => qualityTokens.every((t) => test(c, t)));
     },
-    [data, quality]
+    [data, qualityTokens]
   );
 
   return { companies, isLoading, error };
