@@ -4,11 +4,11 @@
 import * as React from "react";
 import { Suspense, lazy, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BrainCircuit, HandMetal, Sparkles, Settings2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
 import { queryKeys } from "@/lib/queryKeys";
+import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
+import { cn } from "@/lib/utils";
 
 const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
@@ -90,49 +90,90 @@ export function EmailIntelligencePage(): React.ReactElement {
   });
 
   return (
-    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden p-2 md:p-3 gap-2">
-      <h1 className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-shrink-0">
-        <BrainCircuit className="h-4 w-4 text-primary" />
-        Email Intelligence
-      </h1>
+    <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden">
+      <GoldenHeaderBar
+        actions={
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <KpiPill label="Da classificare" value={uncategorizedCount} tone="primary" />
+            <KpiPill label="Suggerimenti AI" value={aiSuggestionsCount} tone="amber" />
+            <KpiPill label="Classificate oggi" value={classifyTodayCount} tone="emerald" />
+            <KpiPill label="Regole attive" value={activeRulesCount} tone="muted" />
+          </div>
+        }
+      />
 
       <Tabs defaultValue="manual" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="bg-card/80 backdrop-blur-sm border border-border/50 overflow-x-auto flex w-full md:w-auto flex-shrink-0">
-          <TabsTrigger value="manual" className="gap-1.5 text-xs">
-            <HandMetal className="h-3.5 w-3.5" />
-            Gestione Manuale
-            {uncategorizedCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{uncategorizedCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="ai-suggestions" className="gap-1.5 text-xs">
-            <Sparkles className="h-3.5 w-3.5" />
-            Suggerimenti AI
-            {aiSuggestionsCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{aiSuggestionsCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="auto-classify" className="gap-1.5 text-xs">
-            <BrainCircuit className="h-3.5 w-3.5" />
-            Auto-Classificazione
-            {classifyTodayCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{classifyTodayCount}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="rules" className="gap-1.5 text-xs">
-            <Settings2 className="h-3.5 w-3.5" />
-            Regole & Azioni
-            {activeRulesCount > 0 && <Badge variant="secondary" className="ml-1 h-4 min-w-[1rem] px-1 text-[10px]">{activeRulesCount}</Badge>}
-          </TabsTrigger>
+        <TabsList className="h-auto p-0 bg-transparent border-b border-border/40 rounded-none justify-start gap-0.5 px-2 overflow-x-auto flex w-full flex-shrink-0">
+          <FlatTabTrigger value="manual">Gestione Manuale</FlatTabTrigger>
+          <FlatTabTrigger value="ai-suggestions">Suggerimenti AI</FlatTabTrigger>
+          <FlatTabTrigger value="auto-classify">Auto-Classificazione</FlatTabTrigger>
+          <FlatTabTrigger value="rules">Regole &amp; Azioni</FlatTabTrigger>
         </TabsList>
 
-        <TabsContent value="manual" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="manual" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><ManualGroupingTab /></Suspense>
         </TabsContent>
-        <TabsContent value="ai-suggestions" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="ai-suggestions" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><AISuggestionsTab /></Suspense>
         </TabsContent>
-        <TabsContent value="auto-classify" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="auto-classify" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><SmartInboxView /></Suspense>
         </TabsContent>
-        <TabsContent value="rules" className="flex-1 mt-4 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+        <TabsContent value="rules" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+/* ---------- helpers locali (presentational) ---------- */
+
+function FlatTabTrigger({
+  value,
+  children,
+}: {
+  value: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <TabsTrigger
+      value={value}
+      className={cn(
+        "relative px-3 py-2 text-xs font-medium rounded-none whitespace-nowrap",
+        "bg-transparent border-0 shadow-none",
+        "text-muted-foreground hover:text-foreground transition-colors",
+        "data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none",
+        "data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-2 data-[state=active]:after:right-2",
+        "data-[state=active]:after:h-0.5 data-[state=active]:after:bg-primary data-[state=active]:after:rounded-full",
+      )}
+    >
+      {children}
+    </TabsTrigger>
+  );
+}
+
+function KpiPill({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "primary" | "amber" | "emerald" | "muted";
+}): React.ReactElement {
+  const toneCls = {
+    primary: "text-primary",
+    amber: "text-amber-500 dark:text-amber-400",
+    emerald: "text-emerald-500 dark:text-emerald-400",
+    muted: "text-muted-foreground",
+  }[tone];
+  return (
+    <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+      <span className={cn("font-semibold tabular-nums", toneCls)}>
+        {value.toLocaleString("it-IT")}
+      </span>
+      <span className="text-muted-foreground/80">{label}</span>
+    </span>
   );
 }
