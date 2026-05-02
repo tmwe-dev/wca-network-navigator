@@ -1,7 +1,8 @@
 /**
  * KBSupervisorPage — Pagina V2 con split-panel chat 40% / canvas 60%
  */
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { KBSupervisorChat } from "@/components/kb-supervisor/KBSupervisorChat";
 import { KBSupervisorCanvas } from "@/components/kb-supervisor/KBSupervisorCanvas";
 import { KBSupervisorHeader } from "@/components/kb-supervisor/KBSupervisorHeader";
@@ -21,7 +22,7 @@ export function KBSupervisorPage() {
       />
 
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
+        <PersistentResizablePanelGroup direction="horizontal" storageId="kb-supervisor:chat-vs-canvas">
           <ResizablePanel defaultSize={40} minSize={30}>
             <KBSupervisorChat
               messages={supervisor.messages}
@@ -53,7 +54,7 @@ export function KBSupervisorPage() {
               onSelectDocument={supervisor.selectDocument}
             />
           </ResizablePanel>
-        </ResizablePanelGroup>
+        </PersistentResizablePanelGroup>
       </div>
 
       <KBSupervisorFooter

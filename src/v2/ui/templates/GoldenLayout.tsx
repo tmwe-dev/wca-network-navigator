@@ -6,7 +6,8 @@
  * Reference implementation: see ContactsPage.
  */
 import * as React from "react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { GoldenHeaderBar } from "./GoldenHeaderBar";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,12 @@ interface GoldenLayoutProps {
   /** Test id wrapper. */
   testId?: string;
   className?: string;
+  /**
+   * Identificatore stabile per persistere il layout in localStorage.
+   * Default: derivato da `testId` quando presente, altrimenti generico.
+   * Convenzione: `<feature>:golden-split` (es. `contacts:golden-split`).
+   */
+  storageId?: string;
 }
 
 export function GoldenLayout({
@@ -34,8 +41,10 @@ export function GoldenLayout({
   hideHeader,
   testId,
   className,
+  storageId,
 }: GoldenLayoutProps): React.ReactElement {
   const hasDetail = detail !== null && detail !== undefined && detail !== false;
+  const persistId = storageId ?? `${testId ?? "golden-layout"}:list-vs-detail`;
 
   return (
     <div
@@ -63,7 +72,8 @@ export function GoldenLayout({
           on the fly leads to "Previous layout not found for panel index -1".
           Keying on hasDetail recreates the group cleanly on selection toggle.
         */}
-        <ResizablePanelGroup
+        <PersistentResizablePanelGroup
+          storageId={persistId}
           key={hasDetail ? "split" : "list-only"}
           direction="horizontal"
           className="h-full"
@@ -84,7 +94,7 @@ export function GoldenLayout({
               </ResizablePanel>
             </>
           )}
-        </ResizablePanelGroup>
+        </PersistentResizablePanelGroup>
       </div>
     </div>
   );
