@@ -86,16 +86,20 @@ export function ContextFiltersRail(): React.ReactElement | null {
 
   if (!context) return null;
 
-  // Tutte le sidebar dei filtri restano SEMPRE a scomparsa con linguetta,
-  // anche su desktop full-width. Nessuna sidebar fissa. Richiesta dell'utente.
+  // Pattern OVERLAY: la sidebar si apre SOPRA il contenuto (fixed + backdrop
+  // oscurato) senza spostare nulla. La pagina sottostante resta in posizione,
+  // viene solo oscurata. Richiesta dell'utente.
+  // L'<aside> è sempre montato (anche chiuso) per preservare lo stato dei
+  // filtri, ma è translato fuori schermo quando chiuso.
   return (
-    <div className={isOpen ? "flex w-80 shrink-0" : "block w-0 shrink-0"}>
+    <>
+      {/* Linguetta SEMPRE visibile, fissa al bordo sinistro */}
       <button
         ref={toggleRef}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         className={[
-          "fixed top-1/2 -translate-y-1/2 z-[60] flex h-14 w-7 items-center justify-center rounded-r-lg border border-l-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all hover:border-primary/50 hover:bg-primary/25",
+          "fixed top-1/2 -translate-y-1/2 z-[70] flex h-14 w-7 items-center justify-center rounded-r-lg border border-l-0 border-primary/30 bg-primary/20 text-primary backdrop-blur-md transition-all duration-200 hover:border-primary/50 hover:bg-primary/25",
           isOpen ? "left-80" : "left-0",
         ].join(" ")}
         aria-label={isOpen ? `Chiudi ${context.title}` : `Apri ${context.title}`}
@@ -104,9 +108,27 @@ export function ContextFiltersRail(): React.ReactElement | null {
         {isOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
       </button>
 
-      {isOpen && (
-        <aside ref={asideRef} className="flex h-full w-80 shrink-0 flex-col border-r border-border/40 bg-card/45 backdrop-blur-sm" aria-label={context.title}>
-          <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
+      {/* Backdrop oscurato — clic per chiudere */}
+      <div
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+        className={[
+          "fixed inset-0 z-[55] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200",
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        ].join(" ")}
+      />
+
+      {/* Pannello sidebar — fixed, slide-in da sinistra, sopra il contenuto */}
+      <aside
+        ref={asideRef}
+        className={[
+          "fixed left-0 top-0 z-[60] flex h-screen w-80 flex-col border-r border-border/40 bg-card/95 backdrop-blur-md shadow-2xl transition-transform duration-200 ease-out",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+        aria-label={context.title}
+        aria-hidden={!isOpen}
+      >
+        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/40 px-4">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             <h2 className="text-xs font-bold uppercase text-foreground">{context.title}</h2>
             <button
@@ -143,9 +165,8 @@ export function ContextFiltersRail(): React.ReactElement | null {
               <Check className="h-3.5 w-3.5" /> Conferma e chiudi
             </button>
           </div>
-        </aside>
-      )}
-    </div>
+      </aside>
+    </>
   );
 }
 
