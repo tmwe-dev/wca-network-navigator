@@ -8,12 +8,17 @@ import { KBSupervisorCanvas } from "@/components/kb-supervisor/KBSupervisorCanva
 import { KBSupervisorHeader } from "@/components/kb-supervisor/KBSupervisorHeader";
 import { KBSupervisorFooter } from "@/components/kb-supervisor/KBSupervisorFooter";
 import { useKBSupervisorState } from "./kb-supervisor/hooks/useKBSupervisorState";
+import { PageTitleHint } from "@/v2/ui/atoms/PageTitleHint";
 
 export function KBSupervisorPage() {
   const supervisor = useKBSupervisorState();
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      <PageTitleHint
+        title="KB Supervisor"
+        hint="Gestisci la Knowledge Base degli agenti: documenti, dottrine, playbook. Parla o scrivi per analizzare, proporre modifiche e migliorare la KB. Le modifiche sono subito attive — usa la modalità Guidato per richiedere conferma."
+      />
       <KBSupervisorHeader
         mode={supervisor.mode}
         onModeChange={supervisor.setMode}
