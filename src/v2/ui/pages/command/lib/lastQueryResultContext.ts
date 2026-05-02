@@ -20,7 +20,7 @@ const TTL_MS = 5 * 60_000;
 let lastCtx: LastQueryResultContext | null = null;
 
 export function setLastQueryResultContext(ctx: Omit<LastQueryResultContext, "ts">): void {
-  if (ctx.partnerIds.length === 0) return;
+  if (ctx.partnerIds.length === 0 && !ctx.countryCode) return;
   lastCtx = { ...ctx, ts: Date.now() };
 }
 
@@ -89,7 +89,8 @@ export function isProceedIntent(prompt: string): boolean {
   if (p.length === 0) return false;
   return (
     /\b(vai\s+avanti|procedi|prosegui|continua|avanti|fai\s+pure|go\b|ok\s+procedi)\b/i.test(p) ||
-    /\b(prepara|fai|scrivi|componi|genera)\s+(la\s+)?(bozza|lettera|mail|email|messaggio)\b/i.test(p) ||
+    /\b(prepara|fai|scrivi|componi|genera)\s+(?:la|il|un|una)?\s*(bozza|lettera|mail|email|messaggio)\b/i.test(p) ||
+    /\b(?:questi|quei|quelli|tutti\s+questi)\s+partner\b/i.test(p) ||
     /\b(vai\s+avanti\s+con\s+(la\s+)?(bozza|lettera))\b/i.test(p)
   );
 }
