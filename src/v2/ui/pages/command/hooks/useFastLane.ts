@@ -108,15 +108,19 @@ export function useFastLane(deps: FastLaneDeps) {
         const partnerIds = extractPartnerIdsFromResult(result);
         const country = detectCountryFromPrompt(userPrompt);
         // Estrai filtri/tabella/count dal risultato (table o multi → prima parte partners).
-        const meta = extractQueryMetaFromResult(result);
+        const metaRaw = extractQueryMetaFromResult(result);
+        let metaTable = metaRaw.table;
+        let metaFilters: ReadonlyArray<{ column: string; op: string; value: unknown }> = metaRaw.filters;
+        const metaCount = metaRaw.count;
         // Per query single-table arricchiamo con i filtri reali dal plan.
-        if (!meta.filters.length) {
+        if (!metaFilters.length) {
           const plan = getLastSuccessfulQueryPlan();
-          if (plan && plan.table === (meta.table ?? plan.table)) {
-            meta.table = meta.table ?? plan.table;
-            meta.filters = plan.filters;
+          if (plan) {
+            metaTable = metaTable ?? plan.table;
+            metaFilters = plan.filters;
           }
         }
+        const meta = { table: metaTable, filters: metaFilters, count: metaCount };
         const cityFilter = meta.filters.find(
           (f) => f.column === "city" && (f.op === "eq" || f.op === "ilike"),
         );
