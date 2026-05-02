@@ -3,11 +3,21 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { Plane, Trophy, MoreHorizontal, Star, Clock } from "lucide-react";
+import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { EntityRow, type EntityRowTone } from "@/v2/ui/atoms/EntityRow";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { useDirectContactActions } from "@/hooks/useDirectContactActions";
+import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
 
 function sourceTone(source: CompanySource): EntityRowTone {
@@ -36,6 +46,56 @@ export function CompanyCard({
 }: CompanyCardProps): React.ReactElement {
   const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
   const tone = sourceTone(source);
+  const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
+
+  const primaryContactFull = company.contacts?.[0];
+  const firstEmail = primaryContactFull?.email || null;
+  const firstPhone = primaryContactFull?.phone || null;
+
+  const onMenuEmail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!firstEmail) {
+      toast.error("Nessuna email disponibile per il contatto principale");
+      return;
+    }
+    handleSendEmail({
+      email: firstEmail,
+      name: primaryContactFull?.name,
+      company: company.name,
+      partnerId: company.id,
+      contactId: primaryContactFull?.id,
+    });
+  };
+
+  const onMenuWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!firstPhone) {
+      toast.error("Nessun numero disponibile per il contatto principale");
+      return;
+    }
+    handleSendWhatsApp({
+      phone: firstPhone,
+      contactName: primaryContactFull?.name,
+      companyName: company.name,
+      contactId: primaryContactFull?.id,
+      partnerId: company.id,
+      sourceType: "partner",
+    });
+  };
+
+  const onMenuCall = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!firstPhone) {
+      toast.error("Nessun numero disponibile");
+      return;
+    }
+    window.open(`tel:${firstPhone.replace(/[^0-9+]/g, "")}`, "_blank");
+  };
+
+  const onMenuOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenCompany?.(company);
+  };
 
   const recency = React.useMemo(() => {
     if (!lastInteractionAt) return { label: "mai", tone: "muted" as const };
@@ -165,15 +225,38 @@ export function CompanyCard({
         channels={channels}
         score={score ?? null}
         actionsSlot={
-          <button
-            type="button"
-            onClick={() => onOpenCompany?.(company)}
-            className="p-1 rounded hover:bg-muted/40 text-muted-foreground hover:text-foreground"
-            aria-label="Apri dettaglio"
-            title="Apri dettaglio"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 rounded hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+                aria-label="Azioni rapide"
+                title="Azioni rapide"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {primaryContactFull?.name || company.name}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onMenuEmail} disabled={!firstEmail}>
+                <Mail className="w-3.5 h-3.5 mr-2 text-primary" /> Invia email
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onMenuWhatsApp} disabled={!firstPhone}>
+                <MessageCircle className="w-3.5 h-3.5 mr-2 text-emerald-500" /> WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onMenuCall} disabled={!firstPhone}>
+                <Phone className="w-3.5 h-3.5 mr-2 text-chart-3" /> Chiama
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onMenuOpen}>
+                <ExternalLink className="w-3.5 h-3.5 mr-2" /> Apri dettaglio
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
         onClick={() => onOpenCompany?.(company)}
       />
