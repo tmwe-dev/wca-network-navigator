@@ -16,6 +16,7 @@ import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
+import { SectionRailTabs } from "./header/SectionRailTabs";
 import { Menu, Sparkles } from "lucide-react";
 
 interface OutreachQueue {
@@ -82,6 +83,10 @@ export function LayoutHeader({
           outreachQueue={outreachQueue}
           globalSync={globalSync}
         />
+
+        {/* Tab di sezione integrate in top bar — evidenziano l'area attiva */}
+        <div className="mx-1 h-5 w-px bg-border/60 shrink-0" aria-hidden="true" />
+        <SectionRailTabs />
 
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />
