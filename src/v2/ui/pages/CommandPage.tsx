@@ -22,6 +22,7 @@ import { useGovernance } from "./command/hooks/useGovernance";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
 import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
 import { useConversation } from "./command/hooks/useConversation";
+import { useCommandJobs } from "./command/hooks/useCommandJobs";
 import { useCommandState } from "./command/hooks/useCommandState";
 import { useCommandSubmit } from "./command/hooks/useCommandSubmit";
 import { CommandHistory } from "./command/components/CommandHistory";
@@ -38,6 +39,7 @@ import CommandThread from "./command/components/CommandThread";
 const CommandPage = () => {
   const state = useCommandState();
   const conv = useConversation();
+  const jobs = useCommandJobs();
   const governance = useGovernance(state.activeToolKey ?? undefined);
   const voiceOut = useVoiceOutput();
 
@@ -63,6 +65,25 @@ const CommandPage = () => {
     messages: state.messages,
     queryContext: state.queryContext,
     setQueryContext: state.setQueryContext,
+    persistMessage: (msg) => { void conv.addMessage(msg); },
+    onUserPrompt: (prompt) => {
+      // Auto-create a job on the first substantive prompt of the conversation.
+      void (async () => {
+        const convId = await conv.ensureConversation(prompt);
+        if (!convId) return;
+        if (jobs.openJobs.some((j) => j.conversation_id === convId)) return;
+        // Skip pure single-word/greeting prompts.
+        if (prompt.trim().length < 12) return;
+        await jobs.createJob({
+          conversation_id: convId,
+          title: prompt.slice(0, 80),
+          goal: prompt,
+          origin_prompt: prompt,
+          phase: "discovery",
+          status: "in_progress",
+        });
+      })();
+    },
   });
 
   const voice = useVoiceInput({
@@ -176,8 +197,22 @@ const CommandPage = () => {
             state.setMessages([]);
             state.setCanvas(null);
             state.setFlowPhase("idle");
+            jobs.setActiveJobId(null);
           }}
           onArchive={(id) => conv.archive(id)}
+          jobs={jobs.openJobs}
+          jobsLoading={jobs.isLoading}
+          activeJobId={jobs.activeJobId}
+          onResumeJob={(job) => {
+            jobs.setActiveJobId(job.id);
+            if (job.conversation_id) {
+              state.setCanvas(null);
+              state.setLiveResult(null);
+              state.setFlowPhase("idle");
+              void conv.loadConversation(job.conversation_id);
+            }
+          }}
+          onArchiveJob={(id) => { void jobs.removeJob(id); }}
         />
         <div
           className={`flex-1 flex flex-col transition-all duration-700 ease-out ${
