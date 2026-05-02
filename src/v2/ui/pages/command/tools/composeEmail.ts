@@ -591,6 +591,24 @@ export const composeEmailTool: Tool = {
 
     const { person, company, email } = extractPersonAndCompany(prompt);
 
+    // Guardrail anti-falso partner: se il prompt sembra un invito/azione
+    // generica (calcio, evento, magazzino, ospiti…) e NON contiene una vera
+    // identificazione di azienda + persona, rifiuta di interpretare frammenti
+    // come ragione sociale (es. "calcio", "magazzini").
+    if (looksLikeGenericInvite(prompt) && !email) {
+      return {
+        kind: "report",
+        title: "Selezione destinatari mancante",
+        meta: { count: 0, sourceLabel: "DB · partners" },
+        sections: [
+          {
+            heading: "Conferma necessaria",
+            body: `Il messaggio è un invito generico ma non ho una **selezione partner attiva** né un destinatario esplicito.\n\nFai prima una ricerca (es. "trovami i partner di Malta" o "elenca i partner ad Amman") e poi conferma con "prepara invito a tutti".`,
+          },
+        ],
+      };
+    }
+
     // 1) Cerca partner
     const candidates = await searchPartner(company, email);
 
