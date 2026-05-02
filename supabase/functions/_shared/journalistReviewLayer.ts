@@ -1,4 +1,9 @@
 // === JournalistReviewLayer — Caporedattore Finale (LOVABLE-80 v2) ===
+// 🔒 EDITORIAL LAYER — INTOCCABILE
+// Unico revisore editoriale del sistema. OBBLIGATORIO su ogni produzione/invio
+// di email, WhatsApp e LinkedIn. Vietato bypassarlo o crearne varianti parallele.
+// Vedi mem://tech/editorial-review-layer-mandatory per la matrice canali.
+//
 // One-way editorial layer: legge tutto, corregge il testo, segnala problemi.
 // NON riscrive il brief di business. MAI cambia stato/canale/playbook.
 
