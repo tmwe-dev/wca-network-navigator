@@ -1,86 +1,92 @@
-## Premessa: correzione alla mia conferma iniziale
-
-Ho detto "nessun revisore finale" — è **parzialmente sbagliato**. Esiste già un **Giornalista AI (Caporedattore Finale)** in `generate-email/index.ts` (`journalistReview` + `loadOptimusSettings`, mode/strictness configurabili) che legge la bozza generata, dà un verdetto (`block` / pass) e può sostituire il body. Quindi:
-
-- Pipeline **`generate-email`** (usata dall'Outreach/Compose classico): **HA** revisore finale ✅
-- Pipeline **`composeEmail` tool del Command** (Super Mario → batch Venezuela): **NON** passa dal Giornalista, va dritta al modello senza QA ❌
-
-Questo è già un primo gap dell'audit.
+## Cosa farò (3 azioni mirate, una per problema)
 
 ---
 
-## Obiettivo dell'audit (read-only, nessuna modifica)
+### 1) Pipeline filtri Giornalista/Revisore — consolidare e memorizzare come INTOCCABILE
 
-Produrre **un singolo report Markdown** con 4 sezioni, esportato in `/mnt/documents/`:
+**Verifica oggettiva fatta sul codice:**
 
-### Sezione 1 — Anatomia di Super Mario
-Mappare cosa Mario riceve nel system prompt, in che ordine, con quale peso:
-- **Identity** (`super_mario_identities` DB, scope `command-director`, fallback hardcoded in `identityLoader.ts:21-28`)
-- **Runtime contract + Hard guards** (`runtimeContract.ts`)
-- **KB STATIC** (`kbAssembler.ts:33-52` — 19 righe hardcoded: glossario, regole ferree)
-- **KB DYNAMIC** (filtrata da `INTENT_KEYWORDS` → `DOMAIN_TO_PROMPT_CONTEXTS` → query `operative_prompts`, max 6 cards × 800 char)
-- **KB SITUATIONAL** (count partner totali + attività agenda oggi)
-- **Memory** (narrative summary + 10 turn recenti + last_tool_result + operator_memory)
-- **Tool catalog**
+Esiste UN layer editoriale unico (`_shared/journalistReviewLayer.ts`) ed è già attivo su TUTTI i punti di produzione/invio messaggi:
 
-Verificare: i richiami alla KB sono sufficienti? Mario "sa di sapere"? Cosa manca (es. nessun riferimento esplicito a `kb_entries` categoria `doctrine`/`procedures`, nessuna iniezione di `system_doctrine`, nessuna persona DB).
+| Canale | Edge function | Journalist attivo |
+|---|---|---|
+| Email — generazione | `generate-email` | ✓ (line 270) |
+| Email — miglioramento | `improve-email` | ✓ (line 445) |
+| Email — coda outreach | `process-email-queue` | ✓ (line 225) |
+| Email — invio diretto | `send-email` | ✓ (line 346, doppio guard se `journalist_reviewed` mancante) |
+| WhatsApp — invio | `send-whatsapp` | ✓ (line 167) |
+| LinkedIn — invio | `send-linkedin` | ✓ (line 210) |
+| Mario · `send_email` (agent-execute) | `emailTools.ts` | ✓ (line 73) |
+| Mario · `send_whatsapp` (agent-execute) | `emailTools.ts` | ✓ (line 165) |
+| Mario · `compose-email` (Command) | usa `generate-email` → ✓ |
+| Mario · `send-linkedin` (Command) | usa edge `send-linkedin` → ✓ |
+| Mario · `send-whatsapp` (Command) | usa edge `send-whatsapp` → ✓ |
 
-### Sezione 2 — Pipeline email completa, stadio per stadio
-Per ogni stadio elencare: file, input, output, istruzioni iniettate, conflitti.
+**Smentita audit precedente:** avevo segnalato che `composeEmail` bypassava il revisore. Rileggendo il file, `composeEmail.ts` chiama `generate-email` (non più `unified-assistant`), quindi il giornalista È applicato. Pipeline già completa su tutti e 3 i canali.
 
-```text
-Oracolo (oracle_type, oracle_tone)
-  → contextAssembler.ts (partner+contact+history+enrichment+BCA+...)
-    → emailContract + emailTypeDetector (LOVABLE-81/82)
-      → decisionEngine (azione raccomandata + journalist_role)
-        → operativePromptsLoader (Prompt Lab DB, context=email)
-          → kbAndPlaybookAssembler (kb_entries + sherlock_playbooks)
-            → strategicAdvisor (heuristic in code)
-              → promptParts.ts (address-priority/holding/commercial — SSOT)
-                → calligrafiaInjector (regole formattazione SSOT KB)
-                  → buildEmailPrompts (assembly finale)
-                    → MODELLO AI (gemini/gpt)
-                      → parseEmailResponse
-                        → journalistReview ✅ REVISORE (mode/strictness DB)
-                          → output finale
-```
+**Cosa farò:**
+1. Salvare in memoria persistente una nuova entry `mem://tech/editorial-review-layer-mandatory` che dichiara: layer `journalistReview` obbligatorio su ogni produzione/invio email/WA/LI; matrice canali sopra; vietato bypassarlo; ogni nuovo tool che produce o invia messaggi DEVE invocarlo o passare per un'edge che lo invoca.
+2. Aggiungere riga in `mem://index.md` Core: "Editorial review (journalistReview) obbligatorio su ogni email/WA/LI prodotti o inviati. Mai bypassarlo."
+3. Aggiungere commento `// 🔒 EDITORIAL LAYER — INTOCCABILE` in testa a `_shared/journalistReviewLayer.ts` per segnalarne lo stato di file critico.
 
-Verificare per ogni stadio:
-- Quali istruzioni inietta (testuali, prese dal codice)
-- Se contraddice/duplica lo stadio successivo (es. tono Oracolo vs tono Prompt Lab vs tono Giornalista)
-- Se è progressivo (raffinamento) o ridondante (ripetizione)
-
-### Sezione 3 — Audit KB + Operative Prompts globali
-Estrarre dal DB tramite `supabase--read_query`:
-- Tutti gli `operative_prompts` attivi (count per `context`, per `priority`, deprecated)
-- Tutte le `kb_entries` attive (count per `category`/`chapter`, per priorità, source_path)
-- `agent_personas`, `agent_capabilities`, `system_doctrine`, `super_mario_identities`
-
-Per ognuno cercare:
-- **Conflitti**: due prompt stessa context con regole opposte (es. lunghezza email)
-- **Duplicazioni**: stesso contenuto in più entry
-- **Gap**: domini operativi senza prompt (es. dominio `partner-search` di Mario mappa a `general` — c'è copertura?)
-- **Orfani**: prompt mai caricati da nessuna pipeline (incrociare `context` con i loader)
-
-### Sezione 4 — Export KB/Prompt: cosa esiste già
-
-Trovati **3 export funzionanti** già in app:
-
-1. **`AIExportPanel`** (`src/components/settings/AIExportPanel.tsx`) — **questo è il completo**. Genera `.zip` con: agenti, kb_entries, operative_prompts, ai_memory (L2/L3), app_settings, agent_personas, scope configs, agent prompts catalog, agent templates, procedures, full-backup.json. Markdown leggibile + JSON tecnico.
-2. **`BackupExportTab`** (`src/components/settings/BackupExportTab.tsx`) — backup generico settings.
-3. **`prompt-lab/ExportButton`** (`src/v2/ui/pages/prompt-lab/ExportButton.tsx`) — snapshot JSON dei tab Prompt Lab.
-
-**Nessuna nuova funzione necessaria**. Verifica solo dove è esposto in UI: lo cerco e ti dico in che pagina/tab del Settings è raggiungibile.
+Nessuna modifica funzionale al codice della pipeline (è già corretta).
 
 ---
 
-## Cosa NON include questo piano (per tua decisione esplicita)
-- ❌ Nessuna proposta di nuovo "Revisore finale" (hai detto "solo audit dell'esistente")
-- ❌ Nessuna modifica codice
-- ❌ Nessun nuovo export
+### 2) Duplicati `operative_prompts` nel DB — pulizia oggettiva
 
-## Deliverable
-Un unico file: `/mnt/documents/audit-super-mario-pipeline-email-2026-05-02.md` (~15-25KB) con le 4 sezioni, tabelle di conflitti, conteggi reali da DB, citazioni dei file con line-number per ogni claim.
+**Verifica oggettiva fatta:** 6 gruppi distinti (context+tags), ognuno replicato esattamente 5 volte → 30 record, di cui 24 da rimuovere. Tutti hanno `updated_at` identico per gruppo (stessa migrazione li ha duplicati).
 
-## Tempo stimato
-~5-8 minuti di esplorazione + query DB + scrittura report.
+| Context | Tags | Copie | Da tenere | Da eliminare |
+|---|---|---|---|---|
+| classification | classification, lead-status, email-quality, universale | 5 | 1 | 4 |
+| command | OBBLIGATORIA, briefing | 5 | 1 | 4 |
+| command | OBBLIGATORIA, identita | 5 | 1 | 4 |
+| command | OBBLIGATORIA, memoria | 5 | 1 | 4 |
+| command | OBBLIGATORIA, proattivita | 5 | 1 | 4 |
+| command | OBBLIGATORIA, scheduling | 5 | 1 | 4 |
+| command | OBBLIGATORIA, voce | 5 | 1 | 4 |
+| command | tool-routing, router, OBBLIGATORIA | 5 | 1 | 4 |
+| command | tool-routing, whatsapp, linkedin, OBBLIGATORIA | 5 | 1 | 4 |
+| general | aliases, copywriting, universale | 5 | 1 | 4 |
+| outreach | outreach, email-quality, universale, OBBLIGATORIA | 5 | 1 | 4 |
+| outreach | outreach, multi-canale, holding-pattern, … | 5 | 1 | 4 |
+
+(in totale 12 gruppi × 5 = 60 record, di cui 48 da rimuovere — la query iniziale era troncata, controllerò esattamente prima di eseguire)
+
+**Prima di eliminare farò una verifica oggettiva del CONTENUTO:**
+- Per ogni gruppo, leggerò il `body` di tutte le copie e verificherò che siano identiche o quasi-identiche.
+- Se sono identiche → elimino tenendo l'`id` più vecchio (per non perdere riferimenti).
+- Se NON sono identiche (anche se context+tags coincidono) → ti mostro le differenze e NON elimino nulla finché non decidi tu.
+
+Esecuzione tramite tool `supabase--insert` (DELETE su tabella business → trigger globale converte automaticamente in soft-delete `deleted_at`, come da policy `mem://constraints/no-physical-delete`).
+
+---
+
+### 3) Export KB/Prompt — confermare il link
+
+**Verifica fatta:** `AIExportPanel` è già esposto. Percorso: **Settings → tab "Backup & Export"** in `/v2/settings` (montato in `src/v2/ui/pages/SettingsPage.tsx` riga 206 via `BackupExportTab`).
+
+Il pannello esporta uno ZIP leggibile (Markdown) con:
+- Tutti i prompt operativi
+- Tutte le KB entries
+- Agenti, capabilities, personas
+- Memoria
+
+**Cosa farò:** ti darò qui sotto il link diretto cliccabile alla pagina (`/v2/settings` → tab Backup & Export). Nessuna modifica codice.
+
+---
+
+## Cosa NON farò ora (rimandato come da tua richiesta)
+
+- Audit oggettivo riga-per-riga del CONTENUTO dei prompt e della KB rispetto ai ruoli degli agenti. Ne parliamo dopo, quando questi 3 punti sono chiusi.
+
+---
+
+## Ordine di esecuzione
+
+1. Salvo memoria "editorial layer intoccabile" + commento file.
+2. Leggo i body dei duplicati, confronto, ti mostro un riepilogo, poi elimino solo gli identici.
+3. Ti do il link `/v2/settings` (tab Backup & Export).
+
+Se confermi, procedo.
