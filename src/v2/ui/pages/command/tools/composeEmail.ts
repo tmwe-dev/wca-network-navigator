@@ -505,11 +505,15 @@ export const composeEmailTool: Tool = {
     // lista partnerIds e genera il batch usando il prompt corrente come goal.
     const queryCtx = getLastQueryResultContext();
     if (queryCtx && isProceedIntent(prompt)) {
-      const partners = queryCtx.partnerIds.length > 0
-        ? await fetchPartnersByIds(queryCtx.partnerIds)
-        : queryCtx.countryCode
-          ? await searchPartnersByCountry(queryCtx.countryCode)
-          : [];
+      let partners: PartnerRow[] = [];
+      if (queryCtx.partnerIds.length > 0) {
+        partners = await fetchPartnersByIds(queryCtx.partnerIds);
+      } else if (queryCtx.filters && queryCtx.filters.length > 0) {
+        // Rifa la query con i filtri reali (city=Amman, country_code=SA, …)
+        partners = await fetchPartnersByFilters(queryCtx.filters);
+      } else if (queryCtx.countryCode) {
+        partners = await searchPartnersByCountry(queryCtx.countryCode);
+      }
       if (partners.length === 0) {
         return {
           kind: "report",
@@ -518,14 +522,14 @@ export const composeEmailTool: Tool = {
           sections: [
             {
               heading: "Contesto perso",
-              body: `I partner trovati nella ricerca precedente non sono più recuperabili (potrebbero essere stati archiviati). Riformula la ricerca${queryCtx.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
+              body: `I partner trovati nella ricerca precedente non sono più recuperabili. Riformula la ricerca${queryCtx.selectionLabel ? ` (selezione precedente: "${queryCtx.selectionLabel}")` : queryCtx.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
             },
           ],
         };
       }
       const tone = detectTone(prompt);
       const drafts = await generateDraftsBatch(partners, tone, prompt);
-      const labelForCtx = queryCtx.countryLabel ?? "selezione";
+      const labelForCtx = queryCtx.selectionLabel ?? queryCtx.countryLabel ?? "selezione";
       const codeForCtx = queryCtx.countryCode ?? "—";
       setLastComposerContext({
         countryCode: codeForCtx,
