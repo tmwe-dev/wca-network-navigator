@@ -169,94 +169,93 @@ export function PromptLabPage() {
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={82} minSize={40}>
           <div className="flex h-full flex-col">
-            <header className="border-b px-3 py-1.5 flex items-center justify-between bg-background flex-shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <FlaskConical className="h-4 w-4 text-primary flex-shrink-0" />
-                <h1 className="text-sm font-semibold leading-none">Prompt Lab</h1>
-                <MetricsSummaryBadge />
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
-                  <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
-                    <BookmarkPlus className="h-3.5 w-3.5" />
-                    Review
-                    {counts.pending > 0 && (
-                      <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] leading-none">
-                        {counts.pending}
-                      </Badge>
-                    )}
-                  </Link>
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Altre azioni">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Azioni AI globali
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setGlobalImproverOpen(true)}>
-                      <Sparkles className="h-3.5 w-3.5 mr-2" /> Migliora tutto
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setHarmonizeOpen(true)}>
-                      <Layers className="h-3.5 w-3.5 mr-2" /> Armonizza tutto
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Gestione
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setCreateBlockOpen(true)}>
-                      <Plus className="h-3.5 w-3.5 mr-2" /> Nuovo blocco
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setHistoryPanelOpen(true)}>
-                      <Clock className="h-3.5 w-3.5 mr-2" /> Storico run
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Esplora
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link to="/v2/prompt-lab/atlas">
-                        <Network className="h-3.5 w-3.5 mr-2" /> Atlas
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/v2/prompt-lab/catalog">
-                        <Library className="h-3.5 w-3.5 mr-2" /> Catalog
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <div className="px-2 py-1">
-                      <ExportButton getSnapshot={handleExport} />
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </header>
-
             {/* Livello 1 — Tabs orizzontali (macroaree) */}
             <Tabs
               value={activeGroupId}
               onValueChange={handleGroupChange}
               className="flex-1 flex flex-col min-h-0"
             >
-              <TabsList className="rounded-none border-b justify-start h-auto p-0 bg-background gap-0">
-                {PROMPT_LAB_GROUPS.map((g) => {
-                  const Icon = GROUP_ICONS[g.id];
-                  return (
-                    <TabsTrigger
-                      key={g.id}
-                      value={g.id}
-                      className="text-xs px-4 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-2"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {g.label}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+              <div className="flex items-center justify-between border-b bg-background flex-shrink-0 pr-2">
+                <TabsList className="rounded-none justify-start h-auto p-0 bg-transparent gap-0">
+                  <div className="flex items-center gap-1.5 px-3 border-r border-border/40 mr-1">
+                    <FlaskConical className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[11px] font-semibold leading-none">Prompt Lab</span>
+                    <MetricsSummaryBadge />
+                  </div>
+                  {PROMPT_LAB_GROUPS.map((g) => {
+                    const Icon = GROUP_ICONS[g.id];
+                    return (
+                      <TabsTrigger
+                        key={g.id}
+                        value={g.id}
+                        className="text-xs px-3 py-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none gap-1.5"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {g.label}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 relative">
+                    <Link to="/v2/prompt-lab/suggestions" title="Suggerimenti da approvare">
+                      <BookmarkPlus className="h-3.5 w-3.5" />
+                      Review
+                      {counts.pending > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[9px] leading-none">
+                          {counts.pending}
+                        </Badge>
+                      )}
+                    </Link>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Altre azioni">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Azioni AI globali
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setGlobalImproverOpen(true)}>
+                        <Sparkles className="h-3.5 w-3.5 mr-2" /> Migliora tutto
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setHarmonizeOpen(true)}>
+                        <Layers className="h-3.5 w-3.5 mr-2" /> Armonizza tutto
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Gestione
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setCreateBlockOpen(true)}>
+                        <Plus className="h-3.5 w-3.5 mr-2" /> Nuovo blocco
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setHistoryPanelOpen(true)}>
+                        <Clock className="h-3.5 w-3.5 mr-2" /> Storico run
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Esplora
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem asChild>
+                        <Link to="/v2/prompt-lab/atlas">
+                          <Network className="h-3.5 w-3.5 mr-2" /> Atlas
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/v2/prompt-lab/catalog">
+                          <Library className="h-3.5 w-3.5 mr-2" /> Catalog
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1">
+                        <ExportButton getSnapshot={handleExport} />
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
 
               {/* Livello 2 — Menu verticale a sinistra + contenuto */}
               <div className="flex-1 flex min-h-0 overflow-hidden">
