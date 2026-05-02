@@ -7,6 +7,31 @@ const HTML_TAG_PATTERN = /<\/?(?:html|body|div|table|tbody|thead|tr|td|th|p|span
 const HTML_ENTITY_PATTERN = /&(?:quot|amp|lt|gt|nbsp|#\d+|#x[0-9a-f]+);/i;
 const MIME_HEADER_PATTERN = /^(?:content-type|content-transfer-encoding|content-disposition):/im;
 
+/**
+ * HTML "corrotto": contiene troppi caratteri di replacement Unicode (�, \uFFFD)
+ * o byte di controllo non stampabili. Tipico caso: Outlook che incolla immagini
+ * inline come blob binari direttamente nel body HTML, oppure HTML letto con la
+ * codifica sbagliata. In questi casi è preferibile mostrare il `body_text`
+ * (che IMAP/parser ha estratto pulito) anziché renderizzare gibberish.
+ */
+function htmlLooksCorrupted(value: string): boolean {
+  if (!value) return false;
+  // Campiona i primi ~100KB per evitare scan O(n) su HTML enormi.
+  const sample = value.length > 100_000 ? value.slice(0, 100_000) : value;
+  const total = sample.length;
+  if (total < 200) return false;
+  // Conta replacement chars + control chars (esclusi \t \n \r).
+  let bad = 0;
+  for (let i = 0; i < total; i++) {
+    const code = sample.charCodeAt(i);
+    if (code === 0xfffd) { bad++; continue; }
+    if (code < 32 && code !== 9 && code !== 10 && code !== 13) { bad++; continue; }
+  }
+  const ratio = bad / total;
+  // Soglia: ≥3% caratteri "sporchi" → HTML corrotto.
+  return ratio >= 0.03;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -189,6 +214,14 @@ export function normalizeEmailContent({
 
   if (!normalizedHtml && normalizedText && HTML_TAG_PATTERN.test(normalizedText)) {
     normalizedHtml = normalizedText;
+  }
+
+  // Se l'HTML è corrotto (replacement chars / control bytes da immagini inline
+  // mal-encoded di Outlook) e abbiamo un body_text leggibile, scartiamo l'HTML.
+  if (normalizedHtml && htmlLooksCorrupted(normalizedHtml)) {
+    if (normalizedText && !looksLikeBase64(normalizedText) && !htmlLooksCorrupted(normalizedText)) {
+      normalizedHtml = null;
+    }
   }
 
   if (normalizedHtml && (!normalizedText || looksLikeBase64(normalizedText) || looksLikeQuotedPrintable(normalizedText))) {
