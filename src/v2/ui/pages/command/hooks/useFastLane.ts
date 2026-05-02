@@ -12,6 +12,7 @@ import {
   extractPartnerIdsFromResult,
   setLastQueryResultContext,
 } from "../lib/lastQueryResultContext";
+import { getLastSuccessfulQueryPlan } from "../tools/aiQueryTool";
 
 interface FastLaneDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -106,12 +107,42 @@ export function useFastLane(deps: FastLaneDeps) {
         // Memorizza partnerIds/paese per il successivo compose-email "vai avanti…".
         const partnerIds = extractPartnerIdsFromResult(result);
         const country = detectCountryFromPrompt(userPrompt);
-        if (partnerIds.length > 0 || country) {
+        // Estrai filtri/tabella/count dal risultato (table o multi → prima parte partners).
+        const metaRaw = extractQueryMetaFromResult(result);
+        let metaTable = metaRaw.table;
+        let metaFilters: ReadonlyArray<{ column: string; op: string; value: unknown }> = metaRaw.filters;
+        const metaCount = metaRaw.count;
+        // Per query single-table arricchiamo con i filtri reali dal plan.
+        if (!metaFilters.length) {
+          const plan = getLastSuccessfulQueryPlan();
+          if (plan) {
+            metaTable = metaTable ?? plan.table;
+            metaFilters = plan.filters;
+          }
+        }
+        const meta = { table: metaTable, filters: metaFilters, count: metaCount };
+        const cityFilter = meta.filters.find(
+          (f) => f.column === "city" && (f.op === "eq" || f.op === "ilike"),
+        );
+        const cityLabel =
+          typeof cityFilter?.value === "string" ? String(cityFilter.value).replace(/%/g, "") : null;
+        const selectionLabel = cityLabel
+          ? `partner a ${cityLabel}`
+          : country
+            ? `partner in ${country.label}`
+            : meta.table
+              ? meta.table
+              : null;
+        if (partnerIds.length > 0 || country || meta.filters.length > 0) {
           setLastQueryResultContext({
             partnerIds,
             countryCode: country?.code ?? null,
             countryLabel: country?.label ?? null,
             originalPrompt: userPrompt,
+            table: meta.table,
+            filters: meta.filters,
+            count: meta.count,
+            selectionLabel,
           });
         }
 
@@ -177,4 +208,44 @@ function detectCountryFromPrompt(prompt: string): { code: string; label: string 
     if (re.test(lower)) return { code, label: name };
   }
   return null;
+}
+
+/** Estrae table/filters/count dal ToolResult AI Query (kind:"table" o "multi"). */
+function extractQueryMetaFromResult(result: unknown): {
+  table: string | null;
+  filters: ReadonlyArray<{ column: string; op: string; value: unknown }>;
+  count: number | null;
+} {
+  if (!result || typeof result !== "object") return { table: null, filters: [], count: null };
+  const r = result as {
+    kind?: string;
+    meta?: { count?: number; sourceLabel?: string };
+    parts?: Array<{
+      table?: string;
+      filters?: ReadonlyArray<{ column: string; op: string; value: unknown }>;
+      count?: number;
+    }>;
+    rows?: unknown[];
+  };
+  if (r.kind === "multi" && Array.isArray(r.parts)) {
+    const partnerPart = r.parts.find((p) => p.table === "partners") ?? r.parts[0];
+    return {
+      table: partnerPart?.table ?? null,
+      filters: partnerPart?.filters ?? [],
+      count: partnerPart?.count ?? null,
+    };
+  }
+  if (r.kind === "table") {
+    // sourceLabel formato: "AI Query · partners · …" — estraiamo la table.
+    const m = (r.meta?.sourceLabel ?? "").match(/AI Query\s*·\s*(\w+)/i);
+    const table = m?.[1] ?? null;
+    return {
+      table,
+      // Ahimè kind:"table" non porta filtri esposti — passeremo per il path multi
+      // o resterà vuoto. Comunque table+count salvati per gli step successivi.
+      filters: [],
+      count: r.meta?.count ?? (Array.isArray(r.rows) ? r.rows.length : null),
+    };
+  }
+  return { table: null, filters: [], count: null };
 }
