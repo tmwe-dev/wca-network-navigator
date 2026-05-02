@@ -23,6 +23,8 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   selected?: boolean;
   /** Toggle selezione (checkbox). */
   onToggleSelect?: (id: string) => void;
+  /** Layout compatto (pannello stretto). */
+  compact?: boolean;
 }
 
 export function CompanyCard({
@@ -30,6 +32,7 @@ export function CompanyCard({
   onOpenCompany,
   selected,
   onToggleSelect,
+  compact = false,
 }: CompanyCardProps): React.ReactElement {
   const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
   const tone = sourceTone(source);
@@ -145,6 +148,7 @@ export function CompanyCard({
         tone={tone}
         countryCode={countryCode}
         selected={selected}
+        compact={compact}
         checkboxSlot={
           onToggleSelect ? (
             <Checkbox
