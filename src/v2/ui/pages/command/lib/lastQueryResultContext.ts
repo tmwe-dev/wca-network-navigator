@@ -100,13 +100,13 @@ export function isProceedIntent(prompt: string): boolean {
   if (p.length === 0) return false;
   return (
     /\b(vai\s+avanti|procedi|prosegui|continua|avanti|fai\s+pure|go\b|ok\s+procedi)\b/i.test(p) ||
-    /\b(prepara|fai|scrivi|componi|genera)\s+(?:la|il|un|una)?\s*(bozza|lettera|mail|email|messaggio)\b/i.test(p) ||
+    /\b(prepara|prepari|preparare|fai|scrivi|componi|genera)\s+(?:la|il|un|una|\d+)?\s*(bozza|lettera|lettere|mail|email|messaggio|messaggi)\b/i.test(p) ||
     /\b(?:questi|quei|quelli|tutti\s+questi)\s+partner\b/i.test(p) ||
     /\b(vai\s+avanti\s+con\s+(la\s+)?(bozza|lettera))\b/i.test(p) ||
     // Inviti generici: "prepara un invito", "invitali", "mandagli un invito"
-    /\b(prepara|fai|scrivi|manda|mandagli|invia|inviagli)\s+(?:un|una|gli|loro)?\s*(invito|invit[oa])\b/i.test(p) ||
-    /\binvit(?:ali|a)\b/i.test(p) ||
+    /\b(prepara|prepari|preparare|fai|scrivi|manda|mandagli|invia|inviagli)\s+(?:un|una|gli|loro|\d+)?\s*(invito|inviti|invit[oa]|lettera|lettere)\b/i.test(p) ||
+    /\binvit(?:ali|a|i|iamo)\b/i.test(p) ||
     // "a tutti", "tutti ospiti", "quelli selezionati/trovati/visti"
-    /\b(a\s+tutti|tutti\s+ospiti|quelli\s+(selezionati|trovati|visti|sopra|elencati))\b/i.test(p)
+    /\b(a\s+tutti|ognuno|ciascuno|tutti\s+ospiti|quelli\s+(selezionati|trovati|visti|sopra|elencati))\b/i.test(p)
   );
 }

@@ -18,6 +18,10 @@ import { TOOLS } from "../tools/registry";
 import type { ToolResult } from "../tools/types";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import type { ConversationMessage } from "@/v2/io/supabase/queries/conversations";
+import {
+  extractPartnerIdsFromResult,
+  setLastQueryResultContext,
+} from "../lib/lastQueryResultContext";
 
 interface FlowDeps {
   addMessage: (msg: Omit<Message, "id">) => void;
@@ -32,6 +36,12 @@ interface FlowDeps {
   messages: Message[];
   persistedMessages?: ConversationMessage[];
   conversationId?: string | null;
+}
+
+interface QueryFilterShape {
+  readonly column: string;
+  readonly op: string;
+  readonly value: unknown;
 }
 
 function buildTurns(
@@ -55,6 +65,31 @@ function buildTurns(
       content: m.content,
       index: i,
     }));
+}
+
+function extractQueryMemoryFromResult(
+  result: ToolResult,
+): { table: string | null; filters: ReadonlyArray<QueryFilterShape>; count: number | null } {
+  if (result.kind === "multi") {
+    const part = result.parts.find((p) => p.table === "partners") ?? result.parts[0];
+    return { table: part?.table ?? null, filters: part?.filters ?? [], count: part?.count ?? null };
+  }
+  if (result.kind === "table") {
+    const m = (result.meta?.sourceLabel ?? "").match(/AI Query\s*·\s*(\w+)/i);
+    return {
+      table: result.liveSource ?? m?.[1] ?? null,
+      filters: result.queryFilters ?? [],
+      count: result.meta?.count ?? result.rows.length,
+    };
+  }
+  return { table: null, filters: [], count: result.meta?.count ?? null };
+}
+
+function inferCountryFromFilters(
+  filters: ReadonlyArray<QueryFilterShape>,
+): { code: string | null; label: string | null } {
+  const f = filters.find((item) => item.column === "country_code" && item.op === "eq");
+  return typeof f?.value === "string" ? { code: f.value, label: f.value } : { code: null, label: null };
 }
 
 export function useSuperMarioFlow(deps: FlowDeps) {
@@ -141,6 +176,24 @@ export function useSuperMarioFlow(deps: FlowDeps) {
         else if (toolResult.kind === "card-grid") setCanvas("live-card-grid");
         else if (toolResult.kind === "composer") setCanvas("live-composer");
         else setCanvas("live-result");
+
+        if (tool.id === "ai-query") {
+          const queryMeta = extractQueryMemoryFromResult(toolResult);
+          const partnerIds = extractPartnerIdsFromResult(toolResult);
+          const country = inferCountryFromFilters(queryMeta.filters);
+          if (partnerIds.length > 0 || country.code || queryMeta.filters.length > 0) {
+            setLastQueryResultContext({
+              partnerIds,
+              countryCode: country.code,
+              countryLabel: country.label,
+              originalPrompt: userMessage,
+              table: queryMeta.table,
+              filters: queryMeta.filters,
+              count: queryMeta.count,
+              selectionLabel: country.label ? `partner in ${country.label}` : queryMeta.table,
+            });
+          }
+        }
         setFlowPhase("idle");
 
         return { ok: true };

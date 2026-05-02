@@ -75,7 +75,7 @@ const COUNTRY_MAP: Record<string, string> = {
   polonia: "PL", poland: "PL", romania: "RO", turchia: "TR", turkey: "TR",
   "stati uniti": "US", usa: "US", "united states": "US", america: "US",
   canada: "CA", messico: "MX", mexico: "MX", brasile: "BR", brazil: "BR",
-  argentina: "AR", cile: "CL", chile: "CL",
+  argentina: "AR", cile: "CL", chile: "CL", venezuela: "VE",
   cina: "CN", china: "CN", giappone: "JP", japan: "JP", india: "IN",
   emirati: "AE", uae: "AE", "arabia saudita": "SA", egitto: "EG", egypt: "EG",
   marocco: "MA", morocco: "MA", "sud africa": "ZA", "south africa": "ZA",
@@ -182,8 +182,8 @@ function leadStatusNote(s: string | null): string {
 
 /* ─── Batch draft generation (1 chiamata generate-email per partner) ───── */
 
-/** Cap di sicurezza per evitare costi imprevisti. Allineato a `searchPartnersByCountry` (limit 50). */
-const MAX_BATCH_DRAFTS = 12;
+/** Cap di sicurezza per evitare costi imprevisti mantenendo il caso operativo "20 lettere". */
+const MAX_BATCH_DRAFTS = 20;
 
 async function fetchPrimaryContact(partnerId: string): Promise<{ name: string | null; email: string | null }> {
   const { data } = await supabase
@@ -449,6 +449,21 @@ async function fetchPartnersByFilters(
   return (data ?? []) as PartnerRow[];
 }
 
+function extractPartnersFromContextPayload(
+  payload: Record<string, unknown> | undefined,
+): { countryCode: string | null; partnerIds: string[] } {
+  if (!payload) return { countryCode: null, partnerIds: [] };
+  const partnerIdsRaw = payload.partner_ids ?? payload.partnerIds ?? payload.ids;
+  const partnerIds = Array.isArray(partnerIdsRaw)
+    ? partnerIdsRaw.filter((v): v is string => typeof v === "string" && v.length > 0)
+    : [];
+  const countryRaw = payload.country_code ?? payload.countryCode;
+  return {
+    countryCode: typeof countryRaw === "string" && countryRaw.length > 0 ? countryRaw : null,
+    partnerIds,
+  };
+}
+
 export const composeEmailTool: Tool = {
   id: "compose-email",
   label: "Componi email",
@@ -475,6 +490,7 @@ export const composeEmailTool: Tool = {
     // Normalizza il prompt: se planRunner ha serializzato JSON, prendi il
     // testo naturale; se c'è originalPrompt nel context, ha priorità assoluta.
     prompt = resolveNaturalPrompt(prompt, context);
+    const payloadSelection = extractPartnersFromContextPayload(context?.payload);
     // ── 0a) Follow-up: rigenerazione/rivisualizzazione bozze precedenti ──
     // Esempi: "rifai più amichevole", "fammele vedere nel canvas",
     //         "non vedo le nuove versioni", "riscrivi più breve".
@@ -518,14 +534,18 @@ export const composeEmailTool: Tool = {
     // dopo una ricerca Query Planner che ha restituito partner. Eredita la
     // lista partnerIds e genera il batch usando il prompt corrente come goal.
     const queryCtx = getLastQueryResultContext();
-    if (queryCtx && isProceedIntent(prompt)) {
+    if ((queryCtx || payloadSelection.partnerIds.length > 0 || payloadSelection.countryCode) && isProceedIntent(prompt)) {
       let partners: PartnerRow[] = [];
-      if (queryCtx.partnerIds.length > 0) {
+      if (payloadSelection.partnerIds.length > 0) {
+        partners = await fetchPartnersByIds(payloadSelection.partnerIds);
+      } else if (queryCtx?.partnerIds.length) {
         partners = await fetchPartnersByIds(queryCtx.partnerIds);
-      } else if (queryCtx.filters && queryCtx.filters.length > 0) {
+      } else if (payloadSelection.countryCode) {
+        partners = await searchPartnersByCountry(payloadSelection.countryCode);
+      } else if (queryCtx?.filters && queryCtx.filters.length > 0) {
         // Rifa la query con i filtri reali (city=Amman, country_code=SA, …)
         partners = await fetchPartnersByFilters(queryCtx.filters);
-      } else if (queryCtx.countryCode) {
+      } else if (queryCtx?.countryCode) {
         partners = await searchPartnersByCountry(queryCtx.countryCode);
       }
       if (partners.length === 0) {
@@ -536,15 +556,15 @@ export const composeEmailTool: Tool = {
           sections: [
             {
               heading: "Contesto perso",
-              body: `I partner trovati nella ricerca precedente non sono più recuperabili. Riformula la ricerca${queryCtx.selectionLabel ? ` (selezione precedente: "${queryCtx.selectionLabel}")` : queryCtx.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
+              body: `I partner trovati nella ricerca precedente non sono più recuperabili. Riformula la ricerca${queryCtx?.selectionLabel ? ` (selezione precedente: "${queryCtx.selectionLabel}")` : queryCtx?.countryLabel ? ` (es. "trovami i partner di ${queryCtx.countryLabel}")` : ""}.`,
             },
           ],
         };
       }
       const tone = detectTone(prompt);
       const drafts = await generateDraftsBatch(partners, tone, prompt);
-      const labelForCtx = queryCtx.selectionLabel ?? queryCtx.countryLabel ?? "selezione";
-      const codeForCtx = queryCtx.countryCode ?? "—";
+      const labelForCtx = queryCtx?.selectionLabel ?? queryCtx?.countryLabel ?? payloadSelection.countryCode ?? "selezione";
+      const codeForCtx = queryCtx?.countryCode ?? payloadSelection.countryCode ?? "—";
       setLastComposerContext({
         countryCode: codeForCtx,
         countryLabel: labelForCtx,
