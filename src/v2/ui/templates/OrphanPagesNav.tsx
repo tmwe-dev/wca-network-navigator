@@ -47,6 +47,7 @@ const ORPHAN_GROUPS: readonly OrphanGroup[] = [
       { label: "Agent Atlas", path: "/v2/prompt-lab/atlas" },
       { label: "Suggestions Review", path: "/v2/prompt-lab/suggestions" },
       { label: "Prompt Catalog", path: "/v2/prompt-lab/catalog" },
+      { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
     ],
   },
   {
