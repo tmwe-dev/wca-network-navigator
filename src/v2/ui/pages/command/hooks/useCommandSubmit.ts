@@ -74,6 +74,15 @@ interface CommandStateApi {
   /** Conversational query context (for follow-ups) */
   queryContext: QueryContext | null;
   setQueryContext: (v: QueryContext | null) => void;
+  /** Persist a message to long-term storage (DB conversation). Optional. */
+  persistMessage?: (msg: {
+    role: "user" | "assistant" | "tool" | "system";
+    content: string;
+    tool_id?: string;
+    tool_result?: unknown;
+  }) => void;
+  /** Hook called once for each substantive user prompt (e.g. to open a Command Job). */
+  onUserPrompt?: (prompt: string) => void;
 }
 
 export function useCommandSubmit(state: CommandStateApi) {
@@ -83,6 +92,7 @@ export function useCommandSubmit(state: CommandStateApi) {
     setPendingApproval, setPlanState, setActiveToolKey,
     setVoiceSpeaking, resetForNewMessage, ts, governance, ttsSpeak, messages,
     queryContext, setQueryContext,
+    persistMessage, onUserPrompt,
   } = state;
 
   // Initialize sub-hooks
@@ -175,6 +185,8 @@ export function useCommandSubmit(state: CommandStateApi) {
       if (!rawText.trim()) return;
       // Show original (un-normalized) text in chat for UX honesty
       addMessage({ role: "user", content: rawText, timestamp: ts() });
+      persistMessage?.({ role: "user", content: rawText });
+      onUserPrompt?.(rawText);
       resetForNewMessage();
 
       // Lexical normalization (typo fix)
@@ -313,6 +325,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      persistMessage, onUserPrompt,
     ],
   );
 
