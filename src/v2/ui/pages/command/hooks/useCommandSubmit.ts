@@ -40,6 +40,7 @@ import {
 } from "../lib/queryContext";
 import type { Message, CanvasType, FlowPhase } from "../constants";
 import { startTrace, type TraceBuilder } from "../lib/toolTrace";
+import type { ConversationMessage } from "@/v2/io/supabase/queries/conversations";
 
 import { useCommandHistory } from "./useCommandHistory";
 import { usePromptAnalysis } from "./usePromptAnalysis";
@@ -74,6 +75,18 @@ interface CommandStateApi {
   /** Conversational query context (for follow-ups) */
   queryContext: QueryContext | null;
   setQueryContext: (v: QueryContext | null) => void;
+  /**
+   * Persistent multi-turn memory (DB-backed via useConversation).
+   * When provided, every user/assistant/tool turn is appended to the DB so the
+   * planner can re-read the FULL conversation, not just the last 6 RAM messages.
+   */
+  persistedMessages?: ConversationMessage[];
+  persistMessage?: (msg: {
+    role: "user" | "assistant" | "tool" | "system";
+    content: string;
+    tool_id?: string;
+    tool_result?: unknown;
+  }) => Promise<void> | void;
 }
 
 export function useCommandSubmit(state: CommandStateApi) {
@@ -82,30 +95,49 @@ export function useCommandSubmit(state: CommandStateApi) {
     setChainHighlight, setExecSteps, setExecProgress, setLiveResult,
     setPendingApproval, setPlanState, setActiveToolKey,
     setVoiceSpeaking, resetForNewMessage, ts, governance, ttsSpeak, messages,
-    queryContext, setQueryContext,
+    queryContext, setQueryContext, persistedMessages, persistMessage,
   } = state;
 
   // Initialize sub-hooks
-  const { buildHistory } = useCommandHistory(messages);
+  const { buildHistory } = useCommandHistory(messages, persistedMessages ?? []);
   const { looksLikeSimpleQuery } = usePromptAnalysis();
+
+  // Wrap addMessage to also persist user/assistant turns to the DB so future
+  // turns can re-read the full conversation. Tool results are persisted inside
+  // the runners (which have access to the actual ToolResult payload).
+  const addMessagePersisted = useCallback(
+    (msg: Omit<Message, "id">) => {
+      addMessage(msg);
+      if (persistMessage && !msg.thinking && msg.content) {
+        const role: "user" | "assistant" = msg.role === "user" ? "user" : "assistant";
+        // Fire-and-forget: persistence shouldn't block UI.
+        void persistMessage({ role, content: msg.content });
+      }
+    },
+    [addMessage, persistMessage],
+  );
+
+  // Re-bind addMessage downstream so every sub-hook persists automatically.
+  // (We don't mutate `state` — we just override the local reference.)
+  const _addMessage = addMessagePersisted;
   const { commentOnResult } = useResultCommentary({
-    addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
+    addMessage: _addMessage, ts, governance, ttsSpeak, setVoiceSpeaking, buildHistory,
   });
   const { updateQueryContextFromLastPlan, isContextUsable } = useQueryContext({
     setQueryContext, queryContext,
   });
   const { renderPlanCompletion, canvasForResult } = usePlanCompletion({
-    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
   });
   const { runPlan, handleApproveStep: handleApproveStepFromExecution } = usePlanExecution({
-    addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
+    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setPlanState, setLiveResult, setCanvas, setShowTools, buildHistory,
   });
   const { runFastLane } = useFastLane({
-    addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
+    addMessage: _addMessage, ts, setFlowPhase, setExecProgress, setLiveResult, setCanvas, setShowTools,
     setActiveToolKey, setToolPhase, setChainHighlight, setExecSteps, buildHistory, canvasForResult,
   });
   const { handleApprove } = useApprovalHandler({
-    addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
+    addMessage: _addMessage, ts, setFlowPhase, setLiveResult, setCanvas, setPendingApproval, canvasForResult,
   });
 
   // Wrapper for plan completion that updates query context
@@ -161,20 +193,20 @@ export function useCommandSubmit(state: CommandStateApi) {
   const handleCancel = useCallback(() => {
     resetForNewMessage();
     toast("Azione annullata");
-    addMessage({
+    _addMessage({
       role: "assistant",
       content: "Operazione annullata. Nessuna azione eseguita.",
       timestamp: ts(),
       agentName: "Orchestratore",
     });
-  }, [addMessage, resetForNewMessage, ts]);
+  }, [_addMessage, resetForNewMessage, ts]);
 
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
       if (!rawText.trim()) return;
       // Show original (un-normalized) text in chat for UX honesty
-      addMessage({ role: "user", content: rawText, timestamp: ts() });
+      _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
 
       // Lexical normalization (typo fix)
@@ -197,7 +229,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       setShowTools(true);
       setToolPhase("activating");
       setChainHighlight(0);
-      addMessage({ role: "assistant", content: "", timestamp: "", thinking: true });
+      addMessage({ role: "assistant", content: "", timestamp: "", thinking: true }); // not persisted (thinking placeholder)
 
       const chainInterval = setInterval(() => {
         setChainHighlight((prev: number | undefined) => {
@@ -214,7 +246,7 @@ export function useCommandSubmit(state: CommandStateApi) {
         setChainHighlight(3);
 
         if (planRes._tag === "Err") {
-          addMessage({
+          _addMessage({
             role: "assistant",
             content: `Non riesco a connettermi al motore AI in questo momento. Riprova tra un istante.\n\n_Dettaglio: ${planRes.error.message}_`,
             agentName: "Orchestratore",
@@ -244,7 +276,7 @@ export function useCommandSubmit(state: CommandStateApi) {
             await runFastLaneWrapped(text, hint);
             return;
           }
-          addMessage({
+          _addMessage({
             role: "assistant",
             content: plan.summary || "Non ho trovato un'azione adatta. Puoi essere più specifico? Ad esempio: \"cerca partner italiani con email\" oppure \"mostra dashboard\".",
             agentName: "Direttore",
@@ -264,7 +296,7 @@ export function useCommandSubmit(state: CommandStateApi) {
         setExecSteps(flowSteps);
 
         if (plan.steps.length > 1) {
-          addMessage({
+          _addMessage({
             role: "assistant",
             content: `**Piano in ${plan.steps.length} step:** ${plan.summary}\n\n${plan.steps
               .map((s) => `${s.stepNumber}. **${TOOLS.find((t) => t.id === s.toolId)?.label ?? s.toolId}** — ${s.reasoning}`)
@@ -299,7 +331,7 @@ export function useCommandSubmit(state: CommandStateApi) {
         clearInterval(chainInterval);
         setMessages((prev) => prev.filter((m) => !m.thinking));
         const msg = err instanceof Error ? err.message : "Errore sconosciuto";
-        addMessage({
+        _addMessage({
           role: "assistant",
           content: `Errore durante la pianificazione: ${msg}`,
           agentName: "Orchestratore",
@@ -310,7 +342,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       }
     },
     [
-      addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
+      _addMessage, addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
     ],
