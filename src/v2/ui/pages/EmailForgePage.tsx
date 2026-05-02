@@ -6,7 +6,8 @@
 import * as React from "react";
 import { Wand2, SlidersHorizontal, Cpu, Clock, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { useEmailForge } from "@/v2/hooks/useEmailForge";
 import { useForgeLab, forgeLabStore } from "@/v2/hooks/useForgeLabStore";
 import { ForgeOraclePanel, type ForgeConfig } from "./email-forge/ForgeOraclePanel";
@@ -90,7 +91,7 @@ export function EmailForgePage(): React.ReactElement {
       </header>
 
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
+        <PersistentResizablePanelGroup direction="horizontal" storageId="email-forge:oracle-vs-output">
           <ResizablePanel defaultSize={35} minSize={28} maxSize={45}>
             <ForgeOraclePanel onRun={handleRun} isLoading={forge.isLoading} />
           </ResizablePanel>
@@ -111,7 +112,7 @@ export function EmailForgePage(): React.ReactElement {
               onRerunPrompt={handleRerunWithOverrides}
             />
           </ResizablePanel>
-        </ResizablePanelGroup>
+        </PersistentResizablePanelGroup>
       </div>
 
       {/* FOOTER metriche compatto */}

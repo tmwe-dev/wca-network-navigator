@@ -4,7 +4,8 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { LabAgentChat } from "./prompt-lab/LabAgentChat";
@@ -166,7 +167,7 @@ export function PromptLabPage() {
 
   return (
     <div className="h-full w-full">
-      <ResizablePanelGroup direction="vertical">
+      <PersistentResizablePanelGroup direction="vertical" storageId="prompt-lab:main-vs-chat">
         <ResizablePanel defaultSize={82} minSize={40}>
           <div className="flex h-full flex-col">
             {/* Livello 1 — Tabs orizzontali (macroaree) */}
@@ -297,7 +298,7 @@ export function PromptLabPage() {
             placeholder={`Migliora un blocco di "${activeTab.label}"...`}
           />
         </ResizablePanel>
-      </ResizablePanelGroup>
+      </PersistentResizablePanelGroup>
       <GlobalImproverDialog open={globalImproverOpen} onOpenChange={setGlobalImproverOpen} defaultGrouping="tab" />
       <HarmonizeSystemDialog open={harmonizeOpen} onOpenChange={setHarmonizeOpen} />
       <CreateBlockDialog open={createBlockOpen} onOpenChange={setCreateBlockOpen} />
