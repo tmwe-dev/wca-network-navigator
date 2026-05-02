@@ -7,7 +7,7 @@
  * Virtualizzazione con @tanstack/react-virtual + altezza riga fissa.
  */
 import * as React from "react";
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CompanyCard } from "./CompanyCard";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
@@ -25,6 +25,7 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
 }
 
 const ROW_HEIGHT = 60;        // header card (px)
+const COMPACT_BREAKPOINT = 520; // px — sotto questa larghezza usa layout 2-righe
 
 export function CompanyCardList({
   companies,
@@ -36,7 +37,26 @@ export function CompanyCardList({
   onToggleSelect,
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
-  const estimateSize = useCallback(() => estimateRowSize + 16, [estimateRowSize]); // + gap
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  const compact = width < COMPACT_BREAKPOINT;
+
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (typeof w === "number") setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const estimateSize = useCallback(
+    () => (compact ? estimateRowSize + 28 : estimateRowSize + 16),
+    [estimateRowSize, compact]
+  );
 
   const virtualizer = useVirtualizer({
     count: companies.length,
@@ -105,6 +125,7 @@ export function CompanyCardList({
                   onOpenCompany={onOpenCompany}
                   selected={selectedIds?.has(company.id) ?? false}
                   onToggleSelect={onToggleSelect}
+                  compact={compact}
                 />
               </div>
             );
