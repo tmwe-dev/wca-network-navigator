@@ -78,8 +78,6 @@ const CommandPage = () => {
   });
 
   const isEmpty = state.messages.length === 0 && conv.messages.length === 0;
-  const { data: recentPrompts = [] } = useRecentCommandPrompts();
-  const briefing = useCommandBriefing();
 
   useEffect(() => {
     if (voice.error) sonnerToast.error(voice.error);
@@ -189,16 +187,13 @@ const CommandPage = () => {
           }`}
         >
           {isEmpty ? (
-            <>
-              <BriefingPanel briefing={briefing} onPromptSelect={(p) => handleSend(p)} />
-              <CommandHistory
-                messages={[]}
-                isEmpty
-                quickPrompts={recentPrompts}
-                onQuickPrompt={(p) => handleSend(p)}
-                chatEndRef={state.chatEndRef}
-              />
-            </>
+            <CommandHistory
+              messages={[]}
+              isEmpty
+              quickPrompts={[]}
+              onQuickPrompt={(p) => handleSend(p)}
+              chatEndRef={state.chatEndRef}
+            />
           ) : (
             <CommandThread
               messages={state.messages}
