@@ -6925,6 +6925,57 @@ export type Database = {
           },
         ]
       }
+      partner_contacts_backup_2026_05_02: {
+        Row: {
+          contact_alias: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          direct_phone: string | null
+          email: string | null
+          id: string | null
+          is_primary: boolean | null
+          mobile: string | null
+          name: string | null
+          operator_id: string | null
+          partner_id: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_alias?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direct_phone?: string | null
+          email?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          mobile?: string | null
+          name?: string | null
+          operator_id?: string | null
+          partner_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_alias?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direct_phone?: string | null
+          email?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          mobile?: string | null
+          name?: string | null
+          operator_id?: string | null
+          partner_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       partner_networks: {
         Row: {
           created_at: string | null

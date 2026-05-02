@@ -1,89 +1,67 @@
-## Obiettivo
+# Piano: dedup contatti + layout responsive lista partner
 
-Trasformare la pagina **Agenda** (`/v2/pipeline/agenda`) da layout a 2 colonne fisse (sidebar fissa con calendario+filtri / lista attività) a un layout **a 2 pannelli operativi** dove i filtri vivono in una **sidebar a scomparsa** (Sheet con linguetta), come da convenzione del sistema.
+## Problema 1 — Contatti duplicati (DB, gravissimo)
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Header sezione (Kanban · Duplicati · Campagne · Agenda)                 │
-├──┬──────────────────────────────────────────────────────────────────────┤
-│ ║│  ┌──────────────────────┐  ┌────────────────────────────────────┐    │
-│ ║│  │  CARD ATTIVITÀ (1/3) │  │  PANNELLO AZIONE (2/3)             │    │
-│ ║│  │                      │  │                                    │    │
-│ ║│  │  ✉ Acme Logistics    │  │  Oggetto: "Quote request"          │    │
-│ ║│  │  IT · BCA · ★87      │  │  ───────────────────────────────   │    │
-│ ║│  │  Da 2g · in ritardo  │  │  [thread / contesto / draft]       │    │
-│ ║│  │  Ultimo: "Quote..."  │  │                                    │    │
-│ ║│  │  [score · canale]    │  │                                    │    │
-│ ║│  │  ─────────────────   │  │  ───────────────────────────────   │    │
-│ ║│  │  ✉ MSC Italy         │  │  [Rispondi] [Rimanda] [Archivia]   │    │
-│ ║│  │  ...                 │  │  [Apri partner ↗]                  │    │
-│ ║│  └──────────────────────┘  └────────────────────────────────────┘    │
-│ ║│                                                                      │
-│ └─ linguetta ⚙ Filtri (apre Sheet con calendario + tipo + stato)        │
-└─────────────────────────────────────────────────────────────────────────┘
+Indagine su Supabase mostra che la tabella `partner_contacts` ha **107.132 righe duplicate su 136.958 totali** (~78%). Esempio Radiant Global Logistics: il referente "Randy Emmons / Manager / bwi.intl@dbaco.com" è presente **4 volte** con id diversi ma stessi dati. Lo stesso pattern colpisce migliaia di partner (29.146 gruppi duplicati). Per questo nel pannello dettaglio l'utente vede 4× lo stesso contatto.
+
+Solo lo 0.5% dei gruppi duplicati (148 su 29.146) ha qualche differenza marginale su `direct_phone`/`mobile`/`title` — quindi è sicuro fare merge tenendo la riga più vecchia (`MIN(created_at)`) e copiando, dove disponibili, gli eventuali campi non-null delle altre prima di eliminarle.
+
+Causa probabile: re-import WCA ripetuti senza upsert idempotente. Va indagato in seconda battuta, ma intanto bonifichiamo i dati.
+
+### Cosa farò
+1. **Migrazione SQL `dedup_partner_contacts`**:
+   - Per ogni gruppo `(partner_id, lower(email), lower(name))` con count > 1:
+     - Identifico la riga "winner" = quella con `created_at` più antica (a parità, `id` minore).
+     - Per i campi `title`, `direct_phone`, `mobile`, `contact_alias`, `is_primary`, copio sul winner il primo valore non-null trovato negli altri duplicati (UPDATE coalesce).
+     - Soft-delete delle righe duplicate (il trigger globale `no-physical-delete` converte automaticamente DELETE → UPDATE `deleted_at`).
+   - Aggiungo un **vincolo UNIQUE parziale** per prevenire la ricomparsa:
+     `CREATE UNIQUE INDEX partner_contacts_dedup_uniq ON partner_contacts (partner_id, lower(email), lower(name)) WHERE deleted_at IS NULL;`
+   - La migrazione viene eseguita come singola transazione, con un report finale (RAISE NOTICE) di quante righe sono state deduplicate.
+
+2. **Hardening upsert lato applicazione**: cerco i punti che inseriscono in `partner_contacts` (probabilmente edge function di sync WCA / scraper) e verifico che usino `ON CONFLICT (partner_id, lower(email), lower(name)) DO UPDATE` invece di INSERT puri. Questa è una verifica di follow-up che annoto a parte: il vincolo UNIQUE da solo già blocca i nuovi duplicati (al massimo farà fallire le insert mal scritte, segnalando il bug).
+
+## Problema 2 — Layout non responsive (UI)
+
+`src/v2/ui/atoms/EntityRow.tsx` usa una grid a colonne **fisse**:
+```
+grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]
+```
+Totale colonne fisse = 396 px (44+56+200+96). Quando il pannello dettaglio è aperto a destra, la lista a sinistra è 1/3 di ~1074 px ≈ **358 px**. Risultato: la colonna titolo (`minmax(0,1fr)`) ha larghezza ≈ 0, badge "Toronto + WCA + 25 anni + clock" si sovrappongono come nello screenshot.
+
+### Cosa farò
+1. **Layout adattivo a 2 modalità in `EntityRow.tsx`**:
+   - Aggiungo prop `compact?: boolean` (oppure rilevo via `@container` query Tailwind).
+   - Modalità **compact** (larghezza < ~480 px): uso layout flex verticale a 2 righe per cella. Riga 1 = checkbox + bandiera + titolo + actions. Riga 2 = sub-title + città + canali + score. Niente più colonne fisse → no overflow.
+   - Modalità **wide** (≥ 480 px): mantengo la grid attuale a 5 colonne.
+2. **Container query**: avvolgo la lista (`CompanyCardList`) in un `@container` Tailwind così ogni riga si adatta automaticamente alla larghezza del pannello senza dover cablare la prop dall'alto. Aggiungo `@container/row` sulla wrapper e `@[480px]/row:` sulle classi grid in `EntityRow`.
+3. **Riduco la colonna città/canali in compact**: bandiera + ISO sotto il titolo, città in lato destro più stretto (es. 120 px invece di 200), oppure città inline come chip.
+4. Verifico anche `CompanyCard.tsx` (titleSlot): in compact alcuni badge ("Anni WCA 25", "BCA", lead status) possono andare a capo. Aggiungo `flex-wrap` sul container del titolo per evitare che spingano fuori la riga.
+
+## Sezione tecnica
+
+### File toccati
+- **NEW** `supabase/migrations/<timestamp>_dedup_partner_contacts.sql` — merge + UNIQUE index parziale.
+- `src/v2/ui/atoms/EntityRow.tsx` — layout responsive a container query.
+- `src/v2/ui/molecules/CompanyCardList/CompanyCardList.tsx` — wrapper `@container/row`.
+- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` — `flex-wrap` su title row.
+
+### Nessuna modifica a
+- DAL `getPartner` / `usePartner` — la query è corretta, il problema è alla sorgente dati. Una volta deduplicati, i contatti compariranno uno solo a partner.
+- Edge function di sync WCA — verifica annotata come follow-up; il UNIQUE index è già una rete di sicurezza.
+
+### Verifica post-migrazione
+Dopo la migrazione eseguo:
+```sql
+SELECT count(*) FROM partner_contacts WHERE deleted_at IS NULL;            -- atteso ~29.826
+SELECT count(*) FROM (
+  SELECT 1 FROM partner_contacts WHERE deleted_at IS NULL
+  GROUP BY partner_id, lower(email), lower(name) HAVING count(*) > 1
+) x;                                                                        -- atteso 0
 ```
 
-`║` = linguetta laterale (`SidebarFiltersTab`) sempre visibile sul bordo sinistro che apre/chiude lo Sheet dei filtri. Quando lo Sheet è chiuso, **tutto lo spazio** della pagina è dedicato all'operatività.
+### Memoria
+Aggiorno `mem://features/p5-crm-lifecycle-2026-04-28.md` (o nuova memoria `mem://tech/partner-contacts-dedup-2026-05-02.md`) con: vincolo UNIQUE attivo, criterio merge, obbligo upsert idempotente per future insert.
 
-## Struttura nuova
-
-### 1. Sidebar a scomparsa (`AgendaFiltersSheet`)
-Contiene tutto ciò che oggi sta nella colonna sinistra fissa:
-- Calendario mensile con badge giorni
-- Sezione "Tipo attività" (Tutti / Email / WhatsApp / LinkedIn / Chiamate / Note)
-- Sezione "Stato risposta" (Tutti / Ha risposto / Non ha risposto)
-- Pulsante "Reset filtri"
-
-Pattern: usa `<Sheet side="left">` di shadcn (stesso pattern di `EntityFiltersDrawer`). Larghezza ~320px. Si apre cliccando la linguetta a bordo pagina.
-
-Sopra la lista, una **barra compatta** mostra i filtri attivi (es. "Sabato 2 Mag · Email · Non ha risposto") con chip rimovibili — così l'utente sa sempre cosa sta vedendo senza riaprire lo Sheet.
-
-### 2. Pannello sinistro — Card attività (1/3 larghezza)
-Lista verticale scrollabile di card più ricche di quelle attuali. Ogni card mostra (a colpo d'occhio, niente apertura modale):
-- **Riga 1**: bandiera · nome partner · badge BCA/Top · score commerciale (★87)
-- **Riga 2**: icona canale · contatto coinvolto · "da 2g fa" con colore urgenza
-- **Riga 3**: titolo/subject pulito (1 riga troncata)
-- **Riga 4**: ultima azione registrata o snippet ultimo messaggio (italics, muted)
-- **Bordo sinistro** colorato (rosso/giallo/verde) per urgenza — già presente
-- **Card selezionata**: highlight + bordo primary
-
-Raggruppamento per tipo di azione (Da rispondere / Da inviare / Da chiamare / Da decidere) **mantenuto** come oggi, con header sezione collassabile.
-
-### 3. Pannello destro — Azione operativa (2/3 larghezza)
-Il vero "tavolo di lavoro". Quando l'utente seleziona una card a sinistra, qui appare:
-- **Header**: partner + canale + età richiesta + status badge
-- **Contesto**: ultimo thread/messaggio ricevuto (per email/WA/LI), oppure note recenti, BCA badge se presente
-- **Bozza pronta**: se l'AI ha già generato una risposta (campagna / autopilot), preview editabile inline
-- **Azioni rapide a piè pagina**:
-  - Primaria: `Rispondi ora` / `Chiama ora` / `Invia` (dipende dal tipo azione)
-  - Secondarie: `Rimanda 24h` · `Delega` · `Archivia` · `Apri partner ↗`
-- **Empty state**: se nessuna card selezionata → "Seleziona un'attività a sinistra per agire"
-
-### 4. Linguetta filtri (`SidebarFiltersTab`)
-Pulsante verticale fisso sul bordo sinistro della pagina (icona ⚙ + label "Filtri" ruotato 90°), allineato con il pattern già usato altrove nel sistema. Mostra un **dot rosso** quando ci sono filtri attivi diversi da default.
-
-## Mapping ai file
-
-- `src/v2/ui/pages/AgendaPage.tsx` — riscrittura layout: rimuove la colonna fissa 240px, aggiunge `<Sheet>` + linguetta + split 1/3 – 2/3
-- `src/components/agenda/AgendaCalendarPage.tsx` — convertito/rinominato in `AgendaFiltersSheet.tsx` (stesso contenuto, ma pensato per stare dentro uno Sheet)
-- `src/components/agenda/AgendaDayDetail.tsx` — aggiornato: emette `onSelectActivity(id)` invece di solo navigare al partner; le card diventano selezionabili
-- **Nuovo** `src/components/agenda/AgendaActionPanel.tsx` — pannello destro operativo (header + contesto + bozza + azioni)
-- **Nuovo** `src/components/agenda/AgendaFiltersTab.tsx` — linguetta laterale che apre lo Sheet
-- **Nuovo** `src/components/agenda/AgendaActiveFiltersBar.tsx` — barra chip filtri attivi sopra la lista
-
-Nessuna modifica a hook (`useAgendaDayActivities`, `useUpdateActivity`, `useReminders`) né a edge functions: solo presentazione.
-
-## Comportamenti chiave
-
-- **Default all'apertura**: Sheet chiuso, oggi selezionato, lista a sinistra, pannello destro in empty state.
-- **Click su card** → seleziona e popola pannello destro (no navigazione fuori pagina).
-- **Click su `Rispondi ora`** → apre composer inline nel pannello destro (riusa `EmailComposer` se canale email).
-- **Mobile / viewport stretto** (<900px CSS): il pannello destro diventa un overlay full-width sopra la lista (split non praticabile sotto questa soglia).
-- **Persistenza filtri**: stato locale (come oggi); nessuna nuova tabella DB.
-
-## Fuori scope (esplicito)
-
-- Nessuna modifica al modello dati / RLS / edge functions.
-- Nessuna modifica a Kanban/Duplicati/Campagne (solo Agenda).
-- Composer email: si **riusa** quello esistente, non se ne crea uno nuovo.
-- Le azioni "Rimanda" / "Delega" restano placeholder come oggi (UX prevista, backend separato).
+## Domande aperte (zero blocker, decido in build se non rispondi)
+- **Backup**: faccio backup tabella in `partner_contacts_backup_2026_05_02` prima della dedup? Consigliato sì, lo includo di default.
+- **Soft vs hard delete dei duplicati**: il trigger globale forza soft-delete → vanno solo "nascosti", non spariscono fisicamente. Va benissimo.
