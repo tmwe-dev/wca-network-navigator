@@ -12,7 +12,6 @@
  * everywhere.
  */
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast as sonnerToast } from "sonner";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import FloatingDock from "@/components/layout/FloatingDock";
@@ -37,7 +36,6 @@ import CommandThread from "./command/components/CommandThread";
 // I componenti restano sul filesystem per un futuro "next best action" ragionato.
 
 const CommandPage = () => {
-  const nav = useNavigate();
   const state = useCommandState();
   const conv = useConversation();
   const governance = useGovernance(state.activeToolKey ?? undefined);
