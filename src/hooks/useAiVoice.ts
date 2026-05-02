@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { Msg } from "./useAiAssistantChat";
 import { parseStructuredMessage } from "./useAiAssistantChat";
 import { createLogger } from "@/lib/log";
+import { logAiInteraction } from "@/data/aiInteractionLog";
 
 const log = createLogger("useAiVoice");
 
@@ -16,7 +17,7 @@ export const VOICES = [
   { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", lang: "🇺🇸" },
 ];
 
-export function useAiVoice(messages: Msg[], isLoading: boolean) {
+export function useAiVoice(messages: Msg[], isLoading: boolean, surface?: string) {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[1].id);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -35,6 +36,7 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
   const playTTS = useCallback(async (text: string) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setIsSpeaking(true);
+    const startedAt = Date.now();
     try {
       const response = await fetch(TTS_URL, {
         method: "POST",
@@ -49,8 +51,18 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
       audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
       audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); audioRef.current = null; };
       await audio.play();
+      // Best-effort logging of the spoken AI response
+      void logAiInteraction({
+        interaction_type: "voice_tts",
+        role: "assistant",
+        content: text,
+        voice_id: selectedVoice,
+        surface: surface ?? "useAiVoice",
+        duration_ms: Date.now() - startedAt,
+        metadata: { text_length: text.length, audio_bytes: audioBlob.size },
+      });
     } catch (e) { log.warn("operation failed, state reset", { error: e instanceof Error ? e.message : String(e) }); setIsSpeaking(false); }
-  }, [selectedVoice]);
+  }, [selectedVoice, surface]);
 
   useEffect(() => {
     if (!voiceEnabled || isLoading || messages.length === 0) return;
@@ -73,13 +85,27 @@ export function useAiVoice(messages: Msg[], isLoading: boolean) {
     recognition.lang = "it-IT";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onresult = (event: SpeechRecognitionEvent) => { const transcript = event.results[0][0].transcript; if (transcript) onTranscript(transcript); };
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        // Log the user's spoken input (STT)
+        void logAiInteraction({
+          interaction_type: "voice_stt",
+          role: "user",
+          content: transcript,
+          surface: surface ?? "useAiVoice",
+          language: "it-IT",
+          metadata: { engine: "webspeech" },
+        });
+        onTranscript(transcript);
+      }
+    };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  }, [isListening]);
+  }, [isListening, surface]);
 
   const resetSpoken = useCallback(() => { lastSpokenIdxRef.current = -1; }, []);
 
