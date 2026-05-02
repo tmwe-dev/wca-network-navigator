@@ -3737,6 +3737,39 @@ export type Database = {
           },
         ]
       }
+      conversation_summaries: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          from_message_index: number
+          id: string
+          model: string
+          summary: string
+          summary_version: number
+          to_message_index: number
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          from_message_index: number
+          id?: string
+          model: string
+          summary: string
+          summary_version?: number
+          to_message_index: number
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          from_message_index?: number
+          id?: string
+          model?: string
+          summary?: string
+          summary_version?: number
+          to_message_index?: number
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -6386,6 +6419,8 @@ export type Database = {
           context: string
           created_at: string
           criteria: string
+          deprecated_at: string | null
+          deprecated_reason: string | null
           examples: string
           id: string
           is_active: boolean
@@ -6402,6 +6437,8 @@ export type Database = {
           context?: string
           created_at?: string
           criteria?: string
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           examples?: string
           id?: string
           is_active?: boolean
@@ -6418,6 +6455,8 @@ export type Database = {
           context?: string
           created_at?: string
           criteria?: string
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           examples?: string
           id?: string
           is_active?: boolean
@@ -8896,6 +8935,99 @@ export type Database = {
         }
         Relationships: []
       }
+      super_mario_identities: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          scope: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          scope: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          scope?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      super_mario_invocations: {
+        Row: {
+          audit_warnings: Json | null
+          completion_tokens: number | null
+          conversation_id: string | null
+          created_at: string
+          error_code: string | null
+          expires_at: string
+          final_prompt_hash: string
+          final_prompt_redacted: string | null
+          id: string
+          latency_ms: number | null
+          model: string
+          operator_id: string | null
+          prompt_tokens: number | null
+          response_summary: string | null
+          scope: string
+          tool_calls_json: Json | null
+          trace_id: string
+        }
+        Insert: {
+          audit_warnings?: Json | null
+          completion_tokens?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          expires_at?: string
+          final_prompt_hash: string
+          final_prompt_redacted?: string | null
+          id?: string
+          latency_ms?: number | null
+          model: string
+          operator_id?: string | null
+          prompt_tokens?: number | null
+          response_summary?: string | null
+          scope: string
+          tool_calls_json?: Json | null
+          trace_id: string
+        }
+        Update: {
+          audit_warnings?: Json | null
+          completion_tokens?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          expires_at?: string
+          final_prompt_hash?: string
+          final_prompt_redacted?: string | null
+          id?: string
+          latency_ms?: number | null
+          model?: string
+          operator_id?: string | null
+          prompt_tokens?: number | null
+          response_summary?: string | null
+          scope?: string
+          tool_calls_json?: Json | null
+          trace_id?: string
+        }
+        Relationships: []
+      }
       supervisor_audit_log: {
         Row: {
           action_category: string
@@ -9599,6 +9731,7 @@ export type Database = {
           group_name: string
         }[]
       }
+      cleanup_super_mario_invocations: { Args: never; Returns: number }
       count_inbound_activities: { Args: never; Returns: Json }
       cron_job_status: {
         Args: never
