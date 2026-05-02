@@ -449,6 +449,21 @@ async function fetchPartnersByFilters(
   return (data ?? []) as PartnerRow[];
 }
 
+function extractPartnersFromContextPayload(
+  payload: Record<string, unknown> | undefined,
+): { countryCode: string | null; partnerIds: string[] } {
+  if (!payload) return { countryCode: null, partnerIds: [] };
+  const partnerIdsRaw = payload.partner_ids ?? payload.partnerIds ?? payload.ids;
+  const partnerIds = Array.isArray(partnerIdsRaw)
+    ? partnerIdsRaw.filter((v): v is string => typeof v === "string" && v.length > 0)
+    : [];
+  const countryRaw = payload.country_code ?? payload.countryCode;
+  return {
+    countryCode: typeof countryRaw === "string" && countryRaw.length > 0 ? countryRaw : null,
+    partnerIds,
+  };
+}
+
 export const composeEmailTool: Tool = {
   id: "compose-email",
   label: "Componi email",
