@@ -176,6 +176,24 @@ export function useSuperMarioFlow(deps: FlowDeps) {
         else if (toolResult.kind === "card-grid") setCanvas("live-card-grid");
         else if (toolResult.kind === "composer") setCanvas("live-composer");
         else setCanvas("live-result");
+
+        if (tool.id === "ai-query") {
+          const queryMeta = extractQueryMemoryFromResult(toolResult);
+          const partnerIds = extractPartnerIdsFromResult(toolResult);
+          const country = inferCountryFromFilters(queryMeta.filters);
+          if (partnerIds.length > 0 || country.code || queryMeta.filters.length > 0) {
+            setLastQueryResultContext({
+              partnerIds,
+              countryCode: country.code,
+              countryLabel: country.label,
+              originalPrompt: userMessage,
+              table: queryMeta.table,
+              filters: queryMeta.filters,
+              count: queryMeta.count,
+              selectionLabel: country.label ? `partner in ${country.label}` : queryMeta.table,
+            });
+          }
+        }
         setFlowPhase("idle");
 
         return { ok: true };
