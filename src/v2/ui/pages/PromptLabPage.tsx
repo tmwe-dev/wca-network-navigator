@@ -46,6 +46,7 @@ import { AgentCapabilitiesTab } from "./prompt-lab/tabs/AgentCapabilitiesTab";
 import { SimulatorTab } from "./prompt-lab/tabs/SimulatorTab";
 import { AuditTab } from "./prompt-lab/tabs/AuditTab";
 import { AgentRoutingTab } from "./prompt-lab/tabs/AgentRoutingTab";
+import { SuperMarioTab } from "./prompt-lab/tabs/SuperMarioTab";
 import { AIProfileTab } from "./prompt-lab/tabs/AIProfileTab";
 import { JournalistsTab } from "./prompt-lab/tabs/JournalistsTab";
 import { PromptTestsTab } from "./prompt-lab/tabs/PromptTestsTab";
@@ -77,6 +78,7 @@ import {
   History,
   Library,
   MoreHorizontal,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
@@ -109,6 +111,7 @@ const TAB_ICONS: Record<PromptLabTabId, LucideIcon> = {
   administrative_kb: BookOpen,
   support_kb: BookOpen,
   domain_routing: Sparkles,
+  super_mario: Rocket,
 };
 
 export function PromptLabPage() {
@@ -278,6 +281,7 @@ export function PromptLabPage() {
                   {activeTabId === "simulator" && <SimulatorTab />}
                   {activeTabId === "audit" && <AuditTab />}
                   {activeTabId === "routing" && <AgentRoutingTab />}
+                  {activeTabId === "super_mario" && <SuperMarioTab />}
                   {activeTabId === "ai_profile" && <AIProfileTab />}
                   {activeTabId === "journalists" && <JournalistsTab />}
                   {activeTabId === "tests" && <PromptTestsTab />}
