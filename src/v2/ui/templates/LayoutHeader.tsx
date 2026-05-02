@@ -10,6 +10,7 @@
  *  - Pulsanti contestuali → CRM / → Network → rimossi (coperti da sidebar).
  */
 import * as React from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
@@ -17,6 +18,7 @@ import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { SectionRailTabs } from "./header/SectionRailTabs";
+import { NavMenuPopover } from "./NavMenuPopover";
 import { Menu, Sparkles } from "lucide-react";
 
 interface OutreachQueue {
@@ -35,7 +37,8 @@ interface GlobalSyncState {
 }
 
 interface Props {
-  onToggleSidebar: () => void;
+  /** @deprecated Sidebar laterale rimossa: il bottone ☰ ora apre il NavMenuPopover globale. Mantenuto per compatibilità con i call site. */
+  onToggleSidebar?: () => void;
   onOpenCommandPalette: () => void;
   onAiClick: () => void;
   onAddContact: () => void;
@@ -48,16 +51,17 @@ interface Props {
 }
 
 export function LayoutHeader({
-  onToggleSidebar, onOpenCommandPalette, onAiClick, onAddContact, onAgentDash, onTestExt,
+  onOpenCommandPalette, onAiClick, onAddContact, onAgentDash, onTestExt,
   outreachQueue, globalSync,
   isDark = false,
   onToggleTheme = () => {
     document.documentElement.classList.toggle("dark");
   },
 }: Props): React.ReactElement {
-  // onOpenCommandPalette è raggiungibile via ⌘K (registrato in AuthenticatedLayout)
-  // e via ☰ tooltip; non occupa più spazio fisso nella barra.
+  // onOpenCommandPalette è raggiungibile via ⌘K (registrato in AuthenticatedLayout);
+  // non occupa più spazio fisso nella barra.
   void onOpenCommandPalette;
+  const { pathname } = useLocation();
 
   return (
     <header
@@ -67,16 +71,17 @@ export function LayoutHeader({
     >
       {/* LEFT cluster */}
       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0"
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar (⌘K per Cerca rapida)"
-          title="Menu · ⌘K cerca rapida"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
+        <NavMenuPopover currentPath={pathname} align="start">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            aria-label="Apri menu di navigazione"
+            title="Menu · ⌘K cerca rapida"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        </NavMenuPopover>
 
         <StatusPill
           onAiClick={onAiClick}
