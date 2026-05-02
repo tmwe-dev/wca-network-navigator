@@ -1,53 +1,71 @@
-# Command — pulizia totale dello stato vuoto
+# Sostituzione "← Dashboard" con dropdown "Menu" in Command
 
-## Decisione di prodotto
+## Problema
+Nella pagina `/v2/command` il pulsante in alto a sinistra è una freccia "← Dashboard" che porta a `/v2`, cioè a `DashboardPage`, una pagina che non è più nel menu principale (la nuova home reale è `/v2/explore/network`). Risultato: l'utente clicca per "tornare indietro" e finisce in una pagina orfana, senza modo rapido di raggiungere le altre sezioni.
 
-Lo stato vuoto della pagina `/v2/command` oggi è rumore. Le tue indicazioni:
+## Obiettivo
+Trasformare quel pulsante da "freccia indietro" a **launcher di navigazione**: un click apre un dropdown che elenca tutte le destinazioni principali dell'app, esattamente le stesse della sidebar standard. Se l'utente non sceglie nulla, resta in Command.
 
-- **Niente briefing** ("Buongiorno, ho 4784 email…") — quei dati vivono già altrove (Inbox, Approval queue).
-- **Niente snapshot numerico** ("14 sorgenti · 12.847 contatti · 234 partner · 1.420 BCA") — distrae.
-- **Nessun suggerimento** ("Cerca i partner di Malta", "Scrivi mail a Luca Arcanà…") — meglio nulla che ultimi prompt buttati lì senza ragionamento commerciale. L'utente fa le sue ricerche.
+## Cosa cambia (UX)
 
-Risultato: una landing zen — solo titolo, l'orb AI, e l'input. L'utente arriva e *parla*.
+- **Etichetta**: da "← Dashboard" a "Menu" con icona griglia/burger (`Menu` o `LayoutGrid` di lucide-react). Stessa posizione (alto-sinistra, fixed), stesso stile glass/blur già usato.
+- **Comportamento**: click → si apre un popover/dropdown verso il basso con la lista delle 6 voci di `navItemsDef` (Command escluso perché siamo già lì):
+  - Esplora → `/v2/explore/network`
+  - Pipeline → `/v2/pipeline/kanban`
+  - Comunica → `/v2/communicate`
+  - Email Intelligence → `/v2/email-intelligence`
+  - Intelligence → `/v2/intelligence`
+  - Config → `/v2/settings`
+- Ogni voce mostra **icona + label tradotta** (i18n key già esistente in `nav.*`).
+- Click su una voce → naviga e chiude il popover. Click fuori / Esc → chiude senza navigare (resti in Command).
+- Voce attiva ("Command") nascosta dalla lista, oppure mostrata in cima come riga inattiva con check, per dare contesto.
 
-## Cosa resta visibile sullo stato vuoto
+## Cosa NON cambia
+- Niente sidebar persistente in Command (resta una pagina fullscreen "zen").
+- Nessun cambio alle altre pagine (la sidebar standard di `AuthenticatedLayout` continua a usare lo stesso `navConfig`).
+- Nessun cambio al routing: `DashboardPage` resta registrata su `/v2` per backward-compat, semplicemente non ci passiamo più da Command.
+
+## Dettagli tecnici
+
+**File da modificare:**
+- `src/v2/ui/pages/command/components/CommandPageBackButton.tsx`
+  - Rinomina concettuale (il file resta, cambia solo il contenuto). In alternativa creare `CommandPageMenuButton.tsx` e rimuovere il vecchio.
+  - Sostituisce `ArrowLeft` con `Menu` (lucide-react).
+  - Avvolge il bottone in `<Popover>` (shadcn `@/components/ui/popover`, già usato nel progetto).
+  - Rimuove la prop `onBack`. Eventualmente accetta `currentPath` opzionale per evidenziare/nascondere la voce attiva.
+  - Lista voci letta da `navItemsDef` di `src/v2/ui/templates/navConfig.tsx` (single source of truth — già rispetta la regola "no inline arrays").
+  - Label tradotte via `useTranslation()` con le chiavi `nav.command`, `nav.explore`, ecc. (già definite).
+- `src/v2/ui/pages/CommandPage.tsx`
+  - Rimuove `onBack={() => nav("/v2")}` e passa eventualmente `currentPath="/v2/command"` al nuovo componente.
+
+**Stile:**
+- Mantiene lo stesso look del bottone attuale (glass blur, border `white/[0.06]`, text `muted-foreground`) per coerenza con il "Zen mode" della pagina.
+- Popover content: `bg-background/95 backdrop-blur-xl border border-white/10`, larghezza ~240px, voci con hover `bg-white/5`.
+
+**Accessibilità:**
+- Bottone con `aria-label="Apri menu di navigazione"`.
+- Popover con focus trap (default shadcn).
+- Voci come `role="menuitem"` navigabili da tastiera (frecce + Enter).
+
+## Layout ASCII
 
 ```text
-                  [ AI Orb pulsante ]
-
-                  Cosa vuoi ottenere?
-
-                ( input + microfono )
+Prima:                          Dopo:
+┌─────────────────────┐        ┌─────────────────────┐
+│ [← Dashboard]       │        │ [☰ Menu]            │
+│                     │        │   └─▼──────────────┐│
+│        ◉            │   →    │     ◯ Esplora      ││
+│ Cosa vuoi ottenere? │        │     ◯ Pipeline     ││
+│                     │        │     ◯ Comunica     ││
+│   [   input   ]     │        │     ◯ Email Intel. ││
+│                     │        │     ◯ Intelligence ││
+│                     │        │     ◯ Config       ││
+└─────────────────────┘        └─────────────────────┘
 ```
 
-Nient'altro. Niente chip, niente proposte, niente snapshot, niente briefing.
-
-## Modifiche tecniche
-
-**File toccato**: `src/v2/ui/pages/CommandPage.tsx`
-- Rimuovere il render di `<BriefingPanel>` nel ramo `isEmpty` (riga ~193).
-- Rimuovere import `BriefingPanel` e `useCommandBriefing` se non più usati.
-
-**File toccato**: `src/v2/ui/pages/command/components/CommandSuggestions.tsx`
-- Eliminare il blocco "allPrompts" (suggerimenti dinamici + fallback statici) e il blocco "capabilities".
-- Lasciare solo: AI orb + titolo "Cosa vuoi ottenere?". Niente sottotitolo con i numeri.
-- (In alternativa: eliminare il file e inline il minimo nello stato vuoto della CommandPage. Decido in implementazione, dipende da quanti consumer ha.)
-
-**File da archiviare (non eliminare)**:
-- `src/v2/ui/pages/command/components/BriefingPanel.tsx`
-- `src/v2/ui/pages/command/hooks/useCommandBriefing.ts`
-
-Restano sul filesystem (regola progetto: non cancellare componenti potenzialmente in sviluppo) ma non più importati. Se in futuro vorrai un "briefing intelligente" davvero ragionato, partiremo da lì.
-
-## Cosa NON tocco
-
-- Header alto della pagina (Dashboard, Sessione attiva, Monitor, Realtime, IT, "Cosa posso fare").
-- Composer / input / voice.
-- Logica conversazione, scenari, tool execution.
-- Bottom dock azioni (Source Unification, Search Partners, ecc.) — quello è un menu rapido strumenti, non un suggerimento commerciale: resta.
-
-## Nota sulla visione (per dopo)
-
-Hai detto chiaramente: *"il sistema deve assistere un ufficio commerciale autonomo"*. Quando vorrai reintrodurre proposte sotto il titolo, il pattern giusto sarà **regole DAL → AI ragiona → 1-2 next best action commerciali** (partner inattivi da X giorni, BCA mai contattate, missioni ferme). Lo apriremo come progetto a sé — `command-next-best-action` — non come patchwork di "ultimi prompt".
-
-Per ora: **silenzio pulito**.
+## Test manuale
+1. Aprire `/v2/command` → verificare bottone "Menu" in alto-sinistra.
+2. Click sul bottone → popover con 6 voci.
+3. Click su "Pipeline" → naviga a `/v2/pipeline/kanban`.
+4. Tornare in Command → riaprire menu → premere Esc → resta in Command.
+5. Verificare che NON ci sia più alcun riferimento a `/v2` (vecchia Dashboard) dal pulsante.
