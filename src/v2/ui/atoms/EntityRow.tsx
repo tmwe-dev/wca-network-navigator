@@ -62,6 +62,11 @@ export interface EntityRowProps {
   onClick?: () => void;
   selected?: boolean;
   className?: string;
+  /**
+   * Layout compatto a 2 righe (per pannelli stretti < ~520px).
+   * Quando true, città/canali/score vanno a capo sotto il titolo.
+   */
+  compact?: boolean;
 }
 
 export function EntityRow({
@@ -78,13 +83,16 @@ export function EntityRow({
   onClick,
   selected,
   className,
+  compact = false,
 }: EntityRowProps): React.ReactElement {
   return (
     <div
       onClick={onClick}
       className={cn(
         "relative grid items-center gap-2 px-2 py-2 rounded-lg border bg-card/40 transition-all overflow-hidden",
-        "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
+        compact
+          ? "grid-cols-[36px_44px_minmax(0,1fr)_56px]"
+          : "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
         TONE_BORDER[tone],
         selected && "ring-1 ring-primary/40 bg-primary/[0.04]",
         onClick && "cursor-pointer",
@@ -110,12 +118,12 @@ export function EntityRow({
 
       {/* Col 2: bandiera */}
       <div className="flex items-center justify-center">
-        <EntityRowFlag countryCode={countryCode} size="lg" />
+        <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />
       </div>
 
       {/* Col 3: title + sub-title */}
       <div className="flex flex-col min-w-0 gap-0.5">
-        <div className="flex items-center gap-1.5 min-w-0 text-sm font-semibold text-foreground">
+        <div className="flex items-center gap-1.5 min-w-0 text-sm font-semibold text-foreground flex-wrap">
           {titleSlot}
         </div>
         {subTitleSlot && (
@@ -123,27 +131,49 @@ export function EntityRow({
             {subTitleSlot}
           </div>
         )}
+        {compact && (city || channels || score != null) && (
+          <div className="flex items-center gap-2 min-w-0 mt-0.5 flex-wrap">
+            {city && (
+              <span className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%]">
+                {city}
+              </span>
+            )}
+            {channels && (
+              <ChannelIcons
+                email={channels.email}
+                whatsapp={channels.whatsapp}
+                linkedin={channels.linkedin}
+                phone={channels.phone}
+                website={channels.website}
+                size="sm"
+              />
+            )}
+            <ScorePill value={score ?? null} />
+          </div>
+        )}
       </div>
 
-      {/* Col 4: città + canali + score */}
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <div className="text-[12px] text-foreground/90 truncate font-medium">
-          {city || <span className="text-muted-foreground/50 italic">—</span>}
+      {/* Col 4 (solo wide): città + canali + score */}
+      {!compact && (
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="text-[12px] text-foreground/90 truncate font-medium">
+            {city || <span className="text-muted-foreground/50 italic">—</span>}
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            {channels && (
+              <ChannelIcons
+                email={channels.email}
+                whatsapp={channels.whatsapp}
+                linkedin={channels.linkedin}
+                phone={channels.phone}
+                website={channels.website}
+                size="sm"
+              />
+            )}
+            <ScorePill value={score ?? null} />
+          </div>
         </div>
-        <div className="flex items-center gap-2 min-w-0">
-          {channels && (
-            <ChannelIcons
-              email={channels.email}
-              whatsapp={channels.whatsapp}
-              linkedin={channels.linkedin}
-              phone={channels.phone}
-              website={channels.website}
-              size="sm"
-            />
-          )}
-          <ScorePill value={score ?? null} />
-        </div>
-      </div>
+      )}
 
       {/* Col 5: actions */}
       <div
