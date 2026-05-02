@@ -25,6 +25,8 @@ interface SentItem {
   body: string;
   source: string;
   sent_at: string;
+  send_method?: "direct" | "queue" | "campaign" | "agent";
+  delivery_status?: "sent" | "failed" | "bounced" | "rejected";
 }
 
 export function InviatiSubTab() {
@@ -35,11 +37,34 @@ export function InviatiSubTab() {
     queryFn: findSentOutreach,
   });
 
+  // Real per-recipient tracking from email_send_log (single + bulk).
+  const { data: sendLog } = useQuery({
+    queryKey: ["outreach", "sent", "send-log"],
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from("email_send_log")
+        .select("id, recipient_email, subject, sent_at, status, send_method, message_id, campaign_queue_id")
+        .order("sent_at", { ascending: false })
+        .limit(500);
+      // Dedup per message_id keeping latest
+      const seen = new Set<string>();
+      const dedup: NonNullable<typeof rows> = [];
+      for (const r of rows ?? []) {
+        const key = r.message_id ?? r.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        dedup.push(r);
+      }
+      return dedup;
+    },
+    refetchInterval: 30000,
+  });
+
   const items = useMemo((): SentItem[] => {
-    if (!data) return [];
+    if (!data && !sendLog) return [];
     const result: SentItem[] = [];
 
-    for (const a of data.activities) {
+    for (const a of data?.activities ?? []) {
       result.push({
         id: a.id,
         email: (a as Record<string, unknown>).source_meta
@@ -51,9 +76,11 @@ export function InviatiSubTab() {
         body: a.email_body || "",
         source: a.source_type || "partner",
         sent_at: a.completed_at || a.created_at,
+        send_method: "direct",
+        delivery_status: "sent",
       });
     }
-    for (const ma of data.missionActions) {
+    for (const ma of data?.missionActions ?? []) {
       result.push({
         id: ma.id,
         email: (ma.metadata as Record<string, string>)?.email || "",
@@ -63,11 +90,29 @@ export function InviatiSubTab() {
         body: (ma.metadata as Record<string, string>)?.email_body || "",
         source: "mission",
         sent_at: ma.completed_at || ma.created_at,
+        send_method: "direct",
+        delivery_status: "sent",
+      });
+    }
+    // Bulk + queue + agent: per-recipient real tracking from email_send_log
+    for (const r of sendLog ?? []) {
+      if (r.send_method === "direct") continue; // covered by activities (avoid dup)
+      result.push({
+        id: `esl-${r.id}`,
+        email: r.recipient_email,
+        partner_name: r.recipient_email,
+        channel: "send_email",
+        subject: r.subject,
+        body: "",
+        source: r.send_method === "campaign" ? "campaign" : r.send_method === "agent" ? "ai_agent" : "partner",
+        sent_at: r.sent_at,
+        send_method: (r.send_method as SentItem["send_method"]) ?? "queue",
+        delivery_status: (r.status as SentItem["delivery_status"]) ?? "sent",
       });
     }
 
     return result.sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
-  }, [data]);
+  }, [data, sendLog]);
 
   // Query real replies from channel_messages
   const { data: replies } = useQuery({
@@ -221,6 +266,11 @@ export function InviatiSubTab() {
                           {item.email && (
                             <span className="text-[10px] text-muted-foreground truncate">{item.email}</span>
                           )}
+                        {item.send_method && item.send_method !== "direct" && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-medium">
+                            {item.send_method === "campaign" ? "Bulk" : item.send_method === "agent" ? "AI" : "Coda"}
+                          </span>
+                        )}
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{item.subject}</p>
                       </div>

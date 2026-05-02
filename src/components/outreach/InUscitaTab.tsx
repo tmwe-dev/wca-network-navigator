@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, CheckCircle2, Calendar, AlertTriangle } from "lucide-react";
+import { Send, CheckCircle2, Calendar, AlertTriangle, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DaInviareSubTab } from "./DaInviareSubTab";
 import { InviatiSubTab } from "./InviatiSubTab";
@@ -23,17 +23,22 @@ export function InUscitaTab(_props: InUscitaTabProps = {}) {
   const { data: counts } = useQuery({
     queryKey: queryKeys.outreach.subCounts(),
     queryFn: async () => {
-      const [pending, sent, scheduled, failed] = await Promise.all([
+      const [pending, sent, scheduled, failed, bulkPending, bulkSent, bulkScheduled, bulkFailed, sentLog] = await Promise.all([
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("activities").select("id", { count: "exact", head: true }).eq("status", "completed").eq("activity_type", "send_email"),
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
         supabase.from("cockpit_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "sent"),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).in("status", ["scheduled"]).not("scheduled_at", "is", null),
+        supabase.from("email_campaign_queue").select("id", { count: "exact", head: true }).eq("status", "failed"),
+        supabase.from("email_send_log").select("id", { count: "exact", head: true }).eq("status", "sent").eq("send_method", "direct"),
       ]);
       return {
-        pending: pending.count || 0,
-        sent: sent.count || 0,
-        scheduled: scheduled.count || 0,
-        failed: failed.count || 0,
+        pending: (pending.count || 0) + (bulkPending.count || 0),
+        sent: (sent.count || 0) + (bulkSent.count || 0) + (sentLog.count || 0),
+        scheduled: (scheduled.count || 0) + (bulkScheduled.count || 0),
+        failed: (failed.count || 0) + (bulkFailed.count || 0),
       };
     },
     refetchInterval: 30000,
@@ -46,6 +51,13 @@ export function InUscitaTab(_props: InUscitaTabProps = {}) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-shrink-0 px-4 pt-2 pb-1 flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/20 border-b border-border/30">
+        <Info className="w-3 h-3 mt-0.5 shrink-0 text-primary" />
+        <span>
+          <b>Single send</b> dal Cockpit/Drawer parte subito e finisce in <b>Inviati</b>. <b>Bulk</b> (≥2 destinatari) viene
+          accodato qui in <b>Da Inviare</b> e tracciato per contatto in <code>email_send_log</code>.
+        </span>
+      </div>
       <div className="flex-shrink-0 px-4 pt-2 pb-1 border-b border-border/40 flex items-center justify-between">
         <Tabs value={sub} onValueChange={setSub}>
           <TabsList className="bg-muted/40 h-8">
