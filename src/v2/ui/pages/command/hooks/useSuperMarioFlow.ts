@@ -137,10 +137,10 @@ export function useSuperMarioFlow(deps: FlowDeps) {
           originalPrompt: userMessage,
         });
         setLiveResult(toolResult);
-        if (toolResult.kind === "table") setCanvas("table");
-        else if (toolResult.kind === "card-grid") setCanvas("card-grid");
-        else if (toolResult.kind === "composer") setCanvas("composer");
-        else setCanvas("dashboard");
+        if (toolResult.kind === "table") setCanvas("live-table");
+        else if (toolResult.kind === "card-grid") setCanvas("live-card-grid");
+        else if (toolResult.kind === "composer") setCanvas("live-composer");
+        else setCanvas("live-result");
         setFlowPhase("idle");
 
         return { ok: true };
