@@ -182,12 +182,9 @@ const WRITE_TOOL_IDS = new Set<string>([
   "calculate-lead-scores",
   "deduplicate-contacts",
   "compose-email",
-  "send-whatsapp",
-  "send-linkedin",
   "launch-mission",
   "parse-business-card",
   "kb-ingest-document",
-  "send-email-direct",
   "deduplicate-partners",
   "recalculate-partner-quality",
   "apply-email-rules",
@@ -210,16 +207,37 @@ const WRITE_TOOL_IDS = new Set<string>([
   "browser-navigate-extract",
 ]);
 
+/** Tool che inviano comunicazioni esterne. Sempre con conferma, audit più rigido. */
+const SEND_TOOL_IDS = new Set<string>([
+  "send-email-direct",
+  "send-whatsapp",
+  "send-linkedin",
+]);
+
+/** Tool destructive: bloccati da Super Mario hard guards. (Vuoto: non esponiamo DELETE.) */
+const DESTRUCTIVE_TOOL_IDS = new Set<string>([]);
+
+export type RiskLevel = "read" | "write" | "send" | "destructive";
+
+function riskLevelFor(id: string): RiskLevel {
+  if (DESTRUCTIVE_TOOL_IDS.has(id)) return "destructive";
+  if (SEND_TOOL_IDS.has(id)) return "send";
+  if (WRITE_TOOL_IDS.has(id)) return "write";
+  return "read";
+}
+
 export interface ToolMetadata {
   readonly id: string;
   readonly label: string;
   readonly description: string;
   readonly requiresApproval: boolean;
+  readonly riskLevel: RiskLevel;
 }
 
 export const TOOL_METADATA: readonly ToolMetadata[] = TOOLS.map((t) => ({
   id: t.id,
   label: t.label,
   description: t.description,
-  requiresApproval: WRITE_TOOL_IDS.has(t.id),
+  requiresApproval: WRITE_TOOL_IDS.has(t.id) || SEND_TOOL_IDS.has(t.id),
+  riskLevel: riskLevelFor(t.id),
 }));
