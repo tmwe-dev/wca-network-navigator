@@ -26,6 +26,7 @@ import { scrapeProspectTool } from "./scrapeProspect";
 import { enrichPartnerFromWebTool } from "./enrichPartnerFromWeb";
 import { enrichPartnerFromWebsiteTool } from "./enrichPartnerFromWebsite";
 import { enrichProspectFromWebsiteTool } from "./enrichProspectFromWebsite";
+import { batchEnrichPartnersTool } from "./batchEnrichPartners";
 import { browserAutoCompleteTool } from "./browserAutoComplete";
 import { browserFillFormTool } from "./browserFillForm";
 import { browserNavigateAndExtractTool } from "./browserNavigateAndExtract";
@@ -113,6 +114,9 @@ const TOOLS: readonly Tool[] = [
   scrapeProspectTool,
   scrapeCompanyWebsiteTool,
   scrapeLinkedInProfileTool,
+  // Batch enrichment IN PRIMA POSIZIONE: cattura "arricchisci dati / siti"
+  // sui partner dell'ultima ricerca, prima dei tool single-UUID legacy.
+  batchEnrichPartnersTool,
   enrichPartnerFromWebTool,
   enrichPartnerFromWebsiteTool,
   enrichProspectFromWebsiteTool,
@@ -202,6 +206,7 @@ const WRITE_TOOL_IDS = new Set<string>([
   "enrich-partner-from-web",
   "enrich-partner-from-website",
   "enrich-prospect-from-website",
+  "batch-enrich-partners",
   "browser-auto-complete",
   "browser-fill-form",
   "browser-navigate-extract",
