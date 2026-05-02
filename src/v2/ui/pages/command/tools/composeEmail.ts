@@ -370,6 +370,20 @@ function daysSince(iso: string | null): string {
   return `${d} giorni fa`;
 }
 
+/** True se il prompt è un invito/azione generica senza identificazione esplicita
+ *  di azienda+persona (es. "prepara un invito a venire a Milano"). */
+function looksLikeGenericInvite(prompt: string): boolean {
+  const p = (prompt ?? "").toLowerCase();
+  if (!/\b(invito|invita|invitarli|ospiti|venire|partita|evento|magazzin|presentazione|cena|workshop|meeting)\b/i.test(p)) {
+    return false;
+  }
+  // Se c'è "a <Persona> di <Azienda>" puntuale, lascia passare
+  if (/\ba\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+){0,3}\s+(?:di|della|del|dello|dalla|presso)\s+[A-ZÀ-Ý]/i.test(prompt)) {
+    return false;
+  }
+  return true;
+}
+
 /** Estrae il testo naturale da un prompt che può essere JSON serializzato
  *  (planRunner) o testo libero. Se context.originalPrompt esiste, vince. */
 function resolveNaturalPrompt(
