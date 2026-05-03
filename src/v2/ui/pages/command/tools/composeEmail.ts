@@ -678,6 +678,33 @@ export const composeEmailTool: Tool = {
     // dopo una ricerca Query Planner che ha restituito partner. Eredita la
     // lista partnerIds e genera il batch usando il prompt corrente come goal.
     const queryCtx = getLastQueryResultContext();
+    // ── 0b-pre) Se il prompt corrente nomina esplicitamente un paese
+    // (es. "email per i partner a Malta") prendiamo SEMPRE l'intera lista
+    // del paese, ignorando un eventuale partnerIds parziale memorizzato dal
+    // Query Planner per una count-query precedente (limit:1).
+    const explicitCountry = detectCountryCode(prompt);
+    if (explicitCountry && isProceedIntent(prompt)) {
+      const partners = await searchPartnersByCountry(explicitCountry.code);
+      if (partners.length > 0) {
+        const tone = detectTone(prompt);
+        const drafts = await generateDraftsBatch(partners, tone, prompt);
+        setLastComposerContext({
+          countryCode: explicitCountry.code,
+          countryLabel: explicitCountry.label,
+          partnerIds: partners.map((p) => p.id),
+          tone,
+          originalGoal: prompt,
+        });
+        return buildBatchComposerResult({
+          partners,
+          drafts,
+          tone,
+          countryCode: explicitCountry.code,
+          countryLabel: explicitCountry.label,
+          prompt,
+        });
+      }
+    }
     if ((queryCtx || payloadSelection.partnerIds.length > 0 || payloadSelection.countryCode) && isProceedIntent(prompt)) {
       let partners: PartnerRow[] = [];
       // STRATEGIA: ricostruisci il SET COMPLETO della selezione precedente.
