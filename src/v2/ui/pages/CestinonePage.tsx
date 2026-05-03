@@ -249,7 +249,7 @@ export function CestinonePage(): React.ReactElement {
 
 // ── ListRow (card alta, ricca) ─────────────────────────────
 
-function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: boolean; onSelect: () => void }): React.ReactElement {
+function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean }): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
@@ -276,6 +276,11 @@ function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: bo
           <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
         </div>
         <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 border", st.tone)}>{st.label}</Badge>
+        {departingSoon && (
+          <Badge className="text-[9px] px-1.5 py-0 gap-1 bg-primary/15 text-primary border border-primary/30">
+            <Rocket className="h-2.5 w-2.5" /> in partenza
+          </Badge>
+        )}
         {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
         {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-rose-500" />}
         <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
