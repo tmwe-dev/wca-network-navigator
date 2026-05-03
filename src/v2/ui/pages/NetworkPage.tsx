@@ -65,6 +65,24 @@ export function NetworkPage(): React.ReactElement {
     return () => window.removeEventListener("v2-open-partner", handler);
   }, []);
 
+  // Quando un menu card chiede una Sherlock launch, apriamo prima il dettaglio
+  // così che PartnerDetailInline possa intercettare l'evento.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { partnerId?: string } | undefined;
+      if (detail?.partnerId) {
+        setSelectedPartnerId(String(detail.partnerId));
+        // Re-emit dopo render per garantire che il listener interno sia attivo.
+        const evt = e as CustomEvent;
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: evt.detail }));
+        }, 50);
+      }
+    };
+    window.addEventListener("sherlock-launch", handler, { once: false });
+    return () => window.removeEventListener("sherlock-launch", handler);
+  }, []);
+
   const handleOpenCompany = useCallback((c: CompanyEntity) => {
     setSelectedPartnerId(c.id);
   }, []);
