@@ -62,7 +62,7 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
 
   const autoStartedRef = React.useRef(false);
   React.useEffect(() => {
-    if (open && autoStartLevel && !autoStartedRef.current && !sherlock.running) {
+    if (open && autoStartLevel && !autoStartedRef.current && !sherlock.running && vars.companyName) {
       autoStartedRef.current = true;
       sherlock.start(autoStartLevel);
     }
@@ -70,7 +70,7 @@ export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLe
       autoStartedRef.current = false;
       sherlock.stop();
     }
-  }, [open, autoStartLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, autoStartLevel, vars.companyName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
