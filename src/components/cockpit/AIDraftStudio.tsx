@@ -242,9 +242,9 @@ function AgentBadgesPanel({ draft }: { draft: DraftState }) {
             <Search className="h-2.5 w-2.5" /> Sherlock · {ds.quality}
           </span>
         )}
-        {ds?.kb_loaded && (
+        {draft.context_summary?.kb_sections && draft.context_summary.kb_sections.length > 0 && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-success/10 border-success/30 text-success">
-            <BookOpen className="h-2.5 w-2.5" /> KB
+            <BookOpen className="h-2.5 w-2.5" /> KB ×{draft.context_summary.kb_sections.length}
           </span>
         )}
         {tr?.was_overridden && (
