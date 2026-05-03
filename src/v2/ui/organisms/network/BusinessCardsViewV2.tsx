@@ -8,8 +8,6 @@ import { Loader2 } from "lucide-react";
 import { EmptyState } from "../../atoms/EmptyState";
 import { StatusBadge } from "../../atoms/StatusBadge";
 import { queryKeys } from "@/lib/queryKeys";
-import { SherlockLevelBadge } from "../../atoms/SherlockLevelBadge";
-import { useSherlockLevels } from "@/v2/hooks/useSherlockLevels";
 
 export function BusinessCardsViewV2(): React.ReactElement {
   const { data: cards, isLoading } = useQuery({
@@ -46,7 +44,6 @@ export function BusinessCardsViewV2(): React.ReactElement {
     unmatched: "error",
     pending: "info",
   };
-  const cardIds = (cards ?? []).map((c) => c.id);
 
   return (
     <div className="space-y-1 p-4">
