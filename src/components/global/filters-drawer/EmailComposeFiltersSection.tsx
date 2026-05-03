@@ -33,14 +33,15 @@ const TONE_ICONS: Record<string, LucideIcon> = {
   Target,
 };
 
-const STYLE_BY_INDEX = [
-  "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15",
-  "border-accent/30 bg-accent/10 text-accent-foreground hover:bg-accent/15",
-  "border-success/30 bg-success/10 text-success hover:bg-success/15",
-  "border-warning/30 bg-warning/10 text-warning hover:bg-warning/15",
-  "border-info/30 bg-info/10 text-info hover:bg-info/15",
-  "border-secondary/40 bg-secondary/20 text-secondary-foreground hover:bg-secondary/30",
-];
+// Stile unificato: sfondo a sfumatura tenue + bordo. L'attivo si distingue
+// SOLO con un bordo primary spesso e un ring, NON con sfondo pieno.
+// Massimo 3 colori in gioco: primary (attivo/accent), foreground (testo),
+// muted (sfondo sfumato).
+const TILE_BASE =
+  "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10 text-foreground/80";
+const TILE_IDLE = "border-border/40 hover:border-primary/40 hover:text-foreground";
+const TILE_ACTIVE =
+  "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5";
 
 export function EmailComposeFiltersSection(): React.ReactElement {
   const { selectedType, setSelectedType, tone, setTone, useKB, setUseKB, brief, setBrief } =
@@ -73,18 +74,13 @@ export function EmailComposeFiltersSection(): React.ReactElement {
           <button
             type="button"
             onClick={() => setSelectedType(null)}
-            className={cn(
-              "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
-              !selectedType
-                ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                : "border-border/50 bg-background/55 text-muted-foreground hover:border-primary/30 hover:text-foreground",
-            )}
+            className={cn(TILE_BASE, !selectedType ? TILE_ACTIVE : TILE_IDLE)}
             aria-pressed={!selectedType}
           >
             <SparkleIcon />
             Libero
           </button>
-          {allTypes.map((t, index) => {
+          {allTypes.map((t) => {
             const Icon = EMAIL_TYPE_ICONS[t.id] ?? MailIcon;
             const selected = selectedType?.id === t.id;
             return (
@@ -92,12 +88,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedType(t)}
-                className={cn(
-                  "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
-                  selected
-                    ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                    : STYLE_BY_INDEX[index % STYLE_BY_INDEX.length],
-                )}
+                className={cn(TILE_BASE, selected ? TILE_ACTIVE : TILE_IDLE)}
                 aria-pressed={selected}
                 title={t.name}
               >
@@ -118,7 +109,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
         <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Tono
         </label>
-        <div className="grid grid-cols-4 gap-1.5 rounded-lg border border-border/40 bg-background/45 p-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {TONE_OPTIONS.map((t) => {
             const Icon = TONE_ICONS[t.icon] ?? Target;
             const selected = tone === t.value;
@@ -128,10 +119,10 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                 type="button"
                 onClick={() => setTone(t.value)}
                 className={cn(
-                  "h-11 rounded-md text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
+                  "h-12 rounded-md border text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-muted/40 to-muted/10",
                   selected
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    ? "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5"
+                    : "border-border/40 text-foreground/70 hover:border-primary/40 hover:text-foreground",
                 )}
                 aria-pressed={selected}
                 title={t.label}
