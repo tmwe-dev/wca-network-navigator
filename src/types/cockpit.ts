@@ -46,7 +46,8 @@ export interface DraftState {
   scrapingPhase: ScrapingPhase;
   linkedinProfile: LinkedInProfileData | null;
   searchLog?: import("@/hooks/useLinkedInLookup").SearchLogEntry[];
-  _debug?: OutreachDebug | ForgeDebug;
+  _debug?: OutreachDebug;
+  _forgeDebug?: ForgeDebug;
   journalist_review?: JournalistReviewSummary | null;
   type_resolution?: ResolvedEmailType | null;
   context_summary?: OracleContextSummary;
