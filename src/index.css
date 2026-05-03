@@ -4,12 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Protezione minimale: impedisce solo lo swipe-back/forward orizzontale
- * del browser, senza interferire con lo scroll verticale o con i container
- * scrollabili interni. NON applicare overscroll-behavior né touch-action
- * globalmente: rompe il trackpad e gli scroll annidati. */
+/* Protezione swipe-back/forward del trackpad senza rompere gli scroll
+ * interni: blocchiamo il chaining orizzontale a livello di html/body
+ * (impedisce navigazione browser) e di #root (impedisce che uno scroll
+ * orizzontale interno arrivato a fine corsa propaghi alla pagina).
+ * Lo scroll verticale e i container annidati restano intatti. */
 html, body {
   overscroll-behavior-x: none;
+}
+#root {
+  overscroll-behavior-x: contain;
 }
 
 @layer base {
