@@ -11,7 +11,7 @@ import BriefAccordion from "@/components/email/BriefAccordion";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
-import { BookOpen, Briefcase, ClipboardList, GraduationCap, Handshake, Plane, RefreshCw, Smile, Target, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, ClipboardList, GraduationCap, Globe, Handshake, Plane, RefreshCw, Smile, Target, type LucideIcon } from "lucide-react";
 import { createLogger } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ const EMAIL_TYPE_ICONS: Record<string, LucideIcon> = {
   RefreshCw,
   ClipboardList,
   Briefcase,
-  Globe: Plane,
+  Globe,
   Plane,
 };
 
@@ -57,7 +57,11 @@ export function EmailComposeFiltersSection(): React.ReactElement {
     }
   }, [settings?.email_oracle_types]);
 
-  const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
+  const allTypes = useMemo(() => {
+    const byId = new Map<string, EmailType>();
+    [...DEFAULT_EMAIL_TYPES, ...customTypes].forEach((type) => byId.set(type.id, type));
+    return Array.from(byId.values());
+  }, [customTypes]);
 
   return (
     <section className="space-y-3">
@@ -70,7 +74,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
             type="button"
             onClick={() => setSelectedType(null)}
             className={cn(
-              "h-[70px] rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1.5",
+              "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
               !selectedType
                 ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
                 : "border-border/50 bg-background/55 text-muted-foreground hover:border-primary/30 hover:text-foreground",
@@ -89,7 +93,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                 type="button"
                 onClick={() => setSelectedType(t)}
                 className={cn(
-                  "h-[70px] rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1.5",
+                  "h-14 rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
                   selected
                     ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
                     : STYLE_BY_INDEX[index % STYLE_BY_INDEX.length],
@@ -97,7 +101,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                 aria-pressed={selected}
                 title={t.name}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 <span className="line-clamp-2 leading-tight">{t.name}</span>
               </button>
             );
@@ -124,7 +128,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
                 type="button"
                 onClick={() => setTone(t.value)}
                 className={cn(
-                  "h-14 rounded-md text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
+                  "h-11 rounded-md text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
                   selected
                     ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
