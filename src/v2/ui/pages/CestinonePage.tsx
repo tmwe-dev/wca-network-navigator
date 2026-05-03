@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 // ── AGENT BADGE ──────────────────────────────────────────
 function AgentBadge({ name, size = "sm" }: { name: string; size?: "sm" | "md" }): React.ReactElement {
@@ -235,11 +236,8 @@ export function CestinonePage(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <PageTitleHeader icon={Trash2} title="Cestinone" subtitle="conferma, modifica o rinvia" />
       <div className="px-4 py-2 flex flex-wrap items-center gap-3 border-b bg-muted/20">
-        <div className="flex items-baseline gap-2 mr-1">
-          <h1 className="text-sm font-semibold leading-none">Cestinone</h1>
-          <span className="text-[10px] text-muted-foreground hidden lg:inline">conferma, modifica o rinvia</span>
-        </div>
         <ChipGroup
           value={status}
           onChange={(v) => setStatus(v as "pending" | "queued")}
