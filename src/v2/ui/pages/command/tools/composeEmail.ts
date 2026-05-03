@@ -217,10 +217,27 @@ async function generateOneDraft(
       body: "",
       status: "no_email",
       errorMessage: "Nessuna email valida per questo partner",
+      pipeline: buildEmailPipeline({
+        partner,
+        tone,
+        hasContact: !!contact.name || !!contact.email,
+        contactEmailMissing: true,
+      }),
     };
   }
   try {
-    const gen = await invokeEdge<{ subject?: string; body?: string; message?: string; error?: string }>(
+    const gen = await invokeEdge<{
+      subject?: string;
+      body?: string;
+      message?: string;
+      error?: string;
+      _context_summary?: {
+        operative_prompts_applied?: string[];
+        model?: string;
+        kb_sections?: string[];
+        playbook_active?: boolean;
+      };
+    }>(
       "generate-email",
       {
         body: {
@@ -239,6 +256,18 @@ async function generateOneDraft(
         context: "command:compose-email-batch-draft",
       },
     );
+    const cs = gen?._context_summary;
+    const pipeline = buildEmailPipeline({
+      partner,
+      tone,
+      hasContact: !!contact.name || !!contact.email,
+      kbCount: cs?.kb_sections?.length ?? 0,
+      promptsApplied: cs?.operative_prompts_applied ?? [],
+      playbookActive: !!cs?.playbook_active,
+      model: cs?.model,
+      generationOk: !!gen?.body,
+      generationWarning: gen?.body ? null : (gen?.message ?? gen?.error ?? null),
+    });
     if (!gen?.body) {
       return {
         partnerId: partner.id,
@@ -249,6 +278,7 @@ async function generateOneDraft(
         body: "",
         status: "ai_error",
         errorMessage: gen?.message ?? gen?.error ?? "Generazione AI fallita",
+        pipeline,
       };
     }
     return {
@@ -259,6 +289,7 @@ async function generateOneDraft(
       subject: gen.subject ?? "",
       body: gen.body,
       status: "ok",
+      pipeline,
     };
   } catch (e) {
     return {
@@ -270,6 +301,13 @@ async function generateOneDraft(
       body: "",
       status: "ai_error",
       errorMessage: e instanceof Error ? e.message : "Errore generazione",
+      pipeline: buildEmailPipeline({
+        partner,
+        tone,
+        hasContact: !!contact.name || !!contact.email,
+        generationOk: false,
+        generationWarning: e instanceof Error ? e.message : "Errore generazione",
+      }),
     };
   }
 }
