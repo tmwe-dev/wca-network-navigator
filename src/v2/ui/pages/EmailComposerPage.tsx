@@ -14,7 +14,6 @@ import { EmailAIPanelSlim } from "@/components/email/EmailAIPanelSlim";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
 import { RecipientHeroCard } from "@/v2/ui/organisms/RecipientHeroCard";
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -24,7 +23,6 @@ export function EmailComposerPage() {
 
   return (
     <PageErrorBoundary>
-    <ComposeAiConfigProvider>
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 min-h-0 flex justify-center">
         <div className="flex max-w-[1060px] w-full min-h-0">
@@ -177,7 +175,6 @@ export function EmailComposerPage() {
         onSave={c.handleSaveAsTemplate}
       />
     </div>
-    </ComposeAiConfigProvider>
     </PageErrorBoundary>
   );
 }
