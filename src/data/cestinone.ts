@@ -23,6 +23,14 @@ export type CestinoSource =
   | "cockpit_queue"
   | "outreach_queue";
 export type CestinoStatus = "pending" | "queued" | "scheduled" | "blocked" | "draft";
+export type CestinoTrigger =
+  | "campaign"
+  | "inbound_reply"
+  | "mission"
+  | "manual"
+  | "auto_touch"
+  | "cockpit_draft";
+export type CestinoPartnerType = "wca_partner" | "customer" | "lead" | "prospect" | null;
 
 export interface CestinoItem {
   readonly id: string;
@@ -36,6 +44,25 @@ export interface CestinoItem {
   readonly preview: string | null;
   readonly scheduledAt: string | null;
   readonly createdAt: string;
+  // identità arricchita
+  readonly partnerName: string | null;
+  readonly partnerType: CestinoPartnerType;
+  readonly partnerCountryCode: string | null;
+  readonly partnerLeadStatus: string | null;
+  readonly partnerWcaId: number | null;
+  // contesto
+  readonly agentName: string | null;
+  readonly campaignName: string | null;
+  readonly triggerKind: CestinoTrigger;
+  // contenuto pieno
+  readonly bodyText: string | null;
+  readonly bodyHtml: string | null;
+  // segnali operativi
+  readonly retryCount: number;
+  readonly maxRetries: number;
+  readonly lastError: string | null;
+  // intelligence
+  readonly deepSearchDoneAt: string | null;
 }
 
 function normalizeStatus(raw: string | null | undefined): CestinoStatus {
@@ -56,6 +83,16 @@ function detectChannel(channel?: string | null): CestinoChannel {
   return "other";
 }
 
+function detectPartnerType(p: { partner_type?: string | null; lead_status?: string | null; wca_id?: number | null }): CestinoPartnerType {
+  const t = (p.partner_type ?? "").toLowerCase();
+  const ls = (p.lead_status ?? "").toLowerCase();
+  if (ls === "active_customer" || ls === "customer" || t === "customer") return "customer";
+  if (p.wca_id) return "wca_partner";
+  if (ls === "lead" || ls === "qualified_lead") return "lead";
+  if (t === "prospect" || ls === "prospect") return "prospect";
+  return p.wca_id ? "wca_partner" : "lead";
+}
+
 /**
  * Carica la coda unificata. Usa Promise.allSettled per non far fallire
  * tutto se una sorgente non risponde.
@@ -66,24 +103,24 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
   const [emailQ, campaignQ, cockpitQ, outreachQ] = await Promise.allSettled([
     supabase
       .from("email_campaign_queue")
-      .select("id, partner_id, recipient_name, recipient_email, subject, status, scheduled_at, created_at")
+      .select("id, partner_id, recipient_name, recipient_email, subject, html_body, status, scheduled_at, created_at, retry_count, error_message, operator_id")
       .in("status", ["pending", "queued", "scheduled"])
       .order("created_at", { ascending: false })
       .limit(500),
     untypedFrom("campaign_jobs")
-      .select("id, partner_id, contact_name, channel, subject, body, status, scheduled_at, created_at")
+      .select("id, partner_id, company_name, country_code, email, phone, job_type, status, batch_id, created_at, operator_id, notes, assigned_to")
       .in("status", ["pending", "queued", "scheduled"])
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
       .from("cockpit_queue")
-      .select("id, partner_id, source_type, source_id, status, created_at")
+      .select("id, partner_id, source_type, source_id, status, created_at, operator_id")
       .eq("status", "queued")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
       .from("outreach_queue")
-      .select("id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, created_at")
+      .select("id, partner_id, channel, recipient_name, recipient_email, recipient_phone, recipient_linkedin_url, subject, body, status, created_at, attempts, max_attempts, last_error, operator_id, created_by")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(500),
@@ -100,28 +137,57 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         recipientName: (r.recipient_name as string) ?? null,
         recipientHandle: (r.recipient_email as string) ?? null,
         subject: (r.subject as string) ?? null,
-        preview: null,
+        preview: r.html_body ? stripHtml(String(r.html_body)).slice(0, 220) : null,
         scheduledAt: (r.scheduled_at as string) ?? null,
         createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: null,
+        partnerType: null,
+        partnerCountryCode: null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? null,
+        campaignName: null,
+        triggerKind: "campaign",
+        bodyText: null,
+        bodyHtml: (r.html_body as string) ?? null,
+        retryCount: Number(r.retry_count ?? 0),
+        maxRetries: 3,
+        lastError: (r.error_message as string) ?? null,
+        deepSearchDoneAt: null,
       });
     }
   }
 
   if (campaignQ.status === "fulfilled" && campaignQ.value.data) {
     for (const r of campaignQ.value.data as Array<Record<string, unknown>>) {
-      const body = (r.body as string) ?? null;
+      const notes = (r.notes as string) ?? null;
+      const handle = (r.email as string) ?? (r.phone as string) ?? null;
       out.push({
         id: `cj:${String(r.id)}`,
         source: "campaign_jobs",
-        channel: detectChannel(r.channel as string),
+        channel: detectChannel(String(r.job_type ?? "")),
         status: normalizeStatus(r.status as string),
         partnerId: (r.partner_id as string) ?? null,
-        recipientName: (r.contact_name as string) ?? null,
-        recipientHandle: null,
-        subject: (r.subject as string) ?? null,
-        preview: body ? body.slice(0, 140) : null,
-        scheduledAt: (r.scheduled_at as string) ?? null,
+        recipientName: (r.company_name as string) ?? null,
+        recipientHandle: handle,
+        subject: String(r.job_type ?? "Job"),
+        preview: notes ? notes.slice(0, 220) : null,
+        scheduledAt: null,
         createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: (r.company_name as string) ?? null,
+        partnerType: null,
+        partnerCountryCode: (r.country_code as string) ?? null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? (r.assigned_to as string) ?? null,
+        campaignName: r.batch_id ? `Batch ${String(r.batch_id).slice(0, 8)}` : null,
+        triggerKind: "campaign",
+        bodyText: notes,
+        bodyHtml: null,
+        retryCount: 0,
+        maxRetries: 3,
+        lastError: null,
+        deepSearchDoneAt: null,
       });
     }
   }
@@ -140,6 +206,20 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         preview: null,
         scheduledAt: null,
         createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: null,
+        partnerType: null,
+        partnerCountryCode: null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? null,
+        campaignName: null,
+        triggerKind: "cockpit_draft",
+        bodyText: null,
+        bodyHtml: null,
+        retryCount: 0,
+        maxRetries: 1,
+        lastError: null,
+        deepSearchDoneAt: null,
       });
     }
   }
@@ -152,30 +232,110 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         ch === "linkedin" ? (r.recipient_linkedin_url as string) :
         (r.recipient_email as string);
       const body = (r.body as string) ?? null;
+      const isReply = String(r.created_by ?? "").includes("reply");
       out.push({
         id: `oq:${String(r.id)}`,
         source: "outreach_queue",
         channel: ch,
         status: normalizeStatus(r.status as string),
-        partnerId: null,
+        partnerId: (r.partner_id as string) ?? null,
         recipientName: (r.recipient_name as string) ?? null,
         recipientHandle: handle ?? null,
         subject: (r.subject as string) ?? null,
-        preview: body ? body.slice(0, 140) : null,
+        preview: body ? body.slice(0, 220) : null,
         scheduledAt: null,
         createdAt: String(r.created_at ?? new Date().toISOString()),
+        partnerName: null,
+        partnerType: null,
+        partnerCountryCode: null,
+        partnerLeadStatus: null,
+        partnerWcaId: null,
+        agentName: (r.operator_id as string) ?? (r.created_by as string) ?? null,
+        campaignName: null,
+        triggerKind: isReply ? "inbound_reply" : "manual",
+        bodyText: body,
+        bodyHtml: null,
+        retryCount: Number(r.attempts ?? 0),
+        maxRetries: Number(r.max_attempts ?? 3),
+        lastError: (r.last_error as string) ?? null,
+        deepSearchDoneAt: null,
       });
     }
   }
 
+  // === ENRICHMENT BATCH (partners + profiles + sherlock) ===
+  const partnerIds = Array.from(new Set(out.map((i) => i.partnerId).filter(Boolean) as string[]));
+  const operatorIds = Array.from(new Set(out.map((i) => i.agentName).filter((v): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v))));
+
+  const [partnersRes, profilesRes, sherlockRes] = await Promise.allSettled([
+    partnerIds.length
+      ? supabase.from("partners").select("id, company_name, country_code, lead_status, partner_type, wca_id").in("id", partnerIds)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    operatorIds.length
+      ? supabase.from("profiles").select("user_id, display_name").in("user_id", operatorIds)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    partnerIds.length
+      ? supabase.from("sherlock_investigations").select("partner_id, created_at").in("partner_id", partnerIds).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+  ]);
+
+  const partnerMap = new Map<string, Record<string, unknown>>();
+  if (partnersRes.status === "fulfilled" && partnersRes.value.data) {
+    for (const p of partnersRes.value.data as Array<Record<string, unknown>>) {
+      partnerMap.set(String(p.id), p);
+    }
+  }
+  const profileMap = new Map<string, string>();
+  if (profilesRes.status === "fulfilled" && profilesRes.value.data) {
+    for (const p of profilesRes.value.data as Array<Record<string, unknown>>) {
+      profileMap.set(String(p.user_id), String(p.display_name ?? ""));
+    }
+  }
+  const sherlockMap = new Map<string, string>();
+  if (sherlockRes.status === "fulfilled" && sherlockRes.value.data) {
+    for (const s of sherlockRes.value.data as Array<Record<string, unknown>>) {
+      const pid = String(s.partner_id);
+      if (!sherlockMap.has(pid)) sherlockMap.set(pid, String(s.created_at));
+    }
+  }
+
+  const enriched = out.map((it): CestinoItem => {
+    const p = it.partnerId ? partnerMap.get(it.partnerId) : null;
+    const agentDisplay = it.agentName && profileMap.has(it.agentName)
+      ? profileMap.get(it.agentName) || it.agentName
+      : it.agentName;
+    return {
+      ...it,
+      partnerName: (p?.company_name as string) ?? it.partnerName,
+      partnerCountryCode: (p?.country_code as string) ?? it.partnerCountryCode,
+      partnerLeadStatus: (p?.lead_status as string) ?? null,
+      partnerWcaId: (p?.wca_id as number) ?? null,
+      partnerType: p ? detectPartnerType({
+        partner_type: p.partner_type as string,
+        lead_status: p.lead_status as string,
+        wca_id: p.wca_id as number,
+      }) : null,
+      agentName: agentDisplay || null,
+      deepSearchDoneAt: it.partnerId ? sherlockMap.get(it.partnerId) ?? null : null,
+    };
+  });
+
   // Ordina per più urgente: scheduled prima, poi più vecchio
-  out.sort((a, b) => {
+  enriched.sort((a, b) => {
     const aS = a.scheduledAt ? Date.parse(a.scheduledAt) : Date.parse(a.createdAt);
     const bS = b.scheduledAt ? Date.parse(b.scheduledAt) : Date.parse(b.createdAt);
     return aS - bS;
   });
 
-  return out;
+  return enriched;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
