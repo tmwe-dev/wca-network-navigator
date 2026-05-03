@@ -106,6 +106,7 @@ const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ lab
       { label: "Telemetry", path: "/v2/settings/telemetry" },
       { label: "Observability", path: "/v2/settings/observability" },
       { label: "System Health", path: "/v2/settings/health" },
+      { label: "E2E Status", path: "/v2/settings/e2e-status" },
       { label: "Design System", path: "/v2/design-system-preview" },
       { label: "Guida", path: "/v2/guida" },
     ],
