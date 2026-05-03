@@ -7,6 +7,7 @@ import { DeepSearchPage } from "@/v2/ui/pages/DeepSearchPage";
 import { ContactsPage } from "@/v2/ui/pages/ContactsPage";
 
 const BCAUnifiedHub = lazy(() => import("@/components/contacts/bca/BCAUnifiedHub"));
+const CampaignsPage = lazy(() => import("@/v2/ui/pages/CampaignsPage").then(m => ({ default: m.Campaigns })));
 
 function TabFallback() {
   return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
@@ -31,7 +32,14 @@ export function ExploreSection(): React.ReactElement {
           />
           <Route path="search"      element={<Navigate to="/v2/explore/contacts" replace />} />
           <Route path="deep-search" element={<DeepSearchPage />} />
-          <Route path="campaigns"   element={<Navigate to="/v2/pipeline/campaigns" replace />} />
+          <Route
+            path="campaigns"
+            element={
+              <Suspense fallback={<TabFallback />}>
+                <CampaignsPage />
+              </Suspense>
+            }
+          />
           <Route path="*"           element={<Navigate to="/v2/explore/map" replace />} />
         </Routes>
       </div>
