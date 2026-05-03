@@ -171,10 +171,28 @@ export function EmailComposerPage() {
                     </Button>
                   )}
                   <PermissionGate permission="email.send" fallback={<div className="text-xs text-muted-foreground">Non hai il permesso per inviare email</div>}>
-                    <Button size="sm" onClick={c.handleEnqueue} disabled={queue.sending || c.processing || c.recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
-                      {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      {queue.sending ? "Preparazione..." : `Invia a ${c.recipientsWithEmail.length} destinatari`}
-                    </Button>
+                    {(() => {
+                      const isDisabled = queue.sending || c.processing || c.recipientsWithEmail.length === 0;
+                      const count = c.recipientsWithEmail.length;
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={c.handleEnqueue}
+                          disabled={isDisabled}
+                          className={
+                            "gap-1.5 h-9 text-xs flex-1 bg-primary text-primary-foreground hover:bg-primary/90 " +
+                            "disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground"
+                          }
+                        >
+                          {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          {queue.sending
+                            ? "Preparazione..."
+                            : count === 0
+                              ? "Aggiungi un destinatario"
+                              : `Invia a ${count} ${count === 1 ? "destinatario" : "destinatari"}`}
+                        </Button>
+                      );
+                    })()}
                   </PermissionGate>
                 </div>
               )}
