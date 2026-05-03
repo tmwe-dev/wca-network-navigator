@@ -18,12 +18,12 @@ import { cn } from "@/lib/utils";
 const log = createLogger("EmailComposeFiltersSection");
 
 const EMAIL_TYPE_ICONS: Record<string, LucideIcon> = {
-  Handshake,
-  RefreshCw,
-  ClipboardList,
-  Briefcase,
-  Globe,
-  Plane,
+  primo_contatto: Handshake,
+  follow_up: RefreshCw,
+  richiesta_info: ClipboardList,
+  proposta: Briefcase,
+  partnership: Globe,
+  network_espresso: Plane,
 };
 
 const TONE_ICONS: Record<string, LucideIcon> = {
@@ -85,7 +85,7 @@ export function EmailComposeFiltersSection(): React.ReactElement {
             Libero
           </button>
           {allTypes.map((t, index) => {
-            const Icon = EMAIL_TYPE_ICONS[t.icon] ?? MailIcon;
+            const Icon = EMAIL_TYPE_ICONS[t.id] ?? MailIcon;
             const selected = selectedType?.id === t.id;
             return (
               <button
