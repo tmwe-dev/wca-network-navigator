@@ -12,6 +12,17 @@ function AgentChatRedirect() {
   const agentId = searchParams.get("agent");
   return <Navigate to={agentId ? `/v2/agents?agent=${agentId}` : "/v2/agents"} replace />;
 }
+
+/**
+ * Redirect che preserva `location.state` (es. prefilledRecipient) e la
+ * query string. Necessario per i caller legacy verso `/v2/email-composer`
+ * e `/v2/communicate/outreach/composer` che passano l'email destinatario
+ * via state — un `<Navigate>` standard la perderebbe.
+ */
+function PreserveStateRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={{ pathname: to, search: location.search }} replace state={location.state} />;
+}
 import { AuthenticatedLayout } from "./ui/templates/AuthenticatedLayout";
 import { PublicLayout } from "./ui/templates/PublicLayout";
 import { FeatureErrorBoundary } from "@/components/system/FeatureErrorBoundary";
@@ -229,9 +240,9 @@ export function V2Routes(): React.ReactElement {
 
           {/* Outreach + figli */}
           <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
-          <Route path="outreach/composer" element={<Navigate to="/v2/communicate/compose" replace />} />
+          <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
           <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
-          <Route path="email-composer" element={<Navigate to="/v2/communicate/compose" replace />} />
+          <Route path="email-composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
           <Route path="agenda" element={guardedPage(AgendaPage, "Agenda")} />
           <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
