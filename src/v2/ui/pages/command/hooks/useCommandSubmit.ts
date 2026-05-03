@@ -209,6 +209,61 @@ export function useCommandSubmit(state: CommandStateApi) {
     });
   }, [_addMessage, resetForNewMessage, ts]);
 
+  const runDirectComposer = useCallback(
+    async (userPrompt: string, hint: string): Promise<boolean> => {
+      const tool = TOOLS.find((t) => t.id === "compose-email");
+      if (!tool?.match(userPrompt)) return false;
+      setActiveToolKey("compose-email");
+      setShowTools(true);
+      setToolPhase("active");
+      setChainHighlight(3);
+      setFlowPhase("executing");
+      setExecSteps([{ label: tool.label, detail: "Preparazione bozze email", status: "pending" as const }]);
+      const trace = startTrace(userPrompt);
+      trace.setPhase("direct-tool");
+      trace.setDriver("compose-email");
+      try {
+        const startedAt = Date.now();
+        const result = await tool.execute(userPrompt, {
+          confirmed: true,
+          originalPrompt: userPrompt,
+          contextHint: hint,
+          history: buildHistory(),
+        });
+        trace.add({
+          source: "tool",
+          label: tool.label,
+          toolId: tool.id,
+          stepNumber: 1,
+          status: "ok",
+          durationMs: Date.now() - startedAt,
+        });
+        const refs = result.meta?.auditRefs;
+        if (refs) {
+          for (const ref of refs) trace.addReference({ kind: ref.kind, label: ref.label, value: ref.value });
+        }
+        setLiveResult(result);
+        setCanvas(canvasForResult(result));
+        setFlowPhase("done");
+        setExecProgress(100);
+        setShowTools(false);
+        const countLabel = result.meta && "count" in result.meta ? ` · ${result.meta.count}` : "";
+        _addMessage({ role: "assistant", content: `🔧 ${tool.label}${countLabel}`, agentName: "Automation", timestamp: ts() });
+        if (result.kind !== "approval") await commentOnResult(userPrompt, tool.id, result, trace);
+        else trace.finish();
+      } catch (err: unknown) {
+        trace.finish();
+        const msg = err instanceof Error ? err.message : "Errore sconosciuto";
+        toast.error(msg);
+        _addMessage({ role: "assistant", content: `❌ Errore composer: ${msg}`, agentName: "Orchestratore", timestamp: ts() });
+        setFlowPhase("idle");
+        setShowTools(false);
+      }
+      return true;
+    },
+    [_addMessage, buildHistory, canvasForResult, commentOnResult, setActiveToolKey, setCanvas, setChainHighlight, setExecProgress, setExecSteps, setFlowPhase, setLiveResult, setShowTools, setToolPhase, ts],
+  );
+
   /** Main entry: process a user prompt */
   const sendMessage = useCallback(
     async (rawText: string) => {
@@ -236,6 +291,8 @@ export function useCommandSubmit(state: CommandStateApi) {
 
       // Build conversational hint from previous query context (if fresh)
       const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+
+      if (await runDirectComposer(text, hint)) return;
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
@@ -367,6 +424,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       _addMessage, addMessage, buildHistory, resetForNewMessage, runFastLaneWrapped, runPlanWrapped,
       setActiveToolKey, setChainHighlight, setExecSteps, setFlowPhase, setMessages,
       setPlanState, setShowTools, setToolPhase, ts, isContextUsable, queryContext, looksLikeSimpleQuery,
+      runDirectComposer,
     ],
   );
 

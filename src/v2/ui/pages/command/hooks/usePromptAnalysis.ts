@@ -12,11 +12,13 @@ function looksLikeSimpleQuery(prompt: string): boolean {
   const actionPatterns = [
     /\bcrea\b/, /\baggiungi\b/, /\baggiorna\b/, /\bmodifica\b/, /\belimina\b/,
     /\bscrap/, /\benrich/, /\barricch/, /\bdedup/, /\bcalcola lead/, /\binvia\b/,
-    /\bcomponi\b/, /\bnaviga\b/, /\bcompila form/, /\bprogramma\b/, /\bschedul/,
+    /\bcomponi\b/, /\bgenera\b/, /\bgenerami\b/, /\bnaviga\b/, /\bcompila form/, /\bprogramma\b/, /\bschedul/,
     /\bapprov/,
     // Write/compose intents — vanno al planner / composeEmail, non al fast-lane di lettura
     /\bscriv/, /\bredig/, /\bprepar/, /\bmand/, /\bbozz[ae]/, /\bdraft\b/,
-    /\b(e-?mail|mail)\s+a\b/, /\bemail\s+ai\b/, /\bmail\s+ai\b/,
+    /\b(?:e-?mail|mail)\s+(?:di|per|a|ai|agli|alle)\b/,
+    /\b(?:e-?mail|mail)\s+(?:di\s+)?(?:presentazione|collaborazione|invito)\b/,
+    /\bemail\s+ai\b/, /\bmail\s+ai\b/,
     /\binvit/,
   ];
   if (actionPatterns.some((re) => re.test(lower))) return false;
