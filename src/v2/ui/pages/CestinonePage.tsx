@@ -56,13 +56,6 @@ const PARTNER_TYPE_META: Record<string, { label: string; tone: string }> = {
   lead:        { label: "Lead",        tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
   prospect:    { label: "Prospect",    tone: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 };
-const SOURCE_LABEL: Record<CestinoItem["source"], string> = {
-  email_campaign_queue: "Coda email campagne",
-  campaign_jobs: "Job campagna",
-  cockpit_queue: "Cockpit",
-  outreach_queue: "Outreach multicanale",
-};
-
 export function CestinonePage(): React.ReactElement {
   const [channel, setChannel] = useState<CestinoChannel | "all">("all");
   const [status, setStatus] = useState<CestinoStatus | "all">("all");
@@ -499,15 +492,6 @@ function EmptyPane({ label }: { label: string }): React.ReactElement {
     <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
       <Inbox className="h-10 w-10 mb-2 opacity-40" />
       <div className="text-xs">{label}</div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }): React.ReactElement {
-  return (
-    <div className="flex gap-2">
-      <span className="text-muted-foreground min-w-[100px]">{label}</span>
-      <span className="text-foreground truncate flex-1">{value}</span>
     </div>
   );
 }
