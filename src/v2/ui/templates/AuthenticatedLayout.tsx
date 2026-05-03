@@ -42,6 +42,7 @@ import { ContextFiltersRail } from "./ContextFiltersRail";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
+import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
