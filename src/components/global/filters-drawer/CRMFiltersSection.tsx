@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check, Tag } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
@@ -27,8 +27,7 @@ export function CRMFiltersSection() {
   const [crmCountries, setCrmCountries] = useState<{ value: string; name: string; flag: string; total: number }[]>([]);
   const [crmOrigins, setCrmOrigins] = useState<FilterOption[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const pageSize = 1000;
@@ -67,9 +66,11 @@ export function CRMFiltersSection() {
             .sort((a, b) => (b.count || 0) - (a.count || 0))
         );
       } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
-    };
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const selectedCountries = useMemo(
     () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.value)),
@@ -342,9 +343,10 @@ export function CRMFiltersSection() {
           const sources = Array.from(g.filters.crmOrigin);
           const res = await bulkUpdateContactsByOrigins(sources, newOrigin);
           qc.invalidateQueries({ queryKey: contactKeys.all });
-          // refresh distinct origins shown in la sidebar (re-fetch del componente al prossimo mount)
-          // azzera selezione filtro: la vecchia origine non esisterà più
+          // azzera selezione filtro: le origini sorgente non esistono più
           g.setCrmOrigin(new Set());
+          // refetch immediato lista distinct origins per la sidebar
+          void fetchData();
           return res;
         }}
       />
