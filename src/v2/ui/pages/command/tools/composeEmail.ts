@@ -485,6 +485,7 @@ function buildBatchComposerResult(args: {
     drafts,
     detectedTone: tone,
     countryCode,
+    pipeline: first?.pipeline,
     dossier: {
       partnerName: `${partners.length} partner · ${countryLabel.toUpperCase()}`,
       contactName: null,
