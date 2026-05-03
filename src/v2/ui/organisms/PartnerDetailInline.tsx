@@ -9,19 +9,12 @@
  * partner_services, partner_certifications, interactions, reminders.
  */
 import * as React from "react";
-import { Loader2, X, Search, ScanSearch, Telescope, ChevronDown } from "lucide-react";
+import { Loader2, X, Search, ScanSearch, Telescope } from "lucide-react";
 import { Button } from "../atoms/Button";
 import { usePartner, useToggleFavorite } from "@/hooks/usePartners";
 import { PartnerDetailFull } from "@/components/partners/PartnerDetailFull";
 import type { PartnerViewModel } from "@/types/partner-views";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   SherlockLauncherDialog,
   type SherlockLauncherTarget,
@@ -81,33 +74,50 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {vm && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-[11px] gap-1">
-                  <Search className="w-3.5 h-3.5" /> Deep Search
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="text-[10px] uppercase">Sherlock — 3 livelli</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => launchSherlock(1)} className="text-xs">
-                  <Search className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
-                  Scout
-                  <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => launchSherlock(2)} className="text-xs">
-                  <ScanSearch className="w-3.5 h-3.5 mr-2 text-primary" />
-                  Detective
-                  <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => launchSherlock(3)} className="text-xs">
-                  <Telescope className="w-3.5 h-3.5 mr-2 text-amber-500" />
-                  Sherlock
-                  <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-0.5 mr-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => launchSherlock(1)}
+                    aria-label="Scout — Deep Search rapido"
+                  >
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Scout · ~30s</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => launchSherlock(2)}
+                    aria-label="Detective — Deep Search medio"
+                  >
+                    <ScanSearch className="w-4 h-4 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Detective · ~2min</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => launchSherlock(3)}
+                    aria-label="Sherlock — Deep Search completo"
+                  >
+                    <Telescope className="w-4 h-4 text-amber-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Sherlock · ~5min</TooltipContent>
+              </Tooltip>
+            </div>
           )}
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Chiudi">
             <X className="h-4 w-4" />
