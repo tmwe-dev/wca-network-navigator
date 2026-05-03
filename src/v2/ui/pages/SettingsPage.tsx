@@ -219,6 +219,7 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+      </div>
     </div>
   );
 }
