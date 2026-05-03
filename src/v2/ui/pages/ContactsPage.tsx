@@ -48,7 +48,7 @@ export function ContactsPage() {
   const [originDialogOpen, setOriginDialogOpen] = useState(false);
   const [originDialogSelection, setOriginDialogSelection] = useState<CompanyEntity[]>([]);
 
-  const { data: distinctOrigins = [] } = useQuery({
+  const { data: distinctOrigins = [] } = useQuery<Array<{ origin: string; count: number }>>({
     queryKey: ["contacts-distinct-origins"],
     queryFn: listDistinctContactOrigins,
     staleTime: 5 * 60 * 1000,
