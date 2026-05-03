@@ -47,6 +47,9 @@ export function useSherlock(args: UseSherlockArgs) {
   });
 
   const stop = React.useCallback(() => {
+    // No-op se non c'è nulla in corso (evita toast spurio quando il dialog si chiude
+    // o un componente si smonta senza aver mai avviato un'indagine).
+    if (!abortRef.current && !running && !investigationId) return;
     abortRef.current?.abort();
     abortRef.current = null;
     setRunning(null);
@@ -58,7 +61,7 @@ export function useSherlock(args: UseSherlockArgs) {
     }
     invalidateEnrichmentCaches(queryClient, args.partnerId);
     toast.info("Indagine interrotta");
-  }, [investigationId, queryClient, args.partnerId]);
+  }, [investigationId, queryClient, args.partnerId, running]);
 
   const reset = React.useCallback(() => {
     if (running) return;
