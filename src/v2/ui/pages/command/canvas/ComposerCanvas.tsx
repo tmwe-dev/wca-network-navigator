@@ -406,8 +406,15 @@ export default function ComposerCanvas({
                 if (e.key === "Enter") {
                   e.preventDefault();
                   handleAddRecipient();
+                } else if (e.key === "," || e.key === ";" || e.key === " ") {
+                  // separatori comuni → committa il chip
+                  if (toField.trim()) {
+                    e.preventDefault();
+                    handleAddRecipient();
+                  }
                 }
               }}
+              onBlur={() => commitPendingRecipient()}
               placeholder={composer.recipients.length === 0 ? "email@esempio.com" : "Aggiungi..."}
               className="flex-1 min-w-[120px] bg-transparent text-[12px] text-foreground outline-none placeholder:text-muted-foreground/40"
             />
