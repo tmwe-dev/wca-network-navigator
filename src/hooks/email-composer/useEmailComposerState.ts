@@ -18,6 +18,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { findPartnerByEmail } from "@/data/partners";
 import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
+import { supabase } from "@/integrations/supabase/client";
 import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
 import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
@@ -58,32 +59,6 @@ export function useEmailComposerState() {
     return groups;
   }, [templates]);
 
-  // ── Prefill from navigation state (one-shot) ──
-  const prefillAppliedRef = useRef(false);
-  useEffect(() => {
-    if (prefillAppliedRef.current) return;
-    const s = location.state as EmailComposerLocationState | null;
-    if (!s || (!s.prefilledRecipient && !s.prefilledSubject && !s.prefilledBody)) return;
-    prefillAppliedRef.current = true;
-    if (s.prefilledRecipient) {
-      const r = s.prefilledRecipient;
-      addRecipient({
-        partnerId: r.partnerId || "", companyName: r.company || r.companyName || "",
-        companyAlias: r.companyAlias, contactId: r.contactId,
-        contactName: r.name || r.contactName || "", contactAlias: r.contactAlias,
-        email: r.email || null, city: r.city || "", countryName: r.countryName || "",
-        countryCode: r.countryCode, isEnriched: false,
-      });
-    }
-    if (s.prefilledSubject) dispatch({ type: "SET_SUBJECT", payload: s.prefilledSubject });
-    if (s.prefilledBody) {
-      const escaped = s.prefilledBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      dispatch({ type: "SET_HTML_BODY", payload: `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>` });
-    }
-    // Clear navigation state after a tick so React commits the recipient first
-    setTimeout(() => navigate(location.pathname, { replace: true, state: {} }), 0);
-  }, [location.state, addRecipient, navigate, location.pathname]);
-
   // ── DB Lookup ──
   const lookupEmailInDB = useCallback(async (emailAddr: string) => {
     const partner = await findPartnerByEmail(emailAddr);
@@ -100,6 +75,77 @@ export function useEmailComposerState() {
     if (bc) return { found: true, companyName: bc.company_name || "", contactName: bc.contact_name || "", countryCode: "", city: bc.location || "", partnerId: bc.matched_partner_id || "" };
     return { found: false, companyName: "", contactName: "", countryCode: "", city: "", partnerId: "" };
   }, []);
+
+  // ── Prefill from navigation state OR query string (one-shot) ──
+  const prefillAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    const s = location.state as EmailComposerLocationState | null;
+    const params = new URLSearchParams(location.search || "");
+    const qEmail = params.get("email") || params.get("to");
+    const qPartner = params.get("partner");
+    const hasState = !!s && (!!s.prefilledRecipient || !!s.prefilledSubject || !!s.prefilledBody);
+    const hasQuery = !!(qEmail || qPartner);
+    if (!hasState && !hasQuery) return;
+    prefillAppliedRef.current = true;
+    if (s?.prefilledRecipient) {
+      const r = s.prefilledRecipient;
+      addRecipient({
+        partnerId: r.partnerId || "", companyName: r.company || r.companyName || "",
+        companyAlias: r.companyAlias, contactId: r.contactId,
+        contactName: r.name || r.contactName || "", contactAlias: r.contactAlias,
+        email: r.email || null, city: r.city || "", countryName: r.countryName || "",
+        countryCode: r.countryCode, isEnriched: false,
+      });
+    }
+    if (s?.prefilledSubject) dispatch({ type: "SET_SUBJECT", payload: s.prefilledSubject });
+    if (s?.prefilledBody) {
+      const escaped = s.prefilledBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      dispatch({ type: "SET_HTML_BODY", payload: `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>` });
+    }
+    if (hasQuery && !s?.prefilledRecipient) {
+      void (async () => {
+        try {
+          if (qEmail) {
+            const r = await lookupEmailInDB(qEmail);
+            addRecipient({
+              partnerId: r.partnerId || qPartner || "",
+              companyName: r.companyName || "",
+              contactName: r.contactName || qEmail.split("@")[0],
+              email: qEmail, city: r.city || "", countryName: "",
+              countryCode: r.countryCode || "", isEnriched: r.found,
+            });
+          } else if (qPartner) {
+            const { data } = await supabase
+              .from("partners")
+              .select("id, company_name, company_alias, country_code, city")
+              .eq("id", qPartner)
+              .maybeSingle();
+            const { data: contact } = await supabase
+              .from("partner_contacts")
+              .select("name, contact_alias, email")
+              .eq("partner_id", qPartner)
+              .not("email", "is", null)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            addRecipient({
+              partnerId: qPartner,
+              companyName: data?.company_alias || data?.company_name || "",
+              contactName: contact?.contact_alias || contact?.name || "",
+              email: contact?.email || null,
+              city: data?.city || "", countryName: "",
+              countryCode: data?.country_code || "", isEnriched: !!data,
+            });
+            if (!contact?.email) toast.warning("Partner senza email principale: aggiungila al contatto.");
+          }
+        } catch (e) {
+          log.warn("query prefill failed", { error: String(e) });
+        }
+      })();
+    }
+    setTimeout(() => navigate(location.pathname, { replace: true, state: {} }), 0);
+  }, [location.state, location.search, addRecipient, navigate, location.pathname, lookupEmailInDB]);
 
   // ── Named actions ──
   const setSubject = useCallback((v: string) => dispatch({ type: "SET_SUBJECT", payload: v }), []);
