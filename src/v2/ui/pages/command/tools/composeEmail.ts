@@ -613,7 +613,7 @@ export const composeEmailTool: Tool = {
 
   match(prompt: string): boolean {
     const p = prompt.toLowerCase();
-    if (/(?:scrivi|componi|invia|prepara|manda).*(?:e-?mail|mail)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
+    if (/(?:scriv|compon|invi|prepar|mand|gener|fai|redig).*(?:e-?mail|mail|messagg|lettera|invito|complimenti)|\bbozz[ae].*(?:e-?mail|mail)|\bemail\s+a\s|draft.*email/.test(p)) {
       return true;
     }
     // Follow-up rigenerazione: "rifai", "fammele vedere nel canvas", "non vedo le nuove versioni"…
