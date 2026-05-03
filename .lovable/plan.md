@@ -1,57 +1,107 @@
-## Risposta sintetica (KB letta)
+## Obiettivo
+Quando un partner/contatto entra in qualsiasi contenitore "in uscita" (cockpit, campagna pendente, coda outreach, bozza email non spedita), deve **scomparire** dalle liste di lavoro come se fosse `lead_status=holding`. Se l'entry viene cancellata senza invio → il partner torna automaticamente visibile.
 
-**Perché manca il tasto Deep Search sul singolo in Network**
-La maschera Network (`/v2/explore/network`) usa `EntityListWithDetail` → `PartnerDetailInline` → `PartnerDetailFull`. Nessuno di questi componenti monta un trigger Deep Search. L'unico entry-point oggi è il **BulkActionsPanel** (selezione 2+), che spara `network-trigger-deep-search-batch` (legacy `useDeepSearchLocal`).
-Sul singolo partner, oggi, Deep Search è raggiungibile solo da Email Forge → tab Sherlock (via `useSherlock`) o dal vecchio `PartnerDetailCompact` (che però non viene montato in Network V2).
+## Definizione operativa di "occupato" (Holding allargato)
+Un partner_id si considera **occupato** se esiste almeno una riga viva (`deleted_at IS NULL`) per il suo `partner_id` in:
 
-**Memoria del livello eseguito**
-Sì: la tabella `sherlock_investigations` salva `partner_id`, `contact_id`, `level` (1=Scout, 2=Detective, 3=Sherlock), `status`, `completed_at`. Quindi il sistema *può* ricordare il massimo livello eseguito per ogni partner/contatto — ma oggi **nessuna card o dettaglio lo legge**. Le card mostrano solo il badge legacy `enrichment.deep_search_at` (data dell'ultimo enrichment via estensione, senza livello).
+- `outreach_queue` con `status IN ('pending','queued','scheduled','processing')`
+- `campaign_jobs` con `status IN ('pending','queued','in_progress')`
+- `cockpit_queue` con `status IN ('queued','in_progress')`
+- `email_campaign_queue` con `status IN ('pending','queued','sending')` collegata a `email_drafts.status='draft'`/`queue_status IN ('idle','queued','running')`
 
-**Icone livello**
-Non esistono ancora icone dedicate per Scout/Detective/Sherlock nelle card. Solo il logo Sparkles generico nel bar bulk.
+Nessun trigger di scrittura su `lead_status`: la transizione è **derivata in lettura** così, se l'utente cancella la riga in coda, il partner torna immediatamente "free" senza side-effect su `partners.lead_status`.
 
----
+## Ambito
+- Tutte le liste basate su `CompanyCardList` (Network/WCA, CRM Contacts, BCA).
+- **Prospects** e qualsiasi vista che oggi mostra aziende/contatti lavorabili.
+- Convive col filtro esistente `holdingFilter` (Senza/Solo/Tutti) — semplicemente la base "holding" diventa più larga.
 
-## Piano
+## Architettura
 
-### 1. Tasto Deep Search sul singolo partner in Network
-- In `PartnerDetailInline` aggiungere, accanto a "Chiudi", un menu "Deep Search ▾" con tre voci: **Scout** (gratis), **Detective** (medio), **Sherlock** (completo).
-- Click → apre un dialog leggero (`SherlockLauncherDialog`) che instanzia `useSherlock({ partnerId, level })` e mostra avanzamento step + risultato (riusa il pannello già esistente in `SherlockCanvas` come componente condiviso, da estrarre in `src/v2/ui/organisms/sherlock/SherlockRunPanel.tsx`).
-- Stesso menu va aggiunto anche dentro `PartnerDetailFull` (header) per coerenza con altre pagine che lo riusano (Cockpit, drawer AI).
+### 1. Nuova tabella materializzata di stato (sola lettura)
+Vista `v_partner_busy` (o tabella materializzata aggiornata via trigger) con una sola colonna utile:
 
-### 2. Icone livello Deep Search nelle card
-- Creare `src/v2/ui/atoms/SherlockLevelBadge.tsx`:
-  - Livello 1 → icona `Search` colore muted ("Scout")
-  - Livello 2 → icona `ScanSearch` colore primary ("Detective")
-  - Livello 3 → icona `Telescope` colore warning ("Sherlock")
-  - Tooltip: `Deep Search livello X — completato il <data>`
-- Mostrare il badge:
-  - `PartnerCard.tsx`, `PartnerListItem.tsx`, `PartnerDetailHeader.tsx`
-  - `CompanyCardList` (vista Network) accanto allo score
-  - `BusinessCardsViewV2` accanto allo StatusBadge match
-  - Drawer contatto (`ContactDrawer` se presente) per `contact_id`
+```text
+partner_id  | source ('outreach'|'campaign'|'cockpit'|'draft') | since
+```
 
-### 3. DAL + hook lettura livello
-- Estendere `src/data/sherlockPlaybooks.ts` (o nuovo `src/data/sherlockInvestigations.ts`) con:
-  - `getMaxSherlockLevelByPartner(partnerIds: string[]): Map<id, {level, completed_at}>`
-  - `getMaxSherlockLevelByContact(contactIds: string[]): Map<id, {level, completed_at}>`
-  - Query: `select partner_id, max(level) as level, max(completed_at) as completed_at from sherlock_investigations where status='completed' group by partner_id`
-- Hook `useSherlockLevels(ids, scope)` con react-query, key in `queryKeys.v2.sherlockLevels(scope, ids)`.
-- Le liste (CompanyCardList, PartnerListItem) chiamano l'hook in batch sui visibili.
+Indice su `partner_id`. Nessuna logica nuova in DB lato write — solo una **VIEW** che fa UNION delle 4 sorgenti filtrate per status "vivo". Più semplice, sempre fresca, niente trigger.
 
-### 4. Cleanup coerente
-- Il vecchio badge `deep_search_at` (legacy enrichment) resta ma viene **affiancato** (non sostituito) dal nuovo `SherlockLevelBadge`: rappresentano cose diverse (enrichment estensione vs investigazione Sherlock).
-- Aggiungere voce in `mem/architecture/sherlock-as-unified-deep-search.md` per documentare che le card mostrano il livello via `sherlock_investigations`.
+### 2. DAL `src/data/partnerBusy.ts`
+- `findBusyPartnerIds(scope?: { partnerIds?: string[] }): Promise<Set<string>>`
+- Singolo round-trip `select partner_id from v_partner_busy` (eventualmente filtrato `in (...)` se la lista è piccola).
+- Cache react-query da 30s con invalidate quando le mutation toccano: outreach_queue, campaign_jobs, cockpit_queue, email_drafts.
 
-### 5. QA
-- Lanciare Sherlock Scout su un partner → riaprire Network → verificare badge "Scout" sulla card e nel dettaglio.
-- Upgrade a Detective sullo stesso partner → badge passa a "Detective" (max).
-- Verificare che il dialog si chiuda senza interrompere `useSherlock` se l'utente lo riapre.
+### 3. Hook `useBusyPartners(partnerIds: string[])`
+Chiave query centralizzata in `src/lib/queryKeys.ts` (`v2.busyPartners`). Restituisce `Set<string>`.
 
-### Dettagli tecnici
-- File nuovi: `SherlockLevelBadge.tsx`, `SherlockRunPanel.tsx`, `SherlockLauncherDialog.tsx`, `useSherlockLevels.ts`, `data/sherlockInvestigations.ts`.
-- File modificati: `PartnerDetailInline.tsx`, `PartnerDetailFull.tsx`, `PartnerCard.tsx`, `PartnerListItem.tsx`, `PartnerDetailHeader.tsx`, `CompanyCardList.tsx`, `BusinessCardsViewV2.tsx`, `lib/queryKeys.ts`.
-- Nessuna migrazione DB necessaria: `sherlock_investigations` ha già tutti i campi.
-- Rispetta KB: niente nuovi caller a `useDeepSearchLocal`, tutto passa da `useSherlock`.
+### 4. Integrazione nelle liste
+In `EntityListWithDetail` la pipeline filtri diventa:
 
-Confermi di procedere con tutto il piano (singolo + badge livello + lettura DB), oppure vuoi un sottoinsieme (es. solo il tasto sul singolo, badge in fase 2)?
+```text
+companies
+  → enrich con `meta.holding = meta.holding || busy.has(c.id)`
+  → applica holdingFilter (Senza/Solo/Tutti) come oggi
+  → filtri standard
+```
+
+Vantaggio: zero modifiche ai 3 adapter (`useWcaPartnersAsCompanies`, `useCrmContactsAsCompanies`, BCA) — l'arricchimento avviene in un solo punto.
+
+### 5. UI feedback
+- Il chip esistente "Senza circuito di attesa" resta invariato come label, ma ora copre anche cockpit/queue/draft.
+- Tooltip aggiornato sull'icona ✈️ della card: "In circuito di attesa (cockpit / campagna in attesa / coda invio / bozza)".
+- Quando un partner è "busy" per via di queue ma con `lead_status` neutro, mostra ✈️ con stile leggermente diverso (outline invece di filled) — opzionale, da confermare.
+
+### 6. Invalidazione cache
+Hook helper `useInvalidateBusyPartners()` chiamato dopo:
+- enqueue/cancel outreach
+- create/cancel campagna
+- add/remove cockpit
+- save/discard bozza
+
+## Cosa NON cambia
+- `partners.lead_status` resta governato dal Lead Status Guard Protocol esistente. La nuova logica è solo "vista".
+- Nessuna modifica al backend di invio/coda. Nessun trigger nuovo. Nessuna RLS toccata (la VIEW eredita le policy delle tabelle sottostanti).
+
+## Dettaglio tecnico (per chi sviluppa)
+
+### Migration
+```sql
+CREATE OR REPLACE VIEW public.v_partner_busy AS
+  SELECT partner_id, 'outreach'::text AS source, created_at AS since
+  FROM public.outreach_queue
+  WHERE deleted_at IS NULL
+    AND partner_id IS NOT NULL
+    AND status IN ('pending','queued','scheduled','processing')
+  UNION ALL
+  SELECT partner_id, 'campaign', created_at
+  FROM public.campaign_jobs
+  WHERE partner_id IS NOT NULL
+    AND status IN ('pending','queued','in_progress')
+  UNION ALL
+  SELECT partner_id, 'cockpit', created_at
+  FROM public.cockpit_queue
+  WHERE partner_id IS NOT NULL
+    AND status IN ('queued','in_progress')
+  UNION ALL
+  SELECT ecq.partner_id, 'draft', ecq.created_at
+  FROM public.email_campaign_queue ecq
+  JOIN public.email_drafts d ON d.id = ecq.draft_id
+  WHERE ecq.partner_id IS NOT NULL
+    AND ecq.status IN ('pending','queued','sending')
+    AND d.status = 'draft';
+```
+(Confermare nomi colonne `email_campaign_queue.partner_id` prima di applicare; in caso negativo, fare lookup via `recipient_email` o saltare quella sorgente.)
+
+### File toccati (stima)
+- `supabase/migrations/<ts>_v_partner_busy.sql` (nuovo)
+- `src/data/partnerBusy.ts` (nuovo)
+- `src/v2/hooks/useBusyPartners.ts` (nuovo)
+- `src/lib/queryKeys.ts` (1 chiave)
+- `src/v2/ui/organisms/EntityListWithDetail.tsx` (1 effetto enrich pre-filter)
+- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` (tooltip ✈️)
+- 4–6 hook di mutation per invalidare la chiave (cockpit add, outreach enqueue, campaign create, draft save)
+
+## Out of scope (proposta separata se serve)
+- Estensione automatica di `lead_status` a `first_touch_sent` quando si manda davvero il primo messaggio — già coperta dal Lead Status Guard Protocol.
+- Vista contatto-level (oggi la "occupazione" è a livello partner; se serve granularità contatto per le sub-card, va aggiunto un secondo indice su `contact_id`).
