@@ -569,7 +569,19 @@ function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOrigin: ()
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t pt-3">
           <div className="text-muted-foreground">Agente AI</div>
-          <div className="font-medium truncate">{item.agentName ?? "—"}</div>
+          <div className="font-medium truncate flex items-center gap-1.5">
+            {item.agentName ? (
+              <>
+                {(() => {
+                  const av = resolveAgentAvatar(item.agentName);
+                  return av
+                    ? <img src={av} alt="" className="h-4 w-4 rounded-full object-cover ring-1 ring-background" />
+                    : <Bot className="h-3.5 w-3.5 text-muted-foreground" />;
+                })()}
+                <span className="capitalize truncate">{item.agentName}</span>
+              </>
+            ) : "—"}
+          </div>
           <div className="text-muted-foreground">Creato</div>
           <div>{format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
           {item.scheduledAt && <>
