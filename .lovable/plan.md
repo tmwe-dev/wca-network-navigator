@@ -1,73 +1,90 @@
-## Riassetto sezione Comunica
+## Diagnosi del bug "1 sola mail invece di 9"
 
-Obiettivo: separare nettamente **ricezione** (Inbox) da **invio** (Outreach), togliere le ripetizioni con Cestinone/Agenda e mettere "Componi" come azione di primo livello con ricerca destinatario integrata.
+Riproduzione: hai chiesto "quanti partner a Malta" → AI ha risposto "9". Poi "voglio che prepari una mail…" → ha generato 1 sola bozza per "Thomas Smith".
 
-### 1. Nuova struttura tab di /v2/communicate
+Causa: il primo turno è una **count query** (`kind: "report"`, niente `rows`). Nel ramo Fast Lane (`useFastLane.ts` riga 108-147):
+- `extractPartnerIdsFromResult` su un report ritorna `[]`
+- `extractQueryMetaFromResult` su un report ritorna `filters: []`
+- viene salvato `countryCode: "MT"` ma `count: null` e `partnerIds: []`
 
-Da 4 tab a 3, con ordine ripensato:
+Nel turno successivo `composeEmail.execute`:
+- `isProceedIntent("…prepari una mail…")` = true → entra nel ramo proceed
+- `forceBatch` calcolato come `batchIntent || queryHasMany`
+  - `batchIntent` = false (prompt non contiene "tutti/batch/ciascuno")
+  - `queryHasMany` = false (partnerIds.length = 0, count = null)
+- `forceBatch = false` → cade sul ramo single-partner → fallback `extractPersonAndCompany` → search casuale per company → trova "Thomas Smith" → 1 bozza
+
+In più, `composeEmail.ts` è oggi a **996 righe** (il file più grande dell'app dopo i types generati): difficile da mantenere e propenso a regressioni come questa.
+
+## Cosa propongo
+
+### 1. Fix mirato batch-detection (priorità 1, 0 rischio nodo critico)
+
+Nel ramo "proceed-with-context" di `composeEmail.execute`:
+- considerare `forceBatch = true` anche quando `queryCtx.countryCode` è presente E il prompt non identifica un destinatario esplicito (`extractPersonAndCompany` non restituisce `email` né coppia `person+company` chiara). In quel caso si tratta inequivocabilmente del follow-up del set "9 partner di Malta".
+- in `useFastLane`/`useSuperMarioFlow`, quando il risultato è un `kind: "report"` con un count numerico nel testo o nel meta, popolare `count` reale dentro `setLastQueryResultContext` così che `queryHasMany` funzioni anche per le count-query.
+
+Nessuna modifica a `generate-email`, edge function, `Promise.allSettled`, deduplica, holding pattern, editorial review. Modifica locale e reversibile.
+
+### 2. Refactor `composeEmail.ts` (priorità 2, file unico spezzato in moduli)
+
+Spezzare il file 996 righe senza cambiare comportamento, estraendo per responsabilità:
 
 ```text
-[ ✍ Componi ]   [ 📥 Inbox ]   [ 🚀 Outreach ]   [ 📣 Campagne ]
+src/v2/ui/pages/command/tools/composeEmail/
+  index.ts                       (Tool export, match + execute orchestrator, ~120 righe)
+  intent.ts                      (extractPersonAndCompany, isCountryWideIntent,
+                                  detectCountryCode, looksLikeGenericInvite,
+                                  resolveNaturalPrompt, extractPartnersFromContextPayload)
+  partnerLookup.ts               (searchPartner, searchPartnersByCountry,
+                                  fetchPartnersByIds, fetchPartnersByFilters,
+                                  findContact, fetchPrimaryContact)
+  draftGenerator.ts              (generateOneDraft, generateDraftsBatch — UNICO punto
+                                  che chiama generate-email, MAX_BATCH_DRAFTS, allSettled)
+  pipelineBuilder.ts             (buildEmailPipeline, leadStatusNote, daysSince)
+  resultBuilders.ts              (buildBatchComposerResult, buildSingleComposerResult,
+                                  buildBlockedResult, buildDisambiguationResult)
 ```
 
-- **Componi** diventa la prima tab (azione primaria: "scrivi un'email").
-- **Inbox** = solo posta ricevuta da leggere/rispondere (resta `InreachPage`).
-- **Outreach** = tutto ciò che riguarda l'invio (cockpit + strumenti), molto più snello.
-- **Campagne** invariato come ingresso, ma il cuore operativo passa per Esplora→Mappa→Aggiungi a campagna (vedi §4).
+Regole:
+- nessun cambio di firma esposta verso `registry.ts` / `useFastLane` / `useSuperMarioFlow`
+- nessuna duplicazione di chiamata `invokeEdge("generate-email", …)` — resta solo dentro `draftGenerator.ts`
+- preservato l'ordine: 0a regenerate → 0b proceed-with-context → 0 country-wide → 1 single
+- preservata la memoria `composerContext` e `lastQueryResultContext`
+- preservato il guardrail blacklist e `looksLikeGenericInvite`
 
-### 2. Pulizia di Outreach (rimuove duplicati con Cestinone, Inbox, Agenda)
+### 3. Audit codice morto — proposta (NON eseguito senza tua conferma)
 
-`OutreachPage` oggi ha 5 sub-tab verticali. Riduzione a 2:
+Scan iniziale: ~20 file in `src/components/` con zero import nel resto del codice (es. `BackgroundSyncIndicator.tsx`, `CommandPalette.tsx`, intera cartella `acquisition/`, vari `agenda/*`, `agents/*`). Memoria progetto dice esplicitamente: "Do not delete unused code in `src/components/` as it may be in development".
 
-| Sub-tab attuale | Decisione |
-|---|---|
-| Cockpit | **Tieni** — centro di comando outbound |
-| In Uscita | **Rimuovi dalla UI** — duplica il Cestinone/Da Inviare. Redirect `/v2/communicate/outreach/inuscita` → `/v2/cestinone` |
-| Risposte (Holding Pattern) | **Rimuovi dalla UI** — duplica Inbox. Redirect → `/v2/communicate/inbox` |
-| Attività | **Sposta in Agenda** — la sub-tab sparisce, le attività vengono mostrate dentro `/v2/agenda` (nuova sezione "Attività outreach") |
-| Strumenti (Sequenze, Coda AI, A/B Test) | **Tieni**, ma con tooltip esplicativi e copy chiaro: "Coda AI = azioni che gli agenti vogliono eseguire e attendono approvazione", "A/B Test = confronto varianti subject/body" |
+Quindi propongo di NON cancellare nulla in automatico. Invece:
+- generare un report `/mnt/documents/dead-code-audit.md` con: percorso, dimensione, ultima modifica git, eventuale pagina/route legata, stato (orfano / referenziato solo da test / referenziato solo da sé).
+- tu decidi voce per voce cosa archiviare in `src/_deprecated/` e cosa tenere.
 
-Risultato: Outreach = `Cockpit` + `Strumenti`. Niente più liste-mail duplicate.
+### 4. Altri file pesanti su cui posso intervenire dopo (solo segnalazione, non in questo giro)
 
-I componenti rimossi dalla UI restano nel codebase (governance "non cancellare codice in sviluppo") ma non sono più montati dalle tab.
+- `src/v2/ui/pages/CestinonePage.tsx` 929 righe
+- `src/v2/ui/pages/prompt-lab/hooks/useLabAgent.ts` 955 righe
+- `src/components/email-intelligence/ManualGroupingTab.tsx` 644 righe
+- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` 572 righe
 
-### 3. Componi: ricerca destinatario in cima
+Li segnalo per un secondo giro di refactor, non li tocco ora.
 
-Nella `EmailComposerPage`, sopra (o dentro) il campo "Destinatario":
+## Check pre-claim "fatto"
 
-- Barra di ricerca unica con tasto "Cerca destinatario" che apre il picker (`EmailComposerContactPicker` esiste già).
-- La ricerca interroga partner, contatti partner e biglietti da visita (BCA) e restituisce nome + email + azienda + paese.
-- Selezionando un risultato → popola automaticamente partner, contatto ed email.
-- Resta possibile digitare manualmente un'email libera.
+- batch OK: 9 destinatari → 9 bozze
+- dedup OK: nessuna chiamata `generate-email` duplicata per lo stesso partner
+- ordine OK: 0a → 0b → 0 → 1 invariato
+- memoria OK: `composerContext` e `lastQueryResultContext` invariati
+- submit OK: `useCommandSubmit` non toccato
+- fallback OK: ramo single resta intatto per i casi davvero singoli
+- nessun side-effect duplicato: invio email, write DB, edge functions non toccati
 
-Bonus coerente con la richiesta precedente: quando si esce dalla pagina, il destinatario viene resettato (no carry-over fra contatti diversi).
+## Nota su scroll
 
-### 4. Attività → Agenda
+Non tocco `src/index.css` né l'overscroll-behavior già aggiunto.
 
-- Le voci oggi mostrate in `AttivitaTab` (follow-up, reply received, ecc.) vengono mostrate dentro `/v2/agenda` come nuova fascia "Outreach" del raggruppamento per tipo già esistente (vedi `agenda-action-grouping`).
-- `AttivitaTab` non più montata in Outreach.
+## Domande prima di partire
 
-### 5. Routing e redirect
-
-In `CommunicateSection.tsx`:
-- Default `/v2/communicate` → `/v2/communicate/compose` (era inbox).
-- Aggiunte route legacy con redirect:
-  - `/v2/communicate/outreach/inuscita` → `/v2/cestinone`
-  - `/v2/communicate/outreach/circuito` → `/v2/communicate/inbox`
-  - `/v2/communicate/outreach/attivita` → `/v2/agenda`
-
-### 6. File toccati (solo UI / presentazione)
-
-- `src/v2/ui/pages/sections/CommunicateSection.tsx` — riordino tab + redirect.
-- `src/v2/ui/pages/OutreachPage.tsx` — rimozione 3 sub-tab, copy migliorato su Strumenti.
-- `src/v2/ui/pages/EmailComposerPage.tsx` — barra ricerca destinatario in alto + tasto picker.
-- `src/components/global/EmailComposerContactPicker.tsx` — già esiste, viene riutilizzato dal nuovo trigger.
-- Pagina Agenda (`/v2/agenda`) — aggiunta sezione "Outreach" che riusa la query di `AttivitaTab`.
-
-Nessuna modifica a edge function, RLS, DB o orchestratori AI.
-
-### Domande aperte
-
-1. La tab "Componi" deve diventare default di `/v2/communicate`, oppure preferisci che resti Inbox?
-2. La ricerca destinatario in Componi deve includere anche **lead non-partner** (es. solo BCA non ancora promossi) o solo partner+contatti partner?
-3. Per "Attività in Agenda": vuoi vederle insieme alle attività manuali oppure in una sezione collassabile separata "Outreach" dentro Agenda?
+1. Procedo con bug-fix + refactor moduli insieme, o preferisci prima solo il bug-fix e poi un secondo giro per il refactor?
+2. Per l'audit codice morto: solo report markdown o vuoi che sposti già gli orfani evidenti in `src/_deprecated/`?
