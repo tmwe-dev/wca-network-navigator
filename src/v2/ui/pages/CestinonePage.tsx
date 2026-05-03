@@ -11,7 +11,7 @@ import DOMPurify from "dompurify";
 import {
   CheckCircle2, Search, Mail, MessageCircle, Linkedin, Phone,
   Bot, Megaphone, ArrowUpRight, Pencil, RefreshCw, Clock, AlertOctagon,
-  Trash2, Building2, Inbox,
+  Trash2, Building2, Inbox, IdCard, ShieldCheck, MapPin, Calendar, History, Send, FileText, Sparkles,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
+import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 
 const CHANNEL_META: Record<CestinoChannel, { label: string; Icon: typeof Mail; tone: string; bg: string }> = {
   email:    { label: "Email",    Icon: Mail,          tone: "text-primary",          bg: "bg-primary/10" },
@@ -71,6 +72,7 @@ export function CestinonePage(): React.ReactElement {
 
   const { items, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status, search });
   const navigate = useNavigate();
+  const { open: openDrawer } = useContactDrawer();
 
   const selected = useMemo(
     () => items.find((i) => i.id === selectedId) ?? items[0] ?? null,
@@ -107,7 +109,11 @@ export function CestinonePage(): React.ReactElement {
   }
 
   function handleOpenPartner(item: CestinoItem) {
-    if (item.partnerId) navigate(`/v2/network/partners/${item.partnerId}`);
+    if (!item.partnerId) {
+      toast.info("Nessun partner collegato a questa azione.");
+      return;
+    }
+    openDrawer({ sourceType: "partner", sourceId: item.partnerId, title: item.partnerName ?? undefined });
   }
 
   function handleRunSherlock(item: CestinoItem) {
