@@ -350,6 +350,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
+                      <ComposeAiConfigProvider>
                       <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
