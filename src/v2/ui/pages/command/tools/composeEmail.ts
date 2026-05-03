@@ -678,30 +678,38 @@ export const composeEmailTool: Tool = {
     const queryCtx = getLastQueryResultContext();
     if ((queryCtx || payloadSelection.partnerIds.length > 0 || payloadSelection.countryCode) && isProceedIntent(prompt)) {
       let partners: PartnerRow[] = [];
-      // PRIORITÀ AL BATCH: se il prompt è esplicitamente batch ("tutti i partner",
-      // "in batch", "per ciascuno") oppure la query precedente ha più partner,
-      // ignoriamo un eventuale partner_id singolo iniettato dall'AI e usiamo
-      // l'intera selezione (queryCtx.partnerIds o filtri).
-      const batchIntent = /\b(tutti|batch|ciascuno|ognuno|per\s+ogni|in\s+blocco|massivo|massiva)\b/i.test(prompt);
-      const queryHasMany = (queryCtx?.partnerIds.length ?? 0) > 1 || (queryCtx?.count ?? 0) > 1;
-      const forceBatch = batchIntent || queryHasMany;
-      if (forceBatch && queryCtx?.partnerIds.length) {
-        partners = await fetchPartnersByIds(queryCtx.partnerIds);
-      } else if (forceBatch && queryCtx?.filters && queryCtx.filters.length > 0) {
-        partners = await fetchPartnersByFilters(queryCtx.filters);
-      } else if (forceBatch && queryCtx?.countryCode) {
-        partners = await searchPartnersByCountry(queryCtx.countryCode);
-      } else if (payloadSelection.partnerIds.length > 0) {
+      // STRATEGIA: ricostruisci il SET COMPLETO della selezione precedente.
+      //
+      // Bug storico: il Query Planner AI a volte genera `limit: 1` per le
+      // count-query (es. "quanti partner a Malta"). In quei casi `partnerIds`
+      // contiene SOLO 1 ID, ma `count` (vero totale) è > 1. Se prendiamo i
+      // partnerIds preferenzialmente, generiamo 1 sola bozza invece di N.
+      //
+      // Regola: se conosciamo il totale (`count`) o abbiamo filtri/country, e
+      // il numero di partnerIds salvati è inferiore al totale, riesegui la
+      // query con i filtri reali per ottenere tutta la selezione.
+      const userExplicitSingle =
+        payloadSelection.partnerIds.length === 1 && !queryCtx;
+      const knownTotal = queryCtx?.count ?? null;
+      const idsAreComplete =
+        (queryCtx?.partnerIds.length ?? 0) > 0 &&
+        (knownTotal === null || queryCtx!.partnerIds.length >= knownTotal);
+
+      if (userExplicitSingle) {
         partners = await fetchPartnersByIds(payloadSelection.partnerIds);
-      } else if (queryCtx?.partnerIds.length) {
-        partners = await fetchPartnersByIds(queryCtx.partnerIds);
-      } else if (payloadSelection.countryCode) {
-        partners = await searchPartnersByCountry(payloadSelection.countryCode);
+      } else if (idsAreComplete) {
+        partners = await fetchPartnersByIds(queryCtx!.partnerIds);
       } else if (queryCtx?.filters && queryCtx.filters.length > 0) {
-        // Rifa la query con i filtri reali (city=Amman, country_code=SA, …)
         partners = await fetchPartnersByFilters(queryCtx.filters);
       } else if (queryCtx?.countryCode) {
         partners = await searchPartnersByCountry(queryCtx.countryCode);
+      } else if (payloadSelection.partnerIds.length > 0) {
+        partners = await fetchPartnersByIds(payloadSelection.partnerIds);
+      } else if (payloadSelection.countryCode) {
+        partners = await searchPartnersByCountry(payloadSelection.countryCode);
+      } else if (queryCtx?.partnerIds.length) {
+        // Ultimo fallback: anche se incompleti, meglio quei N che zero.
+        partners = await fetchPartnersByIds(queryCtx.partnerIds);
       }
       if (partners.length === 0) {
         return {
