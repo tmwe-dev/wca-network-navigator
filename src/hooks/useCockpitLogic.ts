@@ -1,7 +1,10 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
+import { useEmailForge, type ForgeResult } from "@/v2/hooks/useEmailForge";
+import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
+import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { briefToText } from "@/components/email/BriefAccordion";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -99,7 +102,10 @@ export function useCockpitLogic() {
     });
   }, [isLoading, contacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { generate } = useOutreachGenerator();
+  const cfg = useComposeAiConfig();
+  const lab = useForgeLab();
+  const forge = useEmailForge();
+  const [draftQueue, setDraftQueue] = useState<Array<{ contactId: string; contactName: string; result: ForgeResult }>>([]);
   const { refetch: refetchCredits } = useCredits();
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
