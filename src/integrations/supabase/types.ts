@@ -4344,6 +4344,63 @@ export type Database = {
         }
         Relationships: []
       }
+      e2e_run_results: {
+        Row: {
+          branch: string | null
+          commit_sha: string | null
+          created_at: string
+          duration_ms: number | null
+          failed: number
+          finished_at: string
+          flaky: number
+          id: string
+          passed: number
+          report_url: string | null
+          run_id: string
+          skipped: number
+          spec_results: Json
+          started_at: string | null
+          total_tests: number
+          workflow: string
+        }
+        Insert: {
+          branch?: string | null
+          commit_sha?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          failed?: number
+          finished_at?: string
+          flaky?: number
+          id?: string
+          passed?: number
+          report_url?: string | null
+          run_id: string
+          skipped?: number
+          spec_results?: Json
+          started_at?: string | null
+          total_tests?: number
+          workflow?: string
+        }
+        Update: {
+          branch?: string | null
+          commit_sha?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          failed?: number
+          finished_at?: string
+          flaky?: number
+          id?: string
+          passed?: number
+          report_url?: string | null
+          run_id?: string
+          skipped?: number
+          spec_results?: Json
+          started_at?: string | null
+          total_tests?: number
+          workflow?: string
+        }
+        Relationships: []
+      }
       edge_function_logs: {
         Row: {
           created_at: string | null

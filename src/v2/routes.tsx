@@ -79,6 +79,7 @@ const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPrevie
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
+const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
 const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
@@ -323,6 +324,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
           <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
           <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
+          <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />

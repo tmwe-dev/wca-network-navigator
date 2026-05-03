@@ -188,7 +188,7 @@ const COUNTRY_MAP: Record<string, string> = {
   filippine: "PH", philippines: "PH", korea: "KR", "corea del sud": "KR",
 };
 
-function detectCountryCode(prompt: string): { code: string; label: string } | null {
+export function detectCountryCode(prompt: string): { code: string; label: string } | null {
   const lower = prompt.toLowerCase();
   // Cerca pattern "partner(s) (di|in|a) <paese>" o solo nome paese standalone
   for (const [name, code] of Object.entries(COUNTRY_MAP)) {
@@ -203,7 +203,7 @@ function detectCountryCode(prompt: string): { code: string; label: string } | nu
   return null;
 }
 
-function isCountryWideIntent(prompt: string): boolean {
+export function isCountryWideIntent(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
   // Esteso: copre anche "per i partner a/in/di X", "ai partner a Malta",
