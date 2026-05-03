@@ -964,6 +964,18 @@ export const composeEmailTool: Tool = {
       recipientName,
       emailType,
       detectedTone: tone,
+      pipeline: buildEmailPipeline({
+        partner,
+        tone,
+        hasContact: !!contact,
+        contactEmailMissing: !!contact && !contact.email && !email,
+        kbCount: kbSections.length,
+        promptsApplied: appliedPrompts,
+        playbookActive,
+        model: usedModel,
+        generationOk: !!initialBody,
+        generationWarning,
+      }),
       dossier: {
         partnerName: partner.company_name,
         contactName: recipientName,
