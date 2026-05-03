@@ -26,6 +26,7 @@ import {
 import { EntityFiltersDrawer } from "./EntityFiltersDrawer";
 import { BulkActionsPanel } from "./BulkActionsPanel";
 import type { ActiveFilterChip } from "@/v2/ui/molecules/ActiveFiltersBar";
+import { useBusyPartners } from "@/v2/hooks/useBusyPartners";
 
 export interface EntityListWithDetailProps {
   source: "wca" | "crm" | "bca";
@@ -132,14 +133,25 @@ export function EntityListWithDetail({
     try { window.localStorage.setItem(holdingStorageKey, m); } catch { /* swallow */ }
   };
 
-  // Step 0: filtro holding (sempre visibile/applicato).
+  // Step 0a: arricchisci con "occupazione" derivata da code/cockpit/draft.
+  const { busy } = useBusyPartners();
+  const enrichedCompanies = useMemo(() => {
+    if (busy.size === 0) return companies;
+    return companies.map((c) => {
+      if (c.meta?.holding === true) return c;
+      if (!busy.has(c.id)) return c;
+      return { ...c, meta: { ...(c.meta ?? {}), holding: true } };
+    });
+  }, [companies, busy]);
+
+  // Step 0b: filtro holding (sempre visibile/applicato).
   const holdingFiltered = useMemo(() => {
-    if (holdingFilter === "include") return companies;
+    if (holdingFilter === "include") return enrichedCompanies;
     const isHolding = (c: CompanyEntity) =>
       c.meta?.holding === true || c.leadStatus === "holding";
-    if (holdingFilter === "only") return companies.filter(isHolding);
-    return companies.filter((c) => !isHolding(c)); // exclude
-  }, [companies, holdingFilter]);
+    if (holdingFilter === "only") return enrichedCompanies.filter(isHolding);
+    return enrichedCompanies.filter((c) => !isHolding(c)); // exclude
+  }, [enrichedCompanies, holdingFilter]);
   const filtered = useFilteredCompanies(holdingFiltered, filters);
   const sorted = useSortedCompanies(filtered, sortKey, sortDir, search);
 
