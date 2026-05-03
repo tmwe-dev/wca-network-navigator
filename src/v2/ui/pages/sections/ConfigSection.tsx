@@ -8,6 +8,8 @@ import { CalendarPage } from "@/v2/ui/pages/CalendarPage";
 import { AdminUsersPage } from "@/v2/ui/pages/AdminUsersPage";
 import { PromptLabPage } from "@/v2/ui/pages/PromptLabPage";
 import { KBSupervisorPage } from "@/v2/ui/pages/KBSupervisorPage";
+import { AnalyticsPage } from "@/v2/ui/pages/AnalyticsPage";
+import { AIControlCenterPage } from "@/v2/ui/pages/AIControlCenterPage";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { lazy, Suspense } from "react";
 
@@ -20,6 +22,8 @@ function TabFallback() {
 const BASE_TABS: readonly SectionTab[] = [
   { key: "general",  label: "Generali",   to: "/v2/settings/general" },
   { key: "outreach-tools", label: "Strumenti Outreach", to: "/v2/settings/outreach-tools" },
+  { key: "ai-analytics",  label: "AI Analytics", to: "/v2/settings/ai-analytics" },
+  { key: "ai-control",    label: "AI Control",   to: "/v2/settings/ai-control" },
   { key: "guide",    label: "Guida",      to: "/v2/settings/guide" },
   { key: "token",    label: "Token",      to: "/v2/settings/token" },
   { key: "calendar", label: "Calendario", to: "/v2/settings/calendar" },
@@ -52,6 +56,8 @@ export function ConfigSection(): React.ReactElement {
             <ToolsTab />
           </Suspense>
         } />
+        <Route path="ai-analytics" element={<AnalyticsPage />} />
+        <Route path="ai-control"   element={<AIControlCenterPage />} />
         <Route path="guide"    element={<GuidaPage />} />
         <Route path="token"    element={<TokenCockpitPage />} />
         <Route path="calendar" element={<CalendarPage />} />
