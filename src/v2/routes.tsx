@@ -93,6 +93,9 @@ const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceS
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
 const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
 
+// ── Cestinone (unified pre-send queue) ───────────────────────────────
+const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
+
 /** Wraps a lazy page with error boundary and suspense skeleton */
 function guardedPage(Page: React.LazyExoticComponent<React.ComponentType>, name: string): React.ReactElement {
   return (
@@ -193,6 +196,12 @@ export function V2Routes(): React.ReactElement {
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
           <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
 
+          {/* ── Cestinone: unica coda pre-invio ── */}
+          <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
+          <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
+
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
@@ -221,9 +230,10 @@ export function V2Routes(): React.ReactElement {
           {/* Outreach + figli */}
           <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
           <Route path="outreach/composer" element={<Navigate to="/v2/communicate/compose" replace />} />
-          <Route path="outreach/agenda" element={guardedPage(AgendaPage, "Agenda")} />
+          <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="email-composer" element={<Navigate to="/v2/communicate/compose" replace />} />
-          <Route path="agenda" element={<Navigate to="/v2/pipeline/agenda" replace />} />
+          <Route path="agenda" element={guardedPage(AgendaPage, "Agenda")} />
+          <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
           <Route path="inreach" element={<Navigate to="/v2/communicate/inbox" replace />} />
