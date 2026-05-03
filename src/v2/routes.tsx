@@ -208,7 +208,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="pipeline/kanban"     element={<Navigate to="/v2/agenda/pipeline" replace />} />
           <Route path="pipeline/duplicati"  element={<Navigate to="/v2/agenda/duplicati" replace />} />
           <Route path="pipeline/*"          element={guardedPage(PipelineSection, "Pipeline")} />
-          <Route path="communicate/*"  element={guardedPage(CommunicateSection,  "Communicate")} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
           <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
 
@@ -216,7 +215,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
 
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
