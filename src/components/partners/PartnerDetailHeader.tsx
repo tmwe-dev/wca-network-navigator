@@ -14,6 +14,8 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { SocialLinks } from "@/components/partners/SocialLinks";
 import { Box } from "lucide-react";
+import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
+import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 
  
 interface PartnerDetailHeaderProps {
@@ -31,6 +33,7 @@ export function PartnerDetailHeader({
   partner, enrichment, networks, years, expiryDate, isExpiringSoon, isExpired, onToggleFavorite,
 }: PartnerDetailHeaderProps) {
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
+  const sherlockLevel = useSherlockLevel("partner", partner.id);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
@@ -61,6 +64,9 @@ export function PartnerDetailHeader({
                   Deep Search — {format(new Date(String((enrichment as {deep_search_at?: string}).deep_search_at)), "d MMM yyyy", { locale: it })}
                 </TooltipContent>
               </Tooltip>
+            )}
+            {sherlockLevel && (
+              <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
             )}
             <Tooltip>
               <TooltipTrigger asChild>
