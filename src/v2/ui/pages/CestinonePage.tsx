@@ -1,8 +1,7 @@
 /**
- * CestinonePage — 3-column workspace:
- *   COL 1 — Lista cards (1/3 schermo)
- *   COL 2 — Contesto (Destinatario / Origine / Dettagli)
- *   COL 3 — Anteprima messaggio + azioni (Conferma sparisce subito)
+ * CestinonePage — 2-column workspace:
+ *   COL 1 — Lista cards ricche (1/3 schermo)
+ *   COL 2 — Dettaglio: header ricco + tabs + footer azioni (2/3)
  */
 import * as React from "react";
 import { useState, useMemo, useEffect } from "react";
@@ -12,6 +11,7 @@ import {
   CheckCircle2, Search, Mail, MessageCircle, Linkedin, Phone,
   Bot, Megaphone, ArrowUpRight, Pencil, RefreshCw, Clock, AlertOctagon,
   Trash2, Building2, Inbox, IdCard, ShieldCheck, MapPin, Calendar, History, Send, FileText, Sparkles,
+  ExternalLink, User, Globe, Hash,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -20,6 +20,7 @@ import type { CestinoChannel, CestinoStatus, CestinoItem, CestinoTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -28,12 +29,20 @@ import { toast } from "sonner";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 
-const CHANNEL_META: Record<CestinoChannel, { label: string; Icon: typeof Mail; tone: string; bg: string }> = {
-  email:    { label: "Email",    Icon: Mail,          tone: "text-primary",          bg: "bg-primary/10" },
-  whatsapp: { label: "WhatsApp", Icon: MessageCircle, tone: "text-emerald-500",      bg: "bg-emerald-500/10" },
-  linkedin: { label: "LinkedIn", Icon: Linkedin,      tone: "text-blue-500",         bg: "bg-blue-500/10" },
-  voice:    { label: "Voce",     Icon: Phone,         tone: "text-orange-500",       bg: "bg-orange-500/10" },
-  other:    { label: "Altro",    Icon: Mail,          tone: "text-muted-foreground", bg: "bg-muted" },
+// ── META ─────────────────────────────────────────────────
+
+const CHANNEL_META: Record<CestinoChannel, {
+  label: string;
+  Icon: typeof Mail;
+  tone: string;
+  bg: string;
+  borderL: string;
+}> = {
+  email:    { label: "Email",    Icon: Mail,          tone: "text-violet-500",  bg: "bg-violet-500/10",  borderL: "border-l-violet-500" },
+  whatsapp: { label: "WhatsApp", Icon: MessageCircle, tone: "text-emerald-500", bg: "bg-emerald-500/10", borderL: "border-l-emerald-500" },
+  linkedin: { label: "LinkedIn", Icon: Linkedin,      tone: "text-sky-500",     bg: "bg-sky-500/10",     borderL: "border-l-sky-500" },
+  voice:    { label: "Voce",     Icon: Phone,         tone: "text-orange-500",  bg: "bg-orange-500/10",  borderL: "border-l-orange-500" },
+  other:    { label: "Altro",    Icon: Mail,          tone: "text-muted-foreground", bg: "bg-muted",     borderL: "border-l-muted" },
 };
 const STATUS_META: Record<CestinoStatus, { label: string; tone: string }> = {
   pending:   { label: "Da approvare", tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30" },
@@ -42,20 +51,23 @@ const STATUS_META: Record<CestinoStatus, { label: string; tone: string }> = {
   blocked:   { label: "Bloccato",     tone: "bg-rose-500/15  text-rose-600  dark:text-rose-400 border-rose-500/30"  },
   draft:     { label: "Bozza",        tone: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30" },
 };
-const TRIGGER_META: Record<CestinoTrigger, { label: string; Icon: typeof Megaphone }> = {
-  campaign:      { label: "Campagna",          Icon: Megaphone },
-  inbound_reply: { label: "Risposta inbound",  Icon: ArrowUpRight },
-  mission:       { label: "Missione",          Icon: Bot },
-  manual:        { label: "Manuale",           Icon: Pencil },
-  auto_touch:    { label: "Auto follow-up",    Icon: RefreshCw },
-  cockpit_draft: { label: "Bozza cockpit",     Icon: Bot },
+const TRIGGER_META: Record<CestinoTrigger, { label: string; Icon: typeof Megaphone; tone: string }> = {
+  campaign:      { label: "Campagna",          Icon: Megaphone,    tone: "text-fuchsia-500" },
+  inbound_reply: { label: "Risposta inbound",  Icon: ArrowUpRight, tone: "text-emerald-500" },
+  mission:       { label: "Missione",          Icon: Bot,          tone: "text-cyan-500" },
+  manual:        { label: "Manuale",           Icon: Pencil,       tone: "text-amber-500" },
+  auto_touch:    { label: "Auto follow-up",    Icon: RefreshCw,    tone: "text-blue-500" },
+  cockpit_draft: { label: "Bozza cockpit",     Icon: Bot,          tone: "text-slate-500" },
 };
 const PARTNER_TYPE_META: Record<string, { label: string; tone: string }> = {
-  wca_partner: { label: "Partner WCA", tone: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
-  customer:    { label: "Cliente",     tone: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
-  lead:        { label: "Lead",        tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  prospect:    { label: "Prospect",    tone: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
+  wca_partner: { label: "Partner WCA", tone: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30" },
+  customer:    { label: "Cliente",     tone: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" },
+  lead:        { label: "Lead",        tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30" },
+  prospect:    { label: "Prospect",    tone: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30" },
 };
+
+// ── PAGE ─────────────────────────────────────────────────
+
 export function CestinonePage(): React.ReactElement {
   const [channel, setChannel] = useState<CestinoChannel | "all">("all");
   const [status, setStatus] = useState<CestinoStatus | "all">("all");
@@ -77,30 +89,30 @@ export function CestinonePage(): React.ReactElement {
     }
   }, [items, selectedId]);
 
-  function handleConfirm(item: CestinoItem) {
-    dismiss(item.id);
-    toast.success("Confermato. Apro l'origine per il send finale.");
-    if (item.source === "email_campaign_queue") {
-      navigate(`/v2/communicate/outreach?queue=${encodeURIComponent(item.id.split(":")[1] ?? "")}`);
-      return;
-    }
-    if (item.source === "campaign_jobs") {
-      navigate(`/v2/communicate/campaigns?job=${encodeURIComponent(item.id.split(":")[1] ?? "")}`);
-      return;
-    }
-    if (item.source === "cockpit_queue") {
-      navigate(`/v2/communicate/outreach?cockpit=${encodeURIComponent(item.id.split(":")[1] ?? "")}`);
-      return;
-    }
-    navigate(`/v2/communicate/outreach?multi=${encodeURIComponent(item.id.split(":")[1] ?? "")}`);
+  function originHref(item: CestinoItem): string {
+    const localId = item.id.split(":")[1] ?? "";
+    if (item.source === "email_campaign_queue") return `/v2/communicate/outreach?queue=${encodeURIComponent(localId)}`;
+    if (item.source === "campaign_jobs")       return `/v2/communicate/campaigns?job=${encodeURIComponent(localId)}`;
+    if (item.source === "cockpit_queue")       return `/v2/communicate/outreach?cockpit=${encodeURIComponent(localId)}`;
+    return `/v2/communicate/outreach?multi=${encodeURIComponent(localId)}`;
   }
 
-  function handleEdit(item: CestinoItem) {
+  function handleConfirm(item: CestinoItem): void {
+    dismiss(item.id);
+    toast.success("Confermato. Apro l'origine per il send finale.");
+    navigate(originHref(item));
+  }
+
+  function handleEdit(item: CestinoItem): void {
     if (item.partnerId) navigate(`/v2/communicate/compose?partner=${item.partnerId}`);
     else navigate("/v2/communicate/compose");
   }
 
-  function handleOpenPartner(item: CestinoItem) {
+  function handleOpenOrigin(item: CestinoItem): void {
+    navigate(originHref(item));
+  }
+
+  function handleOpenPartner(item: CestinoItem): void {
     if (!item.partnerId) {
       toast.info("Nessun partner collegato a questa azione.");
       return;
@@ -108,14 +120,14 @@ export function CestinonePage(): React.ReactElement {
     openDrawer({ sourceType: "partner", sourceId: item.partnerId, title: item.partnerName ?? undefined });
   }
 
-  function handleRunSherlock(item: CestinoItem) {
+  function handleRunSherlock(item: CestinoItem): void {
     if (item.partnerId) {
       navigate(`/v2/sherlock?partner=${item.partnerId}`);
       toast.info("Apro Sherlock per la deep search.");
     }
   }
 
-  function handleCancel(item: CestinoItem) {
+  function handleCancel(item: CestinoItem): void {
     dismiss(item.id);
     cancel.mutate(item, {
       onSuccess: () => toast.success("Annullato"),
@@ -123,7 +135,7 @@ export function CestinonePage(): React.ReactElement {
     });
   }
 
-  function handleSnooze(item: CestinoItem, minutes: number) {
+  function handleSnooze(item: CestinoItem, minutes: number): void {
     dismiss(item.id);
     snooze.mutate({ item, minutes }, {
       onSuccess: () => toast.success(`Rinviato di ${minutes} min`),
@@ -136,7 +148,7 @@ export function CestinonePage(): React.ReactElement {
       <header className="px-4 py-3 border-b">
         <h1 className="text-lg font-semibold">Cestinone</h1>
         <p className="text-xs text-muted-foreground">
-          Lista a sinistra · Contesto al centro · Anteprima a destra. Conferma o annulla: la card sparisce subito dalla coda.
+          Tutto ciò che stiamo per inviare. Conferma, modifica, rinvia o annulla — la card sparisce subito dalla coda.
         </p>
       </header>
 
@@ -174,8 +186,8 @@ export function CestinonePage(): React.ReactElement {
         </div>
       </div>
 
-      {/* === 3-COLUMN LAYOUT ============================ */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_minmax(280px,1.1fr)_minmax(360px,1.6fr)] overflow-hidden">
+      {/* === 2-COLUMN LAYOUT ============================ */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(340px,1fr)_minmax(560px,2fr)] overflow-hidden">
 
         {/* COL 1 — LISTA */}
         <div className="border-r overflow-y-auto p-2 space-y-2 bg-background">
@@ -198,32 +210,22 @@ export function CestinonePage(): React.ReactElement {
           )}
         </div>
 
-        {/* COL 2 — CONTESTO */}
-        <div className="border-r overflow-y-auto bg-muted/10">
-          {selected ? (
-            <ContextPanel
-              item={selected}
-              onOpenPartner={() => handleOpenPartner(selected)}
-              onRunSherlock={() => handleRunSherlock(selected)}
-            />
-          ) : (
-            <EmptyPane label="Seleziona una card per vedere il contesto." />
-          )}
-        </div>
-
-        {/* COL 3 — ANTEPRIMA + AZIONI */}
+        {/* COL 2 — DETTAGLIO */}
         <div className="overflow-hidden bg-background flex flex-col">
           {selected ? (
-            <PreviewPanel
+            <DetailPanel
               item={selected}
               onConfirm={() => handleConfirm(selected)}
               onEdit={() => handleEdit(selected)}
+              onOpenOrigin={() => handleOpenOrigin(selected)}
+              onOpenPartner={() => handleOpenPartner(selected)}
+              onRunSherlock={() => handleRunSherlock(selected)}
               onSnooze={(m) => handleSnooze(selected, m)}
               onCancel={() => handleCancel(selected)}
               canSnooze={selected.source === "email_campaign_queue" || selected.source === "campaign_jobs"}
             />
           ) : (
-            <EmptyPane label="Seleziona una card per leggere e confermare." />
+            <EmptyPane label="Seleziona una card per vedere il dettaglio." />
           )}
         </div>
       </div>
@@ -231,11 +233,13 @@ export function CestinonePage(): React.ReactElement {
   );
 }
 
-// ── ListRow (col 1) ──────────────────────────────────────
+// ── ListRow (card alta, ricca) ─────────────────────────────
 
 function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: boolean; onSelect: () => void }): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
+  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
+  const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
   const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
   const when = item.scheduledAt ?? item.createdAt;
   const ageLabel = item.scheduledAt
@@ -246,218 +250,167 @@ function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: bo
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full text-left rounded-lg border bg-card p-2.5 transition-all hover:border-primary/40 hover:bg-accent/30",
+        "w-full text-left rounded-lg border border-l-4 bg-card p-3 transition-all hover:border-primary/40 hover:bg-accent/30",
+        ch.borderL,
         selected && "border-primary ring-1 ring-primary/30 bg-accent/40"
       )}
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <div className={cn("h-7 w-7 rounded-md flex items-center justify-center shrink-0", ch.bg)}>
+      {/* Riga 1: canale + stato + bandiera + età */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className={cn("h-7 px-2 rounded-md flex items-center gap-1.5", ch.bg)}>
           <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
+          <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
         </div>
         <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 border", st.tone)}>{st.label}</Badge>
         {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
         {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-rose-500" />}
-        <span className="ml-auto text-[10px] text-muted-foreground">{ageLabel}</span>
+        <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
       </div>
-      <div className="text-sm font-medium leading-tight line-clamp-2">{item.subject ?? "(senza oggetto)"}</div>
-      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
-        {item.partnerName ?? item.recipientName ?? item.recipientHandle ?? "—"}
+
+      {/* Riga 2: oggetto */}
+      <div className="text-sm font-medium leading-tight line-clamp-2 mb-1">
+        {item.subject ?? "(senza oggetto)"}
+      </div>
+
+      {/* Riga 3: destinatario */}
+      <div className="text-[11px] text-muted-foreground truncate mb-1.5 flex items-center gap-1">
+        <ArrowUpRight className="h-3 w-3 shrink-0" />
+        <span className="truncate">{item.partnerName ?? item.recipientName ?? item.recipientHandle ?? "—"}</span>
+      </div>
+
+      {/* Riga 4: meta — partner type · agente · trigger */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+        {pt && (
+          <span className={cn("px-1.5 py-0.5 rounded border font-medium", pt.tone)}>{pt.label}</span>
+        )}
+        {item.agentName && (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Bot className="h-2.5 w-2.5" />
+            <span className="truncate max-w-[80px]">{item.agentName}</span>
+          </span>
+        )}
+        <span className={cn("flex items-center gap-1", tr.tone)}>
+          <tr.Icon className="h-2.5 w-2.5" />
+          <span className="truncate">{tr.label}</span>
+        </span>
       </div>
     </button>
   );
 }
 
-// ── ContextPanel (col 2) ─────────────────────────────────
+// ── DetailPanel (header + tabs + footer) ─────────────────
 
-function ContextPanel({ item, onOpenPartner, onRunSherlock }: { item: CestinoItem; onOpenPartner: () => void; onRunSherlock: () => void }): React.ReactElement {
-  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
-  const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
-  const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
-  const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
-  const oc = item.originContext;
-  const ORIGIN_ICON: Record<string, typeof Mail> = {
-    business_card: IdCard,
-    campaign: Megaphone,
-    inbound_reply: ArrowUpRight,
-    manual: Pencil,
-    import: FileText,
-    unknown: Bot,
-  };
-  const OriginIcon = ORIGIN_ICON[oc.source] ?? Bot;
-
-  return (
-    <div className="p-3 space-y-3">
-      {/* === BLOCCO IDENTITÀ DESTINATARIO === */}
-      <div className="rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-start gap-2">
-          {flag && <span className="text-3xl leading-none mt-0.5">{flag}</span>}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold truncate">{item.partnerName ?? item.recipientName ?? "—"}</div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {item.partnerCountryName ?? item.partnerCountryCode ?? "Paese sconosciuto"}
-              {item.partnerWcaId ? ` · WCA #${item.partnerWcaId}` : ""}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {pt && <Badge variant="secondary" className={cn("text-[9px]", pt.tone)}>{pt.label}</Badge>}
-          {item.partnerLeadStatus && (
-            <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
-          )}
-          <Badge variant="outline" className="text-[9px] gap-1">
-            <ch.Icon className={cn("h-2.5 w-2.5", ch.tone)} /> {ch.label}
-          </Badge>
-        </div>
-        <div className="text-[11px] text-muted-foreground truncate">
-          → {item.recipientHandle ?? "—"}
-        </div>
-        {item.partnerId && (
-          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full" onClick={onOpenPartner}>
-            <Building2 className="h-3 w-3" /> Apri scheda partner
-          </Button>
-        )}
-      </div>
-
-      {/* === BLOCCO ORIGINE / PERCHÉ === */}
-      <div className="rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <OriginIcon className="h-3.5 w-3.5 text-primary" />
-          <span>Perché stiamo scrivendo</span>
-        </div>
-        <div className="text-xs text-foreground leading-relaxed">
-          <span className="font-medium">{oc.label}</span>
-          {item.campaignName && <span className="text-muted-foreground"> — {item.campaignName}</span>}
-        </div>
-        {oc.source === "business_card" && (
-          <div className="space-y-1 text-[11px] text-muted-foreground border-l-2 border-primary/30 pl-2">
-            {oc.eventName && <div className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> {oc.eventName}</div>}
-            {oc.meetingLocation && <div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {oc.meetingLocation}</div>}
-            {oc.acquiredAt && <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Incontrato il {format(new Date(oc.acquiredAt), "dd MMM yyyy", { locale: itLocale })}</div>}
-          </div>
-        )}
-        {item.previousMessage && (
-          <div className="rounded border border-border/60 bg-muted/40 p-2 text-[11px] space-y-1">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <ArrowUpRight className="h-3 w-3" /> Email a cui stiamo rispondendo
-              <span className="ml-auto">{format(new Date(item.previousMessage.date), "dd MMM HH:mm", { locale: itLocale })}</span>
-            </div>
-            {item.previousMessage.subject && <div className="font-medium truncate">{item.previousMessage.subject}</div>}
-            {item.previousMessage.snippet && <div className="text-muted-foreground line-clamp-3">{item.previousMessage.snippet}</div>}
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-1 text-[10px] pt-1">
-          <div className="text-muted-foreground">Agente AI</div>
-          <div className="text-foreground truncate">{item.agentName ?? "—"}</div>
-          <div className="text-muted-foreground">Creato</div>
-          <div className="text-foreground truncate">{format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
-          {item.scheduledAt && <>
-            <div className="text-muted-foreground">Schedulato</div>
-            <div className="text-foreground truncate">{format(new Date(item.scheduledAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
-          </>}
-        </div>
-      </div>
-
-      {/* === BLOCCO CERTIFICAZIONI / ROUTING === */}
-      <div className="rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-          <span>Controlli e routing</span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          <CertBadge ok={!!item.partnerId} label="Partner CRM" />
-          <CertBadge ok={!!item.deepSearchDoneAt} label="Deep search" />
-          <CertBadge ok={!!item.agentName} label={`Agente: ${item.agentName ?? "—"}`} />
-          <CertBadge ok={item.triggerKind === "campaign" || item.triggerKind === "inbound_reply"} label={tr.label} />
-          <CertBadge ok label="Editorial review" />
-          <CertBadge ok={item.retryCount === 0} label={`Tentativi ${item.retryCount}/${item.maxRetries}`} warn={item.retryCount > 0} />
-        </div>
-        {item.partnerId && !item.deepSearchDoneAt && (
-          <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] w-full" onClick={onRunSherlock}>
-            <Search className="h-3 w-3 mr-1" /> Esegui Sherlock prima di inviare
-          </Button>
-        )}
-        {item.lastError && (
-          <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2 text-rose-600 dark:text-rose-400 text-[11px]">
-            ⚠ {item.lastError}
-          </div>
-        )}
-      </div>
-
-      {/* === BLOCCO STORICO === */}
-      <div className="rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <History className="h-3.5 w-3.5 text-primary" />
-          <span>Ultime interazioni</span>
-          <span className="ml-auto text-[10px] text-muted-foreground">{item.recentInteractions.length}</span>
-        </div>
-        {item.recentInteractions.length === 0 ? (
-          <div className="text-[11px] text-muted-foreground italic">Nessuna interazione registrata. Sarebbe il primo contatto.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {item.recentInteractions.map((i, idx) => (
-              <li key={idx} className="text-[11px] border-l-2 border-border pl-2">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Send className="h-2.5 w-2.5" />
-                  <span className="font-medium text-foreground/80">{i.channel}</span>
-                  <span className="ml-auto">{i.date ? format(new Date(i.date), "dd MMM", { locale: itLocale }) : ""}</span>
-                </div>
-                {i.subject && <div className="truncate">{i.subject}</div>}
-                {i.snippet && <div className="text-muted-foreground line-clamp-1">{i.snippet}</div>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CertBadge({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }): React.ReactElement {
-  const tone = warn
-    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-    : ok
-      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-      : "bg-muted text-muted-foreground border-border";
-  return (
-    <Badge variant="outline" className={cn("text-[9px] gap-1 font-normal border", tone)}>
-      {ok && !warn ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertOctagon className="h-2.5 w-2.5" />}
-      {label}
-    </Badge>
-  );
-}
-
-// ── PreviewPanel (col 3) ─────────────────────────────────
-
-function PreviewPanel({ item, onConfirm, onEdit, onSnooze, onCancel, canSnooze }: {
+interface DetailPanelProps {
   item: CestinoItem;
   onConfirm: () => void;
   onEdit: () => void;
+  onOpenOrigin: () => void;
+  onOpenPartner: () => void;
+  onRunSherlock: () => void;
   onSnooze: (m: number) => void;
   onCancel: () => void;
   canSnooze: boolean;
-}): React.ReactElement {
+}
+
+function DetailPanel({
+  item, onConfirm, onEdit, onOpenOrigin, onOpenPartner, onRunSherlock, onSnooze, onCancel, canSnooze,
+}: DetailPanelProps): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
+  const st = STATUS_META[item.status] ?? STATUS_META.pending;
+  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
+  const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
+  const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
+
   return (
     <>
-      <div className="px-4 py-3 border-b flex items-center gap-2 shrink-0">
-        <ch.Icon className={cn("h-4 w-4", ch.tone)} />
-        <h2 className="text-sm font-semibold truncate flex-1">{item.subject ?? "(senza oggetto)"}</h2>
+      {/* === HEADER RICCO === */}
+      <div className={cn("border-b border-l-4 px-4 py-3 space-y-2 bg-muted/10", ch.borderL)}>
+        <div className="flex items-start gap-3">
+          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", ch.bg)}>
+            <ch.Icon className={cn("h-5 w-5", ch.tone)} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
+              <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
+              <span className={cn("text-[10px] flex items-center gap-1", tr.tone)}>
+                <tr.Icon className="h-2.5 w-2.5" /> {tr.label}
+              </span>
+            </div>
+            <h2 className="text-base font-semibold leading-tight truncate">
+              {item.subject ?? "(senza oggetto)"}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap pl-13">
+          {flag && <span className="text-xl leading-none">{flag}</span>}
+          <span className="text-sm font-medium truncate max-w-[240px]">
+            {item.partnerName ?? item.recipientName ?? "—"}
+          </span>
+          {pt && <Badge variant="outline" className={cn("text-[9px] border", pt.tone)}>{pt.label}</Badge>}
+          {item.partnerLeadStatus && (
+            <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
+          )}
+          {item.partnerWcaId && (
+            <Badge variant="outline" className="text-[9px] gap-1">
+              <Hash className="h-2.5 w-2.5" />WCA #{item.partnerWcaId}
+            </Badge>
+          )}
+          <span className="text-[11px] text-muted-foreground truncate">
+            → {item.recipientHandle ?? "—"}
+          </span>
+          {item.agentName && (
+            <Badge variant="secondary" className="text-[9px] gap-1 ml-auto">
+              <Bot className="h-2.5 w-2.5" /> {item.agentName}
+            </Badge>
+          )}
+          {item.campaignName && (
+            <Badge variant="secondary" className="text-[9px] gap-1">
+              <Megaphone className="h-2.5 w-2.5" /> {item.campaignName}
+            </Badge>
+          )}
+        </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-4">
-        {item.bodyHtml ? (
-          <div
-            className="text-xs prose prose-sm dark:prose-invert max-w-none"
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.bodyHtml) }}
-          />
-        ) : item.bodyText ? (
-          <pre className="text-xs whitespace-pre-wrap font-sans">{item.bodyText}</pre>
-        ) : item.preview ? (
-          <p className="text-xs text-muted-foreground italic">{item.preview}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Nessuna anteprima disponibile.</p>
-        )}
-      </div>
+
+      {/* === TABS === */}
+      <Tabs defaultValue="preview" className="flex-1 min-h-0 flex flex-col">
+        <TabsList className="mx-3 mt-2 self-start">
+          <TabsTrigger value="preview" className="text-xs gap-1.5">
+            <Mail className="h-3 w-3" /> Anteprima
+          </TabsTrigger>
+          <TabsTrigger value="origin" className="text-xs gap-1.5">
+            <Sparkles className="h-3 w-3" /> Origine
+          </TabsTrigger>
+          <TabsTrigger value="history" className="text-xs gap-1.5">
+            <History className="h-3 w-3" /> Storico
+          </TabsTrigger>
+          <TabsTrigger value="checks" className="text-xs gap-1.5">
+            <ShieldCheck className="h-3 w-3" /> Controlli
+          </TabsTrigger>
+          <TabsTrigger value="recipient" className="text-xs gap-1.5">
+            <User className="h-3 w-3" /> Destinatario
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="preview" className="flex-1 min-h-0 overflow-y-auto px-4 py-3 m-0">
+          <PreviewTab item={item} />
+        </TabsContent>
+        <TabsContent value="origin" className="flex-1 min-h-0 overflow-y-auto px-4 py-3 m-0">
+          <OriginTab item={item} onOpenOrigin={onOpenOrigin} />
+        </TabsContent>
+        <TabsContent value="history" className="flex-1 min-h-0 overflow-y-auto px-4 py-3 m-0">
+          <HistoryTab item={item} />
+        </TabsContent>
+        <TabsContent value="checks" className="flex-1 min-h-0 overflow-y-auto px-4 py-3 m-0">
+          <ChecksTab item={item} onRunSherlock={onRunSherlock} />
+        </TabsContent>
+        <TabsContent value="recipient" className="flex-1 min-h-0 overflow-y-auto px-4 py-3 m-0">
+          <RecipientTab item={item} onOpenPartner={onOpenPartner} />
+        </TabsContent>
+      </Tabs>
+
+      {/* === FOOTER AZIONI === */}
       <footer className="px-3 py-2 border-t bg-muted/20 flex items-center gap-1.5 flex-wrap shrink-0">
         <Button size="sm" className="h-8 gap-1.5" onClick={onConfirm}>
           <CheckCircle2 className="h-3.5 w-3.5" /> Conferma
@@ -479,11 +432,277 @@ function PreviewPanel({ item, onConfirm, onEdit, onSnooze, onCancel, canSnooze }
             <DropdownMenuItem onClick={() => onSnooze(minutesUntilNextMonday9())}>Lunedì 09:00</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={onOpenOrigin}>
+          <ExternalLink className="h-3.5 w-3.5" /> Apri origine
+        </Button>
         <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-destructive hover:text-destructive ml-auto" onClick={onCancel}>
           <Trash2 className="h-3.5 w-3.5" /> Annulla
         </Button>
       </footer>
     </>
+  );
+}
+
+// ── TABS ─────────────────────────────────────────────────
+
+function PreviewTab({ item }: { item: CestinoItem }): React.ReactElement {
+  const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
+  const isLinkedIn = item.channel === "linkedin";
+  const charCount = (item.bodyText ?? "").length;
+  const limit = isLinkedIn ? 300 : null;
+
+  return (
+    <div className="space-y-3">
+      {/* Header email-style */}
+      {item.channel === "email" && (
+        <div className="rounded-md border bg-muted/20 p-3 text-xs space-y-1">
+          <div className="flex gap-2"><span className="text-muted-foreground w-12 shrink-0">A:</span><span className="font-medium truncate">{item.recipientHandle ?? "—"}</span></div>
+          <div className="flex gap-2"><span className="text-muted-foreground w-12 shrink-0">Oggetto:</span><span className="font-medium">{item.subject ?? "—"}</span></div>
+        </div>
+      )}
+      {(item.channel === "whatsapp" || item.channel === "linkedin") && (
+        <div className="flex items-center gap-2 text-xs">
+          <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
+          <span className="text-muted-foreground">a</span>
+          <span className="font-medium">{item.recipientHandle ?? "—"}</span>
+          {limit && (
+            <span className={cn("ml-auto text-[10px]", charCount > limit ? "text-rose-500" : "text-muted-foreground")}>
+              {charCount}/{limit} caratteri
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Body */}
+      {item.bodyHtml ? (
+        <div
+          className="text-sm prose prose-sm dark:prose-invert max-w-none rounded-md border bg-background p-4"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.bodyHtml) }}
+        />
+      ) : item.bodyText ? (
+        <pre className="text-sm whitespace-pre-wrap font-sans rounded-md border bg-background p-4">{item.bodyText}</pre>
+      ) : item.preview ? (
+        <p className="text-sm text-muted-foreground italic rounded-md border bg-background p-4">{item.preview}</p>
+      ) : (
+        <div className="text-sm text-muted-foreground italic rounded-md border border-dashed p-6 text-center">
+          Nessuna anteprima disponibile per questa azione.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOrigin: () => void }): React.ReactElement {
+  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
+  const oc = item.originContext;
+  const ORIGIN_ICON: Record<string, typeof Mail> = {
+    business_card: IdCard,
+    campaign: Megaphone,
+    inbound_reply: ArrowUpRight,
+    manual: Pencil,
+    import: FileText,
+    unknown: Bot,
+  };
+  const OriginIcon = ORIGIN_ICON[oc.source] ?? Bot;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted", tr.tone)}>
+            <OriginIcon className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Perché stiamo scrivendo</div>
+            <div className="text-sm font-semibold mt-0.5">{tr.label}</div>
+            <div className="text-xs text-muted-foreground mt-1">{oc.label}</div>
+          </div>
+          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={onOpenOrigin}>
+            <ExternalLink className="h-3 w-3" /> Apri origine
+          </Button>
+        </div>
+
+        {item.campaignName && (
+          <div className="flex items-center gap-2 text-xs border-t pt-3">
+            <Megaphone className="h-3.5 w-3.5 text-fuchsia-500" />
+            <span className="text-muted-foreground">Campagna:</span>
+            <span className="font-medium">{item.campaignName}</span>
+          </div>
+        )}
+
+        {oc.source === "business_card" && (
+          <div className="space-y-1.5 text-xs border-l-2 border-primary/40 pl-3 mt-2">
+            {oc.eventName && <div className="flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> {oc.eventName}</div>}
+            {oc.meetingLocation && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {oc.meetingLocation}</div>}
+            {oc.acquiredAt && <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Incontrato il {format(new Date(oc.acquiredAt), "dd MMM yyyy", { locale: itLocale })}</div>}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t pt-3">
+          <div className="text-muted-foreground">Agente AI</div>
+          <div className="font-medium truncate">{item.agentName ?? "—"}</div>
+          <div className="text-muted-foreground">Creato</div>
+          <div>{format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
+          {item.scheduledAt && <>
+            <div className="text-muted-foreground">Schedulato</div>
+            <div>{format(new Date(item.scheduledAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
+          </>}
+        </div>
+      </div>
+
+      {/* Messaggio originale (per inbound_reply) */}
+      {item.previousMessage && (
+        <div className="rounded-lg border bg-card p-4 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+            <span>Messaggio originale a cui stiamo rispondendo</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {format(new Date(item.previousMessage.date), "dd MMM yyyy HH:mm", { locale: itLocale })}
+            </span>
+          </div>
+          {item.previousMessage.subject && (
+            <div className="text-sm font-medium">{item.previousMessage.subject}</div>
+          )}
+          {item.previousMessage.snippet && (
+            <blockquote className="text-xs text-muted-foreground border-l-4 border-emerald-500/40 pl-3 py-1 italic whitespace-pre-wrap">
+              {item.previousMessage.snippet}
+            </blockquote>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HistoryTab({ item }: { item: CestinoItem }): React.ReactElement {
+  if (item.recentInteractions.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground italic">
+        Nessuna interazione registrata.<br />
+        Sarebbe il primo contatto con questo destinatario.
+      </div>
+    );
+  }
+  return (
+    <ol className="relative border-l-2 border-border ml-2 space-y-3">
+      {item.recentInteractions.map((i, idx) => (
+        <li key={idx} className="ml-4 pb-1">
+          <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-primary border-2 border-background" />
+          <div className="flex items-center gap-2 text-xs mb-1">
+            <Send className="h-3 w-3 text-muted-foreground" />
+            <span className="font-medium uppercase text-[10px] tracking-wide">{i.channel}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded border text-muted-foreground">{i.direction === "in" ? "in" : i.direction === "out" ? "out" : "nota"}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {i.date ? format(new Date(i.date), "dd MMM yyyy", { locale: itLocale }) : ""}
+            </span>
+          </div>
+          {i.subject && <div className="text-sm font-medium truncate">{i.subject}</div>}
+          {i.snippet && <div className="text-xs text-muted-foreground line-clamp-2">{i.snippet}</div>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ChecksTab({ item, onRunSherlock }: { item: CestinoItem; onRunSherlock: () => void }): React.ReactElement {
+  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-card p-4 space-y-2">
+        <div className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+          Controlli pre-invio
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <CheckRow ok={!!item.partnerId} label="Partner CRM collegato" />
+          <CheckRow ok={!!item.deepSearchDoneAt} label="Deep Search Sherlock" detail={item.deepSearchDoneAt ? `Fatta ${format(new Date(item.deepSearchDoneAt), "dd MMM", { locale: itLocale })}` : "Mai eseguita"} />
+          <CheckRow ok={!!item.agentName} label="Agente AI assegnato" detail={item.agentName ?? undefined} />
+          <CheckRow ok label="Editorial review" detail="Obbligatoria all'invio" />
+          <CheckRow ok={item.triggerKind === "campaign" || item.triggerKind === "inbound_reply"} label={`Routing: ${tr.label}`} />
+          <CheckRow
+            ok={item.retryCount === 0}
+            warn={item.retryCount > 0 && item.retryCount < item.maxRetries}
+            label={`Tentativi ${item.retryCount}/${item.maxRetries}`}
+          />
+        </div>
+
+        {item.partnerId && !item.deepSearchDoneAt && (
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs w-full mt-2" onClick={onRunSherlock}>
+            <Search className="h-3.5 w-3.5" /> Esegui Deep Search Sherlock prima di inviare
+          </Button>
+        )}
+      </div>
+
+      {item.lastError && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 text-rose-600 dark:text-rose-400 text-xs space-y-1">
+          <div className="flex items-center gap-1.5 font-semibold">
+            <AlertOctagon className="h-3.5 w-3.5" /> Ultimo errore
+          </div>
+          <div>{item.lastError}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecipientTab({ item, onOpenPartner }: { item: CestinoItem; onOpenPartner: () => void }): React.ReactElement {
+  const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
+  const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          {flag && <span className="text-4xl leading-none">{flag}</span>}
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold truncate">{item.partnerName ?? item.recipientName ?? "—"}</div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+              <Globe className="h-3 w-3" />
+              {item.partnerCountryName ?? item.partnerCountryCode ?? "Paese sconosciuto"}
+              {item.partnerWcaId && <span> · WCA #{item.partnerWcaId}</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {pt && <Badge variant="outline" className={cn("text-[10px] border", pt.tone)}>{pt.label}</Badge>}
+          {item.partnerLeadStatus && (
+            <Badge variant="outline" className="text-[10px]">Lead status: {item.partnerLeadStatus}</Badge>
+          )}
+        </div>
+
+        <div className="grid grid-cols-[80px_1fr] gap-y-1.5 text-xs border-t pt-3">
+          <div className="text-muted-foreground">Canale</div>
+          <div className="font-medium">{CHANNEL_META[item.channel].label}</div>
+          <div className="text-muted-foreground">Indirizzo</div>
+          <div className="font-medium truncate">{item.recipientHandle ?? "—"}</div>
+        </div>
+
+        {item.partnerId && (
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs w-full" onClick={onOpenPartner}>
+            <Building2 className="h-3.5 w-3.5" /> Apri scheda partner completa
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CheckRow({ ok, warn, label, detail }: { ok: boolean; warn?: boolean; label: string; detail?: string }): React.ReactElement {
+  const tone = warn
+    ? "text-amber-600 dark:text-amber-400"
+    : ok
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground";
+  const Icon = ok && !warn ? CheckCircle2 : AlertOctagon;
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <Icon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", tone)} />
+      <div className="min-w-0">
+        <div className={cn("font-medium", tone)}>{label}</div>
+        {detail && <div className="text-[10px] text-muted-foreground truncate">{detail}</div>}
+      </div>
+    </div>
   );
 }
 
@@ -512,7 +731,7 @@ function ChipGroup({ value, onChange, options }: ChipGroupProps): React.ReactEle
           className={cn(
             "text-xs px-2.5 py-1 rounded-full border transition-colors",
             value === o.value
-              ? "bg-primary text-primary-foreground border-primary"
+              ? "bg-card/60 dark:bg-card/40 border-primary text-primary ring-1 ring-primary/30"
               : "bg-background text-muted-foreground border-border hover:bg-accent"
           )}
         >
