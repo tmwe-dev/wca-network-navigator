@@ -5,7 +5,7 @@
  * Logic-less: tutte le azioni sono callback che il consumer collega.
  */
 import * as React from "react";
-import { X, Plus, Search, Megaphone, Trash2, Building2, Mail } from "lucide-react";
+import { X, Plus, Search, Megaphone, Trash2, Building2, Mail, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 
@@ -16,6 +16,7 @@ export interface BulkActionsPanelProps {
   onDeepSearch?: (selected: CompanyEntity[]) => void;
   onCreateCampaign?: (selected: CompanyEntity[]) => void;
   onSoftDelete?: (selected: CompanyEntity[]) => void;
+  onChangeOrigin?: (selected: CompanyEntity[]) => void;
   className?: string;
 }
 
@@ -75,6 +76,7 @@ export function BulkActionsPanel({
   onDeepSearch,
   onCreateCampaign,
   onSoftDelete,
+  onChangeOrigin,
   className,
 }: BulkActionsPanelProps): React.ReactElement {
   const count = selected.length;
@@ -127,6 +129,15 @@ export function BulkActionsPanel({
               count={withEmail}
               onClick={onCreateCampaign ? () => onCreateCampaign(selected) : undefined}
             />
+            {onChangeOrigin && (
+              <ActionRow
+                icon={Tag}
+                title="Cambia origine"
+                hint="Riassegna o crea un gruppo"
+                count={count}
+                onClick={() => onChangeOrigin(selected)}
+              />
+            )}
             <ActionRow
               icon={Trash2}
               title="Elimina selezionati"

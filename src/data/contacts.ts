@@ -25,6 +25,8 @@ export {
   type ImportDuplicateMatch,
   updateContactEnrichment,
   findContactByEmail,
+  bulkUpdateContactsOrigin,
+  listDistinctContactOrigins,
   findContactsPaginated,
   findHoldingPatternContacts,
   getHoldingPatternStats,

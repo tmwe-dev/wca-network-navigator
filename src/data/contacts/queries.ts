@@ -245,3 +245,52 @@ export async function findContactByEmail(email: string) {
   if (error) throw error;
   return data;
 }
+
+/**
+ * Bulk update dell'origine per N contatti CRM. Hard-cap di sicurezza a 5000 ids.
+ * Ritorna il numero di righe aggiornate.
+ */
+export async function bulkUpdateContactsOrigin(
+  ids: string[],
+  newOrigin: string,
+): Promise<{ updated: number }> {
+  const cleaned = newOrigin.trim();
+  if (!cleaned) throw new Error("Origine non può essere vuota");
+  if (cleaned.length > 100) throw new Error("Origine max 100 caratteri");
+  if (!ids.length) return { updated: 0 };
+  if (ids.length > 5000) throw new Error("Massimo 5000 contatti per operazione");
+
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .update({ origin: cleaned })
+    .in("id", ids)
+    .select("id");
+  if (error) throw error;
+  return { updated: (data ?? []).length };
+}
+
+/**
+ * Distinct delle origini esistenti su imported_contacts (non cancellati),
+ * con conteggio. Limitato a 200 valori.
+ */
+export async function listDistinctContactOrigins(): Promise<
+  Array<{ origin: string; count: number }>
+> {
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .select("origin")
+    .not("origin", "is", null)
+    .neq("origin", "")
+    .limit(20000);
+  if (error) throw error;
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as Array<{ origin: string | null }>) {
+    const k = (row.origin ?? "").trim();
+    if (!k) continue;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([origin, count]) => ({ origin, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 200);
+}

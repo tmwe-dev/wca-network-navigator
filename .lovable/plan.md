@@ -1,53 +1,61 @@
+# Cambio Origine in Bulk dai Contatti CRM
 
-# Rinforzo E2E — piano onesto
+## Obiettivo
+Permettere, dalla pagina Contatti CRM (`/v2/explore/contacts`), di selezionare N contatti e riassegnare la loro `origin` in un colpo solo: o scegliendo un'origine esistente, o digitandone una nuova. Aggiornamento server immediato, refresh lista e chip filtri.
 
-## Stato attuale (verificato)
+## UX
 
-- 39 spec in `e2e/` + 8 in `e2e/smoke/`.
-- CI gira **solo** `e2e/smoke/` su push/PR (8 spec). Le altre 39 **non girano in CI**.
-- `playwright.config.ts` ha `webServer` su `npm run preview` → ok per CI.
-- Nessun report storico: ogni run sovrascrive `playwright-report/`.
+Nel pannello destro `BulkActionsPanel` (quello con "AZIONI BULK"), aggiungere — solo per source `crm` — una nuova riga azione:
 
-Quindi il problema reale non è che mancano i test, è che **il 80% delle spec esistenti non viene mai eseguito** e nessuno sa quali siano effettivamente verdi oggi.
+- **Cambia origine** (icona `Tag`/`FolderInput`) → apre dialog.
 
-## Cosa propongo (3 fasi, ognuna utile da sola)
+Dialog "Cambia origine":
+- Header: "Sposti N contatti"
+- Combobox unica con:
+  - lista delle origini esistenti (`origin` distinct dal DB, ordinata per frequenza, conteggio a destra)
+  - opzione "Crea nuova origine: «testo digitato»" se la stringa digitata non esiste
+- Anteprima: mostra l'origine attuale dei contatti selezionati raggruppata (es. "Da: TIPOGRAFIA (10), – (4)")
+- Pulsanti: Annulla / Conferma sposta
+- Conferma → chiama DAL → toast → invalida query → chiude dialog e pulisce selezione
 
-### Fase 1 — Inventario verità (1 giro, basso rischio)
-1. Eseguo localmente tutte le 39 spec **una volta** e produco un report markdown:
-   - quali passano, quali falliscono, quali sono flaky, quali hanno `test.skip`.
-   - tempi di esecuzione, errori principali.
-   - output in `docs/e2e/inventory-2026-05-03.md`.
-2. Per ogni spec rotta: **una riga di diagnosi** (selettore obsoleto / route cambiata / dipendenza esterna / dato seed mancante). Non sistemo niente in questo giro.
+Niente bottone in topbar: l'azione vive nel pannello "N selezionati" già presente, dove convivono "Aggiungi al Cockpit", "Deep Search batch", ecc. È coerente con il pattern attuale e l'utente la trova nello stesso posto delle altre azioni di massa.
 
-Risultato: tu sai esattamente cosa hai, io so dove intervenire.
+## Implementazione
 
-### Fase 2 — Riparazione mirata delle 6 spec critiche
-Riparare quelle che coprono i flussi che si rompono di più (in base agli ultimi messaggi e alla criticità):
-1. `crm-partner-flow.spec.ts` — CRUD partner (cuore del sistema).
-2. `outreach-flow.spec.ts` + `outreach-holding-pattern.spec.ts` — generazione email batch (il bug "1 mail invece di 9").
-3. `agent-chat-flow.spec.ts` — Command page / Direttore.
-4. `email-inbound-to-task.spec.ts` — classify-email-response → escalation lead status.
-5. `campaign-queue-lifecycle.spec.ts` — pipeline invio.
-6. `direct-send-vs-queued-send-consistency.spec.ts` — consistency invio diretto vs coda.
+### 1. DAL — `src/data/contacts/mutations.ts` (nuovo o esteso)
+- `bulkUpdateOrigin(contactIds: string[], newOrigin: string): Promise<{updated: number}>`
+- `listDistinctOrigins(): Promise<{origin: string; count: number}[]>` (cached 5 min con react-query)
+- Usa `supabase.from("imported_contacts").update({ origin: newOrigin }).in("id", ids)` via accesso untyped centralizzato.
+- Trim, normalizza maiuscolo/minuscolo? **No**: rispetta esattamente quanto digitato (così l'operatore può unificare manualmente). Limite 100 char, non vuoto.
 
-Per ognuna: aggiorno selettori (`data-testid`), faccio passare almeno il "happy path", marco esplicitamente come `test.skip("flaky: <motivo>")` i sotto-step che richiedono setup non risolvibile ora.
+### 2. Hook — `src/v2/hooks/contacts/useBulkChangeOrigin.ts`
+- React-query mutation che chiama il DAL e invalida `queryKeys.crmContacts.*` + `queryKeys.crmContacts.distinctOrigins`.
 
-**Vincolo**: nessuna modifica al codice dell'app eccetto aggiungere `data-testid` mancanti dove i selettori sono fragili. Niente refactor.
+### 3. UI — `src/v2/ui/organisms/BulkChangeOriginDialog.tsx`
+- Dialog shadcn con Combobox (Command + Popover), validazione zod (1-100 char), preview origini correnti, conta destinazioni.
 
-### Fase 3 — CI nightly + dashboard leggibile
-1. Aggiungo workflow `.github/workflows/e2e-nightly.yml` che gira **tutte** le spec ogni notte (non su PR, troppo lento) e carica il report HTML come artifact.
-2. Workflow on-PR resta solo `e2e/smoke/` (veloce).
-3. Aggiungo pagina `/v2/settings/e2e-status` (sotto Development) che fa fetch dell'ultimo report da una location nota:
-   - tabella spec → status (pass/fail/skip) → durata → ultimo run.
-   - link al report HTML completo.
-   - opzione 1: leggere via GitHub API (richiede token). Opzione 2: edge function che riceve i risultati in webhook a fine workflow e li salva in tabella `e2e_run_results`. **Preferisco opzione 2** (no dipendenze esterne dal frontend).
+### 4. `BulkActionsPanel`
+- Nuova prop opzionale `onChangeOrigin?: (selected) => void` + `availableOrigins?: {origin; count}[]`.
+- ActionRow "Cambia origine" mostrato solo se `onChangeOrigin` è passato.
 
-## Cosa NON faccio
-- Non scrivo nuove spec da zero (prima sistemiamo le 39 esistenti).
-- Non tocco il codice di produzione tranne aggiungere `data-testid` dove serve.
-- Non prometto che tutte le 39 spec passeranno: alcune potrebbero essere obsolete e da archiviare.
+### 5. `EntityListWithDetail`
+- Forwarda `onChangeOrigin` e `availableOrigins` al pannello.
 
-## Domanda chiave prima di partire
-Vuoi che faccia **subito tutta Fase 1** (inventario + diagnosi, senza riparazioni) così decidi tu quali 6 spec valgono lo sforzo della Fase 2? È la mossa più onesta: 1-2 ore di esecuzione, zero modifiche, e poi sai esattamente dove buttare il tempo.
+### 6. `ContactsPage`
+- Carica `useDistinctOrigins()`, gestisce stato dialog aperto + selezione corrente, chiama mutation, toast.
+- Passa `onChangeOrigin` solo qui (NetworkPage non lo riceve, quindi su WCA Partner non appare).
 
-In alternativa salto direttamente alla riparazione delle 6 spec che ho indicato sopra basandomi sulla criticità funzionale.
+## Note tecniche
+- Tabella reale: `imported_contacts.origin` (text, nullable). Le origini esistenti più frequenti sono già quelle visibili nei filtri (es. "TIPOGRAFIA", "WCA OLD", "Hubspot"…).
+- Soft-delete: l'UPDATE non è intercettato dai trigger soft-delete (riguardano solo DELETE), quindi il cambio origine è un UPDATE diretto sicuro.
+- Audit: opzionale, lascio fuori per non gonfiare lo scope. Se serve, in seguito si aggiunge una riga in `contact_interactions` o un log dedicato.
+- RLS: l'utente già ha permesso UPDATE su `imported_contacts` (CRM standard). Verifico in fase di build con un select di prova.
+
+## Out of scope
+- Merge di origini duplicate ("BOLOGNA VINI" vs "Bologna vini") — utile ma è un'altra feature.
+- Bulk change su WCA Partner (`source="wca"`): le origini lì sono diverse (`source_type`), niente azione per ora.
+
+## Cosa NON cambia
+- Nessuna modifica a NetworkPage, BCA, Cestinone.
+- Nessuna modifica al filtro origine esistente (lo riusa, semplicemente la lista filtri si aggiorna grazie all'invalidate).
+

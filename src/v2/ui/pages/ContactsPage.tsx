@@ -5,7 +5,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Users, X } from "lucide-react";
-import { getContactById } from "@/data/contacts";
+import {
+  getContactById,
+  bulkUpdateContactsOrigin,
+  listDistinctContactOrigins,
+  contactKeys,
+} from "@/data/contacts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUrlState } from "@/hooks/useUrlState";
 import { trackEntityOpen } from "@/lib/telemetry";
 import { createLogger } from "@/lib/log";
@@ -17,6 +23,7 @@ import { type SortOption } from "@/v2/ui/molecules/ListToolbar";
 import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
+import { BulkChangeOriginDialog } from "@/v2/ui/organisms/BulkChangeOriginDialog";
 
 const log = createLogger("Contacts");
 
@@ -35,6 +42,17 @@ export function ContactsPage() {
   const [urlContactId, setUrlContactId] = useUrlState<string>("contact", "");
   const { companies, isLoading, hasMore, fetchNextPage } = useCrmContactsAsCompanies();
   const chips = useCrmActiveFilterChips();
+  const qc = useQueryClient();
+
+  // Dialog "Cambia origine"
+  const [originDialogOpen, setOriginDialogOpen] = useState(false);
+  const [originDialogSelection, setOriginDialogSelection] = useState<CompanyEntity[]>([]);
+
+  const { data: distinctOrigins = [] } = useQuery<Array<{ origin: string; count: number }>>({
+    queryKey: ["contacts-distinct-origins"],
+    queryFn: listDistinctContactOrigins,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const loadContactById = useCallback(async (id: string) => {
     try {
@@ -101,6 +119,23 @@ export function ContactsPage() {
     toast.success(`Campagna creata per ${withEmail.length} destinatari`);
   }, []);
 
+  const handleBulkChangeOrigin = useCallback((sel: CompanyEntity[]) => {
+    setOriginDialogSelection(sel);
+    setOriginDialogOpen(true);
+  }, []);
+
+  const handleConfirmChangeOrigin = useCallback(
+    async (newOrigin: string) => {
+      const ids = originDialogSelection.map((s) => s.id);
+      const res = await bulkUpdateContactsOrigin(ids, newOrigin);
+      // Invalida lista contatti e cache origini distinte
+      qc.invalidateQueries({ queryKey: contactKeys.all });
+      qc.invalidateQueries({ queryKey: ["contacts-distinct-origins"] });
+      return res;
+    },
+    [originDialogSelection, qc],
+  );
+
   const detail = selectedContact ? (
     <div className="h-full bg-card relative">
       <button
@@ -133,6 +168,7 @@ export function ContactsPage() {
         detailSlot={detail}
         onBulkAddToCockpit={handleBulkAddToCockpit}
         onBulkCreateCampaign={handleBulkCampaign}
+        onBulkChangeOrigin={handleBulkChangeOrigin}
         toolbarRightSlot={
           hasMore ? (
             <button
@@ -144,6 +180,17 @@ export function ContactsPage() {
             </button>
           ) : null
         }
+      />
+      <BulkChangeOriginDialog
+        open={originDialogOpen}
+        onOpenChange={setOriginDialogOpen}
+        selected={originDialogSelection}
+        availableOrigins={distinctOrigins}
+        onConfirm={handleConfirmChangeOrigin}
+        onSuccess={() => {
+          // Pulisce selezione checkbox emettendo l'evento usato dalla lista
+          window.dispatchEvent(new CustomEvent("clear-company-selection"));
+        }}
       />
     </div>
   );
