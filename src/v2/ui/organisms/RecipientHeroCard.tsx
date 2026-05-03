@@ -141,22 +141,19 @@ export function RecipientHeroCard({
   // Empty state
   if (recipients.length === 0) {
     return (
-      <div className="mb-3 rounded-lg border border-dashed border-border/60 bg-muted/10 px-4 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Nessun destinatario
-          </h3>
+      <div className="mb-2 flex items-center gap-2 px-2 py-1 rounded-md border border-dashed border-border/50 bg-muted/10">
+        <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground shrink-0">
+          Nessun destinatario
+        </span>
+        <div className="flex-1 min-w-0">
+          <ManualEmailField
+            manualEmail={manualEmail}
+            onManualEmailChange={onManualEmailChange}
+            onAddManualEmail={onAddManualEmail}
+            isFirst
+          />
         </div>
-        <ManualEmailField
-          manualEmail={manualEmail}
-          onManualEmailChange={onManualEmailChange}
-          onAddManualEmail={onAddManualEmail}
-          isFirst
-        />
-        <p className="mt-2 text-[10px] text-muted-foreground">
-          Usa il selettore a sinistra (Componi → Destinatari) o digita un'email qui sopra.
-        </p>
       </div>
     );
   }
