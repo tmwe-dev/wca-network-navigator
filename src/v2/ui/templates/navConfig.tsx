@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Kanban, Mail, Brain, Settings, Inbox, Trash2, CalendarDays,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays,
 } from "lucide-react";
 
 export interface NavItemDef {
