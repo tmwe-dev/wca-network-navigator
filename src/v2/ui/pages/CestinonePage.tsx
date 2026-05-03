@@ -28,6 +28,23 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
 import { useContactDrawer } from "@/contexts/ContactDrawerContext";
+import { resolveAgentAvatar } from "@/data/agentAvatars";
+
+// ── AGENT BADGE ──────────────────────────────────────────
+function AgentBadge({ name, size = "sm" }: { name: string; size?: "sm" | "md" }): React.ReactElement {
+  const avatar = resolveAgentAvatar(name);
+  const dim = size === "md" ? "h-4 w-4" : "h-3 w-3";
+  return (
+    <Badge variant="secondary" className="text-[9px] gap-1 pl-0.5" title={`Agente: ${name}`}>
+      {avatar ? (
+        <img src={avatar} alt="" className={cn(dim, "rounded-full object-cover ring-1 ring-background")} />
+      ) : (
+        <Bot className={cn(dim)} />
+      )}
+      <span className="truncate max-w-[100px] capitalize">{name}</span>
+    </Badge>
+  );
+}
 
 // ── META ─────────────────────────────────────────────────
 
@@ -378,10 +395,7 @@ function DetailPanel({
               </Badge>
             )}
             {item.agentName && (
-              <Badge variant="secondary" className="text-[9px] gap-1" title={`Agente: ${item.agentName}`}>
-                <Bot className="h-2.5 w-2.5" />
-                <span className="truncate max-w-[100px]">{item.agentName}</span>
-              </Badge>
+              <AgentBadge name={item.agentName} />
             )}
           </div>
         </div>
@@ -555,7 +569,19 @@ function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOrigin: ()
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t pt-3">
           <div className="text-muted-foreground">Agente AI</div>
-          <div className="font-medium truncate">{item.agentName ?? "—"}</div>
+          <div className="font-medium truncate flex items-center gap-1.5">
+            {item.agentName ? (
+              <>
+                {(() => {
+                  const av = resolveAgentAvatar(item.agentName);
+                  return av
+                    ? <img src={av} alt="" className="h-4 w-4 rounded-full object-cover ring-1 ring-background" />
+                    : <Bot className="h-3.5 w-3.5 text-muted-foreground" />;
+                })()}
+                <span className="capitalize truncate">{item.agentName}</span>
+              </>
+            ) : "—"}
+          </div>
           <div className="text-muted-foreground">Creato</div>
           <div>{format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
           {item.scheduledAt && <>

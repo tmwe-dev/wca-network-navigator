@@ -341,6 +341,23 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
   ]);
 
+  // Risolvi anche eventuali UUID che corrispondono a record in `agents`
+  // (la coda usa `operator_id` indistintamente per operatori umani e agenti AI).
+  const agentMap = new Map<string, string>();
+  if (operatorIds.length) {
+    try {
+      const { data: agentsData } = await supabase
+        .from("agents")
+        .select("id, name")
+        .in("id", operatorIds);
+      if (agentsData) {
+        for (const a of agentsData as Array<Record<string, unknown>>) {
+          agentMap.set(String(a.id), String(a.name ?? ""));
+        }
+      }
+    } catch { /* tabella opzionale: nessuna interruzione */ }
+  }
+
   const partnerMap = new Map<string, Record<string, unknown>>();
   if (partnersRes.status === "fulfilled" && partnersRes.value.data) {
     for (const p of partnersRes.value.data as Array<Record<string, unknown>>) {
@@ -402,9 +419,17 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
 
   const enriched = out.map((it): CestinoItem => {
     const p = it.partnerId ? partnerMap.get(it.partnerId) : null;
-    const agentDisplay = it.agentName && profileMap.has(it.agentName)
-      ? profileMap.get(it.agentName) || it.agentName
-      : it.agentName;
+    let agentDisplay: string | null = it.agentName;
+    if (it.agentName) {
+      if (profileMap.has(it.agentName) && profileMap.get(it.agentName)) {
+        agentDisplay = profileMap.get(it.agentName) ?? it.agentName;
+      } else if (agentMap.has(it.agentName) && agentMap.get(it.agentName)) {
+        agentDisplay = agentMap.get(it.agentName) ?? it.agentName;
+      } else if (/^[0-9a-f-]{36}$/i.test(it.agentName)) {
+        // UUID non risolto: meglio nascondere che mostrare un id grezzo.
+        agentDisplay = null;
+      }
+    }
     const bca = it.partnerId ? bcaMap.get(it.partnerId) : null;
     const previous = it.partnerId ? lastInboundByPartner.get(it.partnerId) ?? null : null;
     const interactions = it.partnerId ? interactionsByPartner.get(it.partnerId) ?? [] : [];
