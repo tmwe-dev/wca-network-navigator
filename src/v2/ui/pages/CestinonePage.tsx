@@ -349,7 +349,7 @@ export function CestinonePage(): React.ReactElement {
 
 // ── ListRow (card alta, ricca) ─────────────────────────────
 
-function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean }): React.ReactElement {
+function ListRow({ item, selected, onSelect, departingSoon, checked, onToggleCheck }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean; checked?: boolean; onToggleCheck?: () => void }): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
@@ -360,15 +360,20 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
     ? `tra ${formatDistanceToNow(new Date(when), { locale: itLocale })}`
     : `${formatDistanceToNow(new Date(when), { locale: itLocale })} fa`;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
         "w-full text-left rounded-lg border border-l-4 bg-card p-3 transition-all hover:border-primary/40 hover:bg-accent/30",
         ch.borderL,
-        selected && "border-primary ring-1 ring-primary/30 bg-accent/40"
+        selected && "border-primary ring-1 ring-primary/30 bg-accent/40",
+        "flex gap-2"
       )}
     >
+      {onToggleCheck && (
+        <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+          <Checkbox checked={!!checked} onCheckedChange={onToggleCheck} aria-label="Seleziona elemento" />
+        </div>
+      )}
+      <button type="button" onClick={onSelect} className="flex-1 min-w-0 text-left">
       {/* Riga 1 — Titolo a sx + trigger badge a dx (campagna / AI / manuale) */}
       <div className="flex items-start gap-2 mb-1">
         <div className="flex-1 min-w-0">
@@ -408,7 +413,8 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
         <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
         {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
       </div>
-    </button>
+      </button>
+    </div>
   );
 }
 
