@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity } from "lucide-react";
+import { Loader2, Settings as SettingsIcon, Brain, Link, Download, FileText, Volume2, Users, Mail, Image, Database, Shield, Briefcase, Clock, Cpu, Package, Bell, Square as LogSquare, KeyRound, UsersRound, Coins, Power, Activity, Puzzle } from "lucide-react";
 import { useAppSettings, useUpdateSetting } from "@/hooks/useAppSettings";
 import AICommandCenter from "@/components/settings/AICommandCenter";
 import { GeneralSettings } from "@/components/settings/GeneralSettings";
@@ -33,6 +33,7 @@ import UserRolesPanel from "@/components/settings/UserRolesPanel";
 import TeamManagementPanel from "@/components/settings/TeamManagementPanel";
 import AutomatedProcessesPanel from "@/components/settings/AutomatedProcessesPanel";
 import AiMonitorPanel from "@/components/settings/AiMonitorPanel";
+import ExtensionsPanel from "@/components/settings/ExtensionsPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function SettingsPage() {
@@ -70,6 +71,7 @@ export function SettingsPage() {
     { value: "provider-ai", label: "Provider AI", icon: Cpu },
     { value: "import-export", label: "Importa", icon: Download },
     { value: "download-email", label: "Download Email", icon: Mail },
+    { value: "estensioni", label: "Estensioni", icon: Puzzle },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "enrichment", label: "Arricchimento", icon: Image },
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
@@ -168,6 +170,11 @@ export function SettingsPage() {
             {tab === "ai-monitor" && (
               <div className="float-panel p-5">
                 <AiMonitorPanel />
+              </div>
+            )}
+            {tab === "estensioni" && (
+              <div className="float-panel p-5">
+                <ExtensionsPanel />
               </div>
             )}
             {tab === "notifiche" && (
