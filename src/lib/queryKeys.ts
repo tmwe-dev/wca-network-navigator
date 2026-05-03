@@ -508,6 +508,8 @@ export const queryKeys = {
     emailSyncJobs: ["v2", "email-sync-jobs"] as const,
     workPlans: ["v2", "work-plans"] as const,
     unreadCounts: ["v2", "unread-counts"] as const,
+    sherlockLevels: (scope: "partner" | "contact", ids: readonly string[]) =>
+      ["v2", "sherlock-levels", scope, [...ids].sort().join(",")] as const,
     adminUsers: ["v2", "admin-users"] as const,
     agentDetail: (agentId: string) => ["v2", "agent-detail", agentId] as const,
     campaignQueue: (draftId?: string) => ["v2", "campaign-queue", draftId ?? "global"] as const,

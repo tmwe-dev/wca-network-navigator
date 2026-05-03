@@ -19,6 +19,7 @@ import {
 import { useDirectContactActions } from "@/hooks/useDirectContactActions";
 import { toast } from "sonner";
 import type { CompanyEntity, CompanyCardListCallbacks, CompanySource } from "./types";
+import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
 
 function sourceTone(source: CompanySource): EntityRowTone {
   if (source === "wca") return "wca";
@@ -35,6 +36,10 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   onToggleSelect?: (id: string) => void;
   /** Layout compatto (pannello stretto). */
   compact?: boolean;
+  /** Massimo livello Sherlock completato (1 Scout · 2 Detective · 3 Sherlock). */
+  sherlockLevel?: 1 | 2 | 3 | null;
+  /** ISO date dell'ultima indagine completata. */
+  sherlockCompletedAt?: string | null;
 }
 
 export function CompanyCard({
@@ -43,6 +48,8 @@ export function CompanyCard({
   selected,
   onToggleSelect,
   compact = false,
+  sherlockLevel = null,
+  sherlockCompletedAt = null,
 }: CompanyCardProps): React.ReactElement {
   const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
   const tone = sourceTone(source);
@@ -155,6 +162,9 @@ export function CompanyCard({
         </Badge>
       )}
       {leadStatusBadge}
+      {sherlockLevel && (
+        <SherlockLevelBadge level={sherlockLevel} completedAt={sherlockCompletedAt} />
+      )}
       {isFavorite && (
         <Star className="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0" />
       )}

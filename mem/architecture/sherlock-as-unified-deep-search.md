@@ -18,5 +18,13 @@ type: constraint
 ## Roadmap successiva (NON fatta in questo passaggio)
 Estendere i playbook Sherlock per scrivere anche `enrichment_data/logo_url/website_quality_score`, poi sostituire `useDeepSearchLocal` in batch. Fino ad allora: legacy resta come back-end per i batch enrichment.
 
+## Visualizzazione livello su card e dettagli (2026-05-03)
+- DAL `src/data/sherlockInvestigations.ts` espone `getMaxLevelByPartner` / `getMaxLevelByContact` (max `level` con `status='completed'`).
+- Hook `src/v2/hooks/useSherlockLevels.ts` (batch + single).
+- Atom `src/v2/ui/atoms/SherlockLevelBadge.tsx`: icona Search/ScanSearch/Telescope per L1/L2/L3.
+- Mostrato in: `CompanyCardList` (Network), `PartnerCard`, `PartnerListItem`, `PartnerDetailHeader`, `PartnerDetailInline`.
+- Convive con il vecchio badge `enrichment.deep_search_at` (legacy estensione) — rappresentano cose diverse.
+- Lancio singolo via `SherlockLauncherDialog` (`src/v2/ui/organisms/sherlock/`), bottone "Deep Search ▾" in `PartnerDetailInline`.
+
 ## Regola
 Qualsiasi nuovo entry-point Deep Search deve usare `useSherlock` (`src/v2/hooks/useSherlock.ts`). Vietato aggiungere nuovi caller a `useDeepSearchLocal` o ricreare edge `deep-search-*`.
