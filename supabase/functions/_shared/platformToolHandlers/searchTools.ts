@@ -40,45 +40,40 @@ export async function executeSearchToolHandler(
     }
 
     case "deep_search_partner": {
+      // Sherlock è il motore unico (client-side, 3 livelli Scout/Detective/Sherlock).
+      // L'agente AI server-side non può lanciarlo: restituisce snapshot + indirizzo UI.
       let pid = args.partner_id as string;
       if (!pid && args.company_name) {
-        const { data } = await supabase
-          .from("partners")
-          .select("id, company_name")
-          .ilike("company_name", `%${args.company_name}%`)
-          .limit(1)
-          .single();
+        const { data } = await supabase.from("partners").select("id, company_name").ilike("company_name", `%${args.company_name}%`).limit(1).maybeSingle();
         if (data) pid = data.id;
       }
       if (!pid) return { error: "Partner non trovato" };
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-partner`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: authHeader },
-        body: JSON.stringify({ partner_id: pid, force: !!args.force }),
-      });
-      const data = await response.json();
-      return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
+      const { data: p } = await supabase.from("partners").select("company_name, enrichment_data").eq("id", pid).maybeSingle();
+      const ed = (p?.enrichment_data as Record<string, unknown>) || {};
+      return {
+        success: true,
+        partner_id: pid,
+        company_name: p?.company_name ?? null,
+        deep_search_at: ed.deep_search_at ?? null,
+        suggestion: `Sherlock è l'unico motore di Deep Search. Apri Email Forge → tab Deep Search e scegli il livello: Scout (rapido), Detective (medio), Sherlock (completo).`,
+      };
     }
 
     case "deep_search_contact": {
       let cid = args.contact_id as string;
       if (!cid && args.contact_name) {
-        const { data } = await supabase
-          .from("imported_contacts")
-          .select("id")
-          .ilike("name", `%${args.contact_name}%`)
-          .limit(1)
-          .single();
+        const { data } = await supabase.from("imported_contacts").select("id, name").ilike("name", `%${args.contact_name}%`).limit(1).maybeSingle();
         if (data) cid = data.id;
       }
       if (!cid) return { error: "Contatto non trovato" };
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/deep-search-contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: authHeader },
-        body: JSON.stringify({ contact_id: cid }),
-      });
-      const data = await response.json();
-      return response.ok ? { success: true, ...data } : { error: data.error || "Errore" };
+      const { data: c } = await supabase.from("imported_contacts").select("id, name, deep_search_at").eq("id", cid).maybeSingle();
+      return {
+        success: true,
+        contact_id: cid,
+        name: c?.name ?? null,
+        deep_search_at: c?.deep_search_at ?? null,
+        suggestion: `Sherlock è l'unico motore di Deep Search contatto. Apri Email Forge → tab Deep Search (Scout/Detective/Sherlock).`,
+      };
     }
 
     default:
