@@ -62,9 +62,10 @@ export function useDeepSearchRunner(): DeepSearchState {
     if (running || ids.length === 0) return;
 
     if (!localSearch.isAvailable) {
-      toast.error("🔌 Installa l'estensione Partner Connect per eseguire la Deep Search. Nessun fallback server disponibile.", {
-        id: "deep-search-global", duration: 8000,
-      });
+      toast.warning(
+        "Deep Search batch (legacy) richiede Partner Connect. Per indagini singole usa Sherlock (Scout / Detective / Sherlock) da Email Forge → tab Deep Search.",
+        { id: "deep-search-global", duration: 9000 }
+      );
       return;
     }
 
