@@ -2,9 +2,10 @@
  * EmailComposerPage V2 — Standalone V1 content migration (NO wrapper)
  */
 import DOMPurify from "dompurify";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Save, Loader2, Mail, Bookmark, Eye } from "lucide-react";
+import { Send, Save, Loader2, Mail, Bookmark, Eye, Search } from "lucide-react";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
@@ -16,10 +17,36 @@ import { RecipientHeroCard } from "@/v2/ui/organisms/RecipientHeroCard";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useMission } from "@/contexts/MissionContext";
+import { useLocation } from "react-router-dom";
 
 export function EmailComposerPage() {
   const c = useEmailComposerState();
   const { email, ui, ai, template, queue } = c.state;
+  const { clearRecipients, setGoal, setBaseProposal } = useMission();
+  const location = useLocation();
+
+  // Reset destinatario + brief quando si entra/esce dal Composer (no carry-over).
+  // Eccezione: se la nav porta un prefilledRecipient, l'effetto di prefill in
+  // useEmailComposerState ripopola subito dopo.
+  useEffect(() => {
+    const hasPrefill = !!location.state || !!location.search;
+    if (!hasPrefill) {
+      clearRecipients();
+      setGoal("");
+      setBaseProposal("");
+    }
+    return () => {
+      clearRecipients();
+      setGoal("");
+      setBaseProposal("");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openRecipientPicker = () => {
+    window.dispatchEvent(new CustomEvent("open-drawer", { detail: { drawer: "filters" } }));
+  };
 
   return (
     <PageErrorBoundary>
@@ -28,6 +55,19 @@ export function EmailComposerPage() {
         <div className="flex max-w-[1060px] w-full min-h-0">
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 p-4 pb-0 w-full overflow-y-auto">
+              {/* Barra ricerca destinatario — apre il picker (partner / contatti / BCA) */}
+              <div className="mb-3 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openRecipientPicker}
+                  className="gap-1.5 h-9 text-xs flex-1 justify-start text-muted-foreground hover:text-foreground"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Cerca destinatario (partner, contatto, biglietto)…
+                </Button>
+              </div>
+
               <RecipientHeroCard
                 recipients={c.recipients}
                 manualEmail={ui.manualEmail}
