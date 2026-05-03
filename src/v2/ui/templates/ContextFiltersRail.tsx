@@ -5,6 +5,7 @@ import { NetworkFiltersSection } from "@/components/global/filters-drawer/Networ
 import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFiltersSection";
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
 import { EmailIntelligenceFiltersSection } from "@/components/global/filters-drawer/EmailIntelligenceFiltersSection";
+import { EmailComposeFiltersSection } from "@/components/global/filters-drawer/EmailComposeFiltersSection";
 import { SidebarBanner } from "@/components/global/filters-drawer/SidebarBanner";
 import {
   SIDEBAR_BANNER_REGISTRY,
@@ -42,6 +43,14 @@ function getFilterContext(
       title: "Filtri Email Intelligence",
       content: <EmailIntelligenceFiltersSection />,
       bannerKey: "email-intelligence",
+    };
+  }
+
+  if (pathname.startsWith("/v2/communicate/compose")) {
+    return {
+      title: "Configurazione Email AI",
+      content: <EmailComposeFiltersSection />,
+      bannerKey: "email-compose",
     };
   }
 

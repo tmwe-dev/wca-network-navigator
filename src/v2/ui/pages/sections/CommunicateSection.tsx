@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
-import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { InreachPage } from "@/v2/ui/pages/InreachPage";
 import { OutreachPage } from "@/v2/ui/pages/OutreachPage";
 import { EmailComposerPage } from "@/v2/ui/pages/EmailComposerPage";
@@ -17,7 +16,6 @@ const TABS: readonly SectionTab[] = [
 export function CommunicateSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <GoldenHeaderBar />
       <SectionTabs tabs={TABS} rootPath="/v2/communicate" contentOverflow="contain">
         <Routes>
           <Route index element={<Navigate to="/v2/communicate/inbox" replace />} />

@@ -10,11 +10,13 @@ import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { CampaignQueueMonitor } from "@/components/campaigns/CampaignQueueMonitor";
 import { useEmailComposerState } from "@/hooks/email-composer";
 import { EmailToolbar } from "@/components/email/EmailToolbar";
-import { EmailRecipientFields } from "@/components/email/EmailRecipientFields";
-import { EmailAIPanel } from "@/components/email/EmailAIPanel";
+import { EmailAIPanelSlim } from "@/components/email/EmailAIPanelSlim";
 import { EmailTemplateSelector } from "@/components/email/EmailTemplateSelector";
-import { RecipientSnapshotHeader } from "@/components/email/RecipientSnapshotHeader";
+import { RecipientHeroCard } from "@/v2/ui/organisms/RecipientHeroCard";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export function EmailComposerPage() {
   const c = useEmailComposerState();
@@ -22,39 +24,45 @@ export function EmailComposerPage() {
 
   return (
     <PageErrorBoundary>
+    <ComposeAiConfigProvider>
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 min-h-0 flex justify-center">
         <div className="flex max-w-[1060px] w-full min-h-0">
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 p-4 pb-0 w-full overflow-y-auto">
-              <EmailRecipientFields
+              <RecipientHeroCard
                 recipients={c.recipients}
                 manualEmail={ui.manualEmail}
-                unknownEmailDialog={ui.unknownEmailDialog}
-                pendingEmail={ui.pendingEmail}
-                manualContactName={ui.manualContactName}
-                manualCompanyName={ui.manualCompanyName}
-                onRemoveRecipient={c.removeRecipient}
                 onManualEmailChange={c.setManualEmail}
                 onAddManualEmail={c.addManualEmail}
-                onSetUnknownDialog={(open) => c.dispatch({ type: "SET_UNKNOWN_DIALOG", payload: open })}
-                onManualContactNameChange={(v) => c.dispatch({ type: "SET_MANUAL_CONTACT_NAME", payload: v })}
-                onManualCompanyNameChange={(v) => c.dispatch({ type: "SET_MANUAL_COMPANY_NAME", payload: v })}
-                onConfirmUnknownEmail={c.confirmUnknownEmail}
+                onRemoveRecipient={c.removeRecipient}
               />
 
-              {(() => {
-                const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
-                const hasRealId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
-                return (
-                  <RecipientSnapshotHeader
-                    partnerId={hasRealId ? single!.partnerId : null}
-                    recipientCount={c.recipientsWithEmail.length}
-                    fallbackCompany={single?.companyAlias || single?.companyName}
-                    fallbackCountry={single?.countryName}
-                  />
-                );
-              })()}
+              {/* Unknown email mini-dialog (preserved) */}
+              <Dialog open={ui.unknownEmailDialog} onOpenChange={(open) => c.dispatch({ type: "SET_UNKNOWN_DIALOG", payload: open })}>
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-sm">Destinatario non trovato</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-xs text-muted-foreground">
+                    L'indirizzo <strong>{ui.pendingEmail}</strong> non è nel database. Inserisci le informazioni per procedere.
+                  </p>
+                  <div className="space-y-3 mt-2">
+                    <div>
+                      <Label className="text-xs">Nome contatto *</Label>
+                      <Input value={ui.manualContactName} onChange={(e) => c.dispatch({ type: "SET_MANUAL_CONTACT_NAME", payload: e.target.value })} placeholder="Mario Rossi" className="h-8 text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Nome azienda *</Label>
+                      <Input value={ui.manualCompanyName} onChange={(e) => c.dispatch({ type: "SET_MANUAL_COMPANY_NAME", payload: e.target.value })} placeholder="Acme Srl" className="h-8 text-sm" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => c.dispatch({ type: "SET_UNKNOWN_DIALOG", payload: false })}>Annulla</Button>
+                    <Button size="sm" className="h-8 text-xs" onClick={c.confirmUnknownEmail}>Aggiungi</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <div className="flex items-center gap-2 mb-3">
                 <Mail className="w-4 h-4 text-primary shrink-0" />
@@ -135,7 +143,7 @@ export function EmailComposerPage() {
             const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
             const hasRealPartnerId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
             return (
-              <EmailAIPanel
+              <EmailAIPanelSlim
                 aiGenerating={ai.aiGenerating}
                 aiImproving={ai.aiImproving}
                 hasBody={!!email.htmlBody.trim()}
@@ -169,6 +177,7 @@ export function EmailComposerPage() {
         onSave={c.handleSaveAsTemplate}
       />
     </div>
+    </ComposeAiConfigProvider>
     </PageErrorBoundary>
   );
 }

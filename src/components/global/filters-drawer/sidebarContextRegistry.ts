@@ -52,7 +52,8 @@ export type SidebarContextKey =
   | "campaigns"
   | "email-intelligence"
   | "email-forge"
-  | "email-composer";
+  | "email-composer"
+  | "email-compose";
 
 type Meta = Pick<SidebarBannerProps, "icon" | "title" | "description" | "tone">;
 
@@ -203,5 +204,12 @@ export const SIDEBAR_BANNER_REGISTRY: Record<SidebarContextKey, Meta> = {
     description:
       "Selettore destinatari per la composizione manuale delle email.",
     tone: "primary",
+  },
+  "email-compose": {
+    icon: Mail,
+    title: "Configurazione Email AI",
+    description:
+      "Tipo email, tono, brief strutturato e Knowledge Base: regola qui i parametri usati dall'Oracolo per generare e migliorare il messaggio.",
+    tone: "accent",
   },
 };
