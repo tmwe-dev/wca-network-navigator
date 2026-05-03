@@ -218,6 +218,7 @@ export function CommandOutput({
                 emailType={liveResult.emailType}
                 drafts={liveResult.drafts}
                 detectedTone={liveResult.detectedTone}
+                pipeline={liveResult.pipeline}
                 onClose={onClose}
               />
             )}
