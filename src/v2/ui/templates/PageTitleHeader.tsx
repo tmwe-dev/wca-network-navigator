@@ -5,6 +5,7 @@
  * mostrando solo il contesto della pagina corrente.
  */
 import * as React from "react";
+import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 
 interface Props {
@@ -14,16 +15,26 @@ interface Props {
   readonly right?: React.ReactNode;
 }
 
-export function PageTitleHeader({ icon: Icon, title, subtitle, right }: Props): React.ReactElement {
-  return (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-border/30 bg-card/30">
+export function PageTitleHeader({ icon: Icon, title, subtitle, right }: Props): React.ReactElement | null {
+  const [slot, setSlot] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    const el = document.getElementById("page-title-slot");
+    setSlot(el);
+  }, []);
+
+  const content = (
+    <div className="flex items-center gap-2 min-w-0" data-testid="page-title-header">
       <Icon className="h-4 w-4 text-primary shrink-0" />
       <span className="text-sm font-semibold text-foreground truncate">{title}</span>
       {subtitle && (
         <span className="text-xs text-muted-foreground truncate hidden sm:inline">· {subtitle}</span>
       )}
-      {right && <div className="ml-auto flex items-center gap-1">{right}</div>}
+      {right && <div className="ml-2 flex items-center gap-1">{right}</div>}
     </div>
   );
+
+  if (!slot) return null;
+  return createPortal(content, slot);
 }
 export default PageTitleHeader;
