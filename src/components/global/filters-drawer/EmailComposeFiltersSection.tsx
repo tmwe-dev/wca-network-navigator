@@ -6,16 +6,41 @@
  */
 import * as React from "react";
 import { useMemo } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import BriefAccordion from "@/components/email/BriefAccordion";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Briefcase, ClipboardList, GraduationCap, Handshake, Plane, RefreshCw, Smile, Target, type LucideIcon } from "lucide-react";
 import { createLogger } from "@/lib/log";
+import { cn } from "@/lib/utils";
 
 const log = createLogger("EmailComposeFiltersSection");
+
+const EMAIL_TYPE_ICONS: Record<string, LucideIcon> = {
+  Handshake,
+  RefreshCw,
+  ClipboardList,
+  Briefcase,
+  Globe: Plane,
+  Plane,
+};
+
+const TONE_ICONS: Record<string, LucideIcon> = {
+  GraduationCap,
+  Briefcase,
+  Smile,
+  Target,
+};
+
+const STYLE_BY_INDEX = [
+  "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15",
+  "border-accent/30 bg-accent/10 text-accent-foreground hover:bg-accent/15",
+  "border-success/30 bg-success/10 text-success hover:bg-success/15",
+  "border-warning/30 bg-warning/10 text-warning hover:bg-warning/15",
+  "border-info/30 bg-info/10 text-info hover:bg-info/15",
+  "border-secondary/40 bg-secondary/20 text-secondary-foreground hover:bg-secondary/30",
+];
 
 export function EmailComposeFiltersSection(): React.ReactElement {
   const { selectedType, setSelectedType, tone, setTone, useKB, setUseKB, brief, setBrief } =
@@ -34,66 +59,88 @@ export function EmailComposeFiltersSection(): React.ReactElement {
 
   const allTypes = useMemo(() => [...DEFAULT_EMAIL_TYPES, ...customTypes], [customTypes]);
 
-  const handleTypeChange = (id: string) => {
-    if (id === "__none__") {
-      setSelectedType(null);
-      return;
-    }
-    const t = allTypes.find((x) => x.id === id) || null;
-    setSelectedType(t);
-  };
-
   return (
-    <section className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <section className="space-y-3">
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Tipo di email
         </label>
-        <Select value={selectedType?.id ?? "__none__"} onValueChange={handleTypeChange}>
-          <SelectTrigger className="h-9 text-xs">
-            <SelectValue placeholder="Scegli un tipo…" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__" className="text-xs italic">
-              Nessuno (libero)
-            </SelectItem>
-            {allTypes.map((t) => (
-              <SelectItem key={t.id} value={t.id} className="text-xs">
-                <span className="mr-1.5">{t.icon}</span>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedType(null)}
+            className={cn(
+              "h-[70px] rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1.5",
+              !selectedType
+                ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "border-border/50 bg-background/55 text-muted-foreground hover:border-primary/30 hover:text-foreground",
+            )}
+            aria-pressed={!selectedType}
+          >
+            <SparkleIcon />
+            Libero
+          </button>
+          {allTypes.map((t, index) => {
+            const Icon = EMAIL_TYPE_ICONS[t.icon] ?? MailIcon;
+            const selected = selectedType?.id === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedType(t)}
+                className={cn(
+                  "h-[70px] rounded-lg border px-2 text-[10px] font-semibold transition-all flex flex-col items-center justify-center gap-1.5",
+                  selected
+                    ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : STYLE_BY_INDEX[index % STYLE_BY_INDEX.length],
+                )}
+                aria-pressed={selected}
+                title={t.name}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="line-clamp-2 leading-tight">{t.name}</span>
+              </button>
+            );
+          })}
+        </div>
         {selectedType?.structure && (
-          <p className="text-[10px] text-muted-foreground italic">
+          <p className="rounded-md border border-primary/15 bg-primary/5 px-2 py-1.5 text-[10px] text-primary">
             Struttura: {selectedType.structure}
           </p>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Tono
         </label>
-        <Select value={tone} onValueChange={setTone}>
-          <SelectTrigger className="h-9 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TONE_OPTIONS.map((t) => (
-              <SelectItem key={t.value} value={t.value} className="text-xs">
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-4 gap-1.5 rounded-lg border border-border/40 bg-background/45 p-1.5">
+          {TONE_OPTIONS.map((t) => {
+            const Icon = TONE_ICONS[t.icon] ?? Target;
+            const selected = tone === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTone(t.value)}
+                className={cn(
+                  "h-14 rounded-md text-[9px] font-semibold transition-all flex flex-col items-center justify-center gap-1",
+                  selected
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+                aria-pressed={selected}
+                title={t.label}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="truncate max-w-full">{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Brief strutturato
-        </label>
+      <div>
         <BriefAccordion brief={brief} onChange={setBrief} />
       </div>
 
@@ -111,4 +158,12 @@ export function EmailComposeFiltersSection(): React.ReactElement {
       </div>
     </section>
   );
+}
+
+function SparkleIcon(): React.ReactElement {
+  return <span className="text-base leading-none">✦</span>;
+}
+
+function MailIcon({ className }: { className?: string }): React.ReactElement {
+  return <BookOpen className={className} />;
 }
