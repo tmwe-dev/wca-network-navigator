@@ -11,6 +11,7 @@ import { useRef, useMemo, useCallback, useState, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CompanyCard } from "./CompanyCard";
 import type { CompanyEntity, CompanyCardListCallbacks } from "./types";
+import { useSherlockLevels } from "@/v2/hooks/useSherlockLevels";
 
 export interface CompanyCardListProps extends CompanyCardListCallbacks {
   companies: CompanyEntity[];
@@ -37,6 +38,12 @@ export function CompanyCardList({
   onToggleSelect,
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
+  // Carica i livelli Sherlock per le aziende visibili in lista (id = partner.id per WCA).
+  const partnerIds = useMemo(
+    () => companies.filter((c) => c.source === "wca").map((c) => c.id),
+    [companies],
+  );
+  const sherlockLevels = useSherlockLevels("partner", partnerIds);
   const [width, setWidth] = useState<number>(() =>
     typeof window !== "undefined" ? window.innerWidth : 1024
   );
@@ -126,6 +133,8 @@ export function CompanyCardList({
                   selected={selectedIds?.has(company.id) ?? false}
                   onToggleSelect={onToggleSelect}
                   compact={compact}
+                  sherlockLevel={sherlockLevels[company.id]?.level ?? null}
+                  sherlockCompletedAt={sherlockLevels[company.id]?.completed_at ?? null}
                 />
               </div>
             );
