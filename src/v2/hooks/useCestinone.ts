@@ -1,7 +1,7 @@
 /**
  * useCestinone — hook unificato per la coda pre-invio.
  */
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCestinone, cancelCestinoItem, snoozeCestinoItem, type CestinoItem, type CestinoChannel, type CestinoStatus } from "@/data/cestinone";
 import { queryKeys } from "@/lib/queryKeys";
@@ -14,6 +14,16 @@ export interface CestinoFilters {
 
 export function useCestinone(filters: CestinoFilters = {}) {
   const qc = useQueryClient();
+  // ID locali "nascosti" subito dopo conferma/annullamento, per
+  // dare feedback istantaneo prima del refetch.
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const dismiss = useCallback((id: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   const query = useQuery({
     queryKey: queryKeys.cestinone.list(filters),
@@ -25,6 +35,7 @@ export function useCestinone(filters: CestinoFilters = {}) {
   const items = useMemo(() => {
     const all = query.data ?? [];
     return all.filter((it) => {
+      if (dismissed.has(it.id)) return false;
       if (filters.channel && filters.channel !== "all" && it.channel !== filters.channel) return false;
       if (filters.status && filters.status !== "all" && it.status !== filters.status) return false;
       if (filters.search && filters.search.trim()) {
@@ -34,7 +45,7 @@ export function useCestinone(filters: CestinoFilters = {}) {
       }
       return true;
     });
-  }, [query.data, filters.channel, filters.status, filters.search]);
+  }, [query.data, dismissed, filters.channel, filters.status, filters.search]);
 
   const counts = useMemo(() => {
     const all = query.data ?? [];
@@ -65,5 +76,5 @@ export function useCestinone(filters: CestinoFilters = {}) {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.cestinone.all }),
   });
 
-  return { ...query, items, counts, cancel, snooze };
+  return { ...query, items, counts, cancel, snooze, dismiss };
 }
