@@ -98,6 +98,9 @@ describe("isProceedIntent", () => {
     "manda un invito a tutti",
     "prepara invito a tutti questi partner",
     "voglio che prepari 20 lettere dedicate a ognuno in cui li inviti a collaborare",
+    "Genera un'email di collaborazione per i partner di Malta",
+    "email di collaborazione per i partner di Malta",
+    "genera email di presentazione per tutti i partner di Malta",
   ])("riconosce: %s", (p) => {
     expect(isProceedIntent(p)).toBe(true);
   });
