@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { getPartnerContactQuality } from "@/hooks/useContactCompleteness";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
+import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 function cleanPhoneForWhatsApp(phone: string): string {
   return phone.replace(/[\s\-\(\)\+]/g, "").replace(/^00/, "");
 }
