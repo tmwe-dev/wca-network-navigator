@@ -1,90 +1,53 @@
-## Diagnosi del bug "1 sola mail invece di 9"
 
-Riproduzione: hai chiesto "quanti partner a Malta" → AI ha risposto "9". Poi "voglio che prepari una mail…" → ha generato 1 sola bozza per "Thomas Smith".
+# Rinforzo E2E — piano onesto
 
-Causa: il primo turno è una **count query** (`kind: "report"`, niente `rows`). Nel ramo Fast Lane (`useFastLane.ts` riga 108-147):
-- `extractPartnerIdsFromResult` su un report ritorna `[]`
-- `extractQueryMetaFromResult` su un report ritorna `filters: []`
-- viene salvato `countryCode: "MT"` ma `count: null` e `partnerIds: []`
+## Stato attuale (verificato)
 
-Nel turno successivo `composeEmail.execute`:
-- `isProceedIntent("…prepari una mail…")` = true → entra nel ramo proceed
-- `forceBatch` calcolato come `batchIntent || queryHasMany`
-  - `batchIntent` = false (prompt non contiene "tutti/batch/ciascuno")
-  - `queryHasMany` = false (partnerIds.length = 0, count = null)
-- `forceBatch = false` → cade sul ramo single-partner → fallback `extractPersonAndCompany` → search casuale per company → trova "Thomas Smith" → 1 bozza
+- 39 spec in `e2e/` + 8 in `e2e/smoke/`.
+- CI gira **solo** `e2e/smoke/` su push/PR (8 spec). Le altre 39 **non girano in CI**.
+- `playwright.config.ts` ha `webServer` su `npm run preview` → ok per CI.
+- Nessun report storico: ogni run sovrascrive `playwright-report/`.
 
-In più, `composeEmail.ts` è oggi a **996 righe** (il file più grande dell'app dopo i types generati): difficile da mantenere e propenso a regressioni come questa.
+Quindi il problema reale non è che mancano i test, è che **il 80% delle spec esistenti non viene mai eseguito** e nessuno sa quali siano effettivamente verdi oggi.
 
-## Cosa propongo
+## Cosa propongo (3 fasi, ognuna utile da sola)
 
-### 1. Fix mirato batch-detection (priorità 1, 0 rischio nodo critico)
+### Fase 1 — Inventario verità (1 giro, basso rischio)
+1. Eseguo localmente tutte le 39 spec **una volta** e produco un report markdown:
+   - quali passano, quali falliscono, quali sono flaky, quali hanno `test.skip`.
+   - tempi di esecuzione, errori principali.
+   - output in `docs/e2e/inventory-2026-05-03.md`.
+2. Per ogni spec rotta: **una riga di diagnosi** (selettore obsoleto / route cambiata / dipendenza esterna / dato seed mancante). Non sistemo niente in questo giro.
 
-Nel ramo "proceed-with-context" di `composeEmail.execute`:
-- considerare `forceBatch = true` anche quando `queryCtx.countryCode` è presente E il prompt non identifica un destinatario esplicito (`extractPersonAndCompany` non restituisce `email` né coppia `person+company` chiara). In quel caso si tratta inequivocabilmente del follow-up del set "9 partner di Malta".
-- in `useFastLane`/`useSuperMarioFlow`, quando il risultato è un `kind: "report"` con un count numerico nel testo o nel meta, popolare `count` reale dentro `setLastQueryResultContext` così che `queryHasMany` funzioni anche per le count-query.
+Risultato: tu sai esattamente cosa hai, io so dove intervenire.
 
-Nessuna modifica a `generate-email`, edge function, `Promise.allSettled`, deduplica, holding pattern, editorial review. Modifica locale e reversibile.
+### Fase 2 — Riparazione mirata delle 6 spec critiche
+Riparare quelle che coprono i flussi che si rompono di più (in base agli ultimi messaggi e alla criticità):
+1. `crm-partner-flow.spec.ts` — CRUD partner (cuore del sistema).
+2. `outreach-flow.spec.ts` + `outreach-holding-pattern.spec.ts` — generazione email batch (il bug "1 mail invece di 9").
+3. `agent-chat-flow.spec.ts` — Command page / Direttore.
+4. `email-inbound-to-task.spec.ts` — classify-email-response → escalation lead status.
+5. `campaign-queue-lifecycle.spec.ts` — pipeline invio.
+6. `direct-send-vs-queued-send-consistency.spec.ts` — consistency invio diretto vs coda.
 
-### 2. Refactor `composeEmail.ts` (priorità 2, file unico spezzato in moduli)
+Per ognuna: aggiorno selettori (`data-testid`), faccio passare almeno il "happy path", marco esplicitamente come `test.skip("flaky: <motivo>")` i sotto-step che richiedono setup non risolvibile ora.
 
-Spezzare il file 996 righe senza cambiare comportamento, estraendo per responsabilità:
+**Vincolo**: nessuna modifica al codice dell'app eccetto aggiungere `data-testid` mancanti dove i selettori sono fragili. Niente refactor.
 
-```text
-src/v2/ui/pages/command/tools/composeEmail/
-  index.ts                       (Tool export, match + execute orchestrator, ~120 righe)
-  intent.ts                      (extractPersonAndCompany, isCountryWideIntent,
-                                  detectCountryCode, looksLikeGenericInvite,
-                                  resolveNaturalPrompt, extractPartnersFromContextPayload)
-  partnerLookup.ts               (searchPartner, searchPartnersByCountry,
-                                  fetchPartnersByIds, fetchPartnersByFilters,
-                                  findContact, fetchPrimaryContact)
-  draftGenerator.ts              (generateOneDraft, generateDraftsBatch — UNICO punto
-                                  che chiama generate-email, MAX_BATCH_DRAFTS, allSettled)
-  pipelineBuilder.ts             (buildEmailPipeline, leadStatusNote, daysSince)
-  resultBuilders.ts              (buildBatchComposerResult, buildSingleComposerResult,
-                                  buildBlockedResult, buildDisambiguationResult)
-```
+### Fase 3 — CI nightly + dashboard leggibile
+1. Aggiungo workflow `.github/workflows/e2e-nightly.yml` che gira **tutte** le spec ogni notte (non su PR, troppo lento) e carica il report HTML come artifact.
+2. Workflow on-PR resta solo `e2e/smoke/` (veloce).
+3. Aggiungo pagina `/v2/settings/e2e-status` (sotto Development) che fa fetch dell'ultimo report da una location nota:
+   - tabella spec → status (pass/fail/skip) → durata → ultimo run.
+   - link al report HTML completo.
+   - opzione 1: leggere via GitHub API (richiede token). Opzione 2: edge function che riceve i risultati in webhook a fine workflow e li salva in tabella `e2e_run_results`. **Preferisco opzione 2** (no dipendenze esterne dal frontend).
 
-Regole:
-- nessun cambio di firma esposta verso `registry.ts` / `useFastLane` / `useSuperMarioFlow`
-- nessuna duplicazione di chiamata `invokeEdge("generate-email", …)` — resta solo dentro `draftGenerator.ts`
-- preservato l'ordine: 0a regenerate → 0b proceed-with-context → 0 country-wide → 1 single
-- preservata la memoria `composerContext` e `lastQueryResultContext`
-- preservato il guardrail blacklist e `looksLikeGenericInvite`
+## Cosa NON faccio
+- Non scrivo nuove spec da zero (prima sistemiamo le 39 esistenti).
+- Non tocco il codice di produzione tranne aggiungere `data-testid` dove serve.
+- Non prometto che tutte le 39 spec passeranno: alcune potrebbero essere obsolete e da archiviare.
 
-### 3. Audit codice morto — proposta (NON eseguito senza tua conferma)
+## Domanda chiave prima di partire
+Vuoi che faccia **subito tutta Fase 1** (inventario + diagnosi, senza riparazioni) così decidi tu quali 6 spec valgono lo sforzo della Fase 2? È la mossa più onesta: 1-2 ore di esecuzione, zero modifiche, e poi sai esattamente dove buttare il tempo.
 
-Scan iniziale: ~20 file in `src/components/` con zero import nel resto del codice (es. `BackgroundSyncIndicator.tsx`, `CommandPalette.tsx`, intera cartella `acquisition/`, vari `agenda/*`, `agents/*`). Memoria progetto dice esplicitamente: "Do not delete unused code in `src/components/` as it may be in development".
-
-Quindi propongo di NON cancellare nulla in automatico. Invece:
-- generare un report `/mnt/documents/dead-code-audit.md` con: percorso, dimensione, ultima modifica git, eventuale pagina/route legata, stato (orfano / referenziato solo da test / referenziato solo da sé).
-- tu decidi voce per voce cosa archiviare in `src/_deprecated/` e cosa tenere.
-
-### 4. Altri file pesanti su cui posso intervenire dopo (solo segnalazione, non in questo giro)
-
-- `src/v2/ui/pages/CestinonePage.tsx` 929 righe
-- `src/v2/ui/pages/prompt-lab/hooks/useLabAgent.ts` 955 righe
-- `src/components/email-intelligence/ManualGroupingTab.tsx` 644 righe
-- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` 572 righe
-
-Li segnalo per un secondo giro di refactor, non li tocco ora.
-
-## Check pre-claim "fatto"
-
-- batch OK: 9 destinatari → 9 bozze
-- dedup OK: nessuna chiamata `generate-email` duplicata per lo stesso partner
-- ordine OK: 0a → 0b → 0 → 1 invariato
-- memoria OK: `composerContext` e `lastQueryResultContext` invariati
-- submit OK: `useCommandSubmit` non toccato
-- fallback OK: ramo single resta intatto per i casi davvero singoli
-- nessun side-effect duplicato: invio email, write DB, edge functions non toccati
-
-## Nota su scroll
-
-Non tocco `src/index.css` né l'overscroll-behavior già aggiunto.
-
-## Domande prima di partire
-
-1. Procedo con bug-fix + refactor moduli insieme, o preferisci prima solo il bug-fix e poi un secondo giro per il refactor?
-2. Per l'audit codice morto: solo report markdown o vuoi che sposti già gli orfani evidenti in `src/_deprecated/`?
+In alternativa salto direttamente alla riparazione delle 6 spec che ho indicato sopra basandomi sulla criticità funzionale.
