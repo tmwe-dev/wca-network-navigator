@@ -11,7 +11,7 @@ import {
   CheckCircle2, Search, Mail, MessageCircle, Linkedin, Phone,
   Bot, Megaphone, ArrowUpRight, Pencil, RefreshCw, Clock, AlertOctagon,
   Trash2, Building2, Inbox, IdCard, ShieldCheck, MapPin, Calendar, History, Send, FileText, Sparkles,
-  ExternalLink, User, Globe, Hash,
+  ExternalLink, User, Globe, Hash, ChevronDown, Rocket,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -70,11 +70,35 @@ const PARTNER_TYPE_META: Record<string, { label: string; tone: string }> = {
 
 export function CestinonePage(): React.ReactElement {
   const [channel, setChannel] = useState<CestinoChannel | "all">("all");
-  const [status, setStatus] = useState<CestinoStatus | "all">("all");
+  // Solo 2 stati operativi: "pending" (da approvare) e "queued" (in coda, ingloba scheduled).
+  const [status, setStatus] = useState<"pending" | "queued">("pending");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { items, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status, search });
+  // Lo status lo applichiamo localmente per poter unire queued+scheduled.
+  const { items: rawItems, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status: "all", search });
+  const items = useMemo(() => {
+    const filtered = rawItems.filter((it) =>
+      status === "pending"
+        ? it.status === "pending"
+        : it.status === "queued" || it.status === "scheduled"
+    );
+    if (status === "queued") {
+      // Ordina per scheduledAt asc (le prime in partenza in cima).
+      return [...filtered].sort((a, b) => {
+        const ta = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
+        const tb = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
+        return ta - tb;
+      });
+    }
+    return filtered;
+  }, [rawItems, status]);
+  const inCodaTotal = counts.byStatus.queued + counts.byStatus.scheduled;
+  // I primi 3 item con scheduledAt valido sono "in partenza".
+  const nextDepartingIds = useMemo(() => {
+    if (status !== "queued") return new Set<string>();
+    return new Set(items.filter((i) => !!i.scheduledAt).slice(0, 3).map((i) => i.id));
+  }, [items, status]);
   const navigate = useNavigate();
   const { open: openDrawer } = useContactDrawer();
 
@@ -154,28 +178,16 @@ export function CestinonePage(): React.ReactElement {
 
       <div className="px-4 py-2 flex flex-wrap items-center gap-2 border-b bg-muted/20">
         <ChipGroup
-          value={channel}
-          onChange={(v) => setChannel(v as CestinoChannel | "all")}
-          options={[
-            { value: "all",      label: `Tutti (${counts.total})` },
-            { value: "email",    label: `Email (${counts.byChannel.email})` },
-            { value: "whatsapp", label: `WA (${counts.byChannel.whatsapp})` },
-            { value: "linkedin", label: `LinkedIn (${counts.byChannel.linkedin})` },
-          ]}
-        />
-        <span className="text-muted-foreground/40">·</span>
-        <ChipGroup
           value={status}
-          onChange={(v) => setStatus(v as CestinoStatus | "all")}
+          onChange={(v) => setStatus(v as "pending" | "queued")}
           options={[
-            { value: "all",       label: "Tutti" },
             { value: "pending",   label: `Da approvare (${counts.byStatus.pending})` },
-            { value: "scheduled", label: `Schedulato (${counts.byStatus.scheduled})` },
-            { value: "queued",    label: `In coda (${counts.byStatus.queued})` },
-            { value: "blocked",   label: `Bloccato (${counts.byStatus.blocked})` },
+            { value: "queued",    label: `In coda (${inCodaTotal})` },
           ]}
         />
-        <div className="ml-auto relative">
+        <div className="ml-auto flex items-center gap-2">
+          <ChannelDropdown value={channel} onChange={setChannel} counts={counts} />
+          <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}
@@ -183,6 +195,7 @@ export function CestinonePage(): React.ReactElement {
             placeholder="Cerca soggetto, destinatario..."
             className="h-8 pl-7 w-64 text-xs"
           />
+          </div>
         </div>
       </div>
 
@@ -205,6 +218,7 @@ export function CestinonePage(): React.ReactElement {
                 item={item}
                 selected={item.id === selected?.id}
                 onSelect={() => setSelectedId(item.id)}
+                departingSoon={nextDepartingIds.has(item.id)}
               />
             ))
           )}
@@ -235,7 +249,7 @@ export function CestinonePage(): React.ReactElement {
 
 // ── ListRow (card alta, ricca) ─────────────────────────────
 
-function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: boolean; onSelect: () => void }): React.ReactElement {
+function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean }): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
@@ -262,6 +276,11 @@ function ListRow({ item, selected, onSelect }: { item: CestinoItem; selected: bo
           <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
         </div>
         <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 border", st.tone)}>{st.label}</Badge>
+        {departingSoon && (
+          <Badge className="text-[9px] px-1.5 py-0 gap-1 bg-primary/15 text-primary border border-primary/30">
+            <Rocket className="h-2.5 w-2.5" /> in partenza
+          </Badge>
+        )}
         {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
         {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-rose-500" />}
         <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
@@ -739,6 +758,43 @@ function ChipGroup({ value, onChange, options }: ChipGroupProps): React.ReactEle
         </button>
       ))}
     </div>
+  );
+}
+
+function ChannelDropdown({
+  value, onChange, counts,
+}: {
+  value: CestinoChannel | "all";
+  onChange: (v: CestinoChannel | "all") => void;
+  counts: { total: number; byChannel: { email: number; whatsapp: number; linkedin: number } };
+}): React.ReactElement {
+  const opts: ReadonlyArray<{ v: CestinoChannel | "all"; label: string; Icon: typeof Mail; tone: string; count: number }> = [
+    { v: "all",      label: "Tutti i canali", Icon: Inbox,         tone: "text-foreground",     count: counts.total },
+    { v: "email",    label: "Email",          Icon: Mail,          tone: "text-violet-500",     count: counts.byChannel.email },
+    { v: "whatsapp", label: "WhatsApp",       Icon: MessageCircle, tone: "text-emerald-500",    count: counts.byChannel.whatsapp },
+    { v: "linkedin", label: "LinkedIn",       Icon: Linkedin,      tone: "text-sky-500",        count: counts.byChannel.linkedin },
+  ];
+  const current = opts.find((o) => o.v === value) ?? opts[0];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+          <current.Icon className={cn("h-3.5 w-3.5", current.tone)} />
+          <span>{current.label}</span>
+          <span className="text-muted-foreground">({current.count})</span>
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[180px]">
+        {opts.map((o) => (
+          <DropdownMenuItem key={o.v} onClick={() => onChange(o.v)} className="text-xs gap-2">
+            <o.Icon className={cn("h-3.5 w-3.5", o.tone)} />
+            <span className="flex-1">{o.label}</span>
+            <span className="text-muted-foreground">{o.count}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
