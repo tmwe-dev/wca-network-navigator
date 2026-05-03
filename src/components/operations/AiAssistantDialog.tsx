@@ -159,7 +159,7 @@ export function AiAssistantDialog({ open, onClose, context }: Props) {
               </button>
             )}
             <button onClick={() => { voice.stopSpeaking(); chat.sendMessage(chat.input); }} disabled={!chat.input.trim() || chat.isLoading}
-              className={`p-2 rounded-xl transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30`}>
+              className={`p-2 rounded-xl transition-colors bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary disabled:opacity-30`}>
               <Send className="w-4 h-4" />
             </button>
           </div>

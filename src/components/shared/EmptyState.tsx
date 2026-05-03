@@ -57,7 +57,7 @@ export function EmptyState({
             <button
               type="button"
               onClick={effectivePrimary.onClick}
-              className="px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition"
+              className="px-4 py-2 text-xs font-medium rounded-lg bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary transition"
             >
               {effectivePrimary.label}
             </button>

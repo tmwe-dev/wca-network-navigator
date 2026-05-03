@@ -82,7 +82,7 @@ export function PWAUpdatePrompt() {
       <div className="flex gap-2 mt-3">
         <button
           onClick={() => waitingWorker.postMessage({ type: "SKIP_WAITING" })}
-          className="flex-1 bg-primary text-primary-foreground text-sm py-2 px-3 rounded-md hover:bg-primary/90 transition-colors font-medium"
+          className="flex-1 bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-sm py-2 px-3 rounded-md hover:bg-primary/15 hover:border-primary transition-colors font-medium"
         >
           Aggiorna ora
         </button>

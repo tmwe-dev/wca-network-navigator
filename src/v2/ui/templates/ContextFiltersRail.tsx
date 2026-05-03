@@ -143,7 +143,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="ml-auto inline-flex h-7 items-center gap-1 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/15 hover:border-primary transition-colors"
               aria-label="Conferma e chiudi filtri"
             >
               <Check className="h-3 w-3" /> Conferma
@@ -169,7 +169,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+              className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 text-primary text-xs font-semibold hover:bg-primary/15 hover:border-primary transition-colors"
             >
               <Check className="h-3.5 w-3.5" /> Conferma e chiudi
             </button>

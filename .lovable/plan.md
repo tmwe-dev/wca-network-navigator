@@ -1,81 +1,47 @@
-# Ridisegno Compose Email — riuso sidebar esistente
+## Obiettivo
+I bottoni con sfondo lilla pieno (`bg-primary`) hanno icone/testo invisibili a causa del basso contrasto. Sostituiamo lo stile con: **sfondo neutro scuro + bordo primary + icona/testo in primary** (o bianco su hover), mantenendo la riconoscibilità del CTA ma eliminando il "lilla pieno".
 
-Hai ragione: la sidebar esiste già (`ContextFiltersRail` con linguetta a sinistra). Non ne creo una nuova, **aggiungo solo un nuovo "context Compose"** dentro quella già montata.
+## Approccio: una sola modifica al design system
 
-## Cosa cambia, in pratica
+Invece di toccare decine di file, intervengo su **2 punti centrali**:
 
-### 1. Sidebar filtri (già esistente) → aggiunta del context "Compose"
-File: `src/v2/ui/templates/ContextFiltersRail.tsx`
-- Aggiungo un ramo nello switch `getFilterContext`:
-  ```ts
-  if (pathname.startsWith("/v2/communicate/compose")) {
-    return { title: "Filtri Email Compose", content: <EmailComposeFiltersSection />, bannerKey: "email-compose" };
-  }
-  ```
-- Nuova chiave `email-compose` in `sidebarContextRegistry.ts` (icona Mail, descrizione "Tipo, tono, lunghezza, brief, libreria").
-- Nuovo file `src/components/global/filters-drawer/EmailComposeFiltersSection.tsx` che contiene **gli stessi controlli che oggi stanno dentro `OraclePanel`**: Tipo email, Tono, Lunghezza, Brief strutturato (BriefAccordion), Libreria immagini on/off.
+### 1. `src/components/ui/button.tsx` — variant `default`
+Oggi: `bg-primary text-primary-foreground hover:bg-primary/90`
+Nuovo: `bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary ring-0`
 
-### 2. Stato condiviso senza riscrivere `useEmailComposerState`
-Nuovo store leggero (Context React) `ComposeAiConfigContext` montato da `EmailComposerPage`:
-- Espone `{ type, tone, length, brief, library, set… }` con persistenza su `localStorage` (le stesse storage keys già usate da `OraclePanel`, così nessuna logica AI cambia).
-- La sezione sidebar legge/scrive lo stesso context.
-- L'oracolo destro legge questi valori e li passa invariati a `onGenerate(OracleConfig)` / `onImprove(OracleConfig)` di `useEmailComposerState`.
-- **Nessun cambio** a generazione, invio, journalistReview, queue, dedup.
+Effetto: tutti i `<Button>` (default) in tutta l'app passano automaticamente al nuovo stile, icone e testo diventano leggibili.
 
-### 3. Oracolo destro snellito
-File nuovo `src/components/email/OraclePanelSlim.tsx` (lascio `OraclePanel.tsx` intatto per non rompere altri call site V1/legacy):
-- Solo: textarea **Obiettivo**, bottoni **Genera** / **Migliora**, **ContextSummary**, **Insert image / Load template**.
-- Tipo / tono / lunghezza / brief / libreria spariscono da qui (vivono in sidebar).
+### 2. Bottoni icon-only custom (header viola in screenshot)
+I quadratini lilla in alto a destra (`hamburger`, `share AI`, lente, target, telescopio, X) NON usano sempre `<Button variant="default">` — alcuni applicano `bg-primary` direttamente. Mappo e correggo:
 
-### 4. Recipient Hero Card (centro, in alto)
-File nuovo `src/v2/ui/organisms/RecipientHeroCard.tsx` che sostituisce il chip + `RecipientSnapshotHeader`:
-- Logo azienda (`partners.logo_url` se presente, altrimenti monogramma colorato).
-- Bandiera reale del paese (no emoji "mondo" generica) — usa `getCountryFlag`.
-- Riga 1: **NOME AZIENDA** grande + bandiera + paese.
-- Riga 2: contatto · email · lead status · n° interazioni · freschezza Deep Search.
-- Bottoni: rimuovi destinatario, "Cambia destinatario" (apre picker).
-- Bulk (>1): card compatta con conteggio.
+- `src/v2/ui/templates/AuthenticatedLayout.tsx` — pulsante hamburger viola in alto-sx + AI sparkle in alto-dx
+- `src/v2/ui/organisms/RecipientHeroCard.tsx` — toolbar lente/target/telescopio/X
+- `src/v2/ui/templates/header/SectionRailTabs.tsx` + `StatusPill.tsx` — pillole header
+- `src/v2/ui/templates/ContextFiltersRail.tsx` — handle laterale viola
+- `src/v2/ui/templates/SectionTabs.tsx` / `LayoutSidebarNav.tsx` — tab attivi
+- `src/v2/ui/atoms/Button.tsx` (atom v2) — eventuale variant locale
 
-### 5. Header pulito
-File: `src/v2/ui/templates/GoldenHeaderBar.tsx` (e/o breadcrumb usato sopra `SectionTabs`).
-- Quando la sezione ha già `SectionTabs` (Comunica → Inbox/Outreach/Componi/Campagne), nascondo il breadcrumb "Home › Comunica › Compose" che lo duplica.
-- I tab "Componi/Inbox/Outreach/Campagne" restano dove sono (in alto, sotto la golden bar) — già coerenti con quanto chiedi.
+Per ognuno: sostituisco `bg-primary` (e gradient `from-primary to-...`) con la stessa formula:
+`bg-card/60 border border-primary/60 text-primary hover:bg-primary/15`
 
-### 6. Layout finale di `EmailComposerPage`
-```text
-linguetta filtri (già esistente, sinistra)  |  CENTRO                           |  ORACOLO SLIM (dx)
-                                            |                                   |
-                                            |  [Recipient Hero Card]            |  Obiettivo
-                                            |  Oggetto _______________          |  [textarea ampia]
-                                            |  [HTML editor a piena larghezza]  |
-                                            |  [Bozza] [Template] [Invia ▶]     |  [Genera] [Migliora]
-                                            |                                   |  Context summary
-```
+### 3. Cosa NON tocco
+- Stati `ring-primary`, `border-primary`, `text-primary` (sono già corretti)
+- `bg-primary/10`, `bg-primary/20` (già trasparenti, leggibili)
+- `bg-destructive`, `bg-success`, `bg-warning` (colori semantici diversi)
+- Form controls (`switch`, `slider`, `sonner`) — usano `bg-primary` come thumb/track, è corretto e visibile
+- CTA "Publish" / azioni primarie esplicite dell'app (es. "Genera", "Invia") → resteranno `bg-primary` con `text-white` esplicito SOLO se il testo è già garantito leggibile. Da decidere caso per caso durante l'implementazione.
 
-## File toccati
-**Nuovi**
-- `src/components/global/filters-drawer/EmailComposeFiltersSection.tsx`
-- `src/components/email/OraclePanelSlim.tsx`
+## Verifica
+1. Build typescript pulito.
+2. Screenshot visuale di: header network, RecipientHeroCard, sidebar filters, EmailComposer toolbar.
+3. Conferma che icone e label siano leggibili in dark mode (caso d'uso principale).
+
+## File previsti (~6-8)
+- `src/components/ui/button.tsx`
+- `src/v2/ui/atoms/Button.tsx`
+- `src/v2/ui/templates/AuthenticatedLayout.tsx`
+- `src/v2/ui/templates/ContextFiltersRail.tsx`
+- `src/v2/ui/templates/header/SectionRailTabs.tsx`
+- `src/v2/ui/templates/header/StatusPill.tsx`
+- `src/v2/ui/templates/SectionTabs.tsx`
 - `src/v2/ui/organisms/RecipientHeroCard.tsx`
-- `src/contexts/ComposeAiConfigContext.tsx` (provider + hook)
-
-**Modificati (minimo)**
-- `src/v2/ui/templates/ContextFiltersRail.tsx` → un branch in più nello switch.
-- `src/components/global/filters-drawer/sidebarContextRegistry.ts` → registra `email-compose`.
-- `src/v2/ui/pages/EmailComposerPage.tsx` → wrappa con `ComposeAiConfigProvider`, monta `RecipientHeroCard` e `OraclePanelSlim`.
-- `src/v2/ui/templates/GoldenHeaderBar.tsx` (o componente breadcrumb) → nasconde breadcrumb in sezioni con `SectionTabs`.
-
-## Vincoli rispettati
-- Nessuna modifica a `useEmailComposerState`, generazione, invio, queue, dedup, `journalistReview`.
-- `OraclePanel.tsx` originale resta intatto.
-- Sidebar esistente riusata, NON ne nasce una nuova.
-- Storage keys delle preferenze Oracolo invariate.
-- Tutto il lavoro è UI/presentation.
-
-## QA finale
-1. `/v2/communicate/compose` → la linguetta sinistra apre la sidebar con titolo "Filtri Email Compose" e mostra Tipo/Tono/Lunghezza/Brief/Libreria.
-2. Cambio "Tipo email" in sidebar → `Genera` nell'oracolo destro produce una mail coerente con quel tipo (verifica payload `OracleConfig` invariato).
-3. Hero card: logo + bandiera + nome azienda visibili, X funziona, cambia destinatario apre picker.
-4. Breadcrumb non appare più sopra i tab Inbox/Outreach/Componi/Campagne.
-5. Bozza, Salva template, Invia: invariati.
-6. Altre sezioni (CRM, Network, Email Intelligence): la sidebar resta con i loro filtri, nessuna regressione.

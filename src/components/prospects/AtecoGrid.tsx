@@ -85,7 +85,7 @@ export function AtecoGrid({
             <span className="text-primary">{visibleCodes.length} categorie filtrate</span>
             {unselectedCount > 0 && (
               <button onClick={() => onSelectMultiple(visibleCodes)}
-                className="px-2.5 py-1 rounded-lg font-medium transition-all bg-primary text-primary-foreground hover:bg-primary/90">
+                className="px-2.5 py-1 rounded-lg font-medium transition-all bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary">
                 Seleziona tutti ({visibleCodes.length})
               </button>
             )}
