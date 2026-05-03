@@ -99,7 +99,6 @@ const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
 const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
-const CommunicateSection  = lazy(() => import("./ui/pages/sections/CommunicateSection"));
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
 const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
