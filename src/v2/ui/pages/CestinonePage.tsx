@@ -339,31 +339,30 @@ function DetailPanel({
 
   return (
     <>
-      {/* === HEADER RICCO === */}
-      <div className={cn("border-b border-l-4 px-4 py-3 space-y-2 bg-muted/10", ch.borderL)}>
-        <div className="flex items-start gap-3">
-          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", ch.bg)}>
-            <ch.Icon className={cn("h-5 w-5", ch.tone)} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
-              <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
-              <span className={cn("text-[10px] flex items-center gap-1", tr.tone)}>
-                <tr.Icon className="h-2.5 w-2.5" /> {tr.label}
-              </span>
-            </div>
-            <h2 className="text-base font-semibold leading-tight truncate">
-              {item.subject ?? "(senza oggetto)"}
-            </h2>
+      {/* === HEADER COMPATTO (1 blocco, allineato a sx) === */}
+      <div className={cn("border-b border-l-4 px-4 py-2.5 bg-muted/10", ch.borderL)}>
+        {/* Riga 1: titolo a sx + canale/stato/trigger a dx */}
+        <div className="flex items-start gap-3 mb-1.5">
+          <h2 className="flex-1 min-w-0 text-base font-semibold leading-snug text-left line-clamp-2">
+            {item.subject ?? "(senza oggetto)"}
+          </h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span title={ch.label} className={cn("h-6 w-6 rounded-md flex items-center justify-center", ch.bg)}>
+              <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
+            </span>
+            <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
+            <span title={tr.label} className={cn("flex items-center", tr.tone)}>
+              <tr.Icon className="h-3.5 w-3.5" />
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap pl-13">
-          {flag && <span className="text-xl leading-none">{flag}</span>}
-          <span className="text-sm font-medium truncate max-w-[240px]">
+        {/* Riga 2: partner + bandiera + meta */}
+        <div className="flex items-center gap-2 flex-wrap text-left">
+          <span className="text-sm font-medium truncate max-w-[260px]">
             {item.partnerName ?? item.recipientName ?? "—"}
           </span>
+          {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
           {pt && <Badge variant="outline" className={cn("text-[9px] border", pt.tone)}>{pt.label}</Badge>}
           {item.partnerLeadStatus && (
             <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
@@ -373,19 +372,23 @@ function DetailPanel({
               <Hash className="h-2.5 w-2.5" />WCA #{item.partnerWcaId}
             </Badge>
           )}
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-[11px] text-muted-foreground truncate ml-1">
             → {item.recipientHandle ?? "—"}
           </span>
-          {item.agentName && (
-            <Badge variant="secondary" className="text-[9px] gap-1 ml-auto">
-              <Bot className="h-2.5 w-2.5" /> {item.agentName}
-            </Badge>
-          )}
-          {item.campaignName && (
-            <Badge variant="secondary" className="text-[9px] gap-1">
-              <Megaphone className="h-2.5 w-2.5" /> {item.campaignName}
-            </Badge>
-          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {item.campaignName && (
+              <Badge variant="secondary" className="text-[9px] gap-1" title={item.campaignName}>
+                <Megaphone className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[120px]">{item.campaignName}</span>
+              </Badge>
+            )}
+            {item.agentName && (
+              <Badge variant="secondary" className="text-[9px] gap-1" title={`Agente: ${item.agentName}`}>
+                <Bot className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[100px]">{item.agentName}</span>
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
