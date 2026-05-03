@@ -42,6 +42,7 @@ import { ContextFiltersRail } from "./ContextFiltersRail";
 import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
+import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -349,6 +350,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
+                      <ComposeAiConfigProvider>
                       <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
@@ -379,6 +381,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                         </div>
                       </div>
+                      </ComposeAiConfigProvider>
                       </BcaFiltersGate>
                     </div>
 
