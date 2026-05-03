@@ -5,13 +5,13 @@
  */
 import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, AlertCircle, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
+import { Mail, AlertCircle } from "lucide-react";
 import OracleContextPanel from "@/components/email/OracleContextPanel";
 import type { ForgeResult } from "@/v2/hooks/useEmailForge";
-import { cn } from "@/lib/utils";
 import { ContextSummary, type PostGenerationContext } from "./components/ContextSummary";
 import { usePreContext } from "./hooks/usePreContext";
 import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
 
 interface Props {
   result: ForgeResult | null;
