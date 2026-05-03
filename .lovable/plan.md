@@ -1,47 +1,57 @@
-# Calligrafia + Anteprima email
+## Risposta sintetica (KB letta)
 
-## 1. Conferma: Calligrafia È utilizzata
+**Perché manca il tasto Deep Search sul singolo in Network**
+La maschera Network (`/v2/explore/network`) usa `EntityListWithDetail` → `PartnerDetailInline` → `PartnerDetailFull`. Nessuno di questi componenti monta un trigger Deep Search. L'unico entry-point oggi è il **BulkActionsPanel** (selezione 2+), che spara `network-trigger-deep-search-batch` (legacy `useDeepSearchLocal`).
+Sul singolo partner, oggi, Deep Search è raggiungibile solo da Email Forge → tab Sherlock (via `useSherlock`) o dal vecchio `PartnerDetailCompact` (che però non viene montato in Network V2).
 
-KB entry presente in DB:
-- `kb_entries` → categoria `calligrafia`, titolo "Calligrafia — Standard di formattazione email (plain text)".
+**Memoria del livello eseguito**
+Sì: la tabella `sherlock_investigations` salva `partner_id`, `contact_id`, `level` (1=Scout, 2=Detective, 3=Sherlock), `status`, `completed_at`. Quindi il sistema *può* ricordare il massimo livello eseguito per ogni partner/contatto — ma oggi **nessuna card o dettaglio lo legge**. Le card mostrano solo il badge legacy `enrichment.deep_search_at` (data dell'ultimo enrichment via estensione, senza livello).
 
-Iniettata via `_shared/calligrafiaInjector.ts` (`buildCalligrafiaSection`) nei tre orchestratori che producono email:
-- `generate-email/index.ts` (riga 232) — pipeline ufficiale del compose-email.
-- `generate-outreach/index.ts` (riga 280) — solo canale email.
-- `improve-email/index.ts` (riga 404) — riscrittura/miglioria.
+**Icone livello**
+Non esistono ancora icone dedicate per Scout/Detective/Sherlock nelle card. Solo il logo Sparkles generico nel bar bulk.
 
-Inoltre il **Giornalista** (`journalistReview`) ricarica le regole di Calligrafia come parte del system prompt prima di approvare ogni messaggio.
+---
 
-→ Quindi sì: ogni email batch che hai visto è passata da Calligrafia. Quello che manca è solo la **visibilità**: nello strip della pipeline (Oracolo → Architetto → Prompt Lab → Giornalista → Bozza) Calligrafia non compare come tappa, e questo dà l'impressione che non ci sia.
+## Piano
 
-Se la formattazione non ti convince, la causa non è "Calligrafia spenta" ma il **contenuto della voce KB**: si modifica da `/v2/prompt-lab` (tab Knowledge Base, categoria `calligrafia`) ed è effettiva al prossimo invio senza redeploy.
+### 1. Tasto Deep Search sul singolo partner in Network
+- In `PartnerDetailInline` aggiungere, accanto a "Chiudi", un menu "Deep Search ▾" con tre voci: **Scout** (gratis), **Detective** (medio), **Sherlock** (completo).
+- Click → apre un dialog leggero (`SherlockLauncherDialog`) che instanzia `useSherlock({ partnerId, level })` e mostra avanzamento step + risultato (riusa il pannello già esistente in `SherlockCanvas` come componente condiviso, da estrarre in `src/v2/ui/organisms/sherlock/SherlockRunPanel.tsx`).
+- Stesso menu va aggiunto anche dentro `PartnerDetailFull` (header) per coerenza con altre pagine che lo riusano (Cockpit, drawer AI).
 
-## 2. Cosa aggiungo (UI-only, nessuna logica AI toccata)
+### 2. Icone livello Deep Search nelle card
+- Creare `src/v2/ui/atoms/SherlockLevelBadge.tsx`:
+  - Livello 1 → icona `Search` colore muted ("Scout")
+  - Livello 2 → icona `ScanSearch` colore primary ("Detective")
+  - Livello 3 → icona `Telescope` colore warning ("Sherlock")
+  - Tooltip: `Deep Search livello X — completato il <data>`
+- Mostrare il badge:
+  - `PartnerCard.tsx`, `PartnerListItem.tsx`, `PartnerDetailHeader.tsx`
+  - `CompanyCardList` (vista Network) accanto allo score
+  - `BusinessCardsViewV2` accanto allo StatusBadge match
+  - Drawer contatto (`ContactDrawer` se presente) per `contact_id`
 
-### A. Stage "Calligrafia" visibile nella pipeline
-In `composeEmail.ts → buildEmailPipeline()` aggiungo una tappa `calligrafia` (label "Calligrafia", detail `KB·1` se la voce esiste, `—` altrimenti) tra "Prompt Lab" e "Giornalista". Lo stato è derivato dalla presenza della KB entry in DB (già nota al tool tramite l'audit).
+### 3. DAL + hook lettura livello
+- Estendere `src/data/sherlockPlaybooks.ts` (o nuovo `src/data/sherlockInvestigations.ts`) con:
+  - `getMaxSherlockLevelByPartner(partnerIds: string[]): Map<id, {level, completed_at}>`
+  - `getMaxSherlockLevelByContact(contactIds: string[]): Map<id, {level, completed_at}>`
+  - Query: `select partner_id, max(level) as level, max(completed_at) as completed_at from sherlock_investigations where status='completed' group by partner_id`
+- Hook `useSherlockLevels(ids, scope)` con react-query, key in `queryKeys.v2.sherlockLevels(scope, ids)`.
+- Le liste (CompanyCardList, PartnerListItem) chiamano l'hook in batch sui visibili.
 
-Risultato visibile: **Oracolo → Architetto → Prompt Lab → Calligrafia → Giornalista → Bozza**.
+### 4. Cleanup coerente
+- Il vecchio badge `deep_search_at` (legacy enrichment) resta ma viene **affiancato** (non sostituito) dal nuovo `SherlockLevelBadge`: rappresentano cose diverse (enrichment estensione vs investigazione Sherlock).
+- Aggiungere voce in `mem/architecture/sherlock-as-unified-deep-search.md` per documentare che le card mostrano il livello via `sherlock_investigations`.
 
-### B. Pulsante "Anteprima email completa"
-In `ComposerCanvas.tsx`, accanto a "Genera con AI" / "Invia questa", aggiungo un'icona **Eye** "Anteprima":
+### 5. QA
+- Lanciare Sherlock Scout su un partner → riaprire Network → verificare badge "Scout" sulla card e nel dettaglio.
+- Upgrade a Detective sullo stesso partner → badge passa a "Detective" (max).
+- Verificare che il dialog si chiuda senza interrompere `useSherlock` se l'utente lo riapre.
 
-- Apre un modal full-width (`Dialog` shadcn) che mostra l'email **come arriverà al destinatario**:
-  - Header: `A: <recipients>` · `Oggetto: <subject>`
-  - Body renderizzato come HTML (lo stesso che `send-email` invia, sanitizzato con DOMPurify lato client per sicurezza).
-  - Sezione "Firma" simulata: caricata via query a `agents` (campo `signature_html` + immagine) dell'agente attivo, con disclaimer "Aggiunte automaticamente all'invio".
-  - Toggle "Visualizza HTML grezzo" per ispezione.
-- In modalità batch il pulsante mostra l'anteprima della bozza correntemente selezionata (indice N/M già gestito).
-- Nessuna chiamata di invio, nessuna mutazione di stato — pure read.
+### Dettagli tecnici
+- File nuovi: `SherlockLevelBadge.tsx`, `SherlockRunPanel.tsx`, `SherlockLauncherDialog.tsx`, `useSherlockLevels.ts`, `data/sherlockInvestigations.ts`.
+- File modificati: `PartnerDetailInline.tsx`, `PartnerDetailFull.tsx`, `PartnerCard.tsx`, `PartnerListItem.tsx`, `PartnerDetailHeader.tsx`, `CompanyCardList.tsx`, `BusinessCardsViewV2.tsx`, `lib/queryKeys.ts`.
+- Nessuna migrazione DB necessaria: `sherlock_investigations` ha già tutti i campi.
+- Rispetta KB: niente nuovi caller a `useDeepSearchLocal`, tutto passa da `useSherlock`.
 
-## 3. Cosa NON tocco
-- Pipeline AI (generate-email, journalistReview, calligrafiaInjector): già funzionanti, nessuna modifica.
-- `send-email` edge: la firma reale resta server-side; l'anteprima la replica leggendo gli stessi campi `agents.signature_html`.
-- Logica batch / governance / approval panel.
-
-## File interessati
-- `src/v2/ui/pages/command/tools/composeEmail.ts` — aggiunta stage `calligrafia` in `buildEmailPipeline`.
-- `src/v2/ui/pages/command/canvas/EmailPipelineBadge.tsx` — eventuale colore/icona per la nuova tappa.
-- `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx` — pulsante Eye + modal anteprima.
-- (nuovo) `src/v2/ui/pages/command/canvas/EmailPreviewDialog.tsx` — modal isolato.
-- DAL: piccola query `agents.signature_html` via funzione esistente in `src/data/agents.ts` (se manca, lettura `.maybeSingle()`).
+Confermi di procedere con tutto il piano (singolo + badge livello + lettura DB), oppure vuoi un sottoinsieme (es. solo il tasto sul singolo, badge in fase 2)?
