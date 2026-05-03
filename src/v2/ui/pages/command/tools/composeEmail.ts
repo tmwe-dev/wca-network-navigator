@@ -552,7 +552,7 @@ export const composeEmailTool: Tool = {
       } else if (payloadSelection.partnerIds.length > 0) {
         partners = await fetchPartnersByIds(payloadSelection.partnerIds);
       } else if (queryCtx?.partnerIds.length) {
-        partners = await fetchPartnersByIds(payloadSelection.partnerIds);
+        partners = await fetchPartnersByIds(queryCtx.partnerIds);
       } else if (payloadSelection.countryCode) {
         partners = await searchPartnersByCountry(payloadSelection.countryCode);
       } else if (queryCtx?.filters && queryCtx.filters.length > 0) {
