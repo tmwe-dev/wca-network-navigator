@@ -113,7 +113,7 @@ export function LoginPage(): React.ReactElement {
           <button
             type="submit"
             disabled={isDisabled || !email || !password}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
             Accedi
@@ -192,7 +192,7 @@ export function LoginPage(): React.ReactElement {
           <button
             type="submit"
             disabled={isDisabled || !email || !password || !displayName}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             Crea account
@@ -244,7 +244,7 @@ export function LoginPage(): React.ReactElement {
           <button
             type="submit"
             disabled={isDisabled || !email || resetSent}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
             Invia link di reset
