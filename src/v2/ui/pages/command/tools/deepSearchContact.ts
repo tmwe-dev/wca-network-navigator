@@ -1,8 +1,7 @@
 /**
- * Tool: deep-search-contact — LOVABLE-75
- * La edge deep-search-contact è deprecata. Questo tool ora restituisce uno
- * snapshot read-only e indirizza l'utente al Deep Search client-side
- * (Partner Connect extension / Email Forge).
+ * Tool: deep-search-contact — read-only snapshot.
+ * Sherlock (Scout/Detective/Sherlock) è il motore unico di Deep Search.
+ * Questo tool mostra lo stato; l'esecuzione si fa da Email Forge → tab Deep Search.
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Tool, ToolResult } from "./types";
@@ -35,7 +34,7 @@ export const deepSearchContactTool: Tool = {
       title: "Stato Deep Search Contatti (read-only)",
       meta: {
         count: results.length,
-        sourceLabel: "Contatti CRM (il Deep Search si avvia da Email Forge / Partner Connect)",
+        sourceLabel: "Contatti CRM — Deep Search via Sherlock (Email Forge → tab Deep Search)",
       },
       columns: [
         { key: "name", label: "Nome" },
