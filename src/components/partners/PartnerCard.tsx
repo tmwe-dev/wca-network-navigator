@@ -47,6 +47,7 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
   const domain = hasWebsite
     ? partner.website!.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
     : null;
+  const sherlockLevel = useSherlockLevel("partner", partner.id);
 
   return (
     <Card
@@ -135,6 +136,9 @@ export default function PartnerCard({ partner, onToggleFavorite }: PartnerCardPr
               </TooltipTrigger>
               <TooltipContent>Deep Search – {new Date(String((partner.enrichment_data as Record<string, unknown>)?.deep_search_at)).toLocaleDateString("it-IT")}</TooltipContent>
             </Tooltip>
+          )}
+          {sherlockLevel && (
+            <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
           )}
           {(() => {
             const quality = getPartnerContactQuality(partner.partner_contacts);
