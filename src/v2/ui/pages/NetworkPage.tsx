@@ -69,13 +69,13 @@ export function NetworkPage(): React.ReactElement {
   // così che PartnerDetailInline possa intercettare l'evento.
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { partnerId?: string } | undefined;
-      if (detail?.partnerId) {
+      const detail = (e as CustomEvent).detail as { partnerId?: string; _replay?: boolean } | undefined;
+      if (detail?.partnerId && !detail._replay) {
         setSelectedPartnerId(String(detail.partnerId));
-        // Re-emit dopo render per garantire che il listener interno sia attivo.
-        const evt = e as CustomEvent;
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("sherlock-launch", { detail: evt.detail }));
+          window.dispatchEvent(
+            new CustomEvent("sherlock-launch", { detail: { ...detail, _replay: true } })
+          );
         }, 50);
       }
     };
