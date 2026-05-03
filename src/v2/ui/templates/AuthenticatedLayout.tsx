@@ -381,6 +381,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                         </div>
                       </div>
+                      </ComposeAiConfigProvider>
                       </BcaFiltersGate>
                     </div>
 
