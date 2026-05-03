@@ -233,7 +233,10 @@ export default function BriefAccordion({ brief, onChange }: Props) {
               min={0}
               max={3}
               step={1}
-              onValueChange={([next]) => update("maxLength", LENGTH_VALUES[next] ?? "")}
+              onValueChange={([next]) => {
+                const sliderValue = typeof next === "number" ? next : 0;
+                update("maxLength", LENGTH_VALUES[sliderValue] ?? "");
+              }}
               aria-label="Lunghezza email"
             />
             <div className="mt-2 grid grid-cols-4 text-center text-[9px] text-muted-foreground">
