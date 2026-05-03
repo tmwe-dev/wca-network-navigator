@@ -63,9 +63,14 @@ export function useEmailComposerState() {
   useEffect(() => {
     if (prefillAppliedRef.current) return;
     const s = location.state as EmailComposerLocationState | null;
-    if (!s || (!s.prefilledRecipient && !s.prefilledSubject && !s.prefilledBody)) return;
+    const params = new URLSearchParams(location.search || "");
+    const qEmail = params.get("email") || params.get("to");
+    const qPartner = params.get("partner");
+    const hasState = !!s && (!!s.prefilledRecipient || !!s.prefilledSubject || !!s.prefilledBody);
+    const hasQuery = !!(qEmail || qPartner);
+    if (!hasState && !hasQuery) return;
     prefillAppliedRef.current = true;
-    if (s.prefilledRecipient) {
+    if (s?.prefilledRecipient) {
       const r = s.prefilledRecipient;
       addRecipient({
         partnerId: r.partnerId || "", companyName: r.company || r.companyName || "",
@@ -75,14 +80,56 @@ export function useEmailComposerState() {
         countryCode: r.countryCode, isEnriched: false,
       });
     }
-    if (s.prefilledSubject) dispatch({ type: "SET_SUBJECT", payload: s.prefilledSubject });
-    if (s.prefilledBody) {
+    if (s?.prefilledSubject) dispatch({ type: "SET_SUBJECT", payload: s.prefilledSubject });
+    if (s?.prefilledBody) {
       const escaped = s.prefilledBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       dispatch({ type: "SET_HTML_BODY", payload: `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>` });
     }
+    // Query-string prefill (es. /v2/communicate/compose?partner=… o ?email=…)
+    if (hasQuery && !s?.prefilledRecipient) {
+      void (async () => {
+        try {
+          if (qEmail) {
+            const r = await lookupEmailInDB(qEmail);
+            addRecipient({
+              partnerId: r.partnerId || qPartner || "",
+              companyName: r.companyName || "",
+              contactName: r.contactName || qEmail.split("@")[0],
+              email: qEmail, city: r.city || "", countryName: "",
+              countryCode: r.countryCode || "", isEnriched: r.found,
+            });
+          } else if (qPartner) {
+            const { data } = await supabase
+              .from("partners")
+              .select("id, company_name, company_alias, country_code, city")
+              .eq("id", qPartner)
+              .maybeSingle();
+            const { data: contact } = await supabase
+              .from("partner_contacts")
+              .select("name, contact_alias, email")
+              .eq("partner_id", qPartner)
+              .not("email", "is", null)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            addRecipient({
+              partnerId: qPartner,
+              companyName: data?.company_alias || data?.company_name || "",
+              contactName: contact?.contact_alias || contact?.name || "",
+              email: contact?.email || null,
+              city: data?.city || "", countryName: "",
+              countryCode: data?.country_code || "", isEnriched: !!data,
+            });
+            if (!contact?.email) toast.warning("Partner senza email principale: aggiungila al contatto.");
+          }
+        } catch (e) {
+          log.warn("query prefill failed", { error: String(e) });
+        }
+      })();
+    }
     // Clear navigation state after a tick so React commits the recipient first
     setTimeout(() => navigate(location.pathname, { replace: true, state: {} }), 0);
-  }, [location.state, addRecipient, navigate, location.pathname]);
+  }, [location.state, location.search, addRecipient, navigate, location.pathname, lookupEmailInDB]);
 
   // ── DB Lookup ──
   const lookupEmailInDB = useCallback(async (emailAddr: string) => {
