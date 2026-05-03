@@ -220,7 +220,7 @@ export function useCommandSubmit(state: CommandStateApi) {
       setFlowPhase("executing");
       setExecSteps([{ label: tool.label, detail: "Preparazione bozze email", status: "pending" as const }]);
       const trace = startTrace(userPrompt);
-      trace.setPhase("direct-tool");
+      trace.setPhase("fast-lane");
       trace.setDriver("compose-email");
       try {
         const startedAt = Date.now();

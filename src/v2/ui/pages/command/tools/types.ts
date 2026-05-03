@@ -1,3 +1,5 @@
+import type { EmailPipelineStage } from "../canvas/EmailPipelineBadge";
+
 export interface ToolResultColumn {
   readonly key: string;
   readonly label: string;
@@ -132,6 +134,8 @@ export type ToolResult =
       readonly detectedTone?: "amichevole" | "professionale" | "diretto" | "informale";
       /** Codice paese ereditato/usato (es. "MT"). Per UI batch e contesto follow-up. */
       readonly countryCode?: string;
+      /** Tappe della pipeline mail (Oracolo→Architetto→Prompt Lab→Giornalista→Bozza). */
+      readonly pipeline?: ReadonlyArray<EmailPipelineStage>;
     }
   | {
       readonly kind: "approval";
@@ -189,6 +193,8 @@ export interface ComposerDraft {
   readonly body: string;
   readonly status: "ok" | "no_email" | "ai_error";
   readonly errorMessage?: string;
+  /** Pipeline per-bozza, mostrata quando si naviga nel batch. */
+  readonly pipeline?: ReadonlyArray<EmailPipelineStage>;
 }
 
 export interface ToolContext {

@@ -1,36 +1,70 @@
-## Diagnosi
+## Obiettivo
 
-Ho ricostruito gli ultimi 4 push sul codice della Command:
+Replicare nel **ComposerCanvas** la stessa logica che già usi nel Command (badge "🔧 tools/fonti" sopra il messaggio): un banner orizzontale con le **tappe della pipeline mail**, sempre visibile sopra l'editor, così sai a colpo d'occhio quali controlli sono stati eseguiti per produrre la bozza.
 
-| Commit | File | Tipo modifica | Può rompere il render? |
-|---|---|---|---|
-| `6c59cc410` | `localResultFormatter.ts` | Cambiate 3 etichette azioni suggerite (testo) | No |
-| `97170ee47` | `aiBridge.ts` | Aggiunto blocco testuale al prompt AI | No |
-| `6beb62ae6` | `batchEnrichPartners.ts` + `registry.ts` | Nuovo tool + registrazione | No |
-| `977f13739` | `CommandPage.tsx` | **Mio fix anti-sparizione messaggi** | È il fix |
+## Cosa vedrai
 
-**Nessuno dei 3 push precedenti tocca i file di rendering della chat** (`CommandThread.tsx`, `CommandPage.tsx`, `useConversation.ts`, `useCommandSubmit.ts`). Si limitano a cambiare testo dei prompt/etichette e aggiungere un tool.
+Sopra "Destinatari/Oggetto/Corpo" compare una striscia compatta:
 
-## Causa reale della sparizione
+```text
+Pipeline mail · 5 step · 2.34s
+[✓ Oracolo] → [✓ Architetto KB·3] → [✓ Prompt Lab·2] → [✓ Giornalista] → [✓ Bozza pronta]
+   partner       fonti consultate     prompt applicati     review            tono · modello
+```
 
-Bug vecchio nel `useEffect` di rehydrate in `CommandPage.tsx`. Riascoltava `conv.messages.length`: ogni `addMessage` persistito sul DB faceva ripartire il rehydrate, che sovrascriveva i messaggi RAM con uno snapshot DB stantio → il messaggio assistant scompariva subito dopo essere apparso.
+- Ogni chip è un **badge tracciabile**: stato (✓/⚠/✗), nome dello stadio, sottotitolo con dettaglio (es. "KB·3", "Prompt Lab·2", "Modello: gpt-5-mini", "Tono: professionale").
+- Hover/click su un chip apre un mini-tooltip con i dettagli (lista prompt operativi applicati, sezioni KB consultate, eventuali warning di Oracolo/Giornalista).
+- In modalità **batch** (es. 9 partner Malta) la stessa striscia mostra "9/9 bozze · Giornalista superato 9/9" con conteggi aggregati.
+- In modalità **single** mostra le 5 tappe specifiche del partner corrente.
 
-Era latente da prima dei 3 push; si è manifestato di più adesso perché la nuova logica fa più append rapidi (utente, automation, direttore, suggested actions).
+## Le 5 tappe rappresentate
 
-## Stato attuale
+| # | Stadio | Cosa mostra |
+|---|--------|-------------|
+| 1 | **Oracolo** (DB lookup) | Partner risolto, lead_status, holding pattern, blacklist guard |
+| 2 | **Architetto** (KB + contesto) | N° sezioni KB consultate, playbook attivo |
+| 3 | **Prompt Lab** | Lista prompt operativi applicati (versione) |
+| 4 | **Giornalista** (review) | Editorial review eseguito (obbligatorio per email) |
+| 5 | **Bozza** | Modello AI usato + tono detectato + lingua |
 
-Il commit `977f13739` (già in `main`) introduce `pendingConversationLoadRef`: il rehydrate parte **solo** quando l'utente clicca una conversazione in sidebar, mai durante append normali.
+Stato per tappa: `ok` (verde), `warn` (ambra, es. partner senza email), `failed` (rosso, es. AI fail), `skipped` (grigio).
 
-## Cosa propongo
+## Sezione tecnica (per chi smanetta)
 
-**Nessun rollback necessario.** I 3 push precedenti sono modifiche di testo/registry, isolate e utili. Il fix al render è già attivo.
+### File toccati (solo UI/presentation, niente business logic nuova)
 
-Azione: ricarica la pagina `/v2/command`, manda un prompt e verifica che il messaggio del Direttore resti visibile. Se sparisce ancora, raccolgo log specifici di `useConversation` + `useCommandSubmit` e isolo il path residuo.
+1. **Nuovo componente** `src/v2/ui/pages/command/canvas/EmailPipelineBadge.tsx`
+   - Riceve un prop tipato `pipeline: EmailPipelineStage[]` con `{ id, label, status, detail?, tooltip? }`.
+   - Render orizzontale con chip + freccia, responsive (wrap su mobile), usa solo design tokens (`bg-success/10`, `text-warning`, ecc.).
 
-Se invece vuoi tornare comunque a uno stato pre-3-push, posso revertire `6c59cc410`, `97170ee47`, `6beb62ae6` mantenendo solo il fix `977f13739` — ma perderesti azioni "comunicazione-first" e il tool batch-enrich.
+2. **Estensione tipi** `src/v2/ui/pages/command/tools/types.ts`
+   - Aggiungo `pipeline?: ReadonlyArray<EmailPipelineStage>` al tipo `ComposerResult` e a `ComposerDraft` (per il batch).
 
-## Dettagli tecnici
+3. **Popolamento pipeline** `src/v2/ui/pages/command/tools/composeEmail.ts`
+   - Sia in `executeSingle` (riga ~722-841) sia in `generateOneDraft`/`buildBatchComposerResult` (riga ~201-360) costruisco l'array `pipeline` partendo dai dati che **già abbiamo**: `_context_summary` (kb_sections, operative_prompts_applied, model, playbook_active), guard rail Oracolo, esito generate-email, tono detectato. Nessuna chiamata extra al backend.
+   - Per il Giornalista mappo l'esito già implicito in `generate-email` (se body ritornato → `ok`, se warning → `warn`).
 
-- File toccato dal fix: `src/v2/ui/pages/CommandPage.tsx` (effetto rehydrate + handler `onSelect`/`onNew` della sidebar)
-- Nessuna migrazione DB, nessuna edge function toccata
-- Compatibile con `useConversation` esistente (nessun cambio di firma)
+4. **Render** `src/v2/ui/pages/command/canvas/ComposerCanvas.tsx`
+   - Aggiungo `pipeline?: EmailPipelineStage[]` alle props e monto `<EmailPipelineBadge>` in cima al pannello (sopra "Batch navigation header" se presente, altrimenti sopra "Destinatari").
+   - In modalità batch sincronizzo i chip con `currentDraft.pipeline` quando si naviga tra le bozze (effetto già esistente).
+
+5. **Wiring** `src/v2/ui/pages/command/components/CommandOutput.tsx` (o dove si renderizza `ComposerCanvas`)
+   - Passo `pipeline={liveResult.pipeline}` / `currentDraft.pipeline`.
+
+### Cosa NON tocco
+
+- `generate-email` edge function (i dati arrivano già da `_context_summary`).
+- `useEmailComposerV2`, governance, send pipeline.
+- `MessageAuditPanel` (resta com'è per l'audit della query AI sopra; questo nuovo badge è specifico del *composer email*).
+- Nessuna nuova chiamata di rete, nessun cambiamento DAL/DB.
+
+### Stima
+
+- 1 nuovo file (~120 righe), 3 file editati (~50 righe totali aggiunte).
+- Zero migrazioni, zero modifiche backend.
+
+## Conferma
+
+Dimmi solo:
+- "Vai" → procedo con l'implementazione esattamente come sopra.
+- Oppure se vuoi **chip diversi** (es. aggiungere "Sherlock", "Enrichment Snapshot", "Compliance check") o cambiare l'**ordine**.

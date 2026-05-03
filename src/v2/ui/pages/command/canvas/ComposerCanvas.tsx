@@ -19,6 +19,7 @@ import { useGovernance } from "../hooks/useGovernance";
 import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import type { ComposerDraft } from "../tools/types";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
+import EmailPipelineBadge, { type EmailPipelineStage } from "./EmailPipelineBadge";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -36,6 +37,8 @@ interface ComposerCanvasProps {
   readonly drafts?: ReadonlyArray<ComposerDraft>;
   /** Tono iniziale detectato dal prompt (default: "professionale"). */
   readonly detectedTone?: DetectedTone;
+  /** Pipeline mail (Oracolo→Architetto→Prompt Lab→Giornalista→Bozza). */
+  readonly pipeline?: ReadonlyArray<EmailPipelineStage>;
 }
 
 export default function ComposerCanvas({
@@ -49,6 +52,7 @@ export default function ComposerCanvas({
   emailType,
   drafts,
   detectedTone,
+  pipeline,
 }: ComposerCanvasProps) {
   const composer = useEmailComposerV2();
   const governance = useGovernance("compose-email");
@@ -296,6 +300,18 @@ export default function ComposerCanvas({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Pipeline mail (Oracolo → Architetto → Prompt Lab → Giornalista → Bozza) */}
+      {(() => {
+        const stages: ReadonlyArray<EmailPipelineStage> | undefined = isBatch
+          ? (batchDrafts[currentIndex]?.pipeline ?? pipeline)
+          : pipeline;
+        if (!stages || stages.length === 0) return null;
+        const summary = isBatch
+          ? `${batchDrafts.filter((d) => d.status === "ok").length}/${batchDrafts.length} bozze · review ok`
+          : `${stages.length} step`;
+        return <EmailPipelineBadge pipeline={stages} summary={summary} />;
+      })()}
 
       {/* Batch navigation header */}
       {isBatch && currentDraft && (
