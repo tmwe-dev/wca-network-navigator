@@ -30,6 +30,7 @@ export {
   findContactByEmail,
   bulkUpdateContactsOrigin,
   listDistinctContactOrigins,
+  bulkUpdateContactsByOrigins,
 } from "./queries";
 
 export type { ImportDuplicateMatch } from "./queries";
