@@ -113,14 +113,17 @@ function suggestedActionsFor(table: string, filters: readonly FilterShape[]): Su
     // Comunicazione-first: il sistema serve a CONTATTARE i partner, non a
     // proporre filtri. Le azioni esplorative (rating, deep search) restano
     // disponibili via testo, ma NON come prime offerte.
+    // IMPORTANTE: i prompt esplicitano "TUTTI i partner ... in BATCH" in modo
+    // che composeEmailTool entri nel ramo batch e generi una bozza per ognuno,
+    // non una sola email a un partner singolo.
     return [
       {
         label: `📧 Email di presentazione`,
-        prompt: `prepara email di presentazione per questi partner ${filtersDesc}`.trim(),
+        prompt: `prepara in batch una email di presentazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
       },
       {
         label: `🤝 Email di collaborazione`,
-        prompt: `prepara email di collaborazione per questi partner ${filtersDesc}`.trim(),
+        prompt: `prepara in batch una email di collaborazione per TUTTI i partner ${filtersDesc} (una bozza per ciascuno)`.trim(),
       },
       {
         label: `🏢 Arricchisci dati mancanti`,
