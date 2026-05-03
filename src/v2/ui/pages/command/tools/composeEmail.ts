@@ -206,7 +206,9 @@ function detectCountryCode(prompt: string): { code: string; label: string } | nu
 function isCountryWideIntent(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   // "tutti i partner", "ai partner di X", "ai responsabili di X", "ai nostri partner"
-  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
+  // Esteso: copre anche "per i partner a/in/di X", "ai partner a Malta",
+  // "i partner di X" → tutte forme batch country-wide.
+  return /\b(tutti\s+i\s+(?:nostri\s+)?partner|(?:ai|per\s+(?:i|gli)|i|gli)\s+(?:nostri\s+)?partner\s+(?:a|in|di|del|della|dello|dei|degli)\s+\w+|ai\s+(?:nostri\s+)?partner|ai\s+responsabili|partner\s+di\s+\w+)\b/i.test(lower);
 }
 
 async function searchPartnersByCountry(countryCode: string): Promise<PartnerRow[]> {
