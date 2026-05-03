@@ -9656,6 +9656,14 @@ export type Database = {
         }
         Relationships: []
       }
+      v_partner_busy: {
+        Row: {
+          partner_id: string | null
+          since: string | null
+          source: string | null
+        }
+        Relationships: []
+      }
       vw_partner_quality_scores: {
         Row: {
           calculated_at: string | null
