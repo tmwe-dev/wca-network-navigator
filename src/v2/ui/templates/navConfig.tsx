@@ -33,7 +33,6 @@ export interface NavGroupDef {
 export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
-  { labelKey: "nav.pipeline",           path: "/v2/pipeline/kanban",    icon: <Kanban className="h-4 w-4" />,   pinned: true, pinOrder: 3 },
   { labelKey: "nav.cestinone",          path: "/v2/cestinone",          icon: <Trash2 className="h-4 w-4" />,   pinned: true, pinOrder: 4, badge: "NEW" },
   { labelKey: "nav.communicate",        path: "/v2/communicate",        icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5 },
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
