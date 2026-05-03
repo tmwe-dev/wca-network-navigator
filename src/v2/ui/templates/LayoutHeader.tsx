@@ -91,6 +91,9 @@ export function LayoutHeader({
         {/* Header contestuale per la sezione Esplora (auto-nascosto altrove) */}
         <ExploreContextHeader />
 
+        {/* Slot per PageTitleHeader (Cockpit, Inbox, Email, ecc.) — riempito via Portal */}
+        <div id="page-title-slot" className="flex min-w-0 items-center gap-2" />
+
         {/* Slot dinamico per controlli pagina (campagne, ecc.) — riservato ma compresso */}
         <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
       </div>
