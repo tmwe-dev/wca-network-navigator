@@ -2,6 +2,7 @@ import type { Tool, ToolResult, ComposerDraft } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
+import type { EmailPipelineStage } from "../canvas/EmailPipelineBadge";
 import {
   getLastComposerContext,
   isRegenerateIntent,
