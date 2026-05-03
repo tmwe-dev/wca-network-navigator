@@ -301,6 +301,18 @@ export default function ComposerCanvas({
         </button>
       </div>
 
+      {/* Pipeline mail (Oracolo → Architetto → Prompt Lab → Giornalista → Bozza) */}
+      {(() => {
+        const stages: ReadonlyArray<EmailPipelineStage> | undefined = isBatch
+          ? (batchDrafts[currentIndex]?.pipeline ?? pipeline)
+          : pipeline;
+        if (!stages || stages.length === 0) return null;
+        const summary = isBatch
+          ? `${batchDrafts.filter((d) => d.status === "ok").length}/${batchDrafts.length} bozze · review ok`
+          : `${stages.length} step`;
+        return <EmailPipelineBadge pipeline={stages} summary={summary} />;
+      })()}
+
       {/* Batch navigation header */}
       {isBatch && currentDraft && (
         <div
