@@ -51,7 +51,7 @@ export class DrawerErrorBoundary extends React.Component<Props, State> {
           <button
             type="button"
             onClick={this.handleReset}
-            className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="px-3 py-1.5 text-xs rounded-md bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary transition-colors"
           >
             Chiudi e riprova
           </button>

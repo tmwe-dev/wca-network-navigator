@@ -220,7 +220,7 @@ export function ProspectAdvancedFilters({ filters, onChange, isDark }: Props) {
             )}
             <button
               onClick={() => setOpen(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-card/60 dark:bg-card/40 border border-primary/60 text-primary hover:bg-primary/15 hover:border-primary"
             >
               Applica filtri
             </button>
