@@ -43,7 +43,7 @@ const LEVEL_META: Record<SherlockLevel, { label: string; Icon: typeof Search; et
 
 export function SherlockLauncherDialog({ open, onOpenChange, target, autoStartLevel }: Props): React.ReactElement {
   const vars = React.useMemo<Record<string, string>>(() => {
-    if (!target) return {};
+    if (!target) return {} as Record<string, string>;
     return {
       companyName: target.companyName ?? "",
       city: target.city ?? target.countryName ?? target.countryCode ?? "",
