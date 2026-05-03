@@ -300,10 +300,28 @@ export function useCockpitLogic() {
     if (signal.aborted) return;
 
     setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
-    const result = await generate({ channel, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard" });
+    const result = await generate({
+      channel,
+      contact_name: contact.name,
+      contact_email: contact.email,
+      company_name: contact.company,
+      country_code: contact.country,
+      partner_id: contact.partnerId ?? null,
+      contact_id: contact.sourceType === "contact" ? contact.sourceId : null,
+    });
     if (signal.aborted) return;
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        scrapingPhase: "idle",
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
@@ -315,9 +333,28 @@ export function useCockpitLogic() {
     const contact = contactsMap[draftState.contactId];
     if (!contact) return;
     setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating" }));
-    const result = await generate({ channel: draftState.channel!, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard", linkedin_profile: draftState.linkedinProfile || undefined });
+    const result = await generate({
+      channel: draftState.channel!,
+      contact_name: contact.name,
+      contact_email: contact.email,
+      company_name: contact.company,
+      country_code: contact.country,
+      partner_id: contact.partnerId ?? null,
+      contact_id: contact.sourceType === "contact" ? contact.sourceId : null,
+      linkedin_profile: draftState.linkedinProfile,
+    });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        scrapingPhase: "idle",
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
@@ -328,9 +365,26 @@ export function useCockpitLogic() {
     if (!draftState.channel || !draftState.contactId) return;
     setDraftState(prev => ({ ...prev, subject: "", body: "", isGenerating: true }));
     const contact = contactsMap[draftState.contactId];
-    const result = await generate({ channel: draftState.channel, contact_name: draftState.contactName || "", contact_email: contact?.email, company_name: contact?.company || "", country_code: contact?.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard" });
+    const result = await generate({
+      channel: draftState.channel,
+      contact_name: draftState.contactName || "",
+      contact_email: contact?.email,
+      company_name: contact?.company || "",
+      country_code: contact?.country,
+      partner_id: contact?.partnerId ?? null,
+      contact_id: contact?.sourceType === "contact" ? contact?.sourceId : null,
+    });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
