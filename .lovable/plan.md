@@ -1,107 +1,98 @@
 ## Obiettivo
-Quando un partner/contatto entra in qualsiasi contenitore "in uscita" (cockpit, campagna pendente, coda outreach, bozza email non spedita), deve **scomparire** dalle liste di lavoro come se fosse `lead_status=holding`. Se l'entry viene cancellata senza invio → il partner torna automaticamente visibile.
 
-## Definizione operativa di "occupato" (Holding allargato)
-Un partner_id si considera **occupato** se esiste almeno una riga viva (`deleted_at IS NULL`) per il suo `partner_id` in:
+Eliminare il caos del "dopo-clic-Invia". Oggi una bozza/un invio in attesa può vivere in 5 posti diversi (Cockpit, In Uscita, Risposte, Attività, Approvazioni). Lo riduciamo a **un solo cestinone**: la coda unica delle cose da confermare prima che partano davvero.
 
-- `outreach_queue` con `status IN ('pending','queued','scheduled','processing')`
-- `campaign_jobs` con `status IN ('pending','queued','in_progress')`
-- `cockpit_queue` con `status IN ('queued','in_progress')`
-- `email_campaign_queue` con `status IN ('pending','queued','sending')` collegata a `email_drafts.status='draft'`/`queue_status IN ('idle','queued','running')`
+---
 
-Nessun trigger di scrittura su `lead_status`: la transizione è **derivata in lettura** così, se l'utente cancella la riga in coda, il partner torna immediatamente "free" senza side-effect su `partners.lead_status`.
-
-## Ambito
-- Tutte le liste basate su `CompanyCardList` (Network/WCA, CRM Contacts, BCA).
-- **Prospects** e qualsiasi vista che oggi mostra aziende/contatti lavorabili.
-- Convive col filtro esistente `holdingFilter` (Senza/Solo/Tutti) — semplicemente la base "holding" diventa più larga.
-
-## Architettura
-
-### 1. Nuova tabella materializzata di stato (sola lettura)
-Vista `v_partner_busy` (o tabella materializzata aggiornata via trigger) con una sola colonna utile:
+## Nuova mappa della sidebar
 
 ```text
-partner_id  | source ('outreach'|'campaign'|'cockpit'|'draft') | since
+Esplora      → Network, Contatti, Biglietti           (i "laghi": pesci crudi)
+Pipeline     → Kanban, Duplicati                       (CRM lifecycle, niente outreach)
+Cestinone ⭐ → UNICA coda di cose "in cottura"        (NUOVA pagina top-level)
+Comunica     → Inbox, Outreach, Componi, Campagne     (creo / leggo)
+Agenda       → vista azioni del giorno                 (top-level a sé, già esiste)
 ```
 
-Indice su `partner_id`. Nessuna logica nuova in DB lato write — solo una **VIEW** che fa UNION delle 4 sorgenti filtrate per status "vivo". Più semplice, sempre fresca, niente trigger.
+---
 
-### 2. DAL `src/data/partnerBusy.ts`
-- `findBusyPartnerIds(scope?: { partnerIds?: string[] }): Promise<Set<string>>`
-- Singolo round-trip `select partner_id from v_partner_busy` (eventualmente filtrato `in (...)` se la lista è piccola).
-- Cache react-query da 30s con invalidate quando le mutation toccano: outreach_queue, campaign_jobs, cockpit_queue, email_drafts.
+## Cos'è il Cestinone
 
-### 3. Hook `useBusyPartners(partnerIds: string[])`
-Chiave query centralizzata in `src/lib/queryKeys.ts` (`v2.busyPartners`). Restituisce `Set<string>`.
+**Una sola pagina, una sola lista.** Ogni riga = un'azione che sta per partire o che richiede una decisione. L'operatore decide solo: ✅ Conferma · ✏️ Modifica · ⏸ Rinvia · ❌ Annulla.
 
-### 4. Integrazione nelle liste
-In `EntityListWithDetail` la pipeline filtri diventa:
+Sorgenti unificate (oggi sparse):
+- `email_campaign_queue` (status = pending / queued / scheduled)
+- `campaign_jobs` (in attesa di approvazione)
+- Cockpit queue (bozze AI proposte)
+- Bozze email non spedite
+- Messaggi WA/LinkedIn in `outbound_dispatch_queue` pending
+- Risposte inbound che richiedono mossa (oggi "Risposte" / Holding Pattern)
 
-```text
-companies
-  → enrich con `meta.holding = meta.holding || busy.has(c.id)`
-  → applica holdingFilter (Senza/Solo/Tutti) come oggi
-  → filtri standard
-```
+Filtri rapidi in alto (chip):
+- **Canale**: Email · WhatsApp · LinkedIn · Voce
+- **Origine**: Manuale · AI · Campagna · Risposta inbound
+- **Stato**: Da approvare · Schedulata · Bozza · Bloccata
 
-Vantaggio: zero modifiche ai 3 adapter (`useWcaPartnersAsCompanies`, `useCrmContactsAsCompanies`, BCA) — l'arricchimento avviene in un solo punto.
+Default: tutto quello che è in "circuito d'attesa" + mostrato finché non è stato eseguito o cancellato (regola già definita).
 
-### 5. UI feedback
-- Il chip esistente "Senza circuito di attesa" resta invariato come label, ma ora copre anche cockpit/queue/draft.
-- Tooltip aggiornato sull'icona ✈️ della card: "In circuito di attesa (cockpit / campagna in attesa / coda invio / bozza)".
-- Quando un partner è "busy" per via di queue ma con `lead_status` neutro, mostra ✈️ con stile leggermente diverso (outline invece di filled) — opzionale, da confermare.
+---
 
-### 6. Invalidazione cache
-Hook helper `useInvalidateBusyPartners()` chiamato dopo:
-- enqueue/cancel outreach
-- create/cancel campagna
-- add/remove cockpit
-- save/discard bozza
+## Cambi alle sezioni esistenti
 
-## Cosa NON cambia
-- `partners.lead_status` resta governato dal Lead Status Guard Protocol esistente. La nuova logica è solo "vista".
-- Nessuna modifica al backend di invio/coda. Nessun trigger nuovo. Nessuna RLS toccata (la VIEW eredita le policy delle tabelle sottostanti).
+### `/v2/pipeline` → solo CRM
+- ✅ Tieni: **Kanban**, **Duplicati**
+- ➡️ Sposta: **Campagne** → dentro Comunica come tab
+- ➡️ Sposta: **Agenda** → top-level sidebar (route `/v2/agenda` già esistente)
+- Redirect retro-compatibili da `/v2/pipeline/campaigns` e `/v2/pipeline/agenda`
 
-## Dettaglio tecnico (per chi sviluppa)
+### `/v2/communicate` → semplificata
+- Tabs: **Inbox** · **Outreach** · **Componi** · **Campagne** (nuova)
+- Rimossa la tab **Approvazioni** (la SortingPage attuale, che era smistamento, non approvazione invio): la sua funzione di "decidere su una mail" confluisce nel Cestinone.
 
-### Migration
-```sql
-CREATE OR REPLACE VIEW public.v_partner_busy AS
-  SELECT partner_id, 'outreach'::text AS source, created_at AS since
-  FROM public.outreach_queue
-  WHERE deleted_at IS NULL
-    AND partner_id IS NOT NULL
-    AND status IN ('pending','queued','scheduled','processing')
-  UNION ALL
-  SELECT partner_id, 'campaign', created_at
-  FROM public.campaign_jobs
-  WHERE partner_id IS NOT NULL
-    AND status IN ('pending','queued','in_progress')
-  UNION ALL
-  SELECT partner_id, 'cockpit', created_at
-  FROM public.cockpit_queue
-  WHERE partner_id IS NOT NULL
-    AND status IN ('queued','in_progress')
-  UNION ALL
-  SELECT ecq.partner_id, 'draft', ecq.created_at
-  FROM public.email_campaign_queue ecq
-  JOIN public.email_drafts d ON d.id = ecq.draft_id
-  WHERE ecq.partner_id IS NOT NULL
-    AND ecq.status IN ('pending','queued','sending')
-    AND d.status = 'draft';
-```
-(Confermare nomi colonne `email_campaign_queue.partner_id` prima di applicare; in caso negativo, fare lookup via `recipient_email` o saltare quella sorgente.)
+### `/v2/communicate/outreach` → snellita
+Oggi ha 5 tab verticali (Cockpit, In Uscita, Risposte, Attività, Strumenti). Diventa:
+- **Cockpit** (stats e grafici, resta)
+- **Storico** (tutto quello che è già stato inviato/risposto/chiuso, sola lettura)
+- **Strumenti** (A/B test, scheduling, coda AI)
 
-### File toccati (stima)
-- `supabase/migrations/<ts>_v_partner_busy.sql` (nuovo)
-- `src/data/partnerBusy.ts` (nuovo)
-- `src/v2/hooks/useBusyPartners.ts` (nuovo)
-- `src/lib/queryKeys.ts` (1 chiave)
-- `src/v2/ui/organisms/EntityListWithDetail.tsx` (1 effetto enrich pre-filter)
-- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` (tooltip ✈️)
-- 4–6 hook di mutation per invalidare la chiave (cockpit add, outreach enqueue, campaign create, draft save)
+➡️ **In Uscita**, **Risposte**, **Attività** → confluiscono nel **Cestinone**.
 
-## Out of scope (proposta separata se serve)
-- Estensione automatica di `lead_status` a `first_touch_sent` quando si manda davvero il primo messaggio — già coperta dal Lead Status Guard Protocol.
-- Vista contatto-level (oggi la "occupazione" è a livello partner; se serve granularità contatto per le sub-card, va aggiunto un secondo indice su `contact_id`).
+### `/v2/cestinone` (NUOVO) → top-level
+Unica vista azione. Sotto-tab solo per "vista":
+- **Tutto** (default) · **Da approvare** · **Schedulato** · **Bloccato**
+
+---
+
+## Comportamento del cestinone (regole già condivise)
+
+- Un partner entra nel cestinone appena ha un'attività in attesa di invio.
+- Esce automaticamente quando l'attività viene **eseguita** (inviata davvero) → torna "free" e ricontattabile.
+- Se l'attività viene **cancellata** dal cockpit/altre fonti senza esecuzione → torna "free" subito.
+- Holding Pattern (✈️) resta come **badge visivo** sulla card, non come pagina separata.
+- Editorial review (`journalistReview`) resta obbligatorio prima del send fisico (intoccabile).
+
+---
+
+## Dettaglio tecnico (per dopo)
+
+- **Hook unico** `useCestinone()` che fa fan-out su: `email_campaign_queue`, `campaign_jobs`, `outbound_dispatch_queue`, `cockpit_queue`, bozze. Ritorna `CestinoItem[]` normalizzato (`{id, channel, partner, subject/preview, status, source, scheduled_at, action: {confirm, edit, snooze, cancel}}`).
+- **DAL nuovo**: `src/data/cestinone.ts` che orchestra le sorgenti via Promise.allSettled. Nessuna nuova tabella DB.
+- **Mutazioni**: confirm → enqueue normale del canale; cancel → soft-delete (trigger DB lo gestisce); snooze → update `scheduled_at`.
+- **Realtime**: subscribe alle 3 tabelle sorgente per refresh live.
+- **Query keys** centralizzati in `queryKeys.cestinone.*`.
+- **Route**: aggiungere `/v2/cestinone` in App.tsx; aggiungere voce in sidebar; redirect da vecchi tab Outreach (In Uscita/Risposte/Attività) → `/v2/cestinone`.
+- **Codice vecchio**: NON cancellato (regola "no delete in `src/components`"), solo non più referenziato dal router. `HoldingPatternCommandCenter` riusato come "vista compatta" dentro la card del Cestinone.
+- **Editorial review**: invariato. Hook `useCestinone().confirm()` chiama lo stesso path di invio attuale.
+
+---
+
+## Ordine consigliato di implementazione
+
+1. **Crea `/v2/cestinone`** (route + voce sidebar + pagina vuota con tab vista).
+2. **DAL `cestinone.ts` + hook `useCestinone`** che aggrega le sorgenti già esistenti — solo lettura.
+3. **Card unificata** con CTA Conferma/Modifica/Rinvia/Annulla che riusa `ApprovalPanel.tsx` e gli handler già esistenti dei vari canali.
+4. **Sposta tab**: Campagne → Comunica, Agenda → top-level. Aggiungi redirect.
+5. **Snellisci OutreachPage** rimuovendo tab "In Uscita / Risposte / Attività" (redirect → cestinone).
+6. **Rimuovi tab "Approvazioni"** da Comunica (redirect → cestinone).
+
+Dopo lo step 1-3 avrai già il cestinone funzionante. Gli step 4-6 sono pulizia, reversibili in qualunque momento.

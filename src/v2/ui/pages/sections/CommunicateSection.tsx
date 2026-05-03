@@ -5,13 +5,13 @@ import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { InreachPage } from "@/v2/ui/pages/InreachPage";
 import { OutreachPage } from "@/v2/ui/pages/OutreachPage";
 import { EmailComposerPage } from "@/v2/ui/pages/EmailComposerPage";
-import { Sorting as SortingPage } from "@/v2/ui/pages/SortingPage";
+import { Campaigns as CampaignsPage } from "@/v2/ui/pages/CampaignsPage";
 
 const TABS: readonly SectionTab[] = [
   { key: "inbox",    label: "Inbox",        to: "/v2/communicate/inbox" },
   { key: "outreach", label: "Outreach",     to: "/v2/communicate/outreach" },
   { key: "compose",  label: "Componi",      to: "/v2/communicate/compose" },
-  { key: "approve",  label: "Approvazioni", to: "/v2/communicate/approve" },
+  { key: "campaigns",label: "Campagne",     to: "/v2/communicate/campaigns" },
 ];
 
 export function CommunicateSection(): React.ReactElement {
@@ -24,7 +24,8 @@ export function CommunicateSection(): React.ReactElement {
           <Route path="inbox"    element={<InreachPage />} />
           <Route path="outreach" element={<OutreachPage />} />
           <Route path="compose"  element={<EmailComposerPage />} />
-          <Route path="approve"  element={<SortingPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="approve"  element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="*"        element={<Navigate to="/v2/communicate/inbox" replace />} />
         </Routes>
       </SectionTabs>
