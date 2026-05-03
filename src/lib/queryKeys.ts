@@ -32,6 +32,13 @@ export const queryKeys = {
     pickerPartner: (filters?: unknown) => ["picker-partner-contacts", filters] as const,
   },
 
+  // ── Cestinone (unified pre-send queue) ────────────────
+  cestinone: {
+    all: ["cestinone"] as const,
+    list: (filters?: unknown) => ["cestinone-list", filters] as const,
+    count: ["cestinone-count"] as const,
+  },
+
   // ── Social Links ──────────────────────────────────────
   socialLinks: {
     all: ["social-links"] as const,
