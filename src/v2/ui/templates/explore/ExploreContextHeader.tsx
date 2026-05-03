@@ -17,12 +17,12 @@ import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Globe, Users, IdCard, Map as MapIcon, SearchCheck, ChevronLeft, ChevronRight,
-  LayoutDashboard,
+  LayoutDashboard, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExploreTabCounters, type ExploreTabCounters } from "@/v2/hooks/useExploreTabCounters";
 
-type TabKey = "command" | "network" | "contacts" | "biglietti" | "map" | "deep";
+type TabKey = "command" | "network" | "contacts" | "biglietti" | "map" | "campaigns" | "deep";
 
 interface TabDef {
   readonly key: TabKey;
@@ -40,6 +40,7 @@ const TABS: readonly TabDef[] = [
   { key: "contacts",  label: "Contatti CRM",  to: "/v2/explore/contacts",    icon: Users,       counterKey: "contacts",  unitLabel: "contatti", matchPaths: ["/v2/explore/contacts"] },
   { key: "biglietti", label: "Biglietti",     to: "/v2/explore/biglietti",   icon: IdCard,      counterKey: "biglietti", unitLabel: "biglietti", matchPaths: ["/v2/explore/biglietti"] },
   { key: "map",       label: "Mappa",         to: "/v2/explore/map",         icon: MapIcon,     counterKey: "map",       unitLabel: "paesi",    matchPaths: ["/v2/explore/map"] },
+  { key: "campaigns", label: "Campagne",      to: "/v2/explore/campaigns",   icon: Megaphone,                                                    matchPaths: ["/v2/explore/campaigns"] },
   { key: "deep",      label: "Sherlock",      to: "/v2/explore/deep-search", icon: SearchCheck,                                                  matchPaths: ["/v2/explore/deep-search"] },
 ] as const;
 
