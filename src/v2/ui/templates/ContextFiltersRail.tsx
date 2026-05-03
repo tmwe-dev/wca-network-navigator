@@ -149,8 +149,8 @@ export function ContextFiltersRail(): React.ReactElement | null {
               <Check className="h-3 w-3" /> Conferma
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {(() => {
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {context.bannerKey !== "email-compose" && (() => {
               const meta = SIDEBAR_BANNER_REGISTRY[context.bannerKey];
               return (
                 <SidebarBanner
@@ -161,7 +161,7 @@ export function ContextFiltersRail(): React.ReactElement | null {
                 />
               );
             })()}
-            <div className="space-y-5 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
+            <div className="space-y-4 [&>section+section]:border-t [&>section+section]:border-border/40 [&>section+section]:pt-4 [&>div+section]:border-t [&>div+section]:border-border/40 [&>div+section]:pt-4">
               {context.content}
             </div>
           </div>
