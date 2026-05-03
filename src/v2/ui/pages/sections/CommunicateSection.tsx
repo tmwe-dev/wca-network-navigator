@@ -26,6 +26,7 @@ export function CommunicateSection(): React.ReactElement {
           <Route path="outreach/inuscita" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="outreach/circuito" element={<Navigate to="/v2/communicate/inbox" replace />} />
           <Route path="outreach/attivita" element={<Navigate to="/v2/agenda" replace />} />
+          <Route path="outreach/strumenti" element={<Navigate to="/v2/settings/outreach-tools" replace />} />
           <Route path="*"        element={<Navigate to="/v2/communicate/compose" replace />} />
         </Routes>
       </SectionTabs>
