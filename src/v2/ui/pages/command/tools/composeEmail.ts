@@ -94,6 +94,13 @@ function buildEmailPipeline(args: BuildPipelineArgs): EmailPipelineStage[] {
     { id: "architetto",  label: "Architetto",  status: architettoStatus,  detail: architettoDetail,
       tooltip: kbCount > 0 ? `${kbCount} sezioni KB consultate${playbookActive ? " + playbook attivo" : ""}` : "Nessuna sezione KB" },
     { id: "prompt-lab",  label: "Prompt Lab",  status: promptStatus,      detail: promptDetail,    tooltip: promptTooltip },
+    {
+      id: "calligrafia",
+      label: "Calligrafia",
+      status: generationOk === true ? "ok" : (generationOk === false ? "failed" : "skipped"),
+      detail: generationOk === true ? "KB" : undefined,
+      tooltip: 'Regole di formattazione email caricate dalla KB "Calligrafia" e iniettate nel prompt (server-side, generate-email).',
+    },
     { id: "giornalista", label: "Giornalista", status: giornalistaStatus, detail: giornalistaDetail, tooltip: giornalistaTooltip },
     { id: "bozza",       label: "Bozza",       status: bozzaStatus,       detail: bozzaDetail,     tooltip: bozzaTooltip },
   ];
