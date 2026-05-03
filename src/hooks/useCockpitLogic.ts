@@ -511,5 +511,6 @@ export function useCockpitLogic() {
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
     handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
+    draftQueue, setDraftQueue,
   };
 }
