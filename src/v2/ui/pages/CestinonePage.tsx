@@ -291,7 +291,7 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
 
       {/* Riga 2 — Meta sinistra (canale icona, stato, lead, partner type) + bandiera a dx */}
       <div className="flex items-center gap-1.5 mt-2">
-        <ch.Icon className={cn("h-3.5 w-3.5 shrink-0", ch.tone)} title={ch.label} />
+        <span title={ch.label} className="inline-flex"><ch.Icon className={cn("h-3.5 w-3.5 shrink-0", ch.tone)} /></span>
         <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 border", st.tone)}>{st.label}</Badge>
         {pt && (
           <span className={cn("px-1.5 py-0.5 rounded border font-medium text-[9px]", pt.tone)}>{pt.label}</span>
