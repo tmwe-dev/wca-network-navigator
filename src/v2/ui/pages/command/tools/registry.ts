@@ -185,7 +185,6 @@ const WRITE_TOOL_IDS = new Set<string>([
   "create-kb-entry",
   "calculate-lead-scores",
   "deduplicate-contacts",
-  "compose-email",
   "launch-mission",
   "parse-business-card",
   "kb-ingest-document",
