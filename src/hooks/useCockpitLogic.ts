@@ -326,6 +326,44 @@ export function useCockpitLogic() {
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
     }
+
+    // BULK: se ci sono altri contatti selezionati, generali sequenzialmente
+    // in background e accumulali nella draftQueue. Il primo è già nello studio.
+    if (ids.length > 1 && !signal.aborted) {
+      setDraftQueue([]);
+      const rest = ids.slice(1);
+      let okCount = 1;
+      let errCount = 0;
+      for (const id of rest) {
+        if (signal.aborted) break;
+        const c = contactsMap[id];
+        if (!c) { errCount++; continue; }
+        try {
+          const r = await generate({
+            channel,
+            contact_name: c.name,
+            contact_email: c.email,
+            company_name: c.company,
+            country_code: c.country,
+            partner_id: c.partnerId ?? null,
+            contact_id: c.sourceType === "contact" ? c.sourceId : null,
+          });
+          if (signal.aborted) break;
+          if (r) {
+            setDraftQueue(prev => [...prev, { contactId: id, contactName: c.name, result: r }]);
+            okCount++;
+          } else {
+            errCount++;
+          }
+        } catch (e: unknown) {
+          errCount++;
+          log.warn("bulk generate failed", { id, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      if (!signal.aborted) {
+        toast.success(`Bulk generazione completata`, { description: `${okCount}/${ids.length} OK, ${errCount} errori` });
+      }
+    }
   }, [generate, refetchCredits, getDraggedIds, contactsMap, liBridge, autoAssign, linkedInLookup]);
 
   const handleGenerateAfterReview = useCallback(async () => {
