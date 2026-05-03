@@ -59,7 +59,24 @@ export function useEmailComposerState() {
     return groups;
   }, [templates]);
 
-  // ── Prefill from navigation state (one-shot) ──
+  // ── DB Lookup ──
+  const lookupEmailInDB = useCallback(async (emailAddr: string) => {
+    const partner = await findPartnerByEmail(emailAddr);
+    if (partner) return { found: true, companyName: partner.company_alias || partner.company_name, contactName: "", countryCode: partner.country_code || "", city: partner.city || "", partnerId: partner.id };
+    const pc = await findPartnerContactByEmail(emailAddr);
+    if (pc) {
+      const p = pc.partners as { company_alias?: string | null; company_name?: string | null; country_code?: string | null; city?: string | null } | null;
+      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: (pc as { contact_alias?: string }).contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
+    }
+    const { findContactByEmail } = await import("@/data/contacts");
+    const ic = await findContactByEmail(emailAddr);
+    if (ic) return { found: true, companyName: ic.company_alias || ic.company_name || "", contactName: ic.contact_alias || ic.name || "", countryCode: ic.country || "", city: "", partnerId: "" };
+    const bc = await findBusinessCardByEmail(emailAddr);
+    if (bc) return { found: true, companyName: bc.company_name || "", contactName: bc.contact_name || "", countryCode: "", city: bc.location || "", partnerId: bc.matched_partner_id || "" };
+    return { found: false, companyName: "", contactName: "", countryCode: "", city: "", partnerId: "" };
+  }, []);
+
+  // ── Prefill from navigation state OR query string (one-shot) ──
   const prefillAppliedRef = useRef(false);
   useEffect(() => {
     if (prefillAppliedRef.current) return;
@@ -86,7 +103,6 @@ export function useEmailComposerState() {
       const escaped = s.prefilledBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       dispatch({ type: "SET_HTML_BODY", payload: `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escaped}</pre>` });
     }
-    // Query-string prefill (es. /v2/communicate/compose?partner=… o ?email=…)
     if (hasQuery && !s?.prefilledRecipient) {
       void (async () => {
         try {
@@ -128,26 +144,8 @@ export function useEmailComposerState() {
         }
       })();
     }
-    // Clear navigation state after a tick so React commits the recipient first
     setTimeout(() => navigate(location.pathname, { replace: true, state: {} }), 0);
   }, [location.state, location.search, addRecipient, navigate, location.pathname, lookupEmailInDB]);
-
-  // ── DB Lookup ──
-  const lookupEmailInDB = useCallback(async (emailAddr: string) => {
-    const partner = await findPartnerByEmail(emailAddr);
-    if (partner) return { found: true, companyName: partner.company_alias || partner.company_name, contactName: "", countryCode: partner.country_code || "", city: partner.city || "", partnerId: partner.id };
-    const pc = await findPartnerContactByEmail(emailAddr);
-    if (pc) {
-      const p = pc.partners as { company_alias?: string | null; company_name?: string | null; country_code?: string | null; city?: string | null } | null;
-      return { found: true, companyName: p?.company_alias || p?.company_name || "", contactName: (pc as { contact_alias?: string }).contact_alias || pc.name || "", countryCode: p?.country_code || "", city: p?.city || "", partnerId: pc.partner_id };
-    }
-    const { findContactByEmail } = await import("@/data/contacts");
-    const ic = await findContactByEmail(emailAddr);
-    if (ic) return { found: true, companyName: ic.company_alias || ic.company_name || "", contactName: ic.contact_alias || ic.name || "", countryCode: ic.country || "", city: "", partnerId: "" };
-    const bc = await findBusinessCardByEmail(emailAddr);
-    if (bc) return { found: true, companyName: bc.company_name || "", contactName: bc.contact_name || "", countryCode: "", city: bc.location || "", partnerId: bc.matched_partner_id || "" };
-    return { found: false, companyName: "", contactName: "", countryCode: "", city: "", partnerId: "" };
-  }, []);
 
   // ── Named actions ──
   const setSubject = useCallback((v: string) => dispatch({ type: "SET_SUBJECT", payload: v }), []);
