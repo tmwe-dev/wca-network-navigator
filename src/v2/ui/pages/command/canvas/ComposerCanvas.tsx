@@ -121,6 +121,20 @@ export default function ComposerCanvas({
     const email = toField.trim();
     if (!email || !/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) {
       toast.error("Indirizzo email non valido");
+      return false;
+    }
+    composer.addRecipient({ email, name: email.split("@")[0] ?? email });
+    setToField("");
+    return true;
+  }, [toField, composer]);
+
+  /** Commit silenzioso del campo toField (senza toast) prima di invio/approval. */
+  const commitPendingRecipient = useCallback(() => {
+    const email = toField.trim();
+    if (!email) return;
+    if (!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) return;
+    if (composer.recipients.some((r) => r.email === email)) {
+      setToField("");
       return;
     }
     composer.addRecipient({ email, name: email.split("@")[0] ?? email });
@@ -212,7 +226,13 @@ export default function ComposerCanvas({
   }, [composer, promptHint, partnerId, recipientName, emailType, isBatch, batchDrafts, tone]);
 
   const handleSendClick = useCallback(() => {
-    if (composer.recipients.length === 0) {
+    // Se l'utente ha digitato una mail senza premere Invio, la committiamo ora.
+    commitPendingRecipient();
+    const pendingEmail = toField.trim();
+    const willHaveRecipients =
+      composer.recipients.length > 0 ||
+      (pendingEmail.length > 0 && /^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(pendingEmail));
+    if (!willHaveRecipients) {
       toast.error("Aggiungi almeno un destinatario");
       return;
     }
@@ -225,7 +245,7 @@ export default function ComposerCanvas({
       return;
     }
     setShowApproval(true);
-  }, [composer]);
+  }, [composer, commitPendingRecipient, toField]);
 
   const handleConfirmSend = useCallback(() => {
     setShowApproval(false);
