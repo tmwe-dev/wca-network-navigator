@@ -18,6 +18,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { findPartnerByEmail } from "@/data/partners";
 import { findPartnerContactByEmail } from "@/data/partnerRelations";
 import { findBusinessCardByEmail } from "@/data/businessCards";
+import { supabase } from "@/integrations/supabase/client";
 import { insertEditPattern } from "@/data/aiEditPatterns";
 import type { OracleConfig } from "@/components/email/OraclePanel";
 import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
