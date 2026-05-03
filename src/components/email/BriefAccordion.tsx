@@ -7,7 +7,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { ChevronDown, ListChecks, Target as TargetIcon, AlertTriangle, Ruler, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
 export interface EmailBrief {
@@ -29,6 +29,14 @@ const LENGTH_LABEL: Record<EmailBrief["maxLength"], string> = {
   short: "5-7 righe",
   medium: "8-12 righe",
   long: "13-18 righe",
+};
+
+const LENGTH_VALUES: EmailBrief["maxLength"][] = ["", "short", "medium", "long"];
+const LENGTH_UI_LABEL: Record<EmailBrief["maxLength"], string> = {
+  "": "Auto",
+  short: "Breve",
+  medium: "Media",
+  long: "Lunga",
 };
 
 /** Convert brief to a structured text block to append to customGoal. Empty if no fields set. */
@@ -65,7 +73,7 @@ interface Props {
 }
 
 export default function BriefAccordion({ brief, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [pointInput, setPointInput] = useState("");
 
   const dirtyCount = useMemo(() => {
@@ -95,6 +103,8 @@ export default function BriefAccordion({ brief, onChange }: Props) {
     setPointInput("");
   }, [pointInput, brief.keyPoints, update]);
 
+  const lengthIndex = Math.max(0, LENGTH_VALUES.indexOf(brief.maxLength));
+
   const removePoint = useCallback(
     (i: number) => {
       update(
@@ -106,17 +116,19 @@ export default function BriefAccordion({ brief, onChange }: Props) {
   );
 
   return (
-    <div className="rounded-md border border-border/30 bg-muted/10">
+    <div className="rounded-lg border border-primary/20 bg-primary/5 shadow-sm shadow-primary/5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-medium text-foreground/80 hover:bg-muted/30 transition-colors rounded-md"
+        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold text-foreground hover:bg-primary/10 transition-colors rounded-lg"
       >
         <span className="flex items-center gap-1.5">
-          <ListChecks className="w-3 h-3" />
-          Brief strutturato
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/15 text-primary">
+            <ListChecks className="w-3.5 h-3.5" />
+          </span>
+          Brief
           {dirtyCount > 0 && (
-            <span className="ml-1 px-1 py-0.5 rounded bg-primary/15 text-primary text-[9px]">
+            <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] text-primary-foreground">
               {dirtyCount}
             </span>
           )}
@@ -125,10 +137,10 @@ export default function BriefAccordion({ brief, onChange }: Props) {
       </button>
 
       {open && (
-        <div className="border-t border-border/30 px-2 py-2 space-y-2">
+        <div className="border-t border-primary/15 px-3 py-3 space-y-3">
           {/* Key points */}
           <div>
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-primary mb-1.5">
               <TargetIcon className="w-3 h-3" />
               Punti chiave
             </label>
@@ -142,14 +154,14 @@ export default function BriefAccordion({ brief, onChange }: Props) {
                     addPoint();
                   }
                 }}
-                placeholder="Aggiungi e premi Invio"
-                className="h-7 text-[11px] flex-1"
+                placeholder="Aggiungi punto"
+                className="h-8 text-[11px] flex-1 bg-background/60"
               />
               <button
                 type="button"
                 onClick={addPoint}
                 disabled={!pointInput.trim()}
-                className="shrink-0 px-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="shrink-0 px-2 rounded-md border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 title="Aggiungi punto"
               >
                 <Plus className="w-3 h-3" />
@@ -179,7 +191,7 @@ export default function BriefAccordion({ brief, onChange }: Props) {
 
           {/* CTA */}
           <div>
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-primary mb-1.5">
               <TargetIcon className="w-3 h-3" />
               Call to Action
             </label>
@@ -187,13 +199,13 @@ export default function BriefAccordion({ brief, onChange }: Props) {
               value={brief.cta}
               onChange={(e) => update("cta", e.target.value)}
               placeholder="Es: fissare una call di 15 min"
-              className="h-7 text-[11px]"
+              className="h-8 text-[11px] bg-background/60"
             />
           </div>
 
           {/* Avoid */}
           <div>
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-destructive mb-1.5">
               <AlertTriangle className="w-3 h-3" />
               Da evitare
             </label>
@@ -201,30 +213,38 @@ export default function BriefAccordion({ brief, onChange }: Props) {
               value={brief.avoidTopics}
               onChange={(e) => update("avoidTopics", e.target.value)}
               placeholder="Es: non menzionare prezzi"
-              className="h-7 text-[11px]"
+              className="h-8 text-[11px] bg-background/60"
             />
           </div>
 
           {/* Length */}
-          <div>
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
+          <div className="rounded-md border border-border/30 bg-background/40 px-3 py-2.5">
+            <label className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase text-muted-foreground mb-2.5">
+              <span className="inline-flex items-center gap-1.5">
               <Ruler className="w-3 h-3" />
               Lunghezza
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                {LENGTH_UI_LABEL[brief.maxLength]}
+              </span>
             </label>
-            <Select
-              value={brief.maxLength || "auto"}
-              onValueChange={(v) => update("maxLength", v === "auto" ? "" : (v as EmailBrief["maxLength"]))}
-            >
-              <SelectTrigger className="h-7 text-[11px]">
-                <SelectValue placeholder="Automatica" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="auto" className="text-[11px]">Automatica</SelectItem>
-                <SelectItem value="short" className="text-[11px]">Breve (5-7 righe)</SelectItem>
-                <SelectItem value="medium" className="text-[11px]">Media (8-12 righe)</SelectItem>
-                <SelectItem value="long" className="text-[11px]">Lunga (13-18 righe)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Slider
+              value={[lengthIndex]}
+              min={0}
+              max={3}
+              step={1}
+              onValueChange={([next]) => {
+                const sliderValue = typeof next === "number" ? next : 0;
+                update("maxLength", LENGTH_VALUES[sliderValue] ?? "");
+              }}
+              aria-label="Lunghezza email"
+            />
+            <div className="mt-2 grid grid-cols-4 text-center text-[9px] text-muted-foreground">
+              <span>Auto</span>
+              <span>Breve</span>
+              <span>Media</span>
+              <span>Lunga</span>
+            </div>
           </div>
         </div>
       )}
