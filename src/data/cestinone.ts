@@ -32,6 +32,27 @@ export type CestinoTrigger =
   | "cockpit_draft";
 export type CestinoPartnerType = "wca_partner" | "customer" | "lead" | "prospect" | null;
 
+export interface CestinoInteraction {
+  readonly date: string;
+  readonly channel: string;
+  readonly direction: "in" | "out" | "note";
+  readonly subject: string | null;
+  readonly snippet: string | null;
+}
+
+export interface CestinoOriginContext {
+  /** Provenienza primaria (BCA, fiera, import, manuale, scraping). */
+  readonly source: "business_card" | "campaign" | "inbound_reply" | "manual" | "import" | "unknown";
+  /** Etichetta human-readable della provenienza. */
+  readonly label: string;
+  /** Es. nome fiera per BCA. */
+  readonly eventName?: string | null;
+  /** Es. luogo di incontro per BCA. */
+  readonly meetingLocation?: string | null;
+  /** Data dell'incontro / acquisizione. */
+  readonly acquiredAt?: string | null;
+}
+
 export interface CestinoItem {
   readonly id: string;
   readonly source: CestinoSource;
@@ -48,12 +69,18 @@ export interface CestinoItem {
   readonly partnerName: string | null;
   readonly partnerType: CestinoPartnerType;
   readonly partnerCountryCode: string | null;
+  readonly partnerCountryName: string | null;
   readonly partnerLeadStatus: string | null;
   readonly partnerWcaId: number | null;
   // contesto
   readonly agentName: string | null;
   readonly campaignName: string | null;
   readonly triggerKind: CestinoTrigger;
+  readonly originContext: CestinoOriginContext;
+  /** Email/messaggio precedente che ha generato questa risposta, se presente. */
+  readonly previousMessage: { readonly subject: string | null; readonly snippet: string | null; readonly date: string } | null;
+  /** Ultime interazioni con il partner (max 5). */
+  readonly recentInteractions: ReadonlyArray<CestinoInteraction>;
   // contenuto pieno
   readonly bodyText: string | null;
   readonly bodyHtml: string | null;
@@ -63,6 +90,16 @@ export interface CestinoItem {
   readonly lastError: string | null;
   // intelligence
   readonly deepSearchDoneAt: string | null;
+}
+
+const COUNTRY_NAMER = (() => {
+  try { return new Intl.DisplayNames(["it"], { type: "region" }); }
+  catch { return null; }
+})();
+function countryName(code: string | null | undefined): string | null {
+  if (!code) return null;
+  try { return COUNTRY_NAMER?.of(code.toUpperCase()) ?? code.toUpperCase(); }
+  catch { return code.toUpperCase(); }
 }
 
 function normalizeStatus(raw: string | null | undefined): CestinoStatus {
@@ -143,11 +180,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         partnerName: null,
         partnerType: null,
         partnerCountryCode: null,
+        partnerCountryName: null,
         partnerLeadStatus: null,
         partnerWcaId: null,
         agentName: (r.operator_id as string) ?? null,
         campaignName: null,
         triggerKind: "campaign",
+        originContext: { source: "campaign", label: "Coda email campagne" },
+        previousMessage: null,
+        recentInteractions: [],
         bodyText: null,
         bodyHtml: (r.html_body as string) ?? null,
         retryCount: Number(r.retry_count ?? 0),
@@ -177,11 +218,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         partnerName: (r.company_name as string) ?? null,
         partnerType: null,
         partnerCountryCode: (r.country_code as string) ?? null,
+        partnerCountryName: countryName(r.country_code as string),
         partnerLeadStatus: null,
         partnerWcaId: null,
         agentName: (r.operator_id as string) ?? (r.assigned_to as string) ?? null,
         campaignName: r.batch_id ? `Batch ${String(r.batch_id).slice(0, 8)}` : null,
         triggerKind: "campaign",
+        originContext: { source: "campaign", label: r.batch_id ? `Job campagna · Batch ${String(r.batch_id).slice(0, 8)}` : "Job campagna" },
+        previousMessage: null,
+        recentInteractions: [],
         bodyText: notes,
         bodyHtml: null,
         retryCount: 0,
@@ -209,11 +254,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         partnerName: null,
         partnerType: null,
         partnerCountryCode: null,
+        partnerCountryName: null,
         partnerLeadStatus: null,
         partnerWcaId: null,
         agentName: (r.operator_id as string) ?? null,
         campaignName: null,
         triggerKind: "cockpit_draft",
+        originContext: { source: "manual", label: "Cockpit (bozza operatore)" },
+        previousMessage: null,
+        recentInteractions: [],
         bodyText: null,
         bodyHtml: null,
         retryCount: 0,
@@ -248,11 +297,15 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
         partnerName: null,
         partnerType: null,
         partnerCountryCode: null,
+        partnerCountryName: null,
         partnerLeadStatus: null,
         partnerWcaId: null,
         agentName: (r.operator_id as string) ?? (r.created_by as string) ?? null,
         campaignName: null,
         triggerKind: isReply ? "inbound_reply" : "manual",
+        originContext: { source: isReply ? "inbound_reply" : "manual", label: isReply ? "Risposta a messaggio inbound" : "Outreach manuale multicanale" },
+        previousMessage: null,
+        recentInteractions: [],
         bodyText: body,
         bodyHtml: null,
         retryCount: Number(r.attempts ?? 0),
@@ -267,15 +320,24 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
   const partnerIds = Array.from(new Set(out.map((i) => i.partnerId).filter(Boolean) as string[]));
   const operatorIds = Array.from(new Set(out.map((i) => i.agentName).filter((v): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v))));
 
-  const [partnersRes, profilesRes, sherlockRes] = await Promise.allSettled([
+  const [partnersRes, profilesRes, sherlockRes, bcaRes, interactionsRes, lastInboundRes] = await Promise.allSettled([
     partnerIds.length
-      ? supabase.from("partners").select("id, company_name, country_code, lead_status, partner_type, wca_id").in("id", partnerIds)
+      ? supabase.from("partners").select("id, company_name, country_code, country_name, city, lead_status, partner_type, wca_id").in("id", partnerIds)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     operatorIds.length
       ? supabase.from("profiles").select("user_id, display_name").in("user_id", operatorIds)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     partnerIds.length
       ? supabase.from("sherlock_investigations").select("partner_id, created_at").in("partner_id", partnerIds).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    partnerIds.length
+      ? supabase.from("business_cards").select("matched_partner_id, event_name, location, met_at").in("matched_partner_id", partnerIds)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    partnerIds.length
+      ? supabase.from("interactions").select("partner_id, interaction_type, interaction_date, subject, notes").in("partner_id", partnerIds).order("interaction_date", { ascending: false }).limit(200)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    partnerIds.length
+      ? supabase.from("channel_messages").select("partner_id, channel, direction, subject, body_text, created_at").in("partner_id", partnerIds).eq("direction", "inbound").order("created_at", { ascending: false }).limit(200)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
   ]);
 
@@ -298,16 +360,74 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
       if (!sherlockMap.has(pid)) sherlockMap.set(pid, String(s.created_at));
     }
   }
+  const bcaMap = new Map<string, { event: string | null; location: string | null; met_at: string | null }>();
+  if (bcaRes.status === "fulfilled" && bcaRes.value.data) {
+    for (const c of bcaRes.value.data as Array<Record<string, unknown>>) {
+      const pid = String(c.matched_partner_id);
+      if (!bcaMap.has(pid)) bcaMap.set(pid, {
+        event: (c.event_name as string) ?? null,
+        location: (c.location as string) ?? null,
+        met_at: (c.met_at as string) ?? null,
+      });
+    }
+  }
+  const interactionsByPartner = new Map<string, CestinoInteraction[]>();
+  if (interactionsRes.status === "fulfilled" && interactionsRes.value.data) {
+    for (const i of interactionsRes.value.data as Array<Record<string, unknown>>) {
+      const pid = String(i.partner_id);
+      const arr = interactionsByPartner.get(pid) ?? [];
+      if (arr.length >= 5) continue;
+      arr.push({
+        date: String(i.interaction_date ?? ""),
+        channel: String(i.interaction_type ?? "—"),
+        direction: "note",
+        subject: (i.subject as string) ?? null,
+        snippet: i.notes ? String(i.notes).slice(0, 160) : null,
+      });
+      interactionsByPartner.set(pid, arr);
+    }
+  }
+  const lastInboundByPartner = new Map<string, { subject: string | null; snippet: string | null; date: string }>();
+  if (lastInboundRes.status === "fulfilled" && lastInboundRes.value.data) {
+    for (const m of lastInboundRes.value.data as Array<Record<string, unknown>>) {
+      const pid = String(m.partner_id);
+      if (lastInboundByPartner.has(pid)) continue;
+      lastInboundByPartner.set(pid, {
+        subject: (m.subject as string) ?? null,
+        snippet: m.body_text ? String(m.body_text).replace(/\s+/g, " ").slice(0, 220) : null,
+        date: String(m.created_at ?? ""),
+      });
+    }
+  }
 
   const enriched = out.map((it): CestinoItem => {
     const p = it.partnerId ? partnerMap.get(it.partnerId) : null;
     const agentDisplay = it.agentName && profileMap.has(it.agentName)
       ? profileMap.get(it.agentName) || it.agentName
       : it.agentName;
+    const bca = it.partnerId ? bcaMap.get(it.partnerId) : null;
+    const previous = it.partnerId ? lastInboundByPartner.get(it.partnerId) ?? null : null;
+    const interactions = it.partnerId ? interactionsByPartner.get(it.partnerId) ?? [] : [];
+    let originContext = it.originContext;
+    // se è una risposta o il partner viene da BCA, sovrascrivo il context per essere più informativo
+    if (it.triggerKind === "inbound_reply" && previous) {
+      originContext = { ...originContext, source: "inbound_reply", label: "Risposta a email ricevuta" };
+    } else if (bca) {
+      originContext = {
+        source: "business_card",
+        label: bca.event ? `Biglietto da visita · ${bca.event}` : "Biglietto da visita",
+        eventName: bca.event,
+        meetingLocation: bca.location,
+        acquiredAt: bca.met_at,
+      };
+    }
+    const code = (p?.country_code as string) ?? it.partnerCountryCode;
+    const cName = (p?.country_name as string) ?? countryName(code);
     return {
       ...it,
       partnerName: (p?.company_name as string) ?? it.partnerName,
-      partnerCountryCode: (p?.country_code as string) ?? it.partnerCountryCode,
+      partnerCountryCode: code,
+      partnerCountryName: cName,
       partnerLeadStatus: (p?.lead_status as string) ?? null,
       partnerWcaId: (p?.wca_id as number) ?? null,
       partnerType: p ? detectPartnerType({
@@ -317,6 +437,9 @@ export async function fetchCestinone(): Promise<CestinoItem[]> {
       }) : null,
       agentName: agentDisplay || null,
       deepSearchDoneAt: it.partnerId ? sherlockMap.get(it.partnerId) ?? null : null,
+      originContext,
+      previousMessage: it.triggerKind === "inbound_reply" ? previous : null,
+      recentInteractions: interactions,
     };
   });
 

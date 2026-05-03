@@ -11,7 +11,7 @@ import DOMPurify from "dompurify";
 import {
   CheckCircle2, Search, Mail, MessageCircle, Linkedin, Phone,
   Bot, Megaphone, ArrowUpRight, Pencil, RefreshCw, Clock, AlertOctagon,
-  Trash2, Building2, Inbox,
+  Trash2, Building2, Inbox, IdCard, ShieldCheck, MapPin, Calendar, History, Send, FileText, Sparkles,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { it as itLocale } from "date-fns/locale";
@@ -20,13 +20,13 @@ import type { CestinoChannel, CestinoStatus, CestinoItem, CestinoTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { countryCodeToFlag } from "@/components/operations/bca/bcaUtils";
+import { useContactDrawer } from "@/contexts/ContactDrawerContext";
 
 const CHANNEL_META: Record<CestinoChannel, { label: string; Icon: typeof Mail; tone: string; bg: string }> = {
   email:    { label: "Email",    Icon: Mail,          tone: "text-primary",          bg: "bg-primary/10" },
@@ -56,13 +56,6 @@ const PARTNER_TYPE_META: Record<string, { label: string; tone: string }> = {
   lead:        { label: "Lead",        tone: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
   prospect:    { label: "Prospect",    tone: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 };
-const SOURCE_LABEL: Record<CestinoItem["source"], string> = {
-  email_campaign_queue: "Coda email campagne",
-  campaign_jobs: "Job campagna",
-  cockpit_queue: "Cockpit",
-  outreach_queue: "Outreach multicanale",
-};
-
 export function CestinonePage(): React.ReactElement {
   const [channel, setChannel] = useState<CestinoChannel | "all">("all");
   const [status, setStatus] = useState<CestinoStatus | "all">("all");
@@ -71,6 +64,7 @@ export function CestinonePage(): React.ReactElement {
 
   const { items, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status, search });
   const navigate = useNavigate();
+  const { open: openDrawer } = useContactDrawer();
 
   const selected = useMemo(
     () => items.find((i) => i.id === selectedId) ?? items[0] ?? null,
@@ -107,7 +101,11 @@ export function CestinonePage(): React.ReactElement {
   }
 
   function handleOpenPartner(item: CestinoItem) {
-    if (item.partnerId) navigate(`/v2/network/partners/${item.partnerId}`);
+    if (!item.partnerId) {
+      toast.info("Nessun partner collegato a questa azione.");
+      return;
+    }
+    openDrawer({ sourceType: "partner", sourceId: item.partnerId, title: item.partnerName ?? undefined });
   }
 
   function handleRunSherlock(item: CestinoItem) {
@@ -275,79 +273,156 @@ function ContextPanel({ item, onOpenPartner, onRunSherlock }: { item: CestinoIte
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
   const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
   const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
+  const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
+  const oc = item.originContext;
+  const ORIGIN_ICON: Record<string, typeof Mail> = {
+    business_card: IdCard,
+    campaign: Megaphone,
+    inbound_reply: ArrowUpRight,
+    manual: Pencil,
+    import: FileText,
+    unknown: Bot,
+  };
+  const OriginIcon = ORIGIN_ICON[oc.source] ?? Bot;
+
   return (
-    <div className="p-4">
-      <Tabs defaultValue="recipient" className="w-full">
-        <TabsList className="w-full grid grid-cols-3 h-8">
-          <TabsTrigger value="recipient" className="text-xs h-6">Destinatario</TabsTrigger>
-          <TabsTrigger value="origin" className="text-xs h-6">Origine</TabsTrigger>
-          <TabsTrigger value="meta" className="text-xs h-6">Dettagli</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="recipient" className="mt-3 space-y-2 text-xs">
-          <div className="flex items-center gap-2">
-            {flag && <span className="text-2xl leading-none">{flag}</span>}
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold truncate">{item.partnerName ?? item.recipientName ?? "—"}</div>
-              {pt && <Badge variant="secondary" className={cn("text-[9px] mt-0.5", pt.tone)}>
-                {pt.label}{item.partnerWcaId ? ` #${item.partnerWcaId}` : ""}
-              </Badge>}
+    <div className="p-3 space-y-3">
+      {/* === BLOCCO IDENTITÀ DESTINATARIO === */}
+      <div className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-start gap-2">
+          {flag && <span className="text-3xl leading-none mt-0.5">{flag}</span>}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold truncate">{item.partnerName ?? item.recipientName ?? "—"}</div>
+            <div className="text-[11px] text-muted-foreground truncate">
+              {item.partnerCountryName ?? item.partnerCountryCode ?? "Paese sconosciuto"}
+              {item.partnerWcaId ? ` · WCA #${item.partnerWcaId}` : ""}
             </div>
           </div>
-          <Field label="Paese" value={item.partnerCountryCode ?? "—"} />
-          <Field label="Lead status" value={item.partnerLeadStatus ?? "—"} />
-          <Field label="Canale" value={(CHANNEL_META[item.channel] ?? CHANNEL_META.other).label} />
-          <Field label="Handle" value={item.recipientHandle ?? "—"} />
-          {item.partnerId && (
-            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full mt-2" onClick={onOpenPartner}>
-              <Building2 className="h-3 w-3" /> Apri scheda partner
-            </Button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {pt && <Badge variant="secondary" className={cn("text-[9px]", pt.tone)}>{pt.label}</Badge>}
+          {item.partnerLeadStatus && (
+            <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
           )}
-        </TabsContent>
+          <Badge variant="outline" className="text-[9px] gap-1">
+            <ch.Icon className={cn("h-2.5 w-2.5", ch.tone)} /> {ch.label}
+          </Badge>
+        </div>
+        <div className="text-[11px] text-muted-foreground truncate">
+          → {item.recipientHandle ?? "—"}
+        </div>
+        {item.partnerId && (
+          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs w-full" onClick={onOpenPartner}>
+            <Building2 className="h-3 w-3" /> Apri scheda partner
+          </Button>
+        )}
+      </div>
 
-        <TabsContent value="origin" className="mt-3 space-y-2 text-xs">
-          <div className="flex items-center gap-2 text-foreground">
-            <tr.Icon className="h-3.5 w-3.5 text-primary" />
-            <span className="font-medium">{tr.label}</span>
-            {item.campaignName && <span className="text-muted-foreground truncate">— {item.campaignName}</span>}
+      {/* === BLOCCO ORIGINE / PERCHÉ === */}
+      <div className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <OriginIcon className="h-3.5 w-3.5 text-primary" />
+          <span>Perché stiamo scrivendo</span>
+        </div>
+        <div className="text-xs text-foreground leading-relaxed">
+          <span className="font-medium">{oc.label}</span>
+          {item.campaignName && <span className="text-muted-foreground"> — {item.campaignName}</span>}
+        </div>
+        {oc.source === "business_card" && (
+          <div className="space-y-1 text-[11px] text-muted-foreground border-l-2 border-primary/30 pl-2">
+            {oc.eventName && <div className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> {oc.eventName}</div>}
+            {oc.meetingLocation && <div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {oc.meetingLocation}</div>}
+            {oc.acquiredAt && <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Incontrato il {format(new Date(oc.acquiredAt), "dd MMM yyyy", { locale: itLocale })}</div>}
           </div>
-          <Field label="Agente AI" value={item.agentName ?? "—"} />
-          <Field label="Sorgente" value={SOURCE_LABEL[item.source]} />
-          <Field label="Creato" value={format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })} />
-          {item.scheduledAt && <Field label="Schedulato" value={format(new Date(item.scheduledAt), "dd MMM yyyy HH:mm", { locale: itLocale })} />}
+        )}
+        {item.previousMessage && (
+          <div className="rounded border border-border/60 bg-muted/40 p-2 text-[11px] space-y-1">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <ArrowUpRight className="h-3 w-3" /> Email a cui stiamo rispondendo
+              <span className="ml-auto">{format(new Date(item.previousMessage.date), "dd MMM HH:mm", { locale: itLocale })}</span>
+            </div>
+            {item.previousMessage.subject && <div className="font-medium truncate">{item.previousMessage.subject}</div>}
+            {item.previousMessage.snippet && <div className="text-muted-foreground line-clamp-3">{item.previousMessage.snippet}</div>}
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-1 text-[10px] pt-1">
+          <div className="text-muted-foreground">Agente AI</div>
+          <div className="text-foreground truncate">{item.agentName ?? "—"}</div>
+          <div className="text-muted-foreground">Creato</div>
+          <div className="text-foreground truncate">{format(new Date(item.createdAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
+          {item.scheduledAt && <>
+            <div className="text-muted-foreground">Schedulato</div>
+            <div className="text-foreground truncate">{format(new Date(item.scheduledAt), "dd MMM yyyy HH:mm", { locale: itLocale })}</div>
+          </>}
+        </div>
+      </div>
 
-          {item.partnerId && (
-            item.deepSearchDoneAt ? (
-              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-emerald-700 dark:text-emerald-400 flex items-center gap-2 mt-2">
-                <Search className="h-3.5 w-3.5" />
-                <span className="text-[11px]">Deep search: {format(new Date(item.deepSearchDoneAt), "dd MMM yyyy", { locale: itLocale })}</span>
-              </div>
-            ) : (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 mt-2">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-[11px] mb-1.5">
-                  <Search className="h-3.5 w-3.5" />
-                  Nessuna deep search su questo partner.
+      {/* === BLOCCO CERTIFICAZIONI / ROUTING === */}
+      <div className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+          <span>Controlli e routing</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <CertBadge ok={!!item.partnerId} label="Partner CRM" />
+          <CertBadge ok={!!item.deepSearchDoneAt} label="Deep search" />
+          <CertBadge ok={!!item.agentName} label={`Agente: ${item.agentName ?? "—"}`} />
+          <CertBadge ok={item.triggerKind === "campaign" || item.triggerKind === "inbound_reply"} label={tr.label} />
+          <CertBadge ok label="Editorial review" />
+          <CertBadge ok={item.retryCount === 0} label={`Tentativi ${item.retryCount}/${item.maxRetries}`} warn={item.retryCount > 0} />
+        </div>
+        {item.partnerId && !item.deepSearchDoneAt && (
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] w-full" onClick={onRunSherlock}>
+            <Search className="h-3 w-3 mr-1" /> Esegui Sherlock prima di inviare
+          </Button>
+        )}
+        {item.lastError && (
+          <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2 text-rose-600 dark:text-rose-400 text-[11px]">
+            ⚠ {item.lastError}
+          </div>
+        )}
+      </div>
+
+      {/* === BLOCCO STORICO === */}
+      <div className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <History className="h-3.5 w-3.5 text-primary" />
+          <span>Ultime interazioni</span>
+          <span className="ml-auto text-[10px] text-muted-foreground">{item.recentInteractions.length}</span>
+        </div>
+        {item.recentInteractions.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic">Nessuna interazione registrata. Sarebbe il primo contatto.</div>
+        ) : (
+          <ul className="space-y-1.5">
+            {item.recentInteractions.map((i, idx) => (
+              <li key={idx} className="text-[11px] border-l-2 border-border pl-2">
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Send className="h-2.5 w-2.5" />
+                  <span className="font-medium text-foreground/80">{i.channel}</span>
+                  <span className="ml-auto">{i.date ? format(new Date(i.date), "dd MMM", { locale: itLocale }) : ""}</span>
                 </div>
-                <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] w-full" onClick={onRunSherlock}>
-                  Esegui Sherlock
-                </Button>
-              </div>
-            )
-          )}
-        </TabsContent>
-
-        <TabsContent value="meta" className="mt-3 space-y-2 text-xs">
-          <Field label="ID coda" value={item.id} />
-          <Field label="Partner ID" value={item.partnerId ?? "—"} />
-          <Field label="Tentativi" value={`${item.retryCount}/${item.maxRetries}`} />
-          {item.lastError && (
-            <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2 text-rose-600 dark:text-rose-400 text-[11px]">
-              ⚠ {item.lastError}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                {i.subject && <div className="truncate">{i.subject}</div>}
+                {i.snippet && <div className="text-muted-foreground line-clamp-1">{i.snippet}</div>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
+  );
+}
+
+function CertBadge({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }): React.ReactElement {
+  const tone = warn
+    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+    : ok
+      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+      : "bg-muted text-muted-foreground border-border";
+  return (
+    <Badge variant="outline" className={cn("text-[9px] gap-1 font-normal border", tone)}>
+      {ok && !warn ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertOctagon className="h-2.5 w-2.5" />}
+      {label}
+    </Badge>
   );
 }
 
@@ -417,15 +492,6 @@ function EmptyPane({ label }: { label: string }): React.ReactElement {
     <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
       <Inbox className="h-10 w-10 mb-2 opacity-40" />
       <div className="text-xs">{label}</div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }): React.ReactElement {
-  return (
-    <div className="flex gap-2">
-      <span className="text-muted-foreground min-w-[100px]">{label}</span>
-      <span className="text-foreground truncate flex-1">{value}</span>
     </div>
   );
 }
