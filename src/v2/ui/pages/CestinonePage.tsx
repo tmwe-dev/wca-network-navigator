@@ -169,14 +169,11 @@ export function CestinonePage(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <header className="px-4 py-3 border-b">
-        <h1 className="text-lg font-semibold">Cestinone</h1>
-        <p className="text-xs text-muted-foreground">
-          Tutto ciò che stiamo per inviare. Conferma, modifica, rinvia o annulla — la card sparisce subito dalla coda.
-        </p>
-      </header>
-
-      <div className="px-4 py-2 flex flex-wrap items-center gap-2 border-b bg-muted/20">
+      <div className="px-4 py-2 flex flex-wrap items-center gap-3 border-b bg-muted/20">
+        <div className="flex items-baseline gap-2 mr-1">
+          <h1 className="text-sm font-semibold leading-none">Cestinone</h1>
+          <span className="text-[10px] text-muted-foreground hidden lg:inline">conferma, modifica o rinvia</span>
+        </div>
         <ChipGroup
           value={status}
           onChange={(v) => setStatus(v as "pending" | "queued")}
