@@ -470,6 +470,7 @@ export const queryKeys = {
     kbEntries: (filters?: unknown) => ["v2", "kb-entries", filters] as const,
     workspaceDocs: (filters?: unknown) => ["v2", "workspace-docs", filters] as const,
     outreachQueue: (filters?: unknown) => ["v2", "outreach-queue", filters] as const,
+    busyPartners: ["v2", "busy-partners"] as const,
     sortingRules: ["v2", "sorting-rules"] as const,
     emailDownload: (filters?: unknown) => ["v2", "email-download", filters] as const,
     emailTemplates: ["v2", "email-templates"] as const,

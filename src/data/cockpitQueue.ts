@@ -2,20 +2,24 @@
  * DAL — cockpit_queue
  */
 import { supabase } from "@/integrations/supabase/client";
+import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 export async function insertCockpitQueueItems(items: Array<{ user_id: string; source_type: string; source_id: string; partner_id?: string | null }>) {
   const { error } = await supabase.from("cockpit_queue").upsert(items as never, { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true });
   if (error) throw error;
+  emitBusyPartnersChanged();
 }
 
 export async function deleteCockpitQueueItem(id: string) {
   const { error } = await supabase.from("cockpit_queue").delete().eq("id", id);
   if (error) throw error;
+  emitBusyPartnersChanged();
 }
 
 export async function deleteCockpitQueueBySource(userId: string, sourceType: string, sourceId: string) {
   const { error } = await supabase.from("cockpit_queue").delete().eq("user_id", userId).eq("source_type", sourceType).eq("source_id", sourceId);
   if (error) throw error;
+  emitBusyPartnersChanged();
 }
 
 export async function findCockpitQueue(userId: string, status = "queued", limit = 500) {

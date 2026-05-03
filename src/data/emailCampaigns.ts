@@ -3,6 +3,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { emitBusyPartnersChanged } from "@/v2/hooks/useBusyPartners";
 
 type QueueInsert = Database["public"]["Tables"]["email_campaign_queue"]["Insert"];
 
@@ -21,6 +22,7 @@ export async function insertCampaignQueueBatch(items: QueueInsert[]) {
     const { error } = await supabase.from("email_campaign_queue").insert(items.slice(i, i + 100));
     if (error) throw error;
   }
+  emitBusyPartnersChanged();
 }
 
 export async function countPendingCampaignEmails() {
