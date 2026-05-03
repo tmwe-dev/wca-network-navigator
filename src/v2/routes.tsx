@@ -103,6 +103,7 @@ const CommunicateSection  = lazy(() => import("./ui/pages/sections/CommunicateSe
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
 const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
+const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────
 const CestinonePage = lazy(() => import("./ui/pages/CestinonePage").then((m) => ({ default: m.CestinonePage })));
@@ -202,7 +203,11 @@ export function V2Routes(): React.ReactElement {
           <Route index element={guardedPage(DashboardPage, "Dashboard")} />
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
-          <Route path="pipeline/*"     element={guardedPage(PipelineSection,     "Pipeline")} />
+          {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
+          <Route path="pipeline"            element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/kanban"     element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/duplicati"  element={<Navigate to="/v2/agenda/duplicati" replace />} />
+          <Route path="pipeline/*"          element={guardedPage(PipelineSection, "Pipeline")} />
           <Route path="communicate/*"  element={guardedPage(CommunicateSection,  "Communicate")} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
           <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
@@ -243,7 +248,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
           <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="email-composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
-          <Route path="agenda" element={guardedPage(AgendaPage, "Agenda")} />
+          <Route path="agenda/*" element={guardedPage(AgendaSection, "Agenda")} />
           <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
           <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
