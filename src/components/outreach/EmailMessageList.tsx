@@ -17,7 +17,7 @@ type Props = {
   holdingFilter?: boolean;
 };
 
-const ROW_HEIGHT = 72;
+const ROW_HEIGHT = 88;
 
 function formatListDate(value: string): string {
   const date = new Date(value);
@@ -126,22 +126,14 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 {isUnread && <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />}
               </div>
 
-              {(msg.source_type && msg.source_type !== "unknown" || isInHolding) && (
-                <div className="ml-9 mt-1 flex items-center gap-1">
-                  {msg.source_type && msg.source_type !== "unknown" && (
-                    <Badge variant="outline" className="h-4 gap-0.5 text-[9px]">
-                      {msg.source_type === "partner" && <Building2 className="h-2.5 w-2.5" />}
-                      {msg.source_type === "partner_contact" && <User className="h-2.5 w-2.5" />}
-                      {msg.source_type === "imported_contact" && <User className="h-2.5 w-2.5" />}
-                      {msg.source_type.replace("_", " ")}
-                    </Badge>
-                  )}
-                  {isInHolding && (
-                    <Badge variant="outline" className="h-4 gap-0.5 text-[9px] border-warning/50 text-warning bg-warning/10">
-                      <Plane className="h-2.5 w-2.5" />
-                      Circuito
-                    </Badge>
-                  )}
+              {msg.source_type && msg.source_type !== "unknown" && (
+                <div className="ml-9 mt-1 flex items-center justify-end gap-1">
+                  <Badge variant="outline" className="h-4 gap-0.5 text-[9px]">
+                    {msg.source_type === "partner" && <Building2 className="h-2.5 w-2.5" />}
+                    {msg.source_type === "partner_contact" && <User className="h-2.5 w-2.5" />}
+                    {msg.source_type === "imported_contact" && <User className="h-2.5 w-2.5" />}
+                    {msg.source_type.replace("_", " ")}
+                  </Badge>
                 </div>
               )}
             </button>
