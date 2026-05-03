@@ -9,9 +9,17 @@ import { AdminUsersPage } from "@/v2/ui/pages/AdminUsersPage";
 import { PromptLabPage } from "@/v2/ui/pages/PromptLabPage";
 import { KBSupervisorPage } from "@/v2/ui/pages/KBSupervisorPage";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
+import { lazy, Suspense } from "react";
+
+const ToolsTab = lazy(() => import("@/components/outreach/ToolsTab").then(m => ({ default: m.ToolsTab })));
+
+function TabFallback() {
+  return <div className="h-full animate-pulse bg-muted/20 rounded-lg" />;
+}
 
 const BASE_TABS: readonly SectionTab[] = [
   { key: "general",  label: "Generali",   to: "/v2/settings/general" },
+  { key: "outreach-tools", label: "Strumenti Outreach", to: "/v2/settings/outreach-tools" },
   { key: "guide",    label: "Guida",      to: "/v2/settings/guide" },
   { key: "token",    label: "Token",      to: "/v2/settings/token" },
   { key: "calendar", label: "Calendario", to: "/v2/settings/calendar" },
@@ -39,6 +47,11 @@ export function ConfigSection(): React.ReactElement {
       <Routes>
         <Route index element={<SettingsPage />} />
         <Route path="general"  element={<SettingsPage />} />
+        <Route path="outreach-tools" element={
+          <Suspense fallback={<TabFallback />}>
+            <ToolsTab />
+          </Suspense>
+        } />
         <Route path="guide"    element={<GuidaPage />} />
         <Route path="token"    element={<TokenCockpitPage />} />
         <Route path="calendar" element={<CalendarPage />} />
