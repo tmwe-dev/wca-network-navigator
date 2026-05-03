@@ -112,7 +112,7 @@ const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ lab
   },
 ];
 
-function DevelopmentPagesPanel(): JSX.Element {
+function DevelopmentPagesPanel() {
   const navigate = useNavigate();
   return (
     <div className="float-panel p-5 space-y-4">
