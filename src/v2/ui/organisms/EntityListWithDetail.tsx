@@ -50,6 +50,7 @@ export interface EntityListWithDetailProps {
   onBulkDeepSearch?: (selected: CompanyEntity[]) => void;
   onBulkCreateCampaign?: (selected: CompanyEntity[]) => void;
   onBulkSoftDelete?: (selected: CompanyEntity[]) => void;
+  onBulkChangeOrigin?: (selected: CompanyEntity[]) => void;
   /** Slot azioni a destra in toolbar (es. "Sincronizza"). */
   toolbarRightSlot?: React.ReactNode;
   /** Trailing label per il breadcrumb del GoldenLayout. */
@@ -79,6 +80,7 @@ export function EntityListWithDetail({
   onBulkDeepSearch,
   onBulkCreateCampaign,
   onBulkSoftDelete,
+  onBulkChangeOrigin,
   toolbarRightSlot,
   trailingLabel,
   testId,
@@ -269,6 +271,7 @@ export function EntityListWithDetail({
           onDeepSearch={onBulkDeepSearch}
           onCreateCampaign={onBulkCreateCampaign}
           onSoftDelete={onBulkSoftDelete}
+          onChangeOrigin={onBulkChangeOrigin}
         />
       );
     }
