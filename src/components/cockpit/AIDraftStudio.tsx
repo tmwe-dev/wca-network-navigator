@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypewriterText } from "./TypewriterText";
 import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 import { useAIDraftActions } from "@/hooks/useAIDraftActions";
+import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
+import OracleContextPanel from "@/components/email/OracleContextPanel";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -90,6 +92,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           )}
           {draft.scrapingPhase !== "reviewing" && (
             <DraftPreview draft={draft} isHtmlContent={isHtmlContent} />
+          )}
+          {draft.body && !draft.isGenerating && (
+            <AgentBadgesPanel draft={draft} />
           )}
         </TabsContent>
 
