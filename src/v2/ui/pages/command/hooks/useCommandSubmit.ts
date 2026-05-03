@@ -272,6 +272,17 @@ export function useCommandSubmit(state: CommandStateApi) {
       _addMessage({ role: "user", content: rawText, timestamp: ts() });
       resetForNewMessage();
 
+      // Lexical normalization (typo fix)
+      const text = normalizePrompt(rawText);
+
+      // Build conversational hint from previous query context (if fresh)
+      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
+
+      // PRIORITÀ: se l'utente ha già una selezione partner attiva e chiede
+      // esplicitamente di comporre (es. "genera email di collaborazione"),
+      // salta Super Mario e il planner — apri direttamente il batch composer.
+      if (await runDirectComposer(text, hint)) return;
+
       // SUPER MARIO PATH (feature-flagged): bypass planner, regex e useResultCommentary.
       // Su errore o tool non disponibile, ricade sul percorso classico.
       if (isSuperMarioEnabled()) {
@@ -285,14 +296,6 @@ export function useCommandSubmit(state: CommandStateApi) {
           meta: "fallback",
         });
       }
-
-      // Lexical normalization (typo fix)
-      const text = normalizePrompt(rawText);
-
-      // Build conversational hint from previous query context (if fresh)
-      const hint = buildContextHint(isContextFresh(queryContext) ? queryContext : null);
-
-      if (await runDirectComposer(text, hint)) return;
 
       // FAST LANE: simple read query OR elliptical follow-up with fresh context
       const fastLane =
