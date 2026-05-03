@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check } from "lucide-react";
+import { Search, Shield, Database, Layers, Users, Sparkles, Wifi, Plane, Globe, Check, Tag } from "lucide-react";
 import { FilterDropdownMulti, type FilterOption } from "@/components/global/FilterDropdownMulti";
 import { capitalizeFirst } from "@/lib/capitalize";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -10,20 +10,24 @@ import { WCA_COUNTRIES } from "@/data/wcaCountries";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { CRM_GROUPBY } from "./constants";
 import { createLogger } from "@/lib/log";
+import { useQueryClient } from "@tanstack/react-query";
+import { bulkUpdateContactsByOrigins, contactKeys } from "@/data/contacts";
+import { BulkMergeOriginsDialog } from "@/v2/ui/organisms/BulkMergeOriginsDialog";
 
 const log = createLogger("CRMFiltersSection");
 
 export function CRMFiltersSection() {
   const g = useGlobalFilters();
+  const qc = useQueryClient();
   const [countrySearch, setCountrySearch] = useState("");
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ id: string; company_name: string | null; company_alias?: string | null; name?: string | null; email?: string | null; position?: string | null; country?: string | null }>>([]);
   const [searching, setSearching] = useState(false);
 
   const [crmCountries, setCrmCountries] = useState<{ value: string; name: string; flag: string; total: number }[]>([]);
   const [crmOrigins, setCrmOrigins] = useState<FilterOption[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
         const pageSize = 1000;
@@ -62,9 +66,11 @@ export function CRMFiltersSection() {
             .sort((a, b) => (b.count || 0) - (a.count || 0))
         );
       } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
-    };
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const selectedCountries = useMemo(
     () => crmCountries.filter((c) => g.filters.crmSelectedCountries.has(c.value)),
@@ -284,7 +290,20 @@ export function CRMFiltersSection() {
 
       {/* PIVOT SECONDARI — stato/origine/canale/qualità in dropdown */}
       <div className="space-y-2">
-        <FilterDropdownMulti label="Origine" icon={Database} options={crmOrigins} selected={g.filters.crmOrigin} onToggle={toggleCrmOrigin} searchable placeholder="Cerca origine..." />
+        <div className="space-y-1">
+          {g.filters.crmOrigin.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setMergeOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary transition-colors"
+              title="Cambia/fondi le origini selezionate in una nuova origine"
+            >
+              <Tag className="w-3 h-3" />
+              Cambia origine ({g.filters.crmOrigin.size} sel.)
+            </button>
+          )}
+          <FilterDropdownMulti label="Origine" icon={Database} options={crmOrigins} selected={g.filters.crmOrigin} onToggle={toggleCrmOrigin} searchable placeholder="Cerca origine..." />
+        </div>
         <FilterDropdownMulti label="Stato" icon={Users} options={statusOptions} selected={selectedStatus} onToggle={toggleLeadStatus} singleSelect capitalize={false} />
         <FilterDropdownMulti label="Circuito" icon={Plane} options={holdingOptions} selected={selectedHolding} onToggle={toggleHolding} singleSelect capitalize={false} activeColor={g.filters.holdingPattern === "in" ? "danger" : g.filters.holdingPattern === "out" ? "info" : "default"} />
         <FilterDropdownMulti label="Canale" icon={Wifi} options={channelOptions} selected={selectedChannel} onToggle={toggleChannel} singleSelect capitalize={false} />
@@ -312,6 +331,25 @@ export function CRMFiltersSection() {
           ))}
         </ChipGroup>
       </FilterSection>
+
+      <BulkMergeOriginsDialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        sourceOrigins={crmOrigins
+          .filter((o) => g.filters.crmOrigin.has(o.value))
+          .map((o) => ({ origin: o.value, count: o.count ?? 0 }))}
+        availableOrigins={crmOrigins.map((o) => ({ origin: o.value, count: o.count ?? 0 }))}
+        onConfirm={async (newOrigin) => {
+          const sources = Array.from(g.filters.crmOrigin);
+          const res = await bulkUpdateContactsByOrigins(sources, newOrigin);
+          qc.invalidateQueries({ queryKey: contactKeys.all });
+          // azzera selezione filtro: le origini sorgente non esistono più
+          g.setCrmOrigin(new Set());
+          // refetch immediato lista distinct origins per la sidebar
+          void fetchData();
+          return res;
+        }}
+      />
     </>
   );
 }

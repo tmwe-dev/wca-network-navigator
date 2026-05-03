@@ -294,3 +294,29 @@ export async function listDistinctContactOrigins(): Promise<
     .sort((a, b) => b.count - a.count)
     .slice(0, 200);
 }
+
+/**
+ * Bulk update dell'origine per TUTTI i contatti che oggi hanno una delle
+ * `originsToReplace`. Utile dalla sidebar filtri per "fondere" più origini
+ * sotto un'unica etichetta. Hard-cap per sicurezza: max 50 origini, max
+ * 50000 righe potenzialmente toccate.
+ */
+export async function bulkUpdateContactsByOrigins(
+  originsToReplace: string[],
+  newOrigin: string,
+): Promise<{ updated: number }> {
+  const cleaned = newOrigin.trim();
+  if (!cleaned) throw new Error("Origine non può essere vuota");
+  if (cleaned.length > 100) throw new Error("Origine max 100 caratteri");
+  const sources = Array.from(new Set(originsToReplace.map((o) => o.trim()).filter(Boolean)));
+  if (!sources.length) return { updated: 0 };
+  if (sources.length > 50) throw new Error("Massimo 50 origini per operazione");
+
+  const { data, error } = await supabase
+    .from("imported_contacts")
+    .update({ origin: cleaned })
+    .in("origin", sources)
+    .select("id");
+  if (error) throw error;
+  return { updated: (data ?? []).length };
+}

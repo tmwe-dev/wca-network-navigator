@@ -27,6 +27,7 @@ export {
   findContactByEmail,
   bulkUpdateContactsOrigin,
   listDistinctContactOrigins,
+  bulkUpdateContactsByOrigins,
   findContactsPaginated,
   findHoldingPatternContacts,
   getHoldingPatternStats,
