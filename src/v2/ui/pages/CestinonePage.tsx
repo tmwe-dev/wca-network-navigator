@@ -169,14 +169,11 @@ export function CestinonePage(): React.ReactElement {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <header className="px-4 py-3 border-b">
-        <h1 className="text-lg font-semibold">Cestinone</h1>
-        <p className="text-xs text-muted-foreground">
-          Tutto ciò che stiamo per inviare. Conferma, modifica, rinvia o annulla — la card sparisce subito dalla coda.
-        </p>
-      </header>
-
-      <div className="px-4 py-2 flex flex-wrap items-center gap-2 border-b bg-muted/20">
+      <div className="px-4 py-2 flex flex-wrap items-center gap-3 border-b bg-muted/20">
+        <div className="flex items-baseline gap-2 mr-1">
+          <h1 className="text-sm font-semibold leading-none">Cestinone</h1>
+          <span className="text-[10px] text-muted-foreground hidden lg:inline">conferma, modifica o rinvia</span>
+        </div>
         <ChipGroup
           value={status}
           onChange={(v) => setStatus(v as "pending" | "queued")}
@@ -269,49 +266,44 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
         selected && "border-primary ring-1 ring-primary/30 bg-accent/40"
       )}
     >
-      {/* Riga 1: canale + stato + bandiera + età */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className={cn("h-7 px-2 rounded-md flex items-center gap-1.5", ch.bg)}>
-          <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
-          <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
+      {/* Riga 1 — Titolo a sx + trigger badge a dx (campagna / AI / manuale) */}
+      <div className="flex items-start gap-2 mb-1">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold leading-tight line-clamp-2">
+            {item.subject ?? "(senza oggetto)"}
+          </div>
+          <div className="text-[11px] text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+            <ArrowUpRight className="h-3 w-3 shrink-0" />
+            <span className="truncate">{item.partnerName ?? item.recipientName ?? item.recipientHandle ?? "—"}</span>
+          </div>
         </div>
+        <span
+          title={tr.label}
+          className={cn(
+            "shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-medium",
+            tr.tone, "border-current/30 bg-current/10"
+          )}
+        >
+          <tr.Icon className="h-2.5 w-2.5" />
+          <span className="hidden sm:inline">{tr.label}</span>
+        </span>
+      </div>
+
+      {/* Riga 2 — Meta sinistra (canale icona, stato, lead, partner type) + bandiera a dx */}
+      <div className="flex items-center gap-1.5 mt-2">
+        <span title={ch.label} className="inline-flex"><ch.Icon className={cn("h-3.5 w-3.5 shrink-0", ch.tone)} /></span>
         <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 border", st.tone)}>{st.label}</Badge>
+        {pt && (
+          <span className={cn("px-1.5 py-0.5 rounded border font-medium text-[9px]", pt.tone)}>{pt.label}</span>
+        )}
         {departingSoon && (
           <Badge className="text-[9px] px-1.5 py-0 gap-1 bg-primary/15 text-primary border border-primary/30">
             <Rocket className="h-2.5 w-2.5" /> in partenza
           </Badge>
         )}
-        {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
         {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-rose-500" />}
         <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
-      </div>
-
-      {/* Riga 2: oggetto */}
-      <div className="text-sm font-medium leading-tight line-clamp-2 mb-1">
-        {item.subject ?? "(senza oggetto)"}
-      </div>
-
-      {/* Riga 3: destinatario */}
-      <div className="text-[11px] text-muted-foreground truncate mb-1.5 flex items-center gap-1">
-        <ArrowUpRight className="h-3 w-3 shrink-0" />
-        <span className="truncate">{item.partnerName ?? item.recipientName ?? item.recipientHandle ?? "—"}</span>
-      </div>
-
-      {/* Riga 4: meta — partner type · agente · trigger */}
-      <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-        {pt && (
-          <span className={cn("px-1.5 py-0.5 rounded border font-medium", pt.tone)}>{pt.label}</span>
-        )}
-        {item.agentName && (
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <Bot className="h-2.5 w-2.5" />
-            <span className="truncate max-w-[80px]">{item.agentName}</span>
-          </span>
-        )}
-        <span className={cn("flex items-center gap-1", tr.tone)}>
-          <tr.Icon className="h-2.5 w-2.5" />
-          <span className="truncate">{tr.label}</span>
-        </span>
+        {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
       </div>
     </button>
   );
@@ -342,31 +334,30 @@ function DetailPanel({
 
   return (
     <>
-      {/* === HEADER RICCO === */}
-      <div className={cn("border-b border-l-4 px-4 py-3 space-y-2 bg-muted/10", ch.borderL)}>
-        <div className="flex items-start gap-3">
-          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", ch.bg)}>
-            <ch.Icon className={cn("h-5 w-5", ch.tone)} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className={cn("text-[10px] font-semibold uppercase tracking-wide", ch.tone)}>{ch.label}</span>
-              <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
-              <span className={cn("text-[10px] flex items-center gap-1", tr.tone)}>
-                <tr.Icon className="h-2.5 w-2.5" /> {tr.label}
-              </span>
-            </div>
-            <h2 className="text-base font-semibold leading-tight truncate">
-              {item.subject ?? "(senza oggetto)"}
-            </h2>
+      {/* === HEADER COMPATTO (1 blocco, allineato a sx) === */}
+      <div className={cn("border-b border-l-4 px-4 py-2.5 bg-muted/10", ch.borderL)}>
+        {/* Riga 1: titolo a sx + canale/stato/trigger a dx */}
+        <div className="flex items-start gap-3 mb-1.5">
+          <h2 className="flex-1 min-w-0 text-base font-semibold leading-snug text-left line-clamp-2">
+            {item.subject ?? "(senza oggetto)"}
+          </h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span title={ch.label} className={cn("h-6 w-6 rounded-md flex items-center justify-center", ch.bg)}>
+              <ch.Icon className={cn("h-3.5 w-3.5", ch.tone)} />
+            </span>
+            <Badge variant="outline" className={cn("text-[9px] border", st.tone)}>{st.label}</Badge>
+            <span title={tr.label} className={cn("flex items-center", tr.tone)}>
+              <tr.Icon className="h-3.5 w-3.5" />
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap pl-13">
-          {flag && <span className="text-xl leading-none">{flag}</span>}
-          <span className="text-sm font-medium truncate max-w-[240px]">
+        {/* Riga 2: partner + bandiera + meta */}
+        <div className="flex items-center gap-2 flex-wrap text-left">
+          <span className="text-sm font-medium truncate max-w-[260px]">
             {item.partnerName ?? item.recipientName ?? "—"}
           </span>
+          {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
           {pt && <Badge variant="outline" className={cn("text-[9px] border", pt.tone)}>{pt.label}</Badge>}
           {item.partnerLeadStatus && (
             <Badge variant="outline" className="text-[9px]">Lead: {item.partnerLeadStatus}</Badge>
@@ -376,19 +367,23 @@ function DetailPanel({
               <Hash className="h-2.5 w-2.5" />WCA #{item.partnerWcaId}
             </Badge>
           )}
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-[11px] text-muted-foreground truncate ml-1">
             → {item.recipientHandle ?? "—"}
           </span>
-          {item.agentName && (
-            <Badge variant="secondary" className="text-[9px] gap-1 ml-auto">
-              <Bot className="h-2.5 w-2.5" /> {item.agentName}
-            </Badge>
-          )}
-          {item.campaignName && (
-            <Badge variant="secondary" className="text-[9px] gap-1">
-              <Megaphone className="h-2.5 w-2.5" /> {item.campaignName}
-            </Badge>
-          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {item.campaignName && (
+              <Badge variant="secondary" className="text-[9px] gap-1" title={item.campaignName}>
+                <Megaphone className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[120px]">{item.campaignName}</span>
+              </Badge>
+            )}
+            {item.agentName && (
+              <Badge variant="secondary" className="text-[9px] gap-1" title={`Agente: ${item.agentName}`}>
+                <Bot className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[100px]">{item.agentName}</span>
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
