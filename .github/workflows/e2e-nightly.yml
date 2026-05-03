@@ -39,6 +39,15 @@ jobs:
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
 
+      - name: Post results to dashboard
+        if: always()
+        continue-on-error: true
+        run: node scripts/post-e2e-results.mjs
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          E2E_WEBHOOK_SECRET: ${{ secrets.E2E_WEBHOOK_SECRET }}
+
       - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
