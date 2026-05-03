@@ -324,6 +324,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/telemetry" element={guardedPage(TelemetryPage, "Telemetry")} />
           <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
           <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
+          <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
