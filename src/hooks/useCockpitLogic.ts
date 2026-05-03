@@ -1,7 +1,10 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { useOutreachGenerator } from "@/hooks/useOutreachGenerator";
+import { useEmailForge, type ForgeResult } from "@/v2/hooks/useEmailForge";
+import { useComposeAiConfig } from "@/contexts/ComposeAiConfigContext";
+import { useForgeLab } from "@/v2/hooks/useForgeLabStore";
+import { briefToText } from "@/components/email/BriefAccordion";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useLinkedInLookup } from "@/hooks/useLinkedInLookup";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -99,8 +102,47 @@ export function useCockpitLogic() {
     });
   }, [isLoading, contacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { generate } = useOutreachGenerator();
+  const cfg = useComposeAiConfig();
+  const lab = useForgeLab();
+  const forge = useEmailForge();
+  const [draftQueue, setDraftQueue] = useState<Array<{ contactId: string; contactName: string; result: ForgeResult }>>([]);
   const { refetch: refetchCredits } = useCredits();
+
+  /**
+   * Shim che instrada la generazione attraverso `useEmailForge` (edge `generate-email`),
+   * iniettando la configurazione del pannello laterale (tipo email, tono, brief, KB,
+   * quality → Scout/Detective/Sherlock). Pipeline UNICA con Email Forge e Composer.
+   */
+  const generate = useCallback(async (params: {
+    channel: DraftChannel;
+    contact_name: string;
+    contact_email?: string | null;
+    company_name?: string | null;
+    country_code?: string | null;
+    partner_id?: string | null;
+    contact_id?: string | null;
+    linkedin_profile?: LinkedInProfileData | null;
+  }): Promise<ForgeResult | null> => {
+    const goalParts: string[] = [];
+    if (cfg.customGoal.trim()) goalParts.push(cfg.customGoal.trim());
+    if (cfg.selectedType?.prompt) goalParts.push(cfg.selectedType.prompt);
+    return await forge.run({
+      partner_id: params.partner_id ?? null,
+      contact_id: params.contact_id ?? null,
+      recipient_name: params.contact_name,
+      recipient_company: params.company_name ?? "",
+      recipient_countries: params.country_code ?? "",
+      oracle_type: cfg.selectedType?.id,
+      oracle_tone: cfg.tone,
+      use_kb: cfg.useKB,
+      goal: goalParts.join("\n\n"),
+      base_proposal: briefToText(cfg.brief) || undefined,
+      quality: lab.quality,
+      email_type_prompt: cfg.selectedType?.prompt ?? null,
+      email_type_structure: cfg.selectedType?.structure ?? null,
+      email_type_kb_categories: cfg.selectedType?.kb_categories,
+    });
+  }, [cfg, lab.quality, forge]);
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
   const linkedInLookup = useLinkedInLookup();
@@ -258,13 +300,69 @@ export function useCockpitLogic() {
     if (signal.aborted) return;
 
     setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
-    const result = await generate({ channel, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard" });
+    const result = await generate({
+      channel,
+      contact_name: contact.name,
+      contact_email: contact.email,
+      company_name: contact.company,
+      country_code: contact.country,
+      partner_id: contact.partnerId ?? null,
+      contact_id: contact.sourceType === "contact" ? contact.sourceId : null,
+    });
     if (signal.aborted) return;
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        scrapingPhase: "idle",
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
+    }
+
+    // BULK: se ci sono altri contatti selezionati, generali sequenzialmente
+    // in background e accumulali nella draftQueue. Il primo è già nello studio.
+    if (ids.length > 1 && !signal.aborted) {
+      setDraftQueue([]);
+      const rest = ids.slice(1);
+      let okCount = 1;
+      let errCount = 0;
+      for (const id of rest) {
+        if (signal.aborted) break;
+        const c = contactsMap[id];
+        if (!c) { errCount++; continue; }
+        try {
+          const r = await generate({
+            channel,
+            contact_name: c.name,
+            contact_email: c.email,
+            company_name: c.company,
+            country_code: c.country,
+            partner_id: c.partnerId ?? null,
+            contact_id: c.sourceType === "contact" ? c.sourceId : null,
+          });
+          if (signal.aborted) break;
+          if (r) {
+            setDraftQueue(prev => [...prev, { contactId: id, contactName: c.name, result: r }]);
+            okCount++;
+          } else {
+            errCount++;
+          }
+        } catch (e: unknown) {
+          errCount++;
+          log.warn("bulk generate failed", { id, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      if (!signal.aborted) {
+        toast.success(`Bulk generazione completata`, { description: `${okCount}/${ids.length} OK, ${errCount} errori` });
+      }
     }
   }, [generate, refetchCredits, getDraggedIds, contactsMap, liBridge, autoAssign, linkedInLookup]);
 
@@ -273,9 +371,28 @@ export function useCockpitLogic() {
     const contact = contactsMap[draftState.contactId];
     if (!contact) return;
     setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating" }));
-    const result = await generate({ channel: draftState.channel!, contact_name: contact.name, contact_email: contact.email, company_name: contact.company, country_code: contact.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard", linkedin_profile: draftState.linkedinProfile || undefined });
+    const result = await generate({
+      channel: draftState.channel!,
+      contact_name: contact.name,
+      contact_email: contact.email,
+      company_name: contact.company,
+      country_code: contact.country,
+      partner_id: contact.partnerId ?? null,
+      contact_id: contact.sourceType === "contact" ? contact.sourceId : null,
+      linkedin_profile: draftState.linkedinProfile,
+    });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, scrapingPhase: "idle", _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        scrapingPhase: "idle",
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
@@ -286,9 +403,26 @@ export function useCockpitLogic() {
     if (!draftState.channel || !draftState.contactId) return;
     setDraftState(prev => ({ ...prev, subject: "", body: "", isGenerating: true }));
     const contact = contactsMap[draftState.contactId];
-    const result = await generate({ channel: draftState.channel, contact_name: draftState.contactName || "", contact_email: contact?.email, company_name: contact?.company || "", country_code: contact?.country, goal: "Proposta di collaborazione nel freight forwarding", quality: "standard" });
+    const result = await generate({
+      channel: draftState.channel,
+      contact_name: draftState.contactName || "",
+      contact_email: contact?.email,
+      company_name: contact?.company || "",
+      country_code: contact?.country,
+      partner_id: contact?.partnerId ?? null,
+      contact_id: contact?.sourceType === "contact" ? contact?.sourceId : null,
+    });
     if (result) {
-      setDraftState(prev => ({ ...prev, subject: result.subject || "", body: result.body || "", language: result.language || prev.language, isGenerating: false, _debug: result._debug }));
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || "",
+        body: result.body || "",
+        isGenerating: false,
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? null,
+        type_resolution: result.type_resolution ?? null,
+        context_summary: result._context_summary,
+      }));
       refetchCredits();
     } else {
       setDraftState(prev => ({ ...prev, isGenerating: false }));
@@ -377,5 +511,6 @@ export function useCockpitLogic() {
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
     handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
+    draftQueue, setDraftQueue,
   };
 }

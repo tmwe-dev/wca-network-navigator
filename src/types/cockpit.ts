@@ -4,6 +4,9 @@
  */
 
 import type { OutreachDebug } from "@/hooks/useOutreachGenerator";
+import type { ForgeDebug, JournalistReviewSummary } from "@/v2/hooks/useEmailForge";
+import type { OracleContextSummary } from "@/components/email/OracleContextPanel";
+import type { ResolvedEmailType } from "@/v2/ui/pages/email-forge/types/contract";
 
 export type ViewMode = "card" | "list";
 export type DraftChannel = "email" | "linkedin" | "whatsapp" | "sms" | null;
@@ -44,4 +47,8 @@ export interface DraftState {
   linkedinProfile: LinkedInProfileData | null;
   searchLog?: import("@/hooks/useLinkedInLookup").SearchLogEntry[];
   _debug?: OutreachDebug;
+  _forgeDebug?: ForgeDebug;
+  journalist_review?: JournalistReviewSummary | null;
+  type_resolution?: ResolvedEmailType | null;
+  context_summary?: OracleContextSummary;
 }

@@ -1,61 +1,127 @@
-# Cambio Origine in Bulk dai Contatti CRM
+## Verifica: Email Forge è il sistema corretto ✅
 
-## Obiettivo
-Permettere, dalla pagina Contatti CRM (`/v2/explore/contacts`), di selezionare N contatti e riassegnare la loro `origin` in un colpo solo: o scegliendo un'origine esistente, o digitandone una nuova. Aggiornamento server immediato, refresh lista e chip filtri.
+Confermato leggendo il codice:
 
-## UX
+| Aspetto | Email Forge (`/v2/email-forge`) | Cockpit (`/v2/cockpit`) | Composer (`/v2/communicate/compose`) |
+|---|---|---|---|
+| Hook AI | `useEmailForge` → edge `generate-email` | `useOutreachGenerator` → `generate-content?action=outreach` | `useEmailComposerState` → `generate-email` |
+| Tipo email (oracle_type) | ✅ propagato | ❌ **non propagato** | ✅ propagato |
+| Tono / KB / brief / quality | ✅ tutti propagati | ❌ **non propagati** (hardcoded) | ✅ tutti |
+| `journalist_review` esposto | ✅ in `ForgeResult` | ❌ **non esiste** in `OutreachResult` | parziale |
+| `type_resolution` (Detector) | ✅ | ❌ | ❌ |
+| `_context_summary` (KB usate, history) | ✅ | ❌ | parziale |
+| Badge "chi ha lavorato" | ✅ `ContextSummary` | ❌ niente | ❌ niente |
+| Pannello config laterale | ✅ via `ContextFiltersRail` + `EmailComposeFiltersSection` (montato per `/v2/communicate/compose`) | ❌ non montato | ✅ |
+| Bulk N contatti | N/A (singolo) | ❌ **prende solo `ids[0]`** → 1 sola email per N contatti | N/A |
 
-Nel pannello destro `BulkActionsPanel` (quello con "AZIONI BULK"), aggiungere — solo per source `crm` — una nuova riga azione:
+→ **Email Forge è la pipeline canonica.** Cockpit e gli altri moduli devono allinearsi.
 
-- **Cambia origine** (icona `Tag`/`FolderInput`) → apre dialog.
+---
 
-Dialog "Cambia origine":
-- Header: "Sposti N contatti"
-- Combobox unica con:
-  - lista delle origini esistenti (`origin` distinct dal DB, ordinata per frequenza, conteggio a destra)
-  - opzione "Crea nuova origine: «testo digitato»" se la stringa digitata non esiste
-- Anteprima: mostra l'origine attuale dei contatti selezionati raggruppata (es. "Da: TIPOGRAFIA (10), – (4)")
-- Pulsanti: Annulla / Conferma sposta
-- Conferma → chiama DAL → toast → invalida query → chiude dialog e pulisce selezione
+## Piano: unificazione su Email Forge
 
-Niente bottone in topbar: l'azione vive nel pannello "N selezionati" già presente, dove convivono "Aggiungi al Cockpit", "Deep Search batch", ecc. È coerente con il pattern attuale e l'utente la trova nello stesso posto delle altre azioni di massa.
+### Obiettivo
+Un unico motore (`useEmailForge` + edge `generate-email`), un unico pannello config (linguetta laterale `ContextFiltersRail` con `EmailComposeFiltersSection` + `ComposeAiConfigContext`), un unico set di badge (`ContextSummary` di `email-forge/components`).
 
-## Implementazione
+### Step 1 — Estendi il pannello laterale ai moduli email
+File: `src/v2/ui/templates/ContextFiltersRail.tsx` (`getFilterContext`).
 
-### 1. DAL — `src/data/contacts/mutations.ts` (nuovo o esteso)
-- `bulkUpdateOrigin(contactIds: string[], newOrigin: string): Promise<{updated: number}>`
-- `listDistinctOrigins(): Promise<{origin: string; count: number}[]>` (cached 5 min con react-query)
-- Usa `supabase.from("imported_contacts").update({ origin: newOrigin }).in("id", ids)` via accesso untyped centralizzato.
-- Trim, normalizza maiuscolo/minuscolo? **No**: rispetta esattamente quanto digitato (così l'operatore può unificare manualmente). Limite 100 char, non vuoto.
+Aggiungere route mapping per:
+- `/v2/cockpit` → `EmailComposeFiltersSection` (banner key `email-compose`)
+- `/v2/email-forge` → `EmailComposeFiltersSection` (sostituisce/integra il drawer "Filtri globali" del header)
+- (eventuali future pagine email)
 
-### 2. Hook — `src/v2/hooks/contacts/useBulkChangeOrigin.ts`
-- React-query mutation che chiama il DAL e invalida `queryKeys.crmContacts.*` + `queryKeys.crmContacts.distinctOrigins`.
+Tutti useranno lo **stesso** `ComposeAiConfigContext` → tipo email, tono, brief, useKB, customGoal sono globali per la sessione utente.
 
-### 3. UI — `src/v2/ui/organisms/BulkChangeOriginDialog.tsx`
-- Dialog shadcn con Combobox (Command + Popover), validazione zod (1-100 char), preview origini correnti, conta destinazioni.
+### Step 2 — Wrap globale con `ComposeAiConfigProvider`
+File: `src/App.tsx` (o layout authenticated).
 
-### 4. `BulkActionsPanel`
-- Nuova prop opzionale `onChangeOrigin?: (selected) => void` + `availableOrigins?: {origin; count}[]`.
-- ActionRow "Cambia origine" mostrato solo se `onChangeOrigin` è passato.
+Spostare il provider dal solo `EmailComposerPage` a un livello sopra (layout autenticato) così Cockpit/Forge/Composer **leggono lo stesso stato** dal pannello laterale.
 
-### 5. `EntityListWithDetail`
-- Forwarda `onChangeOrigin` e `availableOrigins` al pannello.
+### Step 3 — Cockpit usa `useEmailForge` + supporta bulk reale
+File: `src/hooks/useCockpitLogic.ts` (`handleDrop`).
 
-### 6. `ContactsPage`
-- Carica `useDistinctOrigins()`, gestisce stato dialog aperto + selezione corrente, chiama mutation, toast.
-- Passa `onChangeOrigin` solo qui (NetworkPage non lo riceve, quindi su WCA Partner non appare).
+Sostituire `useOutreachGenerator.generate(...)` con un loop che usa `useEmailForge.run(...)`:
 
-## Note tecniche
-- Tabella reale: `imported_contacts.origin` (text, nullable). Le origini esistenti più frequenti sono già quelle visibili nei filtri (es. "TIPOGRAFIA", "WCA OLD", "Hubspot"…).
-- Soft-delete: l'UPDATE non è intercettato dai trigger soft-delete (riguardano solo DELETE), quindi il cambio origine è un UPDATE diretto sicuro.
-- Audit: opzionale, lascio fuori per non gonfiare lo scope. Se serve, in seguito si aggiunge una riga in `contact_interactions` o un log dedicato.
-- RLS: l'utente già ha permesso UPDATE su `imported_contacts` (CRM standard). Verifico in fase di build con un select di prova.
+```ts
+const cfg = useComposeAiConfig();        // tipo, tono, brief, useKB, goal
+const lab = useForgeLab();               // quality (Scout/Detective/Sherlock)
+const forge = useEmailForge();
 
-## Out of scope
-- Merge di origini duplicate ("BOLOGNA VINI" vs "Bologna vini") — utile ma è un'altra feature.
-- Bulk change su WCA Partner (`source="wca"`): le origini lì sono diverse (`source_type`), niente azione per ora.
+const ids = getDraggedIds();
+for (const id of ids) {                  // ❗ TUTTI gli id, non solo ids[0]
+  if (signal.aborted) break;
+  const c = contactsMap[id]; if (!c) continue;
+  const result = await forge.run({
+    partner_id: c.partnerId,
+    contact_id: c.sourceType === "contact" ? c.sourceId : null,
+    recipient_name: c.name,
+    recipient_company: c.company,
+    recipient_countries: c.country,
+    oracle_type: cfg.selectedType?.id,
+    oracle_tone: cfg.tone,
+    use_kb: cfg.useKB,
+    goal: [cfg.customGoal, cfg.selectedType?.prompt].filter(Boolean).join("\n\n"),
+    base_proposal: serializeBrief(cfg.brief),
+    quality: lab.quality,                // → Scout/Detective/Sherlock
+    email_type_prompt: cfg.selectedType?.prompt ?? null,
+    email_type_structure: cfg.selectedType?.structure ?? null,
+    email_type_kb_categories: cfg.selectedType?.kb_categories,
+  });
+  if (signal.aborted) break;
+  pushDraftToQueue(id, result);          // accumula i draft per ciascun contatto
+}
+```
 
-## Cosa NON cambia
-- Nessuna modifica a NetworkPage, BCA, Cestinone.
-- Nessuna modifica al filtro origine esistente (lo riusa, semplicemente la lista filtri si aggiorna grazie all'invalidate).
+Mantenere intatto: `autoAssign`, branch LinkedIn lookup, abort, `mountedRef`, side-effect su `partners.enrichment_data`.
 
+Per visualizzare i N draft generati: una lista verticale di mini-card draft (uno per contatto) nel pannello destro, con il primo già aperto in `AIDraftStudio`.
+
+### Step 4 — Badge unificati ovunque
+Componente: `src/v2/ui/pages/email-forge/components/ContextSummary.tsx` (esistente).
+
+Montarlo dentro:
+- `AIDraftStudio.tsx` (Cockpit) — sotto subject/body
+- `EmailComposerPage` ResultPanel — già parziale
+- ovunque ci sia un risultato di `generate-email`
+
+Badge mostrati (già presenti nel componente):
+- 🕵️ Detector tipo email + confidence
+- 🔍 Livello Deep Search (Scout/Detective/Sherlock) ← `SherlockLevelBadge` esistente
+- 📚 KB sezioni usate
+- 🧠 Memorie / interaction history
+- 📰 Editorial Review (giornalista + verdict + score + warnings)
+- ⚠️ Contract warnings
+
+### Step 5 — Deprecazione soft di `useOutreachGenerator`
+- Marcare il file `@deprecated — use useEmailForge`.
+- Rimuovere le call site Cockpit (Step 3).
+- Le altre call site (LinkedIn flow, command tools) seguono in PR successive — fuori scope di questa.
+
+### Step 6 — Header Email Forge
+Sostituire il pulsante "Filtri globali" del header EmailForge con il toggle del nuovo pannello laterale (lo `ContextFiltersRail` lo gestisce già). Coerenza visiva con tutti gli altri moduli.
+
+---
+
+## Vincoli rispettati
+- ✅ Editorial review (`journalistReview`) resta in `generate-email` (mai bypassato, mai duplicato).
+- ✅ AI Invocation Charter: `useEmailForge` passa da `invokeEdge`/`invokeAi` con scope corretto (già conforme).
+- ✅ DAL access only: nessuna `supabase.from()` aggiunta nei componenti UI.
+- ✅ V2 logic-less UI: tutta la logica in hooks (`useCockpitLogic`, `useEmailForge`).
+- ✅ Soft-delete, abort, mountedRef preservati.
+- ✅ Nessun refactor opportunistico fuori scope.
+
+## File toccati (riepilogo)
+1. `src/v2/ui/templates/ContextFiltersRail.tsx` — aggiungi mapping route
+2. `src/App.tsx` (o layout) — sposta `ComposeAiConfigProvider` a livello globale
+3. `src/hooks/useCockpitLogic.ts` — bulk loop + `useEmailForge` + lettura config
+4. `src/components/cockpit/AIDraftStudio.tsx` — monta `ContextSummary`
+5. `src/v2/ui/pages/EmailForgePage.tsx` — pulsante header → toggle rail laterale
+6. `src/hooks/useOutreachGenerator.ts` — `@deprecated`
+
+## Note
+- `useEmailForge` deve poter essere usato in loop: oggi imposta `result` singolo. Aggiungerò una variante `runMany(params[])` che restituisce array, oppure consumo i risultati progressivamente. Decidere in implementazione (no impatto API esterna).
+- I contatti con email mancante: skip con warning nel toast finale (`X/N completate, Y senza email, Z errori`).
+- `serializeBrief(brief)` esiste già lato Composer; riusare lo stesso helper.
+
+Procedo con l'implementazione in questo ordine: 1 → 2 → 3 (con runMany) → 4 → 5 → 6.

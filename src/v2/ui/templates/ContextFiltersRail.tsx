@@ -54,6 +54,22 @@ function getFilterContext(
     };
   }
 
+  if (pathname.startsWith("/v2/cockpit")) {
+    return {
+      title: "Configurazione Email AI",
+      content: <EmailComposeFiltersSection />,
+      bannerKey: "email-compose",
+    };
+  }
+
+  if (pathname.startsWith("/v2/email-forge")) {
+    return {
+      title: "Configurazione Email AI",
+      content: <EmailComposeFiltersSection />,
+      bannerKey: "email-forge",
+    };
+  }
+
   return null;
 }
 
