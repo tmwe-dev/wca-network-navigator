@@ -42,6 +42,7 @@ export function CockpitPage() {
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
     handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
+    draftQueue,
   } = logic;
 
   return (
@@ -126,7 +127,18 @@ export function CockpitPage() {
           )}
         </div>
         <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
-          <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} />
+          <div className="h-full flex flex-col">
+            {draftQueue.length > 0 && (
+              <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-1.5">
+                <span className="font-semibold text-foreground">Bulk:</span>
+                <span>{draftQueue.length + 1} bozze generate</span>
+                <span className="opacity-60">— questa è 1/{draftQueue.length + 1}</span>
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} />
+            </div>
+          </div>
         </div>
       </div>
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TypewriterText } from "./TypewriterText";
 import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 import { useAIDraftActions } from "@/hooks/useAIDraftActions";
+import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
+import OracleContextPanel from "@/components/email/OracleContextPanel";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -90,6 +92,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
           )}
           {draft.scrapingPhase !== "reviewing" && (
             <DraftPreview draft={draft} isHtmlContent={isHtmlContent} />
+          )}
+          {draft.body && !draft.isGenerating && (
+            <AgentBadgesPanel draft={draft} />
           )}
         </TabsContent>
 
@@ -222,6 +227,39 @@ function DraftPreview({ draft, isHtmlContent }: { draft: DraftState; isHtmlConte
         </div>
       </div>
     </>
+  );
+}
+
+function AgentBadgesPanel({ draft }: { draft: DraftState }) {
+  const tr = draft.type_resolution;
+  const ds = draft._forgeDebug;
+  return (
+    <div className="space-y-2 pt-2 border-t border-border/40">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Agenti coinvolti</div>
+      <div className="flex flex-wrap gap-1.5 text-[10px]">
+        {ds?.quality && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-primary/5 border-primary/30 text-primary">
+            <Search className="h-2.5 w-2.5" /> Sherlock · {ds.quality}
+          </span>
+        )}
+        {draft.context_summary?.kb_sections && draft.context_summary.kb_sections.length > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-success/10 border-success/30 text-success">
+            <BookOpen className="h-2.5 w-2.5" /> KB ×{draft.context_summary.kb_sections.length}
+          </span>
+        )}
+        {tr?.was_overridden && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-warning/10 border-warning/30 text-warning">
+            <AlertTriangle className="h-2.5 w-2.5" /> Tipo → {tr.resolved_type}
+          </span>
+        )}
+      </div>
+      {draft.journalist_review && (
+        <JournalistBadge review={draft.journalist_review} />
+      )}
+      {draft.context_summary && (
+        <OracleContextPanel summary={draft.context_summary} hasRecipient />
+      )}
+    </div>
   );
 }
 
