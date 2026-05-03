@@ -188,6 +188,9 @@ export function PartnerListItem({
               </TooltipContent>
             </Tooltip>
           )}
+          {sherlockLevel && (
+            <SherlockLevelBadge level={sherlockLevel.level} completedAt={sherlockLevel.completed_at} />
+          )}
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>
       </div>
