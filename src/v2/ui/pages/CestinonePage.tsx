@@ -20,6 +20,7 @@ import type { CestinoChannel, CestinoStatus, CestinoItem, CestinoTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -91,6 +92,7 @@ export function CestinonePage(): React.ReactElement {
   const [status, setStatus] = useState<"pending" | "queued">("pending");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
 
   // Lo status lo applichiamo localmente per poter unire queued+scheduled.
   const { items: rawItems, counts, isLoading, cancel, snooze, dismiss } = useCestinone({ channel, status: "all", search });
@@ -110,6 +112,53 @@ export function CestinonePage(): React.ReactElement {
     }
     return filtered;
   }, [rawItems, status]);
+
+  // Pulisce le selezioni bulk quando gli item visibili cambiano (filtri/refetch).
+  useEffect(() => {
+    setBulkIds((prev) => {
+      const visible = new Set(items.map((i) => i.id));
+      const next = new Set<string>();
+      for (const id of prev) if (visible.has(id)) next.add(id);
+      return next.size === prev.size ? prev : next;
+    });
+  }, [items]);
+
+  function toggleBulk(id: string): void {
+    setBulkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleBulkAll(): void {
+    setBulkIds((prev) => (prev.size === items.length ? new Set() : new Set(items.map((i) => i.id))));
+  }
+  function clearBulk(): void { setBulkIds(new Set()); }
+
+  function handleBulkCancel(): void {
+    const targets = items.filter((i) => bulkIds.has(i.id));
+    if (targets.length === 0) return;
+    if (!window.confirm(`Annullare e rimuovere dal cestinone ${targets.length} elemento/i?`)) return;
+    let ok = 0, ko = 0;
+    for (const it of targets) {
+      dismiss(it.id);
+      cancel.mutate(it, {
+        onSuccess: () => { ok++; if (ok + ko === targets.length) toast.success(`${ok} annullati${ko ? ` · ${ko} falliti` : ""}`); },
+        onError: () => { ko++; if (ok + ko === targets.length) toast.error(`${ok} annullati · ${ko} falliti`); },
+      });
+    }
+    clearBulk();
+  }
+  function handleBulkSnooze(minutes: number): void {
+    const targets = items.filter((i) => bulkIds.has(i.id));
+    if (targets.length === 0) return;
+    for (const it of targets) {
+      dismiss(it.id);
+      snooze.mutate({ item: it, minutes });
+    }
+    toast.success(`${targets.length} rinviati di ${minutes} min`);
+    clearBulk();
+  }
   const inCodaTotal = counts.byStatus.queued + counts.byStatus.scheduled;
   // I primi 3 item con scheduledAt valido sono "in partenza".
   const nextDepartingIds = useMemo(() => {
@@ -213,11 +262,46 @@ export function CestinonePage(): React.ReactElement {
         </div>
       </div>
 
+      {/* === BARRA AZIONI BULK ============================ */}
+      {bulkIds.size > 0 && (
+        <div className="px-4 py-2 flex items-center gap-2 border-b bg-primary/5 text-xs">
+          <Checkbox
+            checked={bulkIds.size === items.length && items.length > 0}
+            onCheckedChange={toggleBulkAll}
+            aria-label="Seleziona tutti"
+          />
+          <span className="font-medium">{bulkIds.size} selezionati</span>
+          <span className="text-muted-foreground hidden sm:inline">su {items.length}</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => handleBulkSnooze(60)}>
+              <Clock className="h-3 w-3" /> Rinvia 1h
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => handleBulkSnooze(60 * 24)}>
+              <Clock className="h-3 w-3" /> Rinvia 24h
+            </Button>
+            <Button size="sm" variant="destructive" className="h-7 gap-1.5 text-xs" onClick={handleBulkCancel}>
+              <Trash2 className="h-3 w-3" /> Annulla {bulkIds.size}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={clearBulk}>Deseleziona</Button>
+          </div>
+        </div>
+      )}
+
       {/* === 2-COLUMN LAYOUT ============================ */}
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(340px,1fr)_minmax(560px,2fr)] overflow-hidden">
 
         {/* COL 1 — LISTA */}
         <div className="border-r overflow-y-auto p-2 space-y-2 bg-background">
+          {items.length > 0 && (
+            <div className="flex items-center gap-2 px-2 py-1 text-[11px] text-muted-foreground">
+              <Checkbox
+                checked={items.length > 0 && bulkIds.size === items.length}
+                onCheckedChange={toggleBulkAll}
+                aria-label="Seleziona tutti i visibili"
+              />
+              <span>Seleziona tutti i {items.length} visibili</span>
+            </div>
+          )}
           {isLoading ? (
             <div className="text-sm text-muted-foreground p-6 text-center">Carico...</div>
           ) : items.length === 0 ? (
@@ -233,6 +317,8 @@ export function CestinonePage(): React.ReactElement {
                 selected={item.id === selected?.id}
                 onSelect={() => setSelectedId(item.id)}
                 departingSoon={nextDepartingIds.has(item.id)}
+                checked={bulkIds.has(item.id)}
+                onToggleCheck={() => toggleBulk(item.id)}
               />
             ))
           )}
@@ -263,7 +349,7 @@ export function CestinonePage(): React.ReactElement {
 
 // ── ListRow (card alta, ricca) ─────────────────────────────
 
-function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean }): React.ReactElement {
+function ListRow({ item, selected, onSelect, departingSoon, checked, onToggleCheck }: { item: CestinoItem; selected: boolean; onSelect: () => void; departingSoon?: boolean; checked?: boolean; onToggleCheck?: () => void }): React.ReactElement {
   const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
   const st = STATUS_META[item.status] ?? STATUS_META.pending;
   const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
@@ -274,15 +360,20 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
     ? `tra ${formatDistanceToNow(new Date(when), { locale: itLocale })}`
     : `${formatDistanceToNow(new Date(when), { locale: itLocale })} fa`;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
         "w-full text-left rounded-lg border border-l-4 bg-card p-3 transition-all hover:border-primary/40 hover:bg-accent/30",
         ch.borderL,
-        selected && "border-primary ring-1 ring-primary/30 bg-accent/40"
+        selected && "border-primary ring-1 ring-primary/30 bg-accent/40",
+        "flex gap-2"
       )}
     >
+      {onToggleCheck && (
+        <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+          <Checkbox checked={!!checked} onCheckedChange={onToggleCheck} aria-label="Seleziona elemento" />
+        </div>
+      )}
+      <button type="button" onClick={onSelect} className="flex-1 min-w-0 text-left">
       {/* Riga 1 — Titolo a sx + trigger badge a dx (campagna / AI / manuale) */}
       <div className="flex items-start gap-2 mb-1">
         <div className="flex-1 min-w-0">
@@ -322,7 +413,8 @@ function ListRow({ item, selected, onSelect, departingSoon }: { item: CestinoIte
         <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
         {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
       </div>
-    </button>
+      </button>
+    </div>
   );
 }
 
