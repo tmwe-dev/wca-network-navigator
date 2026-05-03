@@ -11,6 +11,8 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { OutreachStatsHeader } from "@/components/outreach/OutreachStatsHeader";
 import { OutreachLegendFooter } from "@/components/outreach/OutreachLegendFooter";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+import { Rocket } from "lucide-react";
 
 const CockpitContent = lazyRetry(() => import("./CockpitPage").then(m => ({ default: m.CockpitPage })));
 
@@ -26,6 +28,7 @@ export function OutreachPage() {
 
   return (
     <div data-testid="page-outreach" className="flex flex-col h-full overflow-hidden">
+      <PageTitleHeader icon={Rocket} title="Cockpit" subtitle="Pipeline outbound" />
       <OutreachStatsHeader />
       <div className="flex-1 min-h-0 overflow-hidden">
         <Suspense fallback={<TabFallback />}>

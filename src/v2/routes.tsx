@@ -99,7 +99,6 @@ const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
 const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
-const CommunicateSection  = lazy(() => import("./ui/pages/sections/CommunicateSection"));
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
 const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
@@ -208,7 +207,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="pipeline/kanban"     element={<Navigate to="/v2/agenda/pipeline" replace />} />
           <Route path="pipeline/duplicati"  element={<Navigate to="/v2/agenda/duplicati" replace />} />
           <Route path="pipeline/*"          element={guardedPage(PipelineSection, "Pipeline")} />
-          <Route path="communicate/*"  element={guardedPage(CommunicateSection,  "Communicate")} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
           <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
 
@@ -216,7 +214,6 @@ export function V2Routes(): React.ReactElement {
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
-          <Route path="communicate/approve" element={<Navigate to="/v2/cestinone" replace />} />
 
           <Route path="analytics" element={guardedPage(AnalyticsPage, "Analytics")} />
           <Route path="kpi" element={guardedPage(KpiPage, "KPI")} />
@@ -244,15 +241,25 @@ export function V2Routes(): React.ReactElement {
           <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
 
           {/* Outreach + figli */}
-          <Route path="outreach" element={<Navigate to="/v2/communicate/outreach" replace />} />
-          <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
+          <Route path="cockpit" element={guardedPage(OutreachPage, "Cockpit")} />
+          <Route path="inbox"   element={guardedPage(InreachPage, "Inbox")} />
+          <Route path="email"   element={guardedPage(EmailComposerPage, "Email")} />
+          {/* Legacy redirects → nuove voci top-level */}
+          <Route path="outreach" element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/email" />} />
           <Route path="outreach/agenda" element={<Navigate to="/v2/agenda" replace />} />
-          <Route path="email-composer" element={<PreserveStateRedirect to="/v2/communicate/compose" />} />
+          <Route path="email-composer" element={<PreserveStateRedirect to="/v2/email" />} />
+          <Route path="communicate"            element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/outreach"   element={<Navigate to="/v2/cockpit" replace />} />
+          <Route path="communicate/inbox"      element={<Navigate to="/v2/inbox" replace />} />
+          <Route path="communicate/compose"    element={<PreserveStateRedirect to="/v2/email" />} />
+          <Route path="communicate/campaigns"  element={<Navigate to="/v2/explore/campaigns" replace />} />
+          <Route path="communicate/approve"    element={<Navigate to="/v2/cestinone" replace />} />
+          <Route path="communicate/*"          element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="agenda/*" element={guardedPage(AgendaSection, "Agenda")} />
           <Route path="pipeline/agenda" element={<Navigate to="/v2/agenda" replace />} />
-          <Route path="cockpit" element={<Navigate to="/v2/communicate/outreach" replace />} />
 
-          <Route path="inreach" element={<Navigate to="/v2/communicate/inbox" replace />} />
+          <Route path="inreach" element={<Navigate to="/v2/inbox" replace />} />
 
           {/* Agents + figli */}
           <Route path="agents" element={<Navigate to="/v2/intelligence/agents" replace />} />

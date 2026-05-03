@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -34,9 +34,11 @@ export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
   { labelKey: "nav.cestinone",          path: "/v2/cestinone",          icon: <Trash2 className="h-4 w-4" />,   pinned: true, pinOrder: 4, badge: "NEW" },
-  { labelKey: "nav.communicate",        path: "/v2/communicate",        icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5 },
+  { labelKey: "nav.cockpit",            path: "/v2/cockpit",            icon: <Rocket className="h-4 w-4" />,   pinned: true, pinOrder: 5 },
+  { labelKey: "nav.inbox",              path: "/v2/inbox",              icon: <Inbox className="h-4 w-4" />,    pinned: true, pinOrder: 5.1 },
+  { labelKey: "nav.email",              path: "/v2/email",              icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5.2 },
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
-  { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Inbox className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
+  { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
   { labelKey: "nav.intelligence",       path: "/v2/intelligence",       icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 8 },
   { labelKey: "nav.config",             path: "/v2/settings",           icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 9 },
 ] as const;
@@ -57,7 +59,7 @@ export const pinnedNavItems: readonly NavItemDef[] = navItemsDef
 /** Helper used by MobileBottomNav for the 4 main destinations. */
 export const mobileBottomNavPaths = [
   "/v2/command",
-  "/v2/pipeline",
-  "/v2/communicate",
+  "/v2/inbox",
+  "/v2/cockpit",
   "/v2/settings",
 ] as const;

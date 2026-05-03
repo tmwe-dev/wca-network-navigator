@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { useMission } from "@/contexts/MissionContext";
 import { useLocation } from "react-router-dom";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 export function EmailComposerPage() {
   const c = useEmailComposerState();
@@ -51,20 +52,23 @@ export function EmailComposerPage() {
   return (
     <PageErrorBoundary>
     <div className="flex flex-col h-full overflow-hidden">
+      <PageTitleHeader icon={Mail} title="Email" subtitle="Componi messaggio" />
       <div className="flex-1 min-h-0 flex justify-center">
-        <div className="flex max-w-[1060px] w-full min-h-0">
+        <div className="flex max-w-[1280px] w-full min-h-0">
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="flex-1 min-h-0 p-4 pb-0 w-full overflow-y-auto">
-              {/* Barra ricerca destinatario — apre il picker (partner / contatti / BCA) */}
-              <div className="mb-3 flex items-center gap-2">
+            <div className="flex-1 min-h-0 px-3 py-2 w-full overflow-y-auto flex flex-col">
+              {/* Riga compatta: ricerca destinatario + (se vuoto) hint inline */}
+              <div className="mb-2 flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={openRecipientPicker}
-                  className="gap-1.5 h-9 text-xs flex-1 justify-start text-muted-foreground hover:text-foreground"
+                  className="gap-1.5 h-8 text-xs flex-1 justify-start text-muted-foreground hover:text-foreground"
                 >
                   <Search className="w-3.5 h-3.5" />
-                  Cerca destinatario (partner, contatto, biglietto)…
+                  {c.recipients.length === 0
+                    ? "Cerca destinatario (partner, contatto, biglietto)…"
+                    : "Cambia destinatario…"}
                 </Button>
               </div>
 
@@ -102,10 +106,10 @@ export function EmailComposerPage() {
                 </DialogContent>
               </Dialog>
 
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Mail className="w-4 h-4 text-primary shrink-0" />
                 <Input value={email.subject} onChange={(e) => c.setSubject(e.target.value)}
-                  placeholder="Oggetto della email..." className="h-9 text-sm font-medium flex-1" />
+                  placeholder="Oggetto della email..." className="h-8 text-sm font-medium flex-1" />
               </div>
 
               <EmailToolbar
@@ -126,7 +130,7 @@ export function EmailComposerPage() {
 
               <HtmlEmailEditor value={email.htmlBody} onChange={c.setHtmlBody}
                 placeholder="Scrivi il contenuto della email... Usa variabili come {{company_name}} tramite l'icona { } sopra"
-                className="flex-1" />
+                className="flex-1 min-h-[420px]" />
 
               {ui.previewOpen && (email.subject || email.htmlBody) && (
                 <div className="mt-3 border border-border/30 rounded-xl overflow-hidden">
@@ -167,10 +171,28 @@ export function EmailComposerPage() {
                     </Button>
                   )}
                   <PermissionGate permission="email.send" fallback={<div className="text-xs text-muted-foreground">Non hai il permesso per inviare email</div>}>
-                    <Button size="sm" onClick={c.handleEnqueue} disabled={queue.sending || c.processing || c.recipientsWithEmail.length === 0} className="gap-1.5 h-9 text-xs flex-1">
-                      {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      {queue.sending ? "Preparazione..." : `Invia a ${c.recipientsWithEmail.length} destinatari`}
-                    </Button>
+                    {(() => {
+                      const isDisabled = queue.sending || c.processing || c.recipientsWithEmail.length === 0;
+                      const count = c.recipientsWithEmail.length;
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={c.handleEnqueue}
+                          disabled={isDisabled}
+                          className={
+                            "gap-1.5 h-9 text-xs flex-1 bg-primary text-primary-foreground hover:bg-primary/90 " +
+                            "disabled:opacity-40 disabled:bg-muted disabled:text-muted-foreground"
+                          }
+                        >
+                          {queue.sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          {queue.sending
+                            ? "Preparazione..."
+                            : count === 0
+                              ? "Aggiungi un destinatario"
+                              : `Invia a ${count} ${count === 1 ? "destinatario" : "destinatari"}`}
+                        </Button>
+                      );
+                    })()}
                   </PermissionGate>
                 </div>
               )}
