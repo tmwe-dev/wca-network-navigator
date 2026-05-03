@@ -74,9 +74,9 @@ export interface CestinoCardV2Props {
 export function CestinoCardV2({
   item, onConfirm, onEdit, onSnooze, onCancel, onGotoOrigin, onOpenPartner, onRunSherlock,
 }: CestinoCardV2Props): React.ReactElement {
-  const ch = CHANNEL_META[item.channel];
-  const st = STATUS_META[item.status];
-  const tr = TRIGGER_META[item.triggerKind];
+  const ch = CHANNEL_META[item.channel] ?? CHANNEL_META.other;
+  const st = STATUS_META[item.status] ?? STATUS_META.pending;
+  const tr = TRIGGER_META[item.triggerKind] ?? TRIGGER_META.manual;
   const pt = item.partnerType ? PARTNER_TYPE_META[item.partnerType] : null;
   const flag = item.partnerCountryCode ? countryCodeToFlag(item.partnerCountryCode) : "";
   const when = item.scheduledAt ?? item.createdAt;
