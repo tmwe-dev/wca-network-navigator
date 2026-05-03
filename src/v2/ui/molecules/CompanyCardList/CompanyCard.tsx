@@ -3,7 +3,7 @@
  * Logic-less, alimentato da `CompanyEntity`.
  */
 import * as React from "react";
-import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink } from "lucide-react";
+import { Plane, Trophy, MoreHorizontal, Star, Clock, Mail, MessageCircle, Phone, ExternalLink, Search, ScanSearch, Telescope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -264,6 +264,49 @@ export function CompanyCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onMenuOpen}>
                 <ExternalLink className="w-3.5 h-3.5 mr-2" /> Apri dettaglio
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Deep Search
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", {
+                      detail: { partnerId: company.id, level: 1 },
+                    })
+                  );
+                }}
+              >
+                <Search className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Scout
+                <span className="ml-auto text-[10px] text-muted-foreground">~30s</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", {
+                      detail: { partnerId: company.id, level: 2 },
+                    })
+                  );
+                }}
+              >
+                <ScanSearch className="w-3.5 h-3.5 mr-2 text-primary" /> Detective
+                <span className="ml-auto text-[10px] text-muted-foreground">~2min</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.dispatchEvent(
+                    new CustomEvent("sherlock-launch", {
+                      detail: { partnerId: company.id, level: 3 },
+                    })
+                  );
+                }}
+              >
+                <Telescope className="w-3.5 h-3.5 mr-2 text-amber-500" /> Sherlock
+                <span className="ml-auto text-[10px] text-muted-foreground">~5min</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
