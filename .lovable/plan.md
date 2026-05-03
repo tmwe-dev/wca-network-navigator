@@ -1,56 +1,36 @@
-## Piano secco
+## Diagnosi
 
-Correggo Command in 4 punti, così smette di fare domande inutili e usa davvero i risultati già trovati.
+Ho ricostruito gli ultimi 4 push sul codice della Command:
 
-## 1. Fix immediato dei suggerimenti Command
+| Commit | File | Tipo modifica | Può rompere il render? |
+|---|---|---|---|
+| `6c59cc410` | `localResultFormatter.ts` | Cambiate 3 etichette azioni suggerite (testo) | No |
+| `97170ee47` | `aiBridge.ts` | Aggiunto blocco testuale al prompt AI | No |
+| `6beb62ae6` | `batchEnrichPartners.ts` + `registry.ts` | Nuovo tool + registrazione | No |
+| `977f13739` | `CommandPage.tsx` | **Mio fix anti-sparizione messaggi** | È il fix |
 
-Oggi i chip tipo `Arricchisci dati` generano un prompt generico, senza portarsi dietro i 9 partner trovati.
+**Nessuno dei 3 push precedenti tocca i file di rendering della chat** (`CommandThread.tsx`, `CommandPage.tsx`, `useConversation.ts`, `useCommandSubmit.ts`). Si limitano a cambiare testo dei prompt/etichette e aggiungere un tool.
 
-Cambio i suggerimenti generati dopo una ricerca partner in:
+## Causa reale della sparizione
 
-- `Prepara email di presentazione`
-- `Prepara email collaborazione`
-- `Arricchisci dati mancanti`
+Bug vecchio nel `useEffect` di rehydrate in `CommandPage.tsx`. Riascoltava `conv.messages.length`: ogni `addMessage` persistito sul DB faceva ripartire il rehydrate, che sovrascriveva i messaggi RAM con uno snapshot DB stantio → il messaggio assistant scompariva subito dopo essere apparso.
 
-Niente più default `filtra per città` / `rating migliore` come prime opzioni.
+Era latente da prima dei 3 push; si è manifestato di più adesso perché la nuova logica fa più append rapidi (utente, automation, direttore, suggested actions).
 
-## 2. Passaggio corretto del contesto
+## Stato attuale
 
-Quando Command trova partner, salva già `partnerIds`, paese e filtri nel `lastQueryResultContext`.
+Il commit `977f13739` (già in `main`) introduce `pendingConversationLoadRef`: il rehydrate parte **solo** quando l'utente clicca una conversazione in sidebar, mai durante append normali.
 
-Collego i chip a quel contesto: se clicchi `Arricchisci dati` dopo Malta, il tool riceve direttamente i 9 partner Malta, non una frase vaga.
+## Cosa propongo
 
-## 3. Batch enrichment reale, non conferma a vuoto
+**Nessun rollback necessario.** I 3 push precedenti sono modifiche di testo/registry, isolate e utili. Il fix al render è già attivo.
 
-Creo/adeguo un tool Command tipo `batch-enrich-partners` che:
+Azione: ricarica la pagina `/v2/command`, manda un prompt e verifica che il messaggio del Direttore resti visibile. Se sparisce ancora, raccolgo log specifici di `useConversation` + `useCommandSubmit` e isolo il path residuo.
 
-- prende i partner dall’ultima ricerca
-- esclude quelli senza website
-- arricchisce quelli con sito
-- ritorna un report chiaro: completati / saltati / falliti
+Se invece vuoi tornare comunque a uno stato pre-3-push, posso revertire `6c59cc410`, `97170ee47`, `6beb62ae6` mantenendo solo il fix `977f13739` — ma perderesti azioni "comunicazione-first" e il tool batch-enrich.
 
-Se sono più partner, una sola conferma iniziale. Dopo la conferma esegue, non richiede di nuovo “vuoi arricchire?”.
+## Dettagli tecnici
 
-## 4. Comunicazione-first + fuori holding pattern
-
-Per i partner/contatti trovati, le prime azioni saranno operative:
-
-1. email presentazione
-2. email collaborazione
-3. messaggio WA/LinkedIn
-4. arricchimento dati mancanti
-
-E di default gli invii escludono chi è nel circuito di attesa / holding pattern.
-
-## File coinvolti
-
-- `src/v2/ui/pages/command/lib/localResultFormatter.ts`
-- `src/v2/ui/pages/command/aiBridge.ts`
-- `src/v2/ui/pages/command/hooks/useFastLane.ts`
-- `src/v2/ui/pages/command/hooks/useApprovalHandler.ts`
-- `src/v2/ui/pages/command/tools/registry.ts`
-- nuovo tool `src/v2/ui/pages/command/tools/batchEnrichPartners.ts`
-
-## Nota importante
-
-Non tocco `journalistReview`, email pipeline, né i guardrail già messi. Questo intervento è sul routing di Command e sui suggerimenti sbagliati.
+- File toccato dal fix: `src/v2/ui/pages/CommandPage.tsx` (effetto rehydrate + handler `onSelect`/`onNew` della sidebar)
+- Nessuna migrazione DB, nessuna edge function toccata
+- Compatibile con `useConversation` esistente (nessun cambio di firma)
