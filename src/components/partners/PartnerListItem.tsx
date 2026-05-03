@@ -12,6 +12,8 @@ import { MiniStars } from "@/components/partners/shared/MiniStars";
 import { TrophyRow } from "@/components/partners/shared/TrophyRow";
 import { getBranchCountries } from "@/lib/partnerUtils";
 import type { SocialLink } from "@/hooks/useSocialLinks";
+import { SherlockLevelBadge } from "@/v2/ui/atoms/SherlockLevelBadge";
+import { useSherlockLevel } from "@/v2/hooks/useSherlockLevels";
 
 interface ServiceItem { service_category: string }
 interface NetworkItem { id: string; network_name: string }
@@ -52,6 +54,7 @@ export function PartnerListItem({
   const contactEmail = primaryContact?.email;
   const contactPhone = primaryContact?.direct_phone || primaryContact?.mobile;
   const networks: NetworkItem[] = partner.partner_networks || [];
+  const sherlockLevel = useSherlockLevel("partner", partner.id);
 
   return (
     <div
