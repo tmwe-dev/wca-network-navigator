@@ -107,6 +107,42 @@ export function useCockpitLogic() {
   const forge = useEmailForge();
   const [draftQueue, setDraftQueue] = useState<Array<{ contactId: string; contactName: string; result: ForgeResult }>>([]);
   const { refetch: refetchCredits } = useCredits();
+
+  /**
+   * Shim che instrada la generazione attraverso `useEmailForge` (edge `generate-email`),
+   * iniettando la configurazione del pannello laterale (tipo email, tono, brief, KB,
+   * quality → Scout/Detective/Sherlock). Pipeline UNICA con Email Forge e Composer.
+   */
+  const generate = useCallback(async (params: {
+    channel: DraftChannel;
+    contact_name: string;
+    contact_email?: string | null;
+    company_name?: string | null;
+    country_code?: string | null;
+    partner_id?: string | null;
+    contact_id?: string | null;
+    linkedin_profile?: LinkedInProfileData | null;
+  }): Promise<ForgeResult | null> => {
+    const goalParts: string[] = [];
+    if (cfg.customGoal.trim()) goalParts.push(cfg.customGoal.trim());
+    if (cfg.selectedType?.prompt) goalParts.push(cfg.selectedType.prompt);
+    return await forge.run({
+      partner_id: params.partner_id ?? null,
+      contact_id: params.contact_id ?? null,
+      recipient_name: params.contact_name,
+      recipient_company: params.company_name ?? "",
+      recipient_countries: params.country_code ?? "",
+      oracle_type: cfg.selectedType?.id,
+      oracle_tone: cfg.tone,
+      use_kb: cfg.useKB,
+      goal: goalParts.join("\n\n"),
+      base_proposal: briefToText(cfg.brief) || undefined,
+      quality: lab.quality,
+      email_type_prompt: cfg.selectedType?.prompt ?? null,
+      email_type_structure: cfg.selectedType?.structure ?? null,
+      email_type_kb_categories: cfg.selectedType?.kb_categories,
+    });
+  }, [cfg, lab.quality, forge]);
   const deleteContacts = useDeleteCockpitContacts();
   const liBridge = useLinkedInExtensionBridge();
   const linkedInLookup = useLinkedInLookup();
