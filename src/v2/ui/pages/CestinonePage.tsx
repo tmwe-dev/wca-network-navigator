@@ -395,10 +395,7 @@ function DetailPanel({
               </Badge>
             )}
             {item.agentName && (
-              <Badge variant="secondary" className="text-[9px] gap-1" title={`Agente: ${item.agentName}`}>
-                <Bot className="h-2.5 w-2.5" />
-                <span className="truncate max-w-[100px]">{item.agentName}</span>
-              </Badge>
+              <AgentBadge name={item.agentName} />
             )}
           </div>
         </div>
