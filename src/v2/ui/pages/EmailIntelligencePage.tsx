@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
 import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { cn } from "@/lib/utils";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+import { Brain } from "lucide-react";
 
 const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/ManualGroupingTab"));
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
@@ -91,6 +93,7 @@ export function EmailIntelligencePage(): React.ReactElement {
 
   return (
     <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden">
+      <PageTitleHeader icon={Brain} title="Funnemail" subtitle="email intelligence" />
       <GoldenHeaderBar
         actions={
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">

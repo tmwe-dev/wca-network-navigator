@@ -12,6 +12,8 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SectionTabs, type SectionTab } from "@/v2/ui/templates/SectionTabs";
 import { AgendaPage } from "@/v2/ui/pages/AgendaPage";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+import { CalendarDays } from "lucide-react";
 
 const ContactPipelineView = lazy(() =>
   import("@/components/contacts/ContactPipelineView").then((m) => ({
@@ -37,6 +39,7 @@ function TabFallback() {
 export function AgendaSection(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <PageTitleHeader icon={CalendarDays} title="Agenda" subtitle="azioni del giorno e pipeline" />
       <SectionTabs tabs={TABS} rootPath="/v2/agenda" contentOverflow="contain">
         <Routes>
           <Route index element={<AgendaPage />} />

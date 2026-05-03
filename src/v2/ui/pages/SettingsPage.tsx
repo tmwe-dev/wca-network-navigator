@@ -35,6 +35,7 @@ import AutomatedProcessesPanel from "@/components/settings/AutomatedProcessesPan
 import AiMonitorPanel from "@/components/settings/AiMonitorPanel";
 import ExtensionsPanel from "@/components/settings/ExtensionsPanel";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 export function SettingsPage() {
   const { data: settings, isLoading } = useAppSettings();
@@ -90,7 +91,9 @@ export function SettingsPage() {
   ];
 
   return (
-    <div data-testid="page-settings" className="flex h-full min-h-0 overflow-hidden">
+    <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
+      <PageTitleHeader icon={SettingsIcon} title="Config" subtitle="impostazioni di sistema" />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
       <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
         {tab === "download-email" ? (
@@ -215,6 +218,7 @@ export function SettingsPage() {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
