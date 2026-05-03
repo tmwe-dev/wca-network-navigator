@@ -10,7 +10,7 @@
  */
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Send, Sparkles, X, Loader2, Mail, ChevronLeft, ChevronRight, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useEmailComposerV2 } from "@/v2/hooks/useEmailComposerV2";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -20,6 +20,7 @@ import HtmlEmailEditor from "@/components/email/HtmlEmailEditor";
 import type { ComposerDraft } from "../tools/types";
 import { detectTone, toneLabel, type DetectedTone } from "../lib/toneDetector";
 import EmailPipelineBadge, { type EmailPipelineStage } from "./EmailPipelineBadge";
+import EmailPreviewDialog from "./EmailPreviewDialog";
 
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
@@ -64,6 +65,7 @@ export default function ComposerCanvas({
   const [batchDrafts, setBatchDrafts] = useState<ReadonlyArray<ComposerDraft>>(drafts ?? []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [tone, setTone] = useState<DetectedTone>(detectedTone ?? "professionale");
+  const [showPreview, setShowPreview] = useState(false);
 
   const isBatch = batchDrafts.length > 1;
 
@@ -488,6 +490,19 @@ export default function ComposerCanvas({
         </motion.button>
 
         <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowPreview(true)}
+            disabled={isGenerating || isSending}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-light transition-all duration-300 disabled:opacity-50 text-muted-foreground hover:text-foreground"
+            style={{ background: "hsl(240 5% 12% / 0.4)", border: "1px solid hsl(0 0% 100% / 0.08)" }}
+            title="Anteprima email come arriverà al destinatario"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Anteprima
+          </motion.button>
+
           {isBatch && (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -542,6 +557,15 @@ export default function ComposerCanvas({
         onApprove={handleConfirmSend}
         onModify={() => setShowApproval(false)}
         onCancel={() => setShowApproval(false)}
+      />
+
+      {/* Email preview (read-only) */}
+      <EmailPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        recipients={composer.recipients.map((r) => ({ email: r.email, name: r.name }))}
+        subject={composer.subject}
+        body={composer.body}
       />
     </motion.div>
   );
