@@ -1,98 +1,156 @@
 ## Obiettivo
 
-Eliminare il caos del "dopo-clic-Invia". Oggi una bozza/un invio in attesa può vivere in 5 posti diversi (Cockpit, In Uscita, Risposte, Attività, Approvazioni). Lo riduciamo a **un solo cestinone**: la coda unica delle cose da confermare prima che partano davvero.
+Trasformare le card del Cestinone da "riga compatta" a **scheda di lavoro completa** che dà al venditore, in un colpo d'occhio + due click, **tutto** ciò che serve per decidere: cosa stiamo per mandare, a chi, da parte di chi, in che contesto, e in che stato è la pratica.
 
 ---
 
-## Nuova mappa della sidebar
+## Anatomia della nuova card (più alta, stessa larghezza)
 
 ```text
-Esplora      → Network, Contatti, Biglietti           (i "laghi": pesci crudi)
-Pipeline     → Kanban, Duplicati                       (CRM lifecycle, niente outreach)
-Cestinone ⭐ → UNICA coda di cose "in cottura"        (NUOVA pagina top-level)
-Comunica     → Inbox, Outreach, Componi, Campagne     (creo / leggo)
-Agenda       → vista azioni del giorno                 (top-level a sé, già esiste)
+┌──────────────────────────────────────────────────────────────────────┐
+│ 📧 EMAIL  ·  Da approvare  ·  🇩🇪 DE  ·  ⏱ 2h fa                    │  ← header riga 1
+│ 🤖 LUCA (Director)  ·  🎯 Campagna "Spring DACH"  ·  Job #482         │  ← header riga 2
+│ ─────────────────────────────────────────────────────────────────── │
+│ "Re: Quotation Hamburg→Genoa LCL"                                    │  ← oggetto grande
+│ → Müller Logistics GmbH  ·  partner WCA #12834  ·  cliente attivo    │  ← destinatario + tipo
+│ ✉ purchasing@mueller-log.de   ✈ Holding 4gg                          │
+│                                                                      │
+│ [Anteprima] [Destinatario] [Origine] [Storico]                       │  ← TABS card-interne
+│ ┌────────────────────────────────────────────────────────────────┐  │
+│ │ Hi Stefan, thank you for the request. Please find below ...     │  │
+│ │ (corpo email completo, scrollabile, max-h ~280px)               │  │
+│ └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│ [✅ Conferma e invia]  [✏ Modifica]  [⏸ Rinvia 1h ▾]  [🗑 Annulla] │
+│                                              [↗ Vai all'origine]    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Header (sempre visibile, 2 righe)
+
+**Riga 1 — Identità del messaggio**
+- Icona canale grande + label (`Email` / `WhatsApp` / `LinkedIn` / `Voce`)
+- Badge stato colorato (`Da approvare` / `Schedulato` / `In coda` / `Bloccato`)
+- 🏳️ Bandiera grande con codice paese (riusa `EntityRowFlag`)
+- "Età" (`2h fa`, `domani 09:00` se schedulato)
+- Tipo entità: chip `Partner WCA` / `Cliente` / `Lead` / `Prospect` (colore distinto)
+
+**Riga 2 — Contesto operativo**
+- 🤖 **Agente AI** che ha generato il contenuto (nome persona: LUCA / Aurora / Robin / "Manuale operatore")
+- 🎯 **Origine**: `Campagna "X"` / `Risposta inbound` / `Mission Y` / `Manuale` / `Holding pattern auto-touch`
+- ID job/coda piccolo a destra (es. `Job #482`)
+
+### Corpo principale (sotto header)
+
+- **Oggetto** (font medium, 2 righe max)
+- **Destinatario espanso**: nome contatto + azienda + tipo (partner WCA #id / cliente / lead) + status badge
+- **Handle del canale**: email / numero WA / url LinkedIn (cliccabile per copia)
+- Eventuali **flag rapidi**: ✈ Holding Pattern (con giorni), 🔁 Retry n/max, ⚠ Errore precedente
+
+### Tabs interni alla card (default = Anteprima)
+
+| Tab | Contenuto |
+|---|---|
+| **Anteprima** | Corpo completo del messaggio (HTML renderizzato per email, testo per WA/LI). Scrollabile, max-height ~280px. Mostra firma. |
+| **Destinatario** | Profilo veloce: ragione sociale, città, country, lead status, ultimo contatto, n° interazioni, score, link "apri scheda partner". |
+| **Origine** | Pannello "perché stiamo mandando questo": campagna + step + A/B variant, oppure trigger (risposta inbound che cita estratto), oppure mission. Mostra agente AI e prompt usato (collassato). Indica se è stata fatta una **Deep Search** sul partner (✅ data / ❌ "non ancora — [Esegui Sherlock]"). |
+| **Storico** | Timeline ultimi 5 touch col partner (email/WA/LI in/out) + ultimo reply inbound se presente. Riusa la timeline già esistente. |
+
+### Footer azioni (sempre visibile)
+
+- ✅ **Conferma e invia** (passa per editorial review come oggi — intoccato)
+- ✏ **Modifica** (apre composer pre-compilato)
+- ⏸ **Rinvia** con menu: `+1h` / `+4h` / `domani 09:00` / `lunedì`
+- 🗑 **Annulla** (soft-delete via trigger DB)
+- ↗ **Vai all'origine** (link diretto: cockpit / campaign jobs / outreach queue)
+
+---
+
+## Dati extra da caricare
+
+L'attuale `fetchCestinone` prende solo i campi minimi. Estendiamo:
+
+- **email_campaign_queue**: aggiungere `html_body, retry_count, error_message, message_id, failed_at, opened_at, open_count, draft_id, operator_id, idempotency_key`
+- **campaign_jobs**: aggiungere `company_name, country_code, country_name, city, email, phone, job_type, batch_id, operator_id, notes` + lookup nome campagna da `batch_id`
+- **cockpit_queue**: risolvere `source_type/source_id` per recuperare il messaggio reale (email_drafts / outbound_dispatch_queue)
+- **outreach_queue**: aggiungere `body, attempts, max_attempts, last_error, priority, replied_at, created_by, contact_id`
+
+**Lookup batch unici** (1 query):
+- `partners`: `company_name, country_code, lead_status, partner_type, wca_id, profile_description`
+- `profiles`: `display_name` per `operator_id` (= "agente che ha generato")
+- `campaigns` / `email_campaigns`: nome campagna da `batch_id`
+- `partner_outreach_state` o `holding_pattern_state`: flag ✈ + giorni
+- `deep_search_runs` (o equivalente Sherlock): ultima esecuzione per partner → mostra ✅/❌ nella tab Origine
+
+Tutto via `Promise.allSettled` + `.in("id", [...])` — **nessuna nuova tabella**, nessuna nuova RLS.
+
+### Nuovo tipo `CestinoItem` (estensione retro-compatibile)
+
+```ts
+interface CestinoItem {
+  // …campi attuali…
+  // identità arricchita
+  partnerName: string | null;
+  partnerType: "wca_partner" | "customer" | "lead" | "prospect" | null;
+  partnerCountryCode: string | null;
+  partnerLeadStatus: string | null;
+  partnerWcaId: number | null;
+  // contesto AI/origine
+  agentName: string | null;          // "LUCA" / "Aurora" / "Manual"
+  campaignName: string | null;       // "Spring DACH" / null
+  campaignBatchId: string | null;
+  triggerKind: "campaign" | "inbound_reply" | "mission" | "manual" | "auto_touch" | "cockpit_draft";
+  // contenuto pieno
+  bodyText: string | null;
+  bodyHtml: string | null;
+  // segnali operativi
+  retryCount: number;
+  maxRetries: number;
+  lastError: string | null;
+  holdingDays: number | null;
+  scheduledAt: string | null;
+  // intelligence
+  deepSearchDoneAt: string | null;   // null = mai fatta → CTA "Esegui Sherlock"
+}
 ```
 
 ---
 
-## Cos'è il Cestinone
+## Modifiche file
 
-**Una sola pagina, una sola lista.** Ogni riga = un'azione che sta per partire o che richiede una decisione. L'operatore decide solo: ✅ Conferma · ✏️ Modifica · ⏸ Rinvia · ❌ Annulla.
+### Nuovi
+- `src/v2/ui/molecules/CestinoCardHeader.tsx` — header 2 righe (canale, stato, bandiera, agente, campagna)
+- `src/v2/ui/molecules/CestinoCardTabs.tsx` — wrapper Tabs interno (Anteprima/Destinatario/Origine/Storico)
+- `src/v2/ui/molecules/CestinoCardFooter.tsx` — barra azioni con menu Snooze
+- `src/v2/ui/organisms/CestinoCardV2.tsx` — composizione delle tre molecules
 
-Sorgenti unificate (oggi sparse):
-- `email_campaign_queue` (status = pending / queued / scheduled)
-- `campaign_jobs` (in attesa di approvazione)
-- Cockpit queue (bozze AI proposte)
-- Bozze email non spedite
-- Messaggi WA/LinkedIn in `outbound_dispatch_queue` pending
-- Risposte inbound che richiedono mossa (oggi "Risposte" / Holding Pattern)
+### Estesi
+- `src/data/cestinone.ts` — campi extra + batch lookup partners/campaigns/profiles/deep_search
+- `src/v2/hooks/useCestinone.ts` — propagazione tipi + memoization filtri
+- `src/v2/ui/pages/CestinonePage.tsx` — sostituisce `CestinoCard` inline con `CestinoCardV2`
 
-Filtri rapidi in alto (chip):
-- **Canale**: Email · WhatsApp · LinkedIn · Voce
-- **Origine**: Manuale · AI · Campagna · Risposta inbound
-- **Stato**: Da approvare · Schedulata · Bozza · Bloccata
-
-Default: tutto quello che è in "circuito d'attesa" + mostrato finché non è stato eseguito o cancellato (regola già definita).
-
----
-
-## Cambi alle sezioni esistenti
-
-### `/v2/pipeline` → solo CRM
-- ✅ Tieni: **Kanban**, **Duplicati**
-- ➡️ Sposta: **Campagne** → dentro Comunica come tab
-- ➡️ Sposta: **Agenda** → top-level sidebar (route `/v2/agenda` già esistente)
-- Redirect retro-compatibili da `/v2/pipeline/campaigns` e `/v2/pipeline/agenda`
-
-### `/v2/communicate` → semplificata
-- Tabs: **Inbox** · **Outreach** · **Componi** · **Campagne** (nuova)
-- Rimossa la tab **Approvazioni** (la SortingPage attuale, che era smistamento, non approvazione invio): la sua funzione di "decidere su una mail" confluisce nel Cestinone.
-
-### `/v2/communicate/outreach` → snellita
-Oggi ha 5 tab verticali (Cockpit, In Uscita, Risposte, Attività, Strumenti). Diventa:
-- **Cockpit** (stats e grafici, resta)
-- **Storico** (tutto quello che è già stato inviato/risposto/chiuso, sola lettura)
-- **Strumenti** (A/B test, scheduling, coda AI)
-
-➡️ **In Uscita**, **Risposte**, **Attività** → confluiscono nel **Cestinone**.
-
-### `/v2/cestinone` (NUOVO) → top-level
-Unica vista azione. Sotto-tab solo per "vista":
-- **Tutto** (default) · **Da approvare** · **Schedulato** · **Bloccato**
+### Intoccato
+- Editorial review (`journalistReview`) — passa **solo** dalla CTA Conferma → naviga al canale d'origine
+- Trigger soft-delete DB
+- Tutte le tabelle (no migration)
 
 ---
 
-## Comportamento del cestinone (regole già condivise)
+## Comportamenti speciali
 
-- Un partner entra nel cestinone appena ha un'attività in attesa di invio.
-- Esce automaticamente quando l'attività viene **eseguita** (inviata davvero) → torna "free" e ricontattabile.
-- Se l'attività viene **cancellata** dal cockpit/altre fonti senza esecuzione → torna "free" subito.
-- Holding Pattern (✈️) resta come **badge visivo** sulla card, non come pagina separata.
-- Editorial review (`journalistReview`) resta obbligatorio prima del send fisico (intoccabile).
-
----
-
-## Dettaglio tecnico (per dopo)
-
-- **Hook unico** `useCestinone()` che fa fan-out su: `email_campaign_queue`, `campaign_jobs`, `outbound_dispatch_queue`, `cockpit_queue`, bozze. Ritorna `CestinoItem[]` normalizzato (`{id, channel, partner, subject/preview, status, source, scheduled_at, action: {confirm, edit, snooze, cancel}}`).
-- **DAL nuovo**: `src/data/cestinone.ts` che orchestra le sorgenti via Promise.allSettled. Nessuna nuova tabella DB.
-- **Mutazioni**: confirm → enqueue normale del canale; cancel → soft-delete (trigger DB lo gestisce); snooze → update `scheduled_at`.
-- **Realtime**: subscribe alle 3 tabelle sorgente per refresh live.
-- **Query keys** centralizzati in `queryKeys.cestinone.*`.
-- **Route**: aggiungere `/v2/cestinone` in App.tsx; aggiungere voce in sidebar; redirect da vecchi tab Outreach (In Uscita/Risposte/Attività) → `/v2/cestinone`.
-- **Codice vecchio**: NON cancellato (regola "no delete in `src/components`"), solo non più referenziato dal router. `HoldingPatternCommandCenter` riusato come "vista compatta" dentro la card del Cestinone.
-- **Editorial review**: invariato. Hook `useCestinone().confirm()` chiama lo stesso path di invio attuale.
+- **Deep Search nella tab Origine**: se `deepSearchDoneAt` è null mostriamo banner giallo `"Nessuna deep search fatta su questo partner"` con CTA `Esegui Sherlock` che lancia la pipeline esistente. Se fatta, mostriamo data + link al report.
+- **"Vai all'origine"**: link route-aware → `email_campaign_queue` → `/v2/communicate/outreach?queue=ID`, `campaign_jobs` → `/v2/communicate/campaigns?job=ID`, `cockpit_queue` → `/v2/communicate/outreach?cockpit=ID`, `outreach_queue` → `/v2/communicate/outreach?multi=ID`.
+- **Snooze esteso**: oggi solo `+1h`. Aggiungiamo dropdown con `+1h / +4h / domani 9:00 / lunedì 9:00`. Snooze su `outreach_queue` e `cockpit_queue` non supportato → opzione disabilitata con tooltip.
+- **Tipo partner** (chip colorato): derivato da `partner_type` su `partners`; fallback `lead_status` (`active_customer` → "Cliente").
 
 ---
 
-## Ordine consigliato di implementazione
+## Ordine implementazione
 
-1. **Crea `/v2/cestinone`** (route + voce sidebar + pagina vuota con tab vista).
-2. **DAL `cestinone.ts` + hook `useCestinone`** che aggrega le sorgenti già esistenti — solo lettura.
-3. **Card unificata** con CTA Conferma/Modifica/Rinvia/Annulla che riusa `ApprovalPanel.tsx` e gli handler già esistenti dei vari canali.
-4. **Sposta tab**: Campagne → Comunica, Agenda → top-level. Aggiungi redirect.
-5. **Snellisci OutreachPage** rimuovendo tab "In Uscita / Risposte / Attività" (redirect → cestinone).
-6. **Rimuovi tab "Approvazioni"** da Comunica (redirect → cestinone).
+1. Estendere `fetchCestinone` con campi extra + 4 lookup paralleli (partners / campaigns / profiles / deep_search).
+2. Aggiornare `CestinoItem` e `useCestinone`.
+3. Creare `CestinoCardHeader`, `CestinoCardTabs`, `CestinoCardFooter`, `CestinoCardV2`.
+4. Sostituire la card inline in `CestinonePage`.
+5. Aggiungere link "Vai all'origine" + Snooze esteso + CTA Sherlock nella tab Origine.
 
-Dopo lo step 1-3 avrai già il cestinone funzionante. Gli step 4-6 sono pulizia, reversibili in qualunque momento.
+Tutto fatto sui dati che già abbiamo in DB. **Zero migration, zero modifiche all'editorial review, zero modifiche all'invio.**
