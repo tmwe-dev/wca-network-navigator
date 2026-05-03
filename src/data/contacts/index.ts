@@ -28,6 +28,8 @@ export {
   findImportDuplicates,
   updateContactEnrichment,
   findContactByEmail,
+  bulkUpdateContactsOrigin,
+  listDistinctContactOrigins,
 } from "./queries";
 
 export type { ImportDuplicateMatch } from "./queries";
