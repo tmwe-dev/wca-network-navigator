@@ -57,9 +57,8 @@ export function NavMenuPopover({
         className="w-60 p-1 bg-background/95 backdrop-blur-xl border-white/10"
       >
         <div className="flex flex-col">
-          {navItemsDef
-            .filter((item) => sectionRoot(item.path) !== activeRoot)
-            .map((item) => {
+          {navItemsDef.map((item) => {
+              const isActive = sectionRoot(item.path) === activeRoot;
               const translated = t(item.labelKey);
               const label =
                 translated === item.labelKey
@@ -69,8 +68,14 @@ export function NavMenuPopover({
                 <button
                   key={item.path}
                   role="menuitem"
+                  aria-current={isActive ? "page" : undefined}
                   onClick={() => handleSelect(item.path)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-foreground/90 hover:bg-white/5 hover:text-foreground transition-colors text-left capitalize"
+                  className={
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left capitalize " +
+                    (isActive
+                      ? "bg-primary/15 text-primary font-semibold"
+                      : "text-foreground/90 hover:bg-white/5 hover:text-foreground")
+                  }
                 >
                   <span className="text-muted-foreground">{item.icon}</span>
                   <span>{label}</span>
