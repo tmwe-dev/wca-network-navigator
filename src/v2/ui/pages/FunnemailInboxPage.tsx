@@ -14,6 +14,8 @@ import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
 import { cn } from "@/lib/utils";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
 
 type ViewKey = "all" | "unread" | "urgent" | "agenda" | "commercial";
 const VIEW_TABS: Array<{ value: ViewKey; label: string }> = [
@@ -42,7 +44,12 @@ export default function FunnemailInboxPage(): React.ReactElement {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
-      <section className="flex min-h-0 w-[440px] shrink-0 flex-col overflow-hidden border-r border-border">
+      <PersistentResizablePanelGroup
+        storageId="funnemail-inbox:list-vs-reader"
+        direction="horizontal"
+        className="flex min-h-0 flex-1"
+      >
+        <ResizablePanel defaultSize={32} minSize={22} maxSize={60} className="flex min-h-0 flex-col overflow-hidden border-r border-border">
         {/* Tab vista — sostituiscono il vecchio header search/titolo */}
         <div className="flex-shrink-0 border-b border-border bg-muted/30 px-2 py-1">
           <div className="flex items-center gap-1 overflow-x-auto">
@@ -86,15 +93,18 @@ export default function FunnemailInboxPage(): React.ReactElement {
             bulkBusy={ctrl.bulkBusy}
           />
         )}
-      </section>
-
-      {ctrl.selectedMail ? (
-        <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
-      ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-          Seleziona una mail per leggerla
-        </div>
-      )}
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={68} minSize={40} className="flex min-h-0 flex-col overflow-hidden">
+          {ctrl.selectedMail ? (
+            <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
+          ) : (
+            <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
+              Seleziona una mail per leggerla
+            </div>
+          )}
+        </ResizablePanel>
+      </PersistentResizablePanelGroup>
     </div>
   );
 }
