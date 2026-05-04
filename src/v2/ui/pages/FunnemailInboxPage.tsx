@@ -8,9 +8,13 @@
  * Le cartelle e il classificatore sono governati da DB (zero hardcode).
  */
 import * as React from "react";
-import { MailList } from "./funnemail-inbox/MailList";
-import { MailReader } from "./funnemail-inbox/MailReader";
+import { Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { EmailMessageList } from "@/components/outreach/EmailMessageList";
+import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { InboxGroupsSidebar } from "./funnemail-inbox/InboxGroupsSidebar";
 
 /**
  * FunnemailInboxPage — client di posta governato da Funnemail.
@@ -20,6 +24,7 @@ import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
  */
 export default function FunnemailInboxPage(): React.ReactElement {
   const ctrl = useFunnemailInbox();
+  const g = useGlobalFilters();
 
   React.useEffect(() => {
     const prev = document.title;
@@ -28,21 +33,53 @@ export default function FunnemailInboxPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex overflow-hidden">
-      <MailList
-        mails={ctrl.filteredMails}
-        loading={ctrl.mailsLoading}
-        selectedId={ctrl.selectedMessageId}
-        onSelect={ctrl.setSelectedMessageId}
-        folderLabel={ctrl.selectedFolderLabel}
-      />
-      <MailReader
-        mail={ctrl.selectedMail}
+    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
+      <InboxGroupsSidebar
         folders={ctrl.folders}
-        onOverrideFolder={ctrl.overrideFolder}
-        onReclassify={ctrl.reclassify}
-        reclassifying={ctrl.reclassifying}
+        counts={ctrl.counts}
+        selectedFolder={ctrl.selectedFolder}
+        totalCount={ctrl.mails.length}
+        loading={ctrl.foldersLoading}
+        onSelect={ctrl.setSelectedFolder}
       />
+
+      <section className="flex min-h-0 w-[360px] shrink-0 flex-col overflow-hidden border-r border-border">
+        <div className="flex-shrink-0 border-b border-border px-3 py-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={g.filters.funnemailSearch}
+              onChange={(event) => g.setFilter("funnemailSearch", event.target.value)}
+              placeholder="Cerca email..."
+              className="h-7 pl-8 text-xs"
+            />
+          </div>
+          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{ctrl.selectedFolderLabel}</span>
+            <span><strong className="text-foreground">{ctrl.filteredMails.length}</strong> visibili</span>
+          </div>
+        </div>
+
+        {ctrl.mailsLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <EmailMessageList
+            messages={ctrl.filteredMails}
+            selectedId={ctrl.selectedMessageId}
+            onSelect={(message) => ctrl.setSelectedMessageId(message.id)}
+          />
+        )}
+      </section>
+
+      {ctrl.selectedMail ? (
+        <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
+          Seleziona una mail per leggerla
+        </div>
+      )}
     </div>
   );
 }
