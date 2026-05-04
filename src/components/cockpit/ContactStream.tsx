@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 import { Search, Sparkles, X, Users, Trash2, Linkedin, Loader2, Plane } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { CockpitContactCard, type EnrichmentState, type AssignmentInfo } from "./CockpitContactCard";
 import { CockpitContactListItem } from "./CockpitContactListItem";
 import { ContactActionMenu } from "./ContactActionMenu";
@@ -184,13 +185,12 @@ export function ContactStream({
         <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkDeepSearch}>
           <Search className="w-3 h-3" /> Deep Search
         </Button>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkAlias}>
-          <Sparkles className="w-3 h-3" /> Alias
-        </Button>
         {onBulkLinkedInLookup && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
-            {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} LinkedIn
-          </Button>
+          <InfoTooltip content="Cerca l'URL del profilo LinkedIn dei contatti selezionati via Google (non scrape diretto)">
+            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0" onClick={onBulkLinkedInLookup} disabled={isLinkedInLookupRunning}>
+              {isLinkedInLookupRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Linkedin className="w-3 h-3" />} Trova URL LinkedIn
+            </Button>
+          </InfoTooltip>
         )}
         {onBatchMode && (
           <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2 shrink-0 text-primary" onClick={onBatchMode}>
