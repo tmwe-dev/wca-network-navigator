@@ -240,6 +240,8 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <LiveRegion message="" />
 
                     <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
+                      {/* ComposeAiConfigProvider wraps both main content AND overlays (FiltersDrawer)
+                          so EmailComposeFiltersSection works in either place. */}
                       {/* Skip navigation link for accessibility */}
                       <a
                         href="#main-content"
@@ -350,7 +352,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
-                      <ComposeAiConfigProvider>
                       <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
@@ -381,7 +382,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                         </div>
                       </div>
-                      </ComposeAiConfigProvider>
                       </BcaFiltersGate>
                     </div>
 
