@@ -43,7 +43,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
         onSelect={ctrl.setSelectedFolder}
       />
 
-      <section className="flex min-h-0 w-[360px] shrink-0 flex-col overflow-hidden border-r border-border">
+      <section className="flex min-h-0 w-[340px] shrink-0 flex-col overflow-hidden border-r border-border">
         <div className="flex-shrink-0 border-b border-border px-3 py-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
