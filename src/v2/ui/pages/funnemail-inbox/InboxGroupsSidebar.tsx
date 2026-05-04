@@ -1,7 +1,32 @@
-import { Archive, Folder, HelpCircle, Star } from "lucide-react";
+/**
+ * InboxGroupsSidebar — sidebar cartelle Funnemail.
+ *
+ * Sezioni: Prioritarie / Secondarie / Da classificare.
+ * Drag&drop libero fra Prioritarie e Secondarie (puntini a sinistra).
+ * Ordine personalizzato persistito in localStorage per-utente.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { Archive, Folder, GripVertical, HelpCircle, Star } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { FunnemailGroupFolder } from "@/data/funnemailInbox";
+
+type Section = FunnemailGroupFolder["section"];
 
 interface Props {
   folders: FunnemailGroupFolder[];
@@ -12,20 +37,185 @@ interface Props {
   onSelect: (slug: string) => void;
 }
 
-const SECTION_META = {
+const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
   priority: { label: "Prioritarie", icon: Star },
   secondary: { label: "Secondarie", icon: Archive },
   unclassified: { label: "Da classificare", icon: HelpCircle },
-} as const;
+};
+
+const STORAGE_KEY = "funnemail_sidebar_order_v1";
+
+interface StoredOrder {
+  // slug -> { section override, position }
+  [slug: string]: { section: Section; position: number };
+}
+
+function loadOrder(): StoredOrder {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? (parsed as StoredOrder) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveOrder(order: StoredOrder): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+/** Applica preferenze utente su sezione/posizione, mantenendo "unclassified" intoccabile. */
+function applyUserOrder(folders: FunnemailGroupFolder[], order: StoredOrder): FunnemailGroupFolder[] {
+  return folders.map((f) => {
+    if (f.section === "unclassified") return f;
+    const pref = order[f.slug];
+    if (!pref) return f;
+    return { ...f, section: pref.section };
+  });
+}
+
+function sortBySection(
+  folders: FunnemailGroupFolder[],
+  order: StoredOrder,
+): Record<Section, FunnemailGroupFolder[]> {
+  const buckets: Record<Section, FunnemailGroupFolder[]> = { priority: [], secondary: [], unclassified: [] };
+  for (const f of folders) buckets[f.section].push(f);
+  const sorter = (section: Section) => (a: FunnemailGroupFolder, b: FunnemailGroupFolder) => {
+    const pa = order[a.slug]?.section === section ? order[a.slug].position : Number.MAX_SAFE_INTEGER;
+    const pb = order[b.slug]?.section === section ? order[b.slug].position : Number.MAX_SAFE_INTEGER;
+    if (pa !== pb) return pa - pb;
+    return a.sort_order - b.sort_order;
+  };
+  buckets.priority.sort(sorter("priority"));
+  buckets.secondary.sort(sorter("secondary"));
+  return buckets;
+}
+
+interface SortableRowProps {
+  folder: FunnemailGroupFolder;
+  active: boolean;
+  count: number;
+  onSelect: (slug: string) => void;
+  draggable: boolean;
+}
+
+function SortableRow({ folder, active, count, onSelect, draggable }: SortableRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: folder.slug,
+    disabled: !draggable,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group flex items-center gap-1 rounded-md transition-colors",
+        active ? "bg-primary/15 text-primary" : "text-foreground hover:bg-muted/50",
+      )}
+    >
+      {draggable && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="flex h-8 w-4 cursor-grab items-center justify-center text-muted-foreground/50 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+          aria-label={`Trascina ${folder.label}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => onSelect(folder.slug)}
+        className="flex flex-1 items-center justify-between gap-2 px-1.5 py-2 text-left text-xs"
+      >
+        <span className="flex min-w-0 items-center gap-2 font-medium">
+          <span className="shrink-0">{folder.icon ?? "📁"}</span>
+          <span className="truncate">{folder.label}</span>
+        </span>
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-[10px] font-bold",
+            active ? "bg-primary/20" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {count}
+        </span>
+      </button>
+    </div>
+  );
+}
 
 export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect }: Props) {
-  const grouped = folders.reduce<Record<FunnemailGroupFolder["section"], FunnemailGroupFolder[]>>(
-    (acc, folder) => {
-      acc[folder.section].push(folder);
-      return acc;
-    },
-    { priority: [], secondary: [], unclassified: [] },
-  );
+  const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
+
+  useEffect(() => {
+    saveOrder(order);
+  }, [order]);
+
+  const arranged = useMemo(() => applyUserOrder(folders, order), [folders, order]);
+  const grouped = useMemo(() => sortBySection(arranged, order), [arranged, order]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  // Mappa slug -> sezione corrente per il DnD
+  const slugToSection = useMemo(() => {
+    const m = new Map<string, Section>();
+    for (const f of arranged) m.set(f.slug, f.section);
+    return m;
+  }, [arranged]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const fromSlug = String(active.id);
+    const toSlug = String(over.id);
+    const fromSection = slugToSection.get(fromSlug);
+    const toSection = slugToSection.get(toSlug);
+    if (!fromSection || !toSection) return;
+    if (fromSection === "unclassified" || toSection === "unclassified") return;
+
+    setOrder((prev) => {
+      const next: StoredOrder = { ...prev };
+      // Costruisci lista sezione di destinazione attuale
+      const sectionList = grouped[toSection].map((f) => f.slug);
+      let working: string[];
+      if (fromSection === toSection) {
+        const oldIdx = sectionList.indexOf(fromSlug);
+        const newIdx = sectionList.indexOf(toSlug);
+        if (oldIdx < 0 || newIdx < 0) return prev;
+        working = arrayMove(sectionList, oldIdx, newIdx);
+      } else {
+        // rimuovi dalla origine, inserisci in destinazione nella posizione di toSlug
+        const targetIdx = sectionList.indexOf(toSlug);
+        working = [...sectionList];
+        if (targetIdx < 0) working.push(fromSlug);
+        else working.splice(targetIdx, 0, fromSlug);
+      }
+      working.forEach((slug, idx) => {
+        next[slug] = { section: toSection, position: idx };
+      });
+      // Se fromSection diverso da toSection, riallinea anche la sezione di origine
+      if (fromSection !== toSection) {
+        const originList = grouped[fromSection].filter((f) => f.slug !== fromSlug);
+        originList.forEach((f, idx) => {
+          next[f.slug] = { section: fromSection, position: idx };
+        });
+      }
+      return next;
+    });
+  };
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border bg-background/95">
@@ -43,47 +233,42 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
             <Folder className="h-4 w-4 shrink-0" />
             <span className="truncate">Tutte le inbox</span>
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{totalCount}</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+            {totalCount}
+          </span>
         </button>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-4 p-3">
-          {(["priority", "secondary", "unclassified"] as const).map((section) => {
-            const items = grouped[section];
-            const MetaIcon = SECTION_META[section].icon;
-            if (!loading && items.length === 0) return null;
-            return (
-              <div key={section} className="space-y-1.5">
-                <div className="flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  <MetaIcon className="h-3 w-3" />
-                  {SECTION_META[section].label}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="space-y-4 p-2">
+            {(["priority", "secondary", "unclassified"] as const).map((section) => {
+              const items = grouped[section];
+              const MetaIcon = SECTION_META[section].icon;
+              if (!loading && items.length === 0) return null;
+              return (
+                <div key={section} className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    <MetaIcon className="h-3 w-3" />
+                    {SECTION_META[section].label}
+                  </div>
+                  <SortableContext items={items.map((f) => f.slug)} strategy={verticalListSortingStrategy}>
+                    {items.map((folder) => (
+                      <SortableRow
+                        key={folder.slug}
+                        folder={folder}
+                        active={selectedFolder === folder.slug}
+                        count={counts[folder.slug] ?? 0}
+                        onSelect={onSelect}
+                        draggable={section !== "unclassified"}
+                      />
+                    ))}
+                  </SortableContext>
                 </div>
-                {items.map((folder) => {
-                  const active = selectedFolder === folder.slug;
-                  const count = counts[folder.slug] ?? 0;
-                  return (
-                    <button
-                      key={folder.slug}
-                      type="button"
-                      onClick={() => onSelect(folder.slug)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors",
-                        active ? "bg-primary/15 text-primary" : "text-foreground hover:bg-muted/50",
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-2 font-medium">
-                        <span className="shrink-0">{folder.icon ?? "📁"}</span>
-                        <span className="truncate">{folder.label}</span>
-                      </span>
-                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", active ? "bg-primary/20" : "bg-muted text-muted-foreground")}>{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DndContext>
       </ScrollArea>
     </aside>
   );

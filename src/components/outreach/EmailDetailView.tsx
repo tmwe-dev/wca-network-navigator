@@ -22,6 +22,7 @@ import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
+import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
 
 type Props = {
   message: ChannelMessage;
@@ -51,6 +52,7 @@ export function EmailDetailView({ message, onClose }: Props) {
   });
 
   const decodedSubject = useMemo(() => decodeRfc2047(message.subject || "(nessun oggetto)"), [message.subject]);
+  const cleanSubject = useMemo(() => stripReplyPrefixes(decodedSubject) || "(nessun oggetto)", [decodedSubject]);
   const { brand, detail: senderDetail } = useMemo(() => extractSenderBrand(message.from_address || ""), [message.from_address]);
   const normalizedContent = useMemo(
     () => normalizeEmailContent({ bodyHtml, bodyText }),
@@ -88,37 +90,19 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-shrink-0 space-y-1 border-b border-border p-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="flex-shrink-0 space-y-2 border-b border-border p-4">
+        {/* Riga 1: brand + bandiera + tools (nessuna sovrapposizione con l'oggetto) */}
+        <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate text-base font-bold text-primary">{brand}</span>
                 <CompanyLogoInline email={message.from_address} size={20} />
-                {group?.groupName && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
-                      color: group.groupColor ?? "#3B82F6",
-                    }}
-                    title={`Gruppo Funny Mail: ${group.groupName}`}
-                  >
-                    {group.groupIcon && <span>{group.groupIcon}</span>}
-                    {group.groupName}
-                  </span>
-                )}
-                <InlineGroupAssigner
-                  fromAddress={message.from_address}
-                  currentGroupName={group?.groupName ?? null}
-                />
+                <CountryFlag email={message.from_address} size={20} className="flex-shrink-0" />
               </div>
-              <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
             </div>
           </div>
-          <CountryFlag email={message.from_address} size={24} className="flex-shrink-0" />
-
           <div className="flex flex-shrink-0 items-center gap-1">
             <Button
               size="sm"
@@ -137,6 +121,32 @@ export function EmailDetailView({ message, onClose }: Props) {
             </Button>
             <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Chiudi</Button>
           </div>
+        </div>
+
+        {/* Riga 2: oggetto su riga propria, può andare a capo, niente truncate */}
+        <h3 className="ml-12 break-words text-base font-semibold leading-snug text-foreground">
+          {cleanSubject}
+        </h3>
+
+        {/* Riga 3: gruppo + assegnatore */}
+        <div className="ml-12 flex flex-wrap items-center gap-2">
+          {group?.groupName && (
+            <span
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{
+                backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
+                color: group.groupColor ?? "#3B82F6",
+              }}
+              title={`Gruppo Funny Mail: ${group.groupName}`}
+            >
+              {group.groupIcon && <span>{group.groupIcon}</span>}
+              {group.groupName}
+            </span>
+          )}
+          <InlineGroupAssigner
+            fromAddress={message.from_address}
+            currentGroupName={group?.groupName ?? null}
+          />
         </div>
 
         <div className="ml-12 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

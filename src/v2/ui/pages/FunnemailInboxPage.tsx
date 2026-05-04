@@ -10,11 +10,11 @@
 import * as React from "react";
 import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { EmailMessageList } from "@/components/outreach/EmailMessageList";
 import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { InboxGroupsSidebar } from "./funnemail-inbox/InboxGroupsSidebar";
+import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
 
 /**
  * FunnemailInboxPage — client di posta governato da Funnemail.
@@ -43,7 +43,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
         onSelect={ctrl.setSelectedFolder}
       />
 
-      <section className="flex min-h-0 w-[340px] shrink-0 flex-col overflow-hidden border-r border-border">
+      <section className="flex min-h-0 w-[420px] shrink-0 flex-col overflow-hidden border-r border-border">
         <div className="flex-shrink-0 border-b border-border px-3 py-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -65,7 +65,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <EmailMessageList
+          <FunnemailMailList
             messages={ctrl.filteredMails}
             selectedId={ctrl.selectedMessageId}
             onSelect={(message) => ctrl.setSelectedMessageId(message.id)}
