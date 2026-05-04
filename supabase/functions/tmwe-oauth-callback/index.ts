@@ -5,7 +5,7 @@
  * (per ottenere `tmwe_user_id`), e persiste il record in tmwe_user_tokens.
  * Risponde con un redirect 302 verso /v2/settings/connections.
  */
-import { serviceClient } from "../_shared/tmweClient.ts";
+import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function htmlRedirect(url: string): Response {
@@ -23,11 +23,6 @@ function appOrigin(): string {
     Deno.env.get("TMWE_APP_REDIRECT_BASE") ??
     "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app"
   );
-}
-
-function tmweBaseUrl(): string {
-  const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
-  return raw.replace(/\/erp$/, "");
 }
 
 function back(status: "ok" | "error", reason?: string, intent: "connect" | "login" = "connect"): Response {
@@ -86,7 +81,7 @@ Deno.serve(async (req) => {
       code,
       client_id: Deno.env.get("TMWE_OAUTH_CLIENT_ID")!,
       client_secret: Deno.env.get("TMWE_OAUTH_CLIENT_SECRET")!,
-      redirect_uri: Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!,
+      redirect_uri: tmweOAuthRedirectUri(),
     });
 
     const accessToken = tok.access_token as string;
