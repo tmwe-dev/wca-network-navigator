@@ -674,6 +674,7 @@ export default function AISuggestionsTab() {
                                 onAccept={(r) => acceptMutation.mutate(r)}
                                 onIgnore={(r) => ignoreMutation.mutate(r)}
                                 onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                                onOpenActions={(r) => setActionsRow(r)}
                                 busy={busy || analyzeMutation.isPending}
                               />
                             ))}
@@ -693,6 +694,7 @@ export default function AISuggestionsTab() {
                           onAccept={(r) => acceptMutation.mutate(r)}
                           onIgnore={(r) => ignoreMutation.mutate(r)}
                           onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                          onOpenActions={(r) => setActionsRow(r)}
                           busy={busy || analyzeMutation.isPending}
                         />
                       ))}
