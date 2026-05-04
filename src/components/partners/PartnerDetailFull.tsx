@@ -35,14 +35,6 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
 
   return (
     <div className="p-5 space-y-3">
-      <PartnerDetailActivity
-        partnerId={String(partner.id)}
-        interactions={[]}
-        reminders={[]}
-        isBlacklisted={isBlacklisted}
-        blacklistEntries={blacklistEntries}
-      />
-
       <PartnerDetailHeader
         partner={partner}
         enrichment={enrichment}
@@ -68,8 +60,8 @@ export function PartnerDetailFull({ partner, onToggleFavorite }: PartnerDetailFu
         partnerId={String(partner.id)}
         interactions={interactions}
         reminders={reminders}
-        isBlacklisted={false}
-        blacklistEntries={[]}
+        isBlacklisted={isBlacklisted}
+        blacklistEntries={blacklistEntries}
       />
     </div>
   );
