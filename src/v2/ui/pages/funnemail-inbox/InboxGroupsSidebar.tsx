@@ -48,22 +48,28 @@ const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
 };
 
 const STORAGE_KEY = "funnemail_sidebar_order_v1";
-const SORT_STORAGE_KEY = "funnemail_sidebar_sort_v1";
+const PRIORITY_SORT_STORAGE_KEY = "funnemail_sidebar_priority_sort_v1";
+const SECONDARY_SORT_STORAGE_KEY = "funnemail_sidebar_secondary_sort_v1";
 
 type SidebarSort = "default" | "name_asc" | "count_desc";
 
-function loadSortMode(): SidebarSort {
+function loadSortMode(storageKey: string): SidebarSort {
   try {
-    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (raw === "name_asc" || raw === "count_desc" || raw === "default") return raw;
   } catch { /* ignore */ }
   return "default";
 }
 
-function saveSortMode(mode: SidebarSort): void {
+function saveSortMode(storageKey: string, mode: SidebarSort): void {
   try {
-    localStorage.setItem(SORT_STORAGE_KEY, mode);
+    localStorage.setItem(storageKey, mode);
   } catch { /* ignore */ }
+}
+
+interface SidebarSortModes {
+  priority: SidebarSort;
+  secondary: SidebarSort;
 }
 
 interface StoredOrder {
@@ -104,7 +110,7 @@ function sortBySection(
   folders: FunnemailGroupFolder[],
   order: StoredOrder,
   counts: Record<string, number>,
-  mode: SidebarSort,
+  modes: SidebarSortModes,
 ): Record<Section, FunnemailGroupFolder[]> {
   const buckets: Record<Section, FunnemailGroupFolder[]> = { priority: [], secondary: [], unclassified: [] };
   for (const f of folders) buckets[f.section].push(f);
@@ -118,13 +124,17 @@ function sortBySection(
     a.label.localeCompare(b.label);
   const countSorter = (a: FunnemailGroupFolder, b: FunnemailGroupFolder) =>
     (counts[b.slug] ?? 0) - (counts[a.slug] ?? 0) || a.label.localeCompare(b.label);
-  const pickSorter = (section: Section) =>
+  const pickSorter = (section: Section) => {
+    const mode = section === "secondary" ? modes.secondary : modes.priority;
+    return (
     mode === "name_asc" ? nameSorter
       : mode === "count_desc" ? countSorter
-      : defaultSorter(section);
+      : defaultSorter(section)
+    );
+  };
   buckets.priority.sort(pickSorter("priority"));
   buckets.secondary.sort(pickSorter("secondary"));
-  buckets.unclassified.sort(mode === "default" ? (a, b) => a.sort_order - b.sort_order : pickSorter("unclassified"));
+  buckets.unclassified.sort((a, b) => a.sort_order - b.sort_order);
   return buckets;
 }
 
