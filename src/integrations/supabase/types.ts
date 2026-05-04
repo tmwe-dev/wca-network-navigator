@@ -5144,7 +5144,9 @@ export type Database = {
       email_sender_groups: {
         Row: {
           auto_action: string | null
+          auto_action_default: string | null
           auto_action_params: Json | null
+          classification_hint: string | null
           colore: string
           created_at: string
           descrizione: string | null
@@ -5153,13 +5155,16 @@ export type Database = {
           is_default: boolean | null
           nome_gruppo: string
           operator_id: string | null
+          response_style_hint: string | null
           sort_order: number
           updated_at: string
           user_id: string
         }
         Insert: {
           auto_action?: string | null
+          auto_action_default?: string | null
           auto_action_params?: Json | null
+          classification_hint?: string | null
           colore?: string
           created_at?: string
           descrizione?: string | null
@@ -5168,13 +5173,16 @@ export type Database = {
           is_default?: boolean | null
           nome_gruppo: string
           operator_id?: string | null
+          response_style_hint?: string | null
           sort_order?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           auto_action?: string | null
+          auto_action_default?: string | null
           auto_action_params?: Json | null
+          classification_hint?: string | null
           colore?: string
           created_at?: string
           descrizione?: string | null
@@ -5183,6 +5191,7 @@ export type Database = {
           is_default?: boolean | null
           nome_gruppo?: string
           operator_id?: string | null
+          response_style_hint?: string | null
           sort_order?: number
           updated_at?: string
           user_id?: string
@@ -5964,6 +5973,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inbound_operative_actions: {
+        Row: {
+          action_type: string
+          category: string
+          created_at: string
+          default_assignee: string | null
+          deleted_at: string | null
+          group_name: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          sla_hours: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          category: string
+          created_at?: string
+          default_assignee?: string | null
+          deleted_at?: string | null
+          group_name?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          sla_hours?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          category?: string
+          created_at?: string
+          default_assignee?: string | null
+          deleted_at?: string | null
+          group_name?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          sla_hours?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       interactions: {
         Row: {
@@ -9584,6 +9638,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wake_up_rules: {
+        Row: {
+          channel: string
+          created_at: string
+          days_dormant: number
+          deleted_at: string | null
+          group_name: string | null
+          id: string
+          is_active: boolean
+          max_per_day: number
+          min_score: number
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          days_dormant?: number
+          deleted_at?: string | null
+          group_name?: string | null
+          id?: string
+          is_active?: boolean
+          max_per_day?: number
+          min_score?: number
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          days_dormant?: number
+          deleted_at?: string | null
+          group_name?: string | null
+          id?: string
+          is_active?: boolean
+          max_per_day?: number
+          min_score?: number
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       workspace_documents: {
         Row: {

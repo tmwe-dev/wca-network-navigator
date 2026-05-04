@@ -21,6 +21,16 @@ export function buildClassificationPrompt(
 ): string {
   const parts: string[] = [];
 
+  // ── F1: SENDER GROUP injection (group-aware classification) ──
+  if (rules && typeof rules.group_name === "string" && rules.group_name) {
+    parts.push(`## SENDER GROUP\n${rules.group_name}`);
+    if (typeof (rules as Record<string, unknown>).group_classification_hint === "string" && (rules as Record<string, unknown>).group_classification_hint) {
+      parts.push(`### Group classification hint\n${(rules as Record<string, unknown>).group_classification_hint}`);
+    }
+  } else {
+    parts.push(`## SENDER GROUP\nsconosciuto`);
+  }
+
   // PRIORITY: custom_prompt injection
   if (rules && rules.custom_prompt && typeof rules.custom_prompt === "string") {
     parts.push(`## ⚠️ ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO\n${rules.custom_prompt}`);

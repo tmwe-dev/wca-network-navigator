@@ -77,7 +77,30 @@ export function computeDominantSentiment(exchanges: Array<{ sentiment: string }>
 }
 
 export function getNextStatus(currentStatus: string, classification: { category: string; confidence: number }): string | null {
+  return getNextStatusGated(currentStatus, classification, null);
+}
+
+/**
+ * Group-aware gated escalation. If senderGroup is provided and is NOT a
+ * commercial/sales group, the function refuses to promote lead_status.
+ * Non-commercial inbound (admin, support, system, internal, fornitori) must
+ * never move a partner along the commercial pipeline. Unsubscribe / bounce
+ * still apply because they are explicit terminal signals.
+ */
+export function getNextStatusGated(
+  currentStatus: string,
+  classification: { category: string; confidence: number },
+  senderGroup: string | null,
+): string | null {
   const cat = classification.category;
+  const NON_COMMERCIAL_GROUPS = new Set([
+    "amministrazione", "fornitori", "system", "internal", "support_provider",
+    "administrative", "providers", "newsletter",
+  ]);
+  const isCommercialGroup = !senderGroup || !NON_COMMERCIAL_GROUPS.has(senderGroup.toLowerCase());
+  if (!isCommercialGroup && !["unsubscribe", "bounce"].includes(cat)) {
+    return null;
+  }
   if (["interested", "meeting_request", "question", "request_info"].includes(cat)) {
     switch (currentStatus) {
       case "new": return "first_touch_sent";
