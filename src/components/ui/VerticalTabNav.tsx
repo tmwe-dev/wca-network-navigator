@@ -17,11 +17,16 @@ interface VerticalTabNavProps {
   value: string;
   onChange: (value: string) => void;
   filterSlot?: ReactNode;
+  /** When true, the nav fills 100% of its parent's width (used inside resizable panels). */
+  fluid?: boolean;
 }
 
-export function VerticalTabNav({ tabs, value, onChange, filterSlot }: VerticalTabNavProps) {
+export function VerticalTabNav({ tabs, value, onChange, filterSlot, fluid }: VerticalTabNavProps) {
   return (
-    <nav className="flex flex-col w-[140px] shrink-0 border-r border-border/50 bg-muted/20 min-h-0 h-full overflow-hidden">
+    <nav className={cn(
+      "flex flex-col border-r border-border/50 bg-muted/20 min-h-0 h-full overflow-hidden",
+      fluid ? "w-full" : "w-[140px] shrink-0",
+    )}>
       {/* Tab buttons — scrollable when overflowing */}
       <div className="py-1 flex-1 min-h-0 overflow-y-auto">
         <TooltipProvider delayDuration={200}>

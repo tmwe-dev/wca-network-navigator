@@ -23,6 +23,8 @@ import TimingSettings from "@/components/settings/TimingSettings";
 import AdminUsers from "@/components/settings/AdminUsersPanel";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/settings/LanguageSwitcher";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { BackupExportTab } from "@/components/settings/BackupExportTab";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
 import { toast } from "sonner";
@@ -206,9 +208,17 @@ export function SettingsPage() {
   return (
     <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
       <PageTitleHeader icon={SettingsIcon} title="Config" subtitle="impostazioni di sistema" />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-      <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} />
-      <div className={cn("flex-1 min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
+      <PersistentResizablePanelGroup
+        storageId="settings:nav-vs-content"
+        direction="horizontal"
+        className="flex-1 min-h-0"
+      >
+      <ResizablePanel defaultSize={16} minSize={8} maxSize={40} className="min-h-0">
+        <VerticalTabNav tabs={tabs} value={tab} onChange={setTab} fluid />
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={84} minSize={40} className="min-h-0">
+      <div className={cn("h-full min-w-0", tab === "download-email" ? "overflow-hidden" : "overflow-auto p-4")}>
         {tab === "download-email" ? (
           <EmailDownloadPage />
         ) : (
@@ -333,7 +343,8 @@ export function SettingsPage() {
           </div>
         )}
       </div>
-      </div>
+      </ResizablePanel>
+      </PersistentResizablePanelGroup>
     </div>
   );
 }
