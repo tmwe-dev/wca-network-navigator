@@ -11,16 +11,28 @@
  * flusso esistente. Iterazioni future possono inlineare il composer qui.
  */
 import { Link } from "react-router-dom";
+import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote,
-  Reply, Send, PhoneCall, HelpCircle, Clock, Archive, UserPlus,
-  ArrowUpRight, MailX,
+  Reply, Send, PhoneCall, HelpCircle, Clock, Archive,
+  ArrowUpRight, MailX, CalendarPlus, Plane,
 } from "lucide-react";
 import { useUpdateActivity } from "@/hooks/useActivities";
+import { insertActivity, activityKeys } from "@/data/activities";
+import { useAuth } from "@/providers/AuthProvider";
+import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag } from "@/lib/countries";
+import { format, addDays } from "date-fns";
+import { it as itLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { AllActivity } from "@/hooks/useActivities";
 
@@ -80,6 +92,11 @@ interface AgendaActionPanelProps {
 
 export default function AgendaActionPanel({ activity, primaryVerb, onActionDone }: AgendaActionPanelProps) {
   const updateActivity = useUpdateActivity();
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [futureDate, setFutureDate] = React.useState<Date | undefined>(addDays(new Date(), 1));
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const [scheduling, setScheduling] = React.useState(false);
 
   if (!activity) {
     return (
@@ -101,6 +118,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const subject = cleanTitle(activity.title);
   const urgency = urgencyOf(activity.created_at);
   const description = activity.description ?? null;
+  const inHolding = isInHoldingPattern((activity.partners as { lead_status?: string } | undefined)?.lead_status);
 
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate(
@@ -113,11 +131,43 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
     );
   };
 
-  const partnerHref = activity.partner_id ? `/partners/${activity.partner_id}` : null;
+  const partnerHref = activity.partner_id ? `/v2/network?partnerId=${activity.partner_id}` : null;
   const PrimaryIcon =
     primaryVerb === "Rispondi" ? Reply :
     primaryVerb === "Chiama" ? PhoneCall :
     primaryVerb === "Invia" ? Send : HelpCircle;
+
+  const handleScheduleFuture = async () => {
+    if (!futureDate || !activity.partner_id) return;
+    setScheduling(true);
+    try {
+      const dueDate = format(futureDate, "yyyy-MM-dd");
+      await insertActivity({
+        partner_id: activity.partner_id,
+        source_type: "partner",
+        source_id: activity.partner_id,
+        activity_type: "follow_up",
+        title: `Follow-up: ${subject}`,
+        description: description ?? null,
+        priority: "medium",
+        due_date: dueDate,
+        user_id: user?.id ?? null,
+        assigned_to: user?.id ?? null,
+        status: "pending",
+        completed_at: null,
+        reviewed: false,
+      });
+      qc.invalidateQueries({ queryKey: activityKeys.all });
+      qc.invalidateQueries({ queryKey: ["agenda-day"] });
+      toast.success(`Programmata per ${format(futureDate, "d MMM yyyy", { locale: itLocale })}`);
+      setPopoverOpen(false);
+      onActionDone?.();
+    } catch (e) {
+      toast.error("Errore: " + (e instanceof Error ? e.message : "sconosciuto"));
+    } finally {
+      setScheduling(false);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -132,6 +182,11 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
                 <Badge variant="outline" className={cn("text-[10px]", urgency.cls)}>
                   {urgency.label}
                 </Badge>
+                {inHolding && (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-sky-500/40 text-sky-500 bg-sky-500/10 animate-pulse">
+                    <Plane className="w-3 h-3" /> In attesa
+                  </Badge>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 <ChannelIcon className="inline w-3 h-3 mr-1 -mt-0.5" />
@@ -207,24 +262,37 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
               {primaryVerb} ora
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 text-xs gap-1.5"
-            disabled
-            title="Disponibile a breve"
-          >
-            <Clock className="w-3.5 h-3.5" /> Rimanda 24h
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 text-xs gap-1.5"
-            disabled
-            title="Disponibile a breve"
-          >
-            <UserPlus className="w-3.5 h-3.5" /> Delega
-          </Button>
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs gap-1.5"
+                disabled={!activity.partner_id}
+                title="Crea un'attività futura per questo partner"
+              >
+                <CalendarPlus className="w-3.5 h-3.5" /> Programma futuro
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={futureDate}
+                onSelect={setFutureDate}
+                disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+              <div className="flex items-center justify-end gap-2 p-2 border-t border-border/30">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPopoverOpen(false)}>
+                  Annulla
+                </Button>
+                <Button size="sm" className="h-7 text-xs" disabled={!futureDate || scheduling} onClick={handleScheduleFuture}>
+                  Programma
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             variant="outline"
             size="sm"
