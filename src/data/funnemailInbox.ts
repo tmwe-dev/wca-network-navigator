@@ -48,6 +48,29 @@ export interface FunnemailMailRow {
   email_date: string | null;
   partner_id: string | null;
   decision: FunnemailDecisionRow | null;
+  sender_intel?: SenderIntelRow | null;
+}
+
+export interface SenderIntelRow {
+  email_domain: string;
+  is_known_partner: boolean;
+  partner_id: string | null;
+  company_type: string | null;
+  country: string | null;
+  website: string | null;
+  role_guess: string | null;
+}
+
+/** Carica intel Scout per un dominio (best-effort, non throwa). */
+export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
+  if (!domain) return null;
+  // deno-lint-ignore no-explicit-any
+  const { data } = await (supabase as any)
+    .from("funnemail_sender_intel")
+    .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
+    .eq("email_domain", domain.toLowerCase())
+    .maybeSingle();
+  return (data as SenderIntelRow | null) ?? null;
 }
 
 /** Lista cartelle attive ordinate per sezione e sort_order. */
