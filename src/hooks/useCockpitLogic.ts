@@ -60,6 +60,8 @@ export function useCockpitLogic() {
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // IDs di contatti aggiuntivi droppati in batch, in attesa di generazione manuale
+  const [pendingBulkIds, setPendingBulkIds] = useState<string[]>([]);
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
