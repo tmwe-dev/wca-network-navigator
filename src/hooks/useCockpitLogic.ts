@@ -592,7 +592,16 @@ export function useCockpitLogic() {
   const handleBulkDelete = useCallback(() => setShowDeleteConfirm(true), []);
   const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selection.selectedIds);
-    try { await deleteContacts.mutateAsync(ids); selection.clear(); toast.success(`${ids.length} record eliminati`); } catch (e: unknown) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); toast.error("Errore durante l'eliminazione"); }
+    try {
+      const deleted = await deleteContacts.mutateAsync(ids);
+      selection.clear();
+      const n = typeof deleted === "number" ? deleted : ids.length;
+      if (n === 0) toast.warning("Nessun record eliminato (potrebbe non esistere più)");
+      else toast.success(`${n} record eliminati`);
+    } catch (e: unknown) {
+      log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) });
+      toast.error("Errore durante l'eliminazione");
+    }
     setShowDeleteConfirm(false);
   }, [selection, deleteContacts]);
 
