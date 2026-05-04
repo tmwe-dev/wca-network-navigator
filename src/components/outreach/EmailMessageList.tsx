@@ -9,6 +9,7 @@ import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useHoldingPatternEmails } from "@/hooks/useHoldingPatternEmails";
+import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 
 type Props = {
   messages: ChannelMessage[];
@@ -40,6 +41,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   }, [messages]);
   
   const holdingSet = useHoldingPatternEmails(sourceIds);
+  const { getGroup } = useEmailAddressGroups();
 
   const displayMessages = useMemo(() => {
     if (!holdingFilter) return messages;
@@ -82,6 +84,8 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               ? holdingSet.has(`c:${msg.source_id}`)
               : false;
 
+          const group = getGroup(msg.from_address);
+
           return (
             <button
               key={msg.id}
@@ -122,6 +126,21 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                   </div>
                   <p className={cn("truncate text-xs", isUnread ? "text-foreground" : "text-muted-foreground")}>{msg.subject || "(nessun oggetto)"}</p>
                   <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{secondaryLine}</p>
+                  {group?.groupName && (
+                    <div className="mt-0.5 flex items-center gap-1">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-sm px-1 py-0 text-[9px] font-medium leading-tight"
+                        style={{
+                          backgroundColor: `${group.groupColor ?? "#3B82F6"}20`,
+                          color: group.groupColor ?? "#3B82F6",
+                        }}
+                        title={`Gruppo: ${group.groupName}`}
+                      >
+                        {group.groupIcon && <span>{group.groupIcon}</span>}
+                        <span className="truncate max-w-[140px]">{group.groupName}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {isUnread && <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />}
               </div>
