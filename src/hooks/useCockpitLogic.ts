@@ -429,6 +429,103 @@ export function useCockpitLogic() {
     }
   }, [draftState, generate, refetchCredits, contactsMap]);
 
+  const handleImprove = useCallback(async () => {
+    if (!draftState.channel || !draftState.contactId || !draftState.body) return;
+    const contact = contactsMap[draftState.contactId];
+    setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating" }));
+    const goalParts: string[] = [];
+    if (cfg.customGoal.trim()) goalParts.push(cfg.customGoal.trim());
+    if (cfg.selectedType?.prompt) goalParts.push(cfg.selectedType.prompt);
+    goalParts.push("MIGLIORA la bozza qui sotto mantenendo voce, intento e personalità dell'autore. Non riscrivere da zero.");
+    const result = await forge.run({
+      partner_id: contact?.partnerId ?? null,
+      contact_id: contact?.sourceType === "contact" ? contact?.sourceId ?? null : null,
+      recipient_name: draftState.contactName || "",
+      recipient_company: contact?.company ?? "",
+      recipient_countries: contact?.country ?? "",
+      oracle_type: cfg.selectedType?.id,
+      oracle_tone: cfg.tone,
+      use_kb: cfg.useKB,
+      goal: goalParts.join("\n\n"),
+      base_proposal: draftState.body,
+      quality: lab.quality,
+      email_type_prompt: cfg.selectedType?.prompt ?? null,
+      email_type_structure: cfg.selectedType?.structure ?? null,
+      email_type_kb_categories: cfg.selectedType?.kb_categories,
+    });
+    if (result) {
+      setDraftState(prev => ({
+        ...prev,
+        subject: result.subject || prev.subject,
+        body: result.body || prev.body,
+        isGenerating: false,
+        scrapingPhase: "idle",
+        _forgeDebug: result._debug,
+        journalist_review: result.journalist_review ?? prev.journalist_review,
+        type_resolution: result.type_resolution ?? prev.type_resolution,
+        context_summary: result._context_summary ?? prev.context_summary,
+      }));
+      refetchCredits();
+      toast.success("Bozza migliorata");
+    } else {
+      setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
+    }
+  }, [draftState, contactsMap, cfg, lab.quality, forge, refetchCredits]);
+
+  /** Naviga le bozze bulk: salva quella corrente nella queue (al posto giusto) e carica un'altra. */
+  const showQueuedDraft = useCallback((targetContactId: string) => {
+    if (!draftState.contactId) return;
+    const target = draftQueue.find(q => q.contactId === targetContactId);
+    if (!target) return;
+    const contact = contactsMap[targetContactId];
+    if (!contact) return;
+    // Salva la bozza corrente nella queue (replace o insert)
+    setDraftQueue(prev => {
+      const currentEntry = {
+        contactId: draftState.contactId!,
+        contactName: draftState.contactName || "",
+        result: {
+          subject: draftState.subject,
+          body: draftState.body,
+          full_content: draftState.body,
+          partner_name: draftState.companyName,
+          contact_email: draftState.contactEmail,
+          model: draftState._forgeDebug?.model || "",
+          quality: draftState._forgeDebug?.quality || "",
+          journalist_review: draftState.journalist_review ?? null,
+          type_resolution: draftState.type_resolution ?? null,
+          _context_summary: draftState.context_summary,
+          _debug: draftState._forgeDebug,
+        } as ForgeResult,
+      };
+      const without = prev.filter(q => q.contactId !== targetContactId && q.contactId !== draftState.contactId);
+      return [...without, currentEntry];
+    });
+    // Carica la bozza target
+    setDraftState(prev => ({
+      ...prev,
+      channel: prev.channel,
+      contactId: target.contactId,
+      contactName: target.contactName,
+      contactEmail: contact.email,
+      contactPhone: contact.phone,
+      contactLinkedinUrl: contact.linkedinUrl,
+      companyName: contact.company,
+      countryCode: contact.country,
+      subject: target.result.subject || "",
+      body: target.result.body || "",
+      language: contact.language,
+      isGenerating: false,
+      scrapingPhase: "idle",
+      _forgeDebug: target.result._debug,
+      journalist_review: target.result.journalist_review ?? null,
+      type_resolution: target.result.type_resolution ?? null,
+      context_summary: target.result._context_summary,
+    }));
+    // Rimuovi la bozza target dalla queue (è ora attiva)
+    setDraftQueue(prev => prev.filter(q => q.contactId !== targetContactId));
+  }, [draftState, draftQueue, contactsMap]);
+
   const deepSearch = useDeepSearch();
 
   /** Estrae gli id reali (imported_contacts.id / partners.id) dai record del cockpit. */
@@ -505,7 +602,8 @@ export function useCockpitLogic() {
     batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
     draftState, setDraftState,
     draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
-    handleGenerateAfterReview, handleRegenerate,
+    handleGenerateAfterReview, handleRegenerate, handleImprove,
+    showQueuedDraft,
     contacts, contactsMap, isLoading, selection,
     handleBulkDeepSearch, handleBulkAlias, handleBulkLinkedInLookup,
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,

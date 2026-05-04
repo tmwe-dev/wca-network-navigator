@@ -36,7 +36,7 @@ export function CockpitPage() {
     batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
     draftState, setDraftState,
     draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
-    handleGenerateAfterReview, handleRegenerate,
+    handleGenerateAfterReview, handleRegenerate, handleImprove, showQueuedDraft,
     contacts, contactsMap, isLoading, selection,
     handleBulkDeepSearch, handleBulkAlias, handleBulkLinkedInLookup,
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
@@ -129,14 +129,25 @@ export function CockpitPage() {
         <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
           <div className="h-full flex flex-col">
             {draftQueue.length > 0 && (
-              <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-1.5">
-                <span className="font-semibold text-foreground">Bulk:</span>
-                <span>{draftQueue.length + 1} bozze generate</span>
-                <span className="opacity-60">— questa è 1/{draftQueue.length + 1}</span>
+              <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-2 overflow-x-auto">
+                <span className="font-semibold text-foreground shrink-0">Bulk ({draftQueue.length + 1}):</span>
+                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">
+                  ● {draftState.contactName || "—"}
+                </span>
+                {draftQueue.map(q => (
+                  <button
+                    key={q.contactId}
+                    onClick={() => showQueuedDraft(q.contactId)}
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border/40 hover:border-primary/40 hover:text-foreground transition-colors"
+                    title={`Mostra bozza per ${q.contactName}`}
+                  >
+                    {q.contactName}
+                  </button>
+                ))}
               </div>
             )}
             <div className="flex-1 min-h-0">
-              <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} />
+              <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} onImprove={handleImprove} />
             </div>
           </div>
         </div>

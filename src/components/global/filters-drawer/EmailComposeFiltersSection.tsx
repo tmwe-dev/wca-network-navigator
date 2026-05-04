@@ -7,6 +7,7 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import BriefAccordion from "@/components/email/BriefAccordion";
 import { DEFAULT_EMAIL_TYPES, TONE_OPTIONS, type EmailType } from "@/data/defaultEmailTypes";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -44,7 +45,7 @@ const TILE_ACTIVE =
   "border-primary border-2 text-primary ring-2 ring-primary/20 from-primary/15 to-primary/5";
 
 export function EmailComposeFiltersSection(): React.ReactElement {
-  const { selectedType, setSelectedType, tone, setTone, useKB, setUseKB, brief, setBrief } =
+  const { selectedType, setSelectedType, tone, setTone, useKB, setUseKB, brief, setBrief, customGoal, setCustomGoal } =
     useComposeAiConfig();
 
   const { data: settings } = useAppSettings();
@@ -66,6 +67,22 @@ export function EmailComposeFiltersSection(): React.ReactElement {
 
   return (
     <section className="space-y-3">
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+          <Target className="h-3 w-3" /> Obiettivo email (Oracolo)
+        </label>
+        <Textarea
+          value={customGoal}
+          onChange={(e) => setCustomGoal(e.target.value)}
+          rows={4}
+          placeholder="Cosa vuoi dire? Es. proporre tariffa LCL Genova→Tunisi, sconto introduttivo, urgenza fine mese…"
+          className="text-xs resize-y min-h-[80px]"
+        />
+        <p className="text-[10px] text-muted-foreground">
+          Vale per <strong>tutti i contatti</strong> che trascini sulle drop zone.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           Tipo di email
