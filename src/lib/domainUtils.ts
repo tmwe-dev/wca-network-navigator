@@ -58,6 +58,30 @@ function extractCountryTld(domain: string): string | null {
   return TLD_COUNTRY_MAP[last] ? last : null;
 }
 
+const GENERIC_PUBLIC_SUFFIXES = new Set(["com", "net", "org", "info", "biz", "io", "dev", "app", "tech", "xyz"]);
+const COMPOUND_PUBLIC_PREFIXES = new Set(["co", "com", "net", "org", "ac", "gov", "edu"]);
+
+function getLookupDomain(domain: string): string {
+  const parts = domain.toLowerCase().split(".").filter(Boolean);
+  if (parts.length <= 2) return domain.toLowerCase();
+
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+
+  if (GENERIC_PUBLIC_SUFFIXES.has(last)) {
+    return parts.slice(-2).join(".");
+  }
+
+  if (TLD_COUNTRY_MAP[last]) {
+    if (COMPOUND_PUBLIC_PREFIXES.has(secondLast) && parts.length >= 3) {
+      return parts.slice(-3).join(".");
+    }
+    return parts.slice(-2).join(".");
+  }
+
+  return parts.slice(-2).join(".");
+}
+
 /** Get country flag emoji from email domain. Returns null for generic TLDs. */
 export function getFlagFromDomain(domain: string): string | null {
   if (!domain) return null;
@@ -70,5 +94,5 @@ export function getFlagFromDomain(domain: string): string | null {
 /** Get favicon URL from domain using DuckDuckGo (no fake Google placeholders) */
 export function getDomainFaviconUrl(domain: string): string {
   if (!domain) return "";
-  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+  return `https://icons.duckduckgo.com/ip3/${getLookupDomain(domain)}.ico`;
 }

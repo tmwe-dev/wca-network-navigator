@@ -53,11 +53,14 @@ serve(async (req) => {
     const body = await req.json();
     const minEmailCount = body.min_email_count ?? 3;
     const batchSize = body.batch_size ?? 20;
+    const requestedEmails = Array.isArray(body.emails)
+      ? body.emails.map((value: unknown) => String(value).trim().toLowerCase()).filter(Boolean)
+      : [];
 
     // 1. Load groups
     const { data: groups } = await supabase
       .from("email_sender_groups")
-      .select("id, nome_gruppo, descrizione")
+      .select("id, nome_gruppo, descrizione, classification_hint, response_style_hint")
       .eq("user_id", user.id);
 
     if (!groups || groups.length === 0) {
@@ -65,18 +68,33 @@ serve(async (req) => {
     }
 
     // 2. Load uncategorized addresses with enough emails
-    const { data: addresses } = await supabase
+    let addressQuery = supabase
       .from("email_address_rules")
       .select("id, email_address, display_name, email_count")
       .eq("user_id", user.id)
       .is("group_id", null)
       .gte("email_count", minEmailCount)
-      .order("email_count", { ascending: false })
-      .limit(batchSize);
+      .order("email_count", { ascending: false });
+
+    if (requestedEmails.length > 0) {
+      addressQuery = addressQuery.in("email_address", requestedEmails);
+    } else {
+      addressQuery = addressQuery.limit(batchSize);
+    }
+
+    const { data: addresses } = await addressQuery;
 
     if (!addresses || addresses.length === 0) {
       return new Response(JSON.stringify({ processed: 0, suggestions: [] }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
+
+    const { data: learningRules } = await supabase
+      .from("email_address_rules")
+      .select("group_name, email_address, display_name, company_name, domain, custom_prompt, email_count")
+      .eq("user_id", user.id)
+      .not("group_name", "is", null)
+      .order("email_count", { ascending: false })
+      .limit(250);
 
     // 3. For each address, get last 5 subjects
     const addressData: Array<{ email: string; display_name: string | null; email_count: number; subjects: string[]; ruleId: string }> = [];
@@ -99,11 +117,42 @@ serve(async (req) => {
       });
     }
 
+    const groupedExamples = new Map<string, string[]>();
+    for (const rule of learningRules ?? []) {
+      const groupName = typeof rule.group_name === "string" ? rule.group_name : null;
+      if (!groupName) continue;
+      const bucket = groupedExamples.get(groupName) ?? [];
+      if (bucket.length >= 3) continue;
+      const sampleParts = [
+        typeof rule.company_name === "string" && rule.company_name.trim() ? `azienda: ${rule.company_name.trim()}` : null,
+        typeof rule.display_name === "string" && rule.display_name.trim() ? `nome: ${rule.display_name.trim()}` : null,
+        typeof rule.email_address === "string" && rule.email_address.trim() ? `email: ${rule.email_address.trim()}` : null,
+        typeof rule.domain === "string" && rule.domain.trim() ? `dominio: ${rule.domain.trim()}` : null,
+        typeof rule.custom_prompt === "string" && rule.custom_prompt.trim() ? `nota: ${rule.custom_prompt.trim().slice(0, 140)}` : null,
+      ].filter((value): value is string => value !== null);
+      bucket.push(`- ${sampleParts.join(" · ")}`);
+      groupedExamples.set(groupName, bucket);
+    }
+
     // 4. Call AI
-    const groupsList = groups.map((g: Record<string, unknown>) => `- ${g.nome_gruppo}: ${g.descrizione || "nessuna descrizione"}`).join("\n");
+    const groupsList = groups.map((g: Record<string, unknown>) => {
+      const parts = [
+        `- ${String(g.nome_gruppo)}`,
+        typeof g.descrizione === "string" && g.descrizione.trim() ? `descrizione: ${g.descrizione.trim()}` : null,
+        typeof g.classification_hint === "string" && g.classification_hint.trim() ? `hint: ${g.classification_hint.trim()}` : null,
+        typeof g.response_style_hint === "string" && g.response_style_hint.trim() ? `stile: ${g.response_style_hint.trim()}` : null,
+      ].filter((value): value is string => value !== null);
+      return parts.join(" | ");
+    }).join("\n");
     const addressList = addressData.map((a) =>
       `Email: ${a.email}, Nome: ${a.display_name || "N/A"}, Volume: ${a.email_count}, Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`
     ).join("\n");
+    const examplesList = groups.map((g: Record<string, unknown>) => {
+      const groupName = String(g.nome_gruppo);
+      const samples = groupedExamples.get(groupName) ?? [];
+      if (samples.length === 0) return `## ${groupName}\n- nessun esempio ancora disponibile`;
+      return `## ${groupName}\n${samples.join("\n")}`;
+    }).join("\n\n");
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -122,7 +171,7 @@ serve(async (req) => {
           },
           {
             role: "user",
-            content: `Gruppi disponibili:\n${groupsList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra, non inventarne di nuovi\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Basa la decisione su: dominio email, contenuto subject, pattern del sender\n- Rispondi SOLO con un JSON array valido, niente altro testo\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare:\n${addressList}`
+            content: `Gruppi disponibili:\n${groupsList}\n\nEsempi reali già classificati dall'operatore (usali come mini-guida di stile e perimetro, senza copiarli meccanicamente):\n${examplesList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra: l'obiettivo è RIDURRE i gruppi, non moltiplicarli\n- Preferisci sempre gruppi ampi e operativi (es. amministrativo, commerciale, banca, fornitori, clienti, spam) invece di micro-segmenti geografici o troppo specifici\n- Non creare sottogruppi tipo "clienti Francia" o "clienti Germania" se esiste già un gruppo più generale adeguato\n- Usa gli esempi già classificati per capire come l'azienda raggruppa davvero i mittenti\n- Basa la decisione su dominio email, struttura del dominio, display name, contenuto subject e pattern del sender\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Rispondi SOLO con i dati del tool, niente testo extra\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare:\n${addressList}`
           }
         ],
         tools: [{
