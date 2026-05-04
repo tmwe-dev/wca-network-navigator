@@ -636,14 +636,29 @@ export default function AISuggestionsTab() {
                   >
                     {showPreview ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
                   </Button>
-                  <span className="text-xs font-medium text-muted-foreground truncate">
-                    Suggerimenti AI ({visibleRows.length})
+                  <span className="text-xs font-semibold text-foreground truncate">
+                    Suggerimenti AI
                   </span>
+                  <Badge variant="secondary" className="text-[10px] h-5 tabular-nums">
+                    {visibleRows.length}
+                  </Badge>
+                  <Button
+                    variant={groupBySuggestion ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 gap-1.5 ml-2"
+                    onClick={() => setGroupBySuggestion((v) => !v)}
+                    title="Raggruppa per suggerimento AI"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span className="text-xs">Raggruppa AI</span>
+                  </Button>
                 </div>
 
-                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                  {selectedRows.length > 0 ? <span className="text-primary font-semibold">{selectedRows.length} sel.</span> : "Seleziona per lavorare in batch"}
-                </span>
+                {selectedRows.length > 0 && (
+                  <span className="text-[11px] text-primary font-semibold whitespace-nowrap">
+                    {selectedRows.length} selezionati
+                  </span>
+                )}
               </div>
 
               <ScrollArea className="flex-1">
