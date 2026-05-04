@@ -175,33 +175,34 @@ export function SettingsPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const tabs: VerticalTab[] = [
-    { value: "generale", label: "Generale", icon: SettingsIcon },
+  const tabs: VerticalTab[] = ([
+    { value: "ai-monitor", label: "AI Monitor", icon: Activity },
     { value: "ai-prompt", label: "AI & Prompt", icon: Brain },
-    { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
+    { value: "enrichment", label: "Arricchimento", icon: Image },
+    { value: "audit", label: "Audit Trail", icon: LogSquare },
+    { value: "backup-export", label: "Backup & Export", icon: Package },
     { value: "wca", label: "Connessioni", icon: Link },
-    { value: "voce-ai", label: "Voce AI", icon: Volume2 },
-    { value: "provider-ai", label: "Provider AI", icon: Cpu },
-    { value: "import-export", label: "Importa", icon: Download },
+    { value: "development", label: "Development", icon: Layers },
     { value: "download-email", label: "Download Email", icon: Mail },
     { value: "estensioni", label: "Estensioni", icon: Puzzle },
-    { value: "reportaziende", label: "Report Aziende", icon: FileText },
-    { value: "enrichment", label: "Arricchimento", icon: Image },
+    { value: "generale", label: "Generale", icon: SettingsIcon },
+    { value: "import-export", label: "Importa", icon: Download },
+    { value: "guida-operativa", label: "Jobs Operativi", icon: Briefcase },
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
-    { value: "operatori", label: "Operatori", icon: Users },
-    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
-    { value: "timing", label: "Timing & Schedule", icon: Clock },
-    { value: "token-ai", label: "Token AI", icon: Coins },
-    { value: "processi-automatici", label: "Processi Automatici", icon: Power },
-    { value: "ai-monitor", label: "AI Monitor", icon: Activity },
     { value: "notifiche", label: "Notifiche", icon: Bell },
+    { value: "operatori", label: "Operatori", icon: Users },
+    { value: "processi-automatici", label: "Processi Automatici", icon: Power },
+    { value: "provider-ai", label: "Provider AI", icon: Cpu },
+    { value: "reportaziende", label: "Report Aziende", icon: FileText },
     { value: "ruoli", label: "Ruoli & Permessi", icon: KeyRound },
     { value: "ruoli-utenti", label: "Ruoli Utenti", icon: UsersRound },
     { value: "team", label: "Team", icon: Users },
-    { value: "audit", label: "Audit Trail", icon: LogSquare },
-    { value: "backup-export", label: "Backup & Export", icon: Package },
-    { value: "development", label: "Development", icon: Layers },
-  ];
+    { value: "timing", label: "Timing & Schedule", icon: Clock },
+    { value: "token-ai", label: "Token AI", icon: Coins },
+    { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
+    { value: "voce-ai", label: "Voce AI", icon: Volume2 },
+  ] satisfies VerticalTab[]).slice().sort((a, b) => a.label.localeCompare(b.label, "it"));
+  void tabs;
 
   return (
     <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
