@@ -201,21 +201,21 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
 
 export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect, variant = "standalone" }: Props) {
   const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
-  const [sortMode, setSortMode] = useState<SidebarSort>(() => loadSortMode());
+  const [prioritySortMode, setPrioritySortMode] = useState<SidebarSort>(() => loadSortMode(PRIORITY_SORT_STORAGE_KEY));
+  const [secondarySortMode, setSecondarySortMode] = useState<SidebarSort>(() => loadSortMode(SECONDARY_SORT_STORAGE_KEY));
   const isDrawer = variant === "drawer";
 
   useEffect(() => {
     saveOrder(order);
   }, [order]);
-  useEffect(() => { saveSortMode(sortMode); }, [sortMode]);
+  useEffect(() => { saveSortMode(PRIORITY_SORT_STORAGE_KEY, prioritySortMode); }, [prioritySortMode]);
+  useEffect(() => { saveSortMode(SECONDARY_SORT_STORAGE_KEY, secondarySortMode); }, [secondarySortMode]);
 
   const arranged = useMemo(() => applyUserOrder(folders, order), [folders, order]);
   const grouped = useMemo(
-    () => sortBySection(arranged, order, counts, sortMode),
-    [arranged, order, counts, sortMode],
+    () => sortBySection(arranged, order, counts, { priority: prioritySortMode, secondary: secondarySortMode }),
+    [arranged, order, counts, prioritySortMode, secondarySortMode],
   );
-
-  const dragEnabled = sortMode === "default";
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -235,6 +235,9 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
     const toSection = slugToSection.get(toSlug);
     if (!fromSection || !toSection) return;
     if (fromSection === "unclassified" || toSection === "unclassified") return;
+    const fromMode = fromSection === "priority" ? prioritySortMode : secondarySortMode;
+    const toMode = toSection === "priority" ? prioritySortMode : secondarySortMode;
+    if (fromMode !== "default" || toMode !== "default") return;
 
     setOrder((prev) => {
       const next: StoredOrder = { ...prev };
