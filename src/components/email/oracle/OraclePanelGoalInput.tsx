@@ -33,14 +33,17 @@ export function OraclePanelGoalInput({
   }, [customGoal, speech.listening, speech.interimText]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
+      <label className="text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
+        Obiettivo della mail
+      </label>
       <div className="relative">
         <Textarea
           value={displayText}
           onChange={(e) => onGoalChange(e.target.value)}
-          placeholder={getCustomGoalPlaceholder(selectedType?.id ?? null)}
+          placeholder={getCustomGoalPlaceholder(selectedType?.id ?? null) ?? "Scrivi qui cosa vuoi ottenere con questa mail (l'AI userà questo come istruzione principale)…"}
           className={cn(
-            "text-xs min-h-[160px] max-h-[240px] resize-none pr-8",
+            "text-xs min-h-[180px] max-h-[280px] resize-none pr-8 border-primary/20 focus-visible:ring-primary/40",
             speech.listening && "ring-1 ring-destructive/40"
           )}
           rows={6}
