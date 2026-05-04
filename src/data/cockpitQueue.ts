@@ -17,9 +17,18 @@ export async function deleteCockpitQueueItem(id: string) {
 }
 
 export async function deleteCockpitQueueBySource(userId: string, sourceType: string, sourceId: string) {
-  const { error } = await supabase.from("cockpit_queue").delete().eq("user_id", userId).eq("source_type", sourceType).eq("source_id", sourceId);
+  // Visibilità interna globale: il Cockpit mostra anche record di altri operatori,
+  // quindi la cancellazione non filtra per user_id (la RLS DELETE è già aperta agli autenticati).
+  // userId resta nella firma per compatibilità con i call site esistenti.
+  void userId;
+  const { error, count } = await supabase
+    .from("cockpit_queue")
+    .delete({ count: "exact" })
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId);
   if (error) throw error;
   emitBusyPartnersChanged();
+  return count ?? 0;
 }
 
 export async function findCockpitQueue(userId: string, status = "queued", limit = 500) {
