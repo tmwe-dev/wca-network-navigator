@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus, Wand2, Loader2 } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState } from "@/types/cockpit";
@@ -20,7 +20,6 @@ interface AIDraftStudioProps {
   onDraftChange: (draft: DraftState) => void;
   onRegenerate?: () => void;
   onGenerateAfterReview?: () => void;
-  onImprove?: () => void;
 }
 
 const channelMeta: Record<string, { icon: React.ElementType; label: string; color: string }> = {
@@ -30,7 +29,7 @@ const channelMeta: Record<string, { icon: React.ElementType; label: string; colo
   sms: { icon: Smartphone, label: "SMS", color: "text-chart-3" },
 };
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview, onImprove }: AIDraftStudioProps) {
+export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
   const { goal, baseProposal } = useMission();
   const {
     sending, liDmOpen, setLiDmOpen,
@@ -134,16 +133,6 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
               onCopy={handleCopy}
               onDraftChange={onDraftChange}
             />
-            {onImprove && (
-              <button
-                onClick={onImprove}
-                disabled={draft.isGenerating}
-                className="p-2 rounded-lg border border-warning/40 text-warning hover:bg-warning/10 transition-colors disabled:opacity-50"
-                title="Migliora bozza con AI"
-              >
-                {draft.isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-              </button>
-            )}
             <button onClick={handleCopy} className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors" title="Copia">
               <Copy className="w-3.5 h-3.5" />
             </button>

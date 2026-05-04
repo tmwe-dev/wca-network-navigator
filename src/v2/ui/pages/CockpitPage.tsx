@@ -4,8 +4,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
-import { ChannelDropZones } from "@/components/cockpit/ChannelDropZones";
-import { AIDraftStudio } from "@/components/cockpit/AIDraftStudio";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
 import { Mail, Linkedin } from "lucide-react";
 import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
@@ -15,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCockpitLogic } from "@/hooks/useCockpitLogic";
-import { OraclePanelSlim } from "@/components/email/OraclePanelSlim";
+import { CockpitWorkspace } from "@/components/cockpit/CockpitWorkspace";
 import type { OracleConfig } from "@/components/email/OraclePanel";
 // Re-export cockpit types for backwards compatibility
 export type {
@@ -91,7 +89,7 @@ export function CockpitPage() {
           <ActiveFilterChips filters={activeFilters} onRemove={handleRemoveFilter} />
         )}
       </AnimatePresence>
-      <div className="flex-1 flex gap-0 overflow-hidden min-h-0">
+      <div className="flex-1 flex gap-0 overflow-hidden min-h-0 relative">
         <div className="w-[380px] flex-shrink-0 border-r border-border/50 overflow-y-auto">
           <ContactStream
             viewMode={viewMode} searchQuery={searchQuery} onSearchChange={() => {}} filters={activeFilters}
@@ -114,92 +112,61 @@ export function CockpitPage() {
             assignmentMap={assignmentInfoMap}
           />
         </div>
-        <div className="flex-1 flex items-stretch justify-center p-6 min-w-[320px]">
-          {showLinkedInFlow && selection.count > 0 ? (
+        {showLinkedInFlow && selection.count > 0 ? (
+          <div className="flex-1 flex items-stretch justify-center p-6 min-w-[320px]">
             <LinkedInFlowPanel
               selectedContacts={contacts.filter(c => selection.selectedIds.has(c.id)).map(c => ({ id: c.id, name: c.name, company: c.company, linkedinUrl: c.linkedinUrl }))}
               onClose={() => setShowLinkedInFlow(false)}
             />
-          ) : batchMode && selection.count > 0 ? (
+          </div>
+        ) : batchMode && selection.count > 0 && !draftState.contactId ? (
+          <div className="flex-1 flex items-center justify-center p-6 min-w-[320px]">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4 text-center max-w-md">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <Mail className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold text-foreground">Generazione Batch</h3>
-              <p className="text-sm text-muted-foreground">{selection.count} contatti selezionati. Trascina sulle drop zone per generare uno alla volta, oppure usa il comando AI per generare in batch.</p>
+              <p className="text-sm text-muted-foreground">{selection.count} contatti selezionati. Trascina sul workspace per generare in batch.</p>
               <div className="flex gap-2">
                 <button onClick={() => setShowLinkedInFlow(true)} className="flex items-center gap-1.5 text-xs text-[#0077B5] hover:underline font-medium">
                   <Linkedin className="w-3.5 h-3.5" /> LinkedIn Flow
                 </button>
                 <span className="text-muted-foreground text-xs">·</span>
-                <button onClick={() => setBatchMode(false)} className="text-xs text-primary hover:underline">← Drop zone</button>
+                <button onClick={() => setBatchMode(false)} className="text-xs text-primary hover:underline">← Workspace</button>
               </div>
             </motion.div>
-          ) : (
-            <ChannelDropZones
-              isDragging={!!draggedContactId} draggedContactId={draggedContactId}
-              dragCount={dragCount} onDrop={handleDrop}
-              hasActiveContact={!!draftState.contactId}
-              contactAvailability={draftState.contactId ? (() => {
-                const c = contactsMap[draftState.contactId!];
-                return c ? {
-                  hasEmail: !!c.email,
-                  hasPhone: !!c.phone,
-                  hasLinkedinUrl: !!c.linkedinUrl,
-                } : undefined;
-              })() : undefined}
-              onReadProfile={() => {
-                if (draftState.contactId) {
-                  const c = contactsMap[draftState.contactId];
-                  if (c?.linkedinUrl) handleDrop("linkedin", draftState.contactId, c.name);
-                  else toast.info("Nessun URL LinkedIn disponibile — esegui prima LinkedIn Lookup");
-                }
-              }}
-              onDeepSearch={() => { if (draftState.contactId) handleSingleDeepSearch(draftState.contactId); }}
-            />
-          )}
-        </div>
-        <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
-          <div className="h-full flex flex-col">
-            {/* Oracolo — nel Cockpit il goal ha priorità finché non esiste una bozza. */}
-            <div className={draftState.body ? "h-[46%] flex-shrink-0 overflow-hidden border-b border-border/50" : "h-[62%] flex-shrink-0 overflow-hidden border-b border-border/50"}>
-              <OraclePanelSlim
-                onGenerate={handleOracleGenerate}
-                onImprove={handleOracleImprove}
-                onLoadTemplate={handleLoadTemplate}
-                onInsertImage={handleInsertImage}
-                generating={!!draftState.isGenerating}
-                improving={false}
-                hasBody={!!draftState.body}
-                recipientPartnerId={recipientPartnerId}
-                recipientCount={draftState.contactId ? 1 : 0}
-                contextSummary={draftState.context_summary ?? null}
-                prioritizeGoal
-              />
-            </div>
-            {draftQueue.length > 0 && (
-              <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-2 overflow-x-auto">
-                <span className="font-semibold text-foreground shrink-0">Bulk ({draftQueue.length + 1}):</span>
-                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">
-                  ● {draftState.contactName || "—"}
-                </span>
-                {draftQueue.map(q => (
-                  <button
-                    key={q.contactId}
-                    onClick={() => showQueuedDraft(q.contactId)}
-                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border/40 hover:border-primary/40 hover:text-foreground transition-colors"
-                    title={`Mostra bozza per ${q.contactName}`}
-                  >
-                    {q.contactName}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="flex-1 min-h-0">
-              <AIDraftStudio draft={draftState} onDraftChange={setDraftState} onRegenerate={handleRegenerate} onGenerateAfterReview={handleGenerateAfterReview} onImprove={handleImprove} />
-            </div>
           </div>
-        </div>
+        ) : (
+          <CockpitWorkspace
+            draftState={draftState}
+            setDraftState={setDraftState}
+            recipientPartnerId={recipientPartnerId}
+            onOracleGenerate={handleOracleGenerate}
+            onOracleImprove={handleOracleImprove}
+            onLoadTemplate={handleLoadTemplate}
+            onInsertImage={handleInsertImage}
+            onRegenerate={handleRegenerate}
+            onGenerateAfterReview={handleGenerateAfterReview}
+            isDragging={!!draggedContactId}
+            draggedContactId={draggedContactId}
+            dragCount={dragCount}
+            onDrop={handleDrop}
+            onReadProfile={() => {
+              if (draftState.contactId) {
+                const c = contactsMap[draftState.contactId];
+                if (c?.linkedinUrl) handleDrop("linkedin", draftState.contactId, c.name);
+                else toast.info("Nessun URL LinkedIn disponibile — esegui prima LinkedIn Lookup");
+              }
+            }}
+            onDeepSearch={() => { if (draftState.contactId) handleSingleDeepSearch(draftState.contactId); }}
+            contactAvailability={draftState.contactId ? (() => {
+              const c = contactsMap[draftState.contactId!];
+              return c ? { hasEmail: !!c.email, hasPhone: !!c.phone, hasLinkedinUrl: !!c.linkedinUrl } : undefined;
+            })() : undefined}
+            draftQueue={draftQueue}
+            showQueuedDraft={showQueuedDraft}
+          />
+        )}
       </div>
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

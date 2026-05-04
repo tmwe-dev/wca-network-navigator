@@ -1,95 +1,116 @@
+## 1) Cosa c'è oggi (diagnosi onesta)
 
-## Contesto
-
-Stiamo guardando il drawer destro su `/v2/explore/network` (componente `PartnerDetailActivity` → sezione "ATTIVITÀ (100)"). Oggi mostra solo `subject` + data, senza canale, destinatario, persona, bandiera, ora, link al messaggio. Manca il modo di aggiungere note dal drawer, manca il legame "contatto in holding → azienda in holding", e nel DB ci sono dati Deep Search residui da azzerare prima di ripartire.
-
-## Cambi da fare
-
-### 1. Scheda Attività ricca (drawer destro azienda/contatto)
-
-Riscrivo la lista in `PartnerDetailActivity` per ogni riga:
+La pagina `/v2/cockpit` ha tre colonne:
 
 ```text
-[icona canale] [bandiera paese] Persona · email/numero
-              Oggetto / preview testo
-              31 mag · 14:32        [↗ apri messaggio]
+┌─────────────┬───────────────────────────┬──────────────────────────┐
+│  Sinistra   │         Centro            │        Destra            │
+│ ContactStream│   ChannelDropZones        │  OraclePanelSlim (alto)  │
+│ (380px)     │   (drop email/wa/li/sms)  │  + DraftQueue bar        │
+│             │                           │  + AIDraftStudio (basso) │
+└─────────────┴───────────────────────────┴──────────────────────────┘
 ```
 
-- **Icona canale**: ✉️ email, 💬 WhatsApp, 🔗 LinkedIn, 📞 chiamata, 📝 nota, 🔍 deep search.
-- **Direzione**: freccia ↑ sent, ↓ received, colorata.
-- **Persona**: nome contatto + ruolo se disponibile (join `partner_contacts`).
-- **Indirizzo**: email/numero/handle del destinatario.
-- **Bandiera**: country del partner.
-- **Data + ora locale** (CET).
-- **Link "↗ apri messaggio"**: porta alla mail/WA/LI originale (route esistente).
-- **Pulsante "Storia completa"** in cima alla sezione → apre `/v2/agenda?partnerId=…` filtrato su quel partner (riusa la pagina già fatta come da scelta utente).
-- Counter `(100)` resta, virtualizzo se >50.
+I problemi reali, non opinioni:
 
-Nessuna nuova route. Niente deep refactor: cambio solo il render della singola card e aggiungo un join leggero.
+- **Centro vuoto dopo il drop**: una volta trascinato il contatto, le drop zone restano lì occupando tutto lo spazio mentre la bozza viene generata a destra in una colonna stretta (`max-w-[480px]`). Lo spazio centrale diventa inutile.
+- **Destra schiacciata in due metà**: Oracolo sopra (46–62%) + Studio sotto, divisi da un bordo. Goal, bottoni Genera/Migliora, KB sections, queue bulk, oggetto, corpo, allegati, badge agenti, footer azioni — tutto in 480px. Un casino.
+- **Doppio "Migliora"**: ce ne sono due perché vivono in due componenti diversi che non si parlano:
+  - quello in alto nell'OraclePanelSlim (footer dell'Oracolo) → chiama `handleOracleImprove` → `handleImprove`
+  - quello in basso nell'AIDraftStudio (`AIDraftStudio.tsx` riga 137-146) → chiama lo stesso identico `onImprove` → `handleImprove`
+  
+  Sono **letteralmente** la stessa funzione. Uno dei due è un residuo del vecchio layout, va eliminato.
 
-### 2. Note manuali = attività del giorno
+## 2) Flusso logico Genera (per 1 o N contatti)
 
-Aggiungo un pulsante "+ Nota" sopra la sezione Timeline del drawer. Apre un piccolo form:
+Sequenza esatta che parte quando trascini un contatto su una drop zone (`useCockpitLogic.handleDrop`):
 
-- Tipo: Nota / Chiamata / Incontro / Altro
-- Testo libero
-- Checkbox: **"Metti l'azienda in circuito di attesa"** (default OFF; ON quando tipo = Chiamata)
-- Persona contattata (dropdown contatti del partner)
+1. **Selezione destinatari**: se il contatto trascinato è già nella selezione multipla (`selection`), prende **tutta** la selezione; altrimenti solo quello.
+2. **Auto-assignment** del contatto a un agente sales attivo (best-effort).
+3. **LinkedIn (solo canale linkedin)**: verifica autenticazione bridge, cerca URL via Google se manca, salva URL in `enrichment_data` del partner. **Mai scraping diretto.**
+4. **Genera prima bozza** chiamando `generate(...)` → `useEmailForge.run(...)` → edge function `generate-email`. Il payload include:
+   - `partner_id`, `contact_id`, `recipient_name`, `recipient_company`, `recipient_countries`
+   - `oracle_type`, `oracle_tone`, `use_kb`, `email_type_prompt`, `email_type_structure`, `email_type_kb_categories` ← letti da `useComposeAiConfig` (sidebar filtri sinistra)
+   - `goal` = `customGoal` (testo dell'Oracolo) **+** prompt del tipo email selezionato
+   - `base_proposal` = brief testuale (`briefToText(brief)`)
+   - `quality` = preset Sherlock (Scout/Detective/Sherlock) da `useForgeLab`
+5. **Bulk**: se erano selezionati N contatti, dopo il primo cicla in sequenza sui restanti chiamando lo stesso `generate(...)` per ciascuno, accumulando i risultati in `draftQueue`. Solo la bozza attiva è visibile, le altre stanno nella barra in alto a destra come chip cliccabili.
+6. **Editorial review** è obbligatorio lato edge (`journalistReview`) — arriva nel risultato come `journalist_review` e viene mostrato come badge.
 
-Al submit:
-1. Inserisce riga in `interactions` (tipo già esistente) → compare nel Timeline del drawer.
-2. Se checkbox ON → vedi punto 3 (holding azienda).
-3. La stessa riga compare nell'Agenda di oggi grazie al raggruppamento per azione già attivo (`AgendaDayDetail` legge da interactions).
+**Cosa viene effettivamente preso in considerazione:**
+- ✅ `customGoal` (campo "OBIETTIVO DELLA MAIL" nell'Oracolo)
+- ✅ Tipo email selezionato (sidebar) — prompt, struttura, kb_categories
+- ✅ Tono (sidebar)
+- ✅ Brief strutturato (sidebar accordion)
+- ✅ Use KB on/off (sidebar)
+- ✅ Quality / Sherlock preset (sidebar)
+- ✅ Filtri attivi sui contatti (`activeFilters` → influenzano la lista, non il prompt)
+- ❌ I `CockpitFilter` chip in alto NON vengono iniettati nel prompt, filtrano solo la lista contatti. Questa è una scelta corretta ma da rendere esplicita all'utente.
 
-### 3. Holding a livello azienda
+## 3) Differenza Genera vs Migliora
 
-Regola operativa stabilita dall'utente: **se anche un solo contatto entra in circuito di attesa, l'intera azienda è in circuito di attesa e sparisce dalle viste di prospezione finché l'operatore non la riattiva o cerca esplicitamente altri contatti.**
+| Aspetto | Genera (`handleRegenerate`) | Migliora (`handleImprove`) |
+|---|---|---|
+| Edge function | `generate-email` | `generate-email` (stessa) |
+| `base_proposal` inviato | brief testuale dalla sidebar | **il body attuale della bozza** |
+| `goal` | customGoal + prompt del tipo email | customGoal + prompt del tipo email + frase fissa: *"MIGLIORA la bozza qui sotto mantenendo voce, intento e personalità dell'autore. Non riscrivere da zero."* |
+| Subject/body iniziali | svuotati prima della chiamata | **mantenuti come fallback** se il risultato è vuoto |
+| Links | non considerati | se ci sono link allegati, vengono iniettati nel goal con istruzione di usarli come `<a href>` |
+| Effetto | scrive da zero | rifinisce mantenendo intento |
 
-Implementazione minima, senza nuovi schemi:
+In pratica: **Genera** = bozza nuova partendo da zero usando brief + tipo + KB; **Migliora** = passa l'edge il testo già scritto come `base_proposal` e gli dice "rifinisci, non riscrivere". Stessa pipeline, parametri diversi.
 
-- Già oggi un partner è "in holding" se esiste almeno una `interaction` recente (≤ 30g) o se `lead_status ∈ {contacted, in_progress, negotiation}`. Centralizzo questa derivata in un helper `isPartnerInHolding(partner, interactions)` usato sia dalla query lista (esclusione) sia dal badge ✈️ già esistente.
-- Nei filtri di `/v2/explore/network` aggiungo il default **"Nascondi aziende in circuito di attesa"** (toggle nella toolbar, ON di default). L'operatore può disattivarlo per cercare altri contatti della stessa azienda.
-- Nel drawer mostro un banner viola **"✈️ Azienda in circuito di attesa — ultimo contatto: X giorni fa con Y"** con pulsante "Esci dal circuito" (cancella la marcatura settando una `interaction` di tipo `holding_release`).
-- Hard guard outreach: in `useSendEmail` / queue WA/LI controllo `isPartnerInHolding` e blocco con toast "Azienda in circuito di attesa — conferma manuale richiesta".
+## 4) Refactoring proposto — Centro + Destra
 
-### 4. Reset totale Deep Search
+**Principio**: una colonna sola per "scrivere", drop zones solo quando serve, niente duplicazione di Genera/Migliora.
 
-Migration di pulizia (richiesta esplicita utente):
+### Layout nuovo
 
-- `DELETE FROM sherlock_investigations` (tutto).
-- `UPDATE partners SET deep_search_at = NULL, sherlock_level = NULL, sherlock_completed_at = NULL`.
-- `UPDATE partner_contacts SET deep_search_at = NULL` (dove esiste).
-- Cancellazione **alias automatici** creati insieme alle email (verifico tabella `partner_aliases` / equivalente — utente dice "non servono più, vengono creati con le mail"). Filtro per `source = 'auto'` o `created_by_function` se presente.
-- Reset **rating sporchi**: azzero `quality_score`, `lead_score`, `reliability_score` su partners e contacts dove provengono da AI/deep search legacy (manterò i campi, li metto a NULL così le nuove logiche li ricalcolano puliti).
+```text
+┌─────────────┬─────────────────────────────────────────────────────┐
+│ Sinistra    │  CENTRO+DESTRA fuso in un'unica area "Workspace"   │
+│ ContactStream│                                                     │
+│             │  STATO A — nessun contatto attivo:                  │
+│             │   ChannelDropZones a tutta larghezza + hint Oracolo │
+│             │                                                     │
+│             │  STATO B — contatto/i attivo/i:                     │
+│             │   ┌──────────────────┬────────────────────────┐    │
+│             │   │ Oracolo (goal +  │ Bozza viva             │    │
+│             │   │ Genera/Migliora) │ (oggetto, corpo,       │    │
+│             │   │ ~38%             │ allegati, send) ~62%   │    │
+│             │   │                  │                        │    │
+│             │   │ Tipo / Tono /    │ Tabs: Preview /        │    │
+│             │   │ KB chip riassunto│ Sources / Variables    │    │
+│             │   │                  │                        │    │
+│             │   │ Footer: Genera + │ Footer azioni:         │    │
+│             │   │ Migliora UNICI   │ Invia · Copia · Rigen. │    │
+│             │   └──────────────────┴────────────────────────┘    │
+└─────────────┴─────────────────────────────────────────────────────┘
+```
 
-Tutto in **una migration unica** con `BEGIN/COMMIT`, mostro l'elenco esatto delle righe coinvolte prima di eseguirla.
+### Cosa cambia in concreto
 
-### 5. Marker Deep Search visibile ovunque
+1. **`CockpitPage.tsx`**: collasso le due colonne destra/centro in una sola `flex-1`. Mostra ChannelDropZones a tutta larghezza solo quando `!draftState.contactId && !draftState.body`. Quando esiste una bozza (o sta generando), mostra l'unico Workspace a 2 colonne interne.
+2. **Nuovo componente `CockpitWorkspace.tsx`**: contiene Oracolo (sinistra interna) + Bozza+Studio (destra interna). Riusa `OraclePanelSlim` e `AIDraftStudio` ma con gestione spazio coerente (no più 50/50 verticale).
+3. **Eliminazione doppione "Migliora"**: in `AIDraftStudio.tsx` rimuovo il bottone giallo Migliora (righe 137-146) e tengo solo Invia / Copia / Rigenera. L'unico Migliora resta nel footer dell'Oracolo, dove logicamente appartiene (è un'azione AI, non un'azione di invio).
+4. **Bulk queue**: la chip-bar `Bulk (N)` si sposta sopra la bozza nello Studio (più visibile, con conteggio "1/N").
+5. **DropZones in stato B**: trasformo le 4 drop-zone in chip compatti sopra la bozza (Email · LinkedIn · WhatsApp · SMS) per cambiare canale al volo senza dover trascinare di nuovo. Quando trascini un nuovo contatto entra in modalità "drop" sovrapposta.
+6. **Header Studio più ricco**: oltre a canale + nome, aggiungo bandiera, lingua, azienda, e link "apri scheda partner".
+7. **Spaziatura**: l'area Oracolo non ha più altezza fissa percentuale — è `flex-col` con goal `flex-1` (cresce/si riduce libero), bottoni e chip in basso. Il problema dello "spazio per il goal" sparisce strutturalmente.
 
-Già esiste `SherlockLevelBadge` ma è solo nell'header drawer. Lo propago:
+### Coerenza pipeline (cosa NON cambia)
 
-- Card azienda in `/v2/explore/network` → striscia laterale colorata + badge livello (Scout giallo / Detective viola / Sherlock ambra).
-- Card contatto idem.
-- Tooltip con data ultima Deep Search.
+- `useCockpitLogic` invariato: stessi `handleRegenerate`, `handleImprove`, `handleDrop`, stessa `draftQueue`.
+- Edge function `generate-email` invariata.
+- `useComposeAiConfig` (sidebar sinistra: tipo, tono, brief, KB, quality) invariato — i filtri restano lì.
+- Nessun side-effect duplicato: bottone Migliora unico → una sola chiamata edge.
 
-Niente nuova logica: lego al campo `sherlock_level` ripopolato dalle nuove investigazioni post-reset.
+## 5) File toccati (preview)
 
-## File toccati (stima)
+- `src/v2/ui/pages/CockpitPage.tsx` — layout 2 colonne (sinistra contacts + destra workspace)
+- `src/components/cockpit/CockpitWorkspace.tsx` — **nuovo**, orchestratore Oracolo+Studio
+- `src/components/cockpit/AIDraftStudio.tsx` — rimozione bottone Migliora doppione, header arricchito, channel chips
+- `src/components/email/OraclePanelSlim.tsx` — togliere prop `prioritizeGoal` (non più necessaria, lo spazio è gestito dal nuovo Workspace), goal `flex-1`
+- `src/v2/ui/pages/CockpitPage.tsx` — rimozione hardcoded heights `46%` / `62%`
 
-- `src/components/partners/PartnerDetailActivity.tsx` — render ricco righe
-- `src/components/partners/ActivityList.tsx` — idem se serve, o assorbito
-- `src/components/partners/AddNoteForm.tsx` *(nuovo)* — form nota + holding
-- `src/v2/ui/organisms/PartnerDetailInline.tsx` — pulsante "+ Nota" e link "Storia completa" → `/v2/agenda?partnerId`
-- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` — striscia laterale Sherlock + badge holding azienda
-- `src/data/partners/queries.ts` (o equivalente) — filtro "nascondi in holding"
-- `src/hooks/useSendEmail.ts` + queue WA/LI — hard guard holding azienda
-- `src/lib/holding.ts` *(nuovo helper SSOT)*
-- `supabase/migrations/<ts>_reset_deep_search_and_aliases.sql` — wipe
-
-## Vincoli rispettati
-
-- Niente refactor opportunistici fuori scope.
-- Soft-delete globale: il reset Deep Search usa UPDATE/DELETE su tabelle non-business (sherlock_investigations è log, ok DELETE).
-- DAL only, query keys centralizzati, no `any`.
-- Editorial review e pipeline invio: nessuna modifica al journalistReview, solo guard pre-invio.
-- Holding pattern già documentato in `mem://contacts/holding-pattern-governance` — estendo, non duplico.
+Nessuna modifica a hook, edge functions, DB, contesti AI, queue logic.
