@@ -12,6 +12,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   listFunnemailGroupedInbox,
+  markFunnemailMessagesRead,
   overrideFunnemailFolder,
   type FunnemailGroupFolder,
   type FunnemailGroupedInbox,
@@ -43,8 +44,6 @@ export interface UseFunnemailInboxResult {
   bulkBusy: boolean;
 }
 
-const PAGE_SIZE = 20000;
-
 export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
   const g = useGlobalFilters();
@@ -57,8 +56,8 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", PAGE_SIZE),
-    queryFn: () => listFunnemailGroupedInbox(user!.id, PAGE_SIZE),
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon"),
+    queryFn: () => listFunnemailGroupedInbox(user!.id),
     enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
@@ -168,12 +167,10 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const bulkMarkRead = React.useCallback(async (msgs: ChannelMessage[]) => {
     const ids = msgs.filter((m) => !m.read_at).map((m) => m.id);
     if (ids.length === 0) return;
-    const { error } = await supabase
-      .from("channel_messages")
-      .update({ read_at: new Date().toISOString() })
-      .in("id", ids);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await markFunnemailMessagesRead(ids);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore aggiornamento email");
       return;
     }
     toast.success(`${ids.length} email segnate come lette`);
@@ -211,7 +208,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
       try {
         await upsertEmailAddressRule(user.id, addr, { group_name: groupName });
         ok++;
-      } catch (e) {
+      } catch {
         // continua sugli altri
       }
     }

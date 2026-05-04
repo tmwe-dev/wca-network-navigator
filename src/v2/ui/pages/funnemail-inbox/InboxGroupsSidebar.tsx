@@ -48,22 +48,28 @@ const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
 };
 
 const STORAGE_KEY = "funnemail_sidebar_order_v1";
-const SORT_STORAGE_KEY = "funnemail_sidebar_sort_v1";
+const PRIORITY_SORT_STORAGE_KEY = "funnemail_sidebar_priority_sort_v1";
+const SECONDARY_SORT_STORAGE_KEY = "funnemail_sidebar_secondary_sort_v1";
 
 type SidebarSort = "default" | "name_asc" | "count_desc";
 
-function loadSortMode(): SidebarSort {
+function loadSortMode(storageKey: string): SidebarSort {
   try {
-    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (raw === "name_asc" || raw === "count_desc" || raw === "default") return raw;
   } catch { /* ignore */ }
   return "default";
 }
 
-function saveSortMode(mode: SidebarSort): void {
+function saveSortMode(storageKey: string, mode: SidebarSort): void {
   try {
-    localStorage.setItem(SORT_STORAGE_KEY, mode);
+    localStorage.setItem(storageKey, mode);
   } catch { /* ignore */ }
+}
+
+interface SidebarSortModes {
+  priority: SidebarSort;
+  secondary: SidebarSort;
 }
 
 interface StoredOrder {
@@ -104,7 +110,7 @@ function sortBySection(
   folders: FunnemailGroupFolder[],
   order: StoredOrder,
   counts: Record<string, number>,
-  mode: SidebarSort,
+  modes: SidebarSortModes,
 ): Record<Section, FunnemailGroupFolder[]> {
   const buckets: Record<Section, FunnemailGroupFolder[]> = { priority: [], secondary: [], unclassified: [] };
   for (const f of folders) buckets[f.section].push(f);
@@ -118,13 +124,17 @@ function sortBySection(
     a.label.localeCompare(b.label);
   const countSorter = (a: FunnemailGroupFolder, b: FunnemailGroupFolder) =>
     (counts[b.slug] ?? 0) - (counts[a.slug] ?? 0) || a.label.localeCompare(b.label);
-  const pickSorter = (section: Section) =>
+  const pickSorter = (section: Section) => {
+    const mode = section === "secondary" ? modes.secondary : modes.priority;
+    return (
     mode === "name_asc" ? nameSorter
       : mode === "count_desc" ? countSorter
-      : defaultSorter(section);
+      : defaultSorter(section)
+    );
+  };
   buckets.priority.sort(pickSorter("priority"));
   buckets.secondary.sort(pickSorter("secondary"));
-  buckets.unclassified.sort(mode === "default" ? (a, b) => a.sort_order - b.sort_order : pickSorter("unclassified"));
+  buckets.unclassified.sort((a, b) => a.sort_order - b.sort_order);
   return buckets;
 }
 
@@ -191,21 +201,21 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
 
 export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect, variant = "standalone" }: Props) {
   const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
-  const [sortMode, setSortMode] = useState<SidebarSort>(() => loadSortMode());
+  const [prioritySortMode, setPrioritySortMode] = useState<SidebarSort>(() => loadSortMode(PRIORITY_SORT_STORAGE_KEY));
+  const [secondarySortMode, setSecondarySortMode] = useState<SidebarSort>(() => loadSortMode(SECONDARY_SORT_STORAGE_KEY));
   const isDrawer = variant === "drawer";
 
   useEffect(() => {
     saveOrder(order);
   }, [order]);
-  useEffect(() => { saveSortMode(sortMode); }, [sortMode]);
+  useEffect(() => { saveSortMode(PRIORITY_SORT_STORAGE_KEY, prioritySortMode); }, [prioritySortMode]);
+  useEffect(() => { saveSortMode(SECONDARY_SORT_STORAGE_KEY, secondarySortMode); }, [secondarySortMode]);
 
   const arranged = useMemo(() => applyUserOrder(folders, order), [folders, order]);
   const grouped = useMemo(
-    () => sortBySection(arranged, order, counts, sortMode),
-    [arranged, order, counts, sortMode],
+    () => sortBySection(arranged, order, counts, { priority: prioritySortMode, secondary: secondarySortMode }),
+    [arranged, order, counts, prioritySortMode, secondarySortMode],
   );
-
-  const dragEnabled = sortMode === "default";
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -225,6 +235,9 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
     const toSection = slugToSection.get(toSlug);
     if (!fromSection || !toSection) return;
     if (fromSection === "unclassified" || toSection === "unclassified") return;
+    const fromMode = fromSection === "priority" ? prioritySortMode : secondarySortMode;
+    const toMode = toSection === "priority" ? prioritySortMode : secondarySortMode;
+    if (fromMode !== "default" || toMode !== "default") return;
 
     setOrder((prev) => {
       const next: StoredOrder = { ...prev };
@@ -270,19 +283,6 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {isDrawer ? "Cartelle posta" : "Funny Mail"}
         </p>
-        <div className="mt-2 flex items-center gap-1.5">
-          <span className="text-[10px] text-muted-foreground">Ordina</span>
-          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SidebarSort)}>
-            <SelectTrigger className="h-6 flex-1 text-[10px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default" className="text-[11px]">Default (manuale)</SelectItem>
-              <SelectItem value="name_asc" className="text-[11px]">Nome A→Z</SelectItem>
-              <SelectItem value="count_desc" className="text-[11px]">Email ↓</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <button
           type="button"
           onClick={() => onSelect("all")}
@@ -310,9 +310,29 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
               if (!loading && items.length === 0) return null;
               return (
                 <div key={section} className="space-y-0.5">
-                  <div className="flex items-center gap-1.5 px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                    <MetaIcon className="h-3 w-3" />
-                    {SECTION_META[section].label}
+                  <div className="flex items-center justify-between gap-2 px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <MetaIcon className="h-3 w-3" />
+                      {SECTION_META[section].label}
+                    </span>
+                    {section !== "unclassified" && (
+                      <Select
+                        value={section === "priority" ? prioritySortMode : secondarySortMode}
+                        onValueChange={(v) => {
+                          if (section === "priority") setPrioritySortMode(v as SidebarSort);
+                          else setSecondarySortMode(v as SidebarSort);
+                        }}
+                      >
+                        <SelectTrigger className="h-6 w-[112px] text-[10px] normal-case tracking-normal">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default" className="text-[11px]">Default</SelectItem>
+                          <SelectItem value="name_asc" className="text-[11px]">Nome A→Z</SelectItem>
+                          <SelectItem value="count_desc" className="text-[11px]">Email ↓</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <SortableContext items={items.map((f) => f.slug)} strategy={verticalListSortingStrategy}>
                     {items.map((folder) => (
@@ -322,7 +342,7 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
                         active={selectedFolder === folder.slug}
                         count={counts[folder.slug] ?? 0}
                         onSelect={onSelect}
-                        draggable={dragEnabled && section !== "unclassified"}
+                        draggable={section === "priority" ? prioritySortMode === "default" : section === "secondary" && secondarySortMode === "default"}
                       />
                     ))}
                   </SortableContext>

@@ -123,6 +123,25 @@ interface EmailAddressRuleRow {
   group_name: string | null;
 }
 
+const FUNNEMAIL_QUERY_PAGE_SIZE = 500;
+
+interface QueryPage<T> {
+  data: T[] | null;
+  error: Error | null;
+}
+
+async function fetchAllPages<T>(createQuery: (from: number, to: number) => PromiseLike<QueryPage<T>>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += FUNNEMAIL_QUERY_PAGE_SIZE) {
+    const to = from + FUNNEMAIL_QUERY_PAGE_SIZE - 1;
+    const { data, error } = await createQuery(from, to);
+    if (error) throw error;
+    const page = data ?? [];
+    out.push(...page);
+    if (page.length < FUNNEMAIL_QUERY_PAGE_SIZE) return out;
+  }
+}
+
 function extractEmail(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const m = raw.match(/<([^>]+)>/);
@@ -262,37 +281,42 @@ export async function overrideFunnemailFolder(
   if (error) throw error;
 }
 
+export async function markFunnemailMessagesRead(messageIds: string[]): Promise<void> {
+  if (messageIds.length === 0) return;
+  const { error } = await untypedFrom("channel_messages")
+    .update({ read_at: new Date().toISOString() })
+    .in("id", messageIds);
+  if (error) throw error;
+}
+
 /**
  * Client posta Funnemail: stessa sorgente della Inbox, raggruppata per gruppi
  * già lavorati in Funny Mail. Chi non ha regola finisce in "Non classificate".
  */
 export async function listFunnemailGroupedInbox(
   userId: string,
-  limit = 5000,
 ): Promise<FunnemailGroupedInbox> {
-  const [{ data: messages, error: messagesError }, { data: groups, error: groupsError }, { data: rules, error: rulesError }] = await Promise.all([
-    untypedFrom("channel_messages")
+  const [messages, groups, rules] = await Promise.all([
+    fetchAllPages<ChannelMessage>((from, to) => untypedFrom("channel_messages")
       .select(MESSAGE_LIST_SELECT)
       .eq("channel", "email")
       .eq("direction", "inbound")
       .order("email_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(limit),
-    untypedFrom("email_sender_groups")
+      .range(from, to)),
+    fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order")
       .eq("user_id", userId)
-      .order("sort_order", { ascending: true }),
-    untypedFrom("email_address_rules")
+      .order("sort_order", { ascending: true })
+      .range(from, to)),
+    fetchAllPages<EmailAddressRuleRow>((from, to) => untypedFrom("email_address_rules")
       .select("email_address,group_name")
-      .eq("user_id", userId),
+      .eq("user_id", userId)
+      .range(from, to)),
   ]);
 
-  if (messagesError) throw messagesError;
-  if (groupsError) throw groupsError;
-  if (rulesError) throw rulesError;
-
-  const groupRows = (groups ?? []) as EmailSenderGroupRow[];
-  const ruleRows = (rules ?? []) as EmailAddressRuleRow[];
+  const groupRows = groups;
+  const ruleRows = rules;
   const groupByName = new Map(groupRows.map((g) => [g.nome_gruppo, g]));
   const rulesByAddress = new Map<string, string>();
   const rulesByDomain = new Map<string, string>();
@@ -326,7 +350,7 @@ export async function listFunnemailGroupedInbox(
   const folderSlugByName = new Map(folders.map((f) => [f.label, f.slug]));
   const counts: Record<string, number> = Object.fromEntries(folders.map((f) => [f.slug, 0]));
 
-  const groupedMessages = ((messages ?? []) as ChannelMessage[]).map((message) => {
+  const groupedMessages = messages.map((message) => {
     const address = extractEmail(message.from_address);
     const domain = address?.split("@")[1] ?? null;
     const groupName = address ? rulesByAddress.get(address) ?? (domain ? rulesByDomain.get(domain) : undefined) : undefined;
