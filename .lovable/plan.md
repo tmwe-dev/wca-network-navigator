@@ -1,56 +1,107 @@
-## Diagnosi
+## Obiettivo
 
-**Perché "Apri ora" apre la Command Page?**
-In `AgendaActionPanel.tsx` (riga 116) il link punta a `/partners/${partner_id}`, ma in `App.tsx` quella rotta **non esiste**: c'è solo `/v2/*`. Il catch-all (`*`) redirige a `DEFAULT_HOME_ROUTE = "/v2/command"`. Da qui il salto alla Command Page.
-
-**Agenda = circuito di attesa?**
-No. Sono due concetti distinti:
-- **Agenda** = elenco di `activities` (job da fare/fatti) filtrate per giorno.
-- **Circuito di attesa** = `partner.lead_status = 'holding'`, attivato manualmente con la checkbox nella nota.
-Un partner può essere in agenda senza essere in holding, e viceversa. Lo chiarirò con un badge esplicito nella card di agenda.
-
-**La nota appare nella history come messaggio?**
-Sì: oggi `AddNoteDialog` salva la nota in `interactions` (stessa tabella di email/WA/LI), quindi compare nella TIMELINE del partner come item generico. Va distinta visivamente come "Nota interna".
+Coprire in fasi tutte le aree emerse nella guida (pipeline generazione, classificazione inbound, holding pattern, dispatcher operativo, wake-up, gruppi mittenti) e — punto centrale — fare un **audit profondo dei prompt** che governano oggi l'AI, perché sono loro a decidere come catalogare, escalare e rispondere.
 
 ---
 
-## Piano interventi
+## Fase 0 — Audit prompt (priorità massima, prerequisito per tutto il resto)
 
-### 1. Fix "Apri ora" → apre il dettaglio partner reale
-File: `src/components/agenda/AgendaActionPanel.tsx`
-- Cambiare `partnerHref` da `/partners/${id}` a `/v2/explore/network?partnerId=${id}` (o la rotta v2 corretta che monta `PartnerDetailFull`/`PartnerDetailModal`).
-- Stesso fix sul link "Apri partner" in alto a destra (riga 148).
-- Verificare anche `PartnerDetailModal.tsx:211` che ha lo stesso bug.
+Stato attuale rilevato:
+- **37 prompt operativi** in `operative_prompts`, di cui **29 attivi unici** + **8 duplicati tripli** (tutti i `Command — *` esistono in 3 copie identiche → rumore nel context window e rischio di derive).
+- **Solo 1 prompt** governa la classificazione inbound (`Email Domain Detection Rules`, priority 85).
+- **Solo 1 prompt** governa la transizione di stato (`Lead Qualification v2 (9 stati)`).
+- Il classificatore TS (`src/v2/agent/prompts/core/email-classifier.ts`) ha 7 categorie hardcoded ma **nessuna distinzione per gruppo mittente** (administrative, fornitori, partner, lead commerciale).
+- `computeEscalation` in `src/lib/leadEscalation.ts` scatta su qualunque `interested+positive` → un "grazie per la fattura" può promuovere un fornitore a `engaged`.
 
-### 2. Sostituire/affiancare le azioni "Delega" e "Rimanda 24h"
-File: `src/components/agenda/AgendaActionPanel.tsx`
-- Rimuovere "Delega" (disabled, non richiesta).
-- Mantenere "Rimanda 24h" funzionante (oggi è disabled).
-- Aggiungere nuovo bottone **"Programma futuro"** che apre un piccolo popover con date-picker e crea una nuova `activity` (tipo `follow_up` o `other`) con `due_date` futura, `assigned_to = user.id`, `partner_id` corrente, status `pending`.
-- "Archivia" resta com'è.
+Deliverable Fase 0:
+1. **Report `/mnt/documents/prompt-audit.md`** con, per ogni prompt attivo:
+   - copertura (quale edge/feature lo carica davvero, via grep su `loadOperativePrompts`),
+   - sovrapposizioni e contraddizioni,
+   - gap (es. nessun prompt per "amministrazione", "offerta", "supporto"),
+   - score di efficacia 0-100 con motivazione,
+   - azione consigliata (mantieni / fondi / riscrivi / deprecca).
+2. **Pulizia duplicati Command** (8 deprecazioni soft via `deprecated_at`, una sola copia attiva per nome).
+3. **Test di regressione** per i 5 prompt più critici (Lead Qualification, Email A→Z, WhatsApp Gate, Post-Send, Zero Allucinazioni) usando `prompt_test_cases` già esistente — fissano il comportamento atteso prima di toccare qualunque cosa.
 
-### 3. Badge "✈ In attesa" nella card di Agenda
-File: `src/components/agenda/AgendaDayDetail.tsx` (o equivalente che renderizza le card)
-- Quando `activity.partners.lead_status === 'holding'`, mostrare il badge pulsante "✈ In attesa" già presente in `PartnerDetailHeader.tsx`, riusando `isInHoldingPattern()` da `@/constants/holdingPattern`.
-- Stesso badge anche nell'header del `AgendaActionPanel`.
-
-### 4. Nota visibile e distinta nella TIMELINE del partner
-File: `src/components/partners/PartnerDetailActivity.tsx` (timeline)
-- Verificare che gli item con `interaction_type = 'note'` (o `channel = 'note'`) vengano renderizzati con icona `StickyNote`, etichetta "Nota interna", autore (`created_by` → nome operatore), e il **testo completo** della nota nel body.
-- Se la nota oggi non compare, controllare il filtro/sort in `useInteractions` o nel mapping della timeline.
+Niente modifiche di codice in Fase 0 oltre alla pulizia DB e ai test case: **prima misuriamo, poi cambiamo**.
 
 ---
 
-## Dettagli tecnici
+## Fase 1 — Group-aware classification (collega `email_address_rules.group_name` al classificatore)
 
-- Rotta corretta partner v2: da confermare leggendo `src/v2/routes.tsx` attorno a `NetworkPage` / `BusinessCardsViewV2` (sembra essere `/v2/explore/network` con query `partnerId`, oppure aprire `PartnerDetailModal` via store globale).
-- Il "Programma futuro" deve usare `insertActivity` da `src/data/activities.ts` con `status: 'pending'`, `completed_at: null`, `reviewed: false`, `due_date` selezionata, e invalidare le query keys di agenda (`queryKeys.activities.*`).
-- Per il badge holding nella card agenda serve che `useAgendaDayActivities` selezioni anche `partners.lead_status` (verificare il select).
-- Nessuna modifica a edge functions, RLS o nodi critici (submit/AI/dedup). Modifiche solo UI + un nuovo insert in `activities` già coperto dalla DAL.
+Problema: oggi `classify-email-response` non sa se il mittente è "Amministrazione GitHub" o "Lead commerciale". Risultato: amministrative possono spostare lo stato lead.
+
+Interventi:
+- In `classify-inbound-message` / `classify-email-response`: prima di chiamare l'AI, leggere `email_address_rules` per `from_address` e iniettare nel prompt un blocco `SENDER GROUP: amministrazione | offerte | supporto | commerciale | sconosciuto`.
+- Nuovo prompt operativo **`Group-Aware Classification`** (context=`classification`, priority 90) con regole esplicite: se gruppo ≠ commerciale → categoria forzata `unrelated` lato lead pipeline, ma categoria operativa specifica (es. `admin_invoice`, `quote_request`).
+- `computeEscalation`: gate hard "se gruppo non è commerciale o sconosciuto, **non promuovere mai** lead_status".
+- Test: 10 fixture email reali (3 admin, 3 offerte, 2 supporto, 2 commerciali) → snapshot della classificazione attesa.
 
 ---
 
-## Domanda aperta per te
+## Fase 2 — Operative dispatcher (azioni automatiche per gruppo non-commerciale)
 
-Prima di implementare, confermami:
-- "Programma futuro" deve creare una **nuova** activity futura (lasciando l'attuale come "fatta/annotata") oppure deve **spostare** l'activity corrente in avanti (aggiornando `due_date`)?
+Oggi un'email del gruppo "Amministrazione" o "Offerte" finisce in inbox e basta.
+
+Interventi:
+- Nuova tabella `inbound_operative_actions` (group, category, action_type, default_assignee, sla_hours).
+- Edge `dispatch-inbound-action` chiamata da `classify-inbound-message` quando `category` ∈ {`admin_invoice`, `quote_request`, `support_ticket`, ...}: crea `activity` con tipo dedicato, scadenza basata su SLA, assegnata al ruolo giusto.
+- UI: tab "Operative" in `/v2/inbox` raggruppa queste activity per gruppo mittente.
+- Prompt operativo nuovo: **`Operative Dispatcher Routing`** (criteri di assegnazione, priorità, esempi).
+
+---
+
+## Fase 3 — Holding pattern intelligente (downgrade + risveglio)
+
+Oggi `smart-scheduler` e `cadence-engine` esistono ma le soglie sono in codice.
+
+Interventi:
+- Tabella `wake_up_rules` (group_name nullable, min_score, days_dormant, channel, max_per_day) editabile da UI Funny Mail.
+- `smart-scheduler` legge le regole invece delle costanti.
+- Prompt operativo **`Wake-Up Composer`** che genera il messaggio di risveglio variando tono in base a `days_dormant` e ultimo canale toccato (anti-ripetizione già coperto da `Anti-Ripetizione Multi-Touch`).
+- UI in Funny Mail: tab "Risvegli" con preview delle prossime 50 esecuzioni schedulate.
+
+---
+
+## Fase 4 — Pipeline outreach: verifica contratto unico
+
+Verifica (non riscrittura) che **tutti** i punti di generazione passino dalla pipeline canonica:
+- `generate-email`, `generate-outreach`, `improve-email`, `agent-execute` (modalità compose), wake-up di Fase 3.
+- Tutti devono caricare gli stessi prompt OBBLIGATORI (`Email Single A→Z`, `Zero Allucinazioni`, `Post-Send Checklist`, `WhatsApp Message Gate` per WA) e passare per `journalistReview`.
+- Output: report `/mnt/documents/pipeline-coverage.md` con matrice "edge × prompt obbligatorio × journalist review".
+- Fix mirati solo dove la matrice mostra gap (no refactor opportunistico — workspace rule).
+
+---
+
+## Fase 5 — UI Funny Mail: editor prompt per gruppo
+
+Oggi i `custom_prompt` per address esistono (Fase precedente), ma per **gruppo** no.
+
+Interventi:
+- Estendere `email_sender_groups` con campi `classification_hint`, `response_style_hint`, `auto_action_default`.
+- UI: per ogni gruppo, editor a 3 campi (cosa è questo gruppo / come classificarlo / come rispondere).
+- Iniezione automatica di questi hint nel prompt di classificazione e di risposta quando il mittente appartiene al gruppo.
+
+---
+
+## Fase 6 — Osservabilità prompt e loop di apprendimento
+
+- Dashboard `/v2/prompt-lab/effectiveness`: per ogni prompt attivo mostra ultime 100 esecuzioni (da `ai_interaction_log` + `prompt_test_runs`), tasso di successo, tempo medio, feedback 👍/👎.
+- Alert Discord se un prompt scende sotto 70% di successo per 24h.
+- Pulsante "Genera nuova versione" che chiama `agent-prompt-refiner` con i fallimenti come contesto, salva snapshot in `prompt_versions` e apre un test A/B prima della promozione.
+
+---
+
+## Note tecniche (non per l'utente finale)
+
+- Niente modifiche a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria vincolante).
+- Tutte le promozioni di stato lead continuano a passare da `applyLeadStatusChange` (Lead Status Guard Protocol).
+- Tutte le invocazioni AI restano dentro `invokeAi` con `scope` registrato (AI Invocation Charter).
+- Soft-delete globale rispettato: nessun DELETE su `operative_prompts`, solo `deprecated_at`.
+- Ogni nuovo prompt segue lo standard a 5 sezioni (`docs/prompt-standard.md`).
+
+---
+
+## Domanda prima di partire
+
+Vuoi che parta **subito da Fase 0** (audit + pulizia duplicati + test di regressione) producendo il report `/mnt/documents/prompt-audit.md`, oppure preferisci che salti l'audit e attacchi direttamente Fase 1 (group-aware classification, l'impatto pratico più visibile)?
