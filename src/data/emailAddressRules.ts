@@ -82,3 +82,23 @@ export async function bulkSetBlocked(
     .in("email_address", emails);
   if (error) throw error;
 }
+
+/**
+ * Upsert (user_id, email_address) — assegna group_name e/o custom_prompt
+ * direttamente da una vista email (Inbox detail). Crea la regola se non esiste.
+ * Non tocca auto_action: l'utente continua a gestirlo da Funny Mail.
+ */
+export async function upsertEmailAddressRule(
+  userId: string,
+  emailAddress: string,
+  patch: { group_name?: string | null; custom_prompt?: string | null; display_name?: string | null },
+): Promise<void> {
+  const addr = emailAddress.trim().toLowerCase();
+  if (!addr) return;
+  const { error } = await untypedFrom("email_address_rules")
+    .upsert(
+      [{ user_id: userId, email_address: addr, ...patch }],
+      { onConflict: "user_id,email_address" },
+    );
+  if (error) throw error;
+}
