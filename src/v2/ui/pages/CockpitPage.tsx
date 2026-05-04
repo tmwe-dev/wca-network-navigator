@@ -161,8 +161,8 @@ export function CockpitPage() {
         </div>
         <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
           <div className="h-full flex flex-col">
-            {/* Oracolo — identico a /v2/email: goal + Genera/Migliora + template/immagini */}
-            <div className="max-h-[50%] flex-shrink-0 overflow-hidden border-b border-border/50">
+            {/* Oracolo — nel Cockpit il goal ha priorità finché non esiste una bozza. */}
+            <div className={draftState.body ? "h-[46%] flex-shrink-0 overflow-hidden border-b border-border/50" : "h-[62%] flex-shrink-0 overflow-hidden border-b border-border/50"}>
               <OraclePanelSlim
                 onGenerate={handleOracleGenerate}
                 onImprove={handleOracleImprove}
@@ -174,6 +174,7 @@ export function CockpitPage() {
                 recipientPartnerId={recipientPartnerId}
                 recipientCount={draftState.contactId ? 1 : 0}
                 contextSummary={draftState.context_summary ?? null}
+                prioritizeGoal
               />
             </div>
             {draftQueue.length > 0 && (
