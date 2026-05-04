@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus, Wand2, Loader2 } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState } from "@/types/cockpit";
@@ -19,6 +19,7 @@ interface AIDraftStudioProps {
   onDraftChange: (draft: DraftState) => void;
   onRegenerate?: () => void;
   onGenerateAfterReview?: () => void;
+  onImprove?: () => void;
 }
 
 const channelMeta: Record<string, { icon: React.ElementType; label: string; color: string }> = {
@@ -28,7 +29,7 @@ const channelMeta: Record<string, { icon: React.ElementType; label: string; colo
   sms: { icon: Smartphone, label: "SMS", color: "text-chart-3" },
 };
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
+export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview, onImprove }: AIDraftStudioProps) {
   const { goal, baseProposal } = useMission();
   const {
     sending, liDmOpen, setLiDmOpen,
@@ -91,7 +92,7 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
             <ReviewingState draft={draft} onGenerateAfterReview={onGenerateAfterReview} />
           )}
           {draft.scrapingPhase !== "reviewing" && (
-            <DraftPreview draft={draft} isHtmlContent={isHtmlContent} />
+            <DraftPreview draft={draft} isHtmlContent={isHtmlContent} onDraftChange={onDraftChange} />
           )}
           {draft.body && !draft.isGenerating && (
             <AgentBadgesPanel draft={draft} />
@@ -129,6 +130,16 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
               onCopy={handleCopy}
               onDraftChange={onDraftChange}
             />
+            {onImprove && (
+              <button
+                onClick={onImprove}
+                disabled={draft.isGenerating}
+                className="p-2 rounded-lg border border-warning/40 text-warning hover:bg-warning/10 transition-colors disabled:opacity-50"
+                title="Migliora bozza con AI"
+              >
+                {draft.isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              </button>
+            )}
             <button onClick={handleCopy} className="p-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors" title="Copia">
               <Copy className="w-3.5 h-3.5" />
             </button>
@@ -198,17 +209,26 @@ function ReviewingState({ draft, onGenerateAfterReview }: { draft: DraftState; o
   );
 }
 
-function DraftPreview({ draft, isHtmlContent }: { draft: DraftState; isHtmlContent: boolean }) {
+function DraftPreview({ draft, isHtmlContent, onDraftChange }: { draft: DraftState; isHtmlContent: boolean; onDraftChange: (d: DraftState) => void }) {
+  const isReady = !draft.isGenerating && !!draft.body;
   return (
     <>
       {draft.channel === "email" && (
         <div>
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground/90 font-semibold">Oggetto</label>
-          <div className="mt-1 text-sm font-medium text-foreground">
-            {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground/70">Generazione in corso...</span>
-              : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
-              : <span className="text-muted-foreground/70">In attesa...</span>}
-          </div>
+          {isReady ? (
+            <input
+              value={draft.subject}
+              onChange={(e) => onDraftChange({ ...draft, subject: e.target.value })}
+              className="mt-1 w-full text-sm font-medium text-foreground bg-card border border-border/60 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+          ) : (
+            <div className="mt-1 text-sm font-medium text-foreground">
+              {draft.isGenerating && !draft.subject ? <span className="text-muted-foreground/70">Generazione in corso...</span>
+                : draft.subject ? <TypewriterText text={draft.subject} speed={25} />
+                : <span className="text-muted-foreground/70">In attesa...</span>}
+            </div>
+          )}
         </div>
       )}
       <div>
@@ -221,8 +241,13 @@ function DraftPreview({ draft, isHtmlContent }: { draft: DraftState; isHtmlConte
                 <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.5, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.3 }} className="h-3 rounded bg-muted/50" style={{ width: `${70 + i * 10}%` }} />
               ))}
             </div>
-          ) : draft.body ? (
-            isHtmlContent ? <TypewriterText text={draft.body} speed={8} isHtml /> : <TypewriterText text={draft.body} speed={12} />
+          ) : isReady ? (
+            <textarea
+              value={draft.body}
+              onChange={(e) => onDraftChange({ ...draft, body: e.target.value })}
+              rows={isHtmlContent ? 16 : 10}
+              className="w-full text-sm text-foreground bg-card border border-border/60 rounded p-2 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/50 resize-y"
+            />
           ) : <span className="text-muted-foreground/70">In attesa...</span>}
         </div>
       </div>
