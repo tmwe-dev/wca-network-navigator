@@ -28,7 +28,6 @@ import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
-import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
 
 interface AddressRow {
   id: string;
@@ -443,16 +442,6 @@ export default function AISuggestionsTab() {
     );
     setSelectedEmails(new Set());
     toast.success(`${senders.length} address → ${groupName}`);
-  };
-
-  const withUser = async <T,>(fn: (uid: string) => Promise<T>): Promise<T | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user ?? null;
-    if (!user) {
-      toast.error("Sessione scaduta");
-      return null;
-    }
-    return fn(user.id);
   };
 
   const bulkSelected = selectedRows.map((row) => ({
