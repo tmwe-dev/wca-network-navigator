@@ -59,6 +59,11 @@ export default function FunnemailInboxPage(): React.ReactElement {
             messages={ctrl.filteredMails}
             selectedId={ctrl.selectedMessageId}
             onSelect={(message) => ctrl.setSelectedMessageId(message.id)}
+            bulkMarkRead={ctrl.bulkMarkRead}
+            bulkArchive={ctrl.bulkArchive}
+            bulkDelete={ctrl.bulkDelete}
+            bulkAssignGroup={ctrl.bulkAssignGroup}
+            bulkBusy={ctrl.bulkBusy}
           />
         )}
       </section>
