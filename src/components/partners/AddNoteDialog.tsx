@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createInteraction } from "@/data/interactions";
 import { activityKeys, insertActivity } from "@/data/activities";
+import { updatePartner } from "@/data/partners";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -73,6 +74,13 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
         completed_at: new Date().toISOString(),
         reviewed: true,
       });
+
+      // Se l'operatore ha spuntato "in circuito di attesa", aggiorna lo stato
+      // commerciale del partner così tutta l'app (card, filtri, agenda, holding
+      // tab) lo vede come acceso.
+      if (holding) {
+        await updatePartner(partnerId, { lead_status: "holding" });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: activityKeys.forPartner(partnerId) });
