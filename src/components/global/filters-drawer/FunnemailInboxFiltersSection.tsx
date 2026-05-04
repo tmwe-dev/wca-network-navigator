@@ -6,24 +6,14 @@
  *
  * Tutta la logica vive in `useGlobalFilters` + DAL `funnemailInbox`.
  */
-import { useQuery } from "@tanstack/react-query";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import { queryKeys } from "@/lib/queryKeys";
-import { listFunnemailGroupedInbox, type FunnemailGroupedInbox } from "@/data/funnemailInbox";
-import { useAuth } from "@/providers/AuthProvider";
+import type { FunnemailGroupedInbox } from "@/data/funnemailInbox";
+import { useFunnemailInboxSidebarData } from "@/hooks/useFunnemailInboxSidebarData";
 import { InboxGroupsSidebar } from "@/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar";
 
 export function FunnemailInboxFiltersSection() {
   const g = useGlobalFilters();
-  const { user } = useAuth();
-
-  const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon"),
-    queryFn: () => listFunnemailGroupedInbox(user!.id),
-    enabled: !!user?.id,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-  });
+  const groupedQ = useFunnemailInboxSidebarData();
 
   const grouped: FunnemailGroupedInbox = groupedQ.data ?? { folders: [], counts: {}, messages: [] };
 
