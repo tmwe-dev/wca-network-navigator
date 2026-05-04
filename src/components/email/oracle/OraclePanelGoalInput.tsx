@@ -10,6 +10,7 @@ interface GoalInputProps {
   customGoal: string;
   coherence: { ok: boolean; warning?: string | null; suggestion?: string | null };
   onGoalChange: (text: string) => void;
+  priority?: boolean;
   speech: {
     listening: boolean;
     hasSpeechAPI: boolean;
@@ -23,6 +24,7 @@ export function OraclePanelGoalInput({
   customGoal,
   coherence,
   onGoalChange,
+  priority = false,
   speech,
 }: GoalInputProps) {
   const displayText = useMemo(() => {
@@ -43,10 +45,11 @@ export function OraclePanelGoalInput({
           onChange={(e) => onGoalChange(e.target.value)}
           placeholder={getCustomGoalPlaceholder(selectedType?.id ?? null) ?? "Scrivi qui cosa vuoi ottenere con questa mail (l'AI userà questo come istruzione principale)…"}
           className={cn(
-            "text-xs min-h-[180px] max-h-[280px] resize-none pr-8 border-primary/20 focus-visible:ring-primary/40",
+            "text-xs resize-none pr-8 border-primary/20 focus-visible:ring-primary/40",
+            priority ? "min-h-[300px] lg:min-h-[360px]" : "min-h-[180px] max-h-[280px]",
             speech.listening && "ring-1 ring-destructive/40"
           )}
-          rows={6}
+          rows={priority ? 14 : 6}
         />
         {speech.hasSpeechAPI && (
           <button
