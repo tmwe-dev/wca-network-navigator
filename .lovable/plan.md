@@ -1,94 +1,65 @@
-## Obiettivo
-Sistemare il client `/v2/funnemail-inbox` su tre fronti: **sidebar** (cartelle complete, riordinabili, prioritarie corrette), **lista mail** (card più ricche e con azioni), **lettore** (oggetto leggibile, niente prefissi rumorosi, niente sovrapposizioni).
 
----
+# Funny Mail — sort, gruppi, azioni stabili, slot AI
 
-## 1. Sidebar — `InboxGroupsSidebar.tsx`
+Tutto resta in frontend (UI + hook). Riuso i componenti standard già presenti in altre maschere: `EmailMessageActions` (Azioni con `MoreHorizontal`) e `InlineGroupAssigner` (popover con icona `Tag`). Zero nuove edge function, zero modifiche DAL/DB.
 
-**Problema attuale:** sembra che mancano cartelle perché molte finiscono sotto "Secondarie" e non sono visibili senza scroll. "Spam" è in Prioritarie (sbagliato). Nessun riordino.
+## 1. Card mail (FunnemailMailCard)
 
-**Cambiamenti:**
-- **Zero cartelle hardcoded come "prioritarie"**. Default lato server: tutte vanno in Secondarie tranne 3 top operative (`Operativo`, `Commerciale`, `Amministrativo`). Spam **mai** in prioritarie.
-- **Riordino libero via drag handle**: aggiungo icona puntini (`GripVertical`) a sinistra di ogni cartella. L'utente trascina per spostare sopra/sotto, anche fra sezioni (Prioritarie ↔ Secondarie). Lo Spam può finire ovunque tranne che sia "imposto" prioritario.
-- **Persistenza ordine**: salvato per-utente in `localStorage` con chiave `funnemail_sidebar_order_v1` (mappa `slug → { section, position }`). Niente migrazione DB in questa fase: è preferenza UI personale, locale al device. (Se vuoi DB-side lo facciamo in un secondo step.)
-- **Tutte le cartelle visibili**: rimuovo lo scroll "nascosto" assicurando che la sezione Prioritarie/Secondarie/Non classificate stiano in un unico `ScrollArea` continuo, con header sticky di sezione.
-- Libreria drag: `@dnd-kit/core` + `@dnd-kit/sortable` (già presente in progetto se usato altrove; altrimenti la aggiungo — chiedo conferma sotto).
+- **Tolgo le hover-actions** (Reply / Forward / InlineGroupAssigner che apparivano al passaggio del mouse).
+- **In basso a destra, sempre visibili**, due controlli affiancati identici alle altre maschere:
+  - `EmailMessageActions` (dropdown "⋯ Azioni" con Segna come letto / Archivia / Sposta in… / Nascondi / Spam / Crea regola).
+  - `InlineGroupAssigner` (pulsantino "Assegna gruppo" / "Modifica" con popover esistente).
+- **Slot "Suggerimento AI"** dove ora compare il pill del gruppo: rimuovo il badge del gruppo già assegnato (l'utente vede comunque il gruppo dentro il popover di Assegna). Nello stesso slot mostro:
+  - quando c'è una `funnemail_decisions.suggested_*` (folder o address) → chip "AI: <gruppo proposto>" cliccabile per accettare,
+  - altrimenti chip neutro "—".
+  Per ora il suggerimento è opzionale: se nei dati grouped non arriva, lo slot resta vuoto. La struttura è pronta per quando attiveremo la classificazione AI.
+- Tolgo `Reply`/`Forward` dai prop della card (non servono più). Il dettaglio email a destra continua ad avere reply/forward/azioni come oggi.
 
----
+## 2. Lista mail centrale (FunnemailMailList + nuova toolbar)
 
-## 2. Card mail — `EmailMessageList.tsx` (versione locale per Funnemail)
+Nuova mini-toolbar sopra la lista (sotto la search):
 
-**Problema attuale:** la card mostra "R: RFQ Request - DAP Shipment…" troncato, senza azioni inline, senza assegnazione gruppo se mancante.
+- **Ordina per**: `Data ↓` (default) · `Azienda A→Z` · `Mittente A→Z` · `Oggetto A→Z`.
+- **Raggruppa per**: `Nessuno` (default) · `Azienda` · `Mittente`.
+- Selezione persistita in `localStorage` (`funnemail_list_view_v1`).
 
-**Cambiamenti:**
-- **Riga 1 — Brand azienda**: nome azienda derivato (`extractSenderBrand`) in grassetto + bandiera + data. Già c'è, lo mantengo.
-- **Riga 2 — Nome mittente**: solo il nome persona (parte prima di `<email>` o prima di `@`), **senza** indirizzo email completo. Es: "Elizabeth Feria" e basta.
-- **Riga 3 — Oggetto pulito**: rimuovo prefissi `R:`, `Re:`, `RE:`, `Fwd:`, `FWD:`, `I:` con regex `/^\s*(re|r|fwd|fw|i)\s*:\s*/gi` ripetuta finché non sparisce. Mostro solo l'oggetto vero. Font invariato.
-- **Righe 4-5 — Snippet corpo**: 2-3 righe del `body_text` (primi ~180 caratteri, strip whitespace, niente HTML). Stesso font del resto. `line-clamp-3`.
-- **Card più alta**: `ROW_HEIGHT` da 88 → **132px** per contenere snippet senza tagliare.
-- **Azioni inline (hover)**: barretta in basso/destra che appare on-hover con:
-  - `Rispondi` (icon-only),
-  - `Inoltra` (icon-only),
-  - `Archivia` (icon-only),
-  - **`Assegna gruppo`** se la mail è in `unclassified` o se voglio cambiare: riuso `InlineGroupAssigner` che già esiste.
-- **Badge gruppo**: se classificata, mostro pillola colorata con nome gruppo (già presente). Se NON classificata, mostro un piccolo `+ Assegna` cliccabile.
+Quando "Raggruppa per" è attivo:
+- la virtualizzazione esistente viene sostituita da una lista a sezioni collassabili (gruppi piccoli — non servono migliaia di righe per gruppo, già filtrate per cartella);
+- ogni sezione ha header con: nome gruppo, conteggio, freccia collassa/espandi, e un menu "⋯ Azioni gruppo" con: **Segna tutte come lette**, **Assegna gruppo a…** (popover compatto con la lista gruppi), **Archivia tutte**, **Elimina tutte (cestino)**.
+- Le azioni di gruppo riusano `useBulkEmailAction` (già supporta array) e `useMarkAsRead` in loop. "Elimina tutte" usa `action: "delete"` (è già soft-delete via trigger DB su `channel_messages`).
+- Conferma modale solo per Archivia/Elimina quando il gruppo > 20 messaggi.
 
-Creo un file dedicato `FunnemailMailCard.tsx` dentro `src/v2/ui/pages/funnemail-inbox/` invece di modificare `EmailMessageList.tsx` globale (evito regressioni nella Inbox V1/V2 standard). La pagina Funnemail userà una nuova `FunnemailMailList.tsx` con virtualizer e questa nuova card.
+## 3. Sidebar cartelle (InboxGroupsSidebar nel drawer)
 
----
+In cima al pannello cartelle, un piccolo segmento "Ordina":
 
-## 3. Lettore — `EmailDetailView.tsx` (header)
+- `Default` (come oggi: priorità + sort_order + drag&drop utente)
+- `Nome A→Z`
+- `Email ↓` (più piene in alto)
 
-**Problema attuale:** oggetto troncato a una riga, sovrapposto da bandiera/badge "Operativo"/"Modifica". "R: RFQ Reques…" tagliato.
+Selezione persistita in `localStorage` (`funnemail_sidebar_sort_v1`).
+Il drag&drop manuale resta attivo solo nella modalità "Default" (negli altri due l'ordine è automatico, le maniglie restano nascoste). Le sezioni Prioritarie / Secondarie / Da classificare e la cartella "Tutte le inbox" non cambiano.
 
-**Cambiamenti (solo nell'uso da Funnemail, non tocco il componente globale):**
-- Faccio una variante leggera `FunnemailMailHeader.tsx` con:
-  - **Riga 1**: Logo + nome azienda (grande) + bandiera **a destra** ma nella stessa riga, **non sopra** all'oggetto.
-  - **Riga 2**: Oggetto **pulito** (stessa regex di rimozione `Re:/R:/Fwd:`), font semibold, `whitespace-normal break-words` (può andare a capo), nessun truncate. Niente badge sopra.
-  - **Riga 3**: Nome persona mittente (no indirizzo completo), data, freccia `→` destinatario.
-  - **Riga 4**: Badge gruppo + pulsante "Modifica gruppo" (InlineGroupAssigner) **sotto**, non incollati al titolo.
-  - **Riga 5**: Azioni Rispondi / Inoltra (già esistenti).
+## 4. File toccati
 
-In alternativa, modifica chirurgica all'`EmailDetailView` esistente:
-- togliere `truncate` da `<h3>` oggetto e farlo `break-words`,
-- spostare il blocco `<CountryFlag>` e i badge in una **riga sotto** (non `flex-shrink-0` accanto al titolo),
-- aggiungere stripping prefissi alla `decodedSubject`.
+Modificati:
+- `src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx` — rimuovo hover-actions, aggiungo slot Azioni + Assegna gruppo in basso a destra, sostituisco badge gruppo con slot suggerimento AI.
+- `src/v2/ui/pages/funnemail-inbox/FunnemailMailList.tsx` — nuova toolbar Ordina/Raggruppa, rendering condizionale virtual vs raggruppato, propagazione azioni di gruppo.
+- `src/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar.tsx` — aggiunta segmented "Ordina" in cima, applicazione sort in `sortBySection`.
+- `src/v2/hooks/useFunnemailInbox.ts` — espongo handler bulk (markRead/archive/delete/assignGroup) per le azioni di gruppo, costruite sopra `useBulkEmailAction` + `upsertEmailAddressRule`.
 
-Propongo la **modifica chirurgica** all'esistente per non duplicare codice (più semplice, meno superficie di rottura). Dimmi se preferisci la variante separata.
+Nuovi:
+- `src/v2/ui/pages/funnemail-inbox/FunnemailListToolbar.tsx` — mini-toolbar Ordina/Raggruppa (logic-less).
+- `src/v2/ui/pages/funnemail-inbox/FunnemailGroupHeader.tsx` — header sezione con menu Azioni di gruppo.
+- `src/v2/ui/pages/funnemail-inbox/AiSuggestionChip.tsx` — chip slot per il suggerimento AI (placeholder pronto, mostra "—" se assente).
 
----
+Non modificati:
+- `src/data/funnemailInbox.ts` (DAL), DB, edge functions, `EmailMessageActions`, `InlineGroupAssigner`.
+- Componenti V1 e altre pagine.
 
-## 4. Tecnico
+## 5. Note
 
-### File modificati
-- `src/data/funnemailInbox.ts` — rimuovo la regola `PRIORITY_THRESHOLD = 6`. Default: solo `Operativo`, `Commerciale`, `Amministrativo` in `priority`; tutto il resto in `secondary`. Spam sempre `secondary`.
-- `src/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar.tsx` — aggiungo drag&drop, persistenza localStorage, applico ordine personalizzato.
-- `src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx` — **nuovo**, card 132px con snippet + azioni hover.
-- `src/v2/ui/pages/funnemail-inbox/FunnemailMailList.tsx` — **nuovo**, virtualizer wrapper della card sopra.
-- `src/v2/ui/pages/FunnemailInboxPage.tsx` — sostituisce `EmailMessageList` con `FunnemailMailList`.
-- `src/components/outreach/EmailDetailView.tsx` — **modifica chirurgica** all'header: oggetto su riga propria con `break-words`, bandiera/badge spostati sotto, stripping prefissi `Re:/R:/Fwd:`.
-- `src/data/funnemailInbox.ts` — il `MESSAGE_LIST_SELECT` non include `body_text` per snippet: aggiungo se manca (lo include già, ok).
-
-### Helper riutilizzabili (in `src/v2/ui/pages/funnemail-inbox/utils.ts`)
-```ts
-export function stripReplyPrefixes(s: string): string { /* regex /^\s*(re|r|fwd|fw|i)\s*:\s*/gi loop */ }
-export function extractSenderName(raw: string|null): string { /* "Mario Rossi <a@b>" → "Mario Rossi"; "a@b" → "a" */ }
-export function makeSnippet(text: string|null, max=180): string { /* strip ws, slice */ }
-```
-
-### Drag&drop
-Verifico se `@dnd-kit/sortable` è già installato (probabile). Se manca, lo aggiungo.
-
----
-
-## Cosa NON tocco
-- DAL `listFunnemailGroupedInbox` resta uguale, cambio solo l'assegnazione `priority/secondary` di default.
-- Hook `useFunnemailInbox` invariato.
-- `EmailMessageList.tsx` globale e Inbox V1/V2 standard: **invariati**, niente regressioni.
-- Nessuna migrazione DB.
-
----
-
-## Domande prima di partire
-1. Persistenza ordine sidebar: **localStorage** (per-device, semplice) o **DB tabella `funnemail_user_folder_order`** (cross-device, richiede migrazione)? Default proposto: localStorage.
-2. Header lettore: modifica chirurgica `EmailDetailView` (rischio basso ma impatta anche altre Inbox) **oppure** componente Funnemail-only? Default proposto: modifica chirurgica minimale (solo `break-words` + spostamento bandiera + stripping prefissi).
+- Tutto in TypeScript stretto, nessun `any`.
+- Nessuna modifica al fetch/paginazione: il sort/raggruppamento è client-side sulla lista già filtrata per cartella (max 5000 messaggi, già supportato dalla virtualizzazione esistente; quando raggruppato uso un fallback non-virtualized solo dentro le sezioni espanse).
+- Editorial review e altri vincoli non sono toccati: queste sono operazioni di lettura/sposta/elimina, non di invio.
+- Verifico in preview dopo l'implementazione: card senza hover, toolbar funzionante, drawer con sort, raggruppamento + azioni di gruppo che invalidano correttamente la query.
