@@ -8,12 +8,21 @@
  * Le cartelle e il classificatore sono governati da DB (zero hardcode).
  */
 import * as React from "react";
-import { Loader2, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
+import { cn } from "@/lib/utils";
+
+type ViewKey = "all" | "unread" | "urgent" | "agenda" | "commercial";
+const VIEW_TABS: Array<{ value: ViewKey; label: string }> = [
+  { value: "all", label: "Tutte" },
+  { value: "unread", label: "Non lette" },
+  { value: "urgent", label: "Urgenti" },
+  { value: "agenda", label: "In agenda" },
+  { value: "commercial", label: "Commerciali" },
+];
 
 /**
  * FunnemailInboxPage — client di posta governato da Funnemail.
@@ -34,19 +43,30 @@ export default function FunnemailInboxPage(): React.ReactElement {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
       <section className="flex min-h-0 w-[440px] shrink-0 flex-col overflow-hidden border-r border-border">
-        <div className="flex-shrink-0 border-b border-border px-3 py-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={g.filters.funnemailSearch}
-              onChange={(event) => g.setFilter("funnemailSearch", event.target.value)}
-              placeholder="Cerca email..."
-              className="h-7 pl-8 text-xs"
-            />
-          </div>
-          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="font-semibold text-foreground">{ctrl.selectedFolderLabel}</span>
-            <span><strong className="text-foreground">{ctrl.filteredMails.length}</strong> visibili</span>
+        {/* Tab vista — sostituiscono il vecchio header search/titolo */}
+        <div className="flex-shrink-0 border-b border-border bg-muted/30 px-2 py-1">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {VIEW_TABS.map((tab) => {
+              const active = g.filters.funnemailView === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => g.setFilter("funnemailView", tab.value)}
+                  className={cn(
+                    "shrink-0 rounded px-2 py-1 text-[11px] font-medium transition-colors",
+                    active
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+            <span className="ml-auto shrink-0 px-1 text-[10px] text-muted-foreground">
+              <strong className="text-foreground">{ctrl.filteredMails.length}</strong> · {ctrl.selectedFolderLabel}
+            </span>
           </div>
         </div>
 

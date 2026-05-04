@@ -43,7 +43,7 @@ export interface UseFunnemailInboxResult {
   bulkBusy: boolean;
 }
 
-const PAGE_SIZE = 5000;
+const PAGE_SIZE = 20000;
 
 export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
