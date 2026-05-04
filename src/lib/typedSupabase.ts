@@ -39,6 +39,8 @@ export const KNOWN_UNTYPED_TABLES = [
   "commercial_playbooks",
   // Misc settings
   "app_settings",
+  // TMWE integration
+  "tmwe_user_connections_v",
 ] as const;
 
 export type KnownUntypedTable = (typeof KNOWN_UNTYPED_TABLES)[number];

@@ -1,0 +1,65 @@
+/**
+ * tmwe-oauth-start — Crea state CSRF e restituisce l'URL di autorizzazione TMWE.
+ * La UI fa redirect a `redirect_url`. Nessun token viene mai esposto al client.
+ */
+import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
+import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
+import { serviceClient } from "../_shared/tmweClient.ts";
+
+const DEFAULT_SCOPES =
+  "profile:read shipment:read shipment:write tracking:read document:read";
+
+function randomState(): string {
+  const buf = new Uint8Array(24);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+Deno.serve(async (req) => {
+  const pre = corsPreflight(req);
+  if (pre) return pre;
+
+  const origin = req.headers.get("origin");
+  const corsH = getCorsHeaders(origin);
+  const headers = getSecurityHeaders(corsH);
+
+  try {
+    const auth = await requireAuth(req, corsH);
+    if (isAuthError(auth)) return auth;
+
+    const svc = serviceClient();
+    const state = randomState();
+    const { error: insErr } = await svc.from("tmwe_oauth_state").insert({
+      state,
+      user_id: auth.userId,
+    });
+    if (insErr) {
+      return new Response(
+        JSON.stringify({ error: insErr.message, code: "INTERNAL_ERROR" }),
+        { status: 500, headers },
+      );
+    }
+
+    const base = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: Deno.env.get("TMWE_OAUTH_CLIENT_ID")!,
+      redirect_uri: Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!,
+      scope: DEFAULT_SCOPES,
+      state,
+    });
+    const redirectUrl = `${base}/erp/tmwe_json/authorization?${params.toString()}`;
+
+    return new Response(JSON.stringify({ redirect_url: redirectUrl, state }), {
+      status: 200,
+      headers,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
+      { status: 500, headers },
+    );
+  }
+});

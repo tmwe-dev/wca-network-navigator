@@ -117,3 +117,6 @@ verify_jwt = false
 
 [functions.replay-domain-events]
 verify_jwt = false
+
+[functions.tmwe-oauth-callback]
+verify_jwt = false
