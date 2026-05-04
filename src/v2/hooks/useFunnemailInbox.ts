@@ -66,6 +66,10 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const selectedFolder = rawSelectedFolder === "all" || validFolderSlugs.has(rawSelectedFolder) ? rawSelectedFolder : "all";
   const mails = React.useMemo<ChannelMessage[]>(() => grouped.messages, [grouped.messages]);
 
+  React.useEffect(() => {
+    if (rawSelectedFolder !== selectedFolder) g.setFilter("funnemailFolder", selectedFolder);
+  }, [g, rawSelectedFolder, selectedFolder]);
+
   // Reset selected mail quando cambio cartella
   React.useEffect(() => {
     setSelectedMessageId(null);

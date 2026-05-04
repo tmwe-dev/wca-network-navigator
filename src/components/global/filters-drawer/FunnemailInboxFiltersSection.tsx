@@ -6,13 +6,15 @@
  *
  * Tutta la logica vive in `useGlobalFilters` + DAL `funnemailInbox`.
  */
-import { Search, Eye, Folder } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { queryKeys } from "@/lib/queryKeys";
-import { listFunnemailFolders, countFunnemailByFolder, type FunnemailFolder } from "@/data/funnemailInbox";
+import { listFunnemailGroupedInbox, type FunnemailGroupedInbox } from "@/data/funnemailInbox";
+import { useAuth } from "@/providers/AuthProvider";
+import { InboxGroupsSidebar } from "@/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar";
 
 const VIEW_OPTIONS: Array<{ value: "all" | "unread" | "urgent" | "agenda" | "commercial"; label: string }> = [
   { value: "all", label: "Tutte" },
@@ -22,35 +24,21 @@ const VIEW_OPTIONS: Array<{ value: "all" | "unread" | "urgent" | "agenda" | "com
   { value: "commercial", label: "Commerciali" },
 ];
 
-const SECTION_LABEL: Record<string, string> = {
-  operative: "Operative",
-  archive: "Archivio",
-  sorting: "Da smistare",
-};
+const PAGE_SIZE = 5000;
 
 export function FunnemailInboxFiltersSection() {
   const g = useGlobalFilters();
+  const { user } = useAuth();
 
-  const foldersQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.folders,
-    queryFn: listFunnemailFolders,
-    staleTime: 5 * 60_000,
-  });
-
-  const countsQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.counts,
-    queryFn: countFunnemailByFolder,
+  const groupedQ = useQuery({
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", PAGE_SIZE),
+    queryFn: () => listFunnemailGroupedInbox(user!.id, PAGE_SIZE),
+    enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
 
-  const folders: FunnemailFolder[] = foldersQ.data ?? [];
-  const counts = countsQ.data ?? {};
-
-  const grouped = folders.reduce<Record<string, FunnemailFolder[]>>((acc, f) => {
-    (acc[f.section] ??= []).push(f);
-    return acc;
-  }, {});
+  const grouped: FunnemailGroupedInbox = groupedQ.data ?? { folders: [], counts: {}, messages: [] };
 
   return (
     <>
@@ -77,31 +65,15 @@ export function FunnemailInboxFiltersSection() {
         </ChipGroup>
       </FilterSection>
 
-      {(["operative", "archive", "sorting"] as const).map((section) => {
-        const items = grouped[section];
-        if (!items || items.length === 0) return null;
-        return (
-          <FilterSection key={section} icon={Folder} label={SECTION_LABEL[section]}>
-            <ChipGroup>
-              {items.map((f) => {
-                const c = counts[f.slug] ?? 0;
-                const active = g.filters.funnemailFolder === f.slug;
-                return (
-                  <Chip
-                    key={f.slug}
-                    active={active}
-                    onClick={() => g.setFilter("funnemailFolder", f.slug)}
-                  >
-                    <span>{f.icon ?? "📂"}</span>
-                    <span>{f.label}</span>
-                    {c > 0 && <span className="opacity-60 ml-0.5">({c})</span>}
-                  </Chip>
-                );
-              })}
-            </ChipGroup>
-          </FilterSection>
-        );
-      })}
+      <InboxGroupsSidebar
+        folders={grouped.folders}
+        counts={grouped.counts}
+        selectedFolder={g.filters.funnemailFolder}
+        totalCount={grouped.messages.length}
+        loading={groupedQ.isLoading}
+        onSelect={(slug) => g.setFilter("funnemailFolder", slug)}
+        variant="drawer"
+      />
     </>
   );
 }

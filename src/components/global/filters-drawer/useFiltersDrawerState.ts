@@ -114,7 +114,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isFunnemailInbox) {
       if (g.filters.funnemailSearch.trim()) n++;
       if (g.filters.funnemailView !== "all") n++;
-      if (g.filters.funnemailFolder !== "rfq") n++;
+      if (g.filters.funnemailFolder !== "all") n++;
     }
     if (isNetwork) {
       if (g.filters.networkSearch.trim()) n++;
@@ -167,7 +167,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     if (isFunnemailInbox) {
       g.setFilter("funnemailSearch", "");
       g.setFilter("funnemailView", "all");
-      g.setFilter("funnemailFolder", "rfq");
+      g.setFilter("funnemailFolder", "all");
     }
   }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM, isEmailIntelligence, isFunnemailInbox]);
 

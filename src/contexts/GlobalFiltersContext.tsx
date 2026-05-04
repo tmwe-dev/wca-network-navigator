@@ -64,7 +64,7 @@ export interface GlobalFilterState {
   emailIntelHideClassified: boolean;
   emailIntelSort: string; // "name-asc" | "count-desc" | "ai_group"
   // Funnemail Inbox (pagina /v2/funnemail-inbox)
-  /** Cartella selezionata (slug). "" = tutte. Default: "rfq". */
+  /** Cartella selezionata (slug). "all" = tutte. */
   funnemailFolder: string;
   /** Vista alta: tutte / non lette / urgenti / con agenda / commerciali. */
   funnemailView: "all" | "unread" | "urgent" | "agenda" | "commercial";
@@ -130,7 +130,7 @@ const defaults: GlobalFilterState = {
   emailIntelVolume: "all",
   emailIntelHideClassified: true,
   emailIntelSort: "count-desc",
-  funnemailFolder: "rfq",
+  funnemailFolder: "all",
   funnemailView: "all",
   funnemailSearch: "",
 };
