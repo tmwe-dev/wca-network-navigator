@@ -10,6 +10,11 @@ import { serviceClient } from "../_shared/tmweClient.ts";
 const DEFAULT_SCOPES =
   "profile:read shipment:read shipment:write tracking:read document:read";
 
+function tmweBaseUrl(): string {
+  const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+  return raw.replace(/\/erp$/, "");
+}
+
 function randomState(): string {
   const buf = new Uint8Array(24);
   crypto.getRandomValues(buf);
@@ -55,7 +60,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const base = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+    const base = tmweBaseUrl();
     // Formato URL TMWE (esempio fornito dall'API):
     //   /erp/tmwe_json/auth?client_id=...&redirect_uri=...&response_type=code&state=...
     // Ordine dei parametri: client_id, redirect_uri, response_type, state.
