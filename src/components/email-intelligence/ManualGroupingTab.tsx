@@ -310,6 +310,7 @@ export default function ManualGroupingTab() {
   const {
     searchQuery,
     groupSortOption, setGroupSortOption,
+    sortOption, setSortOption,
     sortedSenders, sortedGroups,
   } = useFilterAndSort(allSenders, groups);
 
