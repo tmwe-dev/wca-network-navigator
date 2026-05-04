@@ -139,6 +139,26 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const description = activity.description ?? null;
   const inHolding = isInHoldingPattern((activity.partners as { lead_status?: string } | undefined)?.lead_status);
 
+  // Anteprima reale del corpo email inbound (solo per activity email).
+  const isEmailActivity =
+    activity.activity_type === "send_email" || activity.activity_type === "follow_up";
+  const previewQuery = useQuery({
+    queryKey: queryKeys.channelMessages.inboundPreview(
+      activity.partner_id,
+      senderEmail,
+      activity.title,
+    ),
+    queryFn: () =>
+      findInboundPreview({
+        partnerId: activity.partner_id,
+        fromAddress: senderEmail,
+        subject: activity.title,
+      }),
+    enabled: isEmailActivity,
+    staleTime: 60_000,
+  });
+  const inboundPreview = previewQuery.data?.bodyText ?? null;
+
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate(
       {
