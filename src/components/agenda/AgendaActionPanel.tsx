@@ -111,6 +111,28 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [scheduling, setScheduling] = React.useState(false);
 
+  // Hooks devono stare PRIMA di qualsiasi early return per rispettare le rules-of-hooks.
+  const isEmailActivity =
+    !!activity &&
+    (activity.activity_type === "send_email" || activity.activity_type === "follow_up");
+  const senderForQuery = senderFromDescription(activity?.description);
+  const senderEmailForQuery = senderForQuery?.email ?? null;
+  const previewQuery = useQuery({
+    queryKey: queryKeys.channelMessages.inboundPreview(
+      activity?.partner_id ?? null,
+      senderEmailForQuery,
+      activity?.title ?? null,
+    ),
+    queryFn: () =>
+      findInboundPreview({
+        partnerId: activity?.partner_id ?? null,
+        fromAddress: senderEmailForQuery,
+        subject: activity?.title ?? null,
+      }),
+    enabled: isEmailActivity && !!activity,
+    staleTime: 60_000,
+  });
+
   if (!activity) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground/60">
@@ -138,24 +160,6 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const description = activity.description ?? null;
   const inHolding = isInHoldingPattern((activity.partners as { lead_status?: string } | undefined)?.lead_status);
 
-  // Anteprima reale del corpo email inbound (solo per activity email).
-  const isEmailActivity =
-    activity.activity_type === "send_email" || activity.activity_type === "follow_up";
-  const previewQuery = useQuery({
-    queryKey: queryKeys.channelMessages.inboundPreview(
-      activity.partner_id,
-      senderEmail,
-      activity.title,
-    ),
-    queryFn: () =>
-      findInboundPreview({
-        partnerId: activity.partner_id,
-        fromAddress: senderEmail,
-        subject: activity.title,
-      }),
-    enabled: isEmailActivity,
-    staleTime: 60_000,
-  });
   const inboundPreview = previewQuery.data?.bodyText ?? null;
 
   const handleStatus = (status: "completed" | "cancelled") => {
