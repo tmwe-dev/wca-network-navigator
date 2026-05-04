@@ -653,6 +653,7 @@ export function useCockpitLogic() {
     batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
     draftState, setDraftState,
     draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
+    handleStartGeneration, pendingBulkCount: pendingBulkIds.length,
     handleGenerateAfterReview, handleRegenerate, handleImprove,
     showQueuedDraft,
     contacts, contactsMap, isLoading, selection,
