@@ -130,7 +130,6 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
     sender?.domain ||
     "Mittente sconosciuto";
   const senderEmail = sender?.email ?? null;
-  const isUnknownSender = !activity.partners?.company_name && !!sender;
   const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
   const city = activity.partners?.city;
   const country = activity.partners?.country_name;
