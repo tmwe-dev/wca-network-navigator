@@ -208,7 +208,7 @@ export function PartnerDetailModal({ partner, partnerId, aiClassification, open,
               className="w-full"
               onClick={() => {
                 onOpenChange(false);
-                navigate(`/partners/${partnerId}`);
+                navigate(`/v2/network?partnerId=${partnerId}`);
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
