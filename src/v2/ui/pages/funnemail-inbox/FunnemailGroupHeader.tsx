@@ -13,7 +13,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/providers/AuthProvider";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -30,11 +32,29 @@ interface Props {
 
 const CONFIRM_THRESHOLD = 20;
 
+interface SenderGroupRow {
+  nome_gruppo: string;
+  colore: string | null;
+  icon: string | null;
+}
+
 export function FunnemailGroupHeader({
   label, count, expanded, onToggle, busy,
   onMarkAllRead, onAssignGroup, onArchiveAll, onDeleteAll,
 }: Props) {
-  const { data: groupsList } = useEmailAddressGroups();
+  const { user } = useAuth();
+  const { data: groupsList = [] } = useQuery({
+    queryKey: ["email-sender-groups", "list", user?.id ?? "anon"],
+    enabled: !!user?.id,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<SenderGroupRow[]> => {
+      const { data } = await untypedFrom("email_sender_groups")
+        .select("nome_gruppo, colore, icon")
+        .eq("user_id", user!.id)
+        .order("sort_order", { ascending: true });
+      return (data ?? []) as SenderGroupRow[];
+    },
+  });
   const [confirm, setConfirm] = useState<null | "archive" | "delete">(null);
 
   const requireConfirm = (action: "archive" | "delete") => {
@@ -76,16 +96,16 @@ export function FunnemailGroupHeader({
                 <Tag className="h-3.5 w-3.5 mr-2" />Assegna gruppo a tutte…
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-64 overflow-auto">
-                {(!groupsList || groupsList.length === 0) && (
+                {groupsList.length === 0 && (
                   <DropdownMenuItem disabled>Nessun gruppo definito</DropdownMenuItem>
                 )}
-                {(groupsList ?? []).map((g) => (
+                {groupsList.map((g) => (
                   <DropdownMenuItem
-                    key={g.groupName}
-                    onClick={() => onAssignGroup(g.groupName)}
+                    key={g.nome_gruppo}
+                    onClick={() => onAssignGroup(g.nome_gruppo)}
                   >
-                    {g.groupIcon && <span className="mr-2">{g.groupIcon}</span>}
-                    <span>{g.groupName}</span>
+                    {g.icon && <span className="mr-2">{g.icon}</span>}
+                    <span>{g.nome_gruppo}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuSubContent>
