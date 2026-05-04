@@ -7,7 +7,7 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createInteraction } from "@/data/interactions";
-import { activityKeys, createActivities } from "@/data/activities";
+import { activityKeys, insertActivity } from "@/data/activities";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -59,17 +59,20 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
         : type === "email" ? "send_email"
         : "follow_up";
       const today = new Date().toISOString().slice(0, 10);
-      await createActivities([{
+      await insertActivity({
         partner_id: partnerId,
         source_type: "partner",
         source_id: partnerId,
-        assigned_to: null,
         activity_type: activityType,
         title: subj,
         description: notes || null,
         priority: "medium",
         due_date: today,
-      }]);
+        user_id: user?.id ?? null,
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        reviewed: true,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: activityKeys.forPartner(partnerId) });
