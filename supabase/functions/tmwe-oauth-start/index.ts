@@ -56,13 +56,15 @@ Deno.serve(async (req) => {
     }
 
     const base = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: Deno.env.get("TMWE_OAUTH_CLIENT_ID")!,
-      redirect_uri: Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!,
-      scope: DEFAULT_SCOPES,
-      state,
-    });
+    // Formato URL TMWE (esempio fornito dall'API):
+    //   /erp/tmwe_json/auth?client_id=...&redirect_uri=...&response_type=code&state=...
+    // Ordine dei parametri: client_id, redirect_uri, response_type, state.
+    // Nessuno `scope` esposto in query (TMWE lo gestisce server-side).
+    const params = new URLSearchParams();
+    params.set("client_id", Deno.env.get("TMWE_OAUTH_CLIENT_ID")!);
+    params.set("redirect_uri", Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!);
+    params.set("response_type", "code");
+    params.set("state", state);
     // Per TMWE API spec: /authorization redirige a /auth se l'utente non è
     // autenticato. In pratica /authorization restituisce 405 quando aperto
     // direttamente dal browser (richiede sessione), quindi puntiamo
