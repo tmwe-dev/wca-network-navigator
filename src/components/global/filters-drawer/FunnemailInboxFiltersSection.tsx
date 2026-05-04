@@ -13,15 +13,13 @@ import { listFunnemailGroupedInbox, type FunnemailGroupedInbox } from "@/data/fu
 import { useAuth } from "@/providers/AuthProvider";
 import { InboxGroupsSidebar } from "@/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar";
 
-const PAGE_SIZE = 20000;
-
 export function FunnemailInboxFiltersSection() {
   const g = useGlobalFilters();
   const { user } = useAuth();
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", PAGE_SIZE),
-    queryFn: () => listFunnemailGroupedInbox(user!.id, PAGE_SIZE),
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon"),
+    queryFn: () => listFunnemailGroupedInbox(user!.id),
     enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
