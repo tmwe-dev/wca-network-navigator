@@ -1,75 +1,84 @@
-## Problema
+## Obiettivo
 
-Nel Cockpit la pipeline funziona (Sherlock → KB → Calligrafia → Giornalista), ma all'utente mancano gli stessi controlli che ha in Email Forge / Composer:
+Portare nel Cockpit (`AIDraftStudio`) la stessa completezza di Email Forge per **link, immagini e allegati**, gestiti **per singola bozza** nello studio destro. Niente bulk: ogni draft ha la sua attachment-bar.
 
-1. **Obiettivo libero ("testo dell'Oracolo")** — il campo dove digiti *cosa vuoi dire* (es. "proporre tariffa LCL Genova→Tunisi, sconto introduttivo, urgenza fine mese").
-2. **Elementi da inserire** — il brief strutturato (punti, USP, link, allegati da menzionare).
-3. **Migliora bozza** — far rilavorare l'AI sulla bozza corrente.
-4. **Editing assistito** — modificare il testo e ricevere suggerimenti / re-pass dell'AI.
+## Cosa appare in UI
 
-Tutto questo deve restare coerente con il fatto che il Cockpit lavora **N contatti contemporaneamente** (drag bulk → `draftQueue`).
+Sotto la `JournalistBadge`, sopra il body della bozza email, una **toolbar compatta a 3 pulsanti** (visibile solo quando `draft.channel === "email"`):
 
-## Strategia consigliata
-
-**Una sola configurazione condivisa, applicata a tutta la selezione.**
-
-- Tipo email, tono, KB, **obiettivo libero**, **brief strutturato** vivono già in `ComposeAiConfigContext` (storage `compose-ai-config-v1`) e sono editabili dalla **sidebar a scomparsa** già montata sul Cockpit (`ContextFiltersRail` → `EmailComposeFiltersSection`).
-- Aggiungiamo nella stessa sidebar i due campi che oggi mancano: **Obiettivo (Oracolo)** e — quando serve — la microcard "deep search del destinatario" (già live nel Forge).
-- L'utente fissa l'intento *una volta sola*, poi droppa N contatti: `useCockpitLogic.generate()` legge `cfg.customGoal + cfg.brief + cfg.selectedType.prompt` e li passa a tutti i destinatari (già lo fa).
-
-**Per-bozza (azioni non condivisibili) restano nello studio a destra:**
-- Editor del body con preview/HTML.
-- Pulsante **Migliora** che rilancia `useEmailForge.run({ base_proposal: bodyAttuale, goal: cfg.customGoal })` per quel singolo contatto.
-- Pulsante **Rigenera** (già presente).
-- Suggerimenti post-edit (riusiamo `EmailEditLearningDialog` già esistente in Composer): se l'utente modifica manualmente la bozza prima di inviare, al click su Invia si apre il dialog "salva come pattern / invia senza salvare".
-
-## Cosa cambia (UI)
-
-### A. Sidebar `EmailComposeFiltersSection` (un solo file)
-Aggiungere in cima alla sezione:
-- `Textarea` **Obiettivo email (Oracolo)** legata a `cfg.customGoal` (con micro-helper "vale per tutti i contatti selezionati").
-- Riga informativa "🎯 Si applica a N contatti" quando `selection.count > 1`.
-
-Il resto (tipo / tono / brief / KB) è già lì.
-
-### B. `AIDraftStudio` (pannello destro Cockpit)
-- Trasformare il blocco "Messaggio" del tab **Preview** da read-only (TypewriterText) a un `Textarea`/`contenteditable` semplice quando la generazione è finita. Lo stato vive già in `draftState.body` via `onDraftChange`.
-- Aggiungere accanto ai bottoni Copia/Rigenera un bottone **Migliora** (icona `Wand2`) che chiama una nuova action `handleImprove(draftState)` esposta da `useCockpitLogic`.
-- Mostrare lo `JournalistBadge` aggiornato dopo Migliora (già supportato).
-
-### C. `useCockpitLogic`
-Aggiungere `handleImprove()`:
 ```
-const handleImprove = async () => {
-  const r = await forge.run({
-    ...stessi parametri della generate corrente...,
-    base_proposal: draftState.body,    // bozza attuale come base
-    goal: `${cfg.customGoal}\n\nMIGLIORA mantenendo voce e intento.`,
-  });
-  if (r) setDraftState(prev => ({ ...prev, subject: r.subject, body: r.body, journalist_review: r.journalist_review, ... }));
-};
+[🔗 Link]   [🖼️ Immagini]   [📎 Allegati]
 ```
-Nessun cambio al backend: `generate-email` già accetta `base_proposal` e attiva il path "improve" della pipeline.
 
-### D. Bulk
-- Il `draftQueue` resta com'è. Aggiungiamo nel banner "Bulk: N bozze generate" due frecce ◀ ▶ per scorrere le bozze (già accumulate in queue) e poter editare/migliorare ognuna prima di inviare.
-- Migliora opera sempre sulla bozza visibile.
+Ogni pulsante apre un `Popover`:
 
-## Cosa NON cambia
-- `generate-email` edge function.
-- Editorial Review (Giornalista) resta obbligatorio e inviolato.
-- Sherlock / KB / Calligrafia: già iniettati dalla pipeline unica.
-- Nessuna duplicazione di salvataggi o invii: `handleImprove` riusa la stessa `forge.run` (no side-effect).
+1. **Link** — input "Etichetta" + "URL" + "Aggiungi"; lista chip removibili. I link entrano nel **prompt** della prossima rigenerazione/Migliora come istruzione: *"Cita naturalmente questi link nel testo: [label](url)"*.
+2. **Immagini** — riusa `ImageGalleryTab` esistente (bucket `email-images`, upload + galleria). Il click su un'immagine inserisce `<img src="…" style="max-width:100%">` **inline nel body** alla fine (o al cursore).
+3. **Allegati** — input `<input type="file" multiple>` per upload al volo + lista chip. Upload va in un nuovo bucket `cockpit-attachments` (privato). Mostriamo nome + size + ✕.
 
-## File toccati (stima)
-- `src/components/global/filters-drawer/EmailComposeFiltersSection.tsx` — aggiungere Textarea obiettivo + hint bulk.
-- `src/components/cockpit/AIDraftStudio.tsx` — body editabile + bottone Migliora.
-- `src/hooks/useCockpitLogic.ts` — esporre `handleImprove`, navigazione queue (prev/next).
-- `src/v2/ui/pages/CockpitPage.tsx` — collegare prev/next nel banner bulk.
+Badge numerico sul pulsante quando ci sono elementi (come EmailToolbar esistente).
 
-## Check finale (regole interne)
-- Pipeline unica Email Forge ✅ (no duplicati).
-- Giornalista sempre attivo ✅.
-- Bulk preservato, ordine queue stabile ✅.
-- Nessun nuovo invio o side-effect ✅.
-- Logica solo frontend, niente RLS / edge / DB.
+## Flusso dati
+
+Estendiamo `DraftState` (`src/types/cockpit.ts`) con tre campi opzionali per-draft:
+
+```ts
+links?: { label: string; url: string }[];
+inlineImages?: string[];          // URL già nel body, solo per badge counter
+attachments?: { name: string; path: string; size: number; mime: string }[];
+```
+
+Lo stato vive nel draft corrente; navigando tra bozze del bulk (`showQueuedDraft`) è già preservato perché serializziamo l'intero `DraftState` nella queue.
+
+## Integrazione AI (link → prompt)
+
+`useCockpitLogic.handleImprove` e `forge.run` ricevono dal draft un blocco `extraInstructions` quando `links.length > 0`:
+
+```
+Includi nel testo, in modo naturale e contestuale, i seguenti link:
+- [Catalogo](https://…)
+- [Case study](https://…)
+Usa il formato HTML <a href>.
+```
+
+Si appende a `customGoal` prima di chiamare `generate-email`. **Niente modifiche a `generate-email`**: è solo testo nel goal.
+
+## Integrazione invio (allegati → SMTP)
+
+1. **Upload**: client carica i file su `cockpit-attachments/{user_id}/{uuid}-{filename}`, ottiene `path` + signed URL.
+2. **Send**: `useSendEmail.handleSend` aggiunge `attachments: [{ filename, path }]` al body verso `send-email`.
+3. **Edge `send-email`**: estende `SendEmailBody` con `attachments?: { filename: string; path: string }[]`. Per ogni path scarica il file dal bucket via service role e lo passa a `denomailer` come `attachments: [{ filename, content, encoding: "base64" }]`. Cap: max 10 allegati, max 20MB totali (hard guard).
+
+## Storage
+
+Migrazione SQL:
+
+- Bucket `cockpit-attachments` privato.
+- RLS: utente autenticato può `INSERT/SELECT/DELETE` solo nei propri file (`(storage.foldername(name))[1] = auth.uid()::text`).
+- Service role legge tutto (default) per allegare in `send-email`.
+
+## File toccati
+
+**Nuovi**
+- `src/components/cockpit/DraftAttachmentsBar.tsx` — la toolbar 3-pulsanti con i 3 popover.
+- `supabase/migrations/<ts>_cockpit_attachments_bucket.sql`.
+
+**Modificati**
+- `src/types/cockpit.ts` — aggiungi `links`, `inlineImages`, `attachments` opzionali.
+- `src/components/cockpit/AIDraftStudio.tsx` — render `<DraftAttachmentsBar>` sopra il body, callback che aggiornano `draft` via `onDraftChange`. Inserimento immagini = append `<img>` nel body.
+- `src/hooks/useCockpitLogic.ts` — in `handleImprove` e nella chiamata di rigenerazione, comporre `customGoal` con il blocco "Includi link…" se `draft.links?.length`.
+- `src/hooks/useSendEmail.ts` — propaga `attachments` al body di `send-email` (mappa `path` → `{filename, path}`).
+- `supabase/functions/send-email/index.ts` — accetta `attachments`, scarica da storage, passa a `denomailer` con cap 10/20MB.
+
+## Vincoli rispettati
+
+- Niente bulk break: link/immagini/allegati sono **solo per la bozza corrente**, lo scope sidebar resta invariato.
+- `journalistReview` resta intoccato: gli allegati non passano per il revisore (sono binari), il body passa come oggi.
+- `invokeAi` charter: nessuna nuova chiamata AI, solo arricchimento del `goal` testuale già autorizzato.
+- Soft-delete & RLS storage standard.
+- Hard guards in `send-email`: cap allegati lato edge function.
+
+## Out of scope
+
+- Bulk: stessi allegati su tutti i contatti (lo decideremo in un secondo step se serve, riusando lo stesso `DraftState`).
+- Modifica del prompt operativo del Calligrafo (i link entrano via `goal`, non via prompt versionato).
