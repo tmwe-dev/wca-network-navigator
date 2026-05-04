@@ -42,7 +42,7 @@ export function CockpitPage() {
     handleSingleDeepSearch, handleSingleAlias, handleSingleLinkedInLookup,
     handleBulkDelete, confirmBulkDelete, showDeleteConfirm, setShowDeleteConfirm,
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
-    draftQueue,
+    draftQueue, handleStartGeneration, pendingBulkCount,
   } = logic;
 
   // Oracle handlers — riutilizzano la pipeline AI esistente del Cockpit.
@@ -147,6 +147,8 @@ export function CockpitPage() {
             onInsertImage={handleInsertImage}
             onRegenerate={handleRegenerate}
             onGenerateAfterReview={handleGenerateAfterReview}
+            onStartGeneration={handleStartGeneration}
+            pendingBulkCount={pendingBulkCount}
             isDragging={!!draggedContactId}
             draggedContactId={draggedContactId}
             dragCount={dragCount}
