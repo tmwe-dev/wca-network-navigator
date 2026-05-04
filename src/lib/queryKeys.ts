@@ -616,6 +616,8 @@ export const queryKeys = {
   funnemailInbox: {
     folders: ["funnemail-inbox", "folders"] as const,
     counts: ["funnemail-inbox", "counts"] as const,
+    grouped: (userId: string, limit: number) =>
+      ["funnemail-inbox", "grouped", userId, limit] as const,
     mailsByFolder: (slug: string, limit: number) =>
       ["funnemail-inbox", "mails", slug, limit] as const,
     decision: (messageId?: string | null) =>
