@@ -3,7 +3,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { SlidersHorizontal, RotateCcw, Check, Mail, MessageCircle, Linkedin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EmailComposerContactPicker } from "@/components/global/EmailComposerContactPicker";
+import { EmailComposerWizard } from "./EmailComposerWizard";
 import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { useFiltersDrawerState } from "./useFiltersDrawerState";
 import { CockpitFiltersSection } from "./CockpitFiltersSection";
@@ -108,7 +108,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {banner && (
+            {banner && !state.isEmailComposer && (
               <SidebarBanner
                 icon={banner.icon}
                 title={banner.title}
@@ -165,7 +165,7 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isABTest && <ABTestFiltersSection />}
             {state.isArena && <ArenaFiltersSection />}
             {state.isEmailIntelligence && <EmailIntelligenceFiltersSection />}
-            {state.isEmailComposer && <EmailComposerContactPicker onConfirm={() => onOpenChange(false)} />}
+            {state.isEmailComposer && <EmailComposerWizard onConfirm={() => onOpenChange(false)} />}
 
             {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && !state.isSorting && !state.isCodaAI && !state.isABTest && !state.isArena && !state.isEmailIntelligence && (
               <div className="text-center py-8 text-muted-foreground">
