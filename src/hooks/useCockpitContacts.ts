@@ -390,9 +390,11 @@ export function useDeleteCockpitContacts() {
         else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
       }
 
+      let deleted = 0;
       for (const entry of sourceEntries) {
-        await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
+        deleted += await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
       }
+      return deleted;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
