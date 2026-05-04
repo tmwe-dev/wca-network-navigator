@@ -5492,6 +5492,122 @@ export type Database = {
           },
         ]
       }
+      funnemail_decisions: {
+        Row: {
+          commercial_handoff: boolean
+          confidence: number
+          created_at: string
+          folder_slug: string | null
+          from_address: string | null
+          goes_to_agenda: boolean
+          id: string
+          message_id: string
+          model: string | null
+          override_at: string | null
+          override_by: string | null
+          override_folder_slug: string | null
+          partner_id: string | null
+          reasoning: string | null
+          suggested_action: string
+          updated_at: string
+          urgency: string
+          user_id: string | null
+        }
+        Insert: {
+          commercial_handoff?: boolean
+          confidence?: number
+          created_at?: string
+          folder_slug?: string | null
+          from_address?: string | null
+          goes_to_agenda?: boolean
+          id?: string
+          message_id: string
+          model?: string | null
+          override_at?: string | null
+          override_by?: string | null
+          override_folder_slug?: string | null
+          partner_id?: string | null
+          reasoning?: string | null
+          suggested_action?: string
+          updated_at?: string
+          urgency?: string
+          user_id?: string | null
+        }
+        Update: {
+          commercial_handoff?: boolean
+          confidence?: number
+          created_at?: string
+          folder_slug?: string | null
+          from_address?: string | null
+          goes_to_agenda?: boolean
+          id?: string
+          message_id?: string
+          model?: string | null
+          override_at?: string | null
+          override_by?: string | null
+          override_folder_slug?: string | null
+          partner_id?: string | null
+          reasoning?: string | null
+          suggested_action?: string
+          updated_at?: string
+          urgency?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_decisions_folder_slug_fkey"
+            columns: ["folder_slug"]
+            isOneToOne: false
+            referencedRelation: "funnemail_folders"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      funnemail_folders: {
+        Row: {
+          accept_into_agenda: boolean
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          prompt_hint: string | null
+          section: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          accept_into_agenda?: boolean
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          prompt_hint?: string | null
+          section?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          accept_into_agenda?: boolean
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          prompt_hint?: string | null
+          section?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       harmonize_runs: {
         Row: {
           completed_at: string | null
