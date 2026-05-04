@@ -35,6 +35,7 @@ interface Props {
   totalCount: number;
   loading: boolean;
   onSelect: (slug: string) => void;
+  variant?: "standalone" | "drawer";
 }
 
 const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
@@ -157,8 +158,9 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
   );
 }
 
-export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect }: Props) {
+export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect, variant = "standalone" }: Props) {
   const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
+  const isDrawer = variant === "drawer";
 
   useEffect(() => {
     saveOrder(order);
@@ -218,9 +220,18 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
   };
 
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border bg-background/95">
+    <aside
+      className={cn(
+        "flex min-h-0 flex-col bg-background/95",
+        isDrawer
+          ? "max-h-[calc(100vh-18rem)] rounded-md border border-border/60 bg-background/40"
+          : "h-full w-[260px] shrink-0 border-r border-border",
+      )}
+    >
       <div className="border-b border-border px-3 py-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Funny Mail</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {isDrawer ? "Cartelle posta" : "Funny Mail"}
+        </p>
         <button
           type="button"
           onClick={() => onSelect("all")}
