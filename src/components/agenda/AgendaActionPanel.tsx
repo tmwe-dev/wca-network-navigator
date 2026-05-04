@@ -257,24 +257,47 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
             <p className="text-sm font-medium leading-snug">{subject}</p>
           </section>
 
-          {description && (
+          {isEmailActivity ? (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                {isUnknownSender ? "Mittente" : "Contesto"}
+                Anteprima email
+                {senderEmail && (
+                  <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/70">
+                    da <span className="text-foreground/80">{senderEmail}</span>
+                  </span>
+                )}
               </p>
-              {isUnknownSender ? (
-                <p className="text-xs text-foreground/80 leading-relaxed">
-                  Email arrivata da <span className="font-medium">{senderEmail}</span>.
-                  Questo indirizzo non è collegato a nessuna azienda nel CRM:
-                  apri il messaggio per decidere se creare un nuovo partner o archiviarlo.
+              {previewQuery.isLoading ? (
+                <div className="space-y-1.5">
+                  <div className="h-3 w-full animate-pulse bg-muted/40 rounded" />
+                  <div className="h-3 w-11/12 animate-pulse bg-muted/40 rounded" />
+                  <div className="h-3 w-2/3 animate-pulse bg-muted/40 rounded" />
+                </div>
+              ) : inboundPreview ? (
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed line-clamp-[14]">
+                  {inboundPreview.slice(0, 1200)}
+                  {inboundPreview.length > 1200 && "…"}
                 </p>
-              ) : (
+              ) : description ? (
                 <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
                   {description}
                 </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  Anteprima non disponibile. Apri il partner per il messaggio completo.
+                </p>
               )}
             </section>
-          )}
+          ) : description ? (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Contesto
+              </p>
+              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                {description}
+              </p>
+            </section>
+          ) : null}
 
           {activity.selected_contact && (
             <section>
@@ -285,7 +308,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
             </section>
           )}
 
-          {!description && !activity.selected_contact && (
+          {!isEmailActivity && !description && !activity.selected_contact && (
             <p className="text-xs text-muted-foreground italic">
               Nessun contesto aggiuntivo. Apri il partner per la cronologia completa.
             </p>
