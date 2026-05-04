@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Sparkles } from "lucide-react";
+import { GripVertical, Mail, Linkedin, MessageCircle, Smartphone, Sparkles, Building2, FileSearch, Users, CreditCard, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -42,12 +42,12 @@ const channelIcon: Record<string, React.ComponentType<{ className?: string }>> =
   email: Mail, linkedin: Linkedin, whatsapp: MessageCircle, sms: Smartphone,
 };
 
-const originConfig: Record<ContactOrigin, { label: string; bg: string; text: string; dot: string }> = {
-  wca: { label: "WCA", bg: "bg-primary/15", text: "text-primary", dot: "bg-primary" },
-  report_aziende: { label: "RA", bg: "bg-muted", text: "text-muted-foreground", dot: "bg-muted-foreground" },
-  import: { label: "Import", bg: "bg-muted", text: "text-muted-foreground", dot: "bg-muted-foreground" },
-  bca: { label: "BCA", bg: "bg-primary/15", text: "text-primary", dot: "bg-primary" },
-  manual: { label: "Manuale", bg: "bg-emerald-500/15", text: "text-emerald-500", dot: "bg-emerald-500" },
+const originConfig: Record<ContactOrigin, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
+  wca:            { label: "WCA",      icon: Building2,  color: "text-primary" },
+  report_aziende: { label: "Prospect", icon: FileSearch, color: "text-chart-3" },
+  import:         { label: "Contatto", icon: Users,      color: "text-muted-foreground" },
+  bca:            { label: "BCA",      icon: CreditCard, color: "text-warning" },
+  manual:         { label: "Manuale",  icon: Users,      color: "text-emerald-500" },
 };
 
 const priorityLabel = (p: number) => p >= 9 ? "Urgente" : p >= 7 ? "Alta" : p >= 5 ? "Media" : "Bassa";
@@ -78,12 +78,10 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
         }}
         onDragEnd={onDragEnd}
         className={cn(
-          "group flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors",
+          "group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors border border-transparent",
           isAiProcessed
-            ? isSelected ? "bg-primary/10 border border-primary/30" : "bg-primary/[0.08] hover:bg-primary/10"
-            : contact.origin === "bca"
-            ? isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-primary/5"
-            : isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-card/60"
+            ? isSelected ? "bg-primary/10 border-primary/30" : "bg-primary/[0.06] hover:bg-primary/10"
+            : isSelected ? "bg-primary/10 border-primary/30" : "hover:bg-card/60"
         )}
       >
         <Checkbox
@@ -92,25 +90,44 @@ export function CockpitContactListItem({ contact, cockpitContact, flag, index, i
           className="h-3.5 w-3.5 flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         />
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground flex-shrink-0" />
-        <span className="text-sm">{flag}</span>
-        <div className="flex-1 min-w-0 flex items-center gap-3">
-          <span className="text-sm font-medium text-foreground truncate w-[120px] flex items-center gap-1">
-            {contact.name}
-            {isAiProcessed && <Sparkles className="w-3 h-3 text-primary shrink-0" />}
-          </span>
-          <span className="text-xs text-foreground/80 truncate w-[130px]">{contact.company}</span>
-          <span className="text-[11px] text-muted-foreground truncate w-[70px]">{contact.role}</span>
-        </div>
-        {/* Origin badge */}
-        <InfoTooltip content={`Origine: ${contact.originDetail}`}>
-          <span
-            className={cn("text-[9px] font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-1 flex-shrink-0", oc.bg, oc.text)}
-          >
-            <span className={cn("w-1.5 h-1.5 rounded-full", oc.dot)} />
-            {oc.label}
-          </span>
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/80 flex-shrink-0" />
+        <InfoTooltip content={contact.country || "?"}>
+          <span className="text-base leading-none flex-shrink-0">{flag}</span>
         </InfoTooltip>
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-semibold text-foreground truncate">{contact.name}</span>
+            {isAiProcessed && (
+              <InfoTooltip content="Deep Search effettuata">
+                <Sparkles className="w-3 h-3 text-primary shrink-0" />
+              </InfoTooltip>
+            )}
+            <InfoTooltip content={`Origine: ${contact.originDetail}`}>
+              <span className={cn("inline-flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wider flex-shrink-0", oc.color)}>
+                <oc.icon className="w-2.5 h-2.5" />
+                {oc.label}
+              </span>
+            </InfoTooltip>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
+            <span className="truncate font-medium text-foreground/70">{contact.company}</span>
+            {contact.role && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="truncate">{contact.role}</span>
+              </>
+            )}
+            {contact.country && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="inline-flex items-center gap-0.5 shrink-0">
+                  <MapPin className="w-2.5 h-2.5" />
+                  {contact.country}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {contact.channels.map(ch => {
             const Icon = channelIcon[ch];
