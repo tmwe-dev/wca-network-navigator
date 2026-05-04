@@ -150,7 +150,13 @@ export function CockpitPage() {
             isDragging={!!draggedContactId}
             draggedContactId={draggedContactId}
             dragCount={dragCount}
-            onDrop={handleDrop}
+            onDrop={(channel, contactId, contactName) => {
+              // Forziamo dragEnd subito per evitare che isDragging resti "true"
+              // se onDragEnd del browser non spara dopo il drop (caso comune in Chrome
+              // quando il drop avviene su un elemento con animazione in corso).
+              handleDragEnd();
+              handleDrop(channel, contactId, contactName);
+            }}
             onReadProfile={() => {
               if (draftState.contactId) {
                 const c = contactsMap[draftState.contactId];
