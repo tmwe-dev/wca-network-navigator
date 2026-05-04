@@ -37,6 +37,11 @@ interface SendEmailBody {
    * If true, skip journalist review (content was already reviewed upstream)
    */
   journalist_reviewed?: boolean;
+  /**
+   * Allegati opzionali. `path` è la chiave nel bucket privato `cockpit-attachments`.
+   * Hard cap: max 10 file, 20MB totali.
+   */
+  attachments?: { filename: string; path: string }[];
 }
 
 interface SmtpSendOptions {
@@ -46,6 +51,12 @@ interface SmtpSendOptions {
   content: string;
   html: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Uint8Array | string;
+    encoding?: "base64" | "binary";
+    contentType?: string;
+  }>;
 }
 
 Deno.serve(async (req) => {
