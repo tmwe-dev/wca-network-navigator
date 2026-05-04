@@ -90,159 +90,156 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-shrink-0 space-y-2 border-b border-border p-4">
-        {/* Riga 1: brand + bandiera + tools (nessuna sovrapposizione con l'oggetto) */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <CompanyLogo email={message.from_address} name={brand} size={36} className="flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-base font-bold text-primary">{brand}</span>
-                <CompanyLogoInline email={message.from_address} size={20} />
-                <CountryFlag email={message.from_address} size={20} className="flex-shrink-0" />
+      <div className="flex-shrink-0 border-b border-border px-4 pt-3 pb-3">
+        <div className="flex items-start gap-3">
+          <CompanyLogo email={message.from_address} name={brand} size={40} className="flex-shrink-0" />
+
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-bold text-primary">{brand}</span>
+              <CompanyLogoInline email={message.from_address} size={16} />
+              <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
+              <span className="ml-2 truncate text-[11px] text-muted-foreground" title={senderDetail || message.from_address || ""}>
+                {senderDetail || message.from_address}
+              </span>
+              <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
+                {formatDisplayDate(displayDate)}
+              </span>
+            </div>
+
+            <h3 className="break-words text-base font-semibold leading-snug text-foreground">
+              {cleanSubject}
+            </h3>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {group?.groupName && (
+                <span
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
+                    color: group.groupColor ?? "#3B82F6",
+                  }}
+                  title={`Gruppo Funny Mail: ${group.groupName}`}
+                >
+                  {group.groupIcon && <span>{group.groupIcon}</span>}
+                  {group.groupName}
+                </span>
+              )}
+              <InlineGroupAssigner
+                fromAddress={message.from_address}
+                currentGroupName={group?.groupName ?? null}
+              />
+              {message.source_type && message.source_type !== "unknown" && (
+                <Badge variant="secondary" className="gap-1 text-[10px]">
+                  {message.source_type === "partner" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                  {brand}
+                </Badge>
+              )}
+            </div>
+
+            {message.cc_addresses && (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span className="font-medium">CC:</span>
+                <span className="truncate">{message.cc_addresses}</span>
               </div>
+            )}
+
+            <div className="pt-0.5">
+              <EmailTechnicalHeaders message={message} />
+            </div>
+
+            {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
+              <button onClick={() => setBlockRemote(false)} className="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
+                <ImageOff className="h-3 w-3" />
+                Immagini remote bloccate — clicca per caricare
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                  navigate("/v2/email-composer", {
+                    state: {
+                      prefilledRecipient: {
+                        email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                        name: brand,
+                        company: brand,
+                      },
+                      prefilledSubject: replySubject,
+                    },
+                  });
+                }}
+              >
+                <Reply className="h-3 w-3" /> Rispondi
+              </Button>
+              {message.cc_addresses && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  title="Rispondi a tutti"
+                  onClick={() => {
+                    const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
+                    navigate("/v2/email-composer", {
+                      state: {
+                        prefilledRecipient: {
+                          email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
+                          name: brand,
+                          company: brand,
+                        },
+                        prefilledSubject: replySubject,
+                      },
+                    });
+                  }}
+                >
+                  <ReplyAll className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
+                  navigate("/v2/email-composer", {
+                    state: {
+                      prefilledSubject: fwdSubject,
+                      prefilledBody: normalizedContent.bodyText
+                        ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
+                        : "",
+                    },
+                  });
+                }}
+              >
+                <Forward className="h-3 w-3" /> Inoltra
+              </Button>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Button
+                size="sm"
+                variant={blockRemote ? "secondary" : "ghost"}
+                onClick={() => setBlockRemote((prev) => !prev)}
+                className="h-6 px-1.5 text-xs"
+                title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
+              >
+                <ImageOff className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-6 px-1.5 text-xs" title="Vista sicura (normalizzata)">
+                <Shield className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-6 px-1.5 text-xs" title="Vista fedele (originale)">
+                <Eye className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClose} className="h-6 px-2 text-[11px]">Chiudi</Button>
             </div>
           </div>
-          <div className="flex flex-shrink-0 items-center gap-1">
-            <Button
-              size="sm"
-              variant={blockRemote ? "secondary" : "ghost"}
-              onClick={() => setBlockRemote((prev) => !prev)}
-              className="h-7 gap-1 px-2 text-xs"
-              title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
-            >
-              <ImageOff className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-7 gap-1 px-2 text-xs" title="Vista sicura (normalizzata)">
-              <Shield className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 gap-1 px-2 text-xs" title="Vista fedele (originale)">
-              <Eye className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">Chiudi</Button>
-          </div>
-        </div>
-
-        {/* Riga 2: oggetto su riga propria, può andare a capo, niente truncate */}
-        <h3 className="ml-12 break-words text-base font-semibold leading-snug text-foreground">
-          {cleanSubject}
-        </h3>
-
-        {/* Riga 3: gruppo + assegnatore */}
-        <div className="ml-12 flex flex-wrap items-center gap-2">
-          {group?.groupName && (
-            <span
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-              style={{
-                backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
-                color: group.groupColor ?? "#3B82F6",
-              }}
-              title={`Gruppo Funny Mail: ${group.groupName}`}
-            >
-              {group.groupIcon && <span>{group.groupIcon}</span>}
-              {group.groupName}
-            </span>
-          )}
-          <InlineGroupAssigner
-            fromAddress={message.from_address}
-            currentGroupName={group?.groupName ?? null}
-          />
-        </div>
-
-        <div className="ml-12 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{senderDetail || message.from_address}</span>
-          <span>→</span>
-          <span>{message.to_address}</span>
-          <span>·</span>
-          <span>{formatDisplayDate(displayDate)}</span>
-        </div>
-
-        {message.cc_addresses && (
-          <div className="ml-12 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Users className="h-3 w-3" />
-            <span className="font-medium">CC:</span>
-            <span className="truncate">{message.cc_addresses}</span>
-          </div>
-        )}
-
-        {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
-          <button onClick={() => setBlockRemote(false)} className="ml-12 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
-            <ImageOff className="h-3 w-3" />
-            Immagini remote bloccate — clicca per caricare
-          </button>
-        )}
-
-        <EmailTechnicalHeaders message={message} />
-
-        {message.source_type && message.source_type !== "unknown" && (
-          <Badge variant="secondary" className="ml-12 gap-1 text-xs">
-            {message.source_type === "partner" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
-            Associato: {brand}
-          </Badge>
-        )}
-
-        {/* Reply / Forward actions */}
-        <div className="ml-12 flex items-center gap-1 mt-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 gap-1.5 text-xs"
-            onClick={() => {
-              const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-              navigate("/v2/email-composer", {
-                state: {
-                  prefilledRecipient: {
-                    email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
-                    name: brand,
-                    company: brand,
-                  },
-                  prefilledSubject: replySubject,
-                },
-              });
-            }}
-          >
-            <Reply className="h-3 w-3" /> Rispondi
-          </Button>
-          {message.cc_addresses && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => {
-                const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-                navigate("/v2/email-composer", {
-                  state: {
-                    prefilledRecipient: {
-                      email: message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "",
-                      name: brand,
-                      company: brand,
-                    },
-                    prefilledSubject: replySubject,
-                  },
-                });
-              }}
-            >
-              <ReplyAll className="h-3 w-3" /> Tutti
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1.5 text-xs"
-            onClick={() => {
-              const fwdSubject = decodedSubject.startsWith("Fwd:") ? decodedSubject : `Fwd: ${decodedSubject}`;
-              navigate("/v2/email-composer", {
-                state: {
-                  prefilledSubject: fwdSubject,
-                  prefilledBody: normalizedContent.bodyText
-                    ? `\n\n--- Forwarded ---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\nOggetto: ${decodedSubject}\n\n${normalizedContent.bodyText}`
-                    : "",
-                },
-              });
-            }}
-          >
-            <Forward className="h-3 w-3" /> Inoltra
-          </Button>
         </div>
       </div>
 
