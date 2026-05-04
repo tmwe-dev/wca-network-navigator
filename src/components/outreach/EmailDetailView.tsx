@@ -179,9 +179,6 @@ export function EmailDetailView({ message, onClose }: Props) {
             className="h-7 gap-1.5 text-xs"
             onClick={() => {
               const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
-              const quoteText = normalizedContent.bodyText
-                ? `\n\n---\nDa: ${message.from_address}\nData: ${formatDisplayDate(displayDate)}\n\n${normalizedContent.bodyText}`
-                : "";
               navigate("/v2/email-composer", {
                 state: {
                   prefilledRecipient: {
@@ -190,7 +187,6 @@ export function EmailDetailView({ message, onClose }: Props) {
                     company: brand,
                   },
                   prefilledSubject: replySubject,
-                  prefilledBody: quoteText,
                 },
               });
             }}
