@@ -9571,6 +9571,129 @@ export type Database = {
         }
         Relationships: []
       }
+      tmwe_oauth_state: {
+        Row: {
+          created_at: string
+          expires_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tmwe_proxy_audit: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          identity: string
+          latency_ms: number | null
+          op: string
+          status_code: number | null
+          tmwe_user_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          identity: string
+          latency_ms?: number | null
+          op: string
+          status_code?: number | null
+          tmwe_user_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          identity?: string
+          latency_ms?: number | null
+          op?: string
+          status_code?: number | null
+          tmwe_user_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      tmwe_system_tokens: {
+        Row: {
+          access_token: string
+          expires_at: string
+          id: boolean
+          scopes: string[]
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          expires_at: string
+          id?: boolean
+          scopes?: string[]
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          expires_at?: string
+          id?: boolean
+          scopes?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tmwe_user_tokens: {
+        Row: {
+          access_token: string
+          connected_at: string
+          expires_at: string
+          last_used_at: string | null
+          refresh_token: string | null
+          scopes: string[]
+          tmwe_company: string | null
+          tmwe_email: string | null
+          tmwe_user_id: number
+          tmwe_vat_number: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          expires_at: string
+          last_used_at?: string | null
+          refresh_token?: string | null
+          scopes?: string[]
+          tmwe_company?: string | null
+          tmwe_email?: string | null
+          tmwe_user_id: number
+          tmwe_vat_number?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          expires_at?: string
+          last_used_at?: string | null
+          refresh_token?: string | null
+          scopes?: string[]
+          tmwe_company?: string | null
+          tmwe_email?: string | null
+          tmwe_user_id?: number
+          tmwe_vat_number?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ui_navigation_map: {
         Row: {
           category: string
@@ -10083,6 +10206,45 @@ export type Database = {
           prompt_log_tokens_in: number | null
           provider: string | null
           user_id: string | null
+        }
+        Relationships: []
+      }
+      tmwe_user_connections_v: {
+        Row: {
+          connected_at: string | null
+          expires_at: string | null
+          last_used_at: string | null
+          scopes: string[] | null
+          tmwe_company: string | null
+          tmwe_email: string | null
+          tmwe_user_id: number | null
+          tmwe_vat_number: string | null
+          token_valid: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          connected_at?: string | null
+          expires_at?: string | null
+          last_used_at?: string | null
+          scopes?: string[] | null
+          tmwe_company?: string | null
+          tmwe_email?: string | null
+          tmwe_user_id?: number | null
+          tmwe_vat_number?: string | null
+          token_valid?: never
+          user_id?: string | null
+        }
+        Update: {
+          connected_at?: string | null
+          expires_at?: string | null
+          last_used_at?: string | null
+          scopes?: string[] | null
+          tmwe_company?: string | null
+          tmwe_email?: string | null
+          tmwe_user_id?: number | null
+          tmwe_vat_number?: string | null
+          token_valid?: never
+          user_id?: string | null
         }
         Relationships: []
       }
