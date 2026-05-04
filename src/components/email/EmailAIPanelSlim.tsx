@@ -35,7 +35,7 @@ export function EmailAIPanelSlim({
   recipientPartnerId = null, recipientCount = 0, contextSummary = null,
 }: Props): React.ReactElement {
   return (
-    <div className="w-[260px] shrink-0 h-full">
+    <div className="w-full h-full min-w-[240px]">
       <OraclePanelSlim
         onGenerate={onGenerate}
         onImprove={onImprove}

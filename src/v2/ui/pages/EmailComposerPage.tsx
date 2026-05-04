@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { useMission } from "@/contexts/MissionContext";
 import { useLocation } from "react-router-dom";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 
 export function EmailComposerPage() {
   const c = useEmailComposerState();
@@ -53,9 +55,10 @@ export function EmailComposerPage() {
     <PageErrorBoundary>
     <div className="flex flex-col h-full overflow-hidden">
       <PageTitleHeader icon={Mail} title="Email" subtitle="Componi messaggio" />
-      <div className="flex-1 min-h-0 flex justify-center">
-        <div className="flex max-w-[1280px] w-full min-h-0">
-          <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0">
+        <PersistentResizablePanelGroup direction="horizontal" storageId="email-composer:editor-vs-oracle">
+          <ResizablePanel defaultSize={68} minSize={45}>
+          <div className="h-full min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 px-3 py-2 w-full overflow-y-auto flex flex-col">
               {/* Riga compatta: ricerca destinatario + (se vuoto) hint inline */}
               <div className="mb-2 flex items-center gap-2">
@@ -152,7 +155,7 @@ export function EmailComposerPage() {
               )}
             </div>
 
-            <div className="shrink-0 border-t border-border/30 bg-muted/10 px-4 py-2.5 max-w-3xl w-full">
+            <div className="shrink-0 border-t border-border/30 bg-muted/10 px-4 py-3 pb-5 w-full">
               {queue.activeDraftId ? (
                 <CampaignQueueMonitor
                   draftId={queue.activeDraftId}
@@ -198,7 +201,9 @@ export function EmailComposerPage() {
               )}
             </div>
           </div>
-
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={32} minSize={22} maxSize={55}>
           {(() => {
             const single = c.recipientsWithEmail.length === 1 ? c.recipientsWithEmail[0] : null;
             const hasRealPartnerId = single?.partnerId && single.partnerId.length === 36 && single.isEnriched;
@@ -222,7 +227,8 @@ export function EmailComposerPage() {
               />
             );
           })()}
-        </div>
+          </ResizablePanel>
+        </PersistentResizablePanelGroup>
       </div>
 
       <EmailTemplateSelector
