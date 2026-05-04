@@ -1,6 +1,7 @@
-import { RefreshCw, Download, RotateCcw, Square, Loader2, Zap, ZapOff } from "lucide-react";
+import { RefreshCw, Download, RotateCcw, Square, Loader2, Zap, ZapOff, PenSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAppNavigate } from "@/hooks/useAppNavigate";
 
 interface EmailToolbarProps {
   onCheckNew: () => void;
@@ -21,8 +22,19 @@ export function EmailToolbar({
   onReset, isResetting,
   autoSyncEnabled, onToggleAutoSync,
 }: EmailToolbarProps) {
+  const navigate = useAppNavigate();
   return (
     <div className="flex items-center gap-1">
+      <Button
+        size="sm"
+        variant="default"
+        onClick={() => navigate("/v2/email-composer")}
+        className="h-6 gap-1 px-2 text-[10px]"
+        title="Componi nuova email"
+      >
+        <PenSquare className="h-3 w-3" /> Nuova
+      </Button>
+
       <Button
         size="sm"
         variant="outline"
