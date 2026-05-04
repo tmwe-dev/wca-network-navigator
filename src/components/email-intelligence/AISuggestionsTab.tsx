@@ -205,7 +205,7 @@ const SuggestionCard = memo(function SuggestionCard({
         ) : null}
 
         {/* FOOTER azioni */}
-        <div className="flex items-center gap-2 pt-2 mt-1 border-t border-border/40">
+        <div className="flex items-center gap-1.5 pt-2 mt-1">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect(row.email_address)}
@@ -214,10 +214,14 @@ const SuggestionCard = memo(function SuggestionCard({
             aria-label="Seleziona address"
           />
 
+          {/* Assegna gruppo: solo icona + freccetta, niente sbarra nera */}
           <Select onValueChange={(gId) => onAssign(row, gId)} disabled={busy}>
-            <SelectTrigger className="h-8 flex-1 text-xs border-0 shadow-none px-2 bg-transparent focus:ring-1 focus:ring-primary">
-              <Wand2 className="h-3.5 w-3.5 mr-1 text-primary" />
-              <SelectValue placeholder={currentGroup ? "Cambia" : "Assegna"} />
+            <SelectTrigger
+              className="h-8 w-auto gap-1 px-2 text-xs border border-border/60 bg-background hover:bg-muted/40 shadow-none [&>svg:last-child]:opacity-70"
+              aria-label={currentGroup ? "Cambia gruppo" : "Assegna gruppo"}
+              title={currentGroup ? "Cambia gruppo" : "Assegna gruppo"}
+            >
+              <Wand2 className="h-3.5 w-3.5 text-primary" />
             </SelectTrigger>
             <SelectContent>
               {groups.map((g) => (
@@ -227,6 +231,8 @@ const SuggestionCard = memo(function SuggestionCard({
               ))}
             </SelectContent>
           </Select>
+
+          <div className="flex-1" />
 
           <Button
             size="sm"
