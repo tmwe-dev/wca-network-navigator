@@ -48,42 +48,13 @@ export function CockpitWorkspace(props: Props) {
     draftQueue, showQueuedDraft,
   } = props;
 
-  const hasActive = !!draftState.contactId || !!draftState.body || draftState.isGenerating || isDragging;
+  // L'Oracolo è SEMPRE visibile (è l'elemento principe per scrivere il messaggio).
+  // La colonna destra mostra: drop zones se non c'è bozza, altrimenti lo Studio.
+  // Durante il drag l'overlay copre SOLO la colonna destra (no shaking globale).
+  const hasDraft = !!draftState.contactId || !!draftState.body || draftState.isGenerating;
 
-  // STATO A: nessun contatto, nessuna bozza, nessun drag → drop zone full width
-  if (!hasActive) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-6 min-w-0">
-        <ChannelDropZones
-          isDragging={false}
-          draggedContactId={null}
-          dragCount={0}
-          onDrop={onDrop}
-          hasActiveContact={false}
-        />
-      </div>
-    );
-  }
-
-  // STATO B: workspace 2 colonne (Oracolo + Studio)
   return (
     <div className="flex-1 flex min-w-0 overflow-hidden">
-      {/* Drop overlay quando trascini un contatto sopra il workspace */}
-      {isDragging && (
-        <div className="absolute inset-0 z-20 bg-background/85 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <ChannelDropZones
-              isDragging
-              draggedContactId={draggedContactId}
-              dragCount={dragCount}
-              onDrop={onDrop}
-              hasActiveContact={!!draftState.contactId}
-              contactAvailability={contactAvailability}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Colonna Oracolo */}
       <div className="w-[38%] min-w-[300px] max-w-[440px] flex-shrink-0 border-r border-border/40 flex flex-col overflow-hidden">
         <OraclePanelSlim
@@ -100,8 +71,35 @@ export function CockpitWorkspace(props: Props) {
         />
       </div>
 
-      {/* Colonna Studio (bozza viva) */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      {/* Colonna destra: drop zones quando vuota, Studio quando c'è bozza */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden relative">
+        {/* Drop overlay locale alla colonna destra */}
+        {isDragging && (
+          <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-sm flex items-center justify-center p-6">
+            <ChannelDropZones
+              isDragging
+              draggedContactId={draggedContactId}
+              dragCount={dragCount}
+              onDrop={onDrop}
+              hasActiveContact={!!draftState.contactId}
+              contactAvailability={contactAvailability}
+            />
+          </div>
+        )}
+
+        {!hasDraft && !isDragging && (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <ChannelDropZones
+              isDragging={false}
+              draggedContactId={null}
+              dragCount={0}
+              onDrop={onDrop}
+              hasActiveContact={false}
+            />
+          </div>
+        )}
+
+        {hasDraft && (<>
         {draftQueue.length > 0 && (
           <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-2 overflow-x-auto">
             <span className="font-semibold text-foreground shrink-0">
@@ -130,6 +128,7 @@ export function CockpitWorkspace(props: Props) {
             onGenerateAfterReview={onGenerateAfterReview}
           />
         </div>
+        </>)}
       </div>
     </div>
   );
