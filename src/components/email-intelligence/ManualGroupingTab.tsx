@@ -551,6 +551,38 @@ export default function ManualGroupingTab() {
                 <span className="text-xs font-medium text-muted-foreground truncate">
                   Mittenti ({sortedSenders.length})
                 </span>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 ml-1"
+                        onClick={() => {
+                          const cycle: Record<string, "name-asc" | "name-desc" | "count-desc" | "count-asc"> = {
+                            "name-asc": "name-desc",
+                            "name-desc": "count-desc",
+                            "count-desc": "count-asc",
+                            "count-asc": "name-asc",
+                          };
+                          setSortOption(cycle[sortOption] ?? "name-asc");
+                        }}
+                        aria-label="Cambia ordinamento mittenti"
+                      >
+                        {sortOption === "name-asc" ? (
+                          <><ArrowDownAZ className="h-3.5 w-3.5 mr-1" />A → Z</>
+                        ) : sortOption === "name-desc" ? (
+                          <><ArrowUpAZ className="h-3.5 w-3.5 mr-1" />Z → A</>
+                        ) : sortOption === "count-desc" ? (
+                          <><ArrowDown01 className="h-3.5 w-3.5 mr-1" />Più email</>
+                        ) : (
+                          <><ArrowUp01 className="h-3.5 w-3.5 mr-1" />Meno email</>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Click per ciclare A→Z, Z→A, più/meno email</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                 <span className="font-semibold text-foreground">{sortedSenders.length}</span>
