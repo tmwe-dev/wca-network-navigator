@@ -97,8 +97,24 @@ function getDomainBase(domain: string): string {
   // Remove TLD(s): "vercel.com" → "vercel", "co.uk" → handled
   const parts = domain.split('.');
   if (parts.length <= 1) return parts[0] || domain;
-  // For domains like foo.co.uk, foo.com.br — take first part
-  return parts[0];
+  const last = parts[parts.length - 1]?.toLowerCase();
+  const secondLast = parts[parts.length - 2]?.toLowerCase();
+  const genericTlds = new Set(['com', 'net', 'org', 'info', 'biz', 'io', 'dev', 'app', 'tech', 'xyz']);
+  const publicPrefixes = new Set(['co', 'com', 'net', 'org', 'ac', 'gov', 'edu']);
+
+  if (parts.length >= 3 && genericTlds.has(secondLast)) {
+    return parts[parts.length - 3];
+  }
+
+  if (parts.length >= 4 && publicPrefixes.has(secondLast)) {
+    return parts[parts.length - 4];
+  }
+
+  if (parts.length >= 3 && publicPrefixes.has(secondLast) && last && last.length === 2) {
+    return parts[parts.length - 3];
+  }
+
+  return parts[parts.length - 2];
 }
 
 function isPersonalDomain(domainBase: string): boolean {
