@@ -7,7 +7,8 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createInteraction } from "@/data/interactions";
-import { activityKeys } from "@/data/activities";
+import { activityKeys, createActivities } from "@/data/activities";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -29,6 +30,7 @@ type IType = "note" | "call" | "meeting" | "email";
 
 export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [type, setType] = React.useState<IType>("note");
   const [subject, setSubject] = React.useState("");
   const [notes, setNotes] = React.useState("");
@@ -40,15 +42,38 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
 
   const m = useMutation({
     mutationFn: async () => {
+      const subj = subject || (type === "note" ? "Nota" : type === "call" ? "Chiamata" : type === "meeting" ? "Incontro" : "Email");
       await createInteraction({
         partner_id: partnerId,
         interaction_type: type,
-        subject: subject || (type === "note" ? "Nota" : type === "call" ? "Chiamata" : type === "meeting" ? "Incontro" : "Email"),
+        subject: subj,
         notes: notes || null,
+        user_id: user?.id ?? null,
+        created_by: user?.id ?? null,
       });
+
+      // Ogni interazione manuale è anche un'attività in agenda dell'operatore
+      const activityType: "phone_call" | "meeting" | "send_email" | "follow_up" =
+        type === "call" ? "phone_call"
+        : type === "meeting" ? "meeting"
+        : type === "email" ? "send_email"
+        : "follow_up";
+      const today = new Date().toISOString().slice(0, 10);
+      await createActivities([{
+        partner_id: partnerId,
+        source_type: "partner",
+        source_id: partnerId,
+        assigned_to: user?.id ?? null,
+        activity_type: activityType,
+        title: subj,
+        description: notes || null,
+        priority: "medium",
+        due_date: today,
+      }]);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: activityKeys.forPartner(partnerId) });
+      qc.invalidateQueries({ queryKey: activityKeys.all });
       qc.invalidateQueries({ queryKey: ["partner", partnerId] });
       toast.success(holding ? "Salvato. Azienda in circuito di attesa." : "Salvato.");
       setSubject(""); setNotes(""); setType("note"); setHolding(false);
