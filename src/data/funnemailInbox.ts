@@ -305,17 +305,19 @@ export async function listFunnemailGroupedInbox(
     else rulesByAddress.set(key, rule.group_name);
   }
 
-  // Prioritarie = primi 6 gruppi "core" operativi (sort_order < 6).
-  // Tutto il resto va in Secondarie. Non classificate è la sezione finale.
-  const PRIORITY_THRESHOLD = 6;
+  // Prioritarie di default: solo le 3 cartelle core operative.
+  // Lo Spam non è MAI prioritario. L'utente può poi riordinare via drag&drop
+  // (preferenza salvata in localStorage lato client).
+  const PRIORITY_NAMES = new Set(["operativo", "commerciale", "amministrativo"]);
   const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => {
     const order = g.sort_order ?? index;
+    const norm = g.nome_gruppo.trim().toLowerCase();
     return {
       slug: slugifyGroup(g.nome_gruppo),
       label: g.nome_gruppo,
       icon: g.icon,
       color: g.colore,
-      section: order < PRIORITY_THRESHOLD ? "priority" : "secondary",
+      section: PRIORITY_NAMES.has(norm) ? "priority" : "secondary",
       sort_order: order,
     };
   });
