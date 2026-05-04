@@ -400,7 +400,7 @@ function ReminderList({ reminders }: { reminders: Array<Record<string, any>> }) 
         {reminders.map((r) => (
           <Link
             key={r.id}
-            to={`/partners/${r.partner_id}`}
+            to={`/v2/network?partnerId=${r.partner_id}`}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl border bg-card/40 border-border/30 hover:bg-card/60 transition-all"
           >
             <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
