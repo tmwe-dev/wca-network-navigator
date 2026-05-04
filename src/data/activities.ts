@@ -159,12 +159,14 @@ export async function updateActivity(id: string, updates: Partial<Pick<AllActivi
   if (error) throw error;
 }
 
-export async function deleteActivities(ids: string[]) {
+export async function deleteActivities(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
   const { error } = await supabase
     .from("activities")
     .delete()
     .in("id", ids);
   if (error) throw error;
+  return ids.length;
 }
 
 export async function insertActivity(activity: ActivityInsert) {
