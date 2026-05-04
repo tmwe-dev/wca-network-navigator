@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -39,6 +39,7 @@ export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.email",              path: "/v2/email",              icon: <Mail className="h-4 w-4" />,     pinned: true, pinOrder: 5.2 },
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
   { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
+  { labelKey: "nav.funnemail_inbox",    path: "/v2/funnemail-inbox",    icon: <Sparkles className="h-4 w-4" />, pinned: true, pinOrder: 7.5, badge: "NEW" },
   { labelKey: "nav.intelligence",       path: "/v2/intelligence",       icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 8 },
   { labelKey: "nav.config",             path: "/v2/settings",           icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 9 },
 ] as const;
