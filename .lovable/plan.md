@@ -1,109 +1,94 @@
-## Principio: tutto fuori sidebar tranne filtri/raggruppamenti
+## Obiettivo
+Sistemare il client `/v2/funnemail-inbox` su tre fronti: **sidebar** (cartelle complete, riordinabili, prioritarie corrette), **lista mail** (card più ricche e con azioni), **lettore** (oggetto leggibile, niente prefissi rumorosi, niente sovrapposizioni).
 
-- **Sidebar globale** (filtri-drawer): contiene viste, cartelle, filtri urgenza, ricerca. Nient'altro.
-- **Pagina Funnemail Inbox** (fuori sidebar): è il **client di posta** vero. Riusa lo stile delle nostre email esistenti (`SmartInboxView` / componenti `src/components/email`) e aggiunge il **box "Suggerimento Funnemail"** sopra ogni mail con cartella, azione, urgenza, motivazione e, quando il mittente è sconosciuto, gli esiti dello **Scout**.
+---
 
-## Stato già pronto (non si tocca)
+## 1. Sidebar — `InboxGroupsSidebar.tsx`
 
-- 14 cartelle in `funnemail_folders` (rfq, operations, tasks, support, alerts, info, internal, other_urgent, archive set, to_sort).
-- Edge `funnemail-classify` con prompt `funnemail_classifier` da Prompt Lab.
-- Edge `sherlock-extract` con livelli Scout/Detective/Sherlock già esistente.
-- Pattern `FiltersDrawer` + `sidebarContextRegistry` + `FilterSection/ChipGroup/Chip`.
+**Problema attuale:** sembra che mancano cartelle perché molte finiscono sotto "Secondarie" e non sono visibili senza scroll. "Spam" è in Prioritarie (sbagliato). Nessun riordino.
 
-## Cosa cambia
+**Cambiamenti:**
+- **Zero cartelle hardcoded come "prioritarie"**. Default lato server: tutte vanno in Secondarie tranne 3 top operative (`Operativo`, `Commerciale`, `Amministrativo`). Spam **mai** in prioritarie.
+- **Riordino libero via drag handle**: aggiungo icona puntini (`GripVertical`) a sinistra di ogni cartella. L'utente trascina per spostare sopra/sotto, anche fra sezioni (Prioritarie ↔ Secondarie). Lo Spam può finire ovunque tranne che sia "imposto" prioritario.
+- **Persistenza ordine**: salvato per-utente in `localStorage` con chiave `funnemail_sidebar_order_v1` (mappa `slug → { section, position }`). Niente migrazione DB in questa fase: è preferenza UI personale, locale al device. (Se vuoi DB-side lo facciamo in un secondo step.)
+- **Tutte le cartelle visibili**: rimuovo lo scroll "nascosto" assicurando che la sezione Prioritarie/Secondarie/Non classificate stiano in un unico `ScrollArea` continuo, con header sticky di sezione.
+- Libreria drag: `@dnd-kit/core` + `@dnd-kit/sortable` (già presente in progetto se usato altrove; altrimenti la aggiungo — chiedo conferma sotto).
 
-### 1. Sidebar globale → nuova sezione "funnemail-inbox"
+---
 
-- Aggiungo `"funnemail-inbox"` al `SidebarContextKey` con banner (icona Inbox, titolo "Funnemail Inbox", descrizione breve).
-- Nuovo file `FunnemailInboxFiltersSection.tsx` con SOLO filtri (riusa `FilterSection/ChipGroup/Chip`, niente UI custom):
-  - **Vista**: Tutte / Prioritario (urgency in critical/high) / Standard (normal) / Altro (low + sorting + archive).
-  - **Cartelle**: chip per ognuna delle 14 cartelle attive (lette runtime da DB).
-  - **Cerca**: input testo (oggetto + mittente).
-  - **Solo non letti**: toggle.
-- Aggiungo i campi nel `GlobalFiltersContext` (`funnemailView`, `funnemailFolder`, `funnemailSearch`, `funnemailUnreadOnly`).
-- La pagina `FunnemailInboxPage` registra la sidebar come "funnemail-inbox" (come fanno Agenda/Inbox).
+## 2. Card mail — `EmailMessageList.tsx` (versione locale per Funnemail)
 
-### 2. FunnemailInboxPage → vero client di posta (rimuovo i 3 colonne attuali)
+**Problema attuale:** la card mostra "R: RFQ Request - DAP Shipment…" troncato, senza azioni inline, senza assegnazione gruppo se mancante.
 
-- **Rimuovo** `FoldersSidebar` (tutto va nella sidebar globale).
-- Layout 2 colonne: lista mail (sx) + reader (dx), come nelle altre pagine email.
-- La **lista** legge dalla DAL filtrata da `useGlobalFilters()`. Riga = oggetto + mittente + età + badge urgenza/azione/cartella + pallino non-letto. Niente cose strane.
-- Il **reader** mostra: header (mittente, oggetto, data, partner se collegato) + corpo (HTML safe via DOMPurify, già usato nel resto) + sezione **"Suggerimento Funnemail"** in un Card minimalista:
-  - cartella suggerita + azione suggerita + urgenza + reasoning + confidence
-  - badge "Mittente sconosciuto" + risultato Scout se presente (tipo azienda, paese, sito, ruolo presunto: cliente / partner / freight forwarder / fornitore / sconosciuto)
-  - pulsante "Conferma cartella" / select per riassegnare manualmente
-  - pulsante "Riclassifica" (force=true)
+**Cambiamenti:**
+- **Riga 1 — Brand azienda**: nome azienda derivato (`extractSenderBrand`) in grassetto + bandiera + data. Già c'è, lo mantengo.
+- **Riga 2 — Nome mittente**: solo il nome persona (parte prima di `<email>` o prima di `@`), **senza** indirizzo email completo. Es: "Elizabeth Feria" e basta.
+- **Riga 3 — Oggetto pulito**: rimuovo prefissi `R:`, `Re:`, `RE:`, `Fwd:`, `FWD:`, `I:` con regex `/^\s*(re|r|fwd|fw|i)\s*:\s*/gi` ripetuta finché non sparisce. Mostro solo l'oggetto vero. Font invariato.
+- **Righe 4-5 — Snippet corpo**: 2-3 righe del `body_text` (primi ~180 caratteri, strip whitespace, niente HTML). Stesso font del resto. `line-clamp-3`.
+- **Card più alta**: `ROW_HEIGHT` da 88 → **132px** per contenere snippet senza tagliare.
+- **Azioni inline (hover)**: barretta in basso/destra che appare on-hover con:
+  - `Rispondi` (icon-only),
+  - `Inoltra` (icon-only),
+  - `Archivia` (icon-only),
+  - **`Assegna gruppo`** se la mail è in `unclassified` o se voglio cambiare: riuso `InlineGroupAssigner` che già esiste.
+- **Badge gruppo**: se classificata, mostro pillola colorata con nome gruppo (già presente). Se NON classificata, mostro un piccolo `+ Assegna` cliccabile.
 
-### 3. Scout automatico in inbound (solo mittente sconosciuto)
+Creo un file dedicato `FunnemailMailCard.tsx` dentro `src/v2/ui/pages/funnemail-inbox/` invece di modificare `EmailMessageList.tsx` globale (evito regressioni nella Inbox V1/V2 standard). La pagina Funnemail userà una nuova `FunnemailMailList.tsx` con virtualizer e questa nuova card.
 
-- Nuova edge function **`funnemail-scout-sender`** (sub 200 LOC):
-  1. Riceve `{ from_address, message_id, user_id }`.
-  2. Estrae dominio, cerca nei `partners` (match su email/dominio).
-  3. Se trovato → ritorna `{ known: true, partner_id, partner_type }` e basta.
-  4. Se NON trovato → invoca `sherlock-extract` livello **scout** sul dominio (gratuito, senza AI gateway costoso).
-  5. Salva l'esito in nuova tabella `funnemail_sender_intel` (cache 30gg per dominio).
-  6. Ritorna `{ known: false, intel: { company_type, country, website, role_guess, evidence_url } }`.
-- Hook in `classify-inbound-message`: PRIMA di chiamare `funnemail-classify`, chiama `funnemail-scout-sender`. Passa il risultato a `funnemail-classify` come `sender_intel` per arricchire il contesto del prompt.
-- Tutta la logica AI passa da `invokeAi()` per rispettare l'AI Invocation Charter (registro nuovo scope `funnemail_scout`).
+---
 
-### 4. Prompt Funnemail aggiornato (matrice operations)
+## 3. Lettore — `EmailDetailView.tsx` (header)
 
-Aggiorno il prompt `funnemail_classifier` in `operative_prompts` (no codice, solo testo, modificabile da Prompt Lab):
-- Riceve in input anche `sender_intel` (tipo azienda).
-- Per email **operations**, riconosce sotto-tipo e applica matrice:
-  - **booking_confirm** → cartella `operations`, azione `none`, agenda no, estrai riferimento booking.
-  - **awb_update** → cartella `operations`, azione `none`, agenda no.
-  - **tracking_update** → cartella `operations`, azione `none`, agenda no.
-  - **rate_alert** → cartella `info`, azione `none`, agenda no.
-  - **invoice/document** → cartella `tasks`, azione `none`, agenda no.
-  - **operative_quotation_received** → cartella `rfq`, azione `draft_reply`, agenda **sì**.
-  - **operative_request** (richiesta servizio da partner) → cartella `operations`, azione `notify_human`, agenda **sì**.
-- Default conservativo: `goes_to_agenda=false`. Vero solo se mail richiede azione esplicita dell'operatore.
-- Il sotto-tipo va in `decision.reasoning` come prefisso "[subtype:xxx] ...".
+**Problema attuale:** oggetto troncato a una riga, sovrapposto da bandiera/badge "Operativo"/"Modifica". "R: RFQ Reques…" tagliato.
 
-### 5. Tabella nuova `funnemail_sender_intel`
+**Cambiamenti (solo nell'uso da Funnemail, non tocco il componente globale):**
+- Faccio una variante leggera `FunnemailMailHeader.tsx` con:
+  - **Riga 1**: Logo + nome azienda (grande) + bandiera **a destra** ma nella stessa riga, **non sopra** all'oggetto.
+  - **Riga 2**: Oggetto **pulito** (stessa regex di rimozione `Re:/R:/Fwd:`), font semibold, `whitespace-normal break-words` (può andare a capo), nessun truncate. Niente badge sopra.
+  - **Riga 3**: Nome persona mittente (no indirizzo completo), data, freccia `→` destinatario.
+  - **Riga 4**: Badge gruppo + pulsante "Modifica gruppo" (InlineGroupAssigner) **sotto**, non incollati al titolo.
+  - **Riga 5**: Azioni Rispondi / Inoltra (già esistenti).
 
-- Campi business: `email_domain` (PK), `is_known_partner` bool, `partner_id` nullable, `company_type` text, `country` text, `website` text, `role_guess` text, `evidence` jsonb, `expires_at` timestamptz.
-- RLS: globale lettura per autenticati (è cache di info pubbliche), insert/update solo via service role.
+In alternativa, modifica chirurgica all'`EmailDetailView` esistente:
+- togliere `truncate` da `<h3>` oggetto e farlo `break-words`,
+- spostare il blocco `<CountryFlag>` e i badge in una **riga sotto** (non `flex-shrink-0` accanto al titolo),
+- aggiungere stripping prefissi alla `decodedSubject`.
 
-## Cosa NON cambia (volutamente — rispetta principio madre)
+Propongo la **modifica chirurgica** all'esistente per non duplicare codice (più semplice, meno superficie di rottura). Dimmi se preferisci la variante separata.
 
-- `check-inbox`, `email-imap-proxy`, `mark-imap-seen` → intoccati.
-- Editorial review intoccato.
-- Agenda → resta come l'abbiamo ridisegnata; nessun nuovo intervento qui.
-- Le 19 attività vecchie → restano come da decisione precedente.
-- Nessun hardcode di mittenti/regole: tutto via prompt + tabelle.
+---
 
-## Tecnica (riassunto file)
+## 4. Tecnico
 
-**Nuovi**
-- `supabase/functions/funnemail-scout-sender/index.ts`
-- `supabase/migrations/<ts>_funnemail_sender_intel.sql` (tabella + RLS)
-- `supabase/migrations/<ts>_funnemail_classifier_prompt_v2.sql` (UPDATE del prompt operativo)
-- `src/components/global/filters-drawer/FunnemailInboxFiltersSection.tsx`
+### File modificati
+- `src/data/funnemailInbox.ts` — rimuovo la regola `PRIORITY_THRESHOLD = 6`. Default: solo `Operativo`, `Commerciale`, `Amministrativo` in `priority`; tutto il resto in `secondary`. Spam sempre `secondary`.
+- `src/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar.tsx` — aggiungo drag&drop, persistenza localStorage, applico ordine personalizzato.
+- `src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx` — **nuovo**, card 132px con snippet + azioni hover.
+- `src/v2/ui/pages/funnemail-inbox/FunnemailMailList.tsx` — **nuovo**, virtualizer wrapper della card sopra.
+- `src/v2/ui/pages/FunnemailInboxPage.tsx` — sostituisce `EmailMessageList` con `FunnemailMailList`.
+- `src/components/outreach/EmailDetailView.tsx` — **modifica chirurgica** all'header: oggetto su riga propria con `break-words`, bandiera/badge spostati sotto, stripping prefissi `Re:/R:/Fwd:`.
+- `src/data/funnemailInbox.ts` — il `MESSAGE_LIST_SELECT` non include `body_text` per snippet: aggiungo se manca (lo include già, ok).
 
-**Modificati**
-- `src/components/global/filters-drawer/sidebarContextRegistry.ts` (+ key)
-- `src/components/global/filters-drawer/FiltersDrawer.tsx` (+ case render)
-- `src/contexts/GlobalFiltersContext.tsx` (+ 4 campi funnemail*)
-- `src/data/funnemailInbox.ts` (query con i nuovi filtri + join intel)
-- `src/v2/hooks/useFunnemailInbox.ts` (legge dai global filters)
-- `src/v2/ui/pages/FunnemailInboxPage.tsx` (layout 2 colonne, registra sidebar)
-- `src/v2/ui/pages/funnemail-inbox/MailReader.tsx` (Card "Suggerimento Funnemail" + Scout)
-- `src/v2/ui/pages/funnemail-inbox/MailList.tsx` (riusa stile email esistente, semplificato)
-- `supabase/functions/classify-inbound-message/index.ts` (chiama scout PRIMA di classify, passa intel)
-- `supabase/functions/funnemail-classify/index.ts` (accetta `sender_intel` opzionale, lo aggiunge al prompt)
-- `src/lib/queryKeys.ts` (key nuovi)
+### Helper riutilizzabili (in `src/v2/ui/pages/funnemail-inbox/utils.ts`)
+```ts
+export function stripReplyPrefixes(s: string): string { /* regex /^\s*(re|r|fwd|fw|i)\s*:\s*/gi loop */ }
+export function extractSenderName(raw: string|null): string { /* "Mario Rossi <a@b>" → "Mario Rossi"; "a@b" → "a" */ }
+export function makeSnippet(text: string|null, max=180): string { /* strip ws, slice */ }
+```
 
-**Eliminati**
-- `src/v2/ui/pages/funnemail-inbox/FoldersSidebar.tsx` (tutto traslato in sidebar globale)
+### Drag&drop
+Verifico se `@dnd-kit/sortable` è già installato (probabile). Se manca, lo aggiungo.
 
-## Checklist verifica finale
+---
 
-- Cartelle e viste appaiono SOLO nella sidebar filtri globale.
-- La pagina mostra mail con stile email standard + box suggerimento sopra.
-- Mittente noto → niente Scout, intel = `{ known: true, partner_id }`.
-- Mittente sconosciuto → Scout chiamato 1 volta, cached 30gg.
-- Email "operations" finiscono nella cartella corretta secondo matrice prompt, niente in agenda salvo eccezioni.
-- Prompt Funnemail editabile da Prompt Lab senza redeploy.
-- Nessuna chiamata AI fuori da `invokeAi()` lato frontend; nuovo scope `funnemail_scout` registrato.
+## Cosa NON tocco
+- DAL `listFunnemailGroupedInbox` resta uguale, cambio solo l'assegnazione `priority/secondary` di default.
+- Hook `useFunnemailInbox` invariato.
+- `EmailMessageList.tsx` globale e Inbox V1/V2 standard: **invariati**, niente regressioni.
+- Nessuna migrazione DB.
+
+---
+
+## Domande prima di partire
+1. Persistenza ordine sidebar: **localStorage** (per-device, semplice) o **DB tabella `funnemail_user_folder_order`** (cross-device, richiede migrazione)? Default proposto: localStorage.
+2. Header lettore: modifica chirurgica `EmailDetailView` (rischio basso ma impatta anche altre Inbox) **oppure** componente Funnemail-only? Default proposto: modifica chirurgica minimale (solo `break-words` + spostamento bandiera + stripping prefissi).
