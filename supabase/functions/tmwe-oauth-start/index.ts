@@ -25,14 +25,28 @@ Deno.serve(async (req) => {
   const headers = getSecurityHeaders(corsH);
 
   try {
-    const auth = await requireAuth(req, corsH);
-    if (isAuthError(auth)) return auth;
+    // Parse body to detect intent (default: connect)
+    let intent: "connect" | "login" = "connect";
+    try {
+      const body = await req.json();
+      if (body?.intent === "login") intent = "login";
+    } catch {
+      // no body — keep default
+    }
+
+    let userId: string | null = null;
+    if (intent === "connect") {
+      const auth = await requireAuth(req, corsH);
+      if (isAuthError(auth)) return auth;
+      userId = auth.userId;
+    }
 
     const svc = serviceClient();
     const state = randomState();
     const { error: insErr } = await svc.from("tmwe_oauth_state").insert({
       state,
-      user_id: auth.userId,
+      user_id: userId,
+      intent,
     });
     if (insErr) {
       return new Response(
