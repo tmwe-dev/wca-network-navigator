@@ -1,23 +1,25 @@
 /**
  * FunnemailMailCard — riga lista email del client Funnemail.
  *
- * Layout richiesto:
+ * Layout:
  *  - Riga 1: brand azienda (grassetto) + bandiera + data
  *  - Riga 2: nome persona mittente (no email completa)
  *  - Riga 3: oggetto pulito (senza Re:/R:/Fwd:)
  *  - Riga 4-5: snippet body 2-3 righe
- *  - Hover: azioni Rispondi / Inoltra / Assegna gruppo
+ *  - Riga 6 (in basso a destra, sempre visibile): slot suggerimento AI +
+ *    pulsanti standard "Azioni" e "Assegna gruppo" (stessi delle altre maschere).
  */
-import { Forward, Plane, Reply, Tag } from "lucide-react";
+import { Plane } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
 import { CompanyLogo, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { InlineGroupAssigner } from "@/components/outreach/email/InlineGroupAssigner";
+import { EmailMessageActions } from "@/components/outreach/EmailMessageActions";
 import { cn } from "@/lib/utils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { extractSenderName, makeSnippet, stripReplyPrefixes } from "./utils";
+import { AiSuggestionChip, type AiSuggestion } from "./AiSuggestionChip";
 
 interface Props {
   message: ChannelMessage;
@@ -26,9 +28,9 @@ interface Props {
   groupName: string | null;
   groupColor: string | null;
   groupIcon: string | null;
+  aiSuggestion?: AiSuggestion | null;
   onSelect: () => void;
-  onReply: () => void;
-  onForward: () => void;
+  onAcceptAiSuggestion?: () => void;
 }
 
 function formatListDate(value: string): string {
@@ -44,9 +46,9 @@ export function FunnemailMailCard({
   groupName,
   groupColor,
   groupIcon,
+  aiSuggestion,
   onSelect,
-  onReply,
-  onForward,
+  onAcceptAiSuggestion,
 }: Props) {
   const { brand } = extractSenderBrand(message.from_address || "");
   const senderName = extractSenderName(message.from_address);
@@ -58,7 +60,7 @@ export function FunnemailMailCard({
   return (
     <div
       className={cn(
-        "group relative w-full border-b border-border px-3 py-2.5 text-left transition-colors",
+        "relative w-full border-b border-border px-3 py-2.5 text-left transition-colors",
         selected && "bg-muted",
         !selected && isUnread && "bg-primary/5",
         !selected && !isUnread && "hover:bg-muted/50",
@@ -113,62 +115,36 @@ export function FunnemailMailCard({
             </p>
           )}
 
-          {/* Badge gruppo */}
-          {groupName && (
-            <div className="mt-1 flex items-center gap-1">
+          {/* Riga 6: slot suggerimento AI (a sinistra) — sempre presente */}
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <AiSuggestionChip suggestion={aiSuggestion} onAccept={onAcceptAiSuggestion} />
+            {groupName && (
               <span
-                className="inline-flex items-center gap-1 rounded-sm px-1 py-0 text-[9px] font-medium leading-tight"
+                className="inline-flex items-center gap-1 rounded-sm px-1 py-0 text-[9px] font-medium leading-tight opacity-60"
                 style={{
-                  backgroundColor: `${groupColor ?? "#3B82F6"}20`,
+                  backgroundColor: `${groupColor ?? "#3B82F6"}15`,
                   color: groupColor ?? "#3B82F6",
                 }}
-                title={`Gruppo: ${groupName}`}
+                title={`Gruppo assegnato: ${groupName}`}
               >
                 {groupIcon && <span>{groupIcon}</span>}
-                <span className="truncate max-w-[140px]">{groupName}</span>
+                <span className="truncate max-w-[120px]">{groupName}</span>
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </button>
 
-      {/* Azioni hover (in basso a destra) */}
-      <div className="absolute bottom-1.5 right-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-6 w-6"
-          title="Rispondi"
-          onClick={(e) => {
-            e.stopPropagation();
-            onReply();
-          }}
-        >
-          <Reply className="h-3 w-3" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-6 w-6"
-          title="Inoltra"
-          onClick={(e) => {
-            e.stopPropagation();
-            onForward();
-          }}
-        >
-          <Forward className="h-3 w-3" />
-        </Button>
-        <span onClick={(e) => e.stopPropagation()}>
-          <InlineGroupAssigner
-            fromAddress={message.from_address}
-            currentGroupName={groupName}
-          />
-        </span>
-        {!groupName && (
-          <Tag className="h-3 w-3 text-warning" aria-label="Non classificata" />
-        )}
+      {/* Azioni stabili in basso a destra (stesso pattern delle altre maschere) */}
+      <div
+        className="absolute bottom-1 right-2 flex items-center gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <EmailMessageActions message={message} />
+        <InlineGroupAssigner
+          fromAddress={message.from_address}
+          currentGroupName={groupName}
+        />
       </div>
     </div>
   );

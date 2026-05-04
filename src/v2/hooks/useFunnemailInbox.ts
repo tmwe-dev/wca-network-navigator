@@ -17,6 +17,8 @@ import {
   type FunnemailGroupedInbox,
 } from "@/data/funnemailInbox";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
+import { useBulkEmailAction } from "@/hooks/useEmailFolderActions";
+import { upsertEmailAddressRule } from "@/data/emailAddressRules";
 
 export interface UseFunnemailInboxResult {
   folders: FunnemailGroupFolder[];
@@ -34,6 +36,11 @@ export interface UseFunnemailInboxResult {
   overrideFolder: (messageId: string, newSlug: string) => void;
   reclassify: (messageId: string) => void;
   reclassifying: boolean;
+  bulkMarkRead: (messages: ChannelMessage[]) => Promise<void>;
+  bulkArchive: (messages: ChannelMessage[]) => void;
+  bulkDelete: (messages: ChannelMessage[]) => void;
+  bulkAssignGroup: (messages: ChannelMessage[], groupName: string) => Promise<void>;
+  bulkBusy: boolean;
 }
 
 const PAGE_SIZE = 5000;
@@ -150,6 +157,69 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     [reclassifyMutation],
   );
 
+  // ─── Bulk actions per gruppi della lista ──────────────────────────
+  const bulk = useBulkEmailAction();
+
+  const minimal = React.useCallback(
+    (msgs: ChannelMessage[]) => msgs.map((m) => ({ id: m.id, imap_uid: m.imap_uid })),
+    [],
+  );
+
+  const bulkMarkRead = React.useCallback(async (msgs: ChannelMessage[]) => {
+    const ids = msgs.filter((m) => !m.read_at).map((m) => m.id);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("channel_messages")
+      .update({ read_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${ids.length} email segnate come lette`);
+    qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+    qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+  }, [qc]);
+
+  const bulkArchive = React.useCallback((msgs: ChannelMessage[]) => {
+    if (msgs.length === 0) return;
+    bulk.mutate(
+      { messages: minimal(msgs), action: "archive" },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: ["funnemail-inbox"] }) },
+    );
+  }, [bulk, minimal, qc]);
+
+  const bulkDelete = React.useCallback((msgs: ChannelMessage[]) => {
+    if (msgs.length === 0) return;
+    bulk.mutate(
+      { messages: minimal(msgs), action: "delete" },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: ["funnemail-inbox"] }) },
+    );
+  }, [bulk, minimal, qc]);
+
+  const bulkAssignGroup = React.useCallback(async (msgs: ChannelMessage[], groupName: string) => {
+    if (!user?.id || msgs.length === 0) return;
+    const addrs = new Set<string>();
+    for (const m of msgs) {
+      const raw = m.from_address ?? "";
+      const match = raw.match(/<([^>]+)>/);
+      const addr = (match ? match[1] : raw).trim().toLowerCase();
+      if (addr) addrs.add(addr);
+    }
+    let ok = 0;
+    for (const addr of addrs) {
+      try {
+        await upsertEmailAddressRule(user.id, addr, { group_name: groupName });
+        ok++;
+      } catch (e) {
+        // continua sugli altri
+      }
+    }
+    toast.success(`${ok} mittente${ok === 1 ? "" : "i"} assegnato/i a "${groupName}"`);
+    qc.invalidateQueries({ queryKey: ["email-address-groups"] });
+    qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+  }, [qc, user?.id]);
+
   return {
     folders,
     foldersLoading: groupedQ.isLoading,
@@ -166,5 +236,10 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     overrideFolder,
     reclassify,
     reclassifying: reclassifyMutation.isPending,
+    bulkMarkRead,
+    bulkArchive,
+    bulkDelete,
+    bulkAssignGroup,
+    bulkBusy: bulk.isPending,
   };
 }
