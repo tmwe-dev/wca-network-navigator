@@ -63,7 +63,7 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
         partner_id: partnerId,
         source_type: "partner",
         source_id: partnerId,
-        assigned_to: user?.id ?? null,
+        assigned_to: null,
         activity_type: activityType,
         title: subj,
         description: notes || null,
