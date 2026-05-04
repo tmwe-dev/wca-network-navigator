@@ -262,11 +262,11 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
       className={cn(
         "flex min-h-0 flex-col bg-background/95",
         isDrawer
-          ? "max-h-[calc(100vh-18rem)] rounded-md border border-border/60 bg-background/40"
+          ? "h-[calc(100vh-9rem)] rounded-md border border-border/60 bg-background/40"
           : "h-full w-[260px] shrink-0 border-r border-border",
       )}
     >
-      <div className="border-b border-border px-3 py-3">
+      <div className="flex-shrink-0 border-b border-border px-3 py-2">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {isDrawer ? "Cartelle posta" : "Funny Mail"}
         </p>
