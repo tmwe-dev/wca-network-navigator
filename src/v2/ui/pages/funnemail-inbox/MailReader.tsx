@@ -8,7 +8,8 @@ import * as React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Building2, RefreshCw } from "lucide-react";
 import type { FunnemailFolder, FunnemailMailRow, SenderIntelRow } from "@/data/funnemailInbox";
 import { getSenderIntelByDomain } from "@/data/funnemailInbox";
 
@@ -16,6 +17,8 @@ interface Props {
   mail: FunnemailMailRow | null;
   folders: FunnemailFolder[];
   onOverrideFolder: (messageId: string, newSlug: string) => void;
+  onReclassify?: (messageId: string) => void;
+  reclassifying?: boolean;
 }
 
 /** Pulizia rapida del corpo: strip HTML grossolano + collapse whitespace. */
@@ -54,7 +57,7 @@ const ACTION_LABEL: Record<string, string> = {
   notify_human: "Solo notifica",
 };
 
-export function MailReader({ mail, folders, onOverrideFolder }: Props): React.ReactElement {
+export function MailReader({ mail, folders, onOverrideFolder, onReclassify, reclassifying }: Props): React.ReactElement {
   if (!mail) {
     return (
       <section className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
@@ -104,9 +107,24 @@ export function MailReader({ mail, folders, onOverrideFolder }: Props): React.Re
           <div className="p-4 space-y-4">
             {/* Funnemail decision */}
             <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <h4 className="text-xs font-semibold uppercase tracking-wide">Funnemail</h4>
+              <div className="flex items-center justify-between gap-1.5 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wide">Funnemail</h4>
+                </div>
+                {onReclassify && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    disabled={reclassifying}
+                    onClick={() => onReclassify(mail.message_id)}
+                    title="Forza riclassificazione AI"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${reclassifying ? "animate-spin" : ""}`} />
+                    Riclassifica
+                  </Button>
+                )}
               </div>
               {!decision && (
                 <div className="text-xs text-muted-foreground">Nessuna decisione registrata</div>

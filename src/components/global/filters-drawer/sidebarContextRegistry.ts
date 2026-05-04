@@ -44,6 +44,7 @@ export type SidebarContextKey =
   | "inbox-email"
   | "inbox-whatsapp"
   | "inbox-linkedin"
+  | "funnemail-inbox"
   | "inreach"
   | "sorting"
   | "coda-ai"
@@ -141,6 +142,13 @@ export const SIDEBAR_BANNER_REGISTRY: Record<SidebarContextKey, Meta> = {
     description:
       "Messaggi LinkedIn ricevuti via extension: filtra per stato di lettura.",
     tone: "primary",
+  },
+  "funnemail-inbox": {
+    icon: Sparkles,
+    title: "Funnemail Inbox",
+    description:
+      "Smistamento AI: vista, ricerca e cartelle (operative, archivio, da smistare) governate da prompt.",
+    tone: "accent",
   },
   inreach: {
     icon: Inbox,
