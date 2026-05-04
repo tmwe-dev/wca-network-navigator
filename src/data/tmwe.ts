@@ -79,7 +79,22 @@ export async function tmweRubricaSearch(query: string) {
 
 export async function tmweConnectStart(): Promise<string> {
   const { data, error } = await supabase.functions.invoke("tmwe-oauth-start", {
-    body: {},
+    body: { intent: "connect" },
+  });
+  if (error) throw error;
+  const url = (data as { redirect_url?: string })?.redirect_url;
+  if (!url) throw new Error("Missing redirect_url from tmwe-oauth-start");
+  return url;
+}
+
+/**
+ * Avvia il flusso di LOGIN via TMWE (no auth richiesta).
+ * L'utente viene rimbalzato sul provider TMWE; al ritorno la callback
+ * crea/risolve l'utente Lovable Cloud e apre la sessione via magic link.
+ */
+export async function tmweLoginStart(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("tmwe-oauth-start", {
+    body: { intent: "login" },
   });
   if (error) throw error;
   const url = (data as { redirect_url?: string })?.redirect_url;
