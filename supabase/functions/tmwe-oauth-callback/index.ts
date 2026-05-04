@@ -25,6 +25,11 @@ function appOrigin(): string {
   );
 }
 
+function tmweBaseUrl(): string {
+  const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+  return raw.replace(/\/erp$/, "");
+}
+
 function back(status: "ok" | "error", reason?: string, intent: "connect" | "login" = "connect"): Response {
   const path = intent === "login" ? "/v2/login" : "/v2/settings/connections";
   const u = new URL(path, appOrigin());
@@ -73,7 +78,7 @@ Deno.serve(async (req) => {
     await svc.from("tmwe_oauth_state").delete().eq("state", state);
 
     let userId = stateRow.user_id as string | null;
-    const baseUrl = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+    const baseUrl = tmweBaseUrl();
 
     // Exchange code -> tokens
     const tok = await postForm(baseUrl, "/erp/tmwe_json/exchange_code_for_jwt", {
