@@ -7999,6 +7999,7 @@ export type Database = {
         Row: {
           ai_config: Json | null
           created_at: string
+          created_via_tmwe: boolean
           display_name: string | null
           email_signature_html: string | null
           findair_sub: string | null
@@ -8014,6 +8015,7 @@ export type Database = {
         Insert: {
           ai_config?: Json | null
           created_at?: string
+          created_via_tmwe?: boolean
           display_name?: string | null
           email_signature_html?: string | null
           findair_sub?: string | null
@@ -8029,6 +8031,7 @@ export type Database = {
         Update: {
           ai_config?: Json | null
           created_at?: string
+          created_via_tmwe?: boolean
           display_name?: string | null
           email_signature_html?: string | null
           findair_sub?: string | null
@@ -9575,20 +9578,23 @@ export type Database = {
         Row: {
           created_at: string
           expires_at: string
+          intent: string
           state: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           expires_at?: string
+          intent?: string
           state: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           expires_at?: string
+          intent?: string
           state?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
