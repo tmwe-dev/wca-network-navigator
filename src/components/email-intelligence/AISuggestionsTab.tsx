@@ -307,6 +307,7 @@ export default function AISuggestionsTab() {
   const [showPreview, setShowPreview] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
   const [groupBySuggestion, setGroupBySuggestion] = useState(false);
+  const [actionsRow, setActionsRow] = useState<AddressRow | null>(null);
 
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
