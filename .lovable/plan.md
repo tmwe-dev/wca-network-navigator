@@ -105,3 +105,15 @@ Interventi:
 ## Domanda prima di partire
 
 Vuoi che parta **subito da Fase 0** (audit + pulizia duplicati + test di regressione) producendo il report `/mnt/documents/prompt-audit.md`, oppure preferisci che salti l'audit e attacchi direttamente Fase 1 (group-aware classification, l'impatto pratico più visibile)?
+
+---
+
+## Stato implementazione (2026-05-04)
+
+- ✅ **Fase 0** — audit + deprecazione 8 duplicati Command (`/mnt/documents/prompt-audit.md`).
+- ✅ **Fase 1** — `classify-email-response` ora: (a) join `email_sender_groups`, (b) blocco `SENDER GROUP` iniettato nel prompt, (c) `getNextStatusGated` impedisce promozione lead se gruppo non commerciale. Nuovo prompt `Group-Aware Classification` (priority 90).
+- ✅ **Fase 2 (DB)** — tabella `inbound_operative_actions` + prompt `Operative Dispatcher Routing`. Edge `dispatch-inbound-action` da implementare quando l'utente configura le prime regole via UI.
+- ✅ **Fase 3 (DB)** — tabella `wake_up_rules` + prompt `Wake-Up Composer`. Wiring di `smart-scheduler` resta da fare quando ci sono righe configurate.
+- ✅ **Fase 4** — coverage report generato (`/mnt/documents/pipeline-coverage.md`).
+- ✅ **Fase 5** — campi `classification_hint`, `response_style_hint`, `auto_action_default` aggiunti a `email_sender_groups`. UI editor da aggiungere quando l'utente vuole gestirli visualmente in Funny Mail.
+- ⏸ **Fase 6** — dashboard effectiveness rinviata: già esistono `ai_interaction_log` e `prompt_test_runs`; la pagina `/v2/prompt-lab/effectiveness` può essere costruita on-demand.
