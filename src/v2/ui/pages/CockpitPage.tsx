@@ -15,6 +15,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCockpitLogic } from "@/hooks/useCockpitLogic";
+import { OraclePanelSlim } from "@/components/email/OraclePanelSlim";
+import type { OracleConfig } from "@/components/email/OraclePanel";
 // Re-export cockpit types for backwards compatibility
 export type {
   ViewMode,
@@ -44,6 +46,37 @@ export function CockpitPage() {
     contactsForAI, searchQuery, linkedInLookup, assignmentInfoMap,
     draftQueue,
   } = logic;
+
+  // Oracle handlers — riutilizzano la pipeline AI esistente del Cockpit.
+  // `config` arriva già con customGoal/brief uniti; useCockpitLogic legge
+  // direttamente dal ComposeAiConfigContext, quindi qui basta triggerare.
+  const handleOracleGenerate = (_config: OracleConfig) => {
+    if (!draftState.contactId || !draftState.channel) {
+      // eslint-disable-next-line no-alert
+      toast.info("Trascina prima un contatto su un canale per generare");
+      return;
+    }
+    handleRegenerate();
+  };
+  const handleOracleImprove = (_config: OracleConfig) => {
+    if (!draftState.body) {
+      toast.info("Genera prima una bozza da migliorare");
+      return;
+    }
+    handleImprove();
+  };
+  const handleLoadTemplate = (subject: string, body: string) => {
+    setDraftState({ ...draftState, subject: subject || draftState.subject, body: body || draftState.body });
+  };
+  const handleInsertImage = (url: string) => {
+    if (!url) return;
+    const tag = `<img src="${url}" alt="" style="max-width:100%;height:auto;" />`;
+    setDraftState({ ...draftState, body: (draftState.body || "") + "\n" + tag });
+  };
+
+  const recipientPartnerId = draftState.contactId
+    ? contactsMap[draftState.contactId]?.partnerId ?? null
+    : null;
 
   return (
     <div data-testid="page-cockpit" className="h-full flex flex-col overflow-hidden">
@@ -128,6 +161,21 @@ export function CockpitPage() {
         </div>
         <div className="flex-1 min-w-[320px] max-w-[480px] flex-shrink-0 border-l border-border/50">
           <div className="h-full flex flex-col">
+            {/* Oracolo — identico a /v2/email: goal + Genera/Migliora + template/immagini */}
+            <div className="max-h-[50%] flex-shrink-0 overflow-hidden border-b border-border/50">
+              <OraclePanelSlim
+                onGenerate={handleOracleGenerate}
+                onImprove={handleOracleImprove}
+                onLoadTemplate={handleLoadTemplate}
+                onInsertImage={handleInsertImage}
+                generating={!!draftState.isGenerating}
+                improving={false}
+                hasBody={!!draftState.body}
+                recipientPartnerId={recipientPartnerId}
+                recipientCount={draftState.contactId ? 1 : 0}
+                contextSummary={draftState.context_summary ?? null}
+              />
+            </div>
             {draftQueue.length > 0 && (
               <div className="px-3 py-2 border-b border-border/40 bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-2 overflow-x-auto">
                 <span className="font-semibold text-foreground shrink-0">Bulk ({draftQueue.length + 1}):</span>
