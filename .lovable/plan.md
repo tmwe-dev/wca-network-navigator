@@ -1,172 +1,109 @@
+## Principio: tutto fuori sidebar tranne filtri/raggruppamenti
 
-# Funnemail Inbox — il client di posta che decide tutto via prompt
+- **Sidebar globale** (filtri-drawer): contiene viste, cartelle, filtri urgenza, ricerca. Nient'altro.
+- **Pagina Funnemail Inbox** (fuori sidebar): è il **client di posta** vero. Riusa lo stile delle nostre email esistenti (`SmartInboxView` / componenti `src/components/email`) e aggiunge il **box "Suggerimento Funnemail"** sopra ogni mail con cartella, azione, urgenza, motivazione e, quando il mittente è sconosciuto, gli esiti dello **Scout**.
 
-## Filosofia
+## Stato già pronto (non si tocca)
 
-Niente più liste di gruppi cablate nel codice, niente filtri JS in agenda, niente regex sui titoli. Tutto il comportamento è governato da:
+- 14 cartelle in `funnemail_folders` (rfq, operations, tasks, support, alerts, info, internal, other_urgent, archive set, to_sort).
+- Edge `funnemail-classify` con prompt `funnemail_classifier` da Prompt Lab.
+- Edge `sherlock-extract` con livelli Scout/Detective/Sherlock già esistente.
+- Pattern `FiltersDrawer` + `sidebarContextRegistry` + `FilterSection/ChipGroup/Chip`.
 
-1. Un **prompt operativo** in `operative_prompts` (editabile dal Prompt Lab senza redeploy).
-2. Una **KB** in `knowledge_base` con le definizioni delle cartelle operative.
-3. Due **cervelli paralleli** che leggono la stessa email e producono due decisioni indipendenti.
+## Cosa cambia
 
-Il codice fa solo da postino: chiama l'AI, legge la sua decisione, la mostra.
+### 1. Sidebar globale → nuova sezione "funnemail-inbox"
 
----
+- Aggiungo `"funnemail-inbox"` al `SidebarContextKey` con banner (icona Inbox, titolo "Funnemail Inbox", descrizione breve).
+- Nuovo file `FunnemailInboxFiltersSection.tsx` con SOLO filtri (riusa `FilterSection/ChipGroup/Chip`, niente UI custom):
+  - **Vista**: Tutte / Prioritario (urgency in critical/high) / Standard (normal) / Altro (low + sorting + archive).
+  - **Cartelle**: chip per ognuna delle 14 cartelle attive (lette runtime da DB).
+  - **Cerca**: input testo (oggetto + mittente).
+  - **Solo non letti**: toggle.
+- Aggiungo i campi nel `GlobalFiltersContext` (`funnemailView`, `funnemailFolder`, `funnemailSearch`, `funnemailUnreadOnly`).
+- La pagina `FunnemailInboxPage` registra la sidebar come "funnemail-inbox" (come fanno Agenda/Inbox).
 
-## I due cervelli paralleli
+### 2. FunnemailInboxPage → vero client di posta (rimuovo i 3 colonne attuali)
 
-```text
-                Email inbound
-                     │
-        ┌────────────┴────────────┐
-        ▼                         ▼
-  Funnemail (operativo)     LeadProcessManager (commerciale)
-  - Cartella                 - Stato lead
-  - Azione consigliata       - Circuito di attesa
-  - Va in agenda? S/N        - Owner commerciale
-  - Bozza necessaria? S/N    - Pipeline Kanban
-        │                         │
-        └─────────┬───────────────┘
-                  ▼
-         funnemail_decisions (una riga per email)
-                  │
-    ┌─────────────┼─────────────┐
-    ▼             ▼             ▼
- Inbox UI     Agenda      Outreach pipeline
-```
+- **Rimuovo** `FoldersSidebar` (tutto va nella sidebar globale).
+- Layout 2 colonne: lista mail (sx) + reader (dx), come nelle altre pagine email.
+- La **lista** legge dalla DAL filtrata da `useGlobalFilters()`. Riga = oggetto + mittente + età + badge urgenza/azione/cartella + pallino non-letto. Niente cose strane.
+- Il **reader** mostra: header (mittente, oggetto, data, partner se collegato) + corpo (HTML safe via DOMPurify, già usato nel resto) + sezione **"Suggerimento Funnemail"** in un Card minimalista:
+  - cartella suggerita + azione suggerita + urgenza + reasoning + confidence
+  - badge "Mittente sconosciuto" + risultato Scout se presente (tipo azienda, paese, sito, ruolo presunto: cliente / partner / freight forwarder / fornitore / sconosciuto)
+  - pulsante "Conferma cartella" / select per riassegnare manualmente
+  - pulsante "Riclassifica" (force=true)
 
-I due sistemi non si sovrappongono. Funnemail decide *dove vive la mail nell'inbox e cosa farne operativamente*. Il sistema commerciale decide *se merita seguito di vendita*. Entrambi loggano la loro decisione sulla stessa riga `funnemail_decisions` per audit.
+### 3. Scout automatico in inbound (solo mittente sconosciuto)
 
----
+- Nuova edge function **`funnemail-scout-sender`** (sub 200 LOC):
+  1. Riceve `{ from_address, message_id, user_id }`.
+  2. Estrae dominio, cerca nei `partners` (match su email/dominio).
+  3. Se trovato → ritorna `{ known: true, partner_id, partner_type }` e basta.
+  4. Se NON trovato → invoca `sherlock-extract` livello **scout** sul dominio (gratuito, senza AI gateway costoso).
+  5. Salva l'esito in nuova tabella `funnemail_sender_intel` (cache 30gg per dominio).
+  6. Ritorna `{ known: false, intel: { company_type, country, website, role_guess, evidence_url } }`.
+- Hook in `classify-inbound-message`: PRIMA di chiamare `funnemail-classify`, chiama `funnemail-scout-sender`. Passa il risultato a `funnemail-classify` come `sender_intel` per arricchire il contesto del prompt.
+- Tutta la logica AI passa da `invokeAi()` per rispettare l'AI Invocation Charter (registro nuovo scope `funnemail_scout`).
 
-## Cosa costruisco
+### 4. Prompt Funnemail aggiornato (matrice operations)
 
-### 1. Pagina nuova `/v2/funnemail-inbox`
+Aggiorno il prompt `funnemail_classifier` in `operative_prompts` (no codice, solo testo, modificabile da Prompt Lab):
+- Riceve in input anche `sender_intel` (tipo azienda).
+- Per email **operations**, riconosce sotto-tipo e applica matrice:
+  - **booking_confirm** → cartella `operations`, azione `none`, agenda no, estrai riferimento booking.
+  - **awb_update** → cartella `operations`, azione `none`, agenda no.
+  - **tracking_update** → cartella `operations`, azione `none`, agenda no.
+  - **rate_alert** → cartella `info`, azione `none`, agenda no.
+  - **invoice/document** → cartella `tasks`, azione `none`, agenda no.
+  - **operative_quotation_received** → cartella `rfq`, azione `draft_reply`, agenda **sì**.
+  - **operative_request** (richiesta servizio da partner) → cartella `operations`, azione `notify_human`, agenda **sì**.
+- Default conservativo: `goes_to_agenda=false`. Vero solo se mail richiede azione esplicita dell'operatore.
+- Il sotto-tipo va in `decision.reasoning` come prefisso "[subtype:xxx] ...".
 
-Layout a tre colonne, copia visiva di un mail client classico, ma le "cartelle" sono **classificazioni operative**, non gruppi mittente.
+### 5. Tabella nuova `funnemail_sender_intel`
 
-```text
-┌──────────────────┬──────────────────────────┬───────────────────────┐
-│ SIDEBAR          │ LISTA MAIL               │ LETTURA + AZIONI      │
-│                  │ (cartella selezionata)   │                       │
-│ ▸ Operative      │                          │ Oggetto               │
-│   - Offerte/RFQ  │ ┌──────────────────────┐ │ Da: ...               │
-│   - Operations   │ │ ⚡ Urgente           │ │ ─────                 │
-│   - Tasks/Pratich│ │ Oggetto              │ │ [corpo pulito]        │
-│   - Supporto     │ │ Mittente · 2h        │ │                       │
-│   - Chat interna │ │ [badge azione]       │ │ ─── Funnemail ───     │
-│   - Urgenze/Alert│ └──────────────────────┘ │ Cartella: RFQ         │
-│   - Informazioni │ ┌──────────────────────┐ │ Azione: bozza         │
-│ ▸ Archivio       │ │ ...                  │ │ Confidenza: 92%       │
-│   - Newsletter   │ └──────────────────────┘ │ Perché: [reasoning]   │
-│   - NO_REPLY     │                          │ [Apri bozza] [Override│
-│   - ADS          │                          │                       │
-│ ▸ Da smistare    │                          │ ─── Commerciale ───   │
-│ ▸ Tutte          │                          │ Lead: in attesa       │
-└──────────────────┴──────────────────────────┴───────────────────────┘
-```
+- Campi business: `email_domain` (PK), `is_known_partner` bool, `partner_id` nullable, `company_type` text, `country` text, `website` text, `role_guess` text, `evidence` jsonb, `expires_at` timestamptz.
+- RLS: globale lettura per autenticati (è cache di info pubbliche), insert/update solo via service role.
 
-Cartelle operative iniziali (tutte editabili da DB, nessuna hardcoded):
+## Cosa NON cambia (volutamente — rispetta principio madre)
 
-- **Offerte / Richieste quotazione**
-- **Servizi operations**
-- **Informazioni**
-- **Tasks / Pratiche**
-- **Richieste di supporto**
-- **Chat / Messaggi interni** (colleghi & partner)
-- **Urgenze / Alert**
-- **Altro urgente**
+- `check-inbox`, `email-imap-proxy`, `mark-imap-seen` → intoccati.
+- Editorial review intoccato.
+- Agenda → resta come l'abbiamo ridisegnata; nessun nuovo intervento qui.
+- Le 19 attività vecchie → restano come da decisione precedente.
+- Nessun hardcode di mittenti/regole: tutto via prompt + tabelle.
 
-Sotto, sezione "Archivio" con le cartelle automatiche (Newsletter, NO_REPLY, ADS, ecc.) — sempre presenti ma collassate per default. La mail ci finisce quando Funnemail dice "non richiede azione".
+## Tecnica (riassunto file)
 
-### 2. Tabella `funnemail_folders` (le cartelle, editabili)
+**Nuovi**
+- `supabase/functions/funnemail-scout-sender/index.ts`
+- `supabase/migrations/<ts>_funnemail_sender_intel.sql` (tabella + RLS)
+- `supabase/migrations/<ts>_funnemail_classifier_prompt_v2.sql` (UPDATE del prompt operativo)
+- `src/components/global/filters-drawer/FunnemailInboxFiltersSection.tsx`
 
-Una tabella DB con: nome, slug, descrizione operativa, icona, ordine, sezione (operative/archivio), `accept_into_agenda` (bool), prompt-hint per il classificatore. **Nessuna lista nel codice.** L'admin può aggiungere/togliere cartelle dalla UI.
+**Modificati**
+- `src/components/global/filters-drawer/sidebarContextRegistry.ts` (+ key)
+- `src/components/global/filters-drawer/FiltersDrawer.tsx` (+ case render)
+- `src/contexts/GlobalFiltersContext.tsx` (+ 4 campi funnemail*)
+- `src/data/funnemailInbox.ts` (query con i nuovi filtri + join intel)
+- `src/v2/hooks/useFunnemailInbox.ts` (legge dai global filters)
+- `src/v2/ui/pages/FunnemailInboxPage.tsx` (layout 2 colonne, registra sidebar)
+- `src/v2/ui/pages/funnemail-inbox/MailReader.tsx` (Card "Suggerimento Funnemail" + Scout)
+- `src/v2/ui/pages/funnemail-inbox/MailList.tsx` (riusa stile email esistente, semplificato)
+- `supabase/functions/classify-inbound-message/index.ts` (chiama scout PRIMA di classify, passa intel)
+- `supabase/functions/funnemail-classify/index.ts` (accetta `sender_intel` opzionale, lo aggiunge al prompt)
+- `src/lib/queryKeys.ts` (key nuovi)
 
-### 3. Tabella `funnemail_decisions` (la decisione per ogni email)
+**Eliminati**
+- `src/v2/ui/pages/funnemail-inbox/FoldersSidebar.tsx` (tutto traslato in sidebar globale)
 
-Una riga per `(message_id)`: `folder_slug`, `suggested_action` (none/draft_reply/forward/escalate/archive), `goes_to_agenda` (bool), `urgency`, `reasoning` (testo AI), `confidence`, `commercial_handoff` (bool, se il cervello commerciale deve prendere in carico).
+## Checklist verifica finale
 
-### 4. Prompt operativo `funnemail_classifier`
-
-Nuovo prompt in `operative_prompts` con `context = 'funnemail_classifier'`, scritto secondo lo standard Professore (Identità/Obiettivo/Metodo/Guardrail/Output). Riceve in input:
-- testo email pulito (via `contentNormalizer`)
-- mittente + dominio + gruppo già noto
-- elenco cartelle disponibili (caricato da `funnemail_folders`)
-- storico ultime N interazioni con quel mittente
-
-Restituisce JSON validato (Zod):
-```json
-{
-  "folder_slug": "rfq",
-  "suggested_action": "draft_reply",
-  "goes_to_agenda": true,
-  "urgency": "high",
-  "confidence": 0.92,
-  "reasoning": "Cliente conosciuto chiede preventivo per spedizione MXP→JFK, deadline venerdì.",
-  "commercial_handoff": true
-}
-```
-
-Il prompt è la **sola sede della logica**. Cambi cartelle, soglie, criteri "rumore" → modifichi il prompt nel Prompt Lab. Niente deploy.
-
-### 5. Cambio minimo a `classify-inbound-message`
-
-Dopo la classificazione AI esistente, **prima** di creare l'attività `follow_up`, chiama il nuovo classificatore Funnemail. Se `goes_to_agenda = false`, non crea l'attività di follow_up. Se `commercial_handoff = true`, passa l'evento al `LeadProcessManager` come fa già oggi.
-
-Modifica chirurgica, una sola decisione delegata al prompt: "questa mail va in agenda?". Nessuna lista nel codice.
-
-### 6. Agenda — zero modifiche di filtraggio
-
-L'agenda continua a mostrare quello che ha. Le 19 attività di oggi restano. Da domani, semplicemente non se ne creano più di nuove per le mail che il prompt Funnemail classifica come "non richiedono risposta umana". Pulizia naturale per attrito.
-
-### 7. Voce di sidebar
-
-Aggiungo "Funnemail Inbox" nella sidebar V2 sopra la attuale "Email Intelligence". La pagina `/v2/email-intelligence` resta com'è (è il pannello di configurazione, non il client).
-
----
-
-## Dettagli tecnici
-
-**File nuovi:**
-- `src/v2/ui/pages/FunnemailInboxPage.tsx` — pagina, solo UI
-- `src/v2/hooks/useFunnemailInbox.ts` — stato, query keys
-- `src/v2/ui/pages/funnemail-inbox/FoldersSidebar.tsx`
-- `src/v2/ui/pages/funnemail-inbox/MailList.tsx`
-- `src/v2/ui/pages/funnemail-inbox/MailReader.tsx`
-- `src/v2/ui/pages/funnemail-inbox/FunnemailDecisionPanel.tsx`
-- `src/v2/ui/pages/funnemail-inbox/CommercialPanel.tsx`
-- `src/data/funnemailInbox.ts` — DAL letture (folders, mails per folder, decisions)
-- `supabase/functions/funnemail-classify/index.ts` — chiama AI, valida JSON con Zod, scrive `funnemail_decisions`
-
-**File toccati (chirurgia):**
-- `supabase/functions/classify-inbound-message/index.ts` — chiama `funnemail-classify` e usa `goes_to_agenda` per decidere se creare l'attività `follow_up`
-- `src/v2/ui/AppSidebar.tsx` (o equivalente) — voce nuova
-- `src/lib/queryKeys.ts` — chiavi `funnemail.inbox.*`
-- `src/v2/ui/pages/PromptLabPage.tsx` — assicuro che `funnemail_classifier` sia listato (auto, già lo fa)
-
-**Migrazione DB:**
-- `funnemail_folders` (slug univoco, prompt_hint, accept_into_agenda, sort_order, sezione)
-- `funnemail_decisions` (message_id PK, folder_slug FK, suggested_action, goes_to_agenda, urgency, reasoning, confidence, commercial_handoff)
-- Seed iniziale con le 8 cartelle operative + 5 di archivio (Newsletter/NO_REPLY/ADS/Spam/Other)
-- Seed prompt `funnemail_classifier` in `operative_prompts`
-- RLS: lettura authenticated, write solo admin
-- Edge metrics: log `funnemail.classify.*`
-
-**Cosa NON tocco:**
-- `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria)
-- Funnemail dispatcher esistente (resta per le policy gruppo)
-- `journalistReview`
-- Codice agenda (nessun filtro JS, nessun cleanup retroattivo)
-- Email Intelligence page attuale
-
----
-
-## Cosa cambia per te in pratica
-
-- Nuova voce sidebar "Funnemail Inbox": apri e vedi le mail nelle cartelle giuste.
-- Newsletter, no-reply, ADS finiscono in "Archivio" senza creare attività in agenda.
-- Le RFQ vere finiscono in "Offerte / RFQ" con badge "bozza pronta" e passano al cervello commerciale.
-- Il prompt che decide tutto questo lo modifichi tu nel Prompt Lab → effetto immediato, zero deploy.
-- Le 19 attività vecchie le smaltisci a mano. Da domani non se ne formano più di rumore.
-
+- Cartelle e viste appaiono SOLO nella sidebar filtri globale.
+- La pagina mostra mail con stile email standard + box suggerimento sopra.
+- Mittente noto → niente Scout, intel = `{ known: true, partner_id }`.
+- Mittente sconosciuto → Scout chiamato 1 volta, cached 30gg.
+- Email "operations" finiscono nella cartella corretta secondo matrice prompt, niente in agenda salvo eccezioni.
+- Prompt Funnemail editabile da Prompt Lab senza redeploy.
+- Nessuna chiamata AI fuori da `invokeAi()` lato frontend; nuovo scope `funnemail_scout` registrato.
