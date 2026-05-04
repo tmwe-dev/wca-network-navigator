@@ -99,7 +99,8 @@ Deno.serve(async (req) => {
     const userId = await getUserId(req, supabase);
     const byok = userId ? await isByok(userId, supabase) : false;
 
-    if (userId && !byok) {
+    const usageLimitsEnabled = Deno.env.get("AI_USAGE_LIMITS_ENABLED") === "true";
+    if (usageLimitsEnabled && userId && !byok) {
       const { data: credits } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
       if (!credits || credits.balance < 5) {
         return new Response(JSON.stringify({ error: "Crediti insufficienti. Acquista crediti extra o aggiungi le tue chiavi API." }), {
