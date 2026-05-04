@@ -19,15 +19,17 @@ import {
 import {
   Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen, Layers,
 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
-import type { EmailSenderGroup } from "@/types/email-management";
+import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
+import { SenderActionsDialog } from "./management/SenderActionsDialog";
 
 interface AddressRow {
   id: string;
@@ -77,11 +79,12 @@ interface CardProps {
   onAccept: (row: AddressRow) => void;
   onIgnore: (row: AddressRow) => void;
   onAssign: (row: AddressRow, groupId: string) => void;
+  onOpenActions: (row: AddressRow) => void;
   busy: boolean;
 }
 
 const SuggestionCard = memo(function SuggestionCard({
-  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, busy,
+  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
 }: CardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = row.domain || getDomain(row.email_address);
@@ -234,6 +237,21 @@ const SuggestionCard = memo(function SuggestionCard({
           </Select>
 
           <div className="flex-1" />
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 gap-1"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenActions(row);
+            }}
+            disabled={busy}
+            title="Azioni e regole"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            <span className="text-xs hidden sm:inline">Azioni</span>
+          </Button>
 
           <Button
             size="sm"
