@@ -78,9 +78,20 @@ function cleanTitle(title: string | null): string {
   if (!title) return "—";
   return title
     .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+    .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
     .replace(/^re:\s*/i, "")
     .replace(/^fwd:\s*/i, "")
     .trim() || "—";
+}
+
+/** Estrae il dominio del mittente da una description tipo "Messaggio in arrivo da x@y.com (...)". */
+function senderFromDescription(desc: string | null | undefined): { email: string; domain: string } | null {
+  if (!desc) return null;
+  const m = desc.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+  if (!m) return null;
+  const email = m[1];
+  const domain = email.split("@")[1] ?? email;
+  return { email, domain };
 }
 
 interface AgendaActionPanelProps {
@@ -111,7 +122,13 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   }
 
   const ChannelIcon = channelIcon[activity.activity_type] || Mail;
-  const partnerName = activity.partners?.company_name || "Senza partner";
+  const sender = senderFromDescription(activity.description);
+  const partnerName =
+    activity.partners?.company_name ||
+    sender?.domain ||
+    "Mittente sconosciuto";
+  const senderEmail = sender?.email ?? null;
+  const isUnknownSender = !activity.partners?.company_name && !!sender;
   const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
   const city = activity.partners?.city;
   const country = activity.partners?.country_name;
@@ -221,11 +238,19 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
           {description && (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                Contesto
+                {isUnknownSender ? "Mittente" : "Contesto"}
               </p>
-              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                {description}
-              </p>
+              {isUnknownSender ? (
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  Email arrivata da <span className="font-medium">{senderEmail}</span>.
+                  Questo indirizzo non è collegato a nessuna azienda nel CRM:
+                  apri il messaggio per decidere se creare un nuovo partner o archiviarlo.
+                </p>
+              ) : (
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                  {description}
+                </p>
+              )}
             </section>
           )}
 

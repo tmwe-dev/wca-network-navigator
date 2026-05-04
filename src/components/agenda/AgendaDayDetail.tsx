@@ -95,9 +95,20 @@ function cleanTitle(title: string | null): string {
   if (!title) return "—";
   return title
     .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+    .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
     .replace(/^re:\s*/i, "")
     .replace(/^fwd:\s*/i, "")
     .trim() || "—";
+}
+
+/** Estrae un nome leggibile dal mittente in description (es. "leo@aerolog.net" → "aerolog.net"). */
+function senderFromDescription(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const m = desc.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+  if (!m) return null;
+  const email = m[1];
+  const domain = email.split("@")[1] ?? "";
+  return domain || email;
 }
 
 export default function AgendaDayDetail({
@@ -277,7 +288,10 @@ function ActivityRow({
   const urgency = urgencyFromAge(activity.created_at);
   const updateActivity = useUpdateActivity();
 
-  const partnerName = activity.partners?.company_name || "Senza partner";
+  const partnerName =
+    activity.partners?.company_name ||
+    senderFromDescription(activity.description) ||
+    "Mittente sconosciuto";
   const flag = activity.partners?.country_code
     ? getCountryFlag(activity.partners.country_code)
     : null;
