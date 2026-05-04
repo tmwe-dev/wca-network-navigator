@@ -25,6 +25,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
   const isInreach = seg === `/${ROUTE_INREACH}`;
   const isEmailForge = seg === "/ai-staff/email-forge";
   const isEmailIntelligence = seg === "/email-intelligence";
+  const isFunnemailInbox = seg === "/funnemail-inbox";
 
   const outreachTab = g.filters.outreachTab;
   const isCockpit = isOutreach && outreachTab === "cockpit";
@@ -57,7 +58,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       .map(([code, count]) => ({ code, count, flag: FLAG[code] || "🌍" }));
   }, [contacts, isCockpit]);
 
-  const sectionTitle = isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "WCA Partner" : isCRM ? (crmDrawerTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
+  const sectionTitle = isFunnemailInbox ? "Funnemail Inbox" : isCockpit ? "Cockpit" : isWorkspace ? "Workspace" : isInUscita ? "In Uscita" : isCircuito ? "Circuito" : isAttivita ? "Attività" : isSorting ? "Approvazioni" : isCodaAI ? "Coda AI" : isABTest ? "A/B Test" : isArena ? "AI Arena" : isInreach ? `Inreach · ${inreachCh === "email" ? "Email" : inreachCh === "whatsapp" ? "WhatsApp" : "LinkedIn"}` : isEmail ? "Email" : isWhatsApp ? "WhatsApp" : isLinkedIn ? "LinkedIn" : isNetwork ? "WCA Partner" : isCRM ? (crmDrawerTab === "biglietti" ? "Biglietti da visita" : "CRM Contatti") : isAgenda ? "Agenda" : isEmailComposer ? "Email Composer" : isCampaigns ? "Filtri Campagne" : isEmailForge ? "Email Forge — Lab AI" : isEmailIntelligence ? "Email Intelligence — Mittenti" : "Globale";
 
   useEffect(() => {
     const handler = () => onOpenChange(false);
@@ -110,6 +111,11 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.emailIntelVolume !== "all") n++;
       if (!g.filters.emailIntelHideClassified) n++;
     }
+    if (isFunnemailInbox) {
+      if (g.filters.funnemailSearch.trim()) n++;
+      if (g.filters.funnemailView !== "all") n++;
+      if (g.filters.funnemailFolder !== "rfq") n++;
+    }
     if (isNetwork) {
       if (g.filters.networkSearch.trim()) n++;
       if (g.filters.networkQuality !== "all") n++;
@@ -127,7 +133,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       if (g.filters.groupBy !== "country") n++;
     }
     return n;
-  }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence]);
+  }, [g.filters, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isNetwork, isCRM, isEmailIntelligence, isFunnemailInbox]);
 
   const handleResetAll = useCallback(() => {
     if (isCockpit) {
@@ -158,7 +164,12 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
       g.setFilter("emailIntelSort", "count-desc");
       g.setFilter("emailIntelHideClassified", true);
     }
-  }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM, isEmailIntelligence]);
+    if (isFunnemailInbox) {
+      g.setFilter("funnemailSearch", "");
+      g.setFilter("funnemailView", "all");
+      g.setFilter("funnemailFolder", "rfq");
+    }
+  }, [g, isCockpit, isAttivita, isSorting, isCodaAI, isABTest, isArena, isAgenda, isEmail, isWhatsApp, isLinkedIn, isWorkspace, isInUscita, isNetwork, isCRM, isEmailIntelligence, isFunnemailInbox]);
 
   const toggleOrigin = useCallback((val: string) => {
     const next = new Set(g.filters.origin);
@@ -213,7 +224,7 @@ export function useFiltersDrawerState(onOpenChange: (open: boolean) => void) {
     isSorting, isCodaAI, isABTest, isArena,
     isEmail, isWhatsApp, isLinkedIn, isInbox,
     isOutreach, isNetwork, isCRM, crmDrawerTab, isAgenda, isEmailComposer, isCampaigns,
-    isInreach, isEmailForge, isEmailIntelligence,
+    isInreach, isEmailForge, isEmailIntelligence, isFunnemailInbox,
     handleResetAll, toggleOrigin, toggleCockpitCountry,
     toggleCockpitChannel, toggleCockpitQuality, toggleWs, startResize,
   };

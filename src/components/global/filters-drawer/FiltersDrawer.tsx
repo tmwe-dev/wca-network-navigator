@@ -23,6 +23,7 @@ import { CodaAIFiltersSection } from "./CodaAIFiltersSection";
 import { ABTestFiltersSection } from "./ABTestFiltersSection";
 import { ArenaFiltersSection } from "./ArenaFiltersSection";
 import { EmailIntelligenceFiltersSection } from "./EmailIntelligenceFiltersSection";
+import { FunnemailInboxFiltersSection } from "./FunnemailInboxFiltersSection";
 import { FilterSection, ChipGroup, Chip } from "./shared";
 import { SidebarBanner } from "./SidebarBanner";
 import { SIDEBAR_BANNER_REGISTRY, type SidebarContextKey } from "./sidebarContextRegistry";
@@ -36,7 +37,9 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
     ? "w-[92vw] sm:w-[560px] sm:max-w-[620px]"
     : "w-[90vw] sm:w-[400px] sm:max-w-[420px]";
 
-  const bannerKey: SidebarContextKey | null = state.isCockpit
+  const bannerKey: SidebarContextKey | null = state.isFunnemailInbox
+    ? "funnemail-inbox"
+    : state.isCockpit
     ? "cockpit"
     : state.isWorkspace
       ? "workspace"
@@ -165,9 +168,10 @@ export function FiltersDrawer({ open, onOpenChange }: FiltersDrawerProps) {
             {state.isABTest && <ABTestFiltersSection />}
             {state.isArena && <ArenaFiltersSection />}
             {state.isEmailIntelligence && <EmailIntelligenceFiltersSection />}
+            {state.isFunnemailInbox && <FunnemailInboxFiltersSection />}
             {state.isEmailComposer && <EmailComposerWizard onConfirm={() => onOpenChange(false)} />}
 
-            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && !state.isSorting && !state.isCodaAI && !state.isABTest && !state.isArena && !state.isEmailIntelligence && (
+            {!state.isOutreach && !state.isNetwork && !state.isCRM && !state.isAgenda && !state.isEmailComposer && !state.isCampaigns && !state.isInreach && !state.isEmailForge && !state.isSorting && !state.isCodaAI && !state.isABTest && !state.isArena && !state.isEmailIntelligence && !state.isFunnemailInbox && (
               <div className="text-center py-8 text-muted-foreground">
                 <SlidersHorizontal className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Nessun filtro per questa sezione</p>
