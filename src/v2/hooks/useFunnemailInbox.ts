@@ -8,98 +8,102 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useAuth } from "@/providers/AuthProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import {
-  listFunnemailFolders,
-  countFunnemailByFolder,
-  listMailsByFolder,
+  listFunnemailGroupedInbox,
   overrideFunnemailFolder,
-  type FunnemailFolder,
-  type FunnemailMailRow,
+  type FunnemailGroupFolder,
+  type FunnemailGroupedInbox,
 } from "@/data/funnemailInbox";
+import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 export interface UseFunnemailInboxResult {
-  folders: FunnemailFolder[];
+  folders: FunnemailGroupFolder[];
   foldersLoading: boolean;
   counts: Record<string, number>;
   selectedFolder: string;
   setSelectedFolder: (slug: string) => void;
   selectedFolderLabel: string;
-  mails: FunnemailMailRow[];
-  filteredMails: FunnemailMailRow[];
+  mails: ChannelMessage[];
+  filteredMails: ChannelMessage[];
   mailsLoading: boolean;
   selectedMessageId: string | null;
   setSelectedMessageId: (id: string | null) => void;
-  selectedMail: FunnemailMailRow | null;
+  selectedMail: ChannelMessage | null;
   overrideFolder: (messageId: string, newSlug: string) => void;
   reclassify: (messageId: string) => void;
   reclassifying: boolean;
 }
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 5000;
 
 export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
   const g = useGlobalFilters();
-  const selectedFolder = g.filters.funnemailFolder || "rfq";
+  const { user } = useAuth();
+  const rawSelectedFolder = g.filters.funnemailFolder || "all";
   const setSelectedFolder = React.useCallback(
     (slug: string) => g.setFilter("funnemailFolder", slug),
     [g],
   );
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
-  const foldersQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.folders,
-    queryFn: listFunnemailFolders,
-    staleTime: 5 * 60_000,
-  });
-
-  const countsQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.counts,
-    queryFn: countFunnemailByFolder,
+  const groupedQ = useQuery({
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", PAGE_SIZE),
+    queryFn: () => listFunnemailGroupedInbox(user!.id, PAGE_SIZE),
+    enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
 
-  const mailsQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.mailsByFolder(selectedFolder, PAGE_SIZE),
-    queryFn: () => listMailsByFolder(selectedFolder, PAGE_SIZE),
-    staleTime: 30_000,
-  });
+  const grouped = React.useMemo<FunnemailGroupedInbox>(
+    () => groupedQ.data ?? { folders: [], counts: {}, messages: [] },
+    [groupedQ.data],
+  );
+  const folders = React.useMemo<FunnemailGroupFolder[]>(() => grouped.folders, [grouped.folders]);
+  const validFolderSlugs = React.useMemo(() => new Set(folders.map((f) => f.slug)), [folders]);
+  const selectedFolder = rawSelectedFolder === "all" || validFolderSlugs.has(rawSelectedFolder) ? rawSelectedFolder : "all";
+  const mails = React.useMemo<ChannelMessage[]>(() => grouped.messages, [grouped.messages]);
 
   // Reset selected mail quando cambio cartella
   React.useEffect(() => {
     setSelectedMessageId(null);
   }, [selectedFolder]);
 
-  const folders = React.useMemo<FunnemailFolder[]>(() => foldersQ.data ?? [], [foldersQ.data]);
-  const mails = React.useMemo<FunnemailMailRow[]>(() => mailsQ.data ?? [], [mailsQ.data]);
-
   // Filtri client-side guidati dalla sidebar globale.
-  const filteredMails = React.useMemo<FunnemailMailRow[]>(() => {
+  const filteredMails = React.useMemo<ChannelMessage[]>(() => {
     const search = g.filters.funnemailSearch.trim().toLowerCase();
     const view = g.filters.funnemailView;
     return mails.filter((m) => {
+      const groupedMail = m as ChannelMessage & { funnemail_group_slug?: string };
+      if (selectedFolder !== "all" && groupedMail.funnemail_group_slug !== selectedFolder) return false;
       if (search) {
         const hay = `${m.subject ?? ""} ${m.from_address ?? ""}`.toLowerCase();
         if (!hay.includes(search)) return false;
       }
-      const d = m.decision;
-      if (view === "urgent" && !(d?.urgency === "critical" || d?.urgency === "high")) return false;
-      if (view === "agenda" && !d?.goes_to_agenda) return false;
-      if (view === "commercial" && !d?.commercial_handoff) return false;
-      // "unread" non è ancora tracciato a livello decision; placeholder no-op.
+      if (view === "unread" && m.read_at) return false;
+      if (view === "urgent" || view === "agenda" || view === "commercial") return false;
       return true;
     });
-  }, [mails, g.filters.funnemailSearch, g.filters.funnemailView]);
+  }, [mails, selectedFolder, g.filters.funnemailSearch, g.filters.funnemailView]);
 
-  const selectedMail = React.useMemo<FunnemailMailRow | null>(
-    () => filteredMails.find((m) => m.message_id === selectedMessageId) ?? null,
+  const selectedMail = React.useMemo<ChannelMessage | null>(
+    () => filteredMails.find((m) => m.id === selectedMessageId) ?? null,
     [filteredMails, selectedMessageId],
   );
 
+  React.useEffect(() => {
+    if (filteredMails.length === 0) {
+      if (selectedMessageId !== null) setSelectedMessageId(null);
+      return;
+    }
+    const selectionStillExists = selectedMessageId ? filteredMails.some((m) => m.id === selectedMessageId) : false;
+    if (!selectionStillExists) setSelectedMessageId(filteredMails[0].id);
+  }, [filteredMails, selectedMessageId]);
+
   const selectedFolderLabel = React.useMemo<string>(
-    () => folders.find((f) => f.slug === selectedFolder)?.label ?? selectedFolder,
+    () => selectedFolder === "all" ? "Tutte le email" : folders.find((f) => f.slug === selectedFolder)?.label ?? selectedFolder,
     [folders, selectedFolder],
   );
 
@@ -144,14 +148,14 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
 
   return {
     folders,
-    foldersLoading: foldersQ.isLoading,
-    counts: countsQ.data ?? {},
+    foldersLoading: groupedQ.isLoading,
+    counts: grouped.counts,
     selectedFolder,
     setSelectedFolder,
     selectedFolderLabel,
     mails,
     filteredMails,
-    mailsLoading: mailsQ.isLoading,
+    mailsLoading: groupedQ.isLoading,
     selectedMessageId,
     setSelectedMessageId,
     selectedMail,

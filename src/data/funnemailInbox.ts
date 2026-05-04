@@ -10,7 +10,8 @@
  *
  * NESSUNA logica: solo SELECT.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { untypedFrom } from "@/lib/supabaseUntyped";
+import type { ChannelMessage } from "@/hooks/useChannelMessages";
 
 export interface FunnemailFolder {
   slug: string;
@@ -61,12 +62,88 @@ export interface SenderIntelRow {
   role_guess: string | null;
 }
 
+const MESSAGE_LIST_SELECT = [
+  "id",
+  "user_id",
+  "channel",
+  "direction",
+  "source_type",
+  "source_id",
+  "partner_id",
+  "from_address",
+  "to_address",
+  "cc_addresses",
+  "bcc_addresses",
+  "subject",
+  "body_text",
+  "raw_payload",
+  "message_id_external",
+  "in_reply_to",
+  "read_at",
+  "created_at",
+  "email_date",
+  "raw_storage_path",
+  "raw_sha256",
+  "raw_size_bytes",
+  "imap_uid",
+  "uidvalidity",
+  "imap_flags",
+  "internal_date",
+  "parse_status",
+  "parse_warnings",
+  "thread_id",
+  "references_header",
+].join(", ");
+
+export interface FunnemailGroupFolder {
+  slug: string;
+  label: string;
+  icon: string | null;
+  color: string | null;
+  section: "priority" | "secondary" | "unclassified";
+  sort_order: number;
+}
+
+export interface FunnemailGroupedInbox {
+  folders: FunnemailGroupFolder[];
+  counts: Record<string, number>;
+  messages: Array<ChannelMessage & { funnemail_group_slug: string; funnemail_group_name: string | null }>;
+}
+
+interface EmailSenderGroupRow {
+  id: string;
+  nome_gruppo: string;
+  colore: string | null;
+  icon: string | null;
+  sort_order: number | null;
+}
+
+interface EmailAddressRuleRow {
+  email_address: string;
+  group_name: string | null;
+}
+
+function extractEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const m = raw.match(/<([^>]+)>/);
+  const addr = (m ? m[1] : raw).trim().toLowerCase();
+  return addr || null;
+}
+
+function slugifyGroup(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "group";
+}
+
 /** Carica intel Scout per un dominio (best-effort, non throwa). */
 export async function getSenderIntelByDomain(domain: string): Promise<SenderIntelRow | null> {
   if (!domain) return null;
-  // deno-lint-ignore no-explicit-any
-  const { data } = await (supabase as any)
-    .from("funnemail_sender_intel")
+  const { data } = await untypedFrom("funnemail_sender_intel")
     .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
     .eq("email_domain", domain.toLowerCase())
     .maybeSingle();
@@ -75,9 +152,7 @@ export async function getSenderIntelByDomain(domain: string): Promise<SenderInte
 
 /** Lista cartelle attive ordinate per sezione e sort_order. */
 export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
-  // deno-lint-ignore no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from("funnemail_folders")
+  const { data, error } = await untypedFrom("funnemail_folders")
     .select("slug,label,description,icon,section,sort_order,accept_into_agenda,prompt_hint")
     .eq("is_active", true)
     .order("section", { ascending: true })
@@ -89,9 +164,7 @@ export async function listFunnemailFolders(): Promise<FunnemailFolder[]> {
 /** Conteggio decisioni per slug negli ultimi 30 giorni. */
 export async function countFunnemailByFolder(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-  // deno-lint-ignore no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from("funnemail_decisions")
+  const { data, error } = await untypedFrom("funnemail_decisions")
     .select("folder_slug")
     .gte("created_at", since)
     .limit(5000);
@@ -112,10 +185,7 @@ export async function listMailsByFolder(
   folderSlug: string,
   limit = 50,
 ): Promise<FunnemailMailRow[]> {
-  // deno-lint-ignore no-explicit-any
-  const sb = supabase as any;
-  const { data: decisions, error: dErr } = await sb
-    .from("funnemail_decisions")
+  const { data: decisions, error: dErr } = await untypedFrom("funnemail_decisions")
     .select("*")
     .eq("folder_slug", folderSlug)
     .order("created_at", { ascending: false })
@@ -125,8 +195,7 @@ export async function listMailsByFolder(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.message_id);
-  const { data: msgs, error: mErr } = await sb
-    .from("channel_messages")
+  const { data: msgs, error: mErr } = await untypedFrom("channel_messages")
     .select("message_id_external,subject,from_address,body_text,body_html,email_date,partner_id")
     .eq("channel", "email")
     .eq("direction", "inbound")
@@ -171,9 +240,7 @@ export async function listMailsByFolder(
 export async function getFunnemailDecision(
   messageId: string,
 ): Promise<FunnemailDecisionRow | null> {
-  // deno-lint-ignore no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from("funnemail_decisions")
+  const { data, error } = await untypedFrom("funnemail_decisions")
     .select("*")
     .eq("message_id", messageId)
     .maybeSingle();
@@ -186,13 +253,80 @@ export async function overrideFunnemailFolder(
   messageId: string,
   newFolderSlug: string,
 ): Promise<void> {
-  // deno-lint-ignore no-explicit-any
-  const { error } = await (supabase as any)
-    .from("funnemail_decisions")
+  const { error } = await untypedFrom("funnemail_decisions")
     .update({
       override_folder_slug: newFolderSlug,
       override_at: new Date().toISOString(),
     })
     .eq("message_id", messageId);
   if (error) throw error;
+}
+
+/**
+ * Client posta Funnemail: stessa sorgente della Inbox, raggruppata per gruppi
+ * già lavorati in Funny Mail. Chi non ha regola finisce in "Non classificate".
+ */
+export async function listFunnemailGroupedInbox(
+  userId: string,
+  limit = 5000,
+): Promise<FunnemailGroupedInbox> {
+  const [{ data: messages, error: messagesError }, { data: groups, error: groupsError }, { data: rules, error: rulesError }] = await Promise.all([
+    untypedFrom("channel_messages")
+      .select(MESSAGE_LIST_SELECT)
+      .eq("channel", "email")
+      .eq("direction", "inbound")
+      .order("email_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    untypedFrom("email_sender_groups")
+      .select("id,nome_gruppo,colore,icon,sort_order")
+      .eq("user_id", userId)
+      .order("sort_order", { ascending: true }),
+    untypedFrom("email_address_rules")
+      .select("email_address,group_name")
+      .eq("user_id", userId),
+  ]);
+
+  if (messagesError) throw messagesError;
+  if (groupsError) throw groupsError;
+  if (rulesError) throw rulesError;
+
+  const groupRows = (groups ?? []) as EmailSenderGroupRow[];
+  const ruleRows = (rules ?? []) as EmailAddressRuleRow[];
+  const groupByName = new Map(groupRows.map((g) => [g.nome_gruppo, g]));
+  const rulesByAddress = new Map<string, string>();
+  const rulesByDomain = new Map<string, string>();
+
+  for (const rule of ruleRows) {
+    if (!rule.email_address || !rule.group_name) continue;
+    const key = rule.email_address.trim().toLowerCase();
+    if (key.startsWith("@")) rulesByDomain.set(key.slice(1), rule.group_name);
+    else if (!key.includes("@")) rulesByDomain.set(key, rule.group_name);
+    else rulesByAddress.set(key, rule.group_name);
+  }
+
+  const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => ({
+    slug: slugifyGroup(g.nome_gruppo),
+    label: g.nome_gruppo,
+    icon: g.icon,
+    color: g.colore,
+    section: (g.sort_order ?? index) < 100 ? "priority" : "secondary",
+    sort_order: g.sort_order ?? index,
+  }));
+  folders.push({ slug: "unclassified", label: "Non classificate", icon: "?", color: null, section: "unclassified", sort_order: 9999 });
+
+  const folderSlugByName = new Map(folders.map((f) => [f.label, f.slug]));
+  const counts: Record<string, number> = Object.fromEntries(folders.map((f) => [f.slug, 0]));
+
+  const groupedMessages = ((messages ?? []) as ChannelMessage[]).map((message) => {
+    const address = extractEmail(message.from_address);
+    const domain = address?.split("@")[1] ?? null;
+    const groupName = address ? rulesByAddress.get(address) ?? (domain ? rulesByDomain.get(domain) : undefined) : undefined;
+    const knownGroup = groupName ? groupByName.get(groupName) : undefined;
+    const slug = knownGroup ? folderSlugByName.get(knownGroup.nome_gruppo) ?? slugifyGroup(knownGroup.nome_gruppo) : "unclassified";
+    counts[slug] = (counts[slug] ?? 0) + 1;
+    return { ...message, funnemail_group_slug: slug, funnemail_group_name: knownGroup?.nome_gruppo ?? null };
+  });
+
+  return { folders, counts, messages: groupedMessages };
 }
