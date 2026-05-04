@@ -19,18 +19,11 @@ export function EmailComposerWizard({ onConfirm }: { onConfirm?: () => void }): 
 
   return (
     <div className="flex flex-col h-full min-h-[640px]" style={{ perspective: "1400px" }}>
-      <div
-        className="relative flex-1 min-h-0 transition-transform duration-500 ease-out"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: step === "config" ? "rotateY(180deg)" : "rotateY(0deg)",
-        }}
-      >
-        {/* FRONT: destinatari */}
+      <div className="relative flex-1 min-h-0">
+        {step === "recipients" && (
         <div
-          className="absolute inset-0 flex flex-col gap-3"
-          style={{ backfaceVisibility: "hidden" }}
-          aria-hidden={step !== "recipients"}
+          key="recipients-step"
+          className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200"
         >
           <SidebarBanner
             icon={recipientsBanner.icon}
@@ -51,12 +44,11 @@ export function EmailComposerWizard({ onConfirm }: { onConfirm?: () => void }): 
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
-
-        {/* BACK: configurazione tipo/tono/brief */}
+        )}
+        {step === "config" && (
         <div
-          className="absolute inset-0 flex flex-col gap-3"
-          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-          aria-hidden={step !== "config"}
+          key="config-step"
+          className="absolute inset-0 flex flex-col gap-3 animate-in fade-in duration-200"
         >
           <SidebarBanner
             icon={configBanner.icon}
@@ -88,6 +80,7 @@ export function EmailComposerWizard({ onConfirm }: { onConfirm?: () => void }): 
             </Button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
