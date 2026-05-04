@@ -63,7 +63,12 @@ Deno.serve(async (req) => {
       scope: DEFAULT_SCOPES,
       state,
     });
-    const redirectUrl = `${base}/erp/tmwe_json/authorization?${params.toString()}`;
+    // Per TMWE API spec: /authorization redirige a /auth se l'utente non è
+    // autenticato. In pratica /authorization restituisce 405 quando aperto
+    // direttamente dal browser (richiede sessione), quindi puntiamo
+    // direttamente a /auth (login form) che gestisce l'intero flusso
+    // Authorization Code: GET → form, POST → 302 al redirect_uri con `code`.
+    const redirectUrl = `${base}/erp/tmwe_json/auth?${params.toString()}`;
 
     return new Response(JSON.stringify({ redirect_url: redirectUrl, state }), {
       status: 200,
