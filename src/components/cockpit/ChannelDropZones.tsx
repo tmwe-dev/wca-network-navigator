@@ -72,6 +72,8 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
             return (
               <div
                 key={ch.id}
+                data-drop-zone="true"
+                data-channel-id={ch.id}
                 onDragOver={(e) => { e.preventDefault(); setHoveredChannel(ch.id); }}
                 onDragLeave={() => setHoveredChannel(null)}
                 onDrop={(e) => {
@@ -126,6 +128,8 @@ export function ChannelDropZones({ isDragging, draggedContactId, dragCount, onDr
         return (
           <motion.div
             key={ch.id}
+            data-drop-zone="true"
+            data-channel-id={ch.id}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{
               opacity: 1,

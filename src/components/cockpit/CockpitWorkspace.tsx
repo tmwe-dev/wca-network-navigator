@@ -13,6 +13,7 @@ import type { DraftState, DraftChannel } from "@/types/cockpit";
 import { ArrowLeft, Mail, Linkedin, MessageCircle, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 const CHANNEL_META: Record<Exclude<DraftChannel, null>, { label: string; icon: React.ElementType; color: string }> = {
   email:    { label: "Email",       icon: Mail,           color: "text-primary" },
@@ -77,6 +78,45 @@ export function CockpitWorkspace(props: Props) {
       isGenerating: false,
     });
   };
+
+  // ── Pointer-based hit test (port da Email Intelligence / Funny Mail) ──
+  // Traccia il cursore durante tutto il drag e risolve la drop zone via
+  // document.elementFromPoint. Più preciso del nativo HTML5 drop e immune
+  // al bug macOS in cui dragend riporta (0,0).
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!isDragging || !draggedContactId) return;
+
+    const resolveChannel = (x: number, y: number): DraftChannel | null => {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      const zone = el?.closest('[data-drop-zone="true"]') as HTMLElement | null;
+      const ch = zone?.getAttribute("data-channel-id") as DraftChannel | null;
+      return ch ?? null;
+    };
+
+    const onDragOver = (e: DragEvent) => {
+      if (e.clientX === 0 && e.clientY === 0) return;
+      e.preventDefault();
+      lastPointerRef.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const onDragEnd = () => {
+      const p = lastPointerRef.current;
+      lastPointerRef.current = null;
+      if (!p) return;
+      const ch = resolveChannel(p.x, p.y);
+      if (ch && draggedContactId) {
+        onDrop(ch, draggedContactId, "Contact");
+      }
+    };
+
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("dragend", onDragEnd);
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("dragend", onDragEnd);
+    };
+  }, [isDragging, draggedContactId, onDrop]);
 
   return (
     <div className="flex-1 min-w-0 overflow-hidden relative">
