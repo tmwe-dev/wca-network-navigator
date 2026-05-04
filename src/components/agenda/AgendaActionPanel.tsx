@@ -122,7 +122,13 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   }
 
   const ChannelIcon = channelIcon[activity.activity_type] || Mail;
-  const partnerName = activity.partners?.company_name || "Senza partner";
+  const sender = senderFromDescription(activity.description);
+  const partnerName =
+    activity.partners?.company_name ||
+    sender?.domain ||
+    "Mittente sconosciuto";
+  const senderEmail = sender?.email ?? null;
+  const isUnknownSender = !activity.partners?.company_name && !!sender;
   const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
   const city = activity.partners?.city;
   const country = activity.partners?.country_name;
