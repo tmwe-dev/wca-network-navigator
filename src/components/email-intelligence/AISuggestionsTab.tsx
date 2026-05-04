@@ -19,15 +19,17 @@ import {
 import {
   Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen, Layers,
 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
-import type { EmailSenderGroup } from "@/types/email-management";
+import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
+import { SenderActionsDialog } from "./management/SenderActionsDialog";
 
 interface AddressRow {
   id: string;
@@ -77,11 +79,12 @@ interface CardProps {
   onAccept: (row: AddressRow) => void;
   onIgnore: (row: AddressRow) => void;
   onAssign: (row: AddressRow, groupId: string) => void;
+  onOpenActions: (row: AddressRow) => void;
   busy: boolean;
 }
 
 const SuggestionCard = memo(function SuggestionCard({
-  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, busy,
+  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
 }: CardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = row.domain || getDomain(row.email_address);
@@ -238,6 +241,21 @@ const SuggestionCard = memo(function SuggestionCard({
           <Button
             size="sm"
             variant="outline"
+            className="h-8 px-2 gap-1"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenActions(row);
+            }}
+            disabled={busy}
+            title="Azioni e regole"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            <span className="text-xs hidden sm:inline">Azioni</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
             className="h-8 px-2.5 gap-1"
             onClick={(event) => {
               event.stopPropagation();
@@ -289,6 +307,7 @@ export default function AISuggestionsTab() {
   const [showPreview, setShowPreview] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
   const [groupBySuggestion, setGroupBySuggestion] = useState(false);
+  const [actionsRow, setActionsRow] = useState<AddressRow | null>(null);
 
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
@@ -655,6 +674,7 @@ export default function AISuggestionsTab() {
                                 onAccept={(r) => acceptMutation.mutate(r)}
                                 onIgnore={(r) => ignoreMutation.mutate(r)}
                                 onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                                onOpenActions={(r) => setActionsRow(r)}
                                 busy={busy || analyzeMutation.isPending}
                               />
                             ))}
@@ -674,6 +694,7 @@ export default function AISuggestionsTab() {
                           onAccept={(r) => acceptMutation.mutate(r)}
                           onIgnore={(r) => ignoreMutation.mutate(r)}
                           onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                          onOpenActions={(r) => setActionsRow(r)}
                           busy={busy || analyzeMutation.isPending}
                         />
                       ))}
@@ -695,6 +716,32 @@ export default function AISuggestionsTab() {
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
+
+      <SenderActionsDialog
+        sender={
+          actionsRow
+            ? ({
+                email: actionsRow.email_address,
+                domain: actionsRow.domain || getDomain(actionsRow.email_address),
+                companyName:
+                  actionsRow.company_name ||
+                  actionsRow.display_name ||
+                  deriveSenderDisplayName(actionsRow.email_address),
+                emailCount: actionsRow.email_count,
+                firstSeen: "",
+                lastSeen: "",
+                isClassified: actionsRow.group_id !== null,
+              } as SenderAnalysis)
+            : null
+        }
+        open={actionsRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setActionsRow(null);
+        }}
+        onActionDone={() => {
+          qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+        }}
+      />
     </div>
   );
 }
