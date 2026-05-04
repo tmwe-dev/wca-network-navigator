@@ -1,116 +1,56 @@
-## 1) Cosa c'è oggi (diagnosi onesta)
+## Diagnosi
 
-La pagina `/v2/cockpit` ha tre colonne:
+**Perché "Apri ora" apre la Command Page?**
+In `AgendaActionPanel.tsx` (riga 116) il link punta a `/partners/${partner_id}`, ma in `App.tsx` quella rotta **non esiste**: c'è solo `/v2/*`. Il catch-all (`*`) redirige a `DEFAULT_HOME_ROUTE = "/v2/command"`. Da qui il salto alla Command Page.
 
-```text
-┌─────────────┬───────────────────────────┬──────────────────────────┐
-│  Sinistra   │         Centro            │        Destra            │
-│ ContactStream│   ChannelDropZones        │  OraclePanelSlim (alto)  │
-│ (380px)     │   (drop email/wa/li/sms)  │  + DraftQueue bar        │
-│             │                           │  + AIDraftStudio (basso) │
-└─────────────┴───────────────────────────┴──────────────────────────┘
-```
+**Agenda = circuito di attesa?**
+No. Sono due concetti distinti:
+- **Agenda** = elenco di `activities` (job da fare/fatti) filtrate per giorno.
+- **Circuito di attesa** = `partner.lead_status = 'holding'`, attivato manualmente con la checkbox nella nota.
+Un partner può essere in agenda senza essere in holding, e viceversa. Lo chiarirò con un badge esplicito nella card di agenda.
 
-I problemi reali, non opinioni:
+**La nota appare nella history come messaggio?**
+Sì: oggi `AddNoteDialog` salva la nota in `interactions` (stessa tabella di email/WA/LI), quindi compare nella TIMELINE del partner come item generico. Va distinta visivamente come "Nota interna".
 
-- **Centro vuoto dopo il drop**: una volta trascinato il contatto, le drop zone restano lì occupando tutto lo spazio mentre la bozza viene generata a destra in una colonna stretta (`max-w-[480px]`). Lo spazio centrale diventa inutile.
-- **Destra schiacciata in due metà**: Oracolo sopra (46–62%) + Studio sotto, divisi da un bordo. Goal, bottoni Genera/Migliora, KB sections, queue bulk, oggetto, corpo, allegati, badge agenti, footer azioni — tutto in 480px. Un casino.
-- **Doppio "Migliora"**: ce ne sono due perché vivono in due componenti diversi che non si parlano:
-  - quello in alto nell'OraclePanelSlim (footer dell'Oracolo) → chiama `handleOracleImprove` → `handleImprove`
-  - quello in basso nell'AIDraftStudio (`AIDraftStudio.tsx` riga 137-146) → chiama lo stesso identico `onImprove` → `handleImprove`
-  
-  Sono **letteralmente** la stessa funzione. Uno dei due è un residuo del vecchio layout, va eliminato.
+---
 
-## 2) Flusso logico Genera (per 1 o N contatti)
+## Piano interventi
 
-Sequenza esatta che parte quando trascini un contatto su una drop zone (`useCockpitLogic.handleDrop`):
+### 1. Fix "Apri ora" → apre il dettaglio partner reale
+File: `src/components/agenda/AgendaActionPanel.tsx`
+- Cambiare `partnerHref` da `/partners/${id}` a `/v2/explore/network?partnerId=${id}` (o la rotta v2 corretta che monta `PartnerDetailFull`/`PartnerDetailModal`).
+- Stesso fix sul link "Apri partner" in alto a destra (riga 148).
+- Verificare anche `PartnerDetailModal.tsx:211` che ha lo stesso bug.
 
-1. **Selezione destinatari**: se il contatto trascinato è già nella selezione multipla (`selection`), prende **tutta** la selezione; altrimenti solo quello.
-2. **Auto-assignment** del contatto a un agente sales attivo (best-effort).
-3. **LinkedIn (solo canale linkedin)**: verifica autenticazione bridge, cerca URL via Google se manca, salva URL in `enrichment_data` del partner. **Mai scraping diretto.**
-4. **Genera prima bozza** chiamando `generate(...)` → `useEmailForge.run(...)` → edge function `generate-email`. Il payload include:
-   - `partner_id`, `contact_id`, `recipient_name`, `recipient_company`, `recipient_countries`
-   - `oracle_type`, `oracle_tone`, `use_kb`, `email_type_prompt`, `email_type_structure`, `email_type_kb_categories` ← letti da `useComposeAiConfig` (sidebar filtri sinistra)
-   - `goal` = `customGoal` (testo dell'Oracolo) **+** prompt del tipo email selezionato
-   - `base_proposal` = brief testuale (`briefToText(brief)`)
-   - `quality` = preset Sherlock (Scout/Detective/Sherlock) da `useForgeLab`
-5. **Bulk**: se erano selezionati N contatti, dopo il primo cicla in sequenza sui restanti chiamando lo stesso `generate(...)` per ciascuno, accumulando i risultati in `draftQueue`. Solo la bozza attiva è visibile, le altre stanno nella barra in alto a destra come chip cliccabili.
-6. **Editorial review** è obbligatorio lato edge (`journalistReview`) — arriva nel risultato come `journalist_review` e viene mostrato come badge.
+### 2. Sostituire/affiancare le azioni "Delega" e "Rimanda 24h"
+File: `src/components/agenda/AgendaActionPanel.tsx`
+- Rimuovere "Delega" (disabled, non richiesta).
+- Mantenere "Rimanda 24h" funzionante (oggi è disabled).
+- Aggiungere nuovo bottone **"Programma futuro"** che apre un piccolo popover con date-picker e crea una nuova `activity` (tipo `follow_up` o `other`) con `due_date` futura, `assigned_to = user.id`, `partner_id` corrente, status `pending`.
+- "Archivia" resta com'è.
 
-**Cosa viene effettivamente preso in considerazione:**
-- ✅ `customGoal` (campo "OBIETTIVO DELLA MAIL" nell'Oracolo)
-- ✅ Tipo email selezionato (sidebar) — prompt, struttura, kb_categories
-- ✅ Tono (sidebar)
-- ✅ Brief strutturato (sidebar accordion)
-- ✅ Use KB on/off (sidebar)
-- ✅ Quality / Sherlock preset (sidebar)
-- ✅ Filtri attivi sui contatti (`activeFilters` → influenzano la lista, non il prompt)
-- ❌ I `CockpitFilter` chip in alto NON vengono iniettati nel prompt, filtrano solo la lista contatti. Questa è una scelta corretta ma da rendere esplicita all'utente.
+### 3. Badge "✈ In attesa" nella card di Agenda
+File: `src/components/agenda/AgendaDayDetail.tsx` (o equivalente che renderizza le card)
+- Quando `activity.partners.lead_status === 'holding'`, mostrare il badge pulsante "✈ In attesa" già presente in `PartnerDetailHeader.tsx`, riusando `isInHoldingPattern()` da `@/constants/holdingPattern`.
+- Stesso badge anche nell'header del `AgendaActionPanel`.
 
-## 3) Differenza Genera vs Migliora
+### 4. Nota visibile e distinta nella TIMELINE del partner
+File: `src/components/partners/PartnerDetailActivity.tsx` (timeline)
+- Verificare che gli item con `interaction_type = 'note'` (o `channel = 'note'`) vengano renderizzati con icona `StickyNote`, etichetta "Nota interna", autore (`created_by` → nome operatore), e il **testo completo** della nota nel body.
+- Se la nota oggi non compare, controllare il filtro/sort in `useInteractions` o nel mapping della timeline.
 
-| Aspetto | Genera (`handleRegenerate`) | Migliora (`handleImprove`) |
-|---|---|---|
-| Edge function | `generate-email` | `generate-email` (stessa) |
-| `base_proposal` inviato | brief testuale dalla sidebar | **il body attuale della bozza** |
-| `goal` | customGoal + prompt del tipo email | customGoal + prompt del tipo email + frase fissa: *"MIGLIORA la bozza qui sotto mantenendo voce, intento e personalità dell'autore. Non riscrivere da zero."* |
-| Subject/body iniziali | svuotati prima della chiamata | **mantenuti come fallback** se il risultato è vuoto |
-| Links | non considerati | se ci sono link allegati, vengono iniettati nel goal con istruzione di usarli come `<a href>` |
-| Effetto | scrive da zero | rifinisce mantenendo intento |
+---
 
-In pratica: **Genera** = bozza nuova partendo da zero usando brief + tipo + KB; **Migliora** = passa l'edge il testo già scritto come `base_proposal` e gli dice "rifinisci, non riscrivere". Stessa pipeline, parametri diversi.
+## Dettagli tecnici
 
-## 4) Refactoring proposto — Centro + Destra
+- Rotta corretta partner v2: da confermare leggendo `src/v2/routes.tsx` attorno a `NetworkPage` / `BusinessCardsViewV2` (sembra essere `/v2/explore/network` con query `partnerId`, oppure aprire `PartnerDetailModal` via store globale).
+- Il "Programma futuro" deve usare `insertActivity` da `src/data/activities.ts` con `status: 'pending'`, `completed_at: null`, `reviewed: false`, `due_date` selezionata, e invalidare le query keys di agenda (`queryKeys.activities.*`).
+- Per il badge holding nella card agenda serve che `useAgendaDayActivities` selezioni anche `partners.lead_status` (verificare il select).
+- Nessuna modifica a edge functions, RLS o nodi critici (submit/AI/dedup). Modifiche solo UI + un nuovo insert in `activities` già coperto dalla DAL.
 
-**Principio**: una colonna sola per "scrivere", drop zones solo quando serve, niente duplicazione di Genera/Migliora.
+---
 
-### Layout nuovo
+## Domanda aperta per te
 
-```text
-┌─────────────┬─────────────────────────────────────────────────────┐
-│ Sinistra    │  CENTRO+DESTRA fuso in un'unica area "Workspace"   │
-│ ContactStream│                                                     │
-│             │  STATO A — nessun contatto attivo:                  │
-│             │   ChannelDropZones a tutta larghezza + hint Oracolo │
-│             │                                                     │
-│             │  STATO B — contatto/i attivo/i:                     │
-│             │   ┌──────────────────┬────────────────────────┐    │
-│             │   │ Oracolo (goal +  │ Bozza viva             │    │
-│             │   │ Genera/Migliora) │ (oggetto, corpo,       │    │
-│             │   │ ~38%             │ allegati, send) ~62%   │    │
-│             │   │                  │                        │    │
-│             │   │ Tipo / Tono /    │ Tabs: Preview /        │    │
-│             │   │ KB chip riassunto│ Sources / Variables    │    │
-│             │   │                  │                        │    │
-│             │   │ Footer: Genera + │ Footer azioni:         │    │
-│             │   │ Migliora UNICI   │ Invia · Copia · Rigen. │    │
-│             │   └──────────────────┴────────────────────────┘    │
-└─────────────┴─────────────────────────────────────────────────────┘
-```
-
-### Cosa cambia in concreto
-
-1. **`CockpitPage.tsx`**: collasso le due colonne destra/centro in una sola `flex-1`. Mostra ChannelDropZones a tutta larghezza solo quando `!draftState.contactId && !draftState.body`. Quando esiste una bozza (o sta generando), mostra l'unico Workspace a 2 colonne interne.
-2. **Nuovo componente `CockpitWorkspace.tsx`**: contiene Oracolo (sinistra interna) + Bozza+Studio (destra interna). Riusa `OraclePanelSlim` e `AIDraftStudio` ma con gestione spazio coerente (no più 50/50 verticale).
-3. **Eliminazione doppione "Migliora"**: in `AIDraftStudio.tsx` rimuovo il bottone giallo Migliora (righe 137-146) e tengo solo Invia / Copia / Rigenera. L'unico Migliora resta nel footer dell'Oracolo, dove logicamente appartiene (è un'azione AI, non un'azione di invio).
-4. **Bulk queue**: la chip-bar `Bulk (N)` si sposta sopra la bozza nello Studio (più visibile, con conteggio "1/N").
-5. **DropZones in stato B**: trasformo le 4 drop-zone in chip compatti sopra la bozza (Email · LinkedIn · WhatsApp · SMS) per cambiare canale al volo senza dover trascinare di nuovo. Quando trascini un nuovo contatto entra in modalità "drop" sovrapposta.
-6. **Header Studio più ricco**: oltre a canale + nome, aggiungo bandiera, lingua, azienda, e link "apri scheda partner".
-7. **Spaziatura**: l'area Oracolo non ha più altezza fissa percentuale — è `flex-col` con goal `flex-1` (cresce/si riduce libero), bottoni e chip in basso. Il problema dello "spazio per il goal" sparisce strutturalmente.
-
-### Coerenza pipeline (cosa NON cambia)
-
-- `useCockpitLogic` invariato: stessi `handleRegenerate`, `handleImprove`, `handleDrop`, stessa `draftQueue`.
-- Edge function `generate-email` invariata.
-- `useComposeAiConfig` (sidebar sinistra: tipo, tono, brief, KB, quality) invariato — i filtri restano lì.
-- Nessun side-effect duplicato: bottone Migliora unico → una sola chiamata edge.
-
-## 5) File toccati (preview)
-
-- `src/v2/ui/pages/CockpitPage.tsx` — layout 2 colonne (sinistra contacts + destra workspace)
-- `src/components/cockpit/CockpitWorkspace.tsx` — **nuovo**, orchestratore Oracolo+Studio
-- `src/components/cockpit/AIDraftStudio.tsx` — rimozione bottone Migliora doppione, header arricchito, channel chips
-- `src/components/email/OraclePanelSlim.tsx` — togliere prop `prioritizeGoal` (non più necessaria, lo spazio è gestito dal nuovo Workspace), goal `flex-1`
-- `src/v2/ui/pages/CockpitPage.tsx` — rimozione hardcoded heights `46%` / `62%`
-
-Nessuna modifica a hook, edge functions, DB, contesti AI, queue logic.
+Prima di implementare, confermami:
+- "Programma futuro" deve creare una **nuova** activity futura (lasciando l'attuale come "fatta/annotata") oppure deve **spostare** l'activity corrente in avanti (aggiornando `due_date`)?
