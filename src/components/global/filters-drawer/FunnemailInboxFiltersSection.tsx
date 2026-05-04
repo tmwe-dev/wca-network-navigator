@@ -7,7 +7,6 @@
  * Tutta la logica vive in `useGlobalFilters` + DAL `funnemailInbox`.
  */
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
-import type { FunnemailGroupedInbox } from "@/data/funnemailInbox";
 import { useFunnemailInboxSidebarData } from "@/hooks/useFunnemailInboxSidebarData";
 import { InboxGroupsSidebar } from "@/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar";
 
@@ -15,7 +14,7 @@ export function FunnemailInboxFiltersSection() {
   const g = useGlobalFilters();
   const groupedQ = useFunnemailInboxSidebarData();
 
-  const grouped: FunnemailGroupedInbox = groupedQ.data ?? { folders: [], counts: {}, messages: [] };
+  const grouped = groupedQ.data ?? { folders: [], counts: {}, messages: [] };
 
   return (
     <InboxGroupsSidebar
