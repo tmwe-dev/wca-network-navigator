@@ -5150,6 +5150,8 @@ export type Database = {
           colore: string
           created_at: string
           descrizione: string | null
+          funnemail_enabled: boolean
+          funnemail_policy: Json
           icon: string | null
           id: string
           is_default: boolean | null
@@ -5168,6 +5170,8 @@ export type Database = {
           colore?: string
           created_at?: string
           descrizione?: string | null
+          funnemail_enabled?: boolean
+          funnemail_policy?: Json
           icon?: string | null
           id?: string
           is_default?: boolean | null
@@ -5186,6 +5190,8 @@ export type Database = {
           colore?: string
           created_at?: string
           descrizione?: string | null
+          funnemail_enabled?: boolean
+          funnemail_policy?: Json
           icon?: string | null
           id?: string
           is_default?: boolean | null
@@ -5432,6 +5438,56 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnemail_actions_log: {
+        Row: {
+          action: string
+          created_at: string
+          error: string | null
+          from_address: string | null
+          group_id: string | null
+          id: string
+          message_id: string
+          partner_id: string | null
+          payload: Json
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error?: string | null
+          from_address?: string | null
+          group_id?: string | null
+          id?: string
+          message_id: string
+          partner_id?: string | null
+          payload?: Json
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error?: string | null
+          from_address?: string | null
+          group_id?: string | null
+          id?: string
+          message_id?: string
+          partner_id?: string | null
+          payload?: Json
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_actions_log_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "email_sender_groups"
             referencedColumns: ["id"]
           },
         ]
