@@ -36,6 +36,8 @@ interface Props {
   // Studio
   onRegenerate: () => void;
   onGenerateAfterReview: () => void;
+  onStartGeneration: () => void;
+  pendingBulkCount: number;
   // Drop zones (stato A: niente contatto)
   isDragging: boolean;
   draggedContactId: string | null;
@@ -53,7 +55,7 @@ export function CockpitWorkspace(props: Props) {
   const {
     draftState, setDraftState, recipientPartnerId,
     onOracleGenerate, onOracleImprove, onLoadTemplate, onInsertImage,
-    onRegenerate, onGenerateAfterReview,
+    onRegenerate, onGenerateAfterReview, onStartGeneration, pendingBulkCount,
     isDragging, draggedContactId, dragCount, onDrop,
     onReadProfile, onDeepSearch, contactAvailability,
     draftQueue, showQueuedDraft,
@@ -196,6 +198,8 @@ export function CockpitWorkspace(props: Props) {
                     onDraftChange={setDraftState}
                     onRegenerate={onRegenerate}
                     onGenerateAfterReview={onGenerateAfterReview}
+                    onStartGeneration={onStartGeneration}
+                    pendingBulkCount={pendingBulkCount}
                   />
                 </div>
               </div>
