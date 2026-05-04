@@ -5,15 +5,10 @@
 import { corsPreflight, getCorsHeaders } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
-import { serviceClient } from "../_shared/tmweClient.ts";
+import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
 
 const DEFAULT_SCOPES =
   "profile:read shipment:read shipment:write tracking:read document:read";
-
-function tmweBaseUrl(): string {
-  const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
-  return raw.replace(/\/erp$/, "");
-}
 
 function randomState(): string {
   const buf = new Uint8Array(24);
@@ -67,7 +62,7 @@ Deno.serve(async (req) => {
     // Nessuno `scope` esposto in query (TMWE lo gestisce server-side).
     const params = new URLSearchParams();
     params.set("client_id", Deno.env.get("TMWE_OAUTH_CLIENT_ID")!);
-    params.set("redirect_uri", Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!);
+    params.set("redirect_uri", tmweOAuthRedirectUri());
     params.set("response_type", "code");
     params.set("state", state);
     // Per TMWE API spec: /authorization redirige a /auth se l'utente non è
