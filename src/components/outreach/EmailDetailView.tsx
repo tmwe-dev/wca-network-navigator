@@ -20,6 +20,7 @@ import { decodeRfc2047, extractSenderBrand } from "./email/emailUtils";
 import { EmailHtmlFrame } from "./email/EmailHtmlFrame";
 import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
+import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 
 type Props = {
   message: ChannelMessage;
@@ -38,6 +39,8 @@ function formatDisplayDate(value: string): string {
 export function EmailDetailView({ message, onClose }: Props) {
   const navigate = useAppNavigate();
   const { data: attachments = [] } = useMessageAttachments(message.id);
+  const { getGroup } = useEmailAddressGroups();
+  const group = getGroup(message.from_address);
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
@@ -92,6 +95,19 @@ export function EmailDetailView({ message, onClose }: Props) {
               <div className="flex items-center gap-2">
                 <span className="truncate text-base font-bold text-primary">{brand}</span>
                 <CompanyLogoInline email={message.from_address} size={20} />
+                {group?.groupName && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
+                      color: group.groupColor ?? "#3B82F6",
+                    }}
+                    title={`Gruppo Funny Mail: ${group.groupName}`}
+                  >
+                    {group.groupIcon && <span>{group.groupIcon}</span>}
+                    {group.groupName}
+                  </span>
+                )}
               </div>
               <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
             </div>
