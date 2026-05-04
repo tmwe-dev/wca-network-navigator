@@ -37,6 +37,7 @@ interface OraclePanelSlimProps {
   recipientPartnerId?: string | null;
   recipientCount?: number;
   contextSummary?: OracleContextSummary | null;
+  prioritizeGoal?: boolean;
 }
 
 export function OraclePanelSlim({
@@ -50,6 +51,7 @@ export function OraclePanelSlim({
   recipientPartnerId = null,
   recipientCount = 0,
   contextSummary = null,
+  prioritizeGoal = false,
 }: OraclePanelSlimProps) {
   const { selectedType, tone, useKB, brief, customGoal, setCustomGoal } = useComposeAiConfig();
   const [showTemplates, setShowTemplates] = useState(false);
@@ -66,6 +68,7 @@ export function OraclePanelSlim({
   const speech = useContinuousSpeech(onVoiceText);
 
   const { data: templates = [] } = useEmailTemplates();
+  const showSecondaryTools = !prioritizeGoal || hasBody || generating || improving || showTemplates || showImages;
 
   const mergedGoal = useMemo(() => {
     const base = customGoal.trim();
@@ -92,10 +95,11 @@ export function OraclePanelSlim({
           customGoal={customGoal}
           coherence={coherence}
           onGoalChange={setCustomGoal}
+          priority={prioritizeGoal && !hasBody}
           speech={speech}
         />
 
-        <EnrichmentStatusBadges partnerId={recipientPartnerId} />
+        {showSecondaryTools && <EnrichmentStatusBadges partnerId={recipientPartnerId} />}
 
         <div className="flex items-center gap-1.5 px-1 py-1">
           <Tooltip>
@@ -132,47 +136,51 @@ export function OraclePanelSlim({
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  setShowTemplates(!showTemplates);
-                  if (!showTemplates) setShowImages(false);
-                }}
-                className={cn(
-                  "p-1.5 rounded-md border transition-all",
-                  showTemplates
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
-                )}
-                aria-label="Template"
-              >
-                <FileText className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[10px]">Template</TooltipContent>
-          </Tooltip>
+          {showSecondaryTools && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      setShowTemplates(!showTemplates);
+                      if (!showTemplates) setShowImages(false);
+                    }}
+                    className={cn(
+                      "p-1.5 rounded-md border transition-all",
+                      showTemplates
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                    )}
+                    aria-label="Template"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">Template</TooltipContent>
+              </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  setShowImages(!showImages);
-                  if (!showImages) setShowTemplates(false);
-                }}
-                className={cn(
-                  "p-1.5 rounded-md border transition-all",
-                  showImages
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
-                )}
-                aria-label="Immagini"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[10px]">Immagini</TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      setShowImages(!showImages);
+                      if (!showImages) setShowTemplates(false);
+                    }}
+                    className={cn(
+                      "p-1.5 rounded-md border transition-all",
+                      showImages
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                    )}
+                    aria-label="Immagini"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">Immagini</TooltipContent>
+              </Tooltip>
+            </>
+          )}
         </div>
 
         {showTemplates && (
@@ -214,6 +222,7 @@ export function OraclePanelSlim({
         contextSummary={contextSummary}
         onGenerate={() => onGenerate(config)}
         onImprove={() => onImprove(config)}
+        compactBeforeDraft={prioritizeGoal}
       />
     </div>
   );

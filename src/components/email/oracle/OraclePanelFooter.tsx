@@ -13,6 +13,7 @@ interface FooterProps {
   contextSummary: OracleContextSummary | null;
   onGenerate: () => void;
   onImprove: () => void;
+  compactBeforeDraft?: boolean;
 }
 
 export function OraclePanelFooter({
@@ -23,8 +24,10 @@ export function OraclePanelFooter({
   contextSummary,
   onGenerate,
   onImprove,
+  compactBeforeDraft = false,
 }: FooterProps) {
   const navigate = useAppNavigate();
+  const showContext = !compactBeforeDraft || hasBody || generating || improving;
 
   return (
     <div className="shrink-0 border-t border-border/30 px-3 py-2.5 space-y-2">
@@ -65,10 +68,12 @@ export function OraclePanelFooter({
         {improving ? "Miglioramento..." : "Migliora"}
       </Button>
 
-      <OracleContextPanel
-        summary={contextSummary}
-        hasRecipient={recipientCount > 0}
-      />
+      {showContext && (
+        <OracleContextPanel
+          summary={contextSummary}
+          hasRecipient={recipientCount > 0}
+        />
+      )}
     </div>
   );
 }
