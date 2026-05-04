@@ -5,7 +5,7 @@
  * (per ottenere `tmwe_user_id`), e persiste il record in tmwe_user_tokens.
  * Risponde con un redirect 302 verso /v2/settings/connections.
  */
-import { serviceClient } from "../_shared/tmweClient.ts";
+import { serviceClient, tmweBaseUrl, tmweOAuthRedirectUri } from "../_shared/tmweClient.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function htmlRedirect(url: string): Response {
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     await svc.from("tmwe_oauth_state").delete().eq("state", state);
 
     let userId = stateRow.user_id as string | null;
-    const baseUrl = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+    const baseUrl = tmweBaseUrl();
 
     // Exchange code -> tokens
     const tok = await postForm(baseUrl, "/erp/tmwe_json/exchange_code_for_jwt", {
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       code,
       client_id: Deno.env.get("TMWE_OAUTH_CLIENT_ID")!,
       client_secret: Deno.env.get("TMWE_OAUTH_CLIENT_SECRET")!,
-      redirect_uri: Deno.env.get("TMWE_OAUTH_REDIRECT_URI")!,
+      redirect_uri: tmweOAuthRedirectUri(),
     });
 
     const accessToken = tok.access_token as string;
