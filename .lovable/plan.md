@@ -1,127 +1,75 @@
-## Verifica: Email Forge è il sistema corretto ✅
+## Problema
 
-Confermato leggendo il codice:
+Nel Cockpit la pipeline funziona (Sherlock → KB → Calligrafia → Giornalista), ma all'utente mancano gli stessi controlli che ha in Email Forge / Composer:
 
-| Aspetto | Email Forge (`/v2/email-forge`) | Cockpit (`/v2/cockpit`) | Composer (`/v2/communicate/compose`) |
-|---|---|---|---|
-| Hook AI | `useEmailForge` → edge `generate-email` | `useOutreachGenerator` → `generate-content?action=outreach` | `useEmailComposerState` → `generate-email` |
-| Tipo email (oracle_type) | ✅ propagato | ❌ **non propagato** | ✅ propagato |
-| Tono / KB / brief / quality | ✅ tutti propagati | ❌ **non propagati** (hardcoded) | ✅ tutti |
-| `journalist_review` esposto | ✅ in `ForgeResult` | ❌ **non esiste** in `OutreachResult` | parziale |
-| `type_resolution` (Detector) | ✅ | ❌ | ❌ |
-| `_context_summary` (KB usate, history) | ✅ | ❌ | parziale |
-| Badge "chi ha lavorato" | ✅ `ContextSummary` | ❌ niente | ❌ niente |
-| Pannello config laterale | ✅ via `ContextFiltersRail` + `EmailComposeFiltersSection` (montato per `/v2/communicate/compose`) | ❌ non montato | ✅ |
-| Bulk N contatti | N/A (singolo) | ❌ **prende solo `ids[0]`** → 1 sola email per N contatti | N/A |
+1. **Obiettivo libero ("testo dell'Oracolo")** — il campo dove digiti *cosa vuoi dire* (es. "proporre tariffa LCL Genova→Tunisi, sconto introduttivo, urgenza fine mese").
+2. **Elementi da inserire** — il brief strutturato (punti, USP, link, allegati da menzionare).
+3. **Migliora bozza** — far rilavorare l'AI sulla bozza corrente.
+4. **Editing assistito** — modificare il testo e ricevere suggerimenti / re-pass dell'AI.
 
-→ **Email Forge è la pipeline canonica.** Cockpit e gli altri moduli devono allinearsi.
+Tutto questo deve restare coerente con il fatto che il Cockpit lavora **N contatti contemporaneamente** (drag bulk → `draftQueue`).
 
----
+## Strategia consigliata
 
-## Piano: unificazione su Email Forge
+**Una sola configurazione condivisa, applicata a tutta la selezione.**
 
-### Obiettivo
-Un unico motore (`useEmailForge` + edge `generate-email`), un unico pannello config (linguetta laterale `ContextFiltersRail` con `EmailComposeFiltersSection` + `ComposeAiConfigContext`), un unico set di badge (`ContextSummary` di `email-forge/components`).
+- Tipo email, tono, KB, **obiettivo libero**, **brief strutturato** vivono già in `ComposeAiConfigContext` (storage `compose-ai-config-v1`) e sono editabili dalla **sidebar a scomparsa** già montata sul Cockpit (`ContextFiltersRail` → `EmailComposeFiltersSection`).
+- Aggiungiamo nella stessa sidebar i due campi che oggi mancano: **Obiettivo (Oracolo)** e — quando serve — la microcard "deep search del destinatario" (già live nel Forge).
+- L'utente fissa l'intento *una volta sola*, poi droppa N contatti: `useCockpitLogic.generate()` legge `cfg.customGoal + cfg.brief + cfg.selectedType.prompt` e li passa a tutti i destinatari (già lo fa).
 
-### Step 1 — Estendi il pannello laterale ai moduli email
-File: `src/v2/ui/templates/ContextFiltersRail.tsx` (`getFilterContext`).
+**Per-bozza (azioni non condivisibili) restano nello studio a destra:**
+- Editor del body con preview/HTML.
+- Pulsante **Migliora** che rilancia `useEmailForge.run({ base_proposal: bodyAttuale, goal: cfg.customGoal })` per quel singolo contatto.
+- Pulsante **Rigenera** (già presente).
+- Suggerimenti post-edit (riusiamo `EmailEditLearningDialog` già esistente in Composer): se l'utente modifica manualmente la bozza prima di inviare, al click su Invia si apre il dialog "salva come pattern / invia senza salvare".
 
-Aggiungere route mapping per:
-- `/v2/cockpit` → `EmailComposeFiltersSection` (banner key `email-compose`)
-- `/v2/email-forge` → `EmailComposeFiltersSection` (sostituisce/integra il drawer "Filtri globali" del header)
-- (eventuali future pagine email)
+## Cosa cambia (UI)
 
-Tutti useranno lo **stesso** `ComposeAiConfigContext` → tipo email, tono, brief, useKB, customGoal sono globali per la sessione utente.
+### A. Sidebar `EmailComposeFiltersSection` (un solo file)
+Aggiungere in cima alla sezione:
+- `Textarea` **Obiettivo email (Oracolo)** legata a `cfg.customGoal` (con micro-helper "vale per tutti i contatti selezionati").
+- Riga informativa "🎯 Si applica a N contatti" quando `selection.count > 1`.
 
-### Step 2 — Wrap globale con `ComposeAiConfigProvider`
-File: `src/App.tsx` (o layout authenticated).
+Il resto (tipo / tono / brief / KB) è già lì.
 
-Spostare il provider dal solo `EmailComposerPage` a un livello sopra (layout autenticato) così Cockpit/Forge/Composer **leggono lo stesso stato** dal pannello laterale.
+### B. `AIDraftStudio` (pannello destro Cockpit)
+- Trasformare il blocco "Messaggio" del tab **Preview** da read-only (TypewriterText) a un `Textarea`/`contenteditable` semplice quando la generazione è finita. Lo stato vive già in `draftState.body` via `onDraftChange`.
+- Aggiungere accanto ai bottoni Copia/Rigenera un bottone **Migliora** (icona `Wand2`) che chiama una nuova action `handleImprove(draftState)` esposta da `useCockpitLogic`.
+- Mostrare lo `JournalistBadge` aggiornato dopo Migliora (già supportato).
 
-### Step 3 — Cockpit usa `useEmailForge` + supporta bulk reale
-File: `src/hooks/useCockpitLogic.ts` (`handleDrop`).
-
-Sostituire `useOutreachGenerator.generate(...)` con un loop che usa `useEmailForge.run(...)`:
-
-```ts
-const cfg = useComposeAiConfig();        // tipo, tono, brief, useKB, goal
-const lab = useForgeLab();               // quality (Scout/Detective/Sherlock)
-const forge = useEmailForge();
-
-const ids = getDraggedIds();
-for (const id of ids) {                  // ❗ TUTTI gli id, non solo ids[0]
-  if (signal.aborted) break;
-  const c = contactsMap[id]; if (!c) continue;
-  const result = await forge.run({
-    partner_id: c.partnerId,
-    contact_id: c.sourceType === "contact" ? c.sourceId : null,
-    recipient_name: c.name,
-    recipient_company: c.company,
-    recipient_countries: c.country,
-    oracle_type: cfg.selectedType?.id,
-    oracle_tone: cfg.tone,
-    use_kb: cfg.useKB,
-    goal: [cfg.customGoal, cfg.selectedType?.prompt].filter(Boolean).join("\n\n"),
-    base_proposal: serializeBrief(cfg.brief),
-    quality: lab.quality,                // → Scout/Detective/Sherlock
-    email_type_prompt: cfg.selectedType?.prompt ?? null,
-    email_type_structure: cfg.selectedType?.structure ?? null,
-    email_type_kb_categories: cfg.selectedType?.kb_categories,
-  });
-  if (signal.aborted) break;
-  pushDraftToQueue(id, result);          // accumula i draft per ciascun contatto
-}
+### C. `useCockpitLogic`
+Aggiungere `handleImprove()`:
 ```
+const handleImprove = async () => {
+  const r = await forge.run({
+    ...stessi parametri della generate corrente...,
+    base_proposal: draftState.body,    // bozza attuale come base
+    goal: `${cfg.customGoal}\n\nMIGLIORA mantenendo voce e intento.`,
+  });
+  if (r) setDraftState(prev => ({ ...prev, subject: r.subject, body: r.body, journalist_review: r.journalist_review, ... }));
+};
+```
+Nessun cambio al backend: `generate-email` già accetta `base_proposal` e attiva il path "improve" della pipeline.
 
-Mantenere intatto: `autoAssign`, branch LinkedIn lookup, abort, `mountedRef`, side-effect su `partners.enrichment_data`.
+### D. Bulk
+- Il `draftQueue` resta com'è. Aggiungiamo nel banner "Bulk: N bozze generate" due frecce ◀ ▶ per scorrere le bozze (già accumulate in queue) e poter editare/migliorare ognuna prima di inviare.
+- Migliora opera sempre sulla bozza visibile.
 
-Per visualizzare i N draft generati: una lista verticale di mini-card draft (uno per contatto) nel pannello destro, con il primo già aperto in `AIDraftStudio`.
+## Cosa NON cambia
+- `generate-email` edge function.
+- Editorial Review (Giornalista) resta obbligatorio e inviolato.
+- Sherlock / KB / Calligrafia: già iniettati dalla pipeline unica.
+- Nessuna duplicazione di salvataggi o invii: `handleImprove` riusa la stessa `forge.run` (no side-effect).
 
-### Step 4 — Badge unificati ovunque
-Componente: `src/v2/ui/pages/email-forge/components/ContextSummary.tsx` (esistente).
+## File toccati (stima)
+- `src/components/global/filters-drawer/EmailComposeFiltersSection.tsx` — aggiungere Textarea obiettivo + hint bulk.
+- `src/components/cockpit/AIDraftStudio.tsx` — body editabile + bottone Migliora.
+- `src/hooks/useCockpitLogic.ts` — esporre `handleImprove`, navigazione queue (prev/next).
+- `src/v2/ui/pages/CockpitPage.tsx` — collegare prev/next nel banner bulk.
 
-Montarlo dentro:
-- `AIDraftStudio.tsx` (Cockpit) — sotto subject/body
-- `EmailComposerPage` ResultPanel — già parziale
-- ovunque ci sia un risultato di `generate-email`
-
-Badge mostrati (già presenti nel componente):
-- 🕵️ Detector tipo email + confidence
-- 🔍 Livello Deep Search (Scout/Detective/Sherlock) ← `SherlockLevelBadge` esistente
-- 📚 KB sezioni usate
-- 🧠 Memorie / interaction history
-- 📰 Editorial Review (giornalista + verdict + score + warnings)
-- ⚠️ Contract warnings
-
-### Step 5 — Deprecazione soft di `useOutreachGenerator`
-- Marcare il file `@deprecated — use useEmailForge`.
-- Rimuovere le call site Cockpit (Step 3).
-- Le altre call site (LinkedIn flow, command tools) seguono in PR successive — fuori scope di questa.
-
-### Step 6 — Header Email Forge
-Sostituire il pulsante "Filtri globali" del header EmailForge con il toggle del nuovo pannello laterale (lo `ContextFiltersRail` lo gestisce già). Coerenza visiva con tutti gli altri moduli.
-
----
-
-## Vincoli rispettati
-- ✅ Editorial review (`journalistReview`) resta in `generate-email` (mai bypassato, mai duplicato).
-- ✅ AI Invocation Charter: `useEmailForge` passa da `invokeEdge`/`invokeAi` con scope corretto (già conforme).
-- ✅ DAL access only: nessuna `supabase.from()` aggiunta nei componenti UI.
-- ✅ V2 logic-less UI: tutta la logica in hooks (`useCockpitLogic`, `useEmailForge`).
-- ✅ Soft-delete, abort, mountedRef preservati.
-- ✅ Nessun refactor opportunistico fuori scope.
-
-## File toccati (riepilogo)
-1. `src/v2/ui/templates/ContextFiltersRail.tsx` — aggiungi mapping route
-2. `src/App.tsx` (o layout) — sposta `ComposeAiConfigProvider` a livello globale
-3. `src/hooks/useCockpitLogic.ts` — bulk loop + `useEmailForge` + lettura config
-4. `src/components/cockpit/AIDraftStudio.tsx` — monta `ContextSummary`
-5. `src/v2/ui/pages/EmailForgePage.tsx` — pulsante header → toggle rail laterale
-6. `src/hooks/useOutreachGenerator.ts` — `@deprecated`
-
-## Note
-- `useEmailForge` deve poter essere usato in loop: oggi imposta `result` singolo. Aggiungerò una variante `runMany(params[])` che restituisce array, oppure consumo i risultati progressivamente. Decidere in implementazione (no impatto API esterna).
-- I contatti con email mancante: skip con warning nel toast finale (`X/N completate, Y senza email, Z errori`).
-- `serializeBrief(brief)` esiste già lato Composer; riusare lo stesso helper.
-
-Procedo con l'implementazione in questo ordine: 1 → 2 → 3 (con runMany) → 4 → 5 → 6.
+## Check finale (regole interne)
+- Pipeline unica Email Forge ✅ (no duplicati).
+- Giornalista sempre attivo ✅.
+- Bulk preservato, ordine queue stabile ✅.
+- Nessun nuovo invio o side-effect ✅.
+- Logica solo frontend, niente RLS / edge / DB.
