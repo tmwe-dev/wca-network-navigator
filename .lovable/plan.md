@@ -1,119 +1,105 @@
-## Obiettivo
+# Piano CORRETTO — Audit ✅, niente duplicati
 
-Coprire in fasi tutte le aree emerse nella guida (pipeline generazione, classificazione inbound, holding pattern, dispatcher operativo, wake-up, gruppi mittenti) e — punto centrale — fare un **audit profondo dei prompt** che governano oggi l'AI, perché sono loro a decidere come catalogare, escalare e rispondere.
-
----
-
-## Fase 0 — Audit prompt (priorità massima, prerequisito per tutto il resto)
-
-Stato attuale rilevato:
-- **37 prompt operativi** in `operative_prompts`, di cui **29 attivi unici** + **8 duplicati tripli** (tutti i `Command — *` esistono in 3 copie identiche → rumore nel context window e rischio di derive).
-- **Solo 1 prompt** governa la classificazione inbound (`Email Domain Detection Rules`, priority 85).
-- **Solo 1 prompt** governa la transizione di stato (`Lead Qualification v2 (9 stati)`).
-- Il classificatore TS (`src/v2/agent/prompts/core/email-classifier.ts`) ha 7 categorie hardcoded ma **nessuna distinzione per gruppo mittente** (administrative, fornitori, partner, lead commerciale).
-- `computeEscalation` in `src/lib/leadEscalation.ts` scatta su qualunque `interested+positive` → un "grazie per la fattura" può promuovere un fornitore a `engaged`.
-
-Deliverable Fase 0:
-1. **Report `/mnt/documents/prompt-audit.md`** con, per ogni prompt attivo:
-   - copertura (quale edge/feature lo carica davvero, via grep su `loadOperativePrompts`),
-   - sovrapposizioni e contraddizioni,
-   - gap (es. nessun prompt per "amministrazione", "offerta", "supporto"),
-   - score di efficacia 0-100 con motivazione,
-   - azione consigliata (mantieni / fondi / riscrivi / deprecca).
-2. **Pulizia duplicati Command** (8 deprecazioni soft via `deprecated_at`, una sola copia attiva per nome).
-3. **Test di regressione** per i 5 prompt più critici (Lead Qualification, Email A→Z, WhatsApp Gate, Post-Send, Zero Allucinazioni) usando `prompt_test_cases` già esistente — fissano il comportamento atteso prima di toccare qualunque cosa.
-
-Niente modifiche di codice in Fase 0 oltre alla pulizia DB e ai test case: **prima misuriamo, poi cambiamo**.
+Hai ragione: il sistema prompt-per-indirizzo **esiste già ed è cablato ovunque**. Cancello la proposta sbagliata. Audit completo qui sotto.
 
 ---
 
-## Fase 1 — Group-aware classification (collega `email_address_rules.group_name` al classificatore)
+## AUDIT — Cosa esiste già (NON toccare)
 
-Problema: oggi `classify-email-response` non sa se il mittente è "Amministrazione GitHub" o "Lead commerciale". Risultato: amministrative possono spostare lo stato lead.
+### Tabella `email_address_rules` (47 colonne)
+Già presenti:
+- `custom_prompt` (text) — istruzione libera, **massima priorità**
+- `prompt_id` (uuid) → FK a `email_prompts.id` — prompt riusabile
+- `tone_override` (text) — tono dedicato
+- `topics_to_emphasize` / `topics_to_avoid` (array)
+- `category`, `group_name`, `group_id`, `group_color`, `group_icon`
+- `auto_action`, `auto_action_params`, `auto_execute`, `ai_confidence_threshold`
+- `preferred_channel`, `exclusive_agent_id`
+- `priority`, `is_active`, `is_blocked`
+- AI suggestion: `ai_suggested_group`, `ai_suggestion_confidence`, `ai_suggestion_accepted`
+- Telemetria: `interaction_count`, `success_rate`, `last_interaction_at`, `applied_count`
 
-Interventi:
-- In `classify-inbound-message` / `classify-email-response`: prima di chiamare l'AI, leggere `email_address_rules` per `from_address` e iniettare nel prompt un blocco `SENDER GROUP: amministrazione | offerte | supporto | commerciale | sconosciuto`.
-- Nuovo prompt operativo **`Group-Aware Classification`** (context=`classification`, priority 90) con regole esplicite: se gruppo ≠ commerciale → categoria forzata `unrelated` lato lead pipeline, ma categoria operativa specifica (es. `admin_invoice`, `quote_request`).
-- `computeEscalation`: gate hard "se gruppo non è commerciale o sconosciuto, **non promuovere mai** lead_status".
-- Test: 10 fixture email reali (3 admin, 3 offerte, 2 supporto, 2 commerciali) → snapshot della classificazione attesa.
+### Tabella `email_prompts`
+`scope`, `scope_value`, `title`, `instructions`, `priority`, `is_active` — prompt riusabili globali/per scope.
 
----
+### Iniezione già attiva (in ordine di priorità)
+1. **`custom_prompt`** → "ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO"
+2. **`email_prompts.instructions`** (via `prompt_id`) → "SENDER PROMPT"
+3. `tone_override` + `topics_*`
+4. `email_sender_groups` (nome_gruppo, classification_hint, response_style_hint)
 
-## Fase 2 — Operative dispatcher (azioni automatiche per gruppo non-commerciale)
+Cablato in:
+- `classify-email-response/classificationPrompts.ts` (linee 34-36)
+- `classify-email-response/index.ts` (join `email_prompts:prompt_id` + `email_sender_groups:group_id`, linea 117)
+- `generate-email/contextAssembler.ts` (linea 194)
+- `generate-email/conversationIntel.ts` (linee 60-62, 139-141)
+- `generate-outreach/conversationContext.ts` (linee 28-76)
 
-Oggi un'email del gruppo "Amministrazione" o "Offerte" finisce in inbox e basta.
+### UI già esistente
+- `EmailIntelligencePage` (pagina Funny Mail)
+- `prompt-lab/tabs/EmailPromptsTab` (editor `email_prompts`)
+- `InlineGroupAssigner` (assegnazione gruppo da inbox)
+- DAL: `emailAddressRules.ts` (`upsertEmailAddressRule`, bulk actions), `emailPrompts.ts`
 
-Interventi:
-- Nuova tabella `inbound_operative_actions` (group, category, action_type, default_assignee, sla_hours).
-- Edge `dispatch-inbound-action` chiamata da `classify-inbound-message` quando `category` ∈ {`admin_invoice`, `quote_request`, `support_ticket`, ...}: crea `activity` con tipo dedicato, scadenza basata su SLA, assegnata al ruolo giusto.
-- UI: tab "Operative" in `/v2/inbox` raggruppa queste activity per gruppo mittente.
-- Prompt operativo nuovo: **`Operative Dispatcher Routing`** (criteri di assegnazione, priorità, esempi).
+### Funzioni edge correlate
+`apply-email-rules`, `backfill-email-rules`, `suggest-email-groups`, `classify-inbound-message`, `classify-email-response`, `inbound-dispatcher`, `cadence-engine`
 
----
-
-## Fase 3 — Holding pattern intelligente (downgrade + risveglio)
-
-Oggi `smart-scheduler` e `cadence-engine` esistono ma le soglie sono in codice.
-
-Interventi:
-- Tabella `wake_up_rules` (group_name nullable, min_score, days_dormant, channel, max_per_day) editabile da UI Funny Mail.
-- `smart-scheduler` legge le regole invece delle costanti.
-- Prompt operativo **`Wake-Up Composer`** che genera il messaggio di risveglio variando tono in base a `days_dormant` e ultimo canale toccato (anti-ripetizione già coperto da `Anti-Ripetizione Multi-Touch`).
-- UI in Funny Mail: tab "Risvegli" con preview delle prossime 50 esecuzioni schedulate.
-
----
-
-## Fase 4 — Pipeline outreach: verifica contratto unico
-
-Verifica (non riscrittura) che **tutti** i punti di generazione passino dalla pipeline canonica:
-- `generate-email`, `generate-outreach`, `improve-email`, `agent-execute` (modalità compose), wake-up di Fase 3.
-- Tutti devono caricare gli stessi prompt OBBLIGATORI (`Email Single A→Z`, `Zero Allucinazioni`, `Post-Send Checklist`, `WhatsApp Message Gate` per WA) e passare per `journalistReview`.
-- Output: report `/mnt/documents/pipeline-coverage.md` con matrice "edge × prompt obbligatorio × journalist review".
-- Fix mirati solo dove la matrice mostra gap (no refactor opportunistico — workspace rule).
-
----
-
-## Fase 5 — UI Funny Mail: editor prompt per gruppo
-
-Oggi i `custom_prompt` per address esistono (Fase precedente), ma per **gruppo** no.
-
-Interventi:
-- Estendere `email_sender_groups` con campi `classification_hint`, `response_style_hint`, `auto_action_default`.
-- UI: per ogni gruppo, editor a 3 campi (cosa è questo gruppo / come classificarlo / come rispondere).
-- Iniezione automatica di questi hint nel prompt di classificazione e di risposta quando il mittente appartiene al gruppo.
+### Tabelle pipeline già introdotte (Fase 1 sessione precedente)
+`inbound_operative_actions`, `wake_up_rules`, `email_sender_groups.classification_hint/response_style_hint/auto_action_default`
 
 ---
 
-## Fase 6 — Osservabilità prompt e loop di apprendimento
+## PIANO RIVISTO (3 fasi pulite, zero duplicati schema)
 
-- Dashboard `/v2/prompt-lab/effectiveness`: per ogni prompt attivo mostra ultime 100 esecuzioni (da `ai_interaction_log` + `prompt_test_runs`), tasso di successo, tempo medio, feedback 👍/👎.
-- Alert Discord se un prompt scende sotto 70% di successo per 24h.
-- Pulsante "Genera nuova versione" che chiama `agent-prompt-refiner` con i fallimenti come contesto, salva snapshot in `prompt_versions` e apre un test A/B prima della promozione.
+### FASE 1 — Agenda mail-first (UX)
+Solo frontend, zero schema. Tutto quello che ti serve è già nel DB.
+
+**1.1 Badge sulla card e nel pannello.** Mostriamo `group_name` (con `group_color`/`group_icon`), `category`, e — se l'inbound è già stato classificato — la categoria AI (`inbound_messages.classification` o `intent`). Hook esistente: `useEmailAddressGroups.getGroup(email)`.
+
+**1.2 Anteprima messaggio inline nel pannello destro.** Sezione "Messaggio ricevuto": mittente, oggetto, snippet 4-6 righe del body, "Mostra tutto" espande inline. Letto da `inbound_messages` correlato all'attività.
+
+**1.3 Azioni inline:** Aggiungi nota, Marca gestita, Archivia, **Rispondi inline** (mini composer che chiama la pipeline `send-email` esistente — niente modifiche IMAP). Sync stato già garantito da `increment_partner_interaction`.
+
+**1.4 Mittente sconosciuto:** pulsanti "Crea partner da dominio", "Ignora dominio" (`auto_action='ignore'` su `email_address_rules`), "Avvia Scout".
+
+### FASE 2 — Funny Mail come centro di controllo (UX + 1 prompt)
+Niente nuovo schema.
+
+**2.1 Vista 3 colonne in `EmailIntelligencePage`:** feed inbound ordinato per priorità commerciale | mail selezionata + thread | "Cosa farebbe l'AI" (classificazione, prompt usato, azioni proposte).
+
+**2.2 Priorità commerciale** (alto valore = soldi):
+- Calcolata in lettura, da `inbound_messages.classification` + categoria mittente.
+- High: `quote_request`, `account_opening`, `customer_reply_active`.
+- Medium: `complaint`, `info_request`.
+- Bassa: `notification_system`, `newsletter`.
+- Implementazione: helper TS in `src/v2/lib/`, no colonna nuova.
+
+**2.3 Trasparenza prompt:** nel pannello "Cosa farebbe l'AI", mostriamo quale prompt è stato applicato (`custom_prompt` / `email_prompts.title` / `group_name`). Lettura sola.
+
+**2.4 Editor inline:** dalla mail selezionata, pulsante "Modifica regole indirizzo" apre drawer con `custom_prompt`, `prompt_id` (dropdown da `email_prompts`), `tone_override`, `topics_*`, `auto_action`. **Riusa** `upsertEmailAddressRule` già esistente.
+
+### FASE 3 — Deep Search L1 Scout come arricchimento di base
+**3.1** Edge `inbound-scout-trigger`: mail da dominio sconosciuto → enqueue Scout su `ai_pending_actions` (rate-limit 1/24h per dominio).
+
+**3.2** Pulsante "Arricchisci ora" su WCA grid + card partner.
+
+**3.3** Auto-Scout su insert partner/contact/business_card (trigger DB → enqueue).
+
+**3.4** Pulizia dead code: rimuovi `useDeepSearchExtraSources`, `useDeepSearchHelpers`, `DeepSearchSection`. Slim `useDeepSearchLocal`.
+
+### FASE 4 — Test regressione prompt (continuo)
+- Test cases per `Group-Aware Classification`, `Operative Dispatcher Routing`, `Wake-Up Composer` via `prompt-test-runner` esistente.
 
 ---
 
-## Note tecniche (non per l'utente finale)
+## Cosa CAMBIA rispetto al piano precedente
 
-- Niente modifiche a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria vincolante).
-- Tutte le promozioni di stato lead continuano a passare da `applyLeadStatusChange` (Lead Status Guard Protocol).
-- Tutte le invocazioni AI restano dentro `invokeAi` con `scope` registrato (AI Invocation Charter).
-- Soft-delete globale rispettato: nessun DELETE su `operative_prompts`, solo `deprecated_at`.
-- Ogni nuovo prompt segue lo standard a 5 sezioni (`docs/prompt-standard.md`).
+| Prima (sbagliato) | Adesso |
+|---|---|
+| ❌ Aggiungere `custom_prompt` su `email_sender_rules` | ✅ Già esiste su `email_address_rules` |
+| ❌ Nuova tabella `address_prompts` | ✅ Già esiste `email_prompts` + FK `prompt_id` |
+| ❌ Cablare iniezione in classify/generate | ✅ Già cablato in 5 file edge |
+| ❌ Nuova UI editor prompt indirizzo | ✅ Estendere `EmailIntelligencePage` con drawer su rule esistente |
+| ❌ Nuovo campo `revenue_impact` | ✅ Helper TS derivato in lettura |
 
----
-
-## Domanda prima di partire
-
-Vuoi che parta **subito da Fase 0** (audit + pulizia duplicati + test di regressione) producendo il report `/mnt/documents/prompt-audit.md`, oppure preferisci che salti l'audit e attacchi direttamente Fase 1 (group-aware classification, l'impatto pratico più visibile)?
-
----
-
-## Stato implementazione (2026-05-04)
-
-- ✅ **Fase 0** — audit + deprecazione 8 duplicati Command (`/mnt/documents/prompt-audit.md`).
-- ✅ **Fase 1** — `classify-email-response` ora: (a) join `email_sender_groups`, (b) blocco `SENDER GROUP` iniettato nel prompt, (c) `getNextStatusGated` impedisce promozione lead se gruppo non commerciale. Nuovo prompt `Group-Aware Classification` (priority 90).
-- ✅ **Fase 2 (DB)** — tabella `inbound_operative_actions` + prompt `Operative Dispatcher Routing`. Edge `dispatch-inbound-action` da implementare quando l'utente configura le prime regole via UI.
-- ✅ **Fase 3 (DB)** — tabella `wake_up_rules` + prompt `Wake-Up Composer`. Wiring di `smart-scheduler` resta da fare quando ci sono righe configurate.
-- ✅ **Fase 4** — coverage report generato (`/mnt/documents/pipeline-coverage.md`).
-- ✅ **Fase 5** — campi `classification_hint`, `response_style_hint`, `auto_action_default` aggiunti a `email_sender_groups`. UI editor da aggiungere quando l'utente vuole gestirli visualmente in Funny Mail.
-- ⏸ **Fase 6** — dashboard effectiveness rinviata: già esistono `ai_interaction_log` e `prompt_test_runs`; la pagina `/v2/prompt-lab/effectiveness` può essere costruita on-demand.
+Nessun nuovo schema, nessuna duplicazione. Confermi e parto dalla Fase 1?
