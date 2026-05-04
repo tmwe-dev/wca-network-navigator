@@ -19,7 +19,7 @@ import {
 import {
   Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen, Layers,
 } from "lucide-react";
-import { Settings2 } from "lucide-react";
+import { Settings2, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
@@ -523,7 +523,7 @@ export default function AISuggestionsTab() {
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button
           onClick={() => analyzeMutation.mutate(selectedRows.length > 0 ? selectedRows.map((row) => row.email_address) : undefined)}
           disabled={analyzeMutation.isPending}
@@ -533,69 +533,65 @@ export default function AISuggestionsTab() {
           {selectedRows.length > 0 ? `Analizza selezione (${selectedRows.length})` : "Analizza con AI"}
         </Button>
 
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Min. email:</span>
-          <div className="w-32">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border/40">
+          <span className="whitespace-nowrap">Min. email</span>
+          <div className="w-24">
             <Slider value={[minEmailCount]} onValueChange={([v]) => setMinEmailCount(v)} min={1} max={20} step={1} />
           </div>
-          <Badge variant="outline">{minEmailCount}</Badge>
+          <Badge variant="outline" className="tabular-nums">{minEmailCount}</Badge>
         </div>
 
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <SelectTrigger className="w-[200px] h-9 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="uncategorized">📭 Non classificate</SelectItem>
-            <SelectItem value="categorized">✅ Già classificate</SelectItem>
-            <SelectItem value="all">🌐 Tutte</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Toggle binario classificate */}
+        <div className="inline-flex h-9 rounded-md border border-border bg-background p-0.5">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("uncategorized")}
+            className={cn(
+              "px-3 text-xs font-medium rounded-sm transition-colors",
+              statusFilter === "uncategorized"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Da classificare
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={cn(
+              "px-3 text-xs font-medium rounded-sm transition-colors",
+              statusFilter === "all"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Tutti
+          </button>
+        </div>
 
-        <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-          <SelectTrigger className="w-[180px] h-9 text-xs" aria-label="Ordina">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name-asc">Nome A → Z</SelectItem>
-            <SelectItem value="name-desc">Nome Z → A</SelectItem>
-            <SelectItem value="count-desc">Più email</SelectItem>
-            <SelectItem value="count-asc">Meno email</SelectItem>
-          </SelectContent>
-        </Select>
-
+        {/* Sort: due bottoni toggle */}
         <Button
-          variant={groupBySuggestion ? "default" : "outline"}
+          variant={sortMode.startsWith("name") ? "default" : "outline"}
           size="sm"
           className="h-9 gap-1.5"
-          onClick={() => setGroupBySuggestion((v) => !v)}
-          title="Raggruppa per suggerimento AI"
+          onClick={() => setSortMode((m) => (m === "name-asc" ? "name-desc" : "name-asc"))}
+          title="Ordina per nome"
         >
-          <Layers className="h-3.5 w-3.5" />
-          <span className="text-xs">Raggruppa AI</span>
+          {sortMode === "name-desc" ? <ArrowUpAZ className="h-3.5 w-3.5" /> : <ArrowDownAZ className="h-3.5 w-3.5" />}
+          <span className="text-xs">Nome</span>
+        </Button>
+        <Button
+          variant={sortMode.startsWith("count") ? "default" : "outline"}
+          size="sm"
+          className="h-9 gap-1.5"
+          onClick={() => setSortMode((m) => (m === "count-desc" ? "count-asc" : "count-desc"))}
+          title="Ordina per numero di email"
+        >
+          {sortMode === "count-asc" ? <ArrowUp01 className="h-3.5 w-3.5" /> : <ArrowDown01 className="h-3.5 w-3.5" />}
+          <span className="text-xs">Email</span>
         </Button>
 
-        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1">
-          {suggestedGroupOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setSuggestedGroupFilter(option.value)}
-              className={cn(
-                "h-8 inline-flex items-center gap-2 rounded-full border px-3 text-xs whitespace-nowrap transition-colors",
-                suggestedGroupFilter === option.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground hover:bg-muted/50 border-border",
-              )}
-            >
-              {option.icon && <span>{option.icon}</span>}
-              <span>{option.label}</span>
-              <span className="opacity-80">{option.count}</span>
-            </button>
-          ))}
-        </div>
-
-        <Badge variant="outline" className="ml-auto text-xs">
+        <Badge variant="outline" className="ml-auto text-xs tabular-nums">
           {visibleRows.length} address
         </Badge>
       </div>
@@ -640,14 +636,29 @@ export default function AISuggestionsTab() {
                   >
                     {showPreview ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
                   </Button>
-                  <span className="text-xs font-medium text-muted-foreground truncate">
-                    Suggerimenti AI ({visibleRows.length})
+                  <span className="text-xs font-semibold text-foreground truncate">
+                    Suggerimenti AI
                   </span>
+                  <Badge variant="secondary" className="text-[10px] h-5 tabular-nums">
+                    {visibleRows.length}
+                  </Badge>
+                  <Button
+                    variant={groupBySuggestion ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 gap-1.5 ml-2"
+                    onClick={() => setGroupBySuggestion((v) => !v)}
+                    title="Raggruppa per suggerimento AI"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span className="text-xs">Raggruppa AI</span>
+                  </Button>
                 </div>
 
-                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                  {selectedRows.length > 0 ? <span className="text-primary font-semibold">{selectedRows.length} sel.</span> : "Seleziona per lavorare in batch"}
-                </span>
+                {selectedRows.length > 0 && (
+                  <span className="text-[11px] text-primary font-semibold whitespace-nowrap">
+                    {selectedRows.length} selezionati
+                  </span>
+                )}
               </div>
 
               <ScrollArea className="flex-1">
