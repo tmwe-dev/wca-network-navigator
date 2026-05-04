@@ -358,6 +358,33 @@ ${bodyBlock}`;
     // ── Funnemail Inbox classifier (cartella + agenda + handoff). Fire-and-forget. ──
     if (channel === "email") {
       try {
+        // 1) Scout sul mittente: solo se sconosciuto (no partner_id) o
+        //    cache scaduta. La function gestisce internamente cache + match CRM.
+        let senderIntel: unknown = null;
+        try {
+          const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
+            body: {
+              from_address,
+              message_id,
+              user_id: body.user_id ?? null,
+              force: false,
+            },
+          });
+          if (scoutData) {
+            const sd = scoutData as { known?: boolean; partner_id?: string | null; intel?: Record<string, unknown> | null };
+            senderIntel = {
+              known: !!sd.known,
+              partner_id: sd.partner_id ?? null,
+              company_type: sd.intel?.company_type ?? null,
+              country: sd.intel?.country ?? null,
+              website: sd.intel?.website ?? null,
+              role_guess: sd.intel?.role_guess ?? null,
+            };
+          }
+        } catch (_se) {
+          // scout fallito → procediamo senza intel
+        }
+
         await supabase.functions.invoke("funnemail-classify", {
           body: {
             message_id,
@@ -368,6 +395,7 @@ ${bodyBlock}`;
             user_id: body.user_id ?? null,
             prior_classification: result.classification,
             prior_intent: result.intent,
+            sender_intel: senderIntel,
           },
         });
       } catch (_e) {
