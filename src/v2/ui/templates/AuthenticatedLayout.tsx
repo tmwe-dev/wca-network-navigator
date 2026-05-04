@@ -239,7 +239,10 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Toaster />
                       <LiveRegion message="" />
 
+                    <ComposeAiConfigProvider>
                     <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
+                      {/* ComposeAiConfigProvider wraps both main content AND overlays (FiltersDrawer)
+                          so EmailComposeFiltersSection works in either place. */}
                       {/* Skip navigation link for accessibility */}
                       <a
                         href="#main-content"
@@ -324,11 +327,11 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         )}
                       </AnimatePresence>
 
-                      {/* Mobile/tablet: drawer filtri. Desktop largo: i filtri sono una rail sempre visibile. */}
+                      {/* Linguetta filtri SEMPRE disponibile (mobile, tablet, desktop). */}
                       <button
                         onClick={() => setFiltersOpen(true)}
                         className={cn(
-                          `hidden md:flex lg:hidden fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
+                          `hidden md:flex fixed ${sidebarOpen ? "left-56" : "left-0"} top-1/2 -translate-y-1/2 z-[60] items-center justify-center w-6 h-12 rounded-r-lg border border-l-0 border-primary/30 hover:border-primary/50 transition-all cursor-pointer`,
                           filtersOpen && "opacity-0 pointer-events-none"
                         )}
                         style={{ background: "hsl(var(--primary) / 0.25)", backdropFilter: "blur(8px)" }}
@@ -350,7 +353,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
 
                       {/* Main content */}
                       <BcaFiltersGate>
-                      <ComposeAiConfigProvider>
                       <div className="flex-1 flex overflow-hidden">
                         <ContextFiltersRail />
                         <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
@@ -381,7 +383,6 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                         <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
                         </div>
                       </div>
-                      </ComposeAiConfigProvider>
                       </BcaFiltersGate>
                     </div>
 
@@ -414,6 +415,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Suspense fallback={null}>
                         <FloatingCoPilot />
                       </Suspense>
+                    </ComposeAiConfigProvider>
                   </CoPilotProvider>
                     </NotificationsProvider>
                   </MissionProvider>
