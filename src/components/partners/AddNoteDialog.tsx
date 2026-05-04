@@ -54,11 +54,11 @@ export function AddNoteDialog({ open, onOpenChange, partnerId }: Props) {
       });
 
       // Ogni interazione manuale è anche un'attività in agenda dell'operatore
-      const activityType: "phone_call" | "meeting" | "send_email" | "follow_up" =
+      const activityType: "phone_call" | "meeting" | "send_email" | "other" =
         type === "call" ? "phone_call"
         : type === "meeting" ? "meeting"
         : type === "email" ? "send_email"
-        : "follow_up";
+        : "other";
       const today = new Date().toISOString().slice(0, 10);
       await insertActivity({
         partner_id: partnerId,

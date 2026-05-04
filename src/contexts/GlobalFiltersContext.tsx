@@ -29,7 +29,7 @@ export interface GlobalFilterState {
   attivitaPriority: string;
   agendaType: string;
   agendaPriority: string;
-  /** Agenda — canale attività ("all" | "send_email" | "whatsapp" | "linkedin" | "phone_call" | "note") */
+  /** Agenda — canale attività ("all" | "send_email" | "whatsapp" | "linkedin" | "phone_call" | "other") */
   agendaChannel: string;
   /** Agenda — stato risposta ("all" | "responded" | "no_response") */
   agendaResponse: string;

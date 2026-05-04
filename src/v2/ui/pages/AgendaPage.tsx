@@ -24,7 +24,7 @@ import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import type { AllActivity } from "@/hooks/useActivities";
 import type { ActivityTypeFilter, ResponseFilter } from "@/components/agenda/AgendaCalendarPage";
 
-const VALID_CHANNELS: ActivityTypeFilter[] = ["all", "send_email", "whatsapp", "linkedin", "phone_call", "note"];
+const VALID_CHANNELS: ActivityTypeFilter[] = ["all", "send_email", "whatsapp", "linkedin", "phone_call", "other"];
 const VALID_RESPONSES: ResponseFilter[] = ["all", "responded", "no_response"];
 
 const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
@@ -32,7 +32,7 @@ const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
   whatsapp:   { label: "WhatsApp", icon: MessageCircle },
   linkedin:   { label: "LinkedIn", icon: Linkedin },
   phone_call: { label: "Chiamate", icon: Phone },
-  note:       { label: "Note", icon: StickyNote },
+  other:      { label: "Note", icon: StickyNote },
 };
 
 const RESPONSE_LABEL: Record<string, string> = {

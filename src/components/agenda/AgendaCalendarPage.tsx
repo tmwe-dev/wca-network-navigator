@@ -11,7 +11,7 @@ import {
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-export type ActivityTypeFilter = "all" | "send_email" | "whatsapp" | "linkedin" | "phone_call" | "note";
+export type ActivityTypeFilter = "all" | "send_email" | "whatsapp" | "linkedin" | "phone_call" | "other";
 export type ResponseFilter = "all" | "responded" | "no_response";
 
 interface AgendaCalendarPageProps {
@@ -48,7 +48,7 @@ export default function AgendaCalendarPage({
     { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
     { value: "linkedin", label: "LinkedIn", icon: Linkedin },
     { value: "phone_call", label: "Chiamate", icon: Phone },
-    { value: "note", label: "Note", icon: StickyNote },
+    { value: "other", label: "Note", icon: StickyNote },
   ];
 
   const responseTypes: { value: ResponseFilter; label: string }[] = [
