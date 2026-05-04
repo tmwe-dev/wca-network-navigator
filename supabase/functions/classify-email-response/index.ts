@@ -22,7 +22,7 @@ import {
 
 // ── Import refactored modules ──
 import { buildClassificationPrompt, ConversationExchange } from "./classificationPrompts.ts";
-import { parseClassificationResponse, ClassificationResult, computeDominantSentiment, getNextStatus } from "./responseParser.ts";
+import { parseClassificationResponse, ClassificationResult, computeDominantSentiment, getNextStatus, getNextStatusGated } from "./responseParser.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ serve(async (req) => {
         .maybeSingle(),
       supabase
         .from("email_address_rules")
-        .select("*, email_prompts:prompt_id(instructions), partner_id, domain_type")
+        .select("*, email_prompts:prompt_id(instructions), partner_id, domain_type, email_sender_groups:group_id(nome_gruppo, classification_hint, response_style_hint)")
         .eq("user_id", input.user_id)
         .eq("email_address", input.email_address)
         .maybeSingle(),
@@ -132,6 +132,21 @@ serve(async (req) => {
     const conversationSummary: string | null = convCtx?.conversation_summary ?? null;
 
     const rules = rulesRes.data;
+    // Inject group metadata coming from the joined email_sender_groups so the
+    // classification prompt is aware of which sender bucket this address
+    // belongs to (commercial vs administrative vs support, etc.).
+    if (rules) {
+      const grp = (rules as Record<string, unknown>).email_sender_groups as
+        | { nome_gruppo?: string; classification_hint?: string; response_style_hint?: string }
+        | null
+        | undefined;
+      if (grp?.nome_gruppo && !(rules as Record<string, unknown>).group_name) {
+        (rules as Record<string, unknown>).group_name = grp.nome_gruppo;
+      }
+      if (grp?.classification_hint) {
+        (rules as Record<string, unknown>).group_classification_hint = grp.classification_hint;
+      }
+    }
     const promptInstructions: string | null =
       (rules as Record<string, unknown>)?.email_prompts
         ? ((rules as Record<string, unknown>).email_prompts as Record<string, string>)?.instructions ?? null
@@ -278,7 +293,8 @@ serve(async (req) => {
 
       if (partner) {
         // Routing override beats hardcoded escalation when present.
-        const nextStatus = override?.nextStatus ?? getNextStatus(partner.lead_status, classification);
+        const senderGroup = (rules as Record<string, unknown> | null)?.group_name as string | null | undefined;
+        const nextStatus = override?.nextStatus ?? getNextStatusGated(partner.lead_status, classification, senderGroup ?? null);
         if (nextStatus && !override?.skipAction) {
           const guardRes = await applyLeadStatusChange(supabase, {
             table: "partners",
