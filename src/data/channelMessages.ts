@@ -29,6 +29,69 @@ export async function countChannelMessages(channel?: string) {
 }
 
 /**
+ * findInboundPreview — recupera l'anteprima testuale dell'email inbound più
+ * pertinente per un'activity dell'Agenda. Cerca per partner_id (se presente)
+ * o per indirizzo mittente, oppure per subject. Restituisce body_text se
+ * disponibile, altrimenti uno snippet pulito da body_html.
+ */
+export interface InboundPreview {
+  subject: string | null;
+  fromAddress: string | null;
+  bodyText: string | null;
+  emailDate: string | null;
+}
+
+function htmlToPlain(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export async function findInboundPreview(opts: {
+  partnerId?: string | null;
+  fromAddress?: string | null;
+  subject?: string | null;
+}): Promise<InboundPreview | null> {
+  let q = supabase
+    .from("channel_messages")
+    .select("subject, from_address, body_text, body_html, email_date, created_at")
+    .eq("channel", "email")
+    .eq("direction", "inbound")
+    .order("email_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (opts.partnerId) {
+    q = q.eq("partner_id", opts.partnerId);
+  } else if (opts.fromAddress) {
+    q = q.ilike("from_address", `%${opts.fromAddress}%`);
+  } else if (opts.subject) {
+    q = q.ilike("subject", `%${opts.subject.slice(0, 60)}%`);
+  } else {
+    return null;
+  }
+
+  const { data, error } = await q.maybeSingle();
+  if (error || !data) return null;
+  const text = (data.body_text && data.body_text.trim())
+    || (data.body_html ? htmlToPlain(data.body_html) : "");
+  return {
+    subject: data.subject ?? null,
+    fromAddress: data.from_address ?? null,
+    bodyText: text || null,
+    emailDate: data.email_date ?? data.created_at ?? null,
+  };
+}
+
+/**
  * Unified inbox row from v_inbox_unified materialized view.
  * Denormalizes partner info, email classification, and address rules into message rows.
  * Use this for unified inbox views where you need partner/classification context with message data.

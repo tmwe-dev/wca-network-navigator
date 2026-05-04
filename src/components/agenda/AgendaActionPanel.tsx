@@ -12,7 +12,7 @@
  */
 import { Link } from "react-router-dom";
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { useUpdateActivity } from "@/hooks/useActivities";
 import { insertActivity, activityKeys } from "@/data/activities";
+import { findInboundPreview } from "@/data/channelMessages";
+import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag } from "@/lib/countries";
@@ -128,7 +130,6 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
     sender?.domain ||
     "Mittente sconosciuto";
   const senderEmail = sender?.email ?? null;
-  const isUnknownSender = !activity.partners?.company_name && !!sender;
   const flag = activity.partners?.country_code ? getCountryFlag(activity.partners.country_code) : null;
   const city = activity.partners?.city;
   const country = activity.partners?.country_name;
@@ -136,6 +137,26 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
   const urgency = urgencyOf(activity.created_at);
   const description = activity.description ?? null;
   const inHolding = isInHoldingPattern((activity.partners as { lead_status?: string } | undefined)?.lead_status);
+
+  // Anteprima reale del corpo email inbound (solo per activity email).
+  const isEmailActivity =
+    activity.activity_type === "send_email" || activity.activity_type === "follow_up";
+  const previewQuery = useQuery({
+    queryKey: queryKeys.channelMessages.inboundPreview(
+      activity.partner_id,
+      senderEmail,
+      activity.title,
+    ),
+    queryFn: () =>
+      findInboundPreview({
+        partnerId: activity.partner_id,
+        fromAddress: senderEmail,
+        subject: activity.title,
+      }),
+    enabled: isEmailActivity,
+    staleTime: 60_000,
+  });
+  const inboundPreview = previewQuery.data?.bodyText ?? null;
 
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate(
@@ -235,24 +256,47 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
             <p className="text-sm font-medium leading-snug">{subject}</p>
           </section>
 
-          {description && (
+          {isEmailActivity ? (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                {isUnknownSender ? "Mittente" : "Contesto"}
+                Anteprima email
+                {senderEmail && (
+                  <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/70">
+                    da <span className="text-foreground/80">{senderEmail}</span>
+                  </span>
+                )}
               </p>
-              {isUnknownSender ? (
-                <p className="text-xs text-foreground/80 leading-relaxed">
-                  Email arrivata da <span className="font-medium">{senderEmail}</span>.
-                  Questo indirizzo non è collegato a nessuna azienda nel CRM:
-                  apri il messaggio per decidere se creare un nuovo partner o archiviarlo.
+              {previewQuery.isLoading ? (
+                <div className="space-y-1.5">
+                  <div className="h-3 w-full animate-pulse bg-muted/40 rounded" />
+                  <div className="h-3 w-11/12 animate-pulse bg-muted/40 rounded" />
+                  <div className="h-3 w-2/3 animate-pulse bg-muted/40 rounded" />
+                </div>
+              ) : inboundPreview ? (
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed line-clamp-[14]">
+                  {inboundPreview.slice(0, 1200)}
+                  {inboundPreview.length > 1200 && "…"}
                 </p>
-              ) : (
+              ) : description ? (
                 <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
                   {description}
                 </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  Anteprima non disponibile. Apri il partner per il messaggio completo.
+                </p>
               )}
             </section>
-          )}
+          ) : description ? (
+            <section>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Contesto
+              </p>
+              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                {description}
+              </p>
+            </section>
+          ) : null}
 
           {activity.selected_contact && (
             <section>
@@ -263,7 +307,7 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
             </section>
           )}
 
-          {!description && !activity.selected_contact && (
+          {!isEmailActivity && !description && !activity.selected_contact && (
             <p className="text-xs text-muted-foreground italic">
               Nessun contesto aggiuntivo. Apri il partner per la cronologia completa.
             </p>
