@@ -23,6 +23,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { FunnemailGroupFolder } from "@/data/funnemailInbox";
 
@@ -45,6 +48,23 @@ const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
 };
 
 const STORAGE_KEY = "funnemail_sidebar_order_v1";
+const SORT_STORAGE_KEY = "funnemail_sidebar_sort_v1";
+
+type SidebarSort = "default" | "name_asc" | "count_desc";
+
+function loadSortMode(): SidebarSort {
+  try {
+    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    if (raw === "name_asc" || raw === "count_desc" || raw === "default") return raw;
+  } catch { /* ignore */ }
+  return "default";
+}
+
+function saveSortMode(mode: SidebarSort): void {
+  try {
+    localStorage.setItem(SORT_STORAGE_KEY, mode);
+  } catch { /* ignore */ }
+}
 
 interface StoredOrder {
   // slug -> { section override, position }
@@ -83,17 +103,28 @@ function applyUserOrder(folders: FunnemailGroupFolder[], order: StoredOrder): Fu
 function sortBySection(
   folders: FunnemailGroupFolder[],
   order: StoredOrder,
+  counts: Record<string, number>,
+  mode: SidebarSort,
 ): Record<Section, FunnemailGroupFolder[]> {
   const buckets: Record<Section, FunnemailGroupFolder[]> = { priority: [], secondary: [], unclassified: [] };
   for (const f of folders) buckets[f.section].push(f);
-  const sorter = (section: Section) => (a: FunnemailGroupFolder, b: FunnemailGroupFolder) => {
+  const defaultSorter = (section: Section) => (a: FunnemailGroupFolder, b: FunnemailGroupFolder) => {
     const pa = order[a.slug]?.section === section ? order[a.slug].position : Number.MAX_SAFE_INTEGER;
     const pb = order[b.slug]?.section === section ? order[b.slug].position : Number.MAX_SAFE_INTEGER;
     if (pa !== pb) return pa - pb;
     return a.sort_order - b.sort_order;
   };
-  buckets.priority.sort(sorter("priority"));
-  buckets.secondary.sort(sorter("secondary"));
+  const nameSorter = (a: FunnemailGroupFolder, b: FunnemailGroupFolder) =>
+    a.label.localeCompare(b.label);
+  const countSorter = (a: FunnemailGroupFolder, b: FunnemailGroupFolder) =>
+    (counts[b.slug] ?? 0) - (counts[a.slug] ?? 0) || a.label.localeCompare(b.label);
+  const pickSorter = (section: Section) =>
+    mode === "name_asc" ? nameSorter
+      : mode === "count_desc" ? countSorter
+      : defaultSorter(section);
+  buckets.priority.sort(pickSorter("priority"));
+  buckets.secondary.sort(pickSorter("secondary"));
+  buckets.unclassified.sort(mode === "default" ? (a, b) => a.sort_order - b.sort_order : pickSorter("unclassified"));
   return buckets;
 }
 
@@ -160,14 +191,21 @@ function SortableRow({ folder, active, count, onSelect, draggable }: SortableRow
 
 export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount, loading, onSelect, variant = "standalone" }: Props) {
   const [order, setOrder] = useState<StoredOrder>(() => loadOrder());
+  const [sortMode, setSortMode] = useState<SidebarSort>(() => loadSortMode());
   const isDrawer = variant === "drawer";
 
   useEffect(() => {
     saveOrder(order);
   }, [order]);
+  useEffect(() => { saveSortMode(sortMode); }, [sortMode]);
 
   const arranged = useMemo(() => applyUserOrder(folders, order), [folders, order]);
-  const grouped = useMemo(() => sortBySection(arranged, order), [arranged, order]);
+  const grouped = useMemo(
+    () => sortBySection(arranged, order, counts, sortMode),
+    [arranged, order, counts, sortMode],
+  );
+
+  const dragEnabled = sortMode === "default";
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -232,6 +270,19 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {isDrawer ? "Cartelle posta" : "Funny Mail"}
         </p>
+        <div className="mt-2 flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground">Ordina</span>
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SidebarSort)}>
+            <SelectTrigger className="h-6 flex-1 text-[10px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default" className="text-[11px]">Default (manuale)</SelectItem>
+              <SelectItem value="name_asc" className="text-[11px]">Nome A→Z</SelectItem>
+              <SelectItem value="count_desc" className="text-[11px]">Email ↓</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <button
           type="button"
           onClick={() => onSelect("all")}
@@ -271,7 +322,7 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
                         active={selectedFolder === folder.slug}
                         count={counts[folder.slug] ?? 0}
                         onSelect={onSelect}
-                        draggable={section !== "unclassified"}
+                        draggable={dragEnabled && section !== "unclassified"}
                       />
                     ))}
                   </SortableContext>
