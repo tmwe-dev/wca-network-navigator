@@ -78,9 +78,20 @@ function cleanTitle(title: string | null): string {
   if (!title) return "—";
   return title
     .replace(/^reply received\s*\([^)]+\)\s*:?\s*/i, "")
+    .replace(/^risposta\s+(email|whatsapp|linkedin|sms)\s*:?\s*/i, "")
     .replace(/^re:\s*/i, "")
     .replace(/^fwd:\s*/i, "")
     .trim() || "—";
+}
+
+/** Estrae il dominio del mittente da una description tipo "Messaggio in arrivo da x@y.com (...)". */
+function senderFromDescription(desc: string | null | undefined): { email: string; domain: string } | null {
+  if (!desc) return null;
+  const m = desc.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+  if (!m) return null;
+  const email = m[1];
+  const domain = email.split("@")[1] ?? email;
+  return { email, domain };
 }
 
 interface AgendaActionPanelProps {
