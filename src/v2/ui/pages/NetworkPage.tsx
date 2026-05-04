@@ -13,6 +13,7 @@
  */
 import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useMissionDrawerEvents } from "@/hooks/useMissionDrawerEvents";
@@ -40,6 +41,20 @@ export function NetworkPage(): React.ReactElement {
   const { companies, isLoading } = useWcaPartnersAsCompanies();
   const chips = useWcaActiveFilterChips();
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+
+  // Apertura via deep-link: /v2/network?partnerId=<id>
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const id = searchParams.get("partnerId");
+    if (id) {
+      setSelectedPartnerId(id);
+      // pulisce il param per non riselezionare al refresh
+      const next = new URLSearchParams(searchParams);
+      next.delete("partnerId");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useMissionDrawerEvents({
     "deep-search-country": () => {
