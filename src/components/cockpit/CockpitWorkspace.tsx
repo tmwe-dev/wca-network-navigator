@@ -168,12 +168,19 @@ export function CockpitWorkspace(props: Props) {
             initial={{ opacity: 0, rotateY: -90 }}
             animate={{ opacity: 1, rotateY: 0 }}
             exit={{ opacity: 0, rotateY: 90 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: isDragging ? 0 : 0.35, ease: "easeOut" }}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+            onDrop={(e) => {
+              // Fallback: se il drop avviene nello spazio vuoto tra le casellone,
+              // intercettiamo qui per evitare che il browser annulli l'operazione.
+              // Le singole casellone restano la via primaria via stopPropagation interno.
+              e.preventDefault();
+            }}
             className={cn(
               "absolute inset-0 flex items-center justify-center p-8 overflow-auto",
               isDragging && "bg-background/95 backdrop-blur-sm",
             )}
-            style={{ transformStyle: "preserve-3d", perspective: 1200 }}
+            style={{ transformStyle: "preserve-3d", perspective: 1200, transformOrigin: "center" }}
           >
             <ChannelDropZones
               isDragging={isDragging}
