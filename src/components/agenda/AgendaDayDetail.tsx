@@ -11,11 +11,12 @@ import {
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
   Calendar as CalendarIcon, ArrowUpRight,
-  Check, Clock, UserPlus, Archive,
+  Check, Clock, Archive, Plane,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
 import { useUpdateActivity } from "@/hooks/useActivities";
 import { getCountryFlag } from "@/lib/countries";
+import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -280,6 +281,9 @@ function ActivityRow({
   const flag = activity.partners?.country_code
     ? getCountryFlag(activity.partners.country_code)
     : null;
+  const inHolding = isInHoldingPattern(
+    (activity.partners as { lead_status?: string } | undefined)?.lead_status
+  );
 
   const handleStatus = (status: "completed" | "cancelled") => {
     updateActivity.mutate({
@@ -315,6 +319,14 @@ function ActivityRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium truncate">{partnerName}</span>
+          {inHolding && (
+            <span
+              title="In circuito di attesa"
+              className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] border border-sky-500/40 text-sky-500 bg-sky-500/10 animate-pulse shrink-0"
+            >
+              <Plane className="w-2.5 h-2.5" />
+            </span>
+          )}
           {activity.selected_contact && (
             <span className="text-[10px] text-muted-foreground truncate">· {activity.selected_contact.name}</span>
           )}
@@ -333,7 +345,7 @@ function ActivityRow({
         <Badge variant="outline" className="text-[9px] shrink-0 opacity-70">{verb}</Badge>
       ) : activity.partner_id ? (
         <Button asChild size="sm" variant="ghost" className="h-7 px-2.5 text-[10px] shrink-0">
-          <Link to={`/partners/${activity.partner_id}`}>
+          <Link to={`/v2/network?partnerId=${activity.partner_id}`}>
             {verb} <ArrowUpRight className="w-3 h-3 ml-1" />
           </Link>
         </Button>
@@ -358,19 +370,13 @@ function ActivityRow({
           <DropdownMenuItem className="text-xs gap-2" onClick={() => handleStatus("completed")}>
             <Check className="w-3 h-3 text-emerald-500" /> Fatto
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-xs gap-2" disabled>
-            <Clock className="w-3 h-3" /> Rimanda… <span className="ml-auto text-[9px] text-muted-foreground">presto</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-xs gap-2" disabled>
-            <UserPlus className="w-3 h-3" /> Delega… <span className="ml-auto text-[9px] text-muted-foreground">presto</span>
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-xs gap-2" onClick={() => handleStatus("cancelled")}>
             <Archive className="w-3 h-3" /> Archivia
           </DropdownMenuItem>
           {activity.partner_id && (
             <DropdownMenuItem asChild>
-              <Link to={`/partners/${activity.partner_id}`} className="text-xs gap-2">
+              <Link to={`/v2/network?partnerId=${activity.partner_id}`} className="text-xs gap-2">
                 <ArrowUpRight className="w-3 h-3" /> Vai al partner
               </Link>
             </DropdownMenuItem>
