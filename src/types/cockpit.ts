@@ -30,6 +30,9 @@ export interface LinkedInProfileData {
   connectionStatus?: LinkedInConnectionStatus;
 }
 
+export interface DraftLink { label: string; url: string }
+export interface DraftAttachment { name: string; path: string; size: number; mime: string }
+
 export interface DraftState {
   channel: DraftChannel;
   contactId: string | null;
@@ -51,4 +54,10 @@ export interface DraftState {
   journalist_review?: JournalistReviewSummary | null;
   type_resolution?: ResolvedEmailType | null;
   context_summary?: OracleContextSummary;
+  /** Link che l'AI deve citare nel testo (iniettati nel goal). */
+  links?: DraftLink[];
+  /** URL immagini già inserite inline nel body (solo per badge counter). */
+  inlineImages?: string[];
+  /** Allegati da inviare insieme all'email (path nel bucket cockpit-attachments). */
+  attachments?: DraftAttachment[];
 }

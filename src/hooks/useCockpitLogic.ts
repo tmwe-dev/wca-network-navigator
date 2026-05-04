@@ -437,6 +437,10 @@ export function useCockpitLogic() {
     if (cfg.customGoal.trim()) goalParts.push(cfg.customGoal.trim());
     if (cfg.selectedType?.prompt) goalParts.push(cfg.selectedType.prompt);
     goalParts.push("MIGLIORA la bozza qui sotto mantenendo voce, intento e personalità dell'autore. Non riscrivere da zero.");
+    if (draftState.links && draftState.links.length > 0) {
+      const linksList = draftState.links.map(l => `- [${l.label}](${l.url})`).join("\n");
+      goalParts.push(`Includi nel testo, in modo naturale e contestuale, i seguenti link (formato HTML <a href>):\n${linksList}`);
+    }
     const result = await forge.run({
       partner_id: contact?.partnerId ?? null,
       contact_id: contact?.sourceType === "contact" ? contact?.sourceId ?? null : null,

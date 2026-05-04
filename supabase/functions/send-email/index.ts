@@ -37,6 +37,11 @@ interface SendEmailBody {
    * If true, skip journalist review (content was already reviewed upstream)
    */
   journalist_reviewed?: boolean;
+  /**
+   * Allegati opzionali. `path` è la chiave nel bucket privato `cockpit-attachments`.
+   * Hard cap: max 10 file, 20MB totali.
+   */
+  attachments?: { filename: string; path: string }[];
 }
 
 interface SmtpSendOptions {
@@ -46,6 +51,12 @@ interface SmtpSendOptions {
   content: string;
   html: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Uint8Array | string;
+    encoding?: "base64" | "binary";
+    contentType?: string;
+  }>;
 }
 
 Deno.serve(async (req) => {
@@ -375,6 +386,38 @@ Deno.serve(async (req) => {
     };
     if (resolvedReplyTo) {
       sendOptions.replyTo = resolvedReplyTo;
+    }
+
+    // ── Allegati (Cockpit) ──
+    if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+      const MAX_ATT = 10;
+      const MAX_TOTAL = 20 * 1024 * 1024;
+      if (body.attachments.length > MAX_ATT) {
+        return edgeError("VALIDATION_ERROR", `Massimo ${MAX_ATT} allegati`);
+      }
+      const loaded: NonNullable<SmtpSendOptions["attachments"]> = [];
+      let total = 0;
+      for (const att of body.attachments) {
+        if (!att?.path || !att?.filename) continue;
+        const { data: file, error: dlErr } = await supabase.storage
+          .from("cockpit-attachments").download(att.path);
+        if (dlErr || !file) {
+          console.warn(`[send-email] attachment download failed: ${att.path}`, dlErr);
+          return edgeError("ATTACHMENT_ERROR", `Allegato non disponibile: ${att.filename}`);
+        }
+        const buf = new Uint8Array(await file.arrayBuffer());
+        total += buf.byteLength;
+        if (total > MAX_TOTAL) {
+          return edgeError("VALIDATION_ERROR", "Allegati totali superano 20MB");
+        }
+        loaded.push({
+          filename: att.filename,
+          content: buf,
+          encoding: "binary",
+          contentType: file.type || "application/octet-stream",
+        });
+      }
+      sendOptions.attachments = loaded;
     }
 
     // Generate synthetic Message-ID (denomailer doesn't expose server-assigned ID)

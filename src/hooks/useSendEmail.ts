@@ -54,7 +54,12 @@ export function useSendEmail(draft: DraftState) {
         ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
       });
       const data = await invokeEdge<{ error?: string }>("send-email", {
-        body: { to: draft.contactEmail, subject: draft.subject, html: sanitizedHtml },
+        body: {
+          to: draft.contactEmail,
+          subject: draft.subject,
+          html: sanitizedHtml,
+          attachments: (draft.attachments ?? []).map(a => ({ filename: a.name, path: a.path })),
+        },
         context: "useSendEmail",
       });
       if (data?.error) throw new Error(data.error);
