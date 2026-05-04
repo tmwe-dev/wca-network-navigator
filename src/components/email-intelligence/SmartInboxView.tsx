@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ThumbsUp, ThumbsDown, MessageCircle, CalendarCheck, AlertTriangle, RotateCcw, Bot, Ban, HelpCircle, Inbox, CheckCircle, Archive, ShieldBan } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageCircle, CalendarCheck, AlertTriangle, RotateCcw, Bot, Ban, HelpCircle, Inbox, CheckCircle, Archive, ShieldBan, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { queryKeys } from "@/lib/queryKeys";
+import { SenderActionsDialog } from "./management/SenderActionsDialog";
+import type { SenderAnalysis } from "@/types/email-management";
+import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 
 const CATEGORIES: Record<string, { icon: typeof ThumbsUp; color: string; label: string }> = {
   interested: { icon: ThumbsUp, color: "bg-emerald-400/10 text-emerald-400", label: "Interessato" },
@@ -38,6 +41,7 @@ export function SmartInboxView() {
   const qc = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const { data: classifications = [], isLoading } = useQuery({
     queryKey: queryKeys.email.classifications,
@@ -287,10 +291,32 @@ export function SmartInboxView() {
               <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive" onClick={() => handleFolderAction("spam", selected.id)}>
                 <ShieldBan className="h-3.5 w-3.5" />Spam
               </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 ml-auto" onClick={() => setActionsOpen(true)}>
+                <Settings2 className="h-3.5 w-3.5" />Azioni e regole
+              </Button>
             </div>
           </div>
         )}
       </div>
+
+      <SenderActionsDialog
+        sender={
+          selected?.email_address
+            ? ({
+                email: selected.email_address,
+                domain: selected.email_address.split("@")[1] ?? "",
+                companyName: deriveSenderDisplayName(selected.email_address),
+                emailCount: 0,
+                firstSeen: "",
+                lastSeen: "",
+                isClassified: true,
+              } as SenderAnalysis)
+            : null
+        }
+        open={actionsOpen}
+        onOpenChange={setActionsOpen}
+        onActionDone={() => qc.invalidateQueries({ queryKey: queryKeys.email.classifications })}
+      />
     </div>
   );
 }
