@@ -305,14 +305,20 @@ export async function listFunnemailGroupedInbox(
     else rulesByAddress.set(key, rule.group_name);
   }
 
-  const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => ({
-    slug: slugifyGroup(g.nome_gruppo),
-    label: g.nome_gruppo,
-    icon: g.icon,
-    color: g.colore,
-    section: (g.sort_order ?? index) < 100 ? "priority" : "secondary",
-    sort_order: g.sort_order ?? index,
-  }));
+  // Prioritarie = primi 6 gruppi "core" operativi (sort_order < 6).
+  // Tutto il resto va in Secondarie. Non classificate è la sezione finale.
+  const PRIORITY_THRESHOLD = 6;
+  const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => {
+    const order = g.sort_order ?? index;
+    return {
+      slug: slugifyGroup(g.nome_gruppo),
+      label: g.nome_gruppo,
+      icon: g.icon,
+      color: g.colore,
+      section: order < PRIORITY_THRESHOLD ? "priority" : "secondary",
+      sort_order: order,
+    };
+  });
   folders.push({ slug: "unclassified", label: "Non classificate", icon: "?", color: null, section: "unclassified", sort_order: 9999 });
 
   const folderSlugByName = new Map(folders.map((f) => [f.label, f.slug]));
