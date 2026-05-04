@@ -99,7 +99,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               <span className="truncate text-sm font-bold text-primary">{brand}</span>
               <CompanyLogoInline email={message.from_address} size={16} />
               <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
-              <span className="ml-2 truncate text-[11px] text-muted-foreground" title={senderDetail || message.from_address}>
+              <span className="ml-2 truncate text-[11px] text-muted-foreground" title={senderDetail || message.from_address || ""}>
                 {senderDetail || message.from_address}
               </span>
               <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
