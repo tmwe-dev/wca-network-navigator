@@ -18,7 +18,7 @@ export function EmailComposerWizard({ onConfirm }: { onConfirm?: () => void }): 
   const configBanner = SIDEBAR_BANNER_REGISTRY["email-compose"];
 
   return (
-    <div className="flex flex-col h-full" style={{ perspective: "1400px" }}>
+    <div className="flex flex-col h-full min-h-[640px]" style={{ perspective: "1400px" }}>
       <div
         className="relative flex-1 min-h-0 transition-transform duration-500 ease-out"
         style={{
