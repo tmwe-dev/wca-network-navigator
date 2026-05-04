@@ -716,6 +716,32 @@ export default function AISuggestionsTab() {
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
+
+      <SenderActionsDialog
+        sender={
+          actionsRow
+            ? ({
+                email: actionsRow.email_address,
+                domain: actionsRow.domain || getDomain(actionsRow.email_address),
+                companyName:
+                  actionsRow.company_name ||
+                  actionsRow.display_name ||
+                  deriveSenderDisplayName(actionsRow.email_address),
+                emailCount: actionsRow.email_count,
+                firstSeen: "",
+                lastSeen: "",
+                isClassified: actionsRow.group_id !== null,
+              } as SenderAnalysis)
+            : null
+        }
+        open={actionsRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setActionsRow(null);
+        }}
+        onActionDone={() => {
+          qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+        }}
+      />
     </div>
   );
 }
