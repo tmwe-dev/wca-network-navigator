@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Check, X, Pencil, Loader2, ChevronDown, ChevronUp, Zap, Info } from "lucide-react";
+import { Sparkles, Check, X, Pencil, Loader2, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import type { EmailSenderGroup } from "@/types/email-management";
@@ -30,7 +30,7 @@ interface Suggestion {
 export default function AISuggestionsTab() {
   const qc = useQueryClient();
   const [minEmailCount, setMinEmailCount] = useState(3);
-  const [confidenceFilter, setConfidenceFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"uncategorized" | "categorized" | "all">("uncategorized");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Load groups
@@ -45,27 +45,25 @@ export default function AISuggestionsTab() {
     },
   });
 
-  // Load suggestions (uncategorized with ai_suggested_group)
   const { data: suggestions = [], isLoading } = useQuery({
-    queryKey: queryKeys.ai.suggestions,
+    queryKey: [...queryKeys.ai.suggestions, statusFilter, minEmailCount],
     queryFn: async () => {
-      const q = supabase
+      let q = supabase
         .from("email_address_rules")
         .select("id, email_address, display_name, email_count, ai_suggested_group, ai_suggestion_confidence")
-        .is("group_id", null)
-        .not("ai_suggested_group", "is", null)
-        .is("ai_suggestion_accepted", null)
         .gte("email_count", minEmailCount)
-        .order("ai_suggestion_confidence", { ascending: false });
+        .order("email_count", { ascending: false })
+        .limit(500);
+
+      if (statusFilter === "uncategorized") {
+        q = q.is("group_id", null);
+      } else if (statusFilter === "categorized") {
+        q = q.not("group_id", "is", null);
+      }
 
       const { data, error } = await q;
       if (error) throw error;
-
-      let result = (data || []) as Suggestion[];
-      if (confidenceFilter === "80") result = result.filter((s) => s.ai_suggestion_confidence >= 0.8);
-      else if (confidenceFilter === "60") result = result.filter((s) => s.ai_suggestion_confidence >= 0.6);
-      else if (confidenceFilter === "low") result = result.filter((s) => s.ai_suggestion_confidence < 0.6);
-      return result;
+      return (data || []) as Suggestion[];
     },
   });
 
@@ -158,15 +156,6 @@ export default function AISuggestionsTab() {
     },
   });
 
-  // Accept all >80%
-  const acceptAllHighConfidence = async () => {
-    const highConf = suggestions.filter((s) => s.ai_suggestion_confidence >= 0.8);
-    for (const s of highConf) {
-      await acceptMutation.mutateAsync(s);
-    }
-    toast.success(`${highConf.length} suggerimenti accettati`);
-  };
-
   const getGroupColor = (groupName: string | null): string => {
     if (!groupName) return "#666";
     const group = groups.find((g) => g.nome_gruppo === groupName);
@@ -190,24 +179,18 @@ export default function AISuggestionsTab() {
           <Badge variant="outline">{minEmailCount}</Badge>
         </div>
 
-        <Select value={confidenceFilter} onValueChange={setConfidenceFilter}>
-          <SelectTrigger className="w-[140px] h-9 text-xs">
-            <SelectValue placeholder="Confidence" />
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-[180px] h-9 text-xs">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutti</SelectItem>
-            <SelectItem value="80">&gt;80%</SelectItem>
-            <SelectItem value="60">&gt;60%</SelectItem>
-            <SelectItem value="low">&lt;60%</SelectItem>
+            <SelectItem value="uncategorized">Non classificate</SelectItem>
+            <SelectItem value="categorized">Già classificate</SelectItem>
+            <SelectItem value="all">Tutte</SelectItem>
           </SelectContent>
         </Select>
 
-        {suggestions.filter((s) => s.ai_suggestion_confidence >= 0.8).length > 0 && (
-          <Button variant="outline" size="sm" onClick={acceptAllHighConfidence} className="gap-1 text-xs">
-            <Zap className="h-3.5 w-3.5" />
-            Accetta tutti &gt;80% ({suggestions.filter((s) => s.ai_suggestion_confidence >= 0.8).length})
-          </Button>
-        )}
+        <span className="text-xs text-muted-foreground ml-auto">{suggestions.length} address</span>
       </div>
 
       {/* List */}
@@ -218,7 +201,7 @@ export default function AISuggestionsTab() {
       ) : suggestions.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
           <Sparkles className="h-10 w-10 mb-2 text-primary/30" />
-          <p className="text-sm">Nessun suggerimento AI disponibile</p>
+          <p className="text-sm">Nessun address trovato</p>
           <p className="text-xs mt-1">Clicca &quot;Analizza con AI&quot; per generare suggerimenti</p>
         </div>
       ) : (
@@ -226,9 +209,6 @@ export default function AISuggestionsTab() {
           <div className="space-y-2 pr-2">
             {suggestions.map((s) => {
               const isExpanded = expandedId === s.id;
-              const confPercent = Math.round((s.ai_suggestion_confidence || 0) * 100);
-              const confColor = confPercent >= 80 ? "text-emerald-400" : confPercent >= 60 ? "text-yellow-400" : "text-red-400";
-
               return (
                 <div key={s.id} className="bg-card/80 border border-border/50 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-3">
@@ -242,7 +222,6 @@ export default function AISuggestionsTab() {
                         {s.ai_suggested_group}
                       </Badge>
                     )}
-                    <span className={`text-xs font-mono font-bold ${confColor}`}>{confPercent}%</span>
 
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setExpandedId(isExpanded ? null : s.id)}>
                       {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -258,13 +237,15 @@ export default function AISuggestionsTab() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400"
-                      onClick={() => acceptMutation.mutate(s)} disabled={acceptMutation.isPending}>
-                      <Check className="h-3.5 w-3.5" />Accetta
-                    </Button>
+                    {s.ai_suggested_group && (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-emerald-400"
+                        onClick={() => acceptMutation.mutate(s)} disabled={acceptMutation.isPending}>
+                        <Check className="h-3.5 w-3.5" />Accetta
+                      </Button>
+                    )}
                     <Select onValueChange={(gId) => changeMutation.mutate({ ruleId: s.id, groupId: gId })}>
                       <SelectTrigger className="h-7 w-32 text-xs">
-                        <Pencil className="h-3 w-3 mr-1" /><SelectValue placeholder="Cambia" />
+                        <Pencil className="h-3 w-3 mr-1" /><SelectValue placeholder="Assegna" />
                       </SelectTrigger>
                       <SelectContent>
                         {groups.map((g) => (
@@ -274,10 +255,12 @@ export default function AISuggestionsTab() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive"
-                      onClick={() => ignoreMutation.mutate(s.id)}>
-                      <X className="h-3.5 w-3.5" />Ignora
-                    </Button>
+                    {s.ai_suggested_group && (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive"
+                        onClick={() => ignoreMutation.mutate(s.id)}>
+                        <X className="h-3.5 w-3.5" />Ignora suggerimento
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
