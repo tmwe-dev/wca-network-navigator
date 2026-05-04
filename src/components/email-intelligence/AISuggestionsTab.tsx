@@ -228,7 +228,10 @@ export default function AISuggestionsTab() {
         .from("email_sender_groups")
         .select("*")
         .order("sort_order", { ascending: true });
-      return (data || []) as EmailSenderGroup[];
+      const list = (data || []) as EmailSenderGroup[];
+      return [...list].sort((a, b) =>
+        a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base", numeric: true }),
+      );
     },
   });
 
