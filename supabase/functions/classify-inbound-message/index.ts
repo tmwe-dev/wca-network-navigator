@@ -14,6 +14,7 @@ import { initEmailProcessManager } from "../_shared/processManagers/emailProcess
 import { initLeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { checkInjectionGuard } from "../_shared/injectionGuard.ts";
+import { dispatchFunnemail } from "../_shared/funnemailDispatcher.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -330,6 +331,30 @@ ${bodyBlock}`;
       }
     }
 
+    // ── Funnemail policy dispatcher (solo email, fail-safe) ──
+    let funnemailResult: unknown = null;
+    if (channel === "email") {
+      try {
+        funnemailResult = await dispatchFunnemail({
+          supabase,
+          messageId: message_id,
+          userId: body.user_id,
+          channel,
+          fromAddress: from_address,
+          subject: subject || "",
+          bodyText: body_text || "",
+          partnerId: partner_id || null,
+          classification: result.classification,
+          confidence: result.confidence,
+          intent: result.intent,
+          sentiment: result.sentiment,
+          urgency: result.urgency,
+        });
+      } catch (_e) {
+        // dispatcher è fail-safe ma per sicurezza non rompiamo il return
+      }
+    }
+
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
@@ -339,6 +364,7 @@ ${bodyBlock}`;
       urgency: result.urgency,
       channel,
       post_classification: postClassResult,
+      funnemail: funnemailResult,
     }), { status: 200, headers });
 
   } catch (error: unknown) {
