@@ -93,6 +93,15 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     [filteredMails, selectedMessageId],
   );
 
+  React.useEffect(() => {
+    if (filteredMails.length === 0) {
+      if (selectedMessageId !== null) setSelectedMessageId(null);
+      return;
+    }
+    const selectionStillExists = selectedMessageId ? filteredMails.some((m) => m.id === selectedMessageId) : false;
+    if (!selectionStillExists) setSelectedMessageId(filteredMails[0].id);
+  }, [filteredMails, selectedMessageId]);
+
   const selectedFolderLabel = React.useMemo<string>(
     () => selectedFolder === "all" ? "Tutte le email" : folders.find((f) => f.slug === selectedFolder)?.label ?? selectedFolder,
     [folders, selectedFolder],
