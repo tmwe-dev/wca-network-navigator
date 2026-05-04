@@ -43,8 +43,6 @@ export interface UseFunnemailInboxResult {
   bulkBusy: boolean;
 }
 
-const PAGE_SIZE = 20000;
-
 export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
   const g = useGlobalFilters();
@@ -57,8 +55,8 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", PAGE_SIZE),
-    queryFn: () => listFunnemailGroupedInbox(user!.id, PAGE_SIZE),
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon"),
+    queryFn: () => listFunnemailGroupedInbox(user!.id),
     enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
