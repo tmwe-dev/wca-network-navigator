@@ -1,74 +1,34 @@
-## Objetivo
-Añadir "Entra con TMWE" en `/v2/login` como método adicional al email+password+whitelist actual. Auto-crear la cuenta Lovable Cloud si el email TMWE no existe aún.
+## Diagnóstico
 
-## Decisiones clave
-- **Coexiste** con email+password actual. No se toca el flujo whitelist existente.
-- **Auto-provisioning** abierto: cualquier email TMWE válido crea cuenta automáticamente.
-- **Cero tokens TMWE en cliente**: todo el OAuth pasa por edge functions (ya construidas en la iteración previa).
-- **Mapeo 1:1**: `auth.users.id` ⇄ `tmwe_user_id` (vía `tmwe_user_tokens` ya existente).
+El login con TMWE (email+password) sí funciona en el lado de TMWE: el usuario aprueba y TMWE redirige al callback con `?code=...&state=...`. El problema está en nuestro callback.
 
-## Flujo de login TMWE
+Del session replay:
 ```
-[Login page] → botón "Entra con TMWE"
-   ↓
-edge: tmwe-oauth-start  (genera state, redirige a sandbox.findair.net/oauth/authorize)
-   ↓
-[Usuario aprueba en TMWE]
-   ↓
-edge: tmwe-oauth-login-callback  (NUEVA, distinta de la callback de "conectar")
-   - Intercambia code → tokens TMWE
-   - Llama get_my_profile → obtiene email, tmwe_user_id, company
-   - Busca auth.users por email
-       · Si existe → usa ese user_id
-       · Si NO existe → admin.createUser({ email, email_confirm: true, password: random })
-   - Guarda/upserta tokens en tmwe_user_tokens (mapeo user_id ⇄ tmwe_user_id)
-   - Genera magic link Supabase (admin.generateLink type=magiclink)
-   - Redirige al frontend con el magic link → sesión iniciada
-   ↓
-[/v2 dashboard]
+/v2/settings/connections?tmwe=error&reason=TMWE+%2Ferp%2Ftmwe_json%2Fexchange_code_for_jwt+404%3A+
 ```
 
-## Cambios necesarios
+`tmwe-oauth-callback` llama a `POST /erp/tmwe_json/exchange_code_for_jwt` y TMWE responde **404**. Ese endpoint no existe en TMWE. El endpoint correcto, ya usado en el resto del proyecto (`tmweClient.ts` líneas 144 y 190 para `client_credentials` y `refresh_token`), es **`/erp/tmwe_json/token`**.
 
-### 1. DB (migración mínima)
-- Añadir columna `tmwe_email` (text) y `tmwe_company` (text) a `tmwe_user_tokens` para auditoría (ya se guardan en metadata, lo extraemos a columnas indexadas).
-- Añadir flag `created_via_tmwe` (boolean default false) en `profiles` para distinguir cuentas auto-provisionadas.
-- **No se toca whitelist** (`authorized_users`): los usuarios TMWE auto-provisionados saltan la whitelist por diseño.
+Además dos efectos secundarios visibles del bug actual:
+1. El error redirige a `/v2/settings/connections` aunque el `intent` sea `login` — pasa porque el `catch` final llama `back("error", ...)` sin pasar `intent`. Esto explica por qué "vuelve al formulario": realmente acaba en otra ruta de error con query string. (Tu observación de "vuelve a /v2/login" puede estar mezclada con el render del skeleton; igualmente conviene preservar `intent` en el catch.)
+2. No tenemos visibilidad de qué endpoint exacto falla porque el log del callback solo muestra "booted". Añadir un `console.error` con el motivo ayuda al debug.
 
-### 2. Edge function nueva: `tmwe-oauth-login-callback`
-Distinta de `tmwe-oauth-callback` (esa es para "conectar TMWE a un usuario ya logueado"). Esta es para "loguearse vía TMWE".
-- `verify_jwt = false` (público, recibe el code de TMWE)
-- Diferenciada por parámetro `intent=login` en el `state`
-- Usa `service_role` para crear usuarios y generar magic links
-- Devuelve redirect 302 a la URL del magic link
+## Cambios
 
-### 3. Edge function `tmwe-oauth-start` (modificar)
-- Aceptar parámetro `intent` (`connect` | `login`)
-- Guardar `intent` en `tmwe_oauth_state`
-- Redirigir a la callback correcta según `intent`
+### 1. `supabase/functions/tmwe-oauth-callback/index.ts`
+- Cambiar la URL del intercambio code→token de `/erp/tmwe_json/exchange_code_for_jwt` a `/erp/tmwe_json/token`.
+- Capturar `intent` antes del `try` (leyéndolo de `state` cuando esté disponible) o, más simple, mover la resolución de `intent` antes y propagarla en el `catch` mediante una variable de cierre, para que los errores devuelvan a `/v2/login` cuando sea login.
+- Añadir `console.error("[tmwe-oauth-callback]", reason)` en el catch para que el log del edge function muestre la causa.
 
-### 4. UI: `/v2/login`
-- Añadir botón "Entra con TMWE" debajo del form actual con separador "oppure"
-- Llama a `tmwe-oauth-start` con `intent=login`
-- Loading state mientras redirige
+### 2. (Opcional) `supabase/functions/_shared/tmweClient.ts`
+- Centralizar el path `/erp/tmwe_json/token` en una constante exportada, así la callback y los flows de `client_credentials`/`refresh_token` comparten la misma fuente de verdad. Solo si quieres mantenerlo limpio; no es bloqueante.
 
-### 5. DAL: `src/data/tmwe.ts`
-- Añadir `startTmweLogin()` que llama al edge con `intent=login`
+## Validación
 
-## Seguridad
-- `state` CSRF sigue obligatorio (TTL 10min, single-use).
-- Magic link generado server-side, nunca expuesto en logs.
-- Rate limit en callback: máx 10 intentos/hora por IP.
-- Audit en `tmwe_proxy_audit` cada login (event=`oauth_login_success` / `oauth_login_failure`).
-- Email TMWE se confirma como verificado solo si TMWE devuelve `email_verified=true`.
+1. Deploy de `tmwe-oauth-callback`.
+2. Click en "Entra con TMWE" → autenticar en TMWE → debería volver con sesión Lovable abierta y aterrizar en `/v2`.
+3. Si TMWE responde con otro nombre de campo en `intent=login` (p.e. profile sin `email`), el log del edge function ahora mostrará el motivo exacto.
 
 ## Fuera de alcance
-- Vincular a posteriori cuenta TMWE a cuenta email/password ya existente con email distinto (se hace solo por email match).
-- Logout de TMWE (solo cierra sesión Lovable).
-- Refresh automático del token TMWE durante la sesión Lovable (ya gestionado por `tmweClient.ts`).
-
-## Detalles técnicos
-- Endpoints TMWE usados: `/oauth/authorize`, `/oauth/token`, `/erp/tmwe_json/get_my_profile`.
-- `state` table: añadir columna `intent text not null default 'connect' check (intent in ('connect','login'))`.
-- Magic link redirect: `${SITE_URL}/v2` (ya configurado).
-- Si email TMWE coincide con un user existente que tiene password → solo se vincula y se loguea (no se sobreescribe password).
+- Cambiar el flujo de magic link / auto-provisioning (ya implementado, se valida después del fix del 404).
+- Tocar `tmweClient.ts` para refresh/system token (ya apuntan al endpoint correcto).

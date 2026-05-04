@@ -49,6 +49,7 @@ async function postForm(
 }
 
 Deno.serve(async (req) => {
+  let currentIntent: "connect" | "login" = "connect";
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
@@ -66,6 +67,7 @@ Deno.serve(async (req) => {
 
     if (!stateRow) return back("error", "invalid_state");
     const intent = ((stateRow.intent as string) ?? "connect") as "connect" | "login";
+    currentIntent = intent;
     if (new Date(stateRow.expires_at as string).getTime() < Date.now()) {
       await svc.from("tmwe_oauth_state").delete().eq("state", state);
       return back("error", "expired_state", intent);
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
     const baseUrl = tmweBaseUrl();
 
     // Exchange code -> tokens
-    const tok = await postForm(baseUrl, "/erp/tmwe_json/exchange_code_for_jwt", {
+    const tok = await postForm(baseUrl, "/erp/tmwe_json/token", {
       grant_type: "authorization_code",
       code,
       client_id: Deno.env.get("TMWE_OAUTH_CLIENT_ID")!,
@@ -211,6 +213,7 @@ Deno.serve(async (req) => {
     return back("ok", undefined, intent);
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : "unknown";
-    return back("error", reason.slice(0, 80));
+    console.error("[tmwe-oauth-callback]", reason);
+    return back("error", reason.slice(0, 80), currentIntent);
   }
 });
