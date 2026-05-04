@@ -202,7 +202,6 @@ export function SettingsPage() {
     { value: "utenti", label: "Utenti Autorizzati", icon: Shield },
     { value: "voce-ai", label: "Voce AI", icon: Volume2 },
   ] satisfies VerticalTab[]).slice().sort((a, b) => a.label.localeCompare(b.label, "it"));
-  void tabs;
 
   return (
     <div data-testid="page-settings" className="flex h-full min-h-0 flex-col overflow-hidden">
