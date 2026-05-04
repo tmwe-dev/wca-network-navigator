@@ -39,12 +39,11 @@ serve(async (req) => {
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: userData, error: userError } = await anonClient.auth.getUser();
+    if (userError || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "INVALID_TOKEN" }), { status: 401, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
-    const user = { id: claimsData.claims.sub as string };
+    const user = { id: userData.user.id };
 
     // Rate limiting
     const rl = checkRateLimit(`suggest-groups:${user.id}`, { maxTokens: 5, refillRate: 0.08 });
