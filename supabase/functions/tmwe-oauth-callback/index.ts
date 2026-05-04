@@ -99,13 +99,34 @@ Deno.serve(async (req) => {
     if (!profRes.ok) return back("error", "profile_fetch_failed", intent);
     const profile = JSON.parse(profText) as Record<string, unknown>;
 
+    console.log("[tmwe-oauth-callback] profile keys:", Object.keys(profile));
+    const nestedUser = (profile.user as Record<string, unknown> | undefined) ?? {};
+    const nestedData = (profile.data as Record<string, unknown> | undefined) ?? {};
     const tmweUserId =
       (profile.id as number) ??
       (profile.user_id as number) ??
-      (profile.tmwe_user_id as number);
-    if (!tmweUserId) return back("error", "no_tmwe_user_id", intent);
-    const tmweEmail = (profile.email as string) ?? null;
-    const tmweCompany = (profile.company as string) ?? (profile.company_name as string) ?? null;
+      (profile.tmwe_user_id as number) ??
+      (profile.uid as number) ??
+      (profile.userId as number) ??
+      (nestedUser.id as number) ??
+      (nestedUser.user_id as number) ??
+      (nestedData.id as number) ??
+      (nestedData.user_id as number);
+    if (!tmweUserId) {
+      console.error("[tmwe-oauth-callback] no_tmwe_user_id, profile=", JSON.stringify(profile).slice(0, 500));
+      return back("error", "no_tmwe_user_id", intent);
+    }
+    const tmweEmail =
+      (profile.email as string) ??
+      (nestedUser.email as string) ??
+      (nestedData.email as string) ??
+      null;
+    const tmweCompany =
+      (profile.company as string) ??
+      (profile.company_name as string) ??
+      (nestedUser.company as string) ??
+      (nestedData.company as string) ??
+      null;
 
     // ─── LOGIN INTENT: resolve or auto-create Lovable user ──────────────
     if (intent === "login") {
