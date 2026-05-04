@@ -11,6 +11,7 @@ import { ScrapingPhaseIndicator } from "./ScrapingPhaseIndicator";
 import { useAIDraftActions } from "@/hooks/useAIDraftActions";
 import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
 import OracleContextPanel from "@/components/email/OracleContextPanel";
+import { DraftAttachmentsBar } from "./DraftAttachmentsBar";
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -90,6 +91,9 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
         <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 space-y-3">
           {draft.scrapingPhase === "reviewing" && draft.linkedinProfile && (
             <ReviewingState draft={draft} onGenerateAfterReview={onGenerateAfterReview} />
+          )}
+          {draft.channel === "email" && draft.scrapingPhase !== "reviewing" && draft.body && !draft.isGenerating && (
+            <DraftAttachmentsBar draft={draft} onDraftChange={onDraftChange} />
           )}
           {draft.scrapingPhase !== "reviewing" && (
             <DraftPreview draft={draft} isHtmlContent={isHtmlContent} onDraftChange={onDraftChange} />
