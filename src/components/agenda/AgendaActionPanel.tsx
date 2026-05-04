@@ -238,11 +238,19 @@ export default function AgendaActionPanel({ activity, primaryVerb, onActionDone 
           {description && (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                Contesto
+                {isUnknownSender ? "Mittente" : "Contesto"}
               </p>
-              <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                {description}
-              </p>
+              {isUnknownSender ? (
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  Email arrivata da <span className="font-medium">{senderEmail}</span>.
+                  Questo indirizzo non è collegato a nessuna azienda nel CRM:
+                  apri il messaggio per decidere se creare un nuovo partner o archiviarlo.
+                </p>
+              ) : (
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                  {description}
+                </p>
+              )}
             </section>
           )}
 
