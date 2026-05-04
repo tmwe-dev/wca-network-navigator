@@ -25,6 +25,23 @@ function appOrigin(): string {
   );
 }
 
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return null;
+}
+
+function stableNumericId(source: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash || 1;
+}
+
 function back(status: "ok" | "error", reason?: string, intent: "connect" | "login" = "connect"): Response {
   const path = intent === "login" ? "/v2/login" : "/v2/settings/connections";
   const u = new URL(path, appOrigin());
@@ -102,35 +119,41 @@ Deno.serve(async (req) => {
     console.log("[tmwe-oauth-callback] profile keys:", Object.keys(profile));
     const nestedUser = (profile.user as Record<string, unknown> | undefined) ?? {};
     const nestedData = (profile.data as Record<string, unknown> | undefined) ?? {};
-    const tmweUserId =
-      (profile.id as number) ??
-      (profile.user_id as number) ??
-      (profile.tmwe_user_id as number) ??
-      (profile.uid as number) ??
-      (profile.userId as number) ??
-      (nestedUser.id as number) ??
-      (nestedUser.user_id as number) ??
-      (nestedData.id as number) ??
-      (nestedData.user_id as number);
-    if (!tmweUserId) {
+    const tmweUserIdentifier = firstString(
+      profile.id,
+      profile.user_id,
+      profile.tmwe_user_id,
+      profile.uid,
+      profile.userId,
+      profile.username,
+      nestedUser.id,
+      nestedUser.user_id,
+      nestedUser.username,
+      nestedData.id,
+      nestedData.user_id,
+      nestedData.username,
+    );
+    if (!tmweUserIdentifier) {
       console.error("[tmwe-oauth-callback] no_tmwe_user_id, profile=", JSON.stringify(profile).slice(0, 500));
       return back("error", "no_tmwe_user_id", intent);
     }
-    const tmweEmail =
-      (profile.email as string) ??
-      (nestedUser.email as string) ??
-      (nestedData.email as string) ??
-      null;
-    const tmweCompany =
-      (profile.company as string) ??
-      (profile.company_name as string) ??
-      (nestedUser.company as string) ??
-      (nestedData.company as string) ??
-      null;
+    const tmweUserId = /^\d+$/.test(tmweUserIdentifier)
+      ? Number(tmweUserIdentifier)
+      : stableNumericId(`tmwe:${tmweUserIdentifier.toLowerCase()}`);
+    const tmweEmail = firstString(profile.email, nestedUser.email, nestedData.email);
+    const tmweUsername = firstString(profile.username, nestedUser.username, nestedData.username);
+    const authEmail = tmweEmail ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@tmwe.local` : null);
+    const tmweCompany = firstString(
+      profile.company,
+      profile.company_name,
+      profile.enterprise_name,
+      nestedUser.company,
+      nestedData.company,
+    );
 
     // ─── LOGIN INTENT: resolve or auto-create Lovable user ──────────────
     if (intent === "login") {
-      if (!tmweEmail) return back("error", "no_tmwe_email", "login");
+      if (!authEmail) return back("error", "no_tmwe_email", "login");
 
       const admin = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -152,7 +175,7 @@ Deno.serve(async (req) => {
         let foundUserId: string | null = null;
         const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
         const match = list?.users?.find(
-          (u) => (u.email ?? "").toLowerCase() === tmweEmail.toLowerCase(),
+          (u) => (u.email ?? "").toLowerCase() === authEmail.toLowerCase(),
         );
         if (match) foundUserId = match.id;
 
@@ -162,11 +185,11 @@ Deno.serve(async (req) => {
           // Auto-create
           const randomPwd = crypto.randomUUID() + crypto.randomUUID();
           const { data: created, error: createErr } = await admin.auth.admin.createUser({
-            email: tmweEmail,
+            email: authEmail,
             email_confirm: true,
             password: randomPwd,
             user_metadata: {
-              display_name: tmweCompany ?? tmweEmail.split("@")[0],
+              display_name: firstString(profile.name, tmweCompany, tmweUsername, authEmail.split("@")[0]),
               created_via_tmwe: true,
             },
           });
@@ -214,7 +237,7 @@ Deno.serve(async (req) => {
     if (upErr) return back("error", "persist_failed", intent);
 
     // ─── LOGIN: generate magic link and redirect there ──────────────────
-    if (intent === "login" && tmweEmail) {
+    if (intent === "login" && authEmail) {
       const admin = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -222,7 +245,7 @@ Deno.serve(async (req) => {
       );
       const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
         type: "magiclink",
-        email: tmweEmail,
+        email: authEmail,
         options: { redirectTo: `${appOrigin()}/v2` },
       });
       if (linkErr || !linkData?.properties?.action_link) {
