@@ -12,6 +12,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   listFunnemailGroupedInbox,
+  markFunnemailMessagesRead,
   overrideFunnemailFolder,
   type FunnemailGroupFolder,
   type FunnemailGroupedInbox,
@@ -166,12 +167,10 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const bulkMarkRead = React.useCallback(async (msgs: ChannelMessage[]) => {
     const ids = msgs.filter((m) => !m.read_at).map((m) => m.id);
     if (ids.length === 0) return;
-    const { error } = await supabase
-      .from("channel_messages")
-      .update({ read_at: new Date().toISOString() })
-      .in("id", ids);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await markFunnemailMessagesRead(ids);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore aggiornamento email");
       return;
     }
     toast.success(`${ids.length} email segnate come lette`);
@@ -209,7 +208,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
       try {
         await upsertEmailAddressRule(user.id, addr, { group_name: groupName });
         ok++;
-      } catch (e) {
+      } catch {
         // continua sugli altri
       }
     }
