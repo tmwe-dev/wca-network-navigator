@@ -1,84 +1,95 @@
-## Obiettivo
 
-Portare nel Cockpit (`AIDraftStudio`) la stessa completezza di Email Forge per **link, immagini e allegati**, gestiti **per singola bozza** nello studio destro. Niente bulk: ogni draft ha la sua attachment-bar.
+## Contesto
 
-## Cosa appare in UI
+Stiamo guardando il drawer destro su `/v2/explore/network` (componente `PartnerDetailActivity` → sezione "ATTIVITÀ (100)"). Oggi mostra solo `subject` + data, senza canale, destinatario, persona, bandiera, ora, link al messaggio. Manca il modo di aggiungere note dal drawer, manca il legame "contatto in holding → azienda in holding", e nel DB ci sono dati Deep Search residui da azzerare prima di ripartire.
 
-Sotto la `JournalistBadge`, sopra il body della bozza email, una **toolbar compatta a 3 pulsanti** (visibile solo quando `draft.channel === "email"`):
+## Cambi da fare
 
-```
-[🔗 Link]   [🖼️ Immagini]   [📎 Allegati]
-```
+### 1. Scheda Attività ricca (drawer destro azienda/contatto)
 
-Ogni pulsante apre un `Popover`:
+Riscrivo la lista in `PartnerDetailActivity` per ogni riga:
 
-1. **Link** — input "Etichetta" + "URL" + "Aggiungi"; lista chip removibili. I link entrano nel **prompt** della prossima rigenerazione/Migliora come istruzione: *"Cita naturalmente questi link nel testo: [label](url)"*.
-2. **Immagini** — riusa `ImageGalleryTab` esistente (bucket `email-images`, upload + galleria). Il click su un'immagine inserisce `<img src="…" style="max-width:100%">` **inline nel body** alla fine (o al cursore).
-3. **Allegati** — input `<input type="file" multiple>` per upload al volo + lista chip. Upload va in un nuovo bucket `cockpit-attachments` (privato). Mostriamo nome + size + ✕.
-
-Badge numerico sul pulsante quando ci sono elementi (come EmailToolbar esistente).
-
-## Flusso dati
-
-Estendiamo `DraftState` (`src/types/cockpit.ts`) con tre campi opzionali per-draft:
-
-```ts
-links?: { label: string; url: string }[];
-inlineImages?: string[];          // URL già nel body, solo per badge counter
-attachments?: { name: string; path: string; size: number; mime: string }[];
+```text
+[icona canale] [bandiera paese] Persona · email/numero
+              Oggetto / preview testo
+              31 mag · 14:32        [↗ apri messaggio]
 ```
 
-Lo stato vive nel draft corrente; navigando tra bozze del bulk (`showQueuedDraft`) è già preservato perché serializziamo l'intero `DraftState` nella queue.
+- **Icona canale**: ✉️ email, 💬 WhatsApp, 🔗 LinkedIn, 📞 chiamata, 📝 nota, 🔍 deep search.
+- **Direzione**: freccia ↑ sent, ↓ received, colorata.
+- **Persona**: nome contatto + ruolo se disponibile (join `partner_contacts`).
+- **Indirizzo**: email/numero/handle del destinatario.
+- **Bandiera**: country del partner.
+- **Data + ora locale** (CET).
+- **Link "↗ apri messaggio"**: porta alla mail/WA/LI originale (route esistente).
+- **Pulsante "Storia completa"** in cima alla sezione → apre `/v2/agenda?partnerId=…` filtrato su quel partner (riusa la pagina già fatta come da scelta utente).
+- Counter `(100)` resta, virtualizzo se >50.
 
-## Integrazione AI (link → prompt)
+Nessuna nuova route. Niente deep refactor: cambio solo il render della singola card e aggiungo un join leggero.
 
-`useCockpitLogic.handleImprove` e `forge.run` ricevono dal draft un blocco `extraInstructions` quando `links.length > 0`:
+### 2. Note manuali = attività del giorno
 
-```
-Includi nel testo, in modo naturale e contestuale, i seguenti link:
-- [Catalogo](https://…)
-- [Case study](https://…)
-Usa il formato HTML <a href>.
-```
+Aggiungo un pulsante "+ Nota" sopra la sezione Timeline del drawer. Apre un piccolo form:
 
-Si appende a `customGoal` prima di chiamare `generate-email`. **Niente modifiche a `generate-email`**: è solo testo nel goal.
+- Tipo: Nota / Chiamata / Incontro / Altro
+- Testo libero
+- Checkbox: **"Metti l'azienda in circuito di attesa"** (default OFF; ON quando tipo = Chiamata)
+- Persona contattata (dropdown contatti del partner)
 
-## Integrazione invio (allegati → SMTP)
+Al submit:
+1. Inserisce riga in `interactions` (tipo già esistente) → compare nel Timeline del drawer.
+2. Se checkbox ON → vedi punto 3 (holding azienda).
+3. La stessa riga compare nell'Agenda di oggi grazie al raggruppamento per azione già attivo (`AgendaDayDetail` legge da interactions).
 
-1. **Upload**: client carica i file su `cockpit-attachments/{user_id}/{uuid}-{filename}`, ottiene `path` + signed URL.
-2. **Send**: `useSendEmail.handleSend` aggiunge `attachments: [{ filename, path }]` al body verso `send-email`.
-3. **Edge `send-email`**: estende `SendEmailBody` con `attachments?: { filename: string; path: string }[]`. Per ogni path scarica il file dal bucket via service role e lo passa a `denomailer` come `attachments: [{ filename, content, encoding: "base64" }]`. Cap: max 10 allegati, max 20MB totali (hard guard).
+### 3. Holding a livello azienda
 
-## Storage
+Regola operativa stabilita dall'utente: **se anche un solo contatto entra in circuito di attesa, l'intera azienda è in circuito di attesa e sparisce dalle viste di prospezione finché l'operatore non la riattiva o cerca esplicitamente altri contatti.**
 
-Migrazione SQL:
+Implementazione minima, senza nuovi schemi:
 
-- Bucket `cockpit-attachments` privato.
-- RLS: utente autenticato può `INSERT/SELECT/DELETE` solo nei propri file (`(storage.foldername(name))[1] = auth.uid()::text`).
-- Service role legge tutto (default) per allegare in `send-email`.
+- Già oggi un partner è "in holding" se esiste almeno una `interaction` recente (≤ 30g) o se `lead_status ∈ {contacted, in_progress, negotiation}`. Centralizzo questa derivata in un helper `isPartnerInHolding(partner, interactions)` usato sia dalla query lista (esclusione) sia dal badge ✈️ già esistente.
+- Nei filtri di `/v2/explore/network` aggiungo il default **"Nascondi aziende in circuito di attesa"** (toggle nella toolbar, ON di default). L'operatore può disattivarlo per cercare altri contatti della stessa azienda.
+- Nel drawer mostro un banner viola **"✈️ Azienda in circuito di attesa — ultimo contatto: X giorni fa con Y"** con pulsante "Esci dal circuito" (cancella la marcatura settando una `interaction` di tipo `holding_release`).
+- Hard guard outreach: in `useSendEmail` / queue WA/LI controllo `isPartnerInHolding` e blocco con toast "Azienda in circuito di attesa — conferma manuale richiesta".
 
-## File toccati
+### 4. Reset totale Deep Search
 
-**Nuovi**
-- `src/components/cockpit/DraftAttachmentsBar.tsx` — la toolbar 3-pulsanti con i 3 popover.
-- `supabase/migrations/<ts>_cockpit_attachments_bucket.sql`.
+Migration di pulizia (richiesta esplicita utente):
 
-**Modificati**
-- `src/types/cockpit.ts` — aggiungi `links`, `inlineImages`, `attachments` opzionali.
-- `src/components/cockpit/AIDraftStudio.tsx` — render `<DraftAttachmentsBar>` sopra il body, callback che aggiornano `draft` via `onDraftChange`. Inserimento immagini = append `<img>` nel body.
-- `src/hooks/useCockpitLogic.ts` — in `handleImprove` e nella chiamata di rigenerazione, comporre `customGoal` con il blocco "Includi link…" se `draft.links?.length`.
-- `src/hooks/useSendEmail.ts` — propaga `attachments` al body di `send-email` (mappa `path` → `{filename, path}`).
-- `supabase/functions/send-email/index.ts` — accetta `attachments`, scarica da storage, passa a `denomailer` con cap 10/20MB.
+- `DELETE FROM sherlock_investigations` (tutto).
+- `UPDATE partners SET deep_search_at = NULL, sherlock_level = NULL, sherlock_completed_at = NULL`.
+- `UPDATE partner_contacts SET deep_search_at = NULL` (dove esiste).
+- Cancellazione **alias automatici** creati insieme alle email (verifico tabella `partner_aliases` / equivalente — utente dice "non servono più, vengono creati con le mail"). Filtro per `source = 'auto'` o `created_by_function` se presente.
+- Reset **rating sporchi**: azzero `quality_score`, `lead_score`, `reliability_score` su partners e contacts dove provengono da AI/deep search legacy (manterò i campi, li metto a NULL così le nuove logiche li ricalcolano puliti).
+
+Tutto in **una migration unica** con `BEGIN/COMMIT`, mostro l'elenco esatto delle righe coinvolte prima di eseguirla.
+
+### 5. Marker Deep Search visibile ovunque
+
+Già esiste `SherlockLevelBadge` ma è solo nell'header drawer. Lo propago:
+
+- Card azienda in `/v2/explore/network` → striscia laterale colorata + badge livello (Scout giallo / Detective viola / Sherlock ambra).
+- Card contatto idem.
+- Tooltip con data ultima Deep Search.
+
+Niente nuova logica: lego al campo `sherlock_level` ripopolato dalle nuove investigazioni post-reset.
+
+## File toccati (stima)
+
+- `src/components/partners/PartnerDetailActivity.tsx` — render ricco righe
+- `src/components/partners/ActivityList.tsx` — idem se serve, o assorbito
+- `src/components/partners/AddNoteForm.tsx` *(nuovo)* — form nota + holding
+- `src/v2/ui/organisms/PartnerDetailInline.tsx` — pulsante "+ Nota" e link "Storia completa" → `/v2/agenda?partnerId`
+- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx` — striscia laterale Sherlock + badge holding azienda
+- `src/data/partners/queries.ts` (o equivalente) — filtro "nascondi in holding"
+- `src/hooks/useSendEmail.ts` + queue WA/LI — hard guard holding azienda
+- `src/lib/holding.ts` *(nuovo helper SSOT)*
+- `supabase/migrations/<ts>_reset_deep_search_and_aliases.sql` — wipe
 
 ## Vincoli rispettati
 
-- Niente bulk break: link/immagini/allegati sono **solo per la bozza corrente**, lo scope sidebar resta invariato.
-- `journalistReview` resta intoccato: gli allegati non passano per il revisore (sono binari), il body passa come oggi.
-- `invokeAi` charter: nessuna nuova chiamata AI, solo arricchimento del `goal` testuale già autorizzato.
-- Soft-delete & RLS storage standard.
-- Hard guards in `send-email`: cap allegati lato edge function.
-
-## Out of scope
-
-- Bulk: stessi allegati su tutti i contatti (lo decideremo in un secondo step se serve, riusando lo stesso `DraftState`).
-- Modifica del prompt operativo del Calligrafo (i link entrano via `goal`, non via prompt versionato).
+- Niente refactor opportunistici fuori scope.
+- Soft-delete globale: il reset Deep Search usa UPDATE/DELETE su tabelle non-business (sherlock_investigations è log, ok DELETE).
+- DAL only, query keys centralizzati, no `any`.
+- Editorial review e pipeline invio: nessuna modifica al journalistReview, solo guard pre-invio.
+- Holding pattern già documentato in `mem://contacts/holding-pattern-governance` — estendo, non duplico.
