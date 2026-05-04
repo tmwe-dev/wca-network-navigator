@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryKeys } from "@/lib/queryKeys";
-import { GoldenHeaderBar } from "@/v2/ui/templates/GoldenHeaderBar";
 import { cn } from "@/lib/utils";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Brain } from "lucide-react";
@@ -93,9 +92,11 @@ export function EmailIntelligencePage(): React.ReactElement {
 
   return (
     <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden">
-      <PageTitleHeader icon={Brain} title="Funnemail" subtitle="email intelligence" />
-      <GoldenHeaderBar
-        actions={
+      <PageTitleHeader
+        icon={Brain}
+        title="Funnemail"
+        subtitle="email intelligence"
+        right={
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <KpiPill label="Da classificare" value={uncategorizedCount} tone="primary" />
             <KpiPill label="Suggerimenti AI" value={aiSuggestionsCount} tone="amber" />
