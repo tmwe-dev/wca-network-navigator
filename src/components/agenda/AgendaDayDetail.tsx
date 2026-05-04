@@ -288,7 +288,10 @@ function ActivityRow({
   const urgency = urgencyFromAge(activity.created_at);
   const updateActivity = useUpdateActivity();
 
-  const partnerName = activity.partners?.company_name || "Senza partner";
+  const partnerName =
+    activity.partners?.company_name ||
+    senderFromDescription(activity.description) ||
+    "Mittente sconosciuto";
   const flag = activity.partners?.country_code
     ? getCountryFlag(activity.partners.country_code)
     : null;
