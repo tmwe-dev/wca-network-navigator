@@ -12,6 +12,7 @@
 import { Plane } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CompanyLogo, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { InlineGroupAssigner } from "@/components/outreach/email/InlineGroupAssigner";
@@ -31,6 +32,9 @@ interface Props {
   aiSuggestion?: AiSuggestion | null;
   onSelect: () => void;
   onAcceptAiSuggestion?: () => void;
+  checked?: boolean;
+  onToggleChecked?: () => void;
+  showCheckbox?: boolean;
 }
 
 function formatListDate(value: string): string {
@@ -49,6 +53,9 @@ export function FunnemailMailCard({
   aiSuggestion,
   onSelect,
   onAcceptAiSuggestion,
+  checked,
+  onToggleChecked,
+  showCheckbox,
 }: Props) {
   const { brand } = extractSenderBrand(message.from_address || "");
   const senderName = extractSenderName(message.from_address);
@@ -67,7 +74,16 @@ export function FunnemailMailCard({
         inHolding && "border-l-2 border-l-warning",
       )}
     >
-      <button type="button" onClick={onSelect} className="flex w-full items-start gap-2.5 text-left">
+      <div className="flex w-full items-start gap-2.5">
+        {showCheckbox && (
+          <div
+            className="mt-1 flex-shrink-0"
+            onClick={(e) => { e.stopPropagation(); onToggleChecked?.(); }}
+          >
+            <Checkbox checked={!!checked} aria-label="Seleziona email" />
+          </div>
+        )}
+        <button type="button" onClick={onSelect} className="flex flex-1 items-start gap-2.5 text-left min-w-0">
         <CompanyLogo
           email={message.from_address}
           name={brand}
@@ -88,7 +104,7 @@ export function FunnemailMailCard({
             <div className="flex flex-shrink-0 items-center gap-1.5">
               {inHolding && <Plane className="h-3 w-3 animate-pulse text-warning" />}
               <CountryFlag email={message.from_address} size={18} />
-              <span className="text-[10px] tabular-nums text-muted-foreground">
+              <span className="text-[11px] font-medium tabular-nums text-foreground/80">
                 {formatListDate(displayDate)}
               </span>
               {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
@@ -133,7 +149,8 @@ export function FunnemailMailCard({
             )}
           </div>
         </div>
-      </button>
+        </button>
+      </div>
 
       {/* Azioni stabili in basso a destra (stesso pattern delle altre maschere) */}
       <div

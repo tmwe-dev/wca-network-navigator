@@ -17,6 +17,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { upsertEmailAddressRule } from "@/data/emailAddressRules";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { cn } from "@/lib/utils";
 
 type GroupRow = { nome_gruppo: string; colore: string | null; icon: string | null };
 
@@ -114,7 +115,7 @@ export function InlineGroupAssigner({
 
           <div>
             <p className="text-xs font-semibold mb-2">Gruppo</p>
-            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-auto">
+            <div className="flex flex-col max-h-64 overflow-auto rounded-md border border-border/60 divide-y divide-border/40">
               {groups.map((g) => {
                 const active = g.nome_gruppo === effectiveGroup;
                 return (
@@ -123,21 +124,28 @@ export function InlineGroupAssigner({
                     type="button"
                     onClick={() => assignMut.mutate(g.nome_gruppo)}
                     disabled={assignMut.isPending}
-                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium border transition-colors hover:opacity-80"
-                    style={{
-                      backgroundColor: `${g.colore ?? "#3B82F6"}${active ? "33" : "11"}`,
-                      color: g.colore ?? "#3B82F6",
-                      borderColor: active ? (g.colore ?? "#3B82F6") : "transparent",
-                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-2.5 py-2 text-left text-xs transition-colors",
+                      active
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-muted/60 text-foreground",
+                    )}
                   >
-                    {g.icon && <span>{g.icon}</span>}
-                    <span>{g.nome_gruppo}</span>
-                    {active && <Check className="h-2.5 w-2.5" />}
+                    {g.icon ? (
+                      <span className="text-base leading-none w-5 text-center">{g.icon}</span>
+                    ) : (
+                      <span
+                        className="h-3 w-3 rounded-full border border-border/60"
+                        style={{ backgroundColor: g.colore ?? "transparent" }}
+                      />
+                    )}
+                    <span className="flex-1 truncate">{g.nome_gruppo}</span>
+                    {active && <Check className="h-3.5 w-3.5 text-primary" />}
                   </button>
                 );
               })}
               {groups.length === 0 && (
-                <p className="text-[10px] text-muted-foreground italic">
+                <p className="px-2.5 py-2 text-[11px] text-muted-foreground italic">
                   Nessun gruppo definito. Creane uno da Funny Mail.
                 </p>
               )}

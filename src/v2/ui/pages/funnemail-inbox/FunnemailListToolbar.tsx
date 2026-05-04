@@ -3,7 +3,8 @@
  *
  * Logic-less. La selezione è gestita dal parent e persistita in localStorage.
  */
-import { ArrowDownAZ, ArrowDownWideNarrow } from "lucide-react";
+import { ArrowDownAZ, ArrowDownWideNarrow, CheckSquare, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -16,6 +17,10 @@ interface Props {
   group: GroupMode;
   onSortChange: (s: SortMode) => void;
   onGroupChange: (g: GroupMode) => void;
+  totalCount?: number;
+  checkedCount?: number;
+  onSelectAll?: () => void;
+  onClearSelection?: () => void;
 }
 
 const SORT_LABELS: Record<SortMode, string> = {
@@ -31,9 +36,26 @@ const GROUP_LABELS: Record<GroupMode, string> = {
   sender: "Mittente",
 };
 
-export function FunnemailListToolbar({ sort, group, onSortChange, onGroupChange }: Props) {
+export function FunnemailListToolbar({
+  sort, group, onSortChange, onGroupChange,
+  totalCount = 0, checkedCount = 0, onSelectAll, onClearSelection,
+}: Props) {
+  const allSelected = totalCount > 0 && checkedCount >= totalCount;
   return (
-    <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-[10px]">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-1.5 text-[10px]">
+      {(onSelectAll || onClearSelection) && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-6 gap-1 px-1.5 text-[10px]"
+          onClick={() => (allSelected ? onClearSelection?.() : onSelectAll?.())}
+          title={allSelected ? "Deseleziona tutte" : "Seleziona tutte"}
+        >
+          {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+          <span>{checkedCount > 0 ? `${checkedCount}/${totalCount}` : "Sel."}</span>
+        </Button>
+      )}
       <div className="flex items-center gap-1">
         <ArrowDownWideNarrow className="h-3 w-3 text-muted-foreground" />
         <span className="text-muted-foreground">Ordina</span>
