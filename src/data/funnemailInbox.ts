@@ -281,6 +281,14 @@ export async function overrideFunnemailFolder(
   if (error) throw error;
 }
 
+export async function markFunnemailMessagesRead(messageIds: string[]): Promise<void> {
+  if (messageIds.length === 0) return;
+  const { error } = await untypedFrom("channel_messages")
+    .update({ read_at: new Date().toISOString() })
+    .in("id", messageIds);
+  if (error) throw error;
+}
+
 /**
  * Client posta Funnemail: stessa sorgente della Inbox, raggruppata per gruppi
  * già lavorati in Funny Mail. Chi non ha regola finisce in "Non classificate".
