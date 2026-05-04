@@ -355,6 +355,26 @@ ${bodyBlock}`;
       }
     }
 
+    // ── Funnemail Inbox classifier (cartella + agenda + handoff). Fire-and-forget. ──
+    if (channel === "email") {
+      try {
+        await supabase.functions.invoke("funnemail-classify", {
+          body: {
+            message_id,
+            from_address,
+            subject: subject || "",
+            body_text: body_text || "",
+            partner_id: partner_id || null,
+            user_id: body.user_id ?? null,
+            prior_classification: result.classification,
+            prior_intent: result.intent,
+          },
+        });
+      } catch (_e) {
+        // fail-safe: la classificazione legacy resta valida anche senza Funnemail
+      }
+    }
+
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
