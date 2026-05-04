@@ -4,6 +4,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Star, StarOff, Phone, Mail, Globe, Brain,
 } from "lucide-react";
+import { Plane } from "lucide-react";
+import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag, formatPartnerType } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -34,6 +36,7 @@ export function PartnerDetailHeader({
 }: PartnerDetailHeaderProps) {
   const PartnerTypeIcon = PARTNER_TYPE_ICONS[String(partner.partner_type || "")] || Box;
   const sherlockLevel = useSherlockLevel("partner", partner.id);
+  const inHolding = isInHoldingPattern(partner.lead_status as string | null | undefined);
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-card to-primary/5 backdrop-blur-sm border border-primary/10 rounded-2xl p-4">
@@ -55,6 +58,16 @@ export function PartnerDetailHeader({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-foreground truncate">{String(partner.company_name)}</h2>
+            {inHolding && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium animate-pulse">
+                    <Plane className="w-3 h-3" /> In attesa
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Azienda nel circuito di attesa ({String(partner.lead_status)})</TooltipContent>
+              </Tooltip>
+            )}
             {enrichment && typeof enrichment === "object" && (enrichment as {deep_search_at?: string}).deep_search_at && (
               <Tooltip>
                 <TooltipTrigger>
