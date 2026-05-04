@@ -26,6 +26,16 @@ interface RequestBody {
   user_id?: string | null;
   prior_classification?: string;
   prior_intent?: string;
+  /** Intel mittente arricchita dallo Scout (cache funnemail_sender_intel). */
+  sender_intel?: {
+    known?: boolean;
+    partner_id?: string | null;
+    company_type?: string | null;
+    country?: string | null;
+    website?: string | null;
+    role_guess?: string | null;
+  } | null;
+  force?: boolean;
 }
 
 const ResultSchema = z.object({
@@ -84,7 +94,7 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("message_id", body.message_id)
       .maybeSingle();
-    if (existing) {
+    if (existing && !body.force) {
       endMetrics(metrics, true, 200);
       return new Response(JSON.stringify({ ok: true, decision: existing, cached: true }), { status: 200, headers });
     }
@@ -137,7 +147,10 @@ Deno.serve(async (req) => {
       operativeBlock || "",
     ].filter(Boolean).join("\n\n");
 
-    const userPrompt = `FOLDERS:\n${foldersList}\n\nMITTENTE: ${body.from_address}\nOGGETTO: ${subjNorm || "(vuoto)"}\nCORPO:\n${wrappedBody}\n\nClassifica usando lo strumento.`;
+    const senderIntelLine = body.sender_intel
+      ? `SENDER_INTEL:\n- known_partner=${body.sender_intel.known ?? false}\n- company_type=${body.sender_intel.company_type ?? "unknown"}\n- role_guess=${body.sender_intel.role_guess ?? "unknown"}\n- country=${body.sender_intel.country ?? "n/a"}\n- website=${body.sender_intel.website ?? "n/a"}`
+      : "SENDER_INTEL: (non disponibile)";
+    const userPrompt = `FOLDERS:\n${foldersList}\n\n${senderIntelLine}\n\nMITTENTE: ${body.from_address}\nOGGETTO: ${subjNorm || "(vuoto)"}\nCORPO:\n${wrappedBody}\n\nClassifica usando lo strumento.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     let decision: z.infer<typeof ResultSchema> = fallback(folders);
@@ -200,10 +213,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    await supabase.from("funnemail_decisions").insert({
+    // Se esiste già una decisione (force=true), aggiorna; altrimenti insert.
+    const decisionRow = {
       message_id: body.message_id,
       user_id: body.user_id ?? null,
-      partner_id: body.partner_id ?? null,
+      partner_id: body.partner_id ?? body.sender_intel?.partner_id ?? null,
       from_address: body.from_address,
       folder_slug: decision.folder_slug,
       suggested_action: decision.suggested_action,
@@ -213,7 +227,14 @@ Deno.serve(async (req) => {
       reasoning: decision.reasoning,
       commercial_handoff: decision.commercial_handoff,
       model,
-    });
+    };
+    if (existing && body.force) {
+      await supabase.from("funnemail_decisions")
+        .update(decisionRow)
+        .eq("message_id", body.message_id);
+    } else {
+      await supabase.from("funnemail_decisions").insert(decisionRow);
+    }
 
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({ ok: true, decision }), { status: 200, headers });

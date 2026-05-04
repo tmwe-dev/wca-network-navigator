@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Building2 } from "lucide-react";
-import type { FunnemailFolder, FunnemailMailRow } from "@/data/funnemailInbox";
+import type { FunnemailFolder, FunnemailMailRow, SenderIntelRow } from "@/data/funnemailInbox";
+import { getSenderIntelByDomain } from "@/data/funnemailInbox";
 
 interface Props {
   mail: FunnemailMailRow | null;
@@ -65,6 +66,18 @@ export function MailReader({ mail, folders, onOverrideFolder }: Props): React.Re
   const body = React.useMemo(() => cleanBody(mail.body_html, mail.body_text), [mail.body_html, mail.body_text]);
   const decision = mail.decision;
   const currentFolder = decision?.override_folder_slug ?? decision?.folder_slug ?? "to_sort";
+
+  // Scout intel per il dominio mittente (lazy)
+  const [intel, setIntel] = React.useState<SenderIntelRow | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    setIntel(null);
+    const addr = mail.from_address?.toLowerCase() ?? "";
+    const m = addr.match(/@([a-z0-9.-]+\.[a-z]{2,})$/);
+    if (!m) return;
+    getSenderIntelByDomain(m[1]).then((x) => { if (!cancelled) setIntel(x); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [mail.from_address, mail.message_id]);
 
   return (
     <section className="flex-1 flex flex-col h-full min-w-0">
@@ -151,6 +164,36 @@ export function MailReader({ mail, folders, onOverrideFolder }: Props): React.Re
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">Nessun handoff commerciale richiesto.</p>
+              )}
+            </div>
+
+            {/* Scout intel mittente */}
+            <div className="pt-3 border-t border-border/40">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                <h4 className="text-xs font-semibold uppercase tracking-wide">Scout mittente</h4>
+              </div>
+              {!intel && (
+                <p className="text-xs text-muted-foreground">In attesa di analisi…</p>
+              )}
+              {intel && (
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={intel.is_known_partner ? "default" : "outline"} className="text-[10px]">
+                      {intel.is_known_partner ? "Mittente noto (CRM)" : "Mittente sconosciuto"}
+                    </Badge>
+                  </div>
+                  <Field label="Tipo">{intel.company_type ?? "—"}</Field>
+                  <Field label="Ruolo">{intel.role_guess ?? "—"}</Field>
+                  <Field label="Paese">{intel.country ?? "—"}</Field>
+                  {intel.website && (
+                    <Field label="Sito">
+                      <a href={intel.website} target="_blank" rel="noreferrer" className="text-primary underline truncate">
+                        {intel.website}
+                      </a>
+                    </Field>
+                  )}
+                </div>
               )}
             </div>
           </div>

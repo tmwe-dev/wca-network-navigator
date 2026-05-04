@@ -5608,6 +5608,66 @@ export type Database = {
         }
         Relationships: []
       }
+      funnemail_sender_intel: {
+        Row: {
+          company_type: string | null
+          country: string | null
+          created_at: string
+          email_domain: string
+          evidence: Json
+          expires_at: string
+          is_known_partner: boolean
+          partner_id: string | null
+          role_guess: string | null
+          scout_source: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_type?: string | null
+          country?: string | null
+          created_at?: string
+          email_domain: string
+          evidence?: Json
+          expires_at?: string
+          is_known_partner?: boolean
+          partner_id?: string | null
+          role_guess?: string | null
+          scout_source?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_type?: string | null
+          country?: string | null
+          created_at?: string
+          email_domain?: string
+          evidence?: Json
+          expires_at?: string
+          is_known_partner?: boolean
+          partner_id?: string | null
+          role_guess?: string | null
+          scout_source?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_sender_intel_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnemail_sender_intel_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       harmonize_runs: {
         Row: {
           completed_at: string | null
