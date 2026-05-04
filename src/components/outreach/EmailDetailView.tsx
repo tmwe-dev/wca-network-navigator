@@ -21,6 +21,7 @@ import { EmailHtmlFrame } from "./email/EmailHtmlFrame";
 import { AttachmentThumbnail } from "./email/AttachmentThumbnail";
 import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
+import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
 
 type Props = {
   message: ChannelMessage;
@@ -108,6 +109,10 @@ export function EmailDetailView({ message, onClose }: Props) {
                     {group.groupName}
                   </span>
                 )}
+                <InlineGroupAssigner
+                  fromAddress={message.from_address}
+                  currentGroupName={group?.groupName ?? null}
+                />
               </div>
               <h3 className="truncate text-sm font-semibold">{decodedSubject}</h3>
             </div>
