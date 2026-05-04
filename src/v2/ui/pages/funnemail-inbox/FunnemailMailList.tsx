@@ -17,8 +17,9 @@ import { extractSenderName, stripReplyPrefixes } from "./utils";
 import { FunnemailMailCard } from "./FunnemailMailCard";
 import { FunnemailListToolbar, type GroupMode, type SortMode } from "./FunnemailListToolbar";
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
+import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
-const ROW_HEIGHT = 138;
+const ROW_HEIGHT = 142;
 const STORAGE_KEY = "funnemail_list_view_v1";
 
 interface StoredPrefs {
@@ -104,6 +105,25 @@ export function FunnemailMailList({
 
   const { getGroup } = useEmailAddressGroups();
 
+  // Multi-selezione manuale
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
+  const toggleChecked = (id: string) =>
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const clearChecked = () => setCheckedIds(new Set());
+
+  // Reset selezione se cambiano sort/group/filtri (lista cambia identità)
+  useEffect(() => { clearChecked(); }, [sort, group]);
+
+  const checkedMessages = useMemo(
+    () => messages.filter((m) => checkedIds.has(m.id)),
+    [messages, checkedIds],
+  );
+
   const sourceIds = useMemo(() => {
     const ids: { partnerId?: string; contactId?: string }[] = [];
     messages.forEach((msg) => {
@@ -133,6 +153,9 @@ export function FunnemailMailList({
         groupIcon={grp?.groupIcon ?? null}
         aiSuggestion={null}
         onSelect={() => onSelect(msg)}
+        showCheckbox
+        checked={checkedIds.has(msg.id)}
+        onToggleChecked={() => toggleChecked(msg.id)}
       />
     );
   };
@@ -143,6 +166,10 @@ export function FunnemailMailList({
       group={group}
       onSortChange={(s) => setPrefs((p) => ({ ...p, sort: s }))}
       onGroupChange={(g) => setPrefs((p) => ({ ...p, group: g }))}
+      totalCount={messages.length}
+      checkedCount={checkedIds.size}
+      onSelectAll={() => setCheckedIds(new Set(messages.map((m) => m.id)))}
+      onClearSelection={clearChecked}
     />
   );
 
@@ -166,6 +193,17 @@ export function FunnemailMailList({
           selectedId={selectedId}
           renderCard={renderCard}
         />
+        {checkedIds.size > 0 && (
+          <FunnemailBulkBar
+            count={checkedIds.size}
+            busy={bulkBusy}
+            onClear={clearChecked}
+            onMarkRead={() => { void bulkMarkRead(checkedMessages); clearChecked(); }}
+            onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
+            onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
+            onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+          />
+        )}
       </div>
     );
   }
@@ -183,6 +221,17 @@ export function FunnemailMailList({
         bulkAssignGroup={bulkAssignGroup}
         bulkBusy={bulkBusy}
       />
+      {checkedIds.size > 0 && (
+        <FunnemailBulkBar
+          count={checkedIds.size}
+          busy={bulkBusy}
+          onClear={clearChecked}
+          onMarkRead={() => { void bulkMarkRead(checkedMessages); clearChecked(); }}
+          onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
+          onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
+          onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+        />
+      )}
     </div>
   );
 }
