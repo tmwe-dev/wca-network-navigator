@@ -67,9 +67,22 @@ export type TmweOpName = keyof typeof TMWE_OPS;
 const TOKEN_REFRESH_BUFFER_S = 60;
 const FETCH_TIMEOUT_MS = 15_000;
 
-function baseUrl(): string {
+export function tmweBaseUrl(): string {
   const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
   return raw.replace(/\/erp$/, "");
+}
+
+export function tmweOAuthRedirectUri(): string {
+  const configured = Deno.env.get("TMWE_OAUTH_REDIRECT_URI")?.trim();
+  if (configured && !configured.includes("/tmwe_json/auth")) return configured;
+
+  const backendUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/+$/, "");
+  if (!backendUrl) throw new Error("Missing SUPABASE_URL for TMWE OAuth callback");
+  return `${backendUrl}/functions/v1/tmwe-oauth-callback`;
+}
+
+function baseUrl(): string {
+  return tmweBaseUrl();
 }
 
 export function serviceClient(): SupabaseClient {
