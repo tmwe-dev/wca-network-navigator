@@ -20,6 +20,8 @@ interface AIDraftStudioProps {
   onDraftChange: (draft: DraftState) => void;
   onRegenerate?: () => void;
   onGenerateAfterReview?: () => void;
+  onStartGeneration?: () => void;
+  pendingBulkCount?: number;
 }
 
 const channelMeta: Record<string, { icon: React.ElementType; label: string; color: string }> = {
@@ -29,7 +31,7 @@ const channelMeta: Record<string, { icon: React.ElementType; label: string; colo
   sms: { icon: Smartphone, label: "SMS", color: "text-chart-3" },
 };
 
-export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview }: AIDraftStudioProps) {
+export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAfterReview, onStartGeneration, pendingBulkCount = 0 }: AIDraftStudioProps) {
   const { goal, baseProposal } = useMission();
   const {
     sending, liDmOpen, setLiDmOpen,
@@ -90,6 +92,33 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
         <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 space-y-3">
           {draft.scrapingPhase === "reviewing" && draft.linkedinProfile && (
             <ReviewingState draft={draft} onGenerateAfterReview={onGenerateAfterReview} />
+          )}
+          {/* Stato post-drop, pre-generazione: mostra il pulsante "Genera" e
+              ricorda all'utente di configurare obiettivo e tono prima di lanciare l'AI. */}
+          {draft.scrapingPhase === "idle" && !draft.body && !draft.isGenerating && onStartGeneration && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2 text-foreground">
+                <Target className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Pronto per generare</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Configura a sinistra <strong>obiettivo</strong>, <strong>tipo di email</strong> e <strong>tono</strong>,
+                poi premi il pulsante per avviare l'AI. {pendingBulkCount > 0 && (
+                  <>Verrà generata anche una bozza per gli altri <strong>{pendingBulkCount}</strong> contatti in coda.</>
+                )}
+              </p>
+              <button
+                onClick={onStartGeneration}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Sparkles className="w-4 h-4" />
+                Genera {pendingBulkCount > 0 ? `${pendingBulkCount + 1} messaggi` : "messaggio"}
+              </button>
+            </motion.div>
           )}
           {draft.channel === "email" && draft.scrapingPhase !== "reviewing" && draft.body && !draft.isGenerating && (
             <DraftAttachmentsBar draft={draft} onDraftChange={onDraftChange} />

@@ -60,6 +60,8 @@ export function useCockpitLogic() {
   });
   const [draggedContactId, setDraggedContactId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // IDs di contatti aggiuntivi droppati in batch, in attesa di generazione manuale
+  const [pendingBulkIds, setPendingBulkIds] = useState<string[]>([]);
   const { filters: gf } = useGlobalFilters();
   const searchQuery = gf.search;
 
@@ -230,12 +232,15 @@ export function useCockpitLogic() {
     return 1;
   }, [draggedContactId, selection.selectedIds, selection.count]);
 
-  const handleDrop = useCallback(async (channel: DraftChannel, _contactId: string, _contactName: string) => {
-    // Cancel any previous in-flight drop operation
+  /**
+   * Drop di un contatto su un canale: NON avvia la generazione AI.
+   * Carica solo il workspace (canale, destinatario, lingua) e azzera la bozza,
+   * lasciando all'utente il tempo di configurare obiettivo/tipo/tono prima di
+   * cliccare il tasto "Genera". Per il bulk, gli ID restano in coda di attesa.
+   */
+  const handleDrop = useCallback((channel: DraftChannel, _contactId: string, _contactName: string) => {
+    // Annulla eventuali generazioni in corso
     abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const signal = controller.signal;
 
     const ids = getDraggedIds();
     if (ids.length === 0) return;
@@ -245,11 +250,56 @@ export function useCockpitLogic() {
 
     const sourceType = contact.origin === "report_aziende" ? "prospect" : contact.origin === "import" ? "contact" : "partner";
     autoAssign(contact.partnerId || contact.sourceId, sourceType);
-    if (ids.length > 1) toast.info(`Generazione per ${ids.length} contatti — primo: ${contact.name}`);
 
-    let linkedinUrl = contact.linkedinUrl || null;
+    // Reset coda bulk e draft, prepara il workspace
+    setDraftQueue([]);
+    setPendingBulkIds(ids.length > 1 ? ids.slice(1) : []);
+    setDraftState({
+      channel,
+      contactId: firstId,
+      contactName: contact.name,
+      contactEmail: contact.email,
+      contactPhone: contact.phone,
+      contactLinkedinUrl: contact.linkedinUrl || null,
+      companyName: contact.company,
+      countryCode: contact.country,
+      subject: "",
+      body: "",
+      language: contact.language,
+      isGenerating: false,
+      scrapingPhase: "idle",
+      linkedinProfile: null,
+    });
+
+    if (ids.length > 1) {
+      toast.info(`${ids.length} contatti pronti — configura obiettivo e premi Genera`);
+    } else {
+      toast.info(`${contact.name} pronto — configura obiettivo e premi Genera`);
+    }
+  }, [getDraggedIds, contactsMap, autoAssign]);
+
+  /**
+   * Avvia la generazione AI per il destinatario corrente (e per la coda bulk
+   * eventualmente accumulata dal drop). Da chiamare al click del tasto "Genera".
+   */
+  const handleStartGeneration = useCallback(async () => {
+    if (!draftState.channel || !draftState.contactId) {
+      toast.error("Trascina prima un contatto su un canale");
+      return;
+    }
+    const contact = contactsMap[draftState.contactId];
+    if (!contact) return;
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const signal = controller.signal;
+
+    const channel = draftState.channel;
     const isLinkedInChannel = channel === "linkedin";
+    let linkedinUrl = contact.linkedinUrl || null;
 
+    // LinkedIn: auth + lookup URL prima della generazione
     let liAuthOk = false;
     if (isLinkedInChannel && liBridge.isAvailable) {
       const authCheck = await liBridge.ensureAuthenticated(30000);
@@ -257,34 +307,27 @@ export function useCockpitLogic() {
       liAuthOk = authCheck.ok;
       if (!liAuthOk) toast.error("LinkedIn non autenticato. Accedi a LinkedIn nel browser e riprova.");
     }
-
     if (signal.aborted) return;
 
     if (isLinkedInChannel && liAuthOk && linkedinUrl) {
       toast.info(`URL LinkedIn già presente — lettura profilo diretta`);
-      setDraftState({ channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "visiting", linkedinProfile: null, searchLog: [] });
+      setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "visiting", searchLog: [] }));
     } else if (isLinkedInChannel && liAuthOk && !linkedinUrl) {
-      setDraftState({ channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: null, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "searching", linkedinProfile: null, searchLog: [] });
+      setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "searching", searchLog: [] }));
       const searchResult = await linkedInLookup.searchSingle({ name: contact.name, company: contact.company, email: contact.email, role: contact.role, country: contact.country, sourceType: contact.sourceType, sourceId: contact.sourceId });
       if (signal.aborted) return;
       if (searchResult.url) { linkedinUrl = searchResult.url; toast.success(`Profilo LinkedIn trovato: ${searchResult.profile?.name || linkedinUrl}`); }
       else toast.info("Profilo LinkedIn non trovato — generazione con dati DB");
       setDraftState(prev => ({ ...prev, contactLinkedinUrl: linkedinUrl, searchLog: searchResult.searchLog }));
+    } else {
+      setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
     }
 
     if (signal.aborted) return;
+    setDraftState(prev => ({ ...prev, isGenerating: true, scrapingPhase: "generating", contactLinkedinUrl: linkedinUrl }));
 
-    // Never use direct LinkedIn scraping. Always use Google search via Partner Connect.
-    // Even if we have a URL, we don't extract from it directly.
-    const shouldGenerateOnly = !isLinkedInChannel || !linkedinUrl;
-
-    if (shouldGenerateOnly) {
-      setDraftState(prev => ({ ...prev, channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
-    } else {
-      // Has LinkedIn URL but we will NOT scrape it directly — only store the URL for reference
-      setDraftState(prev => ({ ...prev, channel, contactId: firstId, contactName: contact.name, contactEmail: contact.email, contactPhone: contact.phone, contactLinkedinUrl: linkedinUrl, companyName: contact.company, countryCode: contact.country, subject: "", body: "", language: contact.language, isGenerating: true, scrapingPhase: "generating", linkedinProfile: null }));
-
-      // Save URL to enrichment_data in background
+    // Salva URL LinkedIn in background se trovato
+    if (isLinkedInChannel && linkedinUrl) {
       import("@/integrations/supabase/client").then(async ({ supabase: sb }) => {
         if (!mountedRef.current || !linkedinUrl) return;
         try {
@@ -297,9 +340,6 @@ export function useCockpitLogic() {
       });
     }
 
-    if (signal.aborted) return;
-
-    setDraftState(prev => ({ ...prev, scrapingPhase: "generating" }));
     const result = await generate({
       channel,
       contact_name: contact.name,
@@ -327,11 +367,10 @@ export function useCockpitLogic() {
       setDraftState(prev => ({ ...prev, isGenerating: false, scrapingPhase: "idle" }));
     }
 
-    // BULK: se ci sono altri contatti selezionati, generali sequenzialmente
-    // in background e accumulali nella draftQueue. Il primo è già nello studio.
-    if (ids.length > 1 && !signal.aborted) {
+    // BULK: genera anche per gli altri contatti accumulati nella coda
+    if (pendingBulkIds.length > 0 && !signal.aborted) {
       setDraftQueue([]);
-      const rest = ids.slice(1);
+      const rest = pendingBulkIds;
       let okCount = 1;
       let errCount = 0;
       for (const id of rest) {
@@ -352,19 +391,18 @@ export function useCockpitLogic() {
           if (r) {
             setDraftQueue(prev => [...prev, { contactId: id, contactName: c.name, result: r }]);
             okCount++;
-          } else {
-            errCount++;
-          }
+          } else { errCount++; }
         } catch (e: unknown) {
           errCount++;
           log.warn("bulk generate failed", { id, error: e instanceof Error ? e.message : String(e) });
         }
       }
+      setPendingBulkIds([]);
       if (!signal.aborted) {
-        toast.success(`Bulk generazione completata`, { description: `${okCount}/${ids.length} OK, ${errCount} errori` });
+        toast.success(`Bulk generazione completata`, { description: `${okCount}/${rest.length + 1} OK, ${errCount} errori` });
       }
     }
-  }, [generate, refetchCredits, getDraggedIds, contactsMap, liBridge, autoAssign, linkedInLookup]);
+  }, [draftState.channel, draftState.contactId, contactsMap, liBridge, linkedInLookup, generate, refetchCredits, pendingBulkIds]);
 
   const handleGenerateAfterReview = useCallback(async () => {
     if (!draftState.contactId) return;
@@ -615,6 +653,7 @@ export function useCockpitLogic() {
     batchMode, setBatchMode, showLinkedInFlow, setShowLinkedInFlow,
     draftState, setDraftState,
     draggedContactId, dragCount, handleDragStart, handleDragEnd, handleDrop,
+    handleStartGeneration, pendingBulkCount: pendingBulkIds.length,
     handleGenerateAfterReview, handleRegenerate, handleImprove,
     showQueuedDraft,
     contacts, contactsMap, isLoading, selection,
