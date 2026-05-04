@@ -6,10 +6,11 @@
  * whitelist check, signup toggle, and reset-password link.
  */
 import * as React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
-import { Loader2, LogIn, UserPlus, Mail, Lock, User } from "lucide-react";
+import { Loader2, LogIn, UserPlus, Mail, Lock, User, Plane } from "lucide-react";
+import { tmweLoginStart } from "@/data/tmwe";
 
 export function LoginPage(): React.ReactElement {
   const location = useLocation();
@@ -26,6 +27,30 @@ export function LoginPage(): React.ReactElement {
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [tmweSubmitting, setTmweSubmitting] = useState(false);
+  const [tmweError, setTmweError] = useState<string | null>(null);
+
+  // Surface TMWE callback errors via ?tmwe=error&reason=...
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("tmwe") === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      setTmweError(`Login TMWE fallito: ${reason}`);
+    }
+  }, [location.search]);
+
+  const handleTmweLogin = useCallback(async () => {
+    setTmweError(null);
+    setTmweSubmitting(true);
+    try {
+      const url = await tmweLoginStart();
+      window.location.href = url;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTmweError(msg);
+      setTmweSubmitting(false);
+    }
+  }, []);
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +93,32 @@ export function LoginPage(): React.ReactElement {
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-6">
+      {/* ── TMWE login button (always visible above the form) ─── */}
+      {mode === "login" && (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={handleTmweLogin}
+            disabled={tmweSubmitting || isDisabled}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:pointer-events-none transition-colors"
+          >
+            {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
+            Entra con TMWE
+          </button>
+          {tmweError && (
+            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+              {tmweError}
+            </div>
+          )}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">oppure</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Login form ─────────────────────────────────────────── */}
       {mode === "login" && (
         <form onSubmit={handleLogin} className="space-y-4">
