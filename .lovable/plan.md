@@ -1,65 +1,92 @@
 
-# Funny Mail — sort, gruppi, azioni stabili, slot AI
+# Audit completo: AI, automatismi, routing, classificazione, scheduling
 
-Tutto resta in frontend (UI + hook). Riuso i componenti standard già presenti in altre maschere: `EmailMessageActions` (Azioni con `MoreHorizontal`) e `InlineGroupAssigner` (popover con icona `Tag`). Zero nuove edge function, zero modifiche DAL/DB.
+## Scopo
+Mappare tutto ciò che decide, scrive, instrada e programma — dire cosa funziona, cosa è duplicato, cosa è muto, cosa va sistemato. Nessuna modifica al codice in questa fase.
 
-## 1. Card mail (FunnemailMailCard)
+## Cosa ho già verificato (snapshot)
+- 113 edge function. 19 cron job DB attivi.
+- 10.158 messaggi (di cui 7.882 email inbound negli ultimi 30 giorni).
+- `email_classifications`: ha solo 1 riga in DB → la pipeline classify gira ma non sta persistendo / non è mai partita davvero sui 7.882 inbound.
+- `funnemail_decisions`: 0 righe → il classificatore Funnemail (l'unico che mappa nelle cartelle "to_sort / commerciali / agenda") non è mai stato chiamato sull'inbox reale.
+- `agent_tasks`: 2.116 completed, 41 proposed, 17 failed.
+- `ai_pending_actions`: praticamente vuota (1 approved, 0 pending).
+- 4 contesti email-correlati nei prompt operativi: `classification`, `funnemail_classifier`, `email`, `outreach`.
 
-- **Tolgo le hover-actions** (Reply / Forward / InlineGroupAssigner che apparivano al passaggio del mouse).
-- **In basso a destra, sempre visibili**, due controlli affiancati identici alle altre maschere:
-  - `EmailMessageActions` (dropdown "⋯ Azioni" con Segna come letto / Archivia / Sposta in… / Nascondi / Spam / Crea regola).
-  - `InlineGroupAssigner` (pulsantino "Assegna gruppo" / "Modifica" con popover esistente).
-- **Slot "Suggerimento AI"** dove ora compare il pill del gruppo: rimuovo il badge del gruppo già assegnato (l'utente vede comunque il gruppo dentro il popover di Assegna). Nello stesso slot mostro:
-  - quando c'è una `funnemail_decisions.suggested_*` (folder o address) → chip "AI: <gruppo proposto>" cliccabile per accettare,
-  - altrimenti chip neutro "—".
-  Per ora il suggerimento è opzionale: se nei dati grouped non arriva, lo slot resta vuoto. La struttura è pronta per quando attiveremo la classificazione AI.
-- Tolgo `Reply`/`Forward` dai prop della card (non servono più). Il dettaglio email a destra continua ad avere reply/forward/azioni come oggi.
+## Aree da auditare (output del lavoro = un report markdown in `/mnt/documents/`)
 
-## 2. Lista mail centrale (FunnemailMailList + nuova toolbar)
+### 1. Ingresso email → classificazione
+- `check-inbox` → `applyEmailRules` + `classifyInboundEmails` (max 10 per ciclo, fire-and-forget).
+- `classify-email-response` (commerciale, 9 stati, lead status guard).
+- `classify-inbound-message` (multicanale).
+- `funnemail-classify` (smistamento cartelle UI).
+- `reply-classifier` (positive/negative/needs_human).
+- **Domande chiave**: chi chiama chi, quale è autoritativo, perché `email_classifications` e `funnemail_decisions` sono praticamente vuote nonostante 7.882 inbound, dove si perdono i messaggi.
 
-Nuova mini-toolbar sopra la lista (sotto la search):
+### 2. Routing post-classificazione
+- `postClassificationPipeline` → `emailRouter` (commerciale) / `domainHandler` (operativo, amministrativo, support, internal) / `bounceAndUnsubscribeHandler` / `questionAndComplaintHandler`.
+- `EmailProcessManager` + `LeadProcessManager` (event bus).
+- **Domande**: ogni categoria ha un handler? quali categorie cadono nel `skip_no_action`? la regola "email commerciale che chiede proposta → genera draft + mette in agenda" è effettivamente cablata?
 
-- **Ordina per**: `Data ↓` (default) · `Azienda A→Z` · `Mittente A→Z` · `Oggetto A→Z`.
-- **Raggruppa per**: `Nessuno` (default) · `Azienda` · `Mittente`.
-- Selezione persistita in `localStorage` (`funnemail_list_view_v1`).
+### 3. Generazione contenuti & editorial review
+- `generate-email`, `generate-outreach`, `improve-email`, `analyze-email-edit`, `harmonize-proposal-chat`.
+- `journalistReview` obbligatorio (KB).
+- Loader unico `operativePromptsLoader` + Prompt Lab.
+- **Domande**: tutti i percorsi di scrittura (draft automatico da pipeline, send da `pending-action-executor`, send da composer manuale, follow-up da cadence) passano davvero da journalist? Dove sono i bypass.
 
-Quando "Raggruppa per" è attivo:
-- la virtualizzazione esistente viene sostituita da una lista a sezioni collassabili (gruppi piccoli — non servono migliaia di righe per gruppo, già filtrate per cartella);
-- ogni sezione ha header con: nome gruppo, conteggio, freccia collassa/espandi, e un menu "⋯ Azioni gruppo" con: **Segna tutte come lette**, **Assegna gruppo a…** (popover compatto con la lista gruppi), **Archivia tutte**, **Elimina tutte (cestino)**.
-- Le azioni di gruppo riusano `useBulkEmailAction` (già supporta array) e `useMarkAsRead` in loop. "Elimina tutte" usa `action: "delete"` (è già soft-delete via trigger DB su `channel_messages`).
-- Conferma modale solo per Archivia/Elimina quando il gruppo > 20 messaggi.
+### 4. Scheduling & "quando programmare un'attività futura"
+Mappatura completa dei 4 motori:
+- **`cadence-engine`** (cron orario) — esegue `mission_actions` con `scheduled_at` scaduto.
+- **`outreach-scheduler`** (cron 5 min) — drena `outreach_schedules` (FOR UPDATE SKIP LOCKED, batch 20).
+- **`smart-scheduler`** (cron giornaliero 5:00) — propone follow-up: stale > 14gg, hot lead score ≥ 50, finestra Mar-Gio 9:00.
+- **`agent-autonomous-cycle`** (cron 10 min) — screening inbound + overdue follow-up + transizioni di stato + sequenza primo touch.
+- **`reminderManager`** (libreria, chiamata da postSendPipeline) — crea `activities` con sequenza canonica giorni 0/3/7/8/12/16/23.
+- **`cadenceEngine` libreria** — regole hard per stato lead (canali ammessi, days between, max/week).
 
-## 3. Sidebar cartelle (InboxGroupsSidebar nel drawer)
+**Domande**: chi è autoritativo su "prossima azione"? Le 4 sorgenti producono duplicati? Quale tabella va consultata dall'operatore (`activities` vs `mission_actions` vs `outreach_schedules` vs `agent_tasks`)? L'agenda mostra tutto?
 
-In cima al pannello cartelle, un piccolo segmento "Ordina":
+### 5. Esecuzione & approvazione
+- `pending-action-executor` (gate `ai_action_risk` + status='approved' obbligatorio).
+- `agent-loop` / `agent-execute` (con tool whitelist e hard guards).
+- `aiActionRiskGate` (7 livelli, two-phase commit).
+- Pause globale: `app_settings.ai_automations_paused` controllata in 5+ funzioni.
+- **Domande**: tutti i write passano dal gate? Ci sono path che bypassano l'approvazione? L'utente vede dove e perché qualcosa è in attesa?
 
-- `Default` (come oggi: priorità + sort_order + drag&drop utente)
-- `Nome A→Z`
-- `Email ↓` (più piene in alto)
+### 6. Holding pattern & lead status
+- `applyLeadStatusChange` SSOT (KB).
+- 9 stati canonici, transizioni event-driven via `LeadProcessManager.evaluateTimeBasedTransitions`.
+- Auto-escalation in `classify-email-response` con `getNextStatusGated`.
+- **Domande**: tutte le transizioni passano dal guard? Cosa innesca l'uscita da holding? Ci sono lead bloccati per mancanza di trigger?
 
-Selezione persistita in `localStorage` (`funnemail_sidebar_sort_v1`).
-Il drag&drop manuale resta attivo solo nella modalità "Default" (negli altri due l'ordine è automatico, le maniglie restano nascoste). Le sezioni Prioritarie / Secondarie / Da classificare e la cartella "Tutte le inbox" non cambiano.
+### 7. Sicurezza prompt & content
+- `promptSanitizer` + `injectionGuard` + `contentNormalizer`.
+- `aiInvocationGuard` (Charter): tutto deve passare da `invokeAi()` con scope.
+- **Domande**: ci sono ancora chiamate dirette `supabase.functions.invoke` su edge AI dal frontend? (esiste già lo script audit `scripts/audit-ai-invocations.ts`).
 
-## 4. File toccati
+### 8. Osservabilità & feedback loop
+- `ai_interaction_log` + `ai_message_feedback`.
+- `supervisor_audit_log`.
+- `edge_metrics` + `cron_run_log`.
+- `email_send_log`.
+- **Domande**: c'è una pagina che dia in colpo d'occhio "cosa ha fatto l'AI ieri"? cosa è auto vs cosa è stato approvato?
 
-Modificati:
-- `src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx` — rimuovo hover-actions, aggiungo slot Azioni + Assegna gruppo in basso a destra, sostituisco badge gruppo con slot suggerimento AI.
-- `src/v2/ui/pages/funnemail-inbox/FunnemailMailList.tsx` — nuova toolbar Ordina/Raggruppa, rendering condizionale virtual vs raggruppato, propagazione azioni di gruppo.
-- `src/v2/ui/pages/funnemail-inbox/InboxGroupsSidebar.tsx` — aggiunta segmented "Ordina" in cima, applicazione sort in `sortBySection`.
-- `src/v2/hooks/useFunnemailInbox.ts` — espongo handler bulk (markRead/archive/delete/assignGroup) per le azioni di gruppo, costruite sopra `useBulkEmailAction` + `upsertEmailAddressRule`.
+## Output finale
+Documento `/mnt/documents/audit-ai-routing-2026-05-04.md` con:
+1. **Mappa visuale** del flusso email-in → classificazione → handler → pending action → executor → send → reminder.
+2. **Matrice di copertura**: per ogni categoria di email (interested, meeting_request, quote_request, complaint, question, …) → handler? draft? agenda? approval?
+3. **Tabella scheduler**: ognuna delle 4 fonti con cosa scrive, dove (tabella), come la vede l'utente, conflitti.
+4. **Lista anomalie con priorità**:
+   - P0 (bloccante): es. "7.882 inbound ma 1 sola classification → check-inbox limita a 10 e perde il resto, oppure i 10 falliscono silenziosamente".
+   - P1 (qualità): handler mancanti, route che cadono in `skip_no_action`, prompt non versionati.
+   - P2 (UX): duplicati di reminder, agenda incompleta.
+5. **Quick wins** (≤30 min) e **interventi strutturali** (rifattorizzazione PM, dedup scheduler).
+6. **Raccomandazioni vincolanti** per memoria progetto.
 
-Nuovi:
-- `src/v2/ui/pages/funnemail-inbox/FunnemailListToolbar.tsx` — mini-toolbar Ordina/Raggruppa (logic-less).
-- `src/v2/ui/pages/funnemail-inbox/FunnemailGroupHeader.tsx` — header sezione con menu Azioni di gruppo.
-- `src/v2/ui/pages/funnemail-inbox/AiSuggestionChip.tsx` — chip slot per il suggerimento AI (placeholder pronto, mostra "—" se assente).
+## Cosa NON faccio in questo task
+- Nessuna modifica codice/DB.
+- Nessun re-deploy edge.
+- Nessun cambio prompt.
+Solo report. Le azioni correttive verranno proposte come task separati una volta che approvi le priorità.
 
-Non modificati:
-- `src/data/funnemailInbox.ts` (DAL), DB, edge functions, `EmailMessageActions`, `InlineGroupAssigner`.
-- Componenti V1 e altre pagine.
-
-## 5. Note
-
-- Tutto in TypeScript stretto, nessun `any`.
-- Nessuna modifica al fetch/paginazione: il sort/raggruppamento è client-side sulla lista già filtrata per cartella (max 5000 messaggi, già supportato dalla virtualizzazione esistente; quando raggruppato uso un fallback non-virtualized solo dentro le sezioni espanse).
-- Editorial review e altri vincoli non sono toccati: queste sono operazioni di lettura/sposta/elimina, non di invio.
-- Verifico in preview dopo l'implementazione: card senza hover, toolbar funzionante, drawer con sort, raggruppamento + azioni di gruppo che invalidano correttamente la query.
+## Tempi stimati
+- ~25-35 minuti di lavoro: lettura mirata + query DB + cross-reference cron/edge logs ultimi 7gg + scrittura report.
