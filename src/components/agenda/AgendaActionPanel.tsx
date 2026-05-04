@@ -12,7 +12,7 @@
  */
 import { Link } from "react-router-dom";
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { useUpdateActivity } from "@/hooks/useActivities";
 import { insertActivity, activityKeys } from "@/data/activities";
+import { findInboundPreview } from "@/data/channelMessages";
+import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/providers/AuthProvider";
 import { isInHoldingPattern } from "@/constants/holdingPattern";
 import { getCountryFlag } from "@/lib/countries";
