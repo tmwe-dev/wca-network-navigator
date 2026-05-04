@@ -15,6 +15,7 @@ const ManualGroupingTab = lazy(() => import("@/components/email-intelligence/Man
 const AISuggestionsTab = lazy(() => import("@/components/email-intelligence/AISuggestionsTab"));
 const SmartInboxView = lazy(() => import("@/components/email-intelligence/SmartInboxView").then(m => ({ default: m.SmartInboxView })));
 const RulesAndActionsTab = lazy(() => import("@/components/email-intelligence/RulesAndActionsTab"));
+const FunnemailTab = lazy(() => import("@/components/email-intelligence/FunnemailTab"));
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -112,6 +113,7 @@ export function EmailIntelligencePage(): React.ReactElement {
           <FlatTabTrigger value="ai-suggestions">Suggerimenti AI</FlatTabTrigger>
           <FlatTabTrigger value="auto-classify">Auto-Classificazione</FlatTabTrigger>
           <FlatTabTrigger value="rules">Regole &amp; Azioni</FlatTabTrigger>
+          <FlatTabTrigger value="funnemail">Funnemail</FlatTabTrigger>
         </TabsList>
 
         <TabsContent value="manual" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
@@ -125,6 +127,9 @@ export function EmailIntelligencePage(): React.ReactElement {
         </TabsContent>
         <TabsContent value="rules" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><RulesAndActionsTab /></Suspense>
+        </TabsContent>
+        <TabsContent value="funnemail" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
+          <Suspense fallback={<TabFallback />}><FunnemailTab /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
