@@ -17,6 +17,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { upsertEmailAddressRule } from "@/data/emailAddressRules";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { cn } from "@/lib/utils";
 
 type GroupRow = { nome_gruppo: string; colore: string | null; icon: string | null };
 
