@@ -30,7 +30,7 @@ export function useAgendaDayActivities(day: Date | null) {
         .from("activities")
         .select(`
           *,
-          partners(company_name, company_alias, country_code, country_name, city, enriched_at, website, logo_url, email),
+          partners(company_name, company_alias, country_code, country_name, city, enriched_at, website, logo_url, email, lead_status),
           team_members(name),
           selected_contact:partner_contacts!activities_selected_contact_id_fkey(id, name, email, direct_phone, mobile, title, contact_alias)
         `)
