@@ -10,6 +10,7 @@ import type { ContactOrigin } from "@/types/cockpit";
 import { createLogger } from "@/lib/log";
 import { getContactsByIds } from "@/data/contacts";
 import { findBusinessCards } from "@/data/businessCards";
+import { deleteActivities } from "@/data/activities";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -383,21 +384,27 @@ export function useDeleteCockpitContacts() {
       if (!user) throw new Error("Not authenticated");
 
       const sourceEntries: { type: string; id: string }[] = [];
+      const activityIds: string[] = [];
       for (const pid of prefixedIds) {
         if (pid.startsWith("pc-")) sourceEntries.push({ type: "partner_contact", id: pid.slice(3) });
         else if (pid.startsWith("bc-")) sourceEntries.push({ type: "business_card", id: pid.slice(3) });
         else if (pid.startsWith("prc-")) sourceEntries.push({ type: "prospect_contact", id: pid.slice(4) });
         else if (pid.startsWith("ic-")) sourceEntries.push({ type: "contact", id: pid.slice(3) });
+        else if (pid.startsWith("act-")) activityIds.push(pid.slice(4));
       }
 
       let deleted = 0;
       for (const entry of sourceEntries) {
         deleted += await deleteCockpitQueueBySource(user.id, entry.type, entry.id);
       }
+      deleted += await deleteActivities(activityIds);
       return deleted;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.cockpit.queue });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.allActivities });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activities.today });
     },
   });
 }
