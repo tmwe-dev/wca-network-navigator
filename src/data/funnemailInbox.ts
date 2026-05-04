@@ -284,8 +284,7 @@ export async function listFunnemailGroupedInbox(
       .order("sort_order", { ascending: true }),
     untypedFrom("email_address_rules")
       .select("email_address,group_name")
-      .eq("user_id", userId)
-      .eq("is_active", true),
+      .eq("user_id", userId),
   ]);
 
   if (messagesError) throw messagesError;
