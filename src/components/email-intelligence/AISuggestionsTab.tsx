@@ -17,7 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen,
+  Sparkles, Check, X, Loader2, Mail, Wand2, ArrowRight, PanelLeftClose, PanelLeftOpen, Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { invokeEdge } from "@/lib/api/invokeEdge";
@@ -45,6 +45,7 @@ interface AddressRow {
 }
 
 type StatusFilter = "uncategorized" | "categorized" | "all";
+type SortMode = "name-asc" | "name-desc" | "count-desc" | "count-asc";
 
 interface SuggestedGroupFilter {
   value: string;
@@ -286,6 +287,8 @@ export default function AISuggestionsTab() {
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [previewEmail, setPreviewEmail] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>("name-asc");
+  const [groupBySuggestion, setGroupBySuggestion] = useState(false);
 
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
@@ -396,6 +399,44 @@ export default function AISuggestionsTab() {
     return rows.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
   }, [rows, suggestedGroupFilter]);
 
+  const sortedRows = useMemo(() => {
+    const sorted = [...visibleRows];
+    const nameOf = (r: AddressRow) =>
+      (r.company_name || r.display_name || deriveSenderDisplayName(r.email_address) || r.email_address).toLowerCase();
+    switch (sortMode) {
+      case "name-asc":
+        return sorted.sort((a, b) => nameOf(a).localeCompare(nameOf(b), "it", { sensitivity: "base", numeric: true }));
+      case "name-desc":
+        return sorted.sort((a, b) => nameOf(b).localeCompare(nameOf(a), "it", { sensitivity: "base", numeric: true }));
+      case "count-desc":
+        return sorted.sort((a, b) => b.email_count - a.email_count);
+      case "count-asc":
+        return sorted.sort((a, b) => a.email_count - b.email_count);
+    }
+  }, [visibleRows, sortMode]);
+
+  const groupedRows = useMemo(() => {
+    if (!groupBySuggestion) return null;
+    const buckets = new Map<string, AddressRow[]>();
+    sortedRows.forEach((row) => {
+      const key = row.ai_suggested_group ?? "__none__";
+      const arr = buckets.get(key) ?? [];
+      arr.push(row);
+      buckets.set(key, arr);
+    });
+    const entries = Array.from(buckets.entries()).map(([key, items]) => ({
+      key,
+      label: key === "__none__" ? "Senza suggerimento" : key,
+      items,
+    }));
+    entries.sort((a, b) => {
+      if (a.key === "__none__") return 1;
+      if (b.key === "__none__") return -1;
+      return a.label.localeCompare(b.label, "it", { sensitivity: "base", numeric: true });
+    });
+    return entries;
+  }, [groupBySuggestion, sortedRows]);
+
   const suggestedGroupOptions = useMemo<SuggestedGroupFilter[]>(() => {
     const counts = new Map<string, number>();
     rows.forEach((row) => {
@@ -427,8 +468,8 @@ export default function AISuggestionsTab() {
   );
 
   const previewRow = useMemo(
-    () => visibleRows.find((row) => row.email_address === previewEmail) ?? visibleRows[0] ?? null,
-    [previewEmail, visibleRows],
+    () => sortedRows.find((row) => row.email_address === previewEmail) ?? sortedRows[0] ?? null,
+    [previewEmail, sortedRows],
   );
 
   const toggleSelection = (email: string) => {
@@ -491,6 +532,29 @@ export default function AISuggestionsTab() {
             <SelectItem value="all">🌐 Tutte</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+          <SelectTrigger className="w-[180px] h-9 text-xs" aria-label="Ordina">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name-asc">Nome A → Z</SelectItem>
+            <SelectItem value="name-desc">Nome Z → A</SelectItem>
+            <SelectItem value="count-desc">Più email</SelectItem>
+            <SelectItem value="count-asc">Meno email</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant={groupBySuggestion ? "default" : "outline"}
+          size="sm"
+          className="h-9 gap-1.5"
+          onClick={() => setGroupBySuggestion((v) => !v)}
+          title="Raggruppa per suggerimento AI"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span className="text-xs">Raggruppa AI</span>
+        </Button>
 
         <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1">
           {suggestedGroupOptions.map((option) => (
@@ -568,23 +632,51 @@ export default function AISuggestionsTab() {
               </div>
 
               <ScrollArea className="flex-1">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-3 pr-2">
-                  {visibleRows.map((row) => (
-                    <SuggestionCard
-                      key={row.id}
-                      row={row}
-                      groups={groups}
-                      isSelected={selectedEmails.has(row.email_address)}
-                      isFocused={previewRow?.email_address === row.email_address}
-                      onToggleSelect={toggleSelection}
-                      onFocus={(current) => setPreviewEmail(current.email_address)}
-                      onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
-                      onAccept={(r) => acceptMutation.mutate(r)}
-                      onIgnore={(r) => ignoreMutation.mutate(r)}
-                      onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
-                      busy={busy || analyzeMutation.isPending}
-                    />
-                  ))}
+                <div className="flex flex-col gap-3 p-3 pr-2">
+                  {groupedRows
+                    ? groupedRows.map((bucket) => (
+                        <div key={bucket.key} className="flex flex-col gap-2">
+                          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur px-2 py-1 rounded-md border border-border/50 flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-xs font-semibold text-foreground">{bucket.label}</span>
+                            <Badge variant="outline" className="text-[10px] h-5">{bucket.items.length}</Badge>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {bucket.items.map((row) => (
+                              <SuggestionCard
+                                key={row.id}
+                                row={row}
+                                groups={groups}
+                                isSelected={selectedEmails.has(row.email_address)}
+                                isFocused={previewRow?.email_address === row.email_address}
+                                onToggleSelect={toggleSelection}
+                                onFocus={(current) => setPreviewEmail(current.email_address)}
+                                onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
+                                onAccept={(r) => acceptMutation.mutate(r)}
+                                onIgnore={(r) => ignoreMutation.mutate(r)}
+                                onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                                busy={busy || analyzeMutation.isPending}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    : sortedRows.map((row) => (
+                        <SuggestionCard
+                          key={row.id}
+                          row={row}
+                          groups={groups}
+                          isSelected={selectedEmails.has(row.email_address)}
+                          isFocused={previewRow?.email_address === row.email_address}
+                          onToggleSelect={toggleSelection}
+                          onFocus={(current) => setPreviewEmail(current.email_address)}
+                          onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
+                          onAccept={(r) => acceptMutation.mutate(r)}
+                          onIgnore={(r) => ignoreMutation.mutate(r)}
+                          onAssign={(r, gId) => assignMutation.mutate({ row: r, groupId: gId })}
+                          busy={busy || analyzeMutation.isPending}
+                        />
+                      ))}
                 </div>
               </ScrollArea>
 
