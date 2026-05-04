@@ -68,7 +68,8 @@ const TOKEN_REFRESH_BUFFER_S = 60;
 const FETCH_TIMEOUT_MS = 15_000;
 
 function baseUrl(): string {
-  return (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+  const raw = (Deno.env.get("TMWE_BASE_URL") ?? "https://sandbox.findair.net").replace(/\/+$/, "");
+  return raw.replace(/\/erp$/, "");
 }
 
 export function serviceClient(): SupabaseClient {
