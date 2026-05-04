@@ -239,6 +239,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Toaster />
                       <LiveRegion message="" />
 
+                    <ComposeAiConfigProvider>
                     <div className="flex h-screen overflow-hidden overscroll-x-none bg-background">
                       {/* ComposeAiConfigProvider wraps both main content AND overlays (FiltersDrawer)
                           so EmailComposeFiltersSection works in either place. */}
@@ -414,6 +415,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       <Suspense fallback={null}>
                         <FloatingCoPilot />
                       </Suspense>
+                    </ComposeAiConfigProvider>
                   </CoPilotProvider>
                     </NotificationsProvider>
                   </MissionProvider>
