@@ -6540,6 +6540,33 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_state: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          frontend_callback: string
+          redirect_to: string
+          state: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          frontend_callback: string
+          redirect_to?: string
+          state: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          frontend_callback?: string
+          redirect_to?: string
+          state?: string
+        }
+        Relationships: []
+      }
       operative_prompts: {
         Row: {
           context: string
@@ -7741,10 +7768,14 @@ export type Database = {
           ai_config: Json | null
           created_at: string
           display_name: string | null
+          email_signature_html: string | null
+          findair_sub: string | null
           id: string
           language: string
+          linkedin_url: string | null
           onboarding_completed: boolean
           operator_role: string | null
+          phone: string | null
           updated_at: string
           user_id: string
         }
@@ -7752,10 +7783,14 @@ export type Database = {
           ai_config?: Json | null
           created_at?: string
           display_name?: string | null
+          email_signature_html?: string | null
+          findair_sub?: string | null
           id?: string
           language?: string
+          linkedin_url?: string | null
           onboarding_completed?: boolean
           operator_role?: string | null
+          phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -7763,10 +7798,14 @@ export type Database = {
           ai_config?: Json | null
           created_at?: string
           display_name?: string | null
+          email_signature_html?: string | null
+          findair_sub?: string | null
           id?: string
           language?: string
+          linkedin_url?: string | null
           onboarding_completed?: boolean
           operator_role?: string | null
+          phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -9922,6 +9961,7 @@ export type Database = {
         }[]
       }
       claim_pending_action: { Args: { _action_id: string }; Returns: boolean }
+      cleanup_expired_oauth_state: { Args: never; Returns: undefined }
       cleanup_super_mario_invocations: { Args: never; Returns: number }
       count_inbound_activities: { Args: never; Returns: Json }
       cron_job_status: {

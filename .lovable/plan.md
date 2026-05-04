@@ -1,105 +1,95 @@
-# Piano CORRETTO — Audit ✅, niente duplicati
+## Obiettivo
 
-Hai ragione: il sistema prompt-per-indirizzo **esiste già ed è cablato ovunque**. Cancello la proposta sbagliata. Audit completo qui sotto.
+Sostituire **completamente** l'auth attuale di WCA (email+password con whitelist `authorized_users`) con **SSO FindAir** come unico Identity Provider, replicando il pattern di SwiftPack Studio. Dopo il login l'utente atterra in WCA con un profilo creato/aggiornato automaticamente con email + nome ricavati da FindAir; telefono, LinkedIn e altri dati personali per le email li compila in autonomia da `/v2/settings`.
 
----
+## Modello di flusso (da SwiftPack)
 
-## AUDIT — Cosa esiste già (NON toccare)
+```
+User → /v2/login → click "Entra con FindAir"
+   ↓
+Edge: findair-proxy/oauth/start
+   - genera state, salva in DB (oauth_state)
+   - costruisce authorize_url di FindAir con client_id, redirect_uri della edge
+   - ritorna authorize_url al frontend
+   ↓
+Browser top-level redirect → FindAir authorize page → user logga
+   ↓
+FindAir → Edge: findair-proxy/oauth/callback?code=...&state=...
+   - valida state, scambia code per access_token (POST /oauth/token)
+   - chiama userinfo (GET /oauth/userinfo) → email, name, sub
+   - cerca/crea utente in auth.users via admin API (service role)
+   - genera magic link Supabase (admin.generateLink type=magiclink)
+   - upsert su profiles (email, full_name, findair_sub) — telefono/LinkedIn restano vuoti
+   - 302 redirect al frontend_callback con il magic link nel hash
+   ↓
+Browser → /v2/auth/findair-return#access_token=...
+   - Supabase client detecta hash → crea sessione locale
+   - useEffect detecta isAuthenticated → naviga a redirect originale
+```
 
-### Tabella `email_address_rules` (47 colonne)
-Già presenti:
-- `custom_prompt` (text) — istruzione libera, **massima priorità**
-- `prompt_id` (uuid) → FK a `email_prompts.id` — prompt riusabile
-- `tone_override` (text) — tono dedicato
-- `topics_to_emphasize` / `topics_to_avoid` (array)
-- `category`, `group_name`, `group_id`, `group_color`, `group_icon`
-- `auto_action`, `auto_action_params`, `auto_execute`, `ai_confidence_threshold`
-- `preferred_channel`, `exclusive_agent_id`
-- `priority`, `is_active`, `is_blocked`
-- AI suggestion: `ai_suggested_group`, `ai_suggestion_confidence`, `ai_suggestion_accepted`
-- Telemetria: `interaction_count`, `success_rate`, `last_interaction_at`, `applied_count`
+## Cosa cambia in WCA
 
-### Tabella `email_prompts`
-`scope`, `scope_value`, `title`, `instructions`, `priority`, `is_active` — prompt riusabili globali/per scope.
+### Database (1 migration)
+- Nuova tabella `oauth_state` (state token, expires_at) per CSRF protection
+- Aggiungere colonna `findair_sub TEXT UNIQUE` su `profiles` per legare utente FindAir → profilo WCA
+- **Mantenere `authorized_users` ma renderla opzionale**: la whitelist passa da gate al login a "lista email autorizzate FindAir". Se l'email FindAir non è in whitelist → callback nega l'accesso con errore.
 
-### Iniezione già attiva (in ordine di priorità)
-1. **`custom_prompt`** → "ISTRUZIONE PRIORITARIA PER QUESTO INDIRIZZO"
-2. **`email_prompts.instructions`** (via `prompt_id`) → "SENDER PROMPT"
-3. `tone_override` + `topics_*`
-4. `email_sender_groups` (nome_gruppo, classification_hint, response_style_hint)
+### Edge function nuova: `findair-proxy`
+- `verify_jwt = false` in `supabase/config.toml`
+- Tre route: `/oauth/start`, `/oauth/callback`, `/oauth/userinfo` (debug)
+- Usa secrets: `FINDAIR_CLIENT_ID`, `FINDAIR_CLIENT_SECRET`, `FINDAIR_AUTHORIZE_URL`, `FINDAIR_TOKEN_URL`, `FINDAIR_USERINFO_URL`, più `SUPABASE_SERVICE_ROLE_KEY` (già disponibile)
+- CORS whitelist (no `*`) come da regola di progetto
 
-Cablato in:
-- `classify-email-response/classificationPrompts.ts` (linee 34-36)
-- `classify-email-response/index.ts` (join `email_prompts:prompt_id` + `email_sender_groups:group_id`, linea 117)
-- `generate-email/contextAssembler.ts` (linea 194)
-- `generate-email/conversationIntel.ts` (linee 60-62, 139-141)
-- `generate-outreach/conversationContext.ts` (linee 28-76)
+### Frontend
+- `LoginPage.tsx` (esistente in `/src/pages/Auth.tsx` o equivalente): rimuovere form email/password, lasciare **solo** bottone "Entra con FindAir" (testo italiano, non spagnolo)
+- Nuova route pubblica `/v2/auth/findair-return` → componente che attende che `onAuthStateChange` riceva la sessione e poi naviga al `redirect`
+- `AuthProvider` invariato: continua a gestire JWT locale, niente `getUser()` di rete (regola di progetto rispettata)
+- Rimuovere il check whitelist dal client (ora avviene server-side nel callback)
 
-### UI già esistente
-- `EmailIntelligencePage` (pagina Funny Mail)
-- `prompt-lab/tabs/EmailPromptsTab` (editor `email_prompts`)
-- `InlineGroupAssigner` (assegnazione gruppo da inbox)
-- DAL: `emailAddressRules.ts` (`upsertEmailAddressRule`, bulk actions), `emailPrompts.ts`
+### Settings utente
+- `/v2/settings` (o pagina profilo esistente): aggiungere sezione **"Dati personali per email"** dove l'utente compila phone, linkedin_url, signature_html, ecc. Questi finiscono su `profiles`.
 
-### Funzioni edge correlate
-`apply-email-rules`, `backfill-email-rules`, `suggest-email-groups`, `classify-inbound-message`, `classify-email-response`, `inbound-dispatcher`, `cadence-engine`
+## Cosa NON tocco
 
-### Tabelle pipeline già introdotte (Fase 1 sessione precedente)
-`inbound_operative_actions`, `wake_up_rules`, `email_sender_groups.classification_hint/response_style_hint/auto_action_default`
+- AuthProvider centralizzato (pattern già conforme)
+- Logout, password reset (non più necessario — eliminata UI ma `/v2/reset-password` resta accessibile per chi avesse vecchi link, mostra messaggio "ora si entra con FindAir")
+- RBAC `user_roles` + `has_role()`: ruoli continuano a essere gestiti manualmente in WCA, non vengono dedotti da FindAir
+- Tutto il resto del sistema (DAL, RLS, edge function business) — l'auth resta basata su JWT Supabase, cambia solo *come* l'utente lo ottiene
 
----
+## Secrets richiesti
 
-## PIANO RIVISTO (3 fasi pulite, zero duplicati schema)
+Da aggiungere prima della prima esecuzione:
+- `FINDAIR_CLIENT_ID`
+- `FINDAIR_CLIENT_SECRET`
+- `FINDAIR_AUTHORIZE_URL` (es. `https://auth.findair.com/oauth/authorize`)
+- `FINDAIR_TOKEN_URL` (es. `https://auth.findair.com/oauth/token`)
+- `FINDAIR_USERINFO_URL` (es. `https://auth.findair.com/oauth/userinfo`)
 
-### FASE 1 — Agenda mail-first (UX)
-Solo frontend, zero schema. Tutto quello che ti serve è già nel DB.
+Il **redirect_uri** che dovrai registrare lato FindAir sarà:
+```
+https://zrbditqddhjkutzjycgi.supabase.co/functions/v1/findair-proxy/oauth/callback
+```
 
-**1.1 Badge sulla card e nel pannello.** Mostriamo `group_name` (con `group_color`/`group_icon`), `category`, e — se l'inbound è già stato classificato — la categoria AI (`inbound_messages.classification` o `intent`). Hook esistente: `useEmailAddressGroups.getGroup(email)`.
+## Ordine di esecuzione
 
-**1.2 Anteprima messaggio inline nel pannello destro.** Sezione "Messaggio ricevuto": mittente, oggetto, snippet 4-6 righe del body, "Mostra tutto" espande inline. Letto da `inbound_messages` correlato all'attività.
+1. **Migration DB** (`oauth_state`, `profiles.findair_sub`, opzionalità whitelist)
+2. **Aggiunta secrets** (5 chiavi sopra) — bloccante, aspetto conferma
+3. **Edge function `findair-proxy`** (start + callback + userinfo) con test Deno
+4. **Frontend**: nuovo `LoginPage`, route `/v2/auth/findair-return`, rimozione form email/password
+5. **Settings utente**: sezione dati personali per email (phone/linkedin/signature)
+6. **Aggiornamento `mem://auth/whitelist-email-auth-standard` e index** — la regola "no Google OAuth, email+password con whitelist" diventa "SSO FindAir come unico IdP, whitelist applicata server-side nel callback"
+7. **QA**: navigo `/v2/login` in preview, verifico bottone, errori se secrets mancano, redirect dopo callback
 
-**1.3 Azioni inline:** Aggiungi nota, Marca gestita, Archivia, **Rispondi inline** (mini composer che chiama la pipeline `send-email` esistente — niente modifiche IMAP). Sync stato già garantito da `increment_partner_interaction`.
+## Punti di rottura possibili e mitigazioni
 
-**1.4 Mittente sconosciuto:** pulsanti "Crea partner da dominio", "Ignora dominio" (`auto_action='ignore'` su `email_address_rules`), "Avvia Scout".
+- **Sessioni esistenti**: tutti gli utenti già loggati restano loggati (JWT Supabase locale). Al prossimo login dovranno passare da FindAir. Se non sono nella whitelist FindAir restano fuori — **da confermare con te chi è in whitelist**
+- **Redirect URI mismatch**: se l'URL registrato su FindAir non combacia esatto col `/functions/v1/findair-proxy/oauth/callback`, il callback fallisce. Va registrato esattamente
+- **Iframe Lovable**: top-level redirect (`window.top.location.href`) come SwiftPack — funziona
 
-### FASE 2 — Funny Mail come centro di controllo (UX + 1 prompt)
-Niente nuovo schema.
+## Domanda bloccante prima di partire
 
-**2.1 Vista 3 colonne in `EmailIntelligencePage`:** feed inbound ordinato per priorità commerciale | mail selezionata + thread | "Cosa farebbe l'AI" (classificazione, prompt usato, azioni proposte).
-
-**2.2 Priorità commerciale** (alto valore = soldi):
-- Calcolata in lettura, da `inbound_messages.classification` + categoria mittente.
-- High: `quote_request`, `account_opening`, `customer_reply_active`.
-- Medium: `complaint`, `info_request`.
-- Bassa: `notification_system`, `newsletter`.
-- Implementazione: helper TS in `src/v2/lib/`, no colonna nuova.
-
-**2.3 Trasparenza prompt:** nel pannello "Cosa farebbe l'AI", mostriamo quale prompt è stato applicato (`custom_prompt` / `email_prompts.title` / `group_name`). Lettura sola.
-
-**2.4 Editor inline:** dalla mail selezionata, pulsante "Modifica regole indirizzo" apre drawer con `custom_prompt`, `prompt_id` (dropdown da `email_prompts`), `tone_override`, `topics_*`, `auto_action`. **Riusa** `upsertEmailAddressRule` già esistente.
-
-### FASE 3 — Deep Search L1 Scout come arricchimento di base
-**3.1** Edge `inbound-scout-trigger`: mail da dominio sconosciuto → enqueue Scout su `ai_pending_actions` (rate-limit 1/24h per dominio).
-
-**3.2** Pulsante "Arricchisci ora" su WCA grid + card partner.
-
-**3.3** Auto-Scout su insert partner/contact/business_card (trigger DB → enqueue).
-
-**3.4** Pulizia dead code: rimuovi `useDeepSearchExtraSources`, `useDeepSearchHelpers`, `DeepSearchSection`. Slim `useDeepSearchLocal`.
-
-### FASE 4 — Test regressione prompt (continuo)
-- Test cases per `Group-Aware Classification`, `Operative Dispatcher Routing`, `Wake-Up Composer` via `prompt-test-runner` esistente.
-
----
-
-## Cosa CAMBIA rispetto al piano precedente
-
-| Prima (sbagliato) | Adesso |
-|---|---|
-| ❌ Aggiungere `custom_prompt` su `email_sender_rules` | ✅ Già esiste su `email_address_rules` |
-| ❌ Nuova tabella `address_prompts` | ✅ Già esiste `email_prompts` + FK `prompt_id` |
-| ❌ Cablare iniezione in classify/generate | ✅ Già cablato in 5 file edge |
-| ❌ Nuova UI editor prompt indirizzo | ✅ Estendere `EmailIntelligencePage` con drawer su rule esistente |
-| ❌ Nuovo campo `revenue_impact` | ✅ Helper TS derivato in lettura |
-
-Nessun nuovo schema, nessuna duplicazione. Confermi e parto dalla Fase 1?
+Dimmi solo: **gli URL FindAir** (authorize, token, userinfo) li hai già pronti? Se sì, appena confermi questo piano:
+- creo la migration
+- ti chiedo i 5 secrets via tool (compili tu nella form sicura)
+- scrivo edge function + frontend
+- testiamo insieme
