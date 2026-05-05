@@ -60,18 +60,7 @@ export function PartnerDetailInline({ partnerId, onClose }: Props): React.ReactE
     setLauncherOpen(true);
   };
 
-  // Ascolta richieste esterne (es. dal menu ⋯ della card) per lo stesso partner.
-  React.useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { partnerId?: string; level?: SherlockLevel } | undefined;
-      if (!detail?.partnerId || detail.partnerId !== partnerId) return;
-      if (!detail.level) return;
-      setLauncherLevel(detail.level);
-      setLauncherOpen(true);
-    };
-    window.addEventListener("sherlock-launch", handler);
-    return () => window.removeEventListener("sherlock-launch", handler);
-  }, [partnerId]);
+  // sherlock-launch è gestito dal singleton globale (App.tsx).
 
   return (
     <div className="h-full flex flex-col bg-card">
