@@ -92,6 +92,8 @@ export default function FunnemailInboxPage(): React.ReactElement {
             bulkDelete={ctrl.bulkDelete}
             bulkAssignGroup={ctrl.bulkAssignGroup}
             bulkBusy={ctrl.bulkBusy}
+            onReclassify={ctrl.reclassify}
+            reclassifying={ctrl.reclassifying}
           />
         )}
         </ResizablePanel>
