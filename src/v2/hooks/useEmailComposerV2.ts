@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import { invokeEdge } from "@/lib/api/invokeEdge";
 import { createCampaignDraftQueue } from "@/data/emailCampaigns";
+import { pickDefaultEmailTypeId } from "@/data/pickDefaultEmailType";
 
 export interface EmailRecipient {
   readonly email: string;
@@ -22,6 +23,7 @@ interface PrefillState {
   readonly prefilledRecipient?: EmailRecipient;
   readonly prefilledSubject?: string;
   readonly prefilledBody?: string;
+  readonly isReply?: boolean;
 }
 
 const EMAIL_VARIABLES = [
@@ -88,7 +90,7 @@ export function useEmailComposerV2() {
   );
   const [subject, setSubject] = useState(prefill.prefilledSubject ?? "");
   const [body, setBody] = useState(prefill.prefilledBody ?? "");
-  const [emailType, setEmailType] = useState("primo_contatto");
+  const [emailType, setEmailType] = useState(() => pickDefaultEmailTypeId({ isReply: prefill.isReply }));
   const [tone, setTone] = useState("professionale");
   const [useKB, setUseKB] = useState(true);
 
