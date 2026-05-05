@@ -40,7 +40,23 @@ Deno.serve(async (req) => {
 
     
 
-    // Save cookie to both keys for compatibility
+    // PR-2 Step B: user-scoped session when caller is a real user
+    if (auth.authMethod === "jwt" && auth.userId !== "extension-anon") {
+      await supabase.from('user_wca_sessions').upsert(
+        {
+          user_id: auth.userId,
+          cookie,
+          status: isAuthenticated ? 'ok' : 'unknown',
+          has_aspx_auth: hasAspxAuth,
+          has_wca_cookie: hasWcaCookie,
+          updated_at: now,
+        },
+        { onConflict: 'user_id' },
+      )
+    }
+
+    // Legacy global keys (kept for backward compat — to be removed once all
+    // extensions ship JWT and EXTENSION_AUTH_STRICT=true).
     await supabase.from('app_settings').upsert(
       { key: 'wca_auth_cookie', value: cookie, updated_at: now },
       { onConflict: 'key' }
