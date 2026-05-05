@@ -281,7 +281,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ processed, suggestions: classifications }),
+      JSON.stringify({ processed, suggestions: classifications, applied_prompts: appliedPromptNames }),
       { headers: { ...dynCors, "Content-Type": "application/json" } }
     );
   } catch (e) {
