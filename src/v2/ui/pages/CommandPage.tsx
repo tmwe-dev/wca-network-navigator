@@ -177,7 +177,7 @@ const CommandPage = () => {
   };
 
   return (
-    <div className="dark min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
+    <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
       <CommandPageBackButton currentPath="/v2/command" />
       <CommandPageBackground />
       <CommandPageHeader

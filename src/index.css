@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -19,6 +19,8 @@ html, body {
 @layer base {
   :root {
     /* Premium Navy & Gold Palette — ported from WueForm (light) */
+    /* Font for Amber default theme */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --background: 220 25% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -93,6 +95,20 @@ html, body {
 
   /* Lilac-Blue theme — light */
   .theme-lilac {
+    --font-sans: 'Manrope', system-ui, sans-serif;
+    --primary: 245 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 252 78% 70%;
+    --accent: 262 83% 70%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 245 75% 55%;
+    --gradient-start: 245 75% 55%;
+    --gradient-mid: 262 83% 70%;
+    --gradient-end: 280 80% 78%;
+    --glow-primary: 245 75% 55%;
+    --sidebar-primary: 245 75% 55%;
+    --sidebar-ring: 245 75% 55%;
+    --info: 245 75% 55%;
     --theme-accent-bg: rgba(79, 70, 229, 0.08);
     --theme-accent-border: rgba(99, 89, 232, 0.15);
     --theme-accent-hover: rgba(79, 70, 229, 0.12);
@@ -113,6 +129,20 @@ html, body {
 
   /* Space theme — light */
   .theme-space {
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 187 85% 53%;
+    --accent: 192 91% 60%;
+    --accent-foreground: 222 47% 11%;
+    --ring: 199 89% 48%;
+    --gradient-start: 222 47% 20%;
+    --gradient-mid: 199 89% 48%;
+    --gradient-end: 187 85% 60%;
+    --glow-primary: 192 91% 60%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-ring: 199 89% 48%;
+    --info: 199 89% 48%;
     --theme-accent-bg: rgba(15, 23, 42, 0.08);
     --theme-accent-border: rgba(34, 211, 238, 0.15);
     --theme-accent-hover: rgba(15, 23, 42, 0.12);
@@ -133,6 +163,7 @@ html, body {
 
   /* Notte theme — light overrides */
   .theme-notte {
+    --font-sans: 'Cormorant Garamond', 'Inter', serif;
     --background: 25 15% 95%;
     --foreground: 25 25% 15%;
     --card: 30 20% 98%;
@@ -143,6 +174,14 @@ html, body {
     --accent-foreground: 25 25% 15%;
     --border: 30 15% 85%;
     --ring: 38 70% 45%;
+    --secondary: 35 40% 75%;
+    --gradient-start: 30 60% 35%;
+    --gradient-mid: 38 70% 50%;
+    --gradient-end: 45 80% 60%;
+    --glow-primary: 38 70% 50%;
+    --sidebar-primary: 38 70% 45%;
+    --sidebar-ring: 38 70% 45%;
+    --info: 38 70% 45%;
     --theme-accent-bg: rgba(180, 130, 50, 0.08);
     --theme-accent-border: rgba(200, 150, 70, 0.15);
     --theme-accent-hover: rgba(180, 130, 50, 0.15);
@@ -155,6 +194,7 @@ html, body {
   }
 
   .dark {
+    --font-sans: 'Inter', system-ui, sans-serif;
     --background: 222 47% 7%;
     --foreground: 210 40% 98%;
     --card: 216 34% 11%;
@@ -195,6 +235,57 @@ html, body {
     --chart-4: 38 92% 55%;
     --chart-5: 0 84% 65%;
   }
+
+  /* Dark + Lilac */
+  .dark.theme-lilac {
+    --font-sans: 'Manrope', system-ui, sans-serif;
+    --primary: 252 78% 70%;
+    --accent: 262 83% 60%;
+    --ring: 252 78% 70%;
+    --gradient-start: 245 75% 55%;
+    --gradient-mid: 262 83% 65%;
+    --gradient-end: 280 80% 75%;
+    --glow-primary: 252 78% 70%;
+    --sidebar-primary: 252 78% 70%;
+    --sidebar-ring: 252 78% 70%;
+    --info: 252 78% 70%;
+  }
+
+  /* Dark + Space */
+  .dark.theme-space {
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --background: 220 40% 5%;
+    --card: 220 35% 8%;
+    --primary: 192 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --accent: 187 85% 53%;
+    --ring: 192 91% 60%;
+    --gradient-start: 222 47% 15%;
+    --gradient-mid: 199 89% 48%;
+    --gradient-end: 187 85% 60%;
+    --glow-primary: 192 91% 60%;
+    --sidebar-primary: 192 91% 60%;
+    --sidebar-ring: 192 91% 60%;
+    --info: 192 91% 60%;
+  }
+
+  /* Dark + Notte */
+  .dark.theme-notte {
+    --font-sans: 'Cormorant Garamond', 'Inter', serif;
+    --background: 25 15% 5%;
+    --card: 25 12% 8%;
+    --primary: 38 70% 55%;
+    --primary-foreground: 25 15% 5%;
+    --accent: 35 50% 35%;
+    --ring: 38 70% 55%;
+    --gradient-start: 30 60% 25%;
+    --gradient-mid: 38 70% 45%;
+    --gradient-end: 45 80% 55%;
+    --glow-primary: 38 70% 55%;
+    --sidebar-primary: 38 70% 55%;
+    --sidebar-ring: 38 70% 55%;
+    --info: 38 70% 55%;
+  }
 }
 
 @layer base {
@@ -203,6 +294,7 @@ html, body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56,139,253,0.12), transparent),
       radial-gradient(ellipse 60% 40% at 80% 80%, rgba(138,75,255,0.07), transparent);
