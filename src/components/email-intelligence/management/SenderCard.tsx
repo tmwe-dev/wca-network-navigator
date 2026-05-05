@@ -270,8 +270,11 @@ function SenderCardImpl({
                     {groups.length === 0 ? (
                       <DropdownMenuItem disabled>Nessun gruppo disponibile</DropdownMenuItem>
                     ) : (
-                      groups
+                      [...groups]
                         .filter((g) => g.nome_gruppo !== sender.aiSuggestion!.group_name)
+                        .sort((a, b) =>
+                          a.nome_gruppo.localeCompare(b.nome_gruppo, "it", { sensitivity: "base" }),
+                        )
                         .map((g) => (
                           <DropdownMenuItem
                             key={g.id}
@@ -281,6 +284,13 @@ function SenderCardImpl({
                             }}
                             className="gap-2"
                           >
+                            <span
+                              className="text-base leading-none flex-shrink-0"
+                              aria-hidden="true"
+                              style={g.colore ? { color: g.colore } : undefined}
+                            >
+                              {g.icon || "📁"}
+                            </span>
                             <span className="truncate">{g.nome_gruppo}</span>
                           </DropdownMenuItem>
                         ))
