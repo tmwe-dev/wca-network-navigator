@@ -102,6 +102,7 @@ export interface FunnemailGroupFolder {
   color: string | null;
   section: "priority" | "secondary" | "unclassified";
   sort_order: number;
+  auto_mark_read?: boolean;
 }
 
 export interface FunnemailGroupedInbox {
@@ -116,6 +117,7 @@ interface EmailSenderGroupRow {
   colore: string | null;
   icon: string | null;
   sort_order: number | null;
+  funnemail_policy?: { auto_mark_read?: boolean } | null;
 }
 
 interface EmailAddressRuleRow {
@@ -305,7 +307,7 @@ export async function listFunnemailGroupedInbox(
       .order("created_at", { ascending: false })
       .range(from, to)),
     fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
-      .select("id,nome_gruppo,colore,icon,sort_order")
+      .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
       .range(from, to)),
@@ -329,10 +331,16 @@ export async function listFunnemailGroupedInbox(
     else rulesByAddress.set(key, rule.group_name);
   }
 
-  // Prioritarie di default: solo le 3 cartelle core operative.
-  // Lo Spam non è MAI prioritario. L'utente può poi riordinare via drag&drop
+  // Prioritarie di default: la cassettiera della "segretaria AI".
+  // Lo Spam non è MAI prioritario. L'utente può riordinare via drag&drop
   // (preferenza salvata in localStorage lato client).
-  const PRIORITY_NAMES = new Set(["operativo", "commerciale", "amministrativo"]);
+  const PRIORITY_NAMES = new Set([
+    "quotazioni",
+    "operativa",
+    "consulenza",
+    "commerciale",
+    "amministrativo",
+  ]);
   const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => {
     const order = g.sort_order ?? index;
     const norm = g.nome_gruppo.trim().toLowerCase();
@@ -343,6 +351,7 @@ export async function listFunnemailGroupedInbox(
       color: g.colore,
       section: PRIORITY_NAMES.has(norm) ? "priority" : "secondary",
       sort_order: order,
+      auto_mark_read: Boolean(g.funnemail_policy?.auto_mark_read),
     };
   });
   folders.push({ slug: "unclassified", label: "Non classificate", icon: "?", color: null, section: "unclassified", sort_order: 9999 });
