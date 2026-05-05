@@ -108,6 +108,7 @@ export async function validateAgent(
     .from("agents")
     .select("*")
     .eq("id", agentId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (agentErr || !agent) {
