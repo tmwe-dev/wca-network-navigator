@@ -61,9 +61,13 @@ export function CRMFiltersSection() {
             .sort((a, b) => b.total - a.total)
         );
         setCrmOrigins(
-          Object.entries(originCounts)
-            .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
-            .sort((a, b) => (b.count || 0) - (a.count || 0))
+          [
+            // Pseudo-opzione "Non classificati" → mappata a origin IS NULL/'' nel loader
+            { value: "__unclassified__", label: "Non classificati", count: 0 },
+            ...Object.entries(originCounts)
+              .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
+              .sort((a, b) => (b.count || 0) - (a.count || 0)),
+          ]
         );
       } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* best-effort */ }
   }, []);
