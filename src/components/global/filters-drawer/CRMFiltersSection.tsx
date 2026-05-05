@@ -45,11 +45,13 @@ export function CRMFiltersSection() {
         }
         const countryCounts: Record<string, number> = {};
         const originCounts: Record<string, number> = {};
+        let unclassifiedCount = 0;
         allRows.forEach((r) => {
           const raw = (r.country || "").trim();
           if (raw) countryCounts[raw] = (countryCounts[raw] || 0) + 1;
           const o = (r.origin || "").trim();
           if (o) originCounts[o] = (originCounts[o] || 0) + 1;
+          else unclassifiedCount += 1;
         });
         setCrmCountries(
           Object.entries(countryCounts)
@@ -63,7 +65,7 @@ export function CRMFiltersSection() {
         setCrmOrigins(
           [
             // Pseudo-opzione "Non classificati" → mappata a origin IS NULL/'' nel loader
-            { value: "__unclassified__", label: "Non classificati", count: 0 },
+            { value: "__unclassified__", label: "Non classificati", count: unclassifiedCount },
             ...Object.entries(originCounts)
               .map(([value, count]) => ({ value, label: capitalizeFirst(value), count }))
               .sort((a, b) => (b.count || 0) - (a.count || 0)),
