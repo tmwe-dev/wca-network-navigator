@@ -4910,6 +4910,72 @@ export type Database = {
           },
         ]
       }
+      email_content_intelligence: {
+        Row: {
+          business_value: string | null
+          confidence: number
+          content_label: string
+          context_summary: Json
+          continuity: Json
+          created_at: string
+          from_address: string | null
+          id: string
+          intent_summary: string
+          message_id: string
+          model: string | null
+          partner_id: string | null
+          pending_action_ids: string[]
+          reasoning: string | null
+          suggested_actions: Json
+          target_role: string | null
+          updated_at: string
+          urgency: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_value?: string | null
+          confidence?: number
+          content_label?: string
+          context_summary?: Json
+          continuity?: Json
+          created_at?: string
+          from_address?: string | null
+          id?: string
+          intent_summary?: string
+          message_id: string
+          model?: string | null
+          partner_id?: string | null
+          pending_action_ids?: string[]
+          reasoning?: string | null
+          suggested_actions?: Json
+          target_role?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_value?: string | null
+          confidence?: number
+          content_label?: string
+          context_summary?: Json
+          continuity?: Json
+          created_at?: string
+          from_address?: string | null
+          id?: string
+          intent_summary?: string
+          message_id?: string
+          model?: string | null
+          partner_id?: string | null
+          pending_action_ids?: string[]
+          reasoning?: string | null
+          suggested_actions?: Json
+          target_role?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_delivery_events: {
         Row: {
           campaign_queue_id: string | null
