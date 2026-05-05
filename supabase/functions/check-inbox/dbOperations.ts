@@ -239,7 +239,12 @@ export async function saveMessageToDb(
     references_header: params.referencesHeader || null,
     thread_id: params.threadId,
     email_date: emailDate,
-    raw_payload: { uid: params.uid, date: params.date, sender_name: params.match.name || params.senderName },
+    raw_payload: {
+      uid: params.uid,
+      date: params.date,
+      sender_name: params.match.name || params.senderName,
+      match_confidence: params.match.match_confidence,
+    },
     raw_storage_path: params.rawStoragePath || null,
     raw_sha256: params.rawHash || null,
     raw_size_bytes: params.rfc822Size || null,
