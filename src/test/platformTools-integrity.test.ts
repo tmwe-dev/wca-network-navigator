@@ -23,20 +23,15 @@ const handlersSource = fs
   .filter((f) => f.endsWith("Handler.ts") || f === "platformToolHandlers.ts")
   .map((f) => fs.readFileSync(path.join(HANDLERS_DIR, f), "utf-8"))
   .join("\n");
-// Wrap to satisfy existing splits in the test below
-const source = `export const PLATFORM_TOOLS = [\n${defsSource}\n];\nexport async function executePlatformTool() {\n${handlersSource}\n}`;
+const source = `${defsSource}\n${handlersSource}`;
 
-// Estrai tutti i nomi dei tool dalle definizioni (name: "xxx")
 function extractToolNames(): string[] {
-  const toolSection = source.split("export const PLATFORM_TOOLS")[1]?.split("];")[0] ?? "";
-  const matches = [...toolSection.matchAll(/name:\s*"([^"]+)"/g)];
+  const matches = [...defsSource.matchAll(/name:\s*"([^"]+)"/g)];
   return matches.map((m) => m[1]);
 }
 
-// Estrai tutti i case handler (case "xxx":)
 function extractHandlerCases(): string[] {
-  const handlerSection = source.split("export async function executePlatformTool")[1] ?? "";
-  const matches = [...handlerSection.matchAll(/case\s+"([^"]+)":/g)];
+  const matches = [...handlersSource.matchAll(/case\s+"([^"]+)":/g)];
   return matches.map((m) => m[1]);
 }
 
