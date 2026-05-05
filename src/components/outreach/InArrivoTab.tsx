@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, startTransition } from "react";
 import { Mail, MessageCircle, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/useChannelMessages";
@@ -39,7 +39,11 @@ const CHANNELS: { value: Channel; label: string; icon: typeof Mail; channel: "em
 export function InArrivoTab() {
   const g = useGlobalFilters();
   const channel = g.filters.inreachChannel;
-  const setChannel = (c: Channel) => g.setFilter("inreachChannel", c);
+  const setChannel = (c: Channel) => {
+    // Wrap in startTransition to avoid "component suspended while responding
+    // to synchronous input" when switching to a lazy-loaded inbox view.
+    startTransition(() => g.setFilter("inreachChannel", c));
+  };
   const [pulsingChannel, setPulsingChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
