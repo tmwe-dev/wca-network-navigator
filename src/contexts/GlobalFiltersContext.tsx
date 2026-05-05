@@ -131,7 +131,7 @@ const defaults: GlobalFilterState = {
   emailIntelHideClassified: true,
   emailIntelSort: "count-desc",
   funnemailFolder: "all",
-  funnemailView: "unread",
+  funnemailView: "all",
   funnemailSearch: "",
 };
 
