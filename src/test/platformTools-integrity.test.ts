@@ -12,13 +12,17 @@ import * as fs from "fs";
 import * as path from "path";
 
 const DEFS_DIR = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools/defs");
-const HANDLERS_PATH = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools/platformToolHandlers.ts");
+const HANDLERS_DIR = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools");
 const defsSource = fs
   .readdirSync(DEFS_DIR)
   .filter((f) => f.endsWith(".ts"))
   .map((f) => fs.readFileSync(path.join(DEFS_DIR, f), "utf-8"))
   .join("\n");
-const handlersSource = fs.readFileSync(HANDLERS_PATH, "utf-8");
+const handlersSource = fs
+  .readdirSync(HANDLERS_DIR)
+  .filter((f) => f.endsWith("Handler.ts") || f === "platformToolHandlers.ts")
+  .map((f) => fs.readFileSync(path.join(HANDLERS_DIR, f), "utf-8"))
+  .join("\n");
 // Wrap to satisfy existing splits in the test below
 const source = `export const PLATFORM_TOOLS = [\n${defsSource}\n];\nexport async function executePlatformTool() {\n${handlersSource}\n}`;
 
