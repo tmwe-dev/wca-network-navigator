@@ -626,5 +626,11 @@ export const queryKeys = {
       ["funnemail-inbox", "mail", messageId ?? "none"] as const,
   },
 
+  // ── Alert routing (TMWE) ──────────────────────────────
+  alertRouting: {
+    recipients: (userId?: string) => ["alert-recipients", userId ?? "current"] as const,
+    log: (userId?: string) => ["alert-dispatch-log", userId ?? "current"] as const,
+  },
+
   noop: ["noop"] as const,
 } as const;
