@@ -72,6 +72,7 @@ const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) =
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
+const AlertRoutingPage = lazy(() => import("./ui/pages/AlertRoutingPage").then((m) => ({ default: m.AlertRoutingPage })));
 const FunnemailInboxPage = lazy(() => import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
 const AIArenaPage = lazy(() => import("./ui/pages/AIArenaPage").then((m) => ({ default: m.AIArenaPage })));
 const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashboard").then((m) => ({ default: m.SystemHealthDashboard })));
@@ -326,6 +327,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/observability" element={guardedPage(ObservabilityPage, "Observability")} />
           <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
+          <Route path="settings/alert-routing" element={guardedPage(AlertRoutingPage, "AlertRouting")} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />
