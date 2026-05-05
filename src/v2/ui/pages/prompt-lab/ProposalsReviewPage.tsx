@@ -27,6 +27,7 @@ import {
   type KbEntryProposal,
 } from "@/data/kbProposals";
 import { useAuth } from "@/providers/AuthProvider";
+import { DiffViewer } from "./components/DiffViewer";
 
 const ALLOWED_BLOCKS = ["context", "objective", "procedure", "criteria", "examples"] as const;
 
@@ -213,6 +214,15 @@ function PromptProposalCard({
           <div className="text-muted-foreground mb-1">Proposto</div>
           <pre className="bg-primary/5 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-words border border-primary/20">{p.proposed_content}</pre>
         </div>
+      </div>
+
+      {/* Diff visivo: prioritario sul confronto a 2 colonne, rende immediato cosa cambia. */}
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Differenze</div>
+        <DiffViewer
+          before={p.current_content ?? ""}
+          after={p.proposed_content ?? ""}
+        />
       </div>
 
       {(p.rationale || p.risks || p.assumptions) && (
