@@ -75,7 +75,7 @@ export default function PromptCatalogPage() {
       <header className="border-b px-4 py-2 flex items-center justify-between bg-background flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Button asChild size="sm" variant="ghost" className="h-7 gap-1.5 -ml-2">
-            <Link to="/v2/intelligence/prompt-lab">
+            <Link to="/v2/settings/prompt-lab">
               <ArrowLeft className="h-3.5 w-3.5" />
               Prompt Lab
             </Link>
