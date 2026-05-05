@@ -23,13 +23,23 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { getFlagFromDomain, getDomainFaviconUrl } from '@/lib/domainUtils';
-import type { SenderAnalysis } from '@/types/email-management';
+import type { SenderAnalysis, EmailSenderGroup } from '@/types/email-management';
 import { SenderActionsDialog } from './SenderActionsDialog';
 
 interface SenderCardProps {
   sender: SenderAnalysis;
+  /** Lista gruppi disponibili — necessaria per il dropdown "Cambia gruppo" sul chip AI. */
+  groups?: EmailSenderGroup[];
   onDragStart?: (sender: SenderAnalysis) => void;
   onDragEnd?: (clientX: number, clientY: number) => void;
   isSelected?: boolean;
@@ -58,6 +68,7 @@ interface SenderCardProps {
 
 function SenderCardImpl({
   sender,
+  groups = [],
   onDragStart,
   onDragEnd,
   isSelected = false,
@@ -207,26 +218,75 @@ function SenderCardImpl({
              *  così la card non "salta" quando l'analisi AI popola il chip. */}
             {sender.aiSuggestion?.group_name ? (
               <div className="flex items-stretch gap-1.5 mt-0.5 min-h-[40px]">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    stop(e);
-                    onAiChipClick?.(sender.aiSuggestion!.group_name);
-                  }}
-                  draggable={false}
-                  title={`Suggerimento AI (confidenza ${Math.round((sender.aiSuggestion.confidence ?? 0) * 100)}%) — clicca per evidenziare il gruppo`}
-                  className="flex-1 min-w-0 flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-primary/15 hover:bg-primary/25 border border-primary/30 transition-colors text-left"
-                >
-                  <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] uppercase tracking-wide text-primary/80 leading-none">
-                      Suggerito AI
-                    </div>
-                    <div className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
-                      {sender.aiSuggestion.group_name}
-                    </div>
-                  </div>
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={stop}
+                      draggable={false}
+                      title={`Suggerimento AI (confidenza ${Math.round((sender.aiSuggestion.confidence ?? 0) * 100)}%) — clicca per scegliere un gruppo diverso`}
+                      className="flex-1 min-w-0 flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-primary/15 hover:bg-primary/25 border border-primary/30 transition-colors text-left"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] uppercase tracking-wide text-primary/80 leading-none">
+                          Suggerito AI — clicca per cambiare
+                        </div>
+                        <div className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
+                          {sender.aiSuggestion.group_name}
+                        </div>
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="max-h-72 overflow-y-auto w-64"
+                    onClick={stop}
+                  >
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
+                      Assegna a un gruppo
+                    </DropdownMenuLabel>
+                    {onAcceptAiSuggestion && groups.some((g) => g.nome_gruppo === sender.aiSuggestion!.group_name) && (
+                      <>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            runAction("ai-accept", () =>
+                              onAcceptAiSuggestion(sender, sender.aiSuggestion!.group_name),
+                            );
+                          }}
+                          className="gap-2"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          <span className="font-semibold truncate">
+                            {sender.aiSuggestion.group_name}
+                          </span>
+                          <span className="ml-auto text-[10px] text-muted-foreground">
+                            suggerito
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {groups.length === 0 ? (
+                      <DropdownMenuItem disabled>Nessun gruppo disponibile</DropdownMenuItem>
+                    ) : (
+                      groups
+                        .filter((g) => g.nome_gruppo !== sender.aiSuggestion!.group_name)
+                        .map((g) => (
+                          <DropdownMenuItem
+                            key={g.id}
+                            onSelect={() => {
+                              if (!onAcceptAiSuggestion) return;
+                              runAction("ai-accept", () => onAcceptAiSuggestion(sender, g.nome_gruppo));
+                            }}
+                            className="gap-2"
+                          >
+                            <span className="truncate">{g.nome_gruppo}</span>
+                          </DropdownMenuItem>
+                        ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {onAcceptAiSuggestion && (
                   <Tooltip>
                     <TooltipTrigger asChild>
