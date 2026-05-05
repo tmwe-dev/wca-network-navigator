@@ -115,6 +115,12 @@ export function FunnemailMailList({
       return next;
     });
   const clearChecked = () => setCheckedIds(new Set());
+  const addManyChecked = (ids: string[]) =>
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return next;
+    });
 
   // Reset selezione se cambiano sort/group/filtri (lista cambia identità)
   useEffect(() => { clearChecked(); }, [sort, group]);
@@ -225,6 +231,7 @@ export function FunnemailMailList({
         bulkDelete={bulkDelete}
         bulkAssignGroup={bulkAssignGroup}
         bulkBusy={bulkBusy}
+        onSelectGroup={(msgs) => addManyChecked(msgs.map((m) => m.id))}
       />
       {checkedIds.size > 0 && (
         <FunnemailBulkBar
@@ -298,11 +305,13 @@ interface GroupedProps {
   bulkDelete: (msgs: ChannelMessage[]) => void;
   bulkAssignGroup: (msgs: ChannelMessage[], groupName: string) => Promise<void>;
   bulkBusy: boolean;
+  onSelectGroup?: (msgs: ChannelMessage[]) => void;
 }
 
 function GroupedList({
   messages, groupMode, renderCard,
   bulkMarkRead, bulkArchive, bulkDelete, bulkAssignGroup, bulkBusy,
+  onSelectGroup,
 }: GroupedProps): JSX.Element {
   const groups = useMemo(() => {
     const map = new Map<string, ChannelMessage[]>();
@@ -339,6 +348,7 @@ function GroupedList({
               onAssignGroup={(groupName) => { void bulkAssignGroup(msgs, groupName); }}
               onArchiveAll={() => bulkArchive(msgs)}
               onDeleteAll={() => bulkDelete(msgs)}
+              onSelectAll={onSelectGroup ? () => onSelectGroup(msgs) : undefined}
             />
             {expanded && (
               <div>
