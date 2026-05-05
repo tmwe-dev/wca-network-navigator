@@ -300,6 +300,11 @@ html, body {
       radial-gradient(ellipse 60% 40% at 80% 80%, rgba(138,75,255,0.07), transparent);
     min-height: 100vh;
   }
+  /* Forza il font del tema su TUTTI gli elementi (input, button, dialog, command palette, ecc.)
+     che altrimenti userebbero il font di sistema del browser. */
+  button, input, textarea, select, optgroup, [role="dialog"], [role="menu"], [cmdk-root] {
+    font-family: var(--font-sans);
+  }
 }
 
 /* Custom scrollbar */
