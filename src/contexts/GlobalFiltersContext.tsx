@@ -91,7 +91,7 @@ const defaults: GlobalFilterState = {
   workspaceFilters: new Set(),
   emailGenFilter: "all",
   workspaceCountries: new Set(),
-  sortingFilter: "unreviewed",
+  sortingFilter: "all",
   sortingSearch: "",
   cockpitCountries: new Set(),
   cockpitChannels: new Set(),
