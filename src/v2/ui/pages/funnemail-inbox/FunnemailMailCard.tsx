@@ -11,9 +11,10 @@
  * della inbox standard. Le azioni rapide ("Azioni", "Assegna gruppo")
  * compaiono in overlay sull'hover, e la checkbox di bulk è opzionale.
  */
-import { Plane, MailOpen } from "lucide-react";
+import { Brain, CalendarClock, Gauge, MailOpen, Plane, Sparkles, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
@@ -21,9 +22,21 @@ import { InlineGroupAssigner } from "@/components/outreach/email/InlineGroupAssi
 import { EmailMessageActions } from "@/components/outreach/EmailMessageActions";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { cn } from "@/lib/utils";
+import { getCountryFlag } from "@/lib/countries";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
+import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } from "@/data/funnemailInbox";
+import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { extractSenderName, stripReplyPrefixes } from "./utils";
 import { AiSuggestionChip, type AiSuggestion } from "./AiSuggestionChip";
+
+type DecoratedMessage = ChannelMessage & {
+  category?: string | null;
+  funnemail_folder_label?: string | null;
+  funnemail_folder_icon?: string | null;
+  funnemail_decision?: FunnemailDecisionRow | null;
+  sender_intel?: SenderIntelRow | null;
+  partner_snapshot?: FunnemailPartnerSnapshot | null;
+};
 
 interface Props {
   message: ChannelMessage;
@@ -35,6 +48,8 @@ interface Props {
   aiSuggestion?: AiSuggestion | null;
   onSelect: () => void;
   onAcceptAiSuggestion?: () => void;
+  onReclassify?: () => void;
+  reclassifying?: boolean;
   checked?: boolean;
   onToggleChecked?: () => void;
   showCheckbox?: boolean;
@@ -56,17 +71,25 @@ export function FunnemailMailCard({
   aiSuggestion,
   onSelect,
   onAcceptAiSuggestion,
+  onReclassify,
+  reclassifying,
   checked,
   onToggleChecked,
   showCheckbox,
 }: Props) {
+  const meta = message as DecoratedMessage;
+  const partner = meta.partner_snapshot ?? null;
+  const decision = meta.funnemail_decision ?? null;
   const { brand } = extractSenderBrand(message.from_address || "");
+  const displayBrand = partner?.company_alias || partner?.company_name || brand;
   const senderName = extractSenderName(message.from_address);
   const cleanSubject = stripReplyPrefixes(message.subject) || "(nessun oggetto)";
   const isUnread = !message.read_at;
   const displayDate = message.email_date || message.created_at;
   const markRead = useMarkAsRead();
   const secondaryLine = senderName || message.from_address || "(mittente sconosciuto)";
+  const countryCode = partner?.country_code ?? null;
+  const emailAddress = message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "";
 
   return (
     <div
