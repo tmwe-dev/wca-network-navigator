@@ -12,6 +12,16 @@ import "./i18n";
 
 document.documentElement.classList.add('dark');
 
+// Applica il tema visivo persistito (Amber/Lilac/Space/Notte) PRIMA del render
+// per evitare flash. Stesse chiavi usate da ThemePicker.
+try {
+  const stored = localStorage.getItem('wcann.theme');
+  const valid = ['amber', 'lilac', 'space', 'notte'];
+  if (stored && valid.includes(stored) && stored !== 'amber') {
+    document.documentElement.classList.add(`theme-${stored}`);
+  }
+} catch { /* ignore */ }
+
 // ── PWA: guard against iframe/preview contexts ──
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }
