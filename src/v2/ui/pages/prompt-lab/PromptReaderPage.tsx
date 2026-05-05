@@ -283,7 +283,6 @@ export default function PromptReaderPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [kbAll, setKbAll] = useState<KbEntry[] | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [copilotOpen, setCopilotOpen] = useState(true);
   const [targetBlock, setTargetBlock] = useState<{ name: string; content: string }>({
     name: "system_prompt",
     content: "",
