@@ -9,13 +9,14 @@ import * as React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, LogOut } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
+import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 
 const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ label: string; path: string }> }> = [
   {
@@ -116,6 +117,7 @@ export function NavMenuPopover({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+  const { signOut } = useAuthV2();
 
   const handleSelect = (path: string) => {
     setOpen(false);
@@ -210,6 +212,19 @@ export function NavMenuPopover({
               ))}
             </div>
           )}
+          <div className="my-1 border-t border-white/10" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              void signOut();
+            }}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-destructive hover:bg-destructive/10"
+          >
+            <span><LogOut className="h-4 w-4" /></span>
+            <span>Logout</span>
+          </button>
         </div>
       </PopoverContent>
     </Popover>
