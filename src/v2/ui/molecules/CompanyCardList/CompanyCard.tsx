@@ -137,7 +137,6 @@ export function CompanyCard({
       holding: { label: "In attesa", cls: "bg-primary/15 text-primary border-primary/30" },
       archived: { label: "Archiviato", cls: "bg-muted/40 text-muted-foreground border-border/40" },
       blacklisted: { label: "Blacklist", cls: "bg-destructive/15 text-destructive border-destructive/30" },
-      converted: { label: "Cliente", cls: "bg-emerald-500/20 text-emerald-500 border-emerald-500/40 font-semibold" },
     };
     const m = map[leadStatus];
     if (!m) return null;
