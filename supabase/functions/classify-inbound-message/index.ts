@@ -15,6 +15,7 @@ import { initLeadProcessManager } from "../_shared/processManagers/leadProcessMa
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { checkInjectionGuard } from "../_shared/injectionGuard.ts";
 import { dispatchFunnemail } from "../_shared/funnemailDispatcher.ts";
+import { runInboundTriage, maybeDispatchAlert } from "../_shared/inboundTriage.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -436,6 +437,34 @@ ${bodyBlock}`;
             limit: 30,
           },
         });
+      } catch (_e) {
+        // fail-safe
+      }
+    }
+
+    // ── Inbound Triage TMWE (categoria + urgenza 0-100) + alert WhatsApp ai
+    //    responsabili. Fire-and-forget. Mai blocca classificazione legacy.
+    if (channel === "email" && body.user_id) {
+      try {
+        const triage = await runInboundTriage({
+          supabase,
+          userId: body.user_id,
+          messageId: message_id,
+          channel,
+          fromAddress: from_address,
+          subject: subject || "",
+          bodyText: body_text || "",
+        });
+        if (triage) {
+          await maybeDispatchAlert(supabase, {
+            userId: body.user_id,
+            messageId: message_id,
+            channel,
+            fromAddress: from_address,
+            subject: subject || "",
+            triage,
+          });
+        }
       } catch (_e) {
         // fail-safe
       }

@@ -2346,6 +2346,116 @@ export type Database = {
           },
         ]
       }
+      alert_dispatch_log: {
+        Row: {
+          alert_categories: string[] | null
+          business_category: string | null
+          channel: string
+          created_at: string
+          dedup_key: string | null
+          error: string | null
+          id: string
+          message_id: string | null
+          payload: Json
+          recipient_id: string
+          status: string
+          urgency_score: number | null
+          user_id: string
+        }
+        Insert: {
+          alert_categories?: string[] | null
+          business_category?: string | null
+          channel?: string
+          created_at?: string
+          dedup_key?: string | null
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          payload?: Json
+          recipient_id: string
+          status?: string
+          urgency_score?: number | null
+          user_id: string
+        }
+        Update: {
+          alert_categories?: string[] | null
+          business_category?: string | null
+          channel?: string
+          created_at?: string
+          dedup_key?: string | null
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          payload?: Json
+          recipient_id?: string
+          status?: string
+          urgency_score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_dispatch_log_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "alert_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alert_recipients: {
+        Row: {
+          categories: string[]
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          min_urgency_score: number
+          name: string
+          notes: string | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          role: string | null
+          timezone: string
+          updated_at: string
+          user_id: string
+          whatsapp_e164: string
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          min_urgency_score?: number
+          name: string
+          notes?: string | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          role?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          whatsapp_e164: string
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          min_urgency_score?: number
+          name?: string
+          notes?: string | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          role?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp_e164?: string
+        }
+        Relationships: []
+      }
       app_error_logs: {
         Row: {
           component_stack: string | null
