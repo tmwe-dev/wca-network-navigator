@@ -5,6 +5,7 @@
     "pipeline": "Pipeline",
     "communicate": "Comunica",
     "intelligence": "Agenti",
+    "prompt_reader": "Prompt Reader",
     "config": "Config",
     "dashboard": "Dashboard",
     "globe": "Globo",
