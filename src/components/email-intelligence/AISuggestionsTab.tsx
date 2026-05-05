@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
+import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
+import { DeepSearchEmailBulkButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailBulkButton";
 
 interface AddressRow {
   id: string;
@@ -266,6 +268,17 @@ const SuggestionCard = memo(function SuggestionCard({
             <Sparkles className="h-3.5 w-3.5" />
             <span className="text-xs">AI</span>
           </Button>
+
+          <div onClick={(e) => e.stopPropagation()} className="inline-flex">
+            <DeepSearchEmailButton
+              email={row.email_address}
+              source={{ displayName: row.display_name, companyName: row.company_name ?? undefined }}
+              size="sm"
+              variant="outline"
+              className="h-8 px-2.5 gap-1"
+              label="Deep"
+            />
+          </div>
 
           {row.ai_suggested_group && !currentGroup && (
             <>
@@ -532,6 +545,16 @@ export default function AISuggestionsTab() {
           {analyzeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {selectedRows.length > 0 ? `Analizza selezione (${selectedRows.length})` : "Analizza con AI"}
         </Button>
+
+        <DeepSearchEmailBulkButton
+          items={selectedRows.map((row) => ({
+            email: row.email_address,
+            displayName: row.display_name,
+            companyName: row.company_name ?? undefined,
+          }))}
+          disabled={selectedRows.length === 0}
+          variant="outline"
+        />
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground pl-2 border-l border-border/40">
           <span className="whitespace-nowrap">Min. email</span>
