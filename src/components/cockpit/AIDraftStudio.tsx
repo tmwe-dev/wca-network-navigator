@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AISearchMonitorButton } from "./AISearchMonitor";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus } from "lucide-react";
+import { Sparkles, Mail, Linkedin, MessageCircle, Smartphone, Copy, Send, RotateCcw, Target, ExternalLink, Brain, Database, Zap, Globe, User, Building2, BookOpen, Search, CheckCircle2, XCircle, AlertTriangle, UserPlus, Reply, MailOpen } from "lucide-react";
 import { useMission } from "@/contexts/MissionContext";
 import { cn } from "@/lib/utils";
 import type { DraftState } from "@/types/cockpit";
@@ -12,6 +12,15 @@ import { useAIDraftActions } from "@/hooks/useAIDraftActions";
 import { JournalistBadge } from "@/v2/ui/atoms/JournalistBadge";
 import OracleContextPanel from "@/components/email/OracleContextPanel";
 import { DraftAttachmentsBar } from "./DraftAttachmentsBar";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
+
+function cleanContactName(name: string | null | undefined): string {
+  if (!name) return "";
+  return name
+    .replace(/^risposta(?:\s+(?:a\s+)?email[^:]*)?:\s*/i, "")
+    .replace(/^re:\s*/i, "")
+    .trim();
+}
 
 const LinkedInDMDialog = lazy(() => import("@/components/workspace/LinkedInDMDialog"));
 
@@ -42,6 +51,13 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
   const meta = draft.channel ? channelMeta[draft.channel] : null;
   const Icon = meta?.icon || Sparkles;
   const isHtmlContent = draft.channel === "email" && /<(p|br|div|ul|ol)\b/i.test(draft.body);
+  const isReplyDraft = !!draft.replySource?.messageId;
+  const displayName = cleanContactName(draft.contactName);
+
+  const openOriginalMail = () => {
+    if (!draft.replySource?.messageId) return;
+    window.open(`/v2/funnemail-inbox?msg=${encodeURIComponent(draft.replySource.messageId)}`, "_blank", "noopener,noreferrer");
+  };
 
   if (!draft.channel) {
     return (
@@ -67,9 +83,26 @@ export function AIDraftStudio({ draft, onDraftChange, onRegenerate, onGenerateAf
       <div className="px-4 py-3 border-b border-border/60">
         <div className="flex items-center gap-2 mb-1">
           <Icon className={cn("w-4 h-4", meta?.color)} />
-          <span className="text-sm font-semibold text-foreground">{meta?.label}</span>
+          {isReplyDraft && (
+            <InfoTooltip content="Risposta a email ricevuta">
+              <span className="inline-flex items-center justify-center rounded-md p-0.5 bg-sky-500/20 text-sky-100 border border-sky-400/40">
+                <Reply className="w-3 h-3" />
+              </span>
+            </InfoTooltip>
+          )}
           <span className="text-xs text-muted-foreground">→</span>
-          <span className="text-sm text-foreground/90">{draft.contactName}</span>
+          <span className="text-sm text-foreground/90 truncate">{displayName}</span>
+          {isReplyDraft && (
+            <button
+              type="button"
+              onClick={openOriginalMail}
+              className="ml-auto inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              title="Apri mail originale"
+              aria-label="Apri mail originale"
+            >
+              <MailOpen className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground/90">
           <span>Lingua: {draft.language}</span>

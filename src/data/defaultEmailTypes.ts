@@ -157,6 +157,43 @@ VINCOLI:
   },
 ];
 
+/**
+ * Tipo email "Contesto mail": usato come default quando si sta rispondendo
+ * a una mail entrante (Cockpit/Funnemail), non quando si avvia un primo
+ * contatto. L'AI deve agganciarsi al thread, non aprire come fosse outreach.
+ */
+DEFAULT_EMAIL_TYPES.push({
+  id: "contesto_email",
+  name: "Contesto mail",
+  icon: "Reply",
+  category: "risposta",
+  tone: "professionale",
+  kb_categories: ["identita", "vendita", "email_modelli"],
+  prompt: `IDENTITÀ
+Sei l'assistente che risponde, a nome dell'operatore, a una mail già in corso.
+
+OBIETTIVO
+Rispondere alla mail entrante agganciandoti al SUO contesto reale: oggetto del thread, contenuto del messaggio precedente, richiesta esplicita o implicita del mittente. Mai partire come fosse un primo contatto.
+
+METODO
+1. Leggi il thread iniettato (mail entrante + storico) e individua la richiesta concreta del mittente (informazione, preventivo, contestazione, conferma, ecc.).
+2. Apri riconoscendo l'oggetto della loro mail (1 riga, no convenevoli generici).
+3. Rispondi nel merito: se chiedono dati → dali; se chiedono tempi → fissali; se contestano → riconosci e proponi azione; se è un cliente che vuole pagare → istruzioni operative.
+4. Lunghezza media: 8-14 righe corpo, tono professionale, lingua del mittente.
+5. Chiudi con UNA call-to-action coerente con la loro richiesta (es. "ti confermo entro venerdì", "preferisci call mercoledì o giovedì?").
+
+GUARDRAIL
+- Vietato "Mi chiamo…", "La nostra azienda è…", pitch generico, hook da prospezione fredda.
+- Vietato ripetere parola per parola la loro mail; cita solo per disambiguare.
+- Vietato cambiare oggetto: usa "Re: <oggetto originale>" se non già impostato.
+- Niente CTA da first-touch ("possiamo fare una call conoscitiva?") quando il thread è già operativo.
+
+OUTPUT
+- Subject: "Re: <oggetto originale>" se mancante.
+- Body: risposta nel merito, lunghezza media, tono professionale.`,
+  structure: "aggancio al thread → risposta nel merito → CTA coerente",
+});
+
 export const TONE_OPTIONS = [
   { value: "formale", label: "Formale", icon: "GraduationCap" },
   { value: "professionale", label: "Professionale", icon: "Briefcase" },

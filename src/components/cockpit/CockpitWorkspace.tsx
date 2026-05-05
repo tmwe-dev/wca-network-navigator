@@ -153,7 +153,12 @@ export function CockpitWorkspace(props: Props) {
               {draftState.contactName && (
                 <>
                   <span className="text-muted-foreground/40">·</span>
-                  <span className="text-sm text-muted-foreground truncate">{draftState.contactName}</span>
+                  <span className="text-sm text-muted-foreground truncate">
+                    {draftState.contactName
+                      .replace(/^risposta(?:\s+(?:a\s+)?email[^:]*)?:\s*/i, "")
+                      .replace(/^re:\s*/i, "")
+                      .trim()}
+                  </span>
                 </>
               )}
               {draftQueue.length > 0 && (
