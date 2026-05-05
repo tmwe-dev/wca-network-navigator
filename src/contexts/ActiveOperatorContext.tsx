@@ -21,38 +21,47 @@ const Ctx = createContext<ActiveOperatorCtx>({
   setViewingAll: () => {},
 });
 
+const STORAGE_KEY = "activeOperator:v1";
+
+type Persisted = { activeId: string | null; viewingAll: boolean };
+
+function readPersisted(): Persisted {
+  if (typeof window === "undefined") return { activeId: null, viewingAll: false };
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { activeId: null, viewingAll: false };
+    const parsed = JSON.parse(raw) as Partial<Persisted>;
+    return {
+      activeId: typeof parsed.activeId === "string" ? parsed.activeId : null,
+      viewingAll: Boolean(parsed.viewingAll),
+    };
+  } catch {
+    return { activeId: null, viewingAll: false };
+  }
+}
+
 export function ActiveOperatorProvider({ children }: { children: ReactNode }) {
   const { data: operators = [], isLoading: loadingOps } = useOperators();
   const { data: currentOp, isLoading: loadingCurrent } = useCurrentOperator();
-  const STORAGE_KEY = "activeOperator:v1";
-  const [activeId, setActiveId] = useState<string | null>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as { activeId: string | null; viewingAll: boolean };
-      return parsed.viewingAll ? null : parsed.activeId;
-    } catch { return null; }
-  });
-  const [viewingAll, setViewingAllState] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      const parsed = JSON.parse(raw) as { viewingAll: boolean };
-      return Boolean(parsed.viewingAll);
-    } catch { return false; }
-  });
+  const initial = readPersisted();
+  const [activeId, setActiveId] = useState<string | null>(initial.viewingAll ? null : initial.activeId);
+  const [viewingAll, setViewingAllState] = useState<boolean>(initial.viewingAll);
 
-  // Default to current user's operator only if nothing was persisted
+  // Default to current user's operator solo se non c'è nulla di persistito
+  // E non siamo in modalità "tutti".
   useEffect(() => {
-    if (!activeId && !viewingAll && currentOp?.id) {
-      setActiveId(currentOp.id);
-    }
+    if (activeId || viewingAll) return;
+    const persisted = readPersisted();
+    if (persisted.activeId || persisted.viewingAll) return;
+    if (currentOp?.id) setActiveId(currentOp.id);
   }, [currentOp, activeId, viewingAll]);
 
   // Persist selection
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeId, viewingAll }));
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeId, viewingAll }));
+      }
     } catch { /* ignore */ }
   }, [activeId, viewingAll]);
 
