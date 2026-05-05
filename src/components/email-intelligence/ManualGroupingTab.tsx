@@ -12,8 +12,7 @@
  *
  * Auto-pop-up regole dopo drop su gruppo.
  */
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -21,18 +20,15 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Loader2, ArrowUpDown, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { Loader2, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { SenderCard } from "./management/SenderCard";
-import { GroupDropZone } from "./management/GroupDropZone";
 import { CreateCategoryDialog } from "./management/CreateCategoryDialog";
 import { SenderEmailPreviewPanel } from "./management/SenderEmailPreviewPanel";
 import { ExportSendersDialog } from "./management/ExportSendersDialog";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
-import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management";
+import type { SenderAnalysis } from "@/types/email-management";
 import { supabase } from "@/integrations/supabase/client";
 import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
-import { cn } from "@/lib/utils";
 import { invokeAi } from "@/lib/ai/invokeAi";
 
 import { useGroupingData } from "./manual-grouping/useGroupingData";
@@ -41,278 +37,14 @@ import { useDragAndDrop } from "./manual-grouping/useDragAndDrop";
 import { useGroupAssignment } from "./manual-grouping/useGroupAssignment";
 import { useSelectionState } from "./manual-grouping/useSelectionState";
 import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
+import { GroupGridPanel } from "./manual-grouping/GroupGridPanel";
+import { VirtualizedSenderList } from "./manual-grouping/VirtualizedSenderList";
+import { inLetterRange, type LetterRange } from "./manual-grouping/letterRange";
 
 interface SuggestEmailGroupsResponse {
   processed?: number;
   suggestions?: Array<{ email: string; suggested_group: string; confidence: number; reasoning?: string }>;
   error?: string;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Sub-componenti locali
-// ──────────────────────────────────────────────────────────────────────────────
-
-type LetterRange =
-  | "all"
-  | "A-B" | "C-D" | "E-F" | "G-H" | "I-J" | "K-L"
-  | "M-N" | "O-P" | "Q-R" | "S-T" | "U-V" | "W-X" | "Y-Z";
-const LETTER_RANGES: { value: LetterRange; label: string }[] = [
-  { value: "all", label: "Tutti" },
-  { value: "A-B", label: "A-B" },
-  { value: "C-D", label: "C-D" },
-  { value: "E-F", label: "E-F" },
-  { value: "G-H", label: "G-H" },
-  { value: "I-J", label: "I-J" },
-  { value: "K-L", label: "K-L" },
-  { value: "M-N", label: "M-N" },
-  { value: "O-P", label: "O-P" },
-  { value: "Q-R", label: "Q-R" },
-  { value: "S-T", label: "S-T" },
-  { value: "U-V", label: "U-V" },
-  { value: "W-X", label: "W-X" },
-  { value: "Y-Z", label: "Y-Z" },
-];
-
-function inLetterRange(name: string, range: LetterRange): boolean {
-  if (range === "all") return true;
-  const first = name.charAt(0).toUpperCase();
-  if (!/[A-Z]/.test(first)) return false;
-  const [a, b] = range.split("-");
-  return first >= a && first <= b;
-}
-
-// CompactToolbar rimosso: toggle preview spostato accanto a "Mittenti",
-// refresh + nuovo gruppo spostati nell'header del pannello "Gruppi".
-
-type GroupSort = "alpha-asc" | "alpha-desc" | "count-desc" | "count-asc";
-
-const GROUP_SORT_CYCLE: Record<GroupSort, GroupSort> = {
-  "alpha-asc": "alpha-desc",
-  "alpha-desc": "count-desc",
-  "count-desc": "count-asc",
-  "count-asc": "alpha-asc",
-};
-
-const GROUP_SORT_META: Record<GroupSort, { label: string; Icon: typeof ArrowUpDown }> = {
-  "alpha-asc":  { label: "A → Z",        Icon: ArrowDownAZ },
-  "alpha-desc": { label: "Z → A",        Icon: ArrowUpAZ },
-  "count-desc": { label: "Più contatti", Icon: ArrowDown01 },
-  "count-asc":  { label: "Meno contatti", Icon: ArrowUp01 },
-};
-
-function GroupGridPanel(props: {
-  groups: EmailSenderGroup[];
-  visibleGroups: EmailSenderGroup[];
-  groupSortOption: GroupSort;
-  onGroupSortChange: (s: GroupSort) => void;
-  letterRange: LetterRange;
-  onLetterRangeChange: (r: LetterRange) => void;
-  hoveredGroupId: string | null;
-  highlightedGroupName: string | null;
-  assignedByGroup: Map<string, Array<{ id: string; email_address: string; display_name: string | null; company_name: string | null; domain: string | null }>>;
-  reloadAssignedRules: () => void;
-  loadData: () => void;
-  selectedCount: number;
-  onBulkAssign: (group: { id: string; nome_gruppo: string }) => void;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
-  onCreateGroup: () => void;
-  onPartnerClick: (sender: SenderAnalysis) => void;
-}) {
-  const { groups, visibleGroups, groupSortOption, onGroupSortChange,
-    letterRange, onLetterRangeChange, hoveredGroupId, highlightedGroupName,
-    assignedByGroup, reloadAssignedRules, loadData, selectedCount, onBulkAssign,
-    onRefresh, isRefreshing, onCreateGroup, onPartnerClick } = props;
-  const sortMeta = GROUP_SORT_META[groupSortOption];
-  const SortIcon = sortMeta.Icon;
-  return (
-    <div className="flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          Gruppi ({visibleGroups.length}{letterRange !== "all" ? `/${groups.length}` : ""})
-        </span>
-        <TooltipProvider delayDuration={300}>
-          <div className="flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => onGroupSortChange(GROUP_SORT_CYCLE[groupSortOption])}
-                  aria-label="Cambia ordinamento gruppi"
-                >
-                  <SortIcon className="h-3.5 w-3.5 mr-1.5" />
-                  {sortMeta.label}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Click per ciclare A→Z, Z→A, più/meno contatti</TooltipContent>
-            </Tooltip>
-            {onRefresh && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onRefresh}
-                    disabled={isRefreshing}
-                    aria-label="Aggiorna mittenti"
-                    className="h-8 w-8"
-                  >
-                    {isRefreshing
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <RefreshCw className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Aggiorna mittenti</TooltipContent>
-              </Tooltip>
-            )}
-            <Button variant="outline" size="sm" onClick={onCreateGroup} className="h-8">
-              <Plus className="h-4 w-4 mr-1" />
-              Nuovo gruppo
-            </Button>
-          </div>
-        </TooltipProvider>
-      </div>
-
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
-        {LETTER_RANGES.map((r) => (
-          <button
-            key={r.value}
-            onClick={() => onLetterRangeChange(r.value)}
-            className={cn(
-              "px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors",
-              letterRange === r.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-            )}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-        {/* Una card per riga: layout più leggibile, niente confusione tra
-         *  due colonne quando si trascinano mittenti. */}
-        <div className="p-3 grid gap-3 content-start grid-cols-1 auto-rows-min">
-          {visibleGroups.map((group) => (
-            <GroupDropZone
-              key={group.id}
-              group={group}
-              onRefresh={loadData}
-              isHovered={hoveredGroupId === group.id}
-              isHighlighted={highlightedGroupName === group.nome_gruppo}
-              rules={assignedByGroup.get(group.nome_gruppo) || []}
-              onRulesChanged={reloadAssignedRules}
-              selectedCount={selectedCount}
-              onBulkAssign={onBulkAssign}
-              onPartnerClick={onPartnerClick}
-            />
-          ))}
-          {groups.length === 0 && (
-            <p className="text-muted-foreground text-center w-full py-12">Nessun gruppo — creane uno</p>
-          )}
-          {groups.length > 0 && visibleGroups.length === 0 && (
-            <p className="text-muted-foreground text-center w-full py-12 col-span-full">
-              Nessun gruppo nel range selezionato
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Orchestrator
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * VirtualizedSenderList — renderizza solo le card visibili (overscan 6) per
- * gestire >1 000 mittenti senza saturare il DOM. Risolve la regressione
- * "49k DOM nodes / 263 MB heap" osservata sul profilo.
- */
-function VirtualizedSenderList(props: {
-  senders: SenderAnalysis[];
-  groups: EmailSenderGroup[];
-  selectedEmails: Set<string>;
-  focusedEmail: string | null;
-  onDragStart: (s: SenderAnalysis) => void;
-  onDragEnd: (clientX: number, clientY: number) => void;
-  onToggleSelect: (email: string) => void;
-  onAiChipClick: (groupName: string) => void;
-  onFocusRequest: (s: SenderAnalysis) => void;
-  onOpenRules: (s: SenderAnalysis) => void;
-  onMarkRead: (s: SenderAnalysis) => Promise<void> | void;
-  onDelete: (s: SenderAnalysis) => Promise<void> | void;
-  onExport: (s: SenderAnalysis) => void;
-  onBlock: (s: SenderAnalysis) => Promise<void> | void;
-  onAnalyzeAI: (s: SenderAnalysis) => void;
-  onAcceptAiSuggestion: (s: SenderAnalysis, groupName: string) => Promise<void> | void;
-}) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: props.senders.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 188,
-    overscan: 6,
-  });
-
-  const items = virtualizer.getVirtualItems();
-
-  return (
-    <div
-      ref={parentRef}
-      className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2"
-    >
-      <div
-        style={{
-          height: virtualizer.getTotalSize(),
-          position: "relative",
-          width: "100%",
-        }}
-      >
-        {items.map((vi) => {
-          const sender = props.senders[vi.index];
-          return (
-            <div
-              key={sender.email}
-              data-index={vi.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${vi.start}px)`,
-                paddingBottom: 8,
-              }}
-            >
-              <SenderCard
-                sender={sender}
-                groups={props.groups}
-                onDragStart={props.onDragStart}
-                onDragEnd={props.onDragEnd}
-                isSelected={props.selectedEmails.has(sender.email)}
-                onToggleSelect={props.onToggleSelect}
-                onAiChipClick={props.onAiChipClick}
-                isFocused={props.focusedEmail === sender.email}
-                onFocusRequest={props.onFocusRequest}
-                onOpenRules={props.onOpenRules}
-                onMarkRead={props.onMarkRead}
-                onDelete={props.onDelete}
-                onExport={props.onExport}
-                onBlock={props.onBlock}
-                onAnalyzeAI={props.onAnalyzeAI}
-                onAcceptAiSuggestion={props.onAcceptAiSuggestion}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export default function ManualGroupingTab() {
