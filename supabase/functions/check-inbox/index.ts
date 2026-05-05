@@ -20,6 +20,7 @@ import {
 } from "./imapConnection.ts";
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
 import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "./postProcessing.ts";
+import { resyncUnreadFlags } from "./flagResync.ts";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
