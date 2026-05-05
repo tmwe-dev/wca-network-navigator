@@ -315,7 +315,7 @@ export default function SuggestionsReviewPage() {
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost" className="h-7 px-2">
-            <Link to="/v2/prompt-lab">
+            <Link to="/v2/settings/prompt-lab">
               <ArrowLeft className="mr-1 h-3.5 w-3.5" />
               Prompt Lab
             </Link>

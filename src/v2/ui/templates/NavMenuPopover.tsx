@@ -23,8 +23,8 @@ const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ lab
   {
     title: "Acquisizione & Ricerca",
     items: [
-      { label: "Prospects", path: "/v2/crm/prospects" },
       { label: "Acquisizione Partner", path: "/v2/crm/acquisition" },
+      { label: "Prospects", path: "/v2/crm/prospects" },
       { label: "Research", path: "/v2/research" },
       { label: "RA Explorer", path: "/v2/ra-explorer" },
       { label: "RA Scraping Engine", path: "/v2/ra-scraping" },
@@ -34,61 +34,61 @@ const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ lab
   {
     title: "Agenti & Missioni",
     items: [
+      { label: "Agent Capabilities", path: "/v2/agents/capabilities" },
+      { label: "Agent Tasks", path: "/v2/agents/tasks" },
       { label: "Editor Persona", path: "/v2/agents/persona" },
       { label: "Mission Builder", path: "/v2/agents/missions" },
       { label: "Missioni Autopilot", path: "/v2/agents/autopilot" },
-      { label: "Agent Capabilities", path: "/v2/agents/capabilities" },
-      { label: "Agent Tasks", path: "/v2/agents/tasks" },
-    ],
-  },
-  {
-    title: "Prompt Lab",
-    items: [
-      { label: "Agent Atlas", path: "/v2/prompt-lab/atlas" },
-      { label: "Suggestions Review", path: "/v2/prompt-lab/suggestions" },
-      { label: "Prompt Catalog", path: "/v2/prompt-lab/catalog" },
-      { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
     ],
   },
   {
     title: "AI Staff",
     items: [
-      { label: "AI Staff Hub", path: "/v2/ai-staff" },
-      { label: "KB Supervisor", path: "/v2/ai-staff/kb-supervisor" },
-      { label: "AI Lab Test", path: "/v2/ai-staff/lab" },
-      { label: "Email Forge", path: "/v2/ai-staff/email-forge" },
       { label: "AI Arena 3D", path: "/v2/ai-arena" },
+      { label: "AI Lab Test", path: "/v2/ai-staff/lab" },
+      { label: "AI Staff Hub", path: "/v2/ai-staff" },
+      { label: "Email Forge", path: "/v2/ai-staff/email-forge" },
+      { label: "KB Supervisor", path: "/v2/ai-staff/kb-supervisor" },
     ],
   },
   {
     title: "Calendario & Campagne",
     items: [
       { label: "Calendar", path: "/v2/calendar" },
-      { label: "Outreach Agenda", path: "/v2/outreach/agenda" },
       { label: "Campaign Jobs", path: "/v2/campaigns/jobs" },
+      { label: "Outreach Agenda", path: "/v2/outreach/agenda" },
     ],
   },
   {
     title: "Cockpit & Analytics",
     items: [
+      { label: "AI Control Center", path: "/v2/ai-control" },
       { label: "Analytics", path: "/v2/analytics" },
       { label: "KPI Dashboard", path: "/v2/kpi" },
-      { label: "Token Cockpit", path: "/v2/token-cockpit" },
       { label: "Notifications", path: "/v2/notifications" },
-      { label: "AI Control Center", path: "/v2/ai-control" },
+      { label: "Token Cockpit", path: "/v2/token-cockpit" },
+    ],
+  },
+  {
+    title: "Prompt Lab",
+    items: [
+      { label: "Agent Atlas", path: "/v2/prompt-lab/atlas" },
+      { label: "Prompt Catalog", path: "/v2/prompt-lab/catalog" },
+      { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
+      { label: "Suggestions Review", path: "/v2/prompt-lab/suggestions" },
     ],
   },
   {
     title: "Sistema & Admin",
     items: [
       { label: "Admin Users", path: "/v2/settings/admin-users" },
-      { label: "Email Download", path: "/v2/settings/email-download" },
+      { label: "Design System", path: "/v2/design-system-preview" },
       { label: "Diagnostics", path: "/v2/settings/diagnostics" },
-      { label: "Telemetry", path: "/v2/settings/telemetry" },
+      { label: "Email Download", path: "/v2/settings/email-download" },
+      { label: "Guida", path: "/v2/guida" },
       { label: "Observability", path: "/v2/settings/observability" },
       { label: "System Health", path: "/v2/settings/health" },
-      { label: "Design System", path: "/v2/design-system-preview" },
-      { label: "Guida", path: "/v2/guida" },
+      { label: "Telemetry", path: "/v2/settings/telemetry" },
     ],
   },
 ];
@@ -126,10 +126,18 @@ export function NavMenuPopover({
   };
 
   const activeRoot = currentPath ? sectionRoot(currentPath) : null;
-  const isInDev = !!currentPath && DEV_PAGE_GROUPS.some((g) => g.items.some((i) => i.path === currentPath));
+  const activeGroupTitle = React.useMemo(
+    () => DEV_PAGE_GROUPS.find((g) => g.items.some((i) => i.path === currentPath))?.title ?? null,
+    [currentPath],
+  );
+  const isInDev = activeGroupTitle !== null;
+  const [openGroup, setOpenGroup] = React.useState<string | null>(activeGroupTitle);
   React.useEffect(() => {
-    if (isInDev) setDevOpen(true);
-  }, [isInDev]);
+    if (isInDev) {
+      setDevOpen(true);
+      setOpenGroup(activeGroupTitle);
+    }
+  }, [isInDev, activeGroupTitle]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -182,35 +190,52 @@ export function NavMenuPopover({
             {devOpen ? <ChevronDown className="h-4 w-4 opacity-60" /> : <ChevronRight className="h-4 w-4 opacity-60" />}
           </button>
           {devOpen && (
-            <div className="mt-1 space-y-2 pb-1 pl-2">
-              {DEV_PAGE_GROUPS.map((group) => (
-                <div key={group.title}>
-                  <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    {group.title}
+            <div className="mt-1 space-y-0.5 pb-1 pl-2">
+              {DEV_PAGE_GROUPS.map((group) => {
+                const isGroupOpen = openGroup === group.title;
+                const isGroupActive = activeGroupTitle === group.title;
+                return (
+                  <div key={group.title}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroup(isGroupOpen ? null : group.title)}
+                      aria-expanded={isGroupOpen}
+                      className={
+                        "flex w-full items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
+                        (isGroupActive
+                          ? "bg-primary/15 text-primary font-semibold"
+                          : "text-foreground/85 hover:bg-white/5 hover:text-foreground")
+                      }
+                    >
+                      {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-60" /> : <ChevronRight className="h-3.5 w-3.5 opacity-60" />}
+                      <span className="flex-1">{group.title}</span>
+                    </button>
+                    {isGroupOpen && (
+                      <div className="ml-5 mt-0.5 mb-1 flex flex-col border-l border-white/10 pl-2">
+                        {group.items.map((item) => {
+                          const isActive = currentPath === item.path;
+                          return (
+                            <button
+                              key={item.path}
+                              type="button"
+                              onClick={() => handleSelect(item.path)}
+                              aria-current={isActive ? "page" : undefined}
+                              className={
+                                "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
+                                (isActive
+                                  ? "bg-primary/15 text-primary font-semibold"
+                                  : "text-foreground/75 hover:bg-white/5 hover:text-foreground")
+                              }
+                            >
+                              {item.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-col">
-                    {group.items.map((item) => {
-                      const isActive = currentPath === item.path;
-                      return (
-                        <button
-                          key={item.path}
-                          type="button"
-                          onClick={() => handleSelect(item.path)}
-                          aria-current={isActive ? "page" : undefined}
-                          className={
-                            "flex items-center px-3 py-1.5 rounded-md text-xs transition-colors text-left " +
-                            (isActive
-                              ? "bg-primary/15 text-primary font-semibold"
-                              : "text-foreground/80 hover:bg-white/5 hover:text-foreground")
-                          }
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           <div className="my-1 border-t border-white/10" />
