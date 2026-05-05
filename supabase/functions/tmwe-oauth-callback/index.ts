@@ -18,11 +18,13 @@ function htmlRedirect(url: string): Response {
   });
 }
 
+const DEFAULT_APP_ORIGIN =
+  Deno.env.get("TMWE_APP_REDIRECT_BASE") ??
+  "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app";
+
+let runtimeAppOrigin: string = DEFAULT_APP_ORIGIN;
 function appOrigin(): string {
-  return (
-    Deno.env.get("TMWE_APP_REDIRECT_BASE") ??
-    "https://id-preview--c57c2f66-1827-4bc4-9643-9b6951bf4e62.lovable.app"
-  );
+  return runtimeAppOrigin || DEFAULT_APP_ORIGIN;
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -78,13 +80,17 @@ Deno.serve(async (req) => {
     // Verify and consume state
     const { data: stateRow } = await svc
       .from("tmwe_oauth_state")
-      .select("user_id, expires_at, intent")
+      .select("user_id, expires_at, intent, app_origin")
       .eq("state", state)
       .maybeSingle();
 
     if (!stateRow) return back("error", "invalid_state");
     const intent = ((stateRow.intent as string) ?? "connect") as "connect" | "login";
     currentIntent = intent;
+    const stateOrigin = (stateRow as { app_origin?: string | null }).app_origin;
+    if (typeof stateOrigin === "string" && /^https?:\/\//i.test(stateOrigin)) {
+      runtimeAppOrigin = stateOrigin.replace(/\/$/, "");
+    }
     if (new Date(stateRow.expires_at as string).getTime() < Date.now()) {
       await svc.from("tmwe_oauth_state").delete().eq("state", state);
       return back("error", "expired_state", intent);

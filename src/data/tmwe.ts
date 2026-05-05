@@ -94,7 +94,7 @@ export async function tmweConnectStart(): Promise<string> {
  */
 export async function tmweLoginStart(): Promise<string> {
   const { data, error } = await supabase.functions.invoke("tmwe-oauth-start", {
-    body: { intent: "login" },
+    body: { intent: "login", app_origin: window.location.origin },
   });
   if (error) throw error;
   const url = (data as { redirect_url?: string })?.redirect_url;
