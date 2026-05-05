@@ -303,7 +303,7 @@ function VirtualizedSenderList(props: {
 
 export default function ManualGroupingTab() {
   const {
-    senders, setSenders, classifiedSenders,
+    senders, setSenders, classifiedSenders, setClassifiedSenders,
     groups, setGroups, isLoading, isPopulating,
     loadData, populateAddressRules,
     assignedByGroup, reloadAssignedRules,
