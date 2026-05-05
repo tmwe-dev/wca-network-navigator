@@ -11,8 +11,16 @@ import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-const TOOLS_PATH = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools.ts");
-const source = fs.readFileSync(TOOLS_PATH, "utf-8");
+const DEFS_DIR = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools/defs");
+const HANDLERS_PATH = path.resolve(__dirname, "../../supabase/functions/_shared/platformTools/platformToolHandlers.ts");
+const defsSource = fs
+  .readdirSync(DEFS_DIR)
+  .filter((f) => f.endsWith(".ts"))
+  .map((f) => fs.readFileSync(path.join(DEFS_DIR, f), "utf-8"))
+  .join("\n");
+const handlersSource = fs.readFileSync(HANDLERS_PATH, "utf-8");
+// Wrap to satisfy existing splits in the test below
+const source = `export const PLATFORM_TOOLS = [\n${defsSource}\n];\nexport async function executePlatformTool() {\n${handlersSource}\n}`;
 
 // Estrai tutti i nomi dei tool dalle definizioni (name: "xxx")
 function extractToolNames(): string[] {
