@@ -5,13 +5,14 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, Shield, User, Users } from "lucide-react";
+import { AlertCircle, Building2, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, Shield, User, Users } from "lucide-react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMessageAttachments, type ChannelMessage } from "@/hooks/useChannelMessages";
+import { useMarkAsRead } from "@/hooks/useChannelMessages";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
@@ -44,6 +45,7 @@ export function EmailDetailView({ message, onClose }: Props) {
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const { getGroup } = useEmailAddressGroups();
   const group = getGroup(message.from_address);
+  const markAsRead = useMarkAsRead();
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
@@ -160,9 +162,22 @@ export function EmailDetailView({ message, onClose }: Props) {
 
           <div className="flex flex-shrink-0 flex-col items-end gap-1">
             <div className="flex items-center gap-1">
+              {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
                 variant="default"
+                className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => {
+                  if (!message.read_at) markAsRead.mutate(message.id);
+                  onClose();
+                }}
+                title="Marca come letta e nascondi dalla lista"
+              >
+                <Check className="h-3.5 w-3.5" /> Letto, nascondi
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => {
                   const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
