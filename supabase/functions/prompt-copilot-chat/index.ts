@@ -267,10 +267,25 @@ Deno.serve(async (req) => {
     const reply = aiJson?.choices?.[0]?.message?.content ?? "";
 
     // Estrai blocco JSON finale (modalità edit/global)
+    // Tolleriamo: ```json ... ```, ``` ... ```, oppure ultimo {...} bilanciato nel testo.
     let proposal: { proposed_content?: string; rationale?: string; risks?: string; assumptions?: string } | null = null;
     let globalProposal: { global_replacements?: unknown[]; skipped?: unknown[] } | null = null;
-    const m = reply.match(/```json\s*([\s\S]*?)```/);
-    const parsed: Record<string, unknown> | null = m ? (() => { try { return JSON.parse(m[1]); } catch { return null; } })() : null;
+    function extractJsonCandidate(text: string): string | null {
+      const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fence?.[1]) return fence[1].trim();
+      // ultimo blocco {...} bilanciato
+      let depth = 0, start = -1, last: { s: number; e: number } | null = null;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === "{") { if (depth === 0) start = i; depth++; }
+        else if (c === "}") { depth--; if (depth === 0 && start >= 0) { last = { s: start, e: i + 1 }; start = -1; } }
+      }
+      return last ? text.slice(last.s, last.e) : null;
+    }
+    const candidate = extractJsonCandidate(reply);
+    const parsed: Record<string, unknown> | null = candidate
+      ? (() => { try { return JSON.parse(candidate); } catch { return null; } })()
+      : null;
     if (parsed) {
       if (mode === "edit" && typeof parsed.proposed_content === "string") {
         proposal = parsed as typeof proposal;
