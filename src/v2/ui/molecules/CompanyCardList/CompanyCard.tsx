@@ -227,6 +227,39 @@ export function CompanyCard({
       {contactsCount > 1 && (
         <span className="text-muted-foreground/60 flex-shrink-0">+{contactsCount - 1}</span>
       )}
+      {(origin || enrichedLabel || firstEmail || firstPhone) && (
+        <span className="text-muted-foreground/40 flex-shrink-0">·</span>
+      )}
+      {origin && (
+        <span className="text-[10px] text-muted-foreground/70 truncate flex-shrink-0" title={`Origine: ${origin}`}>
+          {origin}
+        </span>
+      )}
+      {enrichedLabel && (
+        <span className="text-[10px] text-emerald-500/80 flex-shrink-0" title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}>
+          {enrichedLabel}
+        </span>
+      )}
+      {firstEmail && (
+        <a
+          href={`mailto:${firstEmail}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-[10px] text-primary hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          title={firstEmail}
+        >
+          <Mail className="w-2.5 h-2.5" />
+        </a>
+      )}
+      {firstPhone && (
+        <a
+          href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-[10px] text-chart-3 hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          title={firstPhone}
+        >
+          <Phone className="w-2.5 h-2.5" />
+        </a>
+      )}
     </>
   ) : (
     <span className="italic text-muted-foreground/50">
