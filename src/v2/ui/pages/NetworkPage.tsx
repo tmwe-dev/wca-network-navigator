@@ -12,7 +12,7 @@
  * dettaglio inline a destra. Selezione 2+ → BulkActionsPanel.
  */
 import * as React from "react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useTrackPage } from "@/hooks/useTrackPage";
@@ -42,30 +42,11 @@ export function NetworkPage(): React.ReactElement {
   const chips = useWcaActiveFilterChips();
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
 
-  // Focus mode: quando una società è selezionata (via deep-link, agenda, AI…)
-  // mostriamo SOLO quella nella lista a sinistra per evitare confusione.
-  // Si esce chiudendo il dettaglio.
-  const focusedCompanies = useMemo(() => {
-    if (!selectedPartnerId) return companies;
-    const only = companies.filter((c) => c.id === selectedPartnerId);
-    // Se non è in lista (es. aperto da agenda con id non presente nei filtri
-    // correnti) lasciamo la lista intera: meglio non mostrare vuoto.
-    return only.length > 0 ? only : companies;
-  }, [companies, selectedPartnerId]);
-
-  const focusedChips = useMemo(() => {
-    if (!selectedPartnerId) return chips;
-    const focused = companies.find((c) => c.id === selectedPartnerId);
-    if (!focused) return chips;
-    return [
-      ...chips,
-      {
-        key: `focus:${selectedPartnerId}`,
-        label: `Focus: ${focused.name}`,
-        tone: "primary" as const,
-      },
-    ];
-  }, [chips, companies, selectedPartnerId]);
+  // Lista sempre completa: la selezione apre il dettaglio a destra ma NON
+  // filtra la lista a sinistra (la navigazione tra partner deve restare
+  // libera). Il default "primo record selezionato" è gestito altrove.
+  const focusedCompanies = companies;
+  const focusedChips = chips;
 
   // Apertura via deep-link: /v2/network?partnerId=<id>
   const [searchParams, setSearchParams] = useSearchParams();
