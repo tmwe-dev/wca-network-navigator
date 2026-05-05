@@ -70,9 +70,11 @@ export const commsKeys = {
     analytics: (filters?: unknown) => ["campaign-analytics", filters] as const,
   },
   funnemailInbox: {
+    root: ["funnemail-inbox"] as const,
     folders: ["funnemail-inbox", "folders"] as const,
     counts: ["funnemail-inbox", "counts"] as const,
-    grouped: (userId: string) => ["funnemail-inbox", "grouped", userId] as const,
+    grouped: (userId: string, operatorUserId?: string | null) =>
+      ["funnemail-inbox", "grouped", userId, operatorUserId ?? "self"] as const,
     mailsByFolder: (slug: string, limit: number) =>
       ["funnemail-inbox", "mails", slug, limit] as const,
     decision: (messageId?: string | null) => ["funnemail-inbox", "decision", messageId ?? "none"] as const,
