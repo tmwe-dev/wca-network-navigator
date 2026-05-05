@@ -22,7 +22,9 @@ interface Body {
   current_content?: string;
   user_message: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
-  mode?: "diagnose" | "edit";
+  mode?: "diagnose" | "edit" | "global";
+  /** Per mode='global': termine da cercare in tutti i prompt + KB */
+  search_term?: string;
   intent?: string; // chiave INTENT_ROUTING
 }
 
@@ -57,13 +59,20 @@ const BLOCK_TO_INTENT: Record<string, string> = {
   examples: "validate_output", output: "validate_output",
 };
 
-function systemPrompt(mode: "diagnose" | "edit", blockName?: string): string {
+function fallbackSystemPrompt(mode: "diagnose" | "edit" | "global", blockName?: string): string {
   if (mode === "diagnose") {
     return [
       "Sei l'Architect del Prompt Lab (guida COBRA).",
       "Analizzi prompt come sistema. NON modifichi nulla.",
       "Produci diagnosi strutturale: punti di rischio, sezioni mancanti, raccomandazioni.",
       "Restituisci JSON con campi: diagnosis, risk_points[], missing_sections[], recommendations[].",
+    ].join("\n");
+  }
+  if (mode === "global") {
+    return [
+      "Sei il Curatore di Prompt e KB. Modalità GLOBALE: ricerca-sostituzione su prompt + KB.",
+      "Esamina ogni occorrenza nel suo contesto. Non sostituire alla cieca.",
+      "Restituisci JSON in fondo: { global_replacements:[{source_kind,source_id,source_label,field,old_excerpt,new_excerpt,rationale,risk}], skipped:[{source_id,reason}] }",
     ].join("\n");
   }
   return [
@@ -83,6 +92,32 @@ function systemPrompt(mode: "diagnose" | "edit", blockName?: string): string {
   ].join("\n");
 }
 
+/**
+ * Carica il prompt operativo "KB & Prompt Curator" dal DB e lo usa come system prompt.
+ * Se non trovato, usa fallback hard-coded. Così l'utente può modificarlo dal Prompt Lab.
+ */
+async function loadCuratorSystemPrompt(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  mode: "diagnose" | "edit" | "global",
+  blockName?: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from("operative_prompts")
+    .select("objective, procedure, criteria, examples")
+    .eq("name", "KB & Prompt Curator")
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!data) return fallbackSystemPrompt(mode, blockName);
+  const parts: string[] = [];
+  if (data.objective) parts.push(`# IDENTITÀ + OBIETTIVO\n${data.objective}`);
+  if (data.procedure) parts.push(`# METODO\n${data.procedure}`);
+  if (data.criteria) parts.push(`# GUARDRAIL + OUTPUT\n${data.criteria}`);
+  if (data.examples) parts.push(`# ESEMPI\n${data.examples}`);
+  parts.push(`\n# MODALITÀ ATTIVA: ${mode.toUpperCase()}${blockName ? ` (blocco target: ${blockName})` : ""}`);
+  return parts.join("\n\n");
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -98,43 +133,104 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // 1. KB pertinenti: filtra per famiglia + (opz.) intersezione con kbCategories agente
-    const targetCats = Object.entries(FAMILY_MAP)
-      .filter(([, fam]) => families.includes(fam))
-      .map(([cat]) => cat);
-
-    const filterCats = body.agent_kb_categories?.length
-      ? targetCats.filter((c) => body.agent_kb_categories!.includes(c))
-      : targetCats;
-
+    // ── Costruzione contesto in base alla modalità ────────────────────
     let kb: Array<{ id: string; category: string; chapter: string | null; title: string; content: string; priority: number }> = [];
-    if (filterCats.length > 0) {
-      const { data, error } = await supabase
-        .from("kb_entries")
-        .select("id, category, chapter, title, content, priority")
-        .eq("is_active", true)
-        .in("category", filterCats)
-        .order("priority", { ascending: false })
-        .limit(25);
-      if (error) throw error;
-      kb = data as typeof kb;
+    let occurrences: Array<{ kind: "operative_prompt" | "kb_entry"; id: string; label: string; field: string; excerpt: string }> = [];
+
+    if (mode === "global") {
+      // Cerca termine in operative_prompts (objective/procedure/criteria/examples) e kb_entries (title/content)
+      const term = (body.search_term ?? body.user_message ?? "").trim();
+      if (term.length >= 2) {
+        const like = `%${term}%`;
+        const { data: prompts } = await supabase
+          .from("operative_prompts")
+          .select("id, name, objective, procedure, criteria, examples")
+          .eq("is_active", true)
+          .or(`objective.ilike.${like},procedure.ilike.${like},criteria.ilike.${like},examples.ilike.${like}`)
+          .limit(40);
+        for (const p of (prompts ?? []) as Array<Record<string, string | null>>) {
+          for (const f of ["objective", "procedure", "criteria", "examples"] as const) {
+            const v = (p[f] ?? "") as string;
+            if (v && v.toLowerCase().includes(term.toLowerCase())) {
+              const idx = v.toLowerCase().indexOf(term.toLowerCase());
+              const start = Math.max(0, idx - 120);
+              const end = Math.min(v.length, idx + term.length + 120);
+              occurrences.push({
+                kind: "operative_prompt",
+                id: p.id as unknown as string,
+                label: (p.name as unknown as string) ?? "(senza nome)",
+                field: f,
+                excerpt: (start > 0 ? "…" : "") + v.slice(start, end) + (end < v.length ? "…" : ""),
+              });
+            }
+          }
+        }
+        const { data: kbHits } = await supabase
+          .from("kb_entries")
+          .select("id, category, chapter, title, content")
+          .eq("is_active", true)
+          .or(`title.ilike.${like},content.ilike.${like}`)
+          .limit(40);
+        for (const e of (kbHits ?? []) as Array<Record<string, string | null>>) {
+          const v = (e.content ?? "") as string;
+          const idx = v.toLowerCase().indexOf(term.toLowerCase());
+          const start = Math.max(0, idx - 120);
+          const end = Math.min(v.length, idx + term.length + 120);
+          occurrences.push({
+            kind: "kb_entry",
+            id: e.id as unknown as string,
+            label: `[${e.category ?? ""}/${e.chapter ?? "-"}] ${e.title ?? ""}`,
+            field: "content",
+            excerpt: idx >= 0 ? (start > 0 ? "…" : "") + v.slice(start, end) + (end < v.length ? "…" : "") : (e.title ?? ""),
+          });
+        }
+      }
+    } else {
+      // BLOCCO/INTAKE: KB pertinenti per famiglia
+      const targetCats = Object.entries(FAMILY_MAP)
+        .filter(([, fam]) => families.includes(fam))
+        .map(([cat]) => cat);
+      const filterCats = body.agent_kb_categories?.length
+        ? targetCats.filter((c) => body.agent_kb_categories!.includes(c))
+        : targetCats;
+      if (filterCats.length > 0) {
+        const { data, error } = await supabase
+          .from("kb_entries")
+          .select("id, category, chapter, title, content, priority")
+          .eq("is_active", true)
+          .in("category", filterCats)
+          .order("priority", { ascending: false })
+          .limit(25);
+        if (error) throw error;
+        kb = data as typeof kb;
+      }
     }
 
-    // 2. Costruisci messaggi per Lovable AI
-    const kbBlock = kb.length === 0
-      ? "(nessuna entry KB pertinente trovata)"
-      : kb.map((e) =>
-          `### [${e.category}/${e.chapter ?? "-"}] ${e.title} (id:${e.id})\n${e.content}`,
-        ).join("\n\n");
-
-    const sys = systemPrompt(mode, body.block_name);
+    // ── Messaggi per Lovable AI ───────────────────────────────────────
+    const sys = await loadCuratorSystemPrompt(supabase, mode, body.block_name);
     const userParts: string[] = [];
     if (body.agent_slug) userParts.push(`AGENTE: ${body.agent_slug}`);
     if (body.block_name) userParts.push(`BLOCCO TARGET: ${body.block_name}`);
     if (body.current_content) {
       userParts.push(`\nCONTENUTO ATTUALE DEL BLOCCO:\n---\n${body.current_content}\n---`);
     }
-    userParts.push(`\nKNOWLEDGE BASE PERTINENTE (${kb.length} entry):\n${kbBlock}`);
+    if (mode === "global") {
+      userParts.push(`\nMODALITÀ: GLOBALE — ricerca-sostituzione su prompt + KB`);
+      if (body.search_term) userParts.push(`TERMINE CERCATO: "${body.search_term}"`);
+      const occBlock = occurrences.length === 0
+        ? "(nessuna occorrenza trovata)"
+        : occurrences.map((o) =>
+            `- [${o.kind}] ${o.label}\n  id: ${o.id} · campo: ${o.field}\n  estratto: ${o.excerpt}`,
+          ).join("\n\n");
+      userParts.push(`\nOCCORRENZE TROVATE (${occurrences.length}):\n${occBlock}`);
+    } else {
+      const kbBlock = kb.length === 0
+        ? "(nessuna entry KB pertinente trovata)"
+        : kb.map((e) =>
+            `### [${e.category}/${e.chapter ?? "-"}] ${e.title} (id:${e.id})\n${e.content}`,
+          ).join("\n\n");
+      userParts.push(`\nKNOWLEDGE BASE PERTINENTE (${kb.length} entry):\n${kbBlock}`);
+    }
     userParts.push(`\nRICHIESTA UTENTE:\n${body.user_message}`);
 
     const messages = [
@@ -170,21 +266,28 @@ Deno.serve(async (req) => {
     const aiJson = await aiResp.json();
     const reply = aiJson?.choices?.[0]?.message?.content ?? "";
 
-    // Estrai eventuale blocco JSON proposta (modalità edit)
+    // Estrai blocco JSON finale (modalità edit/global)
     let proposal: { proposed_content?: string; rationale?: string; risks?: string; assumptions?: string } | null = null;
-    if (mode === "edit") {
-      const m = reply.match(/```json\s*([\s\S]*?)```/);
-      if (m) {
-        try { proposal = JSON.parse(m[1]); } catch { /* ignore parse errors */ }
+    let globalProposal: { global_replacements?: unknown[]; skipped?: unknown[] } | null = null;
+    const m = reply.match(/```json\s*([\s\S]*?)```/);
+    const parsed: Record<string, unknown> | null = m ? (() => { try { return JSON.parse(m[1]); } catch { return null; } })() : null;
+    if (parsed) {
+      if (mode === "edit" && typeof parsed.proposed_content === "string") {
+        proposal = parsed as typeof proposal;
+      } else if (mode === "global" && Array.isArray(parsed.global_replacements)) {
+        globalProposal = parsed as typeof globalProposal;
       }
     }
 
     return new Response(JSON.stringify({
       reply,
       proposal,
+      global_proposal: globalProposal,
+      occurrences,
       kb_consulted: kb.map((e) => ({ id: e.id, category: e.category, chapter: e.chapter, title: e.title })),
       families_used: families,
       intent,
+      mode,
     }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (err) {
     return new Response(

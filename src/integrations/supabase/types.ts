@@ -6620,12 +6620,14 @@ export type Database = {
         Row: {
           ai_rationale: string | null
           approved_kb_entry_id: string | null
+          batch_id: string | null
           conflicts_with: string[] | null
           created_at: string
           created_by: string
           deleted_at: string | null
           duplicates_of: string | null
           id: string
+          operation: string
           raw_content: string
           review_note: string | null
           reviewed_at: string | null
@@ -6639,17 +6641,20 @@ export type Database = {
           suggested_priority: number | null
           suggested_tags: string[] | null
           suggested_title: string | null
+          target_kb_entry_id: string | null
           updated_at: string
         }
         Insert: {
           ai_rationale?: string | null
           approved_kb_entry_id?: string | null
+          batch_id?: string | null
           conflicts_with?: string[] | null
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           duplicates_of?: string | null
           id?: string
+          operation?: string
           raw_content: string
           review_note?: string | null
           reviewed_at?: string | null
@@ -6663,17 +6668,20 @@ export type Database = {
           suggested_priority?: number | null
           suggested_tags?: string[] | null
           suggested_title?: string | null
+          target_kb_entry_id?: string | null
           updated_at?: string
         }
         Update: {
           ai_rationale?: string | null
           approved_kb_entry_id?: string | null
+          batch_id?: string | null
           conflicts_with?: string[] | null
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           duplicates_of?: string | null
           id?: string
+          operation?: string
           raw_content?: string
           review_note?: string | null
           reviewed_at?: string | null
@@ -6687,6 +6695,7 @@ export type Database = {
           suggested_priority?: number | null
           suggested_tags?: string[] | null
           suggested_title?: string | null
+          target_kb_entry_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -8345,6 +8354,7 @@ export type Database = {
       prompt_change_proposals: {
         Row: {
           assumptions: string | null
+          batch_id: string | null
           block_name: string
           created_at: string
           created_by: string
@@ -8367,6 +8377,7 @@ export type Database = {
         }
         Insert: {
           assumptions?: string | null
+          batch_id?: string | null
           block_name: string
           created_at?: string
           created_by?: string
@@ -8389,6 +8400,7 @@ export type Database = {
         }
         Update: {
           assumptions?: string | null
+          batch_id?: string | null
           block_name?: string
           created_at?: string
           created_by?: string
