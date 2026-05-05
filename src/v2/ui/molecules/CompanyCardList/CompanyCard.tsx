@@ -150,6 +150,15 @@ export function CompanyCard({
 
   const titleSlot = (
     <>
+      {logoFromMeta && (
+        <img
+          src={logoFromMeta}
+          alt=""
+          loading="lazy"
+          className="w-4 h-4 rounded-sm object-contain bg-background border border-border/40 flex-shrink-0"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
       <span className="truncate text-foreground">{name || "—"}</span>
       {badge && (
         <Badge
@@ -173,6 +182,11 @@ export function CompanyCard({
       {hasBca && (
         <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
           BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
+        </Badge>
+      )}
+      {isCustomer && (
+        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/20 text-emerald-500 border-emerald-500/40 font-semibold">
+          Cliente
         </Badge>
       )}
       {leadStatusBadge}
