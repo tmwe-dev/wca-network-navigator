@@ -6,7 +6,7 @@
  * AISuggestionsTab) senza richiedere `partner_id`/`contact_id`.
  */
 import type { SherlockLauncherTarget } from "./SherlockLauncherDialog";
-import { extractSenderBrand } from "@/lib/extractSenderBrand";
+import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { deriveSenderDisplayName } from "@/lib/senderDisplayName";
 
 export interface BuildEmailTargetOpts {
