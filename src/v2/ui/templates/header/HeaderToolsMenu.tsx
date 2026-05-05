@@ -3,7 +3,6 @@
  * (Agent Ops, Enrichment, Test Extensions, Trace Console, Tema).
  */
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -13,7 +12,8 @@ import {
   MoreHorizontal, Activity, DatabaseZap, FlaskConical, Stethoscope,
   Sun, Moon, Plus, LogOut,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 
 interface Props {
   onAddContact: () => void;
@@ -32,18 +32,10 @@ export function HeaderToolsMenu({
     window.dispatchEvent(new CustomEvent("trace-console-open"));
   }, []);
 
-  const handleLogout = React.useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-    } finally {
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.includes("supabase") || k.startsWith("sb-"))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch { /* noop */ }
-      navigate("/v2/login", { replace: true });
-    }
-  }, [navigate]);
+  const { signOut } = useAuthV2();
+  const handleLogout = React.useCallback(() => {
+    void signOut();
+  }, [signOut]);
 
   return (
     <DropdownMenu>
