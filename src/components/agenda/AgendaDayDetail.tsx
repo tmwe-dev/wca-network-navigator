@@ -300,7 +300,6 @@ function ActivityRow({
     senderFromDescription(activity.description) ||
     "Mittente sconosciuto";
   const senderEmail = senderEmailFromDescription(activity.description);
-  const unverifiedDomain = isUnverifiedDomainMatch(activity.description);
   const flag = activity.partners?.country_code
     ? getCountryFlag(activity.partners.country_code)
     : null;
@@ -342,14 +341,6 @@ function ActivityRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium truncate">{partnerName}</span>
-          {unverifiedDomain && (
-            <span
-              title="Match solo per dominio email — verificare l'identità reale del mittente"
-              className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] border border-amber-500/40 text-amber-500 bg-amber-500/10 shrink-0"
-            >
-              <AlertTriangle className="w-2.5 h-2.5" /> da verificare
-            </span>
-          )}
           {inHolding && (
             <span
               title="In circuito di attesa"
