@@ -60,4 +60,14 @@ export interface DraftState {
   inlineImages?: string[];
   /** Allegati da inviare insieme all'email (path nel bucket cockpit-attachments). */
   attachments?: DraftAttachment[];
+  /**
+   * Quando la bozza è una risposta a una mail entrante, qui c'è il riferimento
+   * al messaggio originale (per il pulsante "leggi mail originale" e per
+   * impostare i default Oracolo su "contesto_email").
+   */
+  replySource?: {
+    messageId: string;
+    subject?: string;
+    channelMessageId?: string;
+  } | null;
 }
