@@ -16,6 +16,7 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { checkInjectionGuard } from "../_shared/injectionGuard.ts";
 import { dispatchFunnemail } from "../_shared/funnemailDispatcher.ts";
 import { runInboundTriage, maybeDispatchAlert } from "../_shared/inboundTriage.ts";
+import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 
 const CLASSIFICATIONS = ["positive", "negative", "neutral", "needs_human", "spam"] as const;
 const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
@@ -80,8 +81,39 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("classify-inbound-message");
 
   try {
-    const body: RequestBody = await req.json();
+    // ── Auth + ownership ──
+    // Accepts: user JWT (UI) OR service-role (trigger pg_net). Anon-key rejected.
+    const corsHeadersOnly = corsH;
+    const caller = await resolveCaller(req, corsHeadersOnly);
+    if (caller instanceof Response) {
+      endMetrics(metrics, false, caller.status);
+      return caller;
+    }
+    const body: RequestBody = (caller.bodyJson ?? {}) as RequestBody;
     const { message_id, activity_id, channel, body_text, from_address, subject, partner_id, mission_id } = body;
+
+    // For user-JWT callers: force user_id = JWT sub and verify message ownership.
+    // For service-role (trigger): trust body.user_id (set by DB trigger from owning row).
+    if (!caller.isService) {
+      body.user_id = caller.userId;
+      if (message_id) {
+        const ownErr = await assertMessageOwned(
+          // use a service client so RLS doesn't block the lookup
+          createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            { auth: { persistSession: false } },
+          ),
+          message_id,
+          caller.userId,
+          corsHeadersOnly,
+        );
+        if (ownErr) {
+          endMetrics(metrics, false, ownErr.status);
+          return ownErr;
+        }
+      }
+    }
 
     if (!message_id) {
       endMetrics(metrics, false, 400);
