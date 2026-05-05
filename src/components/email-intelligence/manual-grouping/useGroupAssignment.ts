@@ -114,7 +114,7 @@ export function useGroupAssignment(
       if (suggested && suggested !== groupName) {
         toast.info("AI sta imparando dalla tua correzione…", { duration: 2500 });
         invokeAi("learn-from-group-correction", {
-          scope: "classify",
+          scope: "kb-supervisor",
           context: { source: "manual-grouping" },
           body: {
             email: sender.email,
