@@ -1,0 +1,1 @@
+- [Content Intelligence Layer](mem://features/content-intelligence-layer) — Strato 2 inbound: classify-inbound-content legge contenuto mail con contesto pieno, prompt content-intelligence editabile, no enum chiusi, fail-safe
