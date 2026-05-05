@@ -17,13 +17,12 @@ import { cn } from "@/lib/utils";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
 
-type ViewKey = "all" | "unread" | "urgent" | "agenda" | "commercial";
+type ViewKey = "all" | "unread";
+// NOTA: i tab "Urgenti / In agenda / Commerciali" sono nascosti finché
+// non avranno un signal DB dedicato (vedi audit 2026-05-05).
 const VIEW_TABS: Array<{ value: ViewKey; label: string }> = [
   { value: "all", label: "Tutte" },
   { value: "unread", label: "Non lette" },
-  { value: "urgent", label: "Urgenti" },
-  { value: "agenda", label: "In agenda" },
-  { value: "commercial", label: "Commerciali" },
 ];
 
 /**

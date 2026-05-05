@@ -1,3 +1,11 @@
+/**
+ * Wrapper shadcn standard attorno a `react-resizable-panels`.
+ *
+ * REGOLA (2026-05-05): NON avvolgere `PanelGroup`/`PanelResizeHandle`
+ * con `React.forwardRef`. La libreria gestisce internamente i ref tramite
+ * imperative handles e logga warning ("Function components cannot be given
+ * refs") quando li si forza. Mantenere function components puri.
+ */
 import { GripVertical } from "lucide-react";
 import * as ResizablePrimitive from "react-resizable-panels";
 

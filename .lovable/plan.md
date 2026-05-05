@@ -1,74 +1,66 @@
-## Riepilogo
+# Audit profondo — regressioni post-fix "operatore + inbox"
 
-Cinque interventi paralleli sulla pagina Contatti CRM + ripristino visibilità email per `jose@tmwe.it` e per gli altri 3 operatori autorizzati.
+## Sintomo confermato (screenshot)
+- `/v2/funnemail-inbox` mostra spinner permanente con contatore "0 · Tutte le email".
+- Header in alto a dx: `Viewing: Luca Arcanà` → modalità impersonation attiva.
+- Schermo grigio della sessione precedente: oggi non più, ma resta lo stato "0 mail".
 
----
+## Findings (priorità decrescente)
 
-## 1. Fix email invisibili (root cause)
+### F3 — Disallineamento operatore tra Inbox classica e Funnemail [CRITICO — root cause schermata vuota]
+- `useFunnemailInbox` interroga sempre con `user.id` (utente loggato).
+- `InArrivoTab` invece passa `activeOperator.user_id` (rispettando il switcher).
+- In modalità "Viewing: altro operatore" Funnemail filtra ancora sul tuo `user_id` → 0 risultati se l'utente loggato non ha email proprie.
 
-**Diagnosi**: l'utente loggato `jose@tmwe.local` non ha record in `operators`. La RLS di `channel_messages` (`operator_id = ANY get_effective_operator_ids()`) restituisce array vuoto → 0 email visibili. Stessa cosa per WA/LinkedIn e ogni tabella che usa la stessa funzione.
+### F6 — Query key drift su Funnemail [ALTO]
+`useFunnemailInbox` usa `queryKeys.funnemailInbox.grouped(...)` per leggere, ma le 5 invalidazioni sono hard-coded `["funnemail-inbox"]`. Se il prefix centralizzato non combacia, dopo bulk/override/reclassify la lista resta stantia.
 
-**Azioni DB** (migration + insert):
-- Allineare `authorized_users` ai 4 indirizzi: `jose.gabriel@tmwe.it`, `luca@tmwe.it`, `imane@tmwe.it`, `luigi@tmwe.it`.
-- Per ciascuno dei 4: garantire record in `operators` legato al `user_id` dell'auth.users corrispondente. Aggiornare anche le 3 righe operator già esistenti con la nuova email `@tmwe.it` (oggi puntano a `@tmwe.local`).
-- `is_admin = true` per `luca@tmwe.it` e per `jose.gabriel@tmwe.it`.
-- Riassegnare le **10.011 email storiche**: i record in `channel_messages` di Luca/Imane/Luigi restano sui rispettivi operator (già corretti); a Jose ne assegniamo zero (vede solo le proprie + tutto in master mode da admin).
-- Verifica post-migration: `SELECT count(*) FROM channel_messages` con sessione di Jose deve restituire 10.011 (admin master) o solo le sue (admin senza master mode attivo).
+### F2 — `ActiveOperatorContext`: persistenza fragile [MEDIO]
+- Doppia lettura/parse di `localStorage` negli initializer.
+- L'effect "default a currentOp" può sovrascrivere la scelta persistita in race con il caricamento async di `currentOp`.
+- `STORAGE_KEY` dichiarato dentro al componente.
 
----
+### F4 — `useFunnemailInbox`: recovery filtri "una sola volta" [MEDIO]
+`didRecoverEmptyFiltersRef` non si resetta. Se l'utente in seguito riapplica un filtro che svuota la lista, il sistema non recupera più. Reset silenzioso → UX confusa.
 
-## 2. Filtro Origine "Non classificati"
+### F5 — Tab inattivi in `FunnemailInboxPage` [MEDIO]
+"Urgenti / In agenda / Commerciali" sono presenti nei tab ma in `useFunnemailInbox` cadono nel ramo `return base` → identici a "Tutte". Tab che non fanno nulla.
 
-`src/v2/ui/pages/explore/contacts/CRMFiltersSection.tsx` + reducer global filters: aggiungere voce sintetica `__unclassified__` nel dropdown Origine. Il loader `useCrmContactsAsCompanies` mappa `__unclassified__` → `origin IS NULL OR origin = ''`.
+### F7 — Auto mark-as-read: rischio loop al rimount [BASSO]
+`autoReadDoneRef` (Set in ref) si svuota al rimount → possibile rimarcatura inutile.
 
----
+### F1 — Resizable: blindare commento [BASSO]
+`ui/resizable.tsx` riportato a function components standard. Aggiungere doc-comment che vieta forwardRef per prevenire ricaduta.
 
-## 3. Toolbar lista compatta
+### F8 — Smoke test mancante [BASSO]
+Nessun test E2E protegge `/v2/funnemail-inbox` con/senza impersonation.
 
-`src/v2/ui/pages/explore/contacts/EntityListWithDetail.tsx` (+ `ListToolbar.tsx`): tutto su una riga, contatore "49/49 aziende" spostato a destra, etichette `Ordina:` ridotte a icona sotto 1100px, rimuovere `flex-wrap`. Il chip "Filtri attivi · ITALY" entra nel cluster destro.
+## Piano di ripristino (commit atomici, in ordine)
 
----
+1. **F3** — In `useFunnemailInbox` calcolare `targetUserId = viewingAll ? null : (activeOperator?.user_id ?? user.id)`, passarlo a `listFunnemailGroupedInbox` e includerlo nella `queryKey`. Adeguare il DAL `src/data/funnemailInbox.ts` se necessario (param opzionale; se `null` → query "tutti gli operatori" rispettando RLS).
+2. **F6** — Sostituire le 5 `invalidateQueries(["funnemail-inbox"])` con `queryKeys.funnemailInbox.root`. Verificare/estendere `src/lib/queryKeys.ts`.
+3. **F2** — Refactor minimale: `STORAGE_KEY` modulo-level, una sola lettura `localStorage` con try/catch unico, mantenere il fallback a `currentOp.id` solo se nulla è persistito E `viewingAll === false`.
+4. **F4** — Rimuovere il flag "una volta sola"; aggiungere toast `"Filtri resettati: nessun risultato"` quando scatta il recovery.
+5. **F5** — Nascondere i tab "Urgenti / In agenda / Commerciali" finché non implementati (decisione: hide vs implement; default = hide per non rompere il contratto dei dati).
+6. **F1** — Aggiungere commento doc in `ui/resizable.tsx`: "react-resizable-panels gestisce i ref internamente, non avvolgere in forwardRef".
+7. **F7** — Spostare `autoReadDoneRef` su `Map<id, timestamp>` con TTL 10 min, oppure flag locale sul messaggio in cache.
+8. **F8** — Smoke test Vitest sul mount di `FunnemailInboxPage` con e senza `viewingAll`.
 
-## 4. CompanyCard arricchita
+## Vincoli rispettati
+- Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria).
+- Nessuna alterazione a `journalistReview` o pipeline AI.
+- Nessun cambio DB/RLS richiesto.
+- Cambi solo frontend + DAL.
 
-`src/components/.../CompanyCardList/CompanyCard.tsx` + loader contatti:
-- Avatar 32px da `enrichment_data.logo_url` (fallback iniziali).
-- Badge `Cliente` quando `lead_status = 'converted'`.
-- Riga sub-meta: `Origine · Ultima Deep Search (relativeAge)`.
-- Link `mailto:` / `tel:` compatti per email e telefono primario.
-- Nessuna nuova chiamata AI: tutto da campi DB già presenti.
+## File toccati
+- `src/v2/hooks/useFunnemailInbox.ts`
+- `src/contexts/ActiveOperatorContext.tsx`
+- `src/data/funnemailInbox.ts` (firma)
+- `src/lib/queryKeys.ts` (verifica)
+- `src/v2/ui/pages/FunnemailInboxPage.tsx` (tab visibility)
+- `src/components/ui/resizable.tsx` (commento)
 
----
-
-## 5. Audit + Fix Deep Search dai 3 puntini
-
-Il menu emette `window.dispatchEvent(new CustomEvent('sherlock-launch'))` ma solo `NetworkPage` e `PartnerDetailInline` hanno il listener → click silente nelle altre pagine (Contatti CRM, Cestinone, BCA, RA, BulkActions, ContactDetail).
-
-**Fix**: estrarre il listener in `src/hooks/useSherlockLauncher.ts`, montarlo come singleton in `App.tsx`, rimuovere i due listener locali per evitare doppia esecuzione. Audit completo di tutti i `MoreVertical/MoreHorizontal/⋯` per verificare che ognuno passi un `partner_id`/`contact_id` valido nell'evento.
-
----
-
-## Ordine esecuzione
-1. Diagnosi email → migration `operators` + `authorized_users` (richiede approvazione utente).
-2. Singleton `useSherlockLauncher` in `App.tsx` + cleanup listener duplicati.
-3. CompanyCard arricchita + loader.
-4. Filtro "Non classificati".
-5. Toolbar compatta.
-
-## Dettagli tecnici
-
-```text
-operators (oggi)             →  operators (target)
-─────────────────────────────────────────────────────
-ae35ad39 luca@tmwe.local     →  ae35ad39 luca@tmwe.it       admin
-27b60e53 imane@tmwe.local    →  27b60e53 imane@tmwe.it
-fe1db58a luigi@tmwe.local    →  fe1db58a luigi@tmwe.it
-(missing)                    →  NEW      jose.gabriel@tmwe.it admin
-```
-
-`channel_messages.operator_id` invariato — solo l'email dell'operator cambia, gli UUID sono stabili.
-
-## Out of scope
-- Refactor toolbar in più componenti.
-- Merge automatico origini duplicate (già coperto da `BulkMergeOriginsDialog`).
-- UI per gestione operators (resta su admin DB).
+## Cosa NON faremo
+- Nessuna implementazione "Urgenti/Agenda/Commerciali" reale (richiede signal DB dedicati: separato).
+- Nessun refactor del sistema globale di filtri.
+- Nessuna modifica all'edge `funnemail-classify`.
