@@ -1,4 +1,4 @@
-import { CreditCard, Briefcase, Sparkles, ChevronDown, ChevronUp, Mail, MessageCircle, Linkedin, Phone, CalendarClock, Reply } from "lucide-react";
+import { CreditCard, Sparkles, ChevronDown, ChevronUp, Mail, Linkedin, Phone, CalendarClock, Reply } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import type { ContactOrigin } from "@/types/cockpit";
