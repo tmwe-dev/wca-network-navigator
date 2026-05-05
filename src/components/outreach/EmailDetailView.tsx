@@ -23,6 +23,7 @@ import { EmailTechnicalHeaders } from "./email/EmailTechnicalHeaders";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
 import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
+import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 
 type Props = {
   message: ChannelMessage;
@@ -220,6 +221,16 @@ export function EmailDetailView({ message, onClose }: Props) {
               >
                 <Forward className="h-3 w-3" /> Inoltra
               </Button>
+              <DeepSearchEmailButton
+                email={message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || ""}
+                source={{
+                  displayName: brand,
+                  partnerId: message.partner_id ?? null,
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 px-2 text-xs"
+              />
             </div>
             <div className="flex items-center gap-0.5">
               <Button
