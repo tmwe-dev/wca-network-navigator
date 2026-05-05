@@ -11,7 +11,7 @@ import {
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
   Calendar as CalendarIcon, ArrowUpRight,
-  Check, Clock, Archive, Plane, AlertTriangle,
+  Check, Clock, Archive, Plane,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
 import { useUpdateActivity } from "@/hooks/useActivities";
@@ -116,12 +116,6 @@ function senderEmailFromDescription(desc: string | null | undefined): string | n
   if (!desc) return null;
   const m = desc.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
   return m ? m[1] : null;
-}
-
-/** Vero se il trigger ha marcato l'attribuzione come "match per dominio, da verificare". */
-function isUnverifiedDomainMatch(desc: string | null | undefined): boolean {
-  if (!desc) return false;
-  return /Mittente da verificare/i.test(desc);
 }
 
 export default function AgendaDayDetail({
