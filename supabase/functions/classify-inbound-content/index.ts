@@ -21,6 +21,7 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
+import { loadConversationSummary } from "../_shared/conversationSummaryLoader.ts";
 
 interface RequestBody {
   message_id: string;
@@ -136,25 +137,17 @@ async function buildContextSummary(
       if (holding) out.holding_pattern = holding;
     } catch (_) { /* tabella opzionale */ }
 
-    // Ultime 10 interazioni cross-channel (compatte)
+    // Riassunto relazione (summary persistente o fallback 5 msg).
+    // NON leggiamo più 30 mail raw: il summary è la guida.
     try {
-      const { data: history } = await supabase
-        .from("channel_messages")
-        .select("channel,direction,subject,body_text,created_at")
-        .eq("partner_id", pid)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (history?.length) {
-        out.recent_history = history.map((m: {
-          channel: string; direction: string; subject: string | null;
-          body_text: string | null; created_at: string;
-        }) => ({
-          channel: m.channel,
-          direction: m.direction,
-          subject: (m.subject ?? "").slice(0, 80),
-          excerpt: (m.body_text ?? "").slice(0, 160),
-          at: m.created_at,
-        }));
+      const sum = await loadConversationSummary(supabase, userId ?? null, {
+        partnerId: pid,
+        emailAddress: fromAddress,
+        fallbackLimit: 5,
+      });
+      if (sum.block) {
+        out.relationship_summary = sum.block;
+        out.relationship_source = sum.source;
       }
     } catch (_) { /* fail-safe */ }
   }
@@ -167,7 +160,7 @@ function renderContext(ctx: Record<string, unknown>): string {
   if (ctx.our_profile) parts.push(`PROFILO NOSTRO:\n${ctx.our_profile}`);
   if (ctx.partner) parts.push(`PASSAPORTO MITTENTE:\n${JSON.stringify(ctx.partner)}`);
   if (ctx.holding_pattern) parts.push(`HOLDING PATTERN:\n${JSON.stringify(ctx.holding_pattern)}`);
-  if (ctx.recent_history) parts.push(`STORIA INTERAZIONI (ultime):\n${JSON.stringify(ctx.recent_history)}`);
+  if (ctx.relationship_summary) parts.push(String(ctx.relationship_summary));
   return parts.join("\n\n") || "(contesto non disponibile)";
 }
 
