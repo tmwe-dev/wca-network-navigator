@@ -20,7 +20,7 @@ import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
 const ROW_HEIGHT = 142;
-const STORAGE_KEY = "funnemail_list_view_v2";
+const STORAGE_KEY = "funnemail_list_view_v3";
 
 interface StoredPrefs {
   sort: SortMode;
@@ -30,14 +30,14 @@ interface StoredPrefs {
 function loadPrefs(): StoredPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { sort: "company_asc", group: "none" };
+    if (!raw) return { sort: "company_asc", group: "company" };
     const parsed = JSON.parse(raw) as Partial<StoredPrefs>;
     return {
       sort: parsed.sort ?? "company_asc",
-      group: parsed.group ?? "none",
+      group: parsed.group ?? "company",
     };
   } catch {
-    return { sort: "company_asc", group: "none" };
+    return { sort: "company_asc", group: "company" };
   }
 }
 
