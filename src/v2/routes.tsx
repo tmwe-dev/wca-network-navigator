@@ -206,7 +206,9 @@ export function V2Routes(): React.ReactElement {
 
         {/* Authenticated routes */}
         <Route element={<V2AuthGate />}>
-          <Route index element={guardedPage(DashboardPage, "Dashboard")} />
+          {/* Home V2 → Command (Dashboard accessibile esplicitamente su /v2/dashboard) */}
+          <Route index element={<Navigate to="/v2/command" replace />} />
+          <Route path="dashboard" element={guardedPage(DashboardPage, "Dashboard")} />
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
