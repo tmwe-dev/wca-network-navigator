@@ -88,6 +88,7 @@ const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default
 const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => ({ default: m.PromptLabPage })));
 const AgentAtlasPage = lazy(() => import("./ui/pages/prompt-lab/atlas/AgentAtlasPage"));
 const SuggestionsReviewPage = lazy(() => import("./ui/pages/prompt-lab/SuggestionsReviewPage"));
+const ProposalsReviewPage = lazy(() => import("./ui/pages/prompt-lab/ProposalsReviewPage"));
 const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
 const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
@@ -292,6 +293,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="prompt-lab" element={<Navigate to="/v2/settings/prompt-lab" replace />} />
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
+          <Route path="prompt-lab/proposals" element={guardedPage(ProposalsReviewPage, "ProposalsReview")} />
           <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
           <Route path="prompt-reader" element={guardedPage(PromptReaderPage, "PromptReader")} />
           <Route path="ai-interactions-log" element={guardedPage(AiInteractionLogPage, "AiInteractionLog")} />
