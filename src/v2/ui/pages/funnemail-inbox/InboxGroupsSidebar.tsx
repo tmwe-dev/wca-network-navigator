@@ -307,7 +307,6 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
             {(["priority", "secondary", "unclassified"] as const).map((section) => {
               const items = grouped[section];
               const MetaIcon = SECTION_META[section].icon;
-              if (!loading && items.length === 0) return null;
               return (
                 <div key={section} className="space-y-0.5">
                   <div className="flex items-center justify-between gap-2 px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -335,16 +334,22 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
                     )}
                   </div>
                   <SortableContext items={items.map((f) => f.slug)} strategy={verticalListSortingStrategy}>
-                    {items.map((folder) => (
-                      <SortableRow
-                        key={folder.slug}
-                        folder={folder}
-                        active={selectedFolder === folder.slug}
-                        count={counts[folder.slug] ?? 0}
-                        onSelect={onSelect}
-                        draggable={section === "priority" ? prioritySortMode === "default" : section === "secondary" && secondarySortMode === "default"}
-                      />
-                    ))}
+                    {items.length > 0 ? (
+                      items.map((folder) => (
+                        <SortableRow
+                          key={folder.slug}
+                          folder={folder}
+                          active={selectedFolder === folder.slug}
+                          count={counts[folder.slug] ?? 0}
+                          onSelect={onSelect}
+                          draggable={section === "priority" ? prioritySortMode === "default" : section === "secondary" && secondarySortMode === "default"}
+                        />
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-[11px] text-muted-foreground">
+                        {loading ? "Caricamento cartelle…" : "Nessuna cartella"}
+                      </div>
+                    )}
                   </SortableContext>
                 </div>
               );
