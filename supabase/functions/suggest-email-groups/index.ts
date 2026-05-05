@@ -66,19 +66,24 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "No groups configured" }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    // 2. Load uncategorized addresses with enough emails
+    // 2. Load addresses to analyze.
+    // Quando l'utente passa email esplicite (singola o selezione), bypassiamo i
+    // filtri "non classificato" e "min_email_count": è una richiesta puntuale
+    // di rianalisi e deve sempre passare. Il filtro classico vale solo per la
+    // modalità "scopri suggerimenti su tutto".
     let addressQuery = supabase
       .from("email_address_rules")
       .select("id, email_address, display_name, email_count")
       .eq("user_id", user.id)
-      .is("group_id", null)
-      .gte("email_count", minEmailCount)
       .order("email_count", { ascending: false });
 
     if (requestedEmails.length > 0) {
       addressQuery = addressQuery.in("email_address", requestedEmails);
     } else {
-      addressQuery = addressQuery.limit(batchSize);
+      addressQuery = addressQuery
+        .is("group_id", null)
+        .gte("email_count", minEmailCount)
+        .limit(batchSize);
     }
 
     const { data: addresses } = await addressQuery;
