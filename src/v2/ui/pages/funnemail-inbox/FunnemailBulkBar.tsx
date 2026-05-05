@@ -51,9 +51,10 @@ export function FunnemailBulkBar({
     if (!selectedIds?.length) return;
     setClassifying(true);
     try {
-      const res = await invokeEdge("classify-emails-batch", {
-        message_ids: selectedIds,
-      }) as { ok: boolean; total: number; processed: number; errors: number };
+      const res = await invokeEdge<{ ok: boolean; total: number; processed: number; errors: number }>(
+        "classify-emails-batch",
+        { context: "funnemail-bulk-classify", body: { message_ids: selectedIds } },
+      );
       toast.success(`Classificate ${res.processed}/${res.total}${res.errors ? ` · ${res.errors} errori` : ""}`);
     } catch (e) {
       toast.error(`Classificazione fallita: ${e instanceof Error ? e.message : String(e)}`);
