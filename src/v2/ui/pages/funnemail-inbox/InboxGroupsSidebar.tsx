@@ -6,7 +6,7 @@
  * Ordine personalizzato persistito in localStorage per-utente.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Folder, GripVertical, HelpCircle, Star } from "lucide-react";
+import { Archive, Folder, GripVertical, HelpCircle, Star, Inbox, Mail } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -42,8 +42,11 @@ interface Props {
 }
 
 const SECTION_META: Record<Section, { label: string; icon: typeof Star }> = {
+  operative: { label: "Operative", icon: Inbox },
+  archive: { label: "Archivio", icon: Archive },
+  sorting: { label: "Da smistare", icon: HelpCircle },
   priority: { label: "Prioritarie", icon: Star },
-  secondary: { label: "Secondarie", icon: Archive },
+  secondary: { label: "Secondarie", icon: Mail },
   unclassified: { label: "Da classificare", icon: HelpCircle },
 };
 
@@ -96,10 +99,10 @@ function saveOrder(order: StoredOrder): void {
   }
 }
 
-/** Applica preferenze utente su sezione/posizione, mantenendo "unclassified" intoccabile. */
+/** Applica preferenze utente su sezione/posizione. Le sezioni "speciali" (sorting/archive/unclassified) sono intoccabili. */
 function applyUserOrder(folders: FunnemailGroupFolder[], order: StoredOrder): FunnemailGroupFolder[] {
   return folders.map((f) => {
-    if (f.section === "unclassified") return f;
+    if (f.section === "unclassified" || f.section === "sorting" || f.section === "archive") return f;
     const pref = order[f.slug];
     if (!pref) return f;
     return { ...f, section: pref.section };
@@ -112,7 +115,14 @@ function sortBySection(
   counts: Record<string, number>,
   modes: SidebarSortModes,
 ): Record<Section, FunnemailGroupFolder[]> {
-  const buckets: Record<Section, FunnemailGroupFolder[]> = { priority: [], secondary: [], unclassified: [] };
+  const buckets: Record<Section, FunnemailGroupFolder[]> = {
+    operative: [],
+    archive: [],
+    sorting: [],
+    priority: [],
+    secondary: [],
+    unclassified: [],
+  };
   for (const f of folders) buckets[f.section].push(f);
   const defaultSorter = (section: Section) => (a: FunnemailGroupFolder, b: FunnemailGroupFolder) => {
     const pa = order[a.slug]?.section === section ? order[a.slug].position : Number.MAX_SAFE_INTEGER;
@@ -135,6 +145,9 @@ function sortBySection(
   buckets.priority.sort(pickSorter("priority"));
   buckets.secondary.sort(pickSorter("secondary"));
   buckets.unclassified.sort((a, b) => a.sort_order - b.sort_order);
+  buckets.operative.sort((a, b) => a.sort_order - b.sort_order);
+  buckets.archive.sort((a, b) => a.sort_order - b.sort_order);
+  buckets.sorting.sort((a, b) => a.sort_order - b.sort_order);
   return buckets;
 }
 
