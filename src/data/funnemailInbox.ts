@@ -62,6 +62,19 @@ export interface SenderIntelRow {
   role_guess: string | null;
 }
 
+export interface FunnemailPartnerSnapshot {
+  id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code: string | null;
+  country_name: string | null;
+  city: string | null;
+  logo_url: string | null;
+  lead_status: string | null;
+  partner_type: string | null;
+  website: string | null;
+}
+
 const MESSAGE_LIST_SELECT = [
   "id",
   "user_id",
@@ -75,6 +88,9 @@ const MESSAGE_LIST_SELECT = [
   "cc_addresses",
   "bcc_addresses",
   "subject",
+  "category",
+  "folder",
+  "ai_classification_suggestion",
   "body_text",
   "raw_payload",
   "message_id_external",
@@ -108,7 +124,15 @@ export interface FunnemailGroupFolder {
 export interface FunnemailGroupedInbox {
   folders: FunnemailGroupFolder[];
   counts: Record<string, number>;
-  messages: Array<ChannelMessage & { funnemail_group_slug: string; funnemail_group_name: string | null }>;
+  messages: Array<ChannelMessage & {
+    funnemail_group_slug: string;
+    funnemail_group_name: string | null;
+    funnemail_folder_label: string | null;
+    funnemail_folder_icon: string | null;
+    funnemail_decision: FunnemailDecisionRow | null;
+    sender_intel: SenderIntelRow | null;
+    partner_snapshot: FunnemailPartnerSnapshot | null;
+  }>;
 }
 
 interface EmailSenderGroupRow {
