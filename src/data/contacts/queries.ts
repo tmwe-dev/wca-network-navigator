@@ -26,8 +26,18 @@ function applyContactFilters(
   if (filters.countries?.length) q = q.in("country", filters.countries);
   else if (filters.country) q = q.eq("country", filters.country);
 
-  if (filters.origins?.length) q = q.in("origin", filters.origins);
-  else if (filters.origin) q = q.eq("origin", filters.origin);
+  if (filters.origins?.length) {
+    const wantsUnclassified = filters.origins.includes("__unclassified__");
+    const real = filters.origins.filter((o) => o !== "__unclassified__");
+    if (wantsUnclassified && real.length === 0) {
+      q = q.or("origin.is.null,origin.eq.");
+    } else if (wantsUnclassified && real.length > 0) {
+      const list = real.map((s) => `"${s.replace(/"/g, '""')}"`).join(",");
+      q = q.or(`origin.is.null,origin.eq.,origin.in.(${list})`);
+    } else {
+      q = q.in("origin", real);
+    }
+  } else if (filters.origin) q = q.eq("origin", filters.origin);
 
   if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
   if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom);
