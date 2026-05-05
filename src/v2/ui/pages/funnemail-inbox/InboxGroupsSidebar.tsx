@@ -317,8 +317,9 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
       <ScrollArea className="min-h-0 flex-1">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="space-y-4 p-2">
-            {(["priority", "secondary", "unclassified"] as const).map((section) => {
+            {(["operative", "sorting", "archive", "priority", "secondary", "unclassified"] as const).map((section) => {
               const items = grouped[section];
+              if (items.length === 0 && (section === "priority" || section === "secondary" || section === "unclassified")) return null;
               const MetaIcon = SECTION_META[section].icon;
               return (
                 <div key={section} className="space-y-0.5">
