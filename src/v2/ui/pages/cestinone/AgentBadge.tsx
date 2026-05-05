@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Bot } from "lucide-react";
+import { Bot, CheckCircle2, AlertOctagon, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { resolveAgentAvatar } from "@/data/agentAvatars";
@@ -22,7 +22,8 @@ export function AgentBadge({ name, size = "sm" }: { name: string; size?: "sm" | 
 export function EmptyPane({ label }: { label: string }): React.ReactElement {
   return (
     <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-      <span className="text-xs">{label}</span>
+      <Inbox className="h-10 w-10 mb-2 opacity-40" />
+      <div className="text-xs">{label}</div>
     </div>
   );
 }
@@ -33,9 +34,10 @@ export function CheckRow({ ok, warn, label, detail }: { ok: boolean; warn?: bool
     : ok
       ? "text-emerald-600 dark:text-emerald-400"
       : "text-muted-foreground";
+  const Icon = ok && !warn ? CheckCircle2 : AlertOctagon;
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className={cn("mt-0.5 inline-block h-2 w-2 rounded-full shrink-0", tone, ok && !warn ? "bg-emerald-500" : warn ? "bg-amber-500" : "bg-muted-foreground")} />
+      <Icon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", tone)} />
       <div className="min-w-0">
         <div className={cn("font-medium", tone)}>{label}</div>
         {detail && <div className="text-[10px] text-muted-foreground truncate">{detail}</div>}
