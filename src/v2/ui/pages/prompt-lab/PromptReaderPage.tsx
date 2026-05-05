@@ -15,13 +15,14 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Loader2, Package, RefreshCw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AGENT_REGISTRY, type AgentRegistryEntry, type AgentCategory } from "@/data/agentPrompts";
 import { runAgentSimulator, type SimulatorResponse } from "@/data/agentSimulator";
+import { findKbEntries, type KbEntry } from "@/data/kbEntries";
 
 const CATEGORY_ORDER: AgentCategory[] = [
   "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
@@ -41,6 +42,181 @@ function copy(text: string, label = "Prompt") {
     () => toast.success(`${label} copiato`),
     () => toast.error("Copia fallita"),
   );
+}
+
+function downloadText(filename: string, text: string, mime = "text/markdown") {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function slug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function kbForAgent(all: KbEntry[], agent: AgentRegistryEntry): KbEntry[] {
+  const cats = new Set(agent.kbCategories);
+  return all
+    .filter((e) => e.is_active && cats.has(e.category))
+    .sort((a, b) =>
+      a.category.localeCompare(b.category) ||
+      (a.chapter ?? "").localeCompare(b.chapter ?? "") ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    );
+}
+
+function buildAgentMarkdown(agent: AgentRegistryEntry, sim: SimulatorResponse | undefined, kb: KbEntry[]): string {
+  const lines: string[] = [];
+  lines.push(`# ${agent.displayName}`);
+  lines.push("");
+  lines.push(`> ${agent.description}`);
+  lines.push("");
+  lines.push(`- **Categoria:** ${agent.category}`);
+  lines.push(`- **Edge function:** ${agent.runtime.edgeFunction || "—"}`);
+  lines.push(`- **Modello default:** ${agent.runtime.modelDefault}`);
+  lines.push(`- **Categorie KB:** ${agent.kbCategories.join(", ") || "—"}`);
+  lines.push("");
+  if (sim) {
+    lines.push(`## System prompt assemblato (${sim.assembled.char_count.toLocaleString("it-IT")} caratteri)`);
+    lines.push("");
+    lines.push("```");
+    lines.push(sim.assembled.system_prompt || "(vuoto)");
+    lines.push("```");
+    lines.push("");
+    lines.push("## Persona");
+    lines.push("");
+    if (sim.persona.loaded) {
+      lines.push(`- Tono: ${sim.persona.tone ?? "—"}`);
+      lines.push(`- Lingua: ${sim.persona.language ?? "—"}`);
+      lines.push("");
+      lines.push("```");
+      lines.push(sim.persona.block_preview ?? "");
+      lines.push("```");
+    } else {
+      lines.push(`_${sim.persona.note ?? "Nessuna persona definita."}_`);
+    }
+    lines.push("");
+    lines.push(`## Prompt operativi (${sim.operative_prompts.applied.length})`);
+    lines.push("");
+    if (sim.operative_prompts.applied.length === 0) {
+      lines.push("_Nessun prompt operativo applicato._");
+    } else {
+      lines.push(sim.operative_prompts.applied.map((n) => `- ${n}`).join("\n"));
+      lines.push("");
+      lines.push("```");
+      lines.push(sim.operative_prompts.block_preview || "");
+      lines.push("```");
+    }
+    lines.push("");
+    lines.push("## Tool effettivi");
+    lines.push("");
+    lines.push(`Consentiti: ${sim.tools.effective.join(", ") || "nessuno"}`);
+    if (sim.tools.filtered_out.length > 0) {
+      lines.push("");
+      lines.push(`Filtrati dalle capabilities: ${sim.tools.filtered_out.join(", ")}`);
+    }
+    lines.push("");
+    lines.push("## Hard guards");
+    lines.push("");
+    lines.push(`- Tabelle vietate: ${sim.hard_guards.forbidden_tables.join(", ")}`);
+    lines.push(`- Operazioni distruttive bloccate: ${sim.hard_guards.destructive_ops_blocked.join(", ")}`);
+    lines.push(`- Approvazione sempre richiesta: ${sim.hard_guards.approval_required_always.join(", ")}`);
+    lines.push("");
+  }
+  lines.push(`## Knowledge Base usata (${kb.length} entry)`);
+  lines.push("");
+  if (kb.length === 0) {
+    lines.push("_Nessuna entry KB attiva nelle categorie consultate da questo agente._");
+  } else {
+    let lastChapter = "";
+    let lastCategory = "";
+    for (const e of kb) {
+      if (e.category !== lastCategory) {
+        lines.push("");
+        lines.push(`### Categoria: \`${e.category}\``);
+        lastCategory = e.category;
+        lastChapter = "";
+      }
+      const chap = e.chapter || "(senza capitolo)";
+      if (chap !== lastChapter) {
+        lines.push("");
+        lines.push(`#### ${chap}`);
+        lastChapter = chap;
+      }
+      lines.push("");
+      lines.push(`**${e.title}**  \n_priority ${e.priority} · tags: ${e.tags?.join(", ") || "—"}_`);
+      lines.push("");
+      lines.push(e.content);
+    }
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+function buildToolsMarkdown(allAgents: AgentRegistryEntry[], sims: Record<string, SimulatorResponse>): string {
+  const lines: string[] = [];
+  lines.push("# Funzioni & Strumenti — agenti AI");
+  lines.push("");
+  lines.push(`Generato: ${new Date().toLocaleString("it-IT")}`);
+  lines.push("");
+  // Indice tool universale
+  const universe = new Set<string>();
+  for (const s of Object.values(sims)) for (const t of s.tools.all_registered) universe.add(t);
+  // fallback dal registry statico
+  for (const a of allAgents) for (const t of a.tools) universe.add(t);
+  const sortedUniverse = Array.from(universe).sort();
+
+  // Mappa tool -> agenti che lo usano (effective)
+  const toolToAgents = new Map<string, string[]>();
+  for (const a of allAgents) {
+    const sim = sims[a.id];
+    const list = sim ? sim.tools.effective : a.tools;
+    for (const t of list) {
+      if (!toolToAgents.has(t)) toolToAgents.set(t, []);
+      toolToAgents.get(t)!.push(a.displayName);
+    }
+  }
+
+  lines.push("## Catalogo tool");
+  lines.push("");
+  for (const t of sortedUniverse) {
+    const users = toolToAgents.get(t) ?? [];
+    lines.push(`### \`${t}\``);
+    lines.push(`- Agenti che lo usano (${users.length}): ${users.join(", ") || "—"}`);
+    lines.push("");
+  }
+
+  lines.push("---");
+  lines.push("");
+  lines.push("## Agenti — tool effettivi");
+  lines.push("");
+  for (const a of allAgents) {
+    const sim = sims[a.id];
+    lines.push(`### ${a.displayName} (\`${a.id}\`)`);
+    lines.push(`- Edge function: ${a.runtime.edgeFunction || "—"}`);
+    lines.push(`- Modello: ${a.runtime.modelDefault}`);
+    if (sim) {
+      lines.push(`- Tool consentiti: ${sim.tools.effective.join(", ") || "nessuno"}`);
+      if (sim.tools.filtered_out.length) {
+        lines.push(`- Tool filtrati: ${sim.tools.filtered_out.join(", ")}`);
+      }
+      const approval = sim.tools.approval_map.filter((m) => m.requires_approval).map((m) => m.name);
+      if (approval.length) lines.push(`- Richiedono approvazione: ${approval.join(", ")}`);
+    } else {
+      lines.push(`- Tool dichiarati (registry): ${a.tools.join(", ") || "nessuno"}`);
+      if (a.approvalRequiredTools.length) {
+        lines.push(`- Richiedono approvazione: ${a.approvalRequiredTools.join(", ")}`);
+      }
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 function Section({
@@ -79,6 +255,8 @@ export default function PromptReaderPage() {
   const [cache, setCache] = useState<Record<string, SimulatorResponse>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [kbAll, setKbAll] = useState<KbEntry[] | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const selected = allAgents.find((a) => a.id === selectedId) ?? allAgents[0];
   const data: SimulatorResponse | undefined = selected ? cache[selected.id] : undefined;
@@ -116,6 +294,89 @@ export default function PromptReaderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
+  // Carica KB una sola volta
+  useEffect(() => {
+    findKbEntries().then(setKbAll).catch((e) => {
+      console.error("KB load failed", e);
+      toast.error("Caricamento KB fallito");
+      setKbAll([]);
+    });
+  }, []);
+
+  const kbCurrent = useMemo(
+    () => (kbAll && selected ? kbForAgent(kbAll, selected) : []),
+    [kbAll, selected],
+  );
+
+  async function downloadAgent() {
+    if (!selected) return;
+    setDownloading("agent");
+    try {
+      const sim = cache[selected.id] ?? (await runAgentSimulator({
+        agentId: selected.id,
+        userMessage: "(export)",
+        dryRunAI: false,
+      }));
+      const md = buildAgentMarkdown(selected, sim, kbCurrent);
+      downloadText(`${slug(selected.displayName)}-prompt-kb.md`, md);
+      toast.success("Download avviato");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore export");
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function downloadAllAgents() {
+    setDownloading("all");
+    try {
+      const list = allAgents;
+      // Pre-load mancanti in serie (evita di saturare l'edge)
+      const sims: Record<string, SimulatorResponse> = { ...cache };
+      for (const a of list) {
+        if (sims[a.id]) continue;
+        try {
+          sims[a.id] = await runAgentSimulator({ agentId: a.id, userMessage: "(export)", dryRunAI: false });
+        } catch (e) {
+          console.warn("simulator failed for", a.id, e);
+        }
+      }
+      setCache(sims);
+      const parts = list.map((a) => buildAgentMarkdown(a, sims[a.id], kbAll ? kbForAgent(kbAll, a) : []));
+      const md = parts.join("\n\n---\n\n");
+      downloadText(`agenti-prompt-kb.md`, md);
+      toast.success("Export completato");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore export");
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function downloadTools() {
+    setDownloading("tools");
+    try {
+      const sims: Record<string, SimulatorResponse> = { ...cache };
+      // Servono almeno 1-2 sim per popolare tools effettivi; carichiamo tutti come per "all" (in serie)
+      for (const a of allAgents) {
+        if (sims[a.id]) continue;
+        try {
+          sims[a.id] = await runAgentSimulator({ agentId: a.id, userMessage: "(export)", dryRunAI: false });
+        } catch (e) {
+          console.warn("simulator failed for", a.id, e);
+        }
+      }
+      setCache(sims);
+      const md = buildToolsMarkdown(allAgents, sims);
+      downloadText("funzioni-e-strumenti.md", md);
+      toast.success("Documento Funzioni & Strumenti pronto");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore export");
+    } finally {
+      setDownloading(null);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
@@ -133,16 +394,52 @@ export default function PromptReaderPage() {
             — leggi in chiaro tutti i prompt assemblati di ciascun agente
           </span>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 gap-1.5"
-          onClick={() => selected && load(selected.id, true)}
-          disabled={loadingId === selected?.id}
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", loadingId === selected?.id && "animate-spin")} />
-          Ricarica
-        </Button>
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5"
+            onClick={() => selected && load(selected.id, true)}
+            disabled={loadingId === selected?.id}
+            title="Ricarica prompt assemblato"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", loadingId === selected?.id && "animate-spin")} />
+            Ricarica
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5"
+            onClick={downloadAgent}
+            disabled={!selected || downloading !== null}
+            title="Scarica prompt + KB di questo agente (Markdown)"
+          >
+            {downloading === "agent" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Scarica persona
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5"
+            onClick={downloadAllAgents}
+            disabled={downloading !== null}
+            title="Scarica prompt + KB di tutti gli agenti"
+          >
+            {downloading === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Package className="h-3.5 w-3.5" />}
+            Scarica tutto
+          </Button>
+          <Button
+            size="sm"
+            variant="default"
+            className="h-7 gap-1.5"
+            onClick={downloadTools}
+            disabled={downloading !== null}
+            title="Documento delle funzioni e degli strumenti chiamati dagli agenti"
+          >
+            {downloading === "tools" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}
+            Funzioni & Strumenti
+          </Button>
+        </div>
       </div>
 
       {/* Body */}
