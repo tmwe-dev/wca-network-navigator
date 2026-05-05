@@ -550,9 +550,29 @@ export default function PromptReaderPage() {
           {sidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
 
-        {/* Contenuto: prompt in chiaro */}
-        <main className="flex-1 overflow-auto min-w-0">
-          <div className="mx-auto max-w-4xl p-6 space-y-4">
+        {/* Pannelli Reader + Co-pilot, scambiabili via drag&drop */}
+        <SwapPanels
+          order={panelOrder}
+          onReorder={setPanelOrder}
+          expandedId={expandedPanel}
+          panels={[
+            {
+              id: "reader",
+              title: "Prompt Reader",
+              toolbar: (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setExpandedPanel(expandedPanel === "reader" ? null : "reader")}
+                  title={expandedPanel === "reader" ? "Riduci" : "Espandi a tutta larghezza"}
+                >
+                  {expandedPanel === "reader" ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </Button>
+              ),
+              content: (
+                <div className="h-full overflow-auto">
+                  <div className="mx-auto max-w-4xl p-6 space-y-4">
             {selected && (
               <header className="border-b pb-3 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
