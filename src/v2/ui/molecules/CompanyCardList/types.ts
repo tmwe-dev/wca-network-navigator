@@ -92,6 +92,14 @@ export interface CompanyEntity {
   interactionCount?: number;
   /** ISO date dell'ultima Deep Search / arricchimento. */
   enrichedAt?: string | null;
+  /** Origine del contatto (es. import, scraping, manuale). */
+  origin?: string | null;
+  /** URL logo aziendale (da Deep Search / enrichment). */
+  logoUrl?: string | null;
+  /** Email primaria del referente (per mailto: rapido). */
+  primaryEmail?: string | null;
+  /** Telefono primario del referente (per tel: rapido). */
+  primaryPhone?: string | null;
   /** ISO date di scadenza membership WCA. */
   membershipExpires?: string | null;
   /** Servizi (chip). */

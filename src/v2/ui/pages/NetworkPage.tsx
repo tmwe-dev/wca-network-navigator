@@ -89,23 +89,7 @@ export function NetworkPage(): React.ReactElement {
     return () => window.removeEventListener("v2-open-partner", handler);
   }, []);
 
-  // Quando un menu card chiede una Sherlock launch, apriamo prima il dettaglio
-  // così che PartnerDetailInline possa intercettare l'evento.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { partnerId?: string; _replay?: boolean } | undefined;
-      if (detail?.partnerId && !detail._replay) {
-        setSelectedPartnerId(String(detail.partnerId));
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("sherlock-launch", { detail: { ...detail, _replay: true } })
-          );
-        }, 50);
-      }
-    };
-    window.addEventListener("sherlock-launch", handler, { once: false });
-    return () => window.removeEventListener("sherlock-launch", handler);
-  }, []);
+  // Sherlock launch è gestito dal singleton globale GlobalSherlockLauncher (App.tsx).
 
   const handleOpenCompany = useCallback((c: CompanyEntity) => {
     setSelectedPartnerId(c.id);

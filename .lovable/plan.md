@@ -1,83 +1,74 @@
-## Obiettivo
+## Riepilogo
 
-Eliminare il doppio sistema di autenticazione. Una sola porta d'ingresso: **TMWE OAuth**. La whitelist `authorized_users` resta il cancello finale: solo chi è dentro entra.
+Cinque interventi paralleli sulla pagina Contatti CRM + ripristino visibilità email per `jose@tmwe.it` e per gli altri 3 operatori autorizzati.
 
-## Flusso target
+---
 
+## 1. Fix email invisibili (root cause)
+
+**Diagnosi**: l'utente loggato `jose@tmwe.local` non ha record in `operators`. La RLS di `channel_messages` (`operator_id = ANY get_effective_operator_ids()`) restituisce array vuoto → 0 email visibili. Stessa cosa per WA/LinkedIn e ogni tabella che usa la stessa funzione.
+
+**Azioni DB** (migration + insert):
+- Allineare `authorized_users` ai 4 indirizzi: `jose.gabriel@tmwe.it`, `luca@tmwe.it`, `imane@tmwe.it`, `luigi@tmwe.it`.
+- Per ciascuno dei 4: garantire record in `operators` legato al `user_id` dell'auth.users corrispondente. Aggiornare anche le 3 righe operator già esistenti con la nuova email `@tmwe.it` (oggi puntano a `@tmwe.local`).
+- `is_admin = true` per `luca@tmwe.it` e per `jose.gabriel@tmwe.it`.
+- Riassegnare le **10.011 email storiche**: i record in `channel_messages` di Luca/Imane/Luigi restano sui rispettivi operator (già corretti); a Jose ne assegniamo zero (vede solo le proprie + tutto in master mode da admin).
+- Verifica post-migration: `SELECT count(*) FROM channel_messages` con sessione di Jose deve restituire 10.011 (admin master) o solo le sue (admin senza master mode attivo).
+
+---
+
+## 2. Filtro Origine "Non classificati"
+
+`src/v2/ui/pages/explore/contacts/CRMFiltersSection.tsx` + reducer global filters: aggiungere voce sintetica `__unclassified__` nel dropdown Origine. Il loader `useCrmContactsAsCompanies` mappa `__unclassified__` → `origin IS NULL OR origin = ''`.
+
+---
+
+## 3. Toolbar lista compatta
+
+`src/v2/ui/pages/explore/contacts/EntityListWithDetail.tsx` (+ `ListToolbar.tsx`): tutto su una riga, contatore "49/49 aziende" spostato a destra, etichette `Ordina:` ridotte a icona sotto 1100px, rimuovere `flex-wrap`. Il chip "Filtri attivi · ITALY" entra nel cluster destro.
+
+---
+
+## 4. CompanyCard arricchita
+
+`src/components/.../CompanyCardList/CompanyCard.tsx` + loader contatti:
+- Avatar 32px da `enrichment_data.logo_url` (fallback iniziali).
+- Badge `Cliente` quando `lead_status = 'converted'`.
+- Riga sub-meta: `Origine · Ultima Deep Search (relativeAge)`.
+- Link `mailto:` / `tel:` compatti per email e telefono primario.
+- Nessuna nuova chiamata AI: tutto da campi DB già presenti.
+
+---
+
+## 5. Audit + Fix Deep Search dai 3 puntini
+
+Il menu emette `window.dispatchEvent(new CustomEvent('sherlock-launch'))` ma solo `NetworkPage` e `PartnerDetailInline` hanno il listener → click silente nelle altre pagine (Contatti CRM, Cestinone, BCA, RA, BulkActions, ContactDetail).
+
+**Fix**: estrarre il listener in `src/hooks/useSherlockLauncher.ts`, montarlo come singleton in `App.tsx`, rimuovere i due listener locali per evitare doppia esecuzione. Audit completo di tutti i `MoreVertical/MoreHorizontal/⋯` per verificare che ognuno passi un `partner_id`/`contact_id` valido nell'evento.
+
+---
+
+## Ordine esecuzione
+1. Diagnosi email → migration `operators` + `authorized_users` (richiede approvazione utente).
+2. Singleton `useSherlockLauncher` in `App.tsx` + cleanup listener duplicati.
+3. CompanyCard arricchita + loader.
+4. Filtro "Non classificati".
+5. Toolbar compatta.
+
+## Dettagli tecnici
+
+```text
+operators (oggi)             →  operators (target)
+─────────────────────────────────────────────────────
+ae35ad39 luca@tmwe.local     →  ae35ad39 luca@tmwe.it       admin
+27b60e53 imane@tmwe.local    →  27b60e53 imane@tmwe.it
+fe1db58a luigi@tmwe.local    →  fe1db58a luigi@tmwe.it
+(missing)                    →  NEW      jose.gabriel@tmwe.it admin
 ```
-/v2/login  →  [bottone "Entra con TMWE"]  →  TMWE OAuth
-                                              │
-                                              ▼
-                                  tmwe-oauth-callback
-                                              │
-                          ┌───────────────────┼───────────────────┐
-                          ▼                                       ▼
-                 email in whitelist?                   email NON in whitelist
-                          │                                       │
-                          ▼                                       ▼
-                 crea/risolve utente Lovable             redirect /v2/login
-                 magic link → /v2                        ?tmwe=error
-                                                         &reason=not_whitelisted
-```
 
-Risultato: nessuna seconda password da gestire. L'admin gestisce gli accessi solo nella schermata operatori (whitelist).
+`channel_messages.operator_id` invariato — solo l'email dell'operator cambia, gli UUID sono stabili.
 
-## Modifiche
-
-### 1. `tmwe-oauth-callback` (edge function) — gate whitelist
-
-Subito dopo aver ricavato `authEmail` dal profilo TMWE, prima di creare/risolvere l'utente Lovable:
-
-- Query su `authorized_users` (case-insensitive) per `authEmail`.
-- Se non presente → `back("error", "not_whitelisted", "login")` che rimanda a `/v2/login?tmwe=error&reason=not_whitelisted`.
-- Se presente → procedi (resolve/auto-create + magic link, come oggi).
-
-Nessun'altra modifica al flusso OAuth: il behavior corrente di auto-creazione utente Lovable rimane identico, ma solo per email autorizzate.
-
-### 2. `/v2/login` (LoginPage.tsx) — semplificare a solo TMWE
-
-- Rimuovere stati `mode` (login/signup/forgot), `email`, `password`, `displayName`, `submitting`, `resetSent`.
-- Rimuovere chiamate a `signInWithEmail`, `signUp`, `resetPassword`.
-- Rimuovere il separatore "OPPURE" e tutti i form.
-- Tenere solo:
-  - Titolo / brand
-  - Bottone "Entra con TMWE" (`handleTmweLogin`)
-  - Banner errore se `?tmwe=error&reason=…` (incluso messaggio amichevole per `not_whitelisted`: *"Email non autorizzata. Contatta l'amministratore."*)
-
-### 3. `useAuthV2` — disattivare azioni email
-
-- Mantenere il hook (lettura sessione, profilo, ruoli, signOut).
-- Le azioni `signInWithEmail`, `signUp`, `resetPassword`, `updatePassword` restano esportate per compatibilità ma non vengono più chiamate dalla LoginPage. Non rimuoverle ora (per evitare rotture in altri componenti come `SecuritySettingsTab`, `useAdminUsersV2`).
-- Nessun cambio comportamentale lato sessione: l'AuthProvider funziona già con qualsiasi sessione valida (anche quella creata via magic link TMWE).
-
-### 4. Settings whitelist — etichetta UI
-
-Solo nella copy, dove le pagine settings parlano di "operatori autorizzati al login email": aggiornare il microcopy a *"Operatori autorizzati. Solo le email presenti qui possono entrare con TMWE."*
-
-File coinvolti (solo testi, niente logica): `AdminUsersPage.tsx`, eventualmente `AdminUsersPanel.tsx`.
-
-### 5. Pagine accessorie
-
-- `/reset-password`: resta funzionante (può essere richiamata via link Supabase) ma non più linkata. Nessuna modifica codice.
-- Eventuali link a "Crea account" o "Password dimenticata" rimossi insieme al form.
-
-## Cosa NON cambia
-
-- AuthProvider centralizzato e regole di restore sessione (memoria `working-auth-config`).
-- `authorized_users` schema, RLS, RPC `is_email_authorized`.
-- Auto-creazione utente Lovable nel callback TMWE (resta, ma gated).
-- Magic link finale → `/v2` (rispetta lo stato `from` se in futuro vorremo passarlo).
-- `tmwe-oauth-start` / `tmwe-disconnect` / `tmwe-proxy`.
-
-## Verifica post-implementazione
-
-1. Login con email **whitelisted** + account TMWE valido → atterra su `/v2`. ✅
-2. Login con email **NON whitelisted** + account TMWE valido → torna su `/v2/login` con banner "Email non autorizzata". Nessun utente Lovable creato. ✅
-3. Sessione attiva da prima del cambio → resta valida (no re-check whitelist al restore, come da memoria). ✅
-4. Refresh JWT → nessun signout (regola attuale preservata). ✅
-
-## Aspetti tecnici
-
-- Query whitelist nel callback: `svc.from("authorized_users").select("id").ilike("email", authEmail).maybeSingle()`. Se preferisci uniformità, possiamo invocare la stessa funzione DB `is_email_authorized` via `svc.rpc(...)`.
-- Idempotenza: se l'utente fa partire OAuth ma poi viene rifiutato, nessun side-effect (state OAuth viene già consumato/cancellato anche in caso di errore).
-- Niente migrazione DB necessaria.
+## Out of scope
+- Refactor toolbar in più componenti.
+- Merge automatico origini duplicate (già coperto da `BulkMergeOriginsDialog`).
+- UI per gestione operators (resta su admin DB).
