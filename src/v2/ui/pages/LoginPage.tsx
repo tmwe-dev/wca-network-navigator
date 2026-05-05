@@ -24,7 +24,7 @@ const REASON_MESSAGES: Record<string, string> = {
 
 export function LoginPage(): React.ReactElement {
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/v2";
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/v2/command";
 
   const { isAuthenticated, isLoading: authLoading } = useAuthV2();
 

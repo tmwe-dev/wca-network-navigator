@@ -42,9 +42,9 @@ export function AuthCallbackPage(): React.ReactElement {
         }
 
         if (cancelled) return;
-        // Pulisci l'hash e vai alla home autenticata.
-        window.history.replaceState(null, "", "/v2");
-        navigate("/v2", { replace: true });
+        // Pulisci l'hash e vai alla home autenticata (Command).
+        window.history.replaceState(null, "", "/v2/command");
+        navigate("/v2/command", { replace: true });
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "callback_failed";
