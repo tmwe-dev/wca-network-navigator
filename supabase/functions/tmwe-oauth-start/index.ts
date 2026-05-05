@@ -27,11 +27,20 @@ Deno.serve(async (req) => {
   try {
     // Parse body to detect intent (default: connect)
     let intent: "connect" | "login" = "connect";
+    let appOrigin: string | null = null;
     try {
       const body = await req.json();
       if (body?.intent === "login") intent = "login";
+      if (typeof body?.app_origin === "string" && /^https?:\/\//i.test(body.app_origin)) {
+        appOrigin = body.app_origin.replace(/\/$/, "");
+      }
     } catch {
       // no body — keep default
+    }
+    // Fallback: derive from Origin header if client didn't pass it
+    if (!appOrigin) {
+      const o = req.headers.get("origin");
+      if (o && /^https?:\/\//i.test(o)) appOrigin = o.replace(/\/$/, "");
     }
 
     let userId: string | null = null;
@@ -47,6 +56,7 @@ Deno.serve(async (req) => {
       state,
       user_id: userId,
       intent,
+      app_origin: appOrigin,
     });
     if (insErr) {
       return new Response(
