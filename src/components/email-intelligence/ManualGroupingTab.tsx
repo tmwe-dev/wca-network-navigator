@@ -482,9 +482,28 @@ export default function ManualGroupingTab() {
         body: { emails: [s.email], min_email_count: 0, batch_size: 1 },
       });
 
-      await loadData();
-
       const suggestion = data.suggestions?.find((item) => item.email.toLowerCase() === s.email.toLowerCase());
+
+      // Patch in-place senza ricaricare l'intera lista (evita scroll-jump
+      // e re-mount delle ~1200 card). Aggiorniamo SOLO il sender toccato.
+      if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
+        const patch = (arr: SenderAnalysis[]) =>
+          arr.map((x) =>
+            x.email.toLowerCase() === s.email.toLowerCase()
+              ? {
+                  ...x,
+                  aiSuggestion: {
+                    group_name: suggestion.suggested_group,
+                    confidence: suggestion.confidence ?? 0,
+                    accepted: null,
+                  },
+                }
+              : x,
+          );
+        setSenders(patch);
+        setClassifiedSenders(patch);
+      }
+
       if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
         toast.success(`Suggerito: ${suggestion.suggested_group}`, { id: toastId });
         handleAiChipClick(suggestion.suggested_group);
@@ -495,7 +514,7 @@ export default function ManualGroupingTab() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore analisi AI", { id: toastId });
     }
-  }, [handleAiChipClick, loadData]);
+  }, [handleAiChipClick, setSenders, setClassifiedSenders]);
 
   const onCardAcceptAiSuggestion = useCallback(
     async (s: SenderAnalysis, groupName: string) => {
