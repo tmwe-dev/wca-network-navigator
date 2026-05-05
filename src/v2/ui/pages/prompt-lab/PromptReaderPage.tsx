@@ -772,35 +772,38 @@ export default function PromptReaderPage() {
                 )}
               </Section>
             )}
-          </div>
-        </main>
-
-        {/* Co-pilot panel (3a colonna) */}
-        {copilotOpen && selected && (
-          <aside className="w-[380px] border-l flex-shrink-0 hidden lg:flex flex-col bg-card">
-            <div className="border-b px-3 py-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">Co-pilot</span>
-              <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => setCopilotOpen(false)}>×</Button>
-            </div>
-            <div className="flex-1 min-h-0">
-              <PromptCopilotPanel
-                agentSlug={selected.id}
-                agentKbCategories={selected.kbCategories}
-                blockName={targetBlock.name}
-                currentContent={targetBlock.content || data?.assembled?.system_prompt || ""}
-              />
-            </div>
-          </aside>
-        )}
-        {!copilotOpen && (
-          <button
-            onClick={() => setCopilotOpen(true)}
-            className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 h-16 w-5 rounded-l-md bg-primary/90 text-primary-foreground hover:bg-primary items-center justify-center shadow-md"
-            title="Apri Co-pilot"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
-        )}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: "copilot",
+              title: "Co-pilot",
+              toolbar: (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setExpandedPanel(expandedPanel === "copilot" ? null : "copilot")}
+                  title={expandedPanel === "copilot" ? "Riduci" : "Espandi a tutta larghezza"}
+                >
+                  {expandedPanel === "copilot" ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </Button>
+              ),
+              content: selected ? (
+                <PromptCopilotPanel
+                  agentSlug={selected.id}
+                  agentKbCategories={selected.kbCategories}
+                  blockName={targetBlock.name}
+                  currentContent={targetBlock.content || data?.assembled?.system_prompt || ""}
+                  expanded={expandedPanel === "copilot"}
+                />
+              ) : (
+                <div className="p-4 text-xs text-muted-foreground">Seleziona un agente.</div>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );
