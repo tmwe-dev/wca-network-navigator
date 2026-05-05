@@ -424,6 +424,23 @@ ${bodyBlock}`;
       }
     }
 
+    // ── Refresh Conversation Summary (cross-canale).
+    //    Fire-and-forget, debounced 5min nel target. Mai blocca.
+    if (body.user_id && (partner_id || from_address)) {
+      try {
+        await supabase.functions.invoke("refresh-conversation-context", {
+          body: {
+            user_id: body.user_id,
+            partner_id: partner_id ?? null,
+            email_address: from_address ?? null,
+            limit: 30,
+          },
+        });
+      } catch (_e) {
+        // fail-safe
+      }
+    }
+
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
