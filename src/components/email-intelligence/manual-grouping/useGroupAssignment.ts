@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import type { EmailSenderGroup, SenderAnalysis } from "@/types/email-management";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export function useGroupAssignment(
   groups: EmailSenderGroup[],
@@ -106,6 +107,28 @@ export function useGroupAssignment(
       onSendersChange((prev) => prev.filter((s) => s.email !== sender.email));
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
       toast.success(`${sender.companyName} → ${groupName}`);
+
+      // Learning loop: se l'operatore ha scelto un gruppo DIVERSO dal suggerimento AI,
+      // chiediamo all'AI di rileggere e aggiornare le proprie istruzioni.
+      const suggested = sender.aiSuggestion?.group_name?.trim();
+      if (suggested && suggested !== groupName) {
+        toast.info("AI sta imparando dalla tua correzione…", { duration: 2500 });
+        invokeAi("learn-from-group-correction", {
+          scope: "email_intelligence.learn_correction",
+          context: { source: "manual-grouping" },
+          body: {
+            email: sender.email,
+            suggested_group: suggested,
+            chosen_group: groupName,
+          },
+        }).then((res) => {
+          if (res && typeof res === "object" && "lesson" in res && (res as { lesson?: string }).lesson) {
+            toast.success("AI aggiornata: nuova istruzione salvata in KB", { duration: 3500 });
+          }
+        }).catch((e) => {
+          console.warn("[learn-from-group-correction] failed", e);
+        });
+      }
     },
     [groups, onSendersChange, qc],
   );
