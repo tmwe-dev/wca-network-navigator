@@ -57,6 +57,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const targetUserId: string | null = viewingAll
     ? null
     : activeOperator?.user_id ?? user?.id ?? null;
+  const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   const rawSelectedFolder = g.filters.funnemailFolder || "all";
   const setSelectedFolder = React.useCallback(
     (slug: string) => g.setFilter("funnemailFolder", slug),
@@ -65,9 +66,9 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", targetUserId),
-    queryFn: () => listFunnemailGroupedInbox(user!.id, targetUserId),
-    enabled: !!user?.id,
+    queryKey: queryKeys.funnemailInbox.grouped(folderOwnerUserId ?? "anon", targetUserId),
+    queryFn: () => listFunnemailGroupedInbox(folderOwnerUserId!, targetUserId),
+    enabled: !!folderOwnerUserId,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });

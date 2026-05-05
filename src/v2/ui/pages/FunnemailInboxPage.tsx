@@ -13,7 +13,6 @@ import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
-import { InboxGroupsSidebar } from "./funnemail-inbox/InboxGroupsSidebar";
 import { cn } from "@/lib/utils";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
@@ -44,14 +43,6 @@ export default function FunnemailInboxPage(): React.ReactElement {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
-      <InboxGroupsSidebar
-        folders={ctrl.folders}
-        counts={ctrl.counts}
-        selectedFolder={ctrl.selectedFolder}
-        totalCount={ctrl.mails.length}
-        loading={ctrl.foldersLoading}
-        onSelect={ctrl.setSelectedFolder}
-      />
       <PersistentResizablePanelGroup
         storageId="funnemail-inbox:list-vs-reader"
         direction="horizontal"
