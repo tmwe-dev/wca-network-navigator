@@ -24,6 +24,7 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { TraceConsole } from "@/v2/observability/TraceConsole";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { installSupabaseTraceProxy } from "@/v2/observability/supabaseTraceProxy";
+import { GlobalSherlockLauncher } from "@/components/global/GlobalSherlockLauncher";
 
 // Init observability layer (idempotent, safe before any render)
 traceCollector.init();
@@ -124,6 +125,7 @@ const App = () => (
                 <ConnectionBanner />
                 <RuntimeDiagnosticPanel />
                 <TraceConsole />
+                <GlobalSherlockLauncher />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                   <Route path="/" element={<Navigate to={DEFAULT_HOME_ROUTE} replace />} />
