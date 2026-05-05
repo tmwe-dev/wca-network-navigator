@@ -553,7 +553,7 @@ export default function PromptReaderPage() {
         {/* Pannelli Reader + Co-pilot, scambiabili via drag&drop */}
         <SwapPanels
           order={panelOrder}
-          onReorder={setPanelOrder}
+          onReorder={(next) => setPanelOrder(next as [PanelId, PanelId])}
           expandedId={expandedPanel}
           panels={[
             {
