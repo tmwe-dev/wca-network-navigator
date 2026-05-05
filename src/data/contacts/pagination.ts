@@ -28,7 +28,18 @@ export async function findContactsPaginated(
   }
 
   if (filters.countries?.length) query = query.in("country", filters.countries);
-  if (filters.origins?.length) query = query.in("origin", filters.origins);
+  if (filters.origins?.length) {
+    const wantsUnclassified = filters.origins.includes("__unclassified__");
+    const real = filters.origins.filter((o) => o !== "__unclassified__");
+    if (wantsUnclassified && real.length === 0) {
+      query = query.or("origin.is.null,origin.eq.");
+    } else if (wantsUnclassified && real.length > 0) {
+      const list = real.map((s) => `"${s.replace(/"/g, '""')}"`).join(",");
+      query = query.or(`origin.is.null,origin.eq.,origin.in.(${list})`);
+    } else {
+      query = query.in("origin", real);
+    }
+  }
   if (filters.cities?.length) query = query.in("city", filters.cities);
   if (filters.companies?.length) query = query.in("company_name", filters.companies);
   if (filters.names?.length) query = query.in("name", filters.names);
