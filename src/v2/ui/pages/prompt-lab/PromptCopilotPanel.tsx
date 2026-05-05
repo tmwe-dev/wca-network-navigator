@@ -386,8 +386,20 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
         </div>
       </div>
 
-      {/* SOPRA: Modifica proposta sul prompt */}
-      <div className={cn("border-b bg-card overflow-hidden flex flex-col", expanded ? "max-h-[60%]" : "max-h-[45%]")}>
+      {/* Body: layout 2 colonne (compactWidth) o verticale (default).
+          La proposta resta visibile in parallelo alla chat quando c'è spazio. */}
+      <div className={cn(
+        "flex-1 min-h-0 flex",
+        compactWidth ? "flex-row" : "flex-col"
+      )}>
+
+      {/* PROPOSTA: a sinistra (compactWidth) o sopra (mobile) */}
+      <div className={cn(
+        "bg-card overflow-hidden flex flex-col",
+        compactWidth
+          ? "w-1/2 border-r min-h-0"
+          : cn("border-b", expanded ? "max-h-[60%]" : "max-h-[45%]")
+      )}>
         <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-primary tracking-wider border-b bg-muted/40">
           {mode === "global" ? "Batch di sostituzioni globali" : "Modifica proposta dall'AI"}
         </div>
@@ -455,9 +467,17 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
             </div>
           ) : (
             <div className="p-3 space-y-2">
-              <div className="rounded border bg-background p-2 text-[12px] whitespace-pre-wrap font-mono leading-relaxed">
-                {promptProposal.proposed_content}
-              </div>
+              {/* Diff before/after evidenziato — la cosa più importante: cosa cambia */}
+              <DiffViewer before={currentContent ?? ""} after={promptProposal.proposed_content ?? ""} />
+              {/* Testo finale completo (collassato in dettaglio) */}
+              <details className="rounded border bg-muted/20">
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 hover:bg-muted/40">
+                  Vedi testo completo proposto
+                </summary>
+                <pre className="text-[12px] whitespace-pre-wrap font-mono leading-relaxed p-2 max-h-[300px] overflow-auto">
+                  {promptProposal.proposed_content}
+                </pre>
+              </details>
               {promptProposal.rationale && (
                 <div className="text-[11px]">
                   <span className="font-semibold">Perché:</span>{" "}
@@ -500,8 +520,8 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
         </ScrollArea>
       </div>
 
-      {/* SOTTO: Chat */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      {/* CHAT: a destra (compactWidth) o sotto */}
+      <div className={cn("flex-1 min-h-0 flex flex-col", compactWidth && "w-1/2")}>
         <ScrollArea className="flex-1" ref={scrollRef as never}>
           <div className="p-3 space-y-2">
             {history.length === 0 && (
@@ -644,6 +664,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
             </Button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
