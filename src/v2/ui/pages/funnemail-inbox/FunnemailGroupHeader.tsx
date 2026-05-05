@@ -3,7 +3,7 @@
  * con menu Azioni di gruppo (segna lette / assegna gruppo / archivia / elimina).
  */
 import { useState } from "react";
-import { ChevronDown, ChevronRight, MoreHorizontal, MailOpen, Tag, Archive, Trash2, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal, MailOpen, Tag, Archive, Trash2, Loader2, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -28,6 +28,7 @@ interface Props {
   onAssignGroup: (groupName: string) => void;
   onArchiveAll: () => void;
   onDeleteAll: () => void;
+  onSelectAll?: () => void;
 }
 
 const CONFIRM_THRESHOLD = 20;
@@ -41,6 +42,7 @@ interface SenderGroupRow {
 export function FunnemailGroupHeader({
   label, count, expanded, onToggle, busy,
   onMarkAllRead, onAssignGroup, onArchiveAll, onDeleteAll,
+  onSelectAll,
 }: Props) {
   const { user } = useAuth();
   const { data: groupsList = [] } = useQuery({
@@ -81,6 +83,18 @@ export function FunnemailGroupHeader({
             {count}
           </span>
         </button>
+        {onSelectAll && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 gap-1 px-1.5 text-[10px]"
+            title={`Seleziona tutte le ${count} email di "${label}"`}
+            onClick={onSelectAll}
+          >
+            <CheckSquare className="h-3 w-3" />
+            Seleziona tutte
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost" className="h-6 w-6" title="Azioni gruppo">
