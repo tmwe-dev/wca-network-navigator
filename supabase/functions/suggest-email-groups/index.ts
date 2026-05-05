@@ -171,7 +171,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Sei un assistente di classificazione email per un'azienda di freight forwarding / logistica internazionale.\n\nREGOLA CRITICA — Riconosci i COLD OUTREACH / PITCH COMMERCIALI:\nUn mittente che ci sta VENDENDO qualcosa NON è "operativo" e NON è un cliente/fornitore reale. È un venditore esterno che cerca di proporci software, servizi, consulenza, lead generation, marketing, ecc.\n\nSegnali tipici di cold pitch nei subject (anche uno solo basta):\n- Pattern "No more <pain>", "Stop <pain>", "Tired of <pain>"\n- Domande retoriche tipo "How much of your day…", "What if…", "Are you still…"\n- "Let's chat", "Quick chat", "15 min call", "Worth a chat?", "Open to a call?"\n- "Following up", "Just checking in", "Bumping this up", "Re: my last email"\n- Promesse di ROI / efficienza / crescita generiche ("grow faster", "save X hours", "AI-powered", "automate your…")\n- Pitch di software / SaaS / piattaforme / tool / "all-in-one platform"\n- Mittenti con display name personale ma dominio sconosciuto che propongono soluzioni non richieste\n\nQuesti mittenti vanno in un gruppo del tipo "Cold_Outreach", "Vendor_Pitch", "Promo_Commerciale", "Spam_Commerciale" o simile (scegli quello più vicino tra quelli esistenti). MAI in "Operativo", MAI in "Clienti", MAI in "Fornitori" reali.\n\nSe non esiste un gruppo dedicato ai cold pitch, usa "uncategorized" — è meglio non classificare che classificare male come operativo.`
+            content: `Sei un assistente di classificazione email per un'azienda di freight forwarding / logistica internazionale.`
           },
           {
             role: "user",
