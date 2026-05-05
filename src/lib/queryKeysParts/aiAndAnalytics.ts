@@ -1,0 +1,102 @@
+export const aiAndAnalyticsKeys = {
+  ai: {
+    suggestions: ["ai-suggestions"] as const,
+    memories: ["ai-memories"] as const,
+    pendingActions: ["ai-pending-actions"] as const,
+    agentPendingActions: ["agent-pending-actions"] as const,
+    decisionLog: (...args: unknown[]) => ["ai-decision-log", ...args] as const,
+    performance: {
+      kpi: ["ai-performance-kpi"] as const,
+      types: ["ai-performance-types"] as const,
+      critical: ["ai-performance-critical"] as const,
+    },
+  },
+  agents: {
+    all: ["agents"] as const,
+    tasks: (filters?: unknown) => ["agent-tasks", filters] as const,
+    clients: (agentId?: string) => ["agent-clients", agentId] as const,
+    forRecord: (sourceId?: string) => ["agent-for-record", sourceId] as const,
+    dashboard: {
+      tasks: (filters?: unknown) => ["agent-dashboard-tasks", filters] as const,
+      agents: ["agent-dashboard-agents"] as const,
+    },
+    allForCapabilities: () => ["agents-for-capabilities"] as const,
+    capabilities: (agentId?: string) => ["agent-capabilities", agentId] as const,
+    persona: (agentId?: string) => ["agent-persona-lab", agentId] as const,
+    audit: () => ["agent-audit"] as const,
+    routingRules: () => ["agent-routing-rules"] as const,
+  },
+  missions: {
+    activeActions: (filters?: unknown) => ["active-mission-actions", filters] as const,
+    actions: (missionId: string) => ["mission-actions", missionId] as const,
+    recipientSearch: (q: string) => ["mission-recipient-search", q] as const,
+  },
+  explore: { counters: ["explore", "tab-counters"] as const },
+  dashboard: {
+    responseCountry: (filters?: unknown) => ["dashboard-response-country", filters] as const,
+    leadScoreDist: ["dashboard-lead-score-dist"] as const,
+    channelDist: ["dashboard-channel-dist"] as const,
+    activityTrend: (filters?: unknown) => ["dashboard-activity-trend", filters] as const,
+  },
+  guida: { stats: ["guida-stats"] as const, agents: ["guida-agents"] as const },
+  supervisor: {
+    kpis: ["supervisor-kpis"] as const,
+    feed: (actorType: string, category: string, search: string, page: number) =>
+      ["supervisor-audit-log", actorType, category, search, page] as const,
+    count: (filters?: unknown) => ["supervisor-audit-count", filters] as const,
+  },
+  intelliflow: { stats: ["intelliflow-stats"] as const },
+  arena: { suggestions: (...args: unknown[]) => ["arena-suggestions", ...args] as const },
+  superHome: { count: ["super-home-count"] as const },
+  convContext: { byEmail: (email?: string) => ["conv-context", email] as const },
+  abTests: { all: ["ab-tests"] as const },
+  opsCenter: {
+    emailQueue: (filters?: unknown) => ["ops-center-email-queue", filters] as const,
+    agentTasks: (filters?: unknown) => ["ops-center-agent-tasks", filters] as const,
+    activities: (filters?: unknown) => ["ops-center-activities", filters] as const,
+  },
+  groupAddressCounts: (group?: string) => ["group-address-counts", group] as const,
+  promptLabGlobalRuns: {
+    active: (userId: string) => ["prompt-lab-global-runs", "active", userId] as const,
+    history: (userId: string, limit?: number) => ["prompt-lab-global-runs", "history", userId, limit] as const,
+  },
+  promptCatalog: { all: (userId: string) => ["prompt-lab-catalog", userId] as const },
+  promptProposals: { list: (filters?: unknown) => ["prompt-change-proposals", filters] as const },
+  kbProposals: { list: (filters?: unknown) => ["kb-entry-proposals", filters] as const },
+  kbIndexMap: ["kb-index-map"] as const,
+  dealsList: ["deals-list"] as const,
+  deals: {
+    all: ["deals"] as const,
+    filtered: (filters?: Record<string, unknown>) => ["deals", "filtered", filters] as const,
+    byStage: ["deals-by-stage"] as const,
+  },
+  deal: (id: string) => ["deal", id] as const,
+  dealStats: ["deal-stats"] as const,
+  dealActivities: (dealId: string) => ["deal-activities", dealId] as const,
+  calendar: ["calendar"] as const,
+  analytics: {
+    emailMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-email", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    partnerMetrics: () => ["analytics-partners"] as const,
+    outreachMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-outreach", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    aiUsageMetrics: (dateRange: { from: Date; to: Date }) =>
+      ["analytics-ai-usage", dateRange.from.toISOString(), dateRange.to.toISOString()] as const,
+    pipelineMetrics: () => ["analytics-pipeline"] as const,
+    activityTimeline: (days: number) => ["analytics-timeline", days] as const,
+    metricsComparison: (
+      current: { from: Date; to: Date },
+      previous: { from: Date; to: Date },
+    ) => [
+      "analytics-comparison",
+      current.from.toISOString(),
+      current.to.toISOString(),
+      previous.from.toISOString(),
+      previous.to.toISOString(),
+    ] as const,
+  },
+  responseRateCard: ["response-rate-card"] as const,
+  activeSchedules: ["active-schedules"] as const,
+  atecoGroups: ["ateco-groups"] as const,
+  noop: ["noop"] as const,
+} as const;
