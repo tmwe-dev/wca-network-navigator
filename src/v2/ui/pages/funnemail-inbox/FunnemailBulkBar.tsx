@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MailOpen, Tag, Archive, Trash2, X, Loader2, Check } from "lucide-react";
+import { MailOpen, Tag, Archive, Trash2, X, Loader2, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/providers/AuthProvider";
 import { untypedFrom } from "@/lib/supabaseUntyped";
+import { invokeEdge } from "@/lib/api/invokeEdge";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -25,6 +27,8 @@ interface Props {
   onAssignGroup: (groupName: string) => void;
   onArchive: () => void;
   onDelete: () => void;
+  /** ID dei messaggi selezionati per la classificazione retroattiva. */
+  selectedIds?: string[];
 }
 
 interface SenderGroupRow {
@@ -36,11 +40,27 @@ interface SenderGroupRow {
 const CONFIRM_THRESHOLD = 20;
 
 export function FunnemailBulkBar({
-  count, busy, onClear, onMarkRead, onAssignGroup, onArchive, onDelete,
+  count, busy, onClear, onMarkRead, onAssignGroup, onArchive, onDelete, selectedIds,
 }: Props) {
   const { user } = useAuth();
   const [confirm, setConfirm] = useState<null | "archive" | "delete">(null);
   const [groupOpen, setGroupOpen] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+
+  const runRetroClassify = async () => {
+    if (!selectedIds?.length) return;
+    setClassifying(true);
+    try {
+      const res = await invokeEdge("classify-emails-batch", {
+        message_ids: selectedIds,
+      }) as { ok: boolean; total: number; processed: number; errors: number };
+      toast.success(`Classificate ${res.processed}/${res.total}${res.errors ? ` · ${res.errors} errori` : ""}`);
+    } catch (e) {
+      toast.error(`Classificazione fallita: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setClassifying(false);
+    }
+  };
 
   const { data: groupsList = [] } = useQuery({
     queryKey: ["email-sender-groups", "list", user?.id ?? "anon"],
@@ -75,6 +95,19 @@ export function FunnemailBulkBar({
           >
             <MailOpen className="h-3.5 w-3.5" /> Lette
           </Button>
+
+          {selectedIds && selectedIds.length > 0 && (
+            <Button
+              size="sm" variant="ghost"
+              className="h-7 gap-1 px-2 text-[11px]"
+              onClick={runRetroClassify}
+              disabled={busy || classifying}
+              title="Classifica retroattivamente le email selezionate"
+            >
+              {classifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Classifica
+            </Button>
+          )}
 
           <Popover open={groupOpen} onOpenChange={setGroupOpen}>
             <PopoverTrigger asChild>
