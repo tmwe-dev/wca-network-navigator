@@ -12,7 +12,7 @@
  * dettaglio inline a destra. Selezione 2+ → BulkActionsPanel.
  */
 import * as React from "react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useTrackPage } from "@/hooks/useTrackPage";
