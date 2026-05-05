@@ -75,6 +75,7 @@ interface CardProps {
   groups: EmailSenderGroup[];
   isSelected: boolean;
   isFocused: boolean;
+  isRemoving: boolean;
   onToggleSelect: (email: string) => void;
   onFocus: (row: AddressRow) => void;
   onAnalyzeOne: (row: AddressRow) => void;
@@ -86,7 +87,7 @@ interface CardProps {
 }
 
 const SuggestionCard = memo(function SuggestionCard({
-  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
+  row, groups, isSelected, isFocused, isRemoving, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
 }: CardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = row.domain || getDomain(row.email_address);
@@ -112,8 +113,10 @@ const SuggestionCard = memo(function SuggestionCard({
     <Card
       className={cn(
         "border-l-4 transition-all hover:shadow-md cursor-pointer",
+        "transition-[opacity,transform,max-height,margin,padding] duration-300 ease-out overflow-hidden",
         isFocused && "ring-2 ring-primary shadow-md",
         isSelected && "border-2 border-primary bg-primary/5",
+        isRemoving && "opacity-0 scale-95 -translate-y-1 max-h-0 my-0 py-0 border-0 pointer-events-none",
       )}
       style={{ borderLeftColor: accent }}
       onClick={() => onFocus(row)}
