@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 import { z, safeParseToolArgs } from "../_shared/aiJsonValidator.ts";
+import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 
 const ClassificationsSchema = z.object({
   classifications: z
