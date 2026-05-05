@@ -783,3 +783,72 @@ html, body {
   border-top: 1px solid hsl(var(--border));
   margin: 1em 0;
 }
+
+/* ── Ported from WueForm: theme-aware accents + glass + gradients ── */
+@layer utilities {
+  .theme-btn {
+    background: var(--theme-accent-bg);
+    border: 1px solid var(--theme-accent-border);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .theme-btn:hover { background: var(--theme-accent-hover); }
+  .theme-section {
+    background: var(--theme-section-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .theme-notice {
+    background: var(--theme-notice-bg);
+    border: 1px solid var(--theme-notice-border);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .theme-active-toggle {
+    background: var(--theme-active-bg);
+    border-color: var(--theme-active-border);
+  }
+  .theme-icon-active { color: var(--theme-icon-active); }
+
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 8px 32px hsl(var(--glass-shadow));
+  }
+  .glass-subtle {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
+  }
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light)));
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-gold-text {
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .border-gold {
+    border: 2px solid transparent;
+    background:
+      linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+      linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)), hsl(var(--gold-light))) border-box;
+  }
+  .ring-gold {
+    box-shadow: 0 0 0 2px hsl(var(--gold) / 0.3), 0 0 0 4px hsl(var(--gold) / 0.1);
+  }
+}
