@@ -15,7 +15,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Loader2, Package, RefreshCw, Wrench } from "lucide-react";
+import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Inbox, Loader2, Package, RefreshCw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
