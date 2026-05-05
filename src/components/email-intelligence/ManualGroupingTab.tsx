@@ -704,6 +704,31 @@ export default function ManualGroupingTab() {
                   </>
                 )}
               </span>
+              {acceptableCount > 0 && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-7 px-2 ml-2 gap-1"
+                        onClick={handleAcceptAllAiSuggestions}
+                        disabled={isAcceptingAll}
+                      >
+                        {isAcceptingAll
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Sparkles className="h-3.5 w-3.5" />}
+                        <span className="text-xs font-medium">
+                          Accetta tutti ({acceptableCount})
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Accetta in blocco i suggerimenti AI generati sulle card
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             {sortedSenders.length === 0 ? (
               <p className="text-center py-12 text-sm text-muted-foreground">
