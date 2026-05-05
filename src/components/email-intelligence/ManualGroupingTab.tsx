@@ -33,6 +33,7 @@ import type { SenderAnalysis, EmailSenderGroup } from "@/types/email-management"
 import { supabase } from "@/integrations/supabase/client";
 import { bulkUpdateAutoAction, bulkSetBlocked } from "@/data/emailAddressRules";
 import { cn } from "@/lib/utils";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 import { useGroupingData } from "./manual-grouping/useGroupingData";
 import { useFilterAndSort } from "./manual-grouping/useFilterAndSort";
@@ -40,6 +41,12 @@ import { useDragAndDrop } from "./manual-grouping/useDragAndDrop";
 import { useGroupAssignment } from "./manual-grouping/useGroupAssignment";
 import { useSelectionState } from "./manual-grouping/useSelectionState";
 import { ActiveFiltersBar } from "./manual-grouping/ActiveFiltersBar";
+
+interface SuggestEmailGroupsResponse {
+  processed?: number;
+  suggestions?: Array<{ email: string; suggested_group: string; confidence: number; reasoning?: string }>;
+  error?: string;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Sub-componenti locali
@@ -461,9 +468,34 @@ export default function ManualGroupingTab() {
     setShowExportDialog(true);
   }, []);
 
-  const onCardAnalyzeAI = useCallback((s: SenderAnalysis) => {
-    toast.info(`Analisi AI di ${s.companyName} — in arrivo`);
-  }, []);
+  const onCardAnalyzeAI = useCallback(async (s: SenderAnalysis) => {
+    const toastId = toast.loading(`Analisi AI di ${s.companyName}…`);
+    try {
+      const data = await invokeAi<SuggestEmailGroupsResponse>("suggest-email-groups", {
+        scope: "email",
+        context: {
+          source: "ManualGroupingTab.onCardAnalyzeAI",
+          route: "/v2/email-intelligence",
+          mode: "single-address-suggestion",
+          extra: { email: s.email, domain: s.domain },
+        },
+        body: { emails: [s.email], min_email_count: 0, batch_size: 1 },
+      });
+
+      await loadData();
+
+      const suggestion = data.suggestions?.find((item) => item.email.toLowerCase() === s.email.toLowerCase());
+      if (suggestion?.suggested_group && suggestion.suggested_group !== "uncategorized") {
+        toast.success(`Suggerito: ${suggestion.suggested_group}`, { id: toastId });
+        handleAiChipClick(suggestion.suggested_group);
+        return;
+      }
+
+      toast.info("AI completata: nessun gruppo affidabile trovato", { id: toastId });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Errore analisi AI", { id: toastId });
+    }
+  }, [handleAiChipClick, loadData]);
 
   const onCardAcceptAiSuggestion = useCallback(
     async (s: SenderAnalysis, groupName: string) => {
