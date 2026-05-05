@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
+import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 
 const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ label: string; path: string }> }> = [
   {
