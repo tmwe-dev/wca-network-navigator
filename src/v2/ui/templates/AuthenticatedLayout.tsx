@@ -277,6 +277,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-2">
+                          <MobileThemeButton />
                           <button
                             onClick={() => setCommandOpen(true)}
                             className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
