@@ -1,155 +1,82 @@
-# Piano — Prompt Reader collaborativo + KB Index Map
+## Obiettivo
 
-## Parte 1 — Lettura della guida COBRA (parere d'uso)
+Creare un **Codex operativo personale** per Lovable, calibrato sul progetto WCA Network Navigator, che applico automaticamente a ogni tua richiesta. Tu lo richiami con una parola-chiave (es. "codex", "applica codex", "modalità codex") e io seguo il protocollo. Risultato: zero modifiche selvagge, zero "ho fixato" non veri, zero rotture collaterali.
 
-La guida è ottima e **coerente al 90%** con l'ADR 0004 appena salvato. Tre raffinamenti rispetto a quello che già abbiamo:
+## Cosa creo
 
-**Da adottare integralmente**
-- Prompt come **artefatto a blocchi** (`role / mission / constraints / tools / workflow / output_format / examples / refusal_policy`). Più granulare del nostro attuale 5-sezioni (Identità/Obiettivo/Metodo/Guardrail/Output). Compatibile: i nostri 5 blocchi sono mappabili 1:1 sui blocchi COBRA.
-- Quattro ruoli AI separati e non fondibili: **Architect** (diagnosi, no scritture) → **Editor** (modifica chirurgica un blocco) → **Global Improver** (raro, alto rischio) → **Test Runner + Evaluator** (deterministico). Già parzialmente nel nostro Prompt Lab ma non separati come ruoli.
-- Regola di approvazione: `candidate_score ≥ active_score AND candidate_score ≥ 80 AND no blocking failures`.
+### 1. `docs/governance/lovable-codex.md` — Il Codex completo (lungo)
 
-**Da adattare al nostro contesto (non da copiare letteralmente)**
-- Schema dati: la guida propone `agents/prompt_versions/prompt_blocks/golden_inputs/rubrics/test_runs/evaluations/...`. Noi abbiamo già `operative_prompts`, `prompt_versions`, `prompt_test_cases`, `prompt_test_runs`, `agent_personas`, `agent_capabilities`, `kb_entries`. Da ADR 0004: tutto va racchiuso in **runtime_bundles** (prompt+persona+KB snapshot+capabilities+routing+guards+model+temp). La guida COBRA non versiona il bundle, solo il prompt → la nostra ADR 0004 è più severa, va tenuta.
-- Edge functions: la guida propone `architect-analyze / build-prompt-from-blocks / test-run-batch / evaluate-run / deploy-version / rollback-version`. Da unificare nel **Prompt Change Kernel** unico (ADR 0004) che orchestra le sotto-fasi internamente — evita 6 endpoint indipendenti che bypassano la governance.
-- Anti-pattern: i 5 della guida coincidono con i nostri.
+Documento di riferimento con:
 
-**Da NON copiare**
-- Il file-system per blocchi (`role.md`, `mission.md`…). Da noi i blocchi vivono in tabelle (`operative_prompts.context/objective/procedure/criteria/examples`), non su filesystem. Manteniamo DB-first.
+- **§1 Principio madre**: priorità = aggiungere senza rompere. Eco del workspace knowledge.
+- **§2 Classificazione interventi** (TRIM / STANDARD / CRITICAL) con regole specifiche del progetto:
+  - CRITICAL automatico se tocca: `agent-loop`, `agent-execute`, `generate-email`, `generate-outreach`, `classify-*`, `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, edge function di invio, RLS, schema DB, `operative_prompts`, `ai_scope_registry`, `hardGuards.ts`, `editorial review`, `lead-status guard`, `auth/whitelist`, soft-delete trigger.
+  - STANDARD: hook V2, componente UI con logica, DAL non critico.
+  - TRIM: rinomine, commenti, copy, classi Tailwind locali.
+- **§3 Routing per intento** (10 rotte, adattate al progetto): bug fix, nuova feature, refactor, schema/migration, integrazione esterna, performance, deploy, incertezza, gate consegna, default safe.
+- **§4 Verbo Lovable** (9 domande prima di consegnare).
+- **§5 Difesa integrata**: validazione Zod, no `any`, `.maybeSingle()`, no wildcard CORS, secrets via env, no log di dati sensibili, no fallback silenziosi, structured logger.
+- **§6 Rollback**: 4 punti scritti per CRITICAL (file toccati, come tornare indietro, effetti irreversibili, soglia).
+- **§7 Anti-pattern del progetto** (estensione del Codex Cobra ai vincoli locali):
+  - Mai chiamate dirette `supabase.from()` fuori da `src/data/`.
+  - Mai `supabase.functions.invoke` su edge AI: solo `invokeAi()` con scope.
+  - Mai bypass di `journalistReview` su email/WA/LI.
+  - Mai DELETE fisico su tabelle business.
+  - Mai modifica a `check-inbox`/`email-imap-proxy`/`mark-imap-seen` senza autorizzazione.
+  - Mai `getUser()` di rete per validare JWT.
+  - Mai V1 import in V2.
+  - Mai inline query keys (centralizzati in `src/lib/queryKeys.ts`).
+  - Mai refactor opportunistico assieme a fix.
+- **§8 Checkpoint** (CK1-CK7): ingresso task, prima di scrivere, incertezza, secondo problema, gate "fatto", dati persistenti, effetti irreversibili.
+- **§9 Formato output obbligatorio** per CRITICAL/STANDARD: CLASSE / OBIETTIVO / SUCCESSO / BLAST RADIUS / ASSUNZIONI / DIFESA / ROLLBACK / TEST / CHANGELOG.
+- **§10 Registri**: `[VERIFICATO]` / `[ATTESO]` / `[ASSUNTO]`. Frasi senza registro = invalide.
+- **§11 Regole inviolabili del progetto** (le 14 memorie Core + 8 del Cobra), unica lista di "no" non derogabili.
 
-→ La guida COBRA viene allegata come complemento operativo all'ADR 0004 (`docs/adr/0004-prompt-governance-runtime-bundle.md → riferimento a docs/governance/cobra-blocks-and-roles.md`). Nessuna modifica alle fondazioni.
+### 2. `docs/governance/lovable-quick-codex.md` — Quick Codex (la versione che uso davvero)
 
----
+Versione tascabile, 1 pagina, ottimizzata per applicazione veloce ad ogni messaggio.
 
-## Parte 2 — Prompt Reader collaborativo (cosa cambia in UI)
+Struttura:
 
-Layout attuale `/v2/prompt-reader`: sidebar agenti a sinistra + testo prompt assemblato al centro + sezione KB sotto + bottoni download.
-
-Layout target: **3 colonne**.
-
-```text
-┌─────────────┬───────────────────────────┬───────────────────┐
-│  Sidebar    │  Prompt assemblato        │  Co-pilot Chat    │
-│  Agenti     │  (blocchi cliccabili)     │  (AI ↔ KB)        │
-│  (esistente)│                           │                   │
-│             │  ▸ Identità  [seleziona]  │  Tu: migliora il  │
-│             │  ▸ Obiettivo              │  blocco Identità  │
-│             │  ▸ Metodo                 │                   │
-│             │  ▸ Guardrail              │  AI: leggo KB     │
-│             │  ▸ Output                 │  [doctrine, …]    │
-│             │  ▸ Persona                │  Diff proposto:   │
-│             │  ▸ Capabilities           │  - vecchio        │
-│             │  ▸ KB iniettata           │  + nuovo          │
-│             │                           │  [Crea CR] ¹      │
-└─────────────┴───────────────────────────┴───────────────────┘
+```
+TRIGGER → CLASSE → CHECKLIST → OUTPUT
 ```
 
-¹ "CR" = `change_request` registrata nel sistema (NON deploy diretto). Rispetta ADR 0004: la chat **non scrive sul prompt attivo**, produce solo proposte.
+Contenuto:
 
-**Comportamenti chat**
-- Click su un blocco del prompt → la chat lo riceve come "blocco target" (replica del pattern Editor della guida COBRA).
-- L'utente scrive cosa migliorare. L'AI:
-  1. Carica le KB pertinenti tramite la **KB Index Map** (Parte 3).
-  2. Mostra esplicitamente quali entry KB ha letto (chip cliccabili).
-  3. Propone un diff sul blocco (testo originale → testo nuovo) + motivazione + rischi + assunzioni (output Editor della guida).
-  4. Pulsante "Crea Change Request" → scrive in tabella `change_requests` (per ora `prompt_change_proposals`, schema minimo, vedi Parte 4).
-- Tab secondaria "Aggiungi materiale alla KB":
-  - Incolla testo / URL / file → AI lo analizza, propone categoria + chapter + tags + priorità + se duplica/conferma/contraddice entry esistenti.
-  - Pulsante "Crea proposta KB" → scrive in `kb_entry_proposals` (status pending, mai diretto in `kb_entries`).
+- **Tabella trigger → classe** (10 righe).
+- **Checklist 5-righe per classe**:
+  - TRIM: leggi file, modifica locale, una riga di chiusura.
+  - STANDARD: blast radius + difesa + 1 test/check + changelog mini.
+  - CRITICAL: tutto STANDARD + rollback scritto + assunzioni esplicite + verifica del nodo critico toccato (es. RLS / soft-delete / journalistReview / charter AI).
+- **Mini-Verbo a 5 domande** (versione compressa del Verbo Cobra a 9, scelte le 5 più letali sui problemi reali del progetto): Obiettivo, Blast radius, Difesa applicata, Rollback, Test/Verifica.
+- **Nodi critici del progetto** (lista breve da consultare in CK2).
+- **Output minimo obbligatorio**: prima riga `CLASSE | OBIETTIVO`, ultima sezione `CHANGELOG` con registri.
+- **3 frasi vietate** che mi blocco da solo: "dovrebbe funzionare", "ho già fixato" (senza verifica), "ne approfitto per…".
 
-**Vincoli da rispettare**
-- Charter: chat passa da `invokeAi()` con `scope='lab'` e `context.source='prompt-reader-copilot'`.
-- DAL only: nuove query in `src/data/promptChangeProposals.ts` e `src/data/kbProposals.ts`.
-- UI logic-less: state e business in hook `usePromptCopilot.ts`.
-- Editorial review NON si applica (non è messaggio commerciale).
+### 3. Memoria persistente `mem://standards/lovable-codex-protocol.md`
 
----
+Memoria type=`preference` che dice: "Quando l'utente scrive `codex` (o `applica codex`, `modalità codex`, `quick codex`), seguo il protocollo in `docs/governance/lovable-quick-codex.md`. Per CRITICAL leggo anche il Codex completo. Output sempre con `CLASSE | OBIETTIVO` in cima e `CHANGELOG` con registri in fondo."
 
-## Parte 3 — KB Index Map (il documento richiesto)
+Aggiunta in `mem://index.md` sotto Core (rule universale).
 
-Obiettivo: dare all'AI una **mappa navigabile** delle KB invece di farle leggere 167 entry ogni volta. Due artefatti:
+### 4. Aggiornamento `.lovable/plan.md`
 
-**A) Documento markdown statico** `docs/governance/kb-index-map.md`
-- Una sezione per ogni **categoria canonica** (6, già definite nell'audit del 2026-05-02): `doctrine`, `procedures`, `personas`, `playbooks`, `glossary`, `data-schema`.
-- Per ogni categoria: scopo, quando usarla, esempi di domande che la KB risolve, agenti che la consumano (incrocio con `kbCategories` del registry).
-- Una sezione "decision tree": dato un intento ("validare un blocco Identità", "verificare regola commerciale", "controllare schema DB"), quale categoria/chapter consultare.
-- Tabella inversa "agente → KB": per ciascun agente attivo, lista delle KB iniettate ordinate per priorità.
+Sezione "Protocollo Codex attivo" che riassume: parola-chiave di attivazione, output atteso, esempio di risposta conforme.
 
-**B) Endpoint runtime** `kb-index-map` (edge function read-only)
-- Restituisce JSON strutturato: `{categories:[{key, purpose, chapters:[…], agents_using:[…], avg_priority}], agent_to_kb:{agent_slug:[entry_id…]}, intent_routing:{intent:[category…]}}`.
-- Generato on-demand da `kb_entries` (no duplicazione dati). Cache 10 min.
-- Consumato dalla chat copilota: prima di proporre un diff l'AI chiama `kb-index-map`, decide quali entry leggere, poi `findKbEntries({ids})`. Riduce drasticamente i token.
-- Esposto anche nella UI come tab "Mappa KB" del Prompt Reader (per ispezione umana).
+## Come funzionerà in pratica
 
----
+1. Tu scrivi una richiesta normale, opzionalmente preceduta da `codex` o `applica codex`.
+2. Io leggo, identifico la classe (TRIM/STANDARD/CRITICAL).
+3. Per TRIM: rispondo veloce, output minimo (1 riga di chiusura).
+4. Per STANDARD/CRITICAL: applico checklist, dichiaro CLASSE/OBIETTIVO in apertura, eseguo, chiudo con CHANGELOG con registri.
+5. Se incontro incertezza CRITICA → STOP e chiedo, non procedo.
+6. Se vedo un secondo problema durante il lavoro → lo registro in DEBITO RESIDUO, non lo tocco.
 
-## Parte 4 — Schema dati minimo (solo nuove tabelle, nessuna modifica a quelle esistenti)
+## Confermi e procedo
 
-Coerente con ADR 0004 ma intermedio: pone le basi senza implementare ancora il Runtime Bundle completo.
+Se confermi:
+- Creo i 2 documenti + la memoria + l'update `.lovable/plan.md` in un unico passaggio.
+- Da quel momento in poi il Codex è attivo per default sui CRITICAL (sempre) e su richiesta esplicita per STANDARD/TRIM.
 
-```sql
--- Proposte di modifica prompt (output della chat copilota)
-prompt_change_proposals (
-  id, prompt_id, block_name, source_tool, status,
-  current_content, proposed_content, diff,
-  rationale, risks, assumptions,
-  kb_entries_consulted uuid[],   -- audit trail
-  created_by, created_at
-)
-
--- Proposte di nuovo materiale KB
-kb_entry_proposals (
-  id, source ('paste'|'url'|'file'), raw_content,
-  suggested_category, suggested_chapter,
-  suggested_title, suggested_tags, suggested_priority,
-  conflicts_with uuid[], duplicates_of uuid,
-  status, created_by, created_at,
-  approved_kb_entry_id  -- popolato dopo approval
-)
-```
-
-RLS: lettura globale operatori autenticati, scrittura legata a `auth.uid()`. No DELETE fisico (soft-delete via trigger esistente).
-
----
-
-## Parte 5 — Edge functions (3 nuove)
-
-1. `prompt-copilot-chat` — chat streaming. Riceve `{agent_id, block_name?, messages, mode:'edit'|'kb_intake'}`. Carica KB tramite `kb-index-map`, restituisce risposta + (opzionale) diff strutturato + lista entry consultate. **Mai deploy**, mai scrittura diretta su prompt.
-2. `kb-index-map` — read-only, restituisce la mappa JSON descritta in Parte 3.
-3. `kb-intake-analyze` — riceve raw content, restituisce suggerimento categoria/chapter/duplicati/conflitti. Usato dalla tab "Aggiungi materiale".
-
-Tutte e tre passano da `_shared/operativePromptsLoader.ts` per i loro system prompt (editabili da Prompt Lab, no hardcode).
-
----
-
-## Parte 6 — Ordine di implementazione
-
-| # | Step | Effort |
-|---|------|--------|
-| 1 | Migration `prompt_change_proposals` + `kb_entry_proposals` + RLS | S |
-| 2 | DAL `promptChangeProposals.ts` + `kbProposals.ts` | S |
-| 3 | Documento `docs/governance/kb-index-map.md` (statico) | S |
-| 4 | Edge `kb-index-map` (read-only) + DAL | M |
-| 5 | Edge `prompt-copilot-chat` (streaming, scope=lab) | M |
-| 6 | Edge `kb-intake-analyze` | S |
-| 7 | UI 3-colonne in `PromptReaderPage` con tab Chat / Mappa KB / Aggiungi KB | M |
-| 8 | Hook `usePromptCopilot` + componenti `BlockSelector`, `DiffPreview`, `KbConsultedChips`, `KbIntakeForm` | M |
-| 9 | Pagina `/v2/prompt-lab/proposals` per review proposte (lista + accept/reject) | M |
-| 10 | Memoria `mem://features/prompt-copilot-and-kb-index` | XS |
-
----
-
-## Cosa **NON** è in questo piano (rimandato)
-
-- Runtime Bundle completo, Change Kernel unificato, Rubric Engine, Coverage Matrix → restano nell'ADR 0004 come fasi successive.
-- Auto-approval delle change request → manuale finché non c'è il Rubric Engine.
-- Migrazione degli altri tool del Prompt Lab al kernel → fase 3 dell'ADR.
-
-## Definition of Done di questo piano
-
-1. Da `/v2/prompt-reader` posso selezionare un blocco e chiedere all'AI di migliorarlo.
-2. La risposta mostra esplicitamente quali KB ha consultato (chip cliccabili).
-3. Posso salvare la proposta come `change_request` (review separata).
-4. Posso incollare nuovo materiale e l'AI propone categoria/chapter/duplicati.
-5. Il documento `kb-index-map.md` esiste e l'endpoint runtime restituisce JSON coerente.
-6. Nessuna scrittura diretta su `operative_prompts` o `kb_entries` da parte della chat.
+Vuoi che la parola-chiave di attivazione sia **`codex`** (corta) o preferisci **`applica codex`** (esplicita, meno rischio di trigger accidentale)?
