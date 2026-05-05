@@ -1,56 +1,75 @@
 ## Obiettivo
+Rendere il Co-pilot leggibile: "Modifica proposta" e "Chat" affiancate in due colonne dentro lo stesso pannello, con scivolamento automatico quando la sidebar sinistra si riduce. Aggiungere il diff visivo nelle proposte salvate.
 
-Trasformare `/v2/prompt-reader` in un layout a 2 pannelli (Prompt Reader ↔ Co-pilot) **invertibili via drag & drop**, con il **menu agenti spostato dentro la sidebar a scomparsa** e il Co-pilot espandibile a tutta larghezza per leggere comodamente in verticale.
+## Cambiamenti UI
 
-## Layout target
+### 1. `PromptCopilotPanel.tsx` — layout interno orizzontale
+
+Oggi: verticale (proposta sopra ~45%, chat sotto).
+Nuovo: due colonne affiancate sotto l'header.
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ Header: Home / Prompt Reader   [Proposte][Ricarica][Export] │
-├──┬──────────────────────────────────────────────────────────┤
-│≡ │ ┌─ Pannello A ─────────┐  ┌─ Pannello B ──────────────┐ │
-│M │ │ ⠿ Prompt Reader      │  │ ⠿ Co-pilot                │ │
-│E │ │   (chiaro, blocchi)  │  │ (chat, proposte, KB)     │ │
-│N │ │                      │  │                           │ │
-│U │ │                      │  │            [⛶ espandi]   │ │
-└──┴────────────────────────┘  └──────────────────────────┘ │
+┌─────────────────────────────────────────────────────────┐
+│ HEADER (Blocco/Globale + selettore)                      │
+├─────────────────────────┬───────────────────────────────┤
+│  MODIFICA PROPOSTA      │  CHAT                          │
+│  - rationale            │  - bubbles                     │
+│  - diff before/after    │  - input + send                │
+│  - risks/assumptions    │  - allega KB                   │
+│  - bottoni Salva/Scarta │                                │
+│  (50%)                  │  (50%)                         │
+└─────────────────────────┴───────────────────────────────┘
 ```
 
-- **Sidebar a scomparsa (sinistra)**: contiene la lista agenti raggruppata per categoria (oggi è inline). Tab/linguetta come quella già presente per aprire/chiudere.
-- **Pannello A / Pannello B**: due colonne 50/50. Hanno una **handle in alto** (icona `⠿ GripVertical`). Trascinando una handle sopra l'altra, i due pannelli si **scambiano di posto** (animazione 200ms). Lo stato dell'ordine è persistito in `localStorage` (`prompt-reader.panel-order`).
-- **Espansione Co-pilot**: bottone `⛶` in alto a destra del Co-pilot. Quando attivo, il Co-pilot occupa **entrambe le colonne** (full-width sull'area centrale, sidebar agenti resta a scomparsa). Stesso bottone per tornare a 50/50. Stato persistito (`prompt-reader.copilot-expanded`).
-- Quando Co-pilot è espanso, la chat e l'area "Modifica proposta" guadagnano spazio verticale: il pannello chat usa l'altezza disponibile (`flex-1`), e il box "Modifica proposta dall'AI" passa da `max-h-[45%]` a `max-h-[60%]` con `ScrollArea` interno per leggere proposte lunghe senza tagli.
+Regole:
+- Sotto 1024px di larghezza pannello: torna verticale (proposta sopra, chat sotto) per non comprimere troppo.
+- Stato `expanded` (Maximize2 esistente) resta: in expanded le due colonne occupano tutta l'altezza disponibile.
+- ScrollArea indipendente per ciascuna colonna.
 
-## Comportamenti chiave
+### 2. `PromptReaderPage.tsx` — scivolamento alla compressione sidebar
 
-1. **Drag & drop swap**: implementato con `@dnd-kit/core` (già nel progetto se presente) o, se non disponibile, con HTML5 nativo (`draggable`, `onDragStart`, `onDrop`). Solo 2 zone di drop, nessuna libreria pesante. Animazione fade/translate via `transition-all`.
-2. **Sidebar agenti**:
-   - Linguetta verticale stile attuale, di default **chiusa** quando l'utente apre il Co-pilot espanso.
-   - Width 240px quando aperta, 0 quando chiusa.
-   - Manteniamo i 7 gruppi (`core/email/outreach/...`) e la search non c'è oggi: non la aggiungiamo.
-3. **Co-pilot espanso**:
-   - Pulsante `Maximize2 / Minimize2` (lucide) in header del pannello.
-   - In modalità espansa, il Pannello A (Prompt Reader) si nasconde con `hidden`, non viene smontato (state preservato in cache `cache[id]`).
-   - Quando l'utente clicca un blocco "Modifica con Co-pilot" nel Reader (futuro hook), il Co-pilot torna automaticamente a 50/50.
-4. **Ordine pannelli**: l'inversione cambia solo la posizione visiva. Le props passate a `PromptCopilotPanel` restano invariate (`agentSlug`, `blockName`, `currentContent`).
+Oggi: SwapPanels mostra Reader/Co-pilot in due pannelli a 50/50.
+Nuovo: quando l'utente collassa la sidebar agenti/blocchi (controllo già esistente in pagina), il pannello Co-pilot riceve più larghezza e attiva automaticamente il layout a 2 colonne interno.
 
-## File toccati (solo presentation)
+Tecnicamente:
+- Ascoltare la larghezza del container del Co-pilot via `ResizeObserver`.
+- Passare prop `compactWidth: boolean` a `PromptCopilotPanel` che decide colonne vs righe.
+- Animazione 200ms (coerente con SwapPanels esistente).
 
-- `src/v2/ui/pages/prompt-lab/PromptReaderPage.tsx`
-  - Estrarre la lista agenti in `<aside>` di sinistra (sidebar a scomparsa, già esiste: spostare DENTRO il menu navigazione che oggi sta inline) — oggi è già così, va solo confermato che il menu è UNICAMENTE in quella sidebar collassabile.
-  - Sostituire `<main> + <aside>` (Reader + Co-pilot) con un contenitore `SwapPanels` che gestisce ordine + espansione.
-  - Aggiungere stato: `panelOrder: ["reader","copilot"] | ["copilot","reader"]`, `copilotExpanded: boolean`. Persistenza `localStorage`.
-- Nuovo: `src/v2/ui/pages/prompt-lab/components/SwapPanels.tsx`
-  - Componente presentational con 2 slot (`left`, `right`), handle drag, swap on drop, supporto modalità "fullscreen right".
-- `src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx`
-  - Aggiungere prop opzionale `expanded?: boolean` + `onToggleExpand?: () => void`. Bottone `Maximize2/Minimize2` in header. Quando `expanded`, alzare `max-h` del box "Modifica proposta" e dare più altezza alla chat.
+### 3. Diff visivo nelle proposte (UX, non logica)
 
-## Cosa NON cambia
-- Logica Co-pilot (`prompt-copilot-chat`, intake KB, proposte) invariata.
-- Sidebar agenti contenuto/ordine/categorie invariati.
-- ProposalsReviewPage invariato.
-- Nessuna modifica a edge functions, DAL, hook AI.
+In `PromptCopilotPanel.savePromptProposal()`:
+- Calcolare `diff_text` lato client con un diff semplice riga-per-riga (libreria `diff` già usata altrove o utility minima inline).
+- Passarlo a `createPromptChangeProposal({ diff_text })`.
 
-## Risultato
+In `ProposalsReviewPage.tsx` (la pagina dove approvi):
+- Render del diff con righe rosse/verdi, già supportato da `diff_text` nel record.
 
-L'utente entra su `/v2/prompt-reader`, vede 2 pannelli affiancati. Se vuole più spazio per scrivere/leggere col Co-pilot, clicca `⛶` e occupa tutta l'area; se preferisce avere il Co-pilot a sinistra, trascina la handle e i due pannelli si scambiano. Il menu agenti è sempre raggiungibile dalla linguetta a sinistra ma non occupa spazio quando non serve.
+### 4. Anche dentro il Co-pilot: mostra diff nella colonna "Modifica proposta"
+Oggi mostra solo `proposed_content` come blob unico. Aggiungere sopra (o in tab) un mini-diff before/after così vedi subito **cosa cambia** rispetto a `currentContent`, senza dover rileggere parola per parola.
+
+## File toccati
+
+| File | Modifica |
+|---|---|
+| `src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx` | Layout 2 colonne responsive + render diff |
+| `src/v2/ui/pages/prompt-lab/PromptReaderPage.tsx` | ResizeObserver → prop `compactWidth` |
+| `src/v2/ui/pages/prompt-lab/ProposalsReviewPage.tsx` | Render `diff_text` se presente |
+| `src/lib/textDiff.ts` (nuovo) | Utility `computeLineDiff(before, after)` minimale |
+
+## Cosa NON cambio
+- Logica edge function `prompt-copilot-chat` (resta intatta).
+- Persistenza/RLS di `prompt_change_proposals` (campo `diff_text` già esiste).
+- Sidebar agenti, lista blocchi, SwapPanels (drag&drop resta).
+- KB consultate (27 va benissimo, rimosso dall'audit).
+
+## Verifica
+1. Apertura `/v2/prompt-reader` con sidebar aperta → Co-pilot resta verticale (poco spazio).
+2. Collasso sidebar → Co-pilot scivola, attiva 2 colonne in 200ms.
+3. Maximize Co-pilot → 2 colonne occupano tutta la pagina.
+4. Generazione nuova proposta → colonna sinistra mostra diff before/after evidenziato.
+5. Salvataggio proposta → record DB ha `diff_text` valorizzato.
+6. `/v2/prompt-lab/proposals` → review mostra diff.
+
+## Nessun rischio su nodi critici
+Solo presentation (UI + utility diff client-side). Nessun tocco a edge function AI, RLS, auth, journalistReview, soft-delete.
