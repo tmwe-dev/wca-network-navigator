@@ -15,7 +15,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Inbox, Loader2, Package, RefreshCw, Wrench } from "lucide-react";
+import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Inbox, Loader2, Maximize2, Minimize2, Package, RefreshCw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,31 @@ import { AGENT_REGISTRY, type AgentRegistryEntry, type AgentCategory } from "@/d
 import { runAgentSimulator, type SimulatorResponse } from "@/data/agentSimulator";
 import { findKbEntries, type KbEntry } from "@/data/kbEntries";
 import PromptCopilotPanel from "./PromptCopilotPanel";
+import { SwapPanels, type SwapPanelDef } from "./components/SwapPanels";
+
+const PANEL_ORDER_KEY = "prompt-reader.panel-order";
+const COPILOT_EXPANDED_KEY = "prompt-reader.copilot-expanded";
+type PanelId = "reader" | "copilot";
+
+function readPanelOrder(): [PanelId, PanelId] {
+  try {
+    const raw = localStorage.getItem(PANEL_ORDER_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === 2 && parsed.every((x) => x === "reader" || x === "copilot") && parsed[0] !== parsed[1]) {
+        return parsed as [PanelId, PanelId];
+      }
+    }
+  } catch { /* noop */ }
+  return ["reader", "copilot"];
+}
+function readExpanded(): PanelId | null {
+  try {
+    const raw = localStorage.getItem(COPILOT_EXPANDED_KEY);
+    if (raw === "copilot" || raw === "reader") return raw;
+  } catch { /* noop */ }
+  return null;
+}
 
 const CATEGORY_ORDER: AgentCategory[] = [
   "core", "email", "outreach", "analysis", "voice", "autonomous", "classifier",
