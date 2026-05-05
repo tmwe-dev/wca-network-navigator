@@ -21,7 +21,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Loader2, ArrowUpDown, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Loader2, ArrowUpDown, ArrowDownAZ, ArrowUpAZ, ArrowDown01, ArrowUp01, RefreshCw, Plus, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { SenderCard } from "./management/SenderCard";
 import { GroupDropZone } from "./management/GroupDropZone";
@@ -534,6 +534,63 @@ export default function ManualGroupingTab() {
       }
     },
     [groups, assignToGroup, loadData, openActionsDialog],
+  );
+
+  /**
+   * Accetta in batch TUTTI i suggerimenti AI presenti sulle card non
+   * ancora classificate. Ogni assegnazione resta atomica e mirata
+   * (per email + ruleId), nessuna scrittura globale.
+   */
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
+  const handleAcceptAllAiSuggestions = useCallback(async () => {
+    const candidates = senders.filter(
+      (s) =>
+        s.aiSuggestion?.group_name &&
+        s.aiSuggestion.group_name !== "uncategorized" &&
+        groups.some((g) => g.nome_gruppo === s.aiSuggestion!.group_name),
+    );
+    if (candidates.length === 0) {
+      toast.info("Nessun suggerimento AI da accettare");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Accettare ${candidates.length} suggerimenti AI? Ogni mittente verrà associato al gruppo proposto.`,
+    );
+    if (!confirmed) return;
+
+    setIsAcceptingAll(true);
+    const toastId = toast.loading(`Accettazione 0/${candidates.length}…`);
+    let ok = 0;
+    let ko = 0;
+    try {
+      for (let i = 0; i < candidates.length; i++) {
+        const s = candidates[i];
+        const target = groups.find((g) => g.nome_gruppo === s.aiSuggestion!.group_name);
+        if (!target) { ko++; continue; }
+        try {
+          await assignToGroup(s, target.nome_gruppo, target.id);
+          ok++;
+        } catch {
+          ko++;
+        }
+        toast.loading(`Accettazione ${i + 1}/${candidates.length}…`, { id: toastId });
+      }
+      await loadData();
+      toast.success(`${ok} accettati${ko > 0 ? `, ${ko} errori` : ""}`, { id: toastId });
+    } finally {
+      setIsAcceptingAll(false);
+    }
+  }, [senders, groups, assignToGroup, loadData]);
+
+  const acceptableCount = useMemo(
+    () =>
+      senders.filter(
+        (s) =>
+          s.aiSuggestion?.group_name &&
+          s.aiSuggestion.group_name !== "uncategorized" &&
+          groups.some((g) => g.nome_gruppo === s.aiSuggestion!.group_name),
+      ).length,
+    [senders, groups],
   );
   // ────────────────────────────────────────────────────────────────────────────
 
