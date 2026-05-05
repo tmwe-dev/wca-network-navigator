@@ -360,7 +360,6 @@ function IntakeTab() {
             {proposal.duplicates_of ? (
               <div className="text-amber-600 dark:text-amber-400">⚠ Duplicato sospetto di: {String(proposal.duplicates_of)}</div>
             ) : null}
-            )}
             {((proposal.conflicts_with as string[]) ?? []).length > 0 ? (
               <div className="text-destructive">⚠ Conflitti con: {(proposal.conflicts_with as string[]).join(", ")}</div>
             ) : null}
