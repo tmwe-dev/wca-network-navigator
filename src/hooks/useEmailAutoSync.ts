@@ -17,13 +17,14 @@ export function useEmailAutoSync(options: Options = {}) {
   const { paused = false } = options;
   const { status } = useAuth();
 
-  // Default to TRUE (auto-enabled)
+  // Safety default: OFF. check-inbox is CPU-sensitive and must not run on page load.
+  // Legacy "true" values are intentionally ignored; only the new explicit
+  // "enabled" marker turns auto-sync back on after a user action.
   const [enabled, setEnabled] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      // If never set, default to true
-      return stored === null ? true : stored === "true";
-    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return true; }
+      return stored === "enabled";
+    } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); return false; }
   });
   const checkInbox = useCheckInbox();
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -31,7 +32,7 @@ export function useEmailAutoSync(options: Options = {}) {
   const toggle = useCallback(() => {
     setEnabled(prev => {
       const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
+      try { localStorage.setItem(STORAGE_KEY, next ? "enabled" : "disabled"); } catch (e) { log.warn("operation failed", { error: e instanceof Error ? e.message : String(e) }); }
       return next;
     });
   }, []);
@@ -43,9 +44,6 @@ export function useEmailAutoSync(options: Options = {}) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
-
-    // Immediate first check
-    checkInbox.mutate();
 
     timerRef.current = setInterval(() => {
       if (!checkInbox.isPending) {

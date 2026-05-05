@@ -28,20 +28,21 @@ afterEach(() => {
 });
 
 describe("useEmailAutoSync", () => {
-  it("defaults to enabled when localStorage is empty", () => {
-    const { result } = renderHookWithProviders(() => useEmailAutoSync());
-    expect(result.current.enabled).toBe(true);
-  });
-
-  it("reads stored preference from localStorage", () => {
-    localStorage.setItem("email_auto_sync_enabled", "false");
+  it("defaults to disabled when localStorage is empty", () => {
     const { result } = renderHookWithProviders(() => useEmailAutoSync());
     expect(result.current.enabled).toBe(false);
   });
 
-  it("triggers immediate check when active", () => {
+  it("reads stored preference from localStorage", () => {
+    localStorage.setItem("email_auto_sync_enabled", "enabled");
+    const { result } = renderHookWithProviders(() => useEmailAutoSync());
+    expect(result.current.enabled).toBe(true);
+  });
+
+  it("does not trigger immediate check when active", () => {
+    localStorage.setItem("email_auto_sync_enabled", "enabled");
     renderHookWithProviders(() => useEmailAutoSync());
-    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it("does NOT trigger check when paused", () => {
@@ -51,10 +52,10 @@ describe("useEmailAutoSync", () => {
 
   it("toggle flips enabled and persists to localStorage", () => {
     const { result } = renderHookWithProviders(() => useEmailAutoSync());
-    expect(result.current.enabled).toBe(true);
-    act(() => result.current.toggle());
     expect(result.current.enabled).toBe(false);
-    expect(localStorage.getItem("email_auto_sync_enabled")).toBe("false");
+    act(() => result.current.toggle());
+    expect(result.current.enabled).toBe(true);
+    expect(localStorage.getItem("email_auto_sync_enabled")).toBe("enabled");
   });
 
   it("checkNow calls mutate directly", () => {
@@ -65,6 +66,7 @@ describe("useEmailAutoSync", () => {
   });
 
   it("periodic timer fires after interval", () => {
+    localStorage.setItem("email_auto_sync_enabled", "enabled");
     renderHookWithProviders(() => useEmailAutoSync());
     mockMutate.mockClear();
     act(() => { vi.advanceTimersByTime(2 * 60 * 1000); });
