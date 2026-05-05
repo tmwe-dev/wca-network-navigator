@@ -98,7 +98,8 @@ Deno.serve(async (req) => {
     }
 
     const parsed = caller.bodyJson ?? (await req.json().catch(() => ({})))
-    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: Record<string, unknown> }
+    // deno-lint-ignore no-explicit-any
+    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: any }
 
     if (!partnerId || !profileData) {
       return new Response(
