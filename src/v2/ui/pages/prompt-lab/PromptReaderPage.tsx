@@ -13,7 +13,7 @@
  *
  * UI logic-less rispetto al simulator: NON esegue tool, NON persiste nulla.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, BookText, ChevronLeft, ChevronRight, Copy, Download, Inbox, Loader2, Maximize2, Minimize2, Package, RefreshCw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -289,6 +289,21 @@ export default function PromptReaderPage() {
   });
   const [panelOrder, setPanelOrder] = useState<[PanelId, PanelId]>(() => readPanelOrder());
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(() => readExpanded());
+  // ResizeObserver: misura la larghezza del pannello Co-pilot per attivare layout 2-colonne
+  const copilotWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [copilotCompact, setCopilotCompact] = useState(false);
+  useEffect(() => {
+    const el = copilotWrapperRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Soglia: >=720px → 2 colonne (proposta SX, chat DX). Sotto resta verticale.
+        setCopilotCompact(entry.contentRect.width >= 720);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expandedPanel, sidebarOpen]);
 
   useEffect(() => {
     try { localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panelOrder)); } catch { /* noop */ }
@@ -790,13 +805,16 @@ export default function PromptReaderPage() {
                 </Button>
               ),
               content: selected ? (
-                <PromptCopilotPanel
-                  agentSlug={selected.id}
-                  agentKbCategories={selected.kbCategories}
-                  blockName={targetBlock.name}
-                  currentContent={targetBlock.content || data?.assembled?.system_prompt || ""}
-                  expanded={expandedPanel === "copilot"}
-                />
+                <div ref={copilotWrapperRef} className="h-full">
+                  <PromptCopilotPanel
+                    agentSlug={selected.id}
+                    agentKbCategories={selected.kbCategories}
+                    blockName={targetBlock.name}
+                    currentContent={targetBlock.content || data?.assembled?.system_prompt || ""}
+                    expanded={expandedPanel === "copilot"}
+                    compactWidth={copilotCompact}
+                  />
+                </div>
               ) : (
                 <div className="p-4 text-xs text-muted-foreground">Seleziona un agente.</div>
               ),
