@@ -44,6 +44,9 @@ export type PromptScope =
   | "classification"
   | "agent-loop"
   | "command"
+  | "funnemail_classifier"
+  | "content-intelligence"
+  | "conversation-summary"
   | "general";
 
 /** Canonical mapping scope → contexts/tags accepted from the DB. */
@@ -59,6 +62,9 @@ const SCOPE_MAP: Record<PromptScope, { contexts: string[]; tags: string[] }> = {
   "classification": { contexts: ["lead-status", "email-quality"],  tags: ["lead-status", "qualification", "classification"] },
   "agent-loop":     { contexts: ["outreach", "multi-channel", "lead-status"], tags: ["workflow", "outreach", "lead-status"] },
   "command":        { contexts: ["command"],                       tags: ["command", "tool-routing", "router"] },
+  "funnemail_classifier": { contexts: ["funnemail_classifier"],    tags: ["funnemail", "classifier", "inbound"] },
+  "content-intelligence": { contexts: ["content-intelligence"],    tags: ["content", "inbound", "funnemail"] },
+  "conversation-summary": { contexts: ["conversation-summary"],    tags: ["conversation-summary", "context", "inbound"] },
   "general":        { contexts: [],                                tags: [] },
 };
 
