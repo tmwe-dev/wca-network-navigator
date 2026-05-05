@@ -297,12 +297,18 @@ export async function markFunnemailMessagesRead(messageIds: string[]): Promise<v
  */
 export async function listFunnemailGroupedInbox(
   userId: string,
+  targetUserId?: string | null,
 ): Promise<FunnemailGroupedInbox> {
+  // `userId` = utente loggato (per regole/gruppi personali).
+  // `targetUserId` = utente di cui vogliamo vedere le email (impersonation).
+  //   - null/undefined => "tutti gli operatori" (RLS decide la visibilità).
+  //   - stringa        => filtra channel_messages.user_id su quell'operatore.
   const [messages, groups, rules] = await Promise.all([
     fetchAllPages<ChannelMessage>((from, to) => untypedFrom("channel_messages")
       .select(MESSAGE_LIST_SELECT)
       .eq("channel", "email")
       .eq("direction", "inbound")
+      .match(targetUserId ? { user_id: targetUserId } : {})
       .order("email_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(from, to)),
