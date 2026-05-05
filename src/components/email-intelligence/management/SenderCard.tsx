@@ -203,9 +203,10 @@ function SenderCardImpl({
               </div>
             )}
 
-            {/* AI SUGGERIMENTO — visibile e cliccabile */}
+            {/* AI SUGGERIMENTO — slot ad altezza fissa (riservato anche se vuoto)
+             *  così la card non "salta" quando l'analisi AI popola il chip. */}
             {sender.aiSuggestion?.group_name ? (
-              <div className="flex items-stretch gap-1.5 mt-0.5">
+              <div className="flex items-stretch gap-1.5 mt-0.5 min-h-[40px]">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -253,7 +254,15 @@ function SenderCardImpl({
                   </Tooltip>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <div
+                className="flex items-center gap-1.5 mt-0.5 min-h-[40px] px-2 py-1.5 rounded-md border border-dashed border-border/50 text-[11px] text-muted-foreground/70"
+                aria-hidden="true"
+              >
+                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+                <span className="truncate">Nessun suggerimento AI — clicca "AI" per generarlo</span>
+              </div>
+            )}
 
             {/* Badge classificato */}
             {sender.isClassified && (
