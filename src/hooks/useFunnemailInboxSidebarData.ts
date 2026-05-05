@@ -8,10 +8,11 @@ export function useFunnemailInboxSidebarData() {
   const { user } = useAuth();
   const { activeOperator, viewingAll } = useActiveOperator();
   const targetUserId = viewingAll ? null : activeOperator?.user_id ?? user?.id ?? null;
+  const folderOwnerUserId = targetUserId ?? user?.id ?? null;
   return useQuery<FunnemailGroupedInbox>({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", targetUserId),
-    queryFn: () => listFunnemailGroupedInbox(user!.id, targetUserId),
-    enabled: !!user?.id,
+    queryKey: queryKeys.funnemailInbox.grouped(folderOwnerUserId ?? "anon", targetUserId),
+    queryFn: () => listFunnemailGroupedInbox(folderOwnerUserId!, targetUserId),
+    enabled: !!folderOwnerUserId,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
