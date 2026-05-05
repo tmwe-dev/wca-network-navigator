@@ -633,6 +633,68 @@ export default function PromptReaderPage() {
                 </Section>
               </>
             )}
+
+            {/* 7. Knowledge Base usata (sempre visibile se KB caricata) */}
+            {selected && kbAll && (
+              <Section
+                title="Knowledge Base usata da questo agente"
+                meta={`${kbCurrent.length} entry · categorie: ${selected.kbCategories.join(", ") || "—"}`}
+                onCopy={kbCurrent.length > 0 ? () => copy(buildAgentMarkdown(selected, data, kbCurrent), "KB") : undefined}
+              >
+                {kbCurrent.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">
+                    Nessuna entry attiva nelle categorie consultate ({selected.kbCategories.join(", ") || "nessuna categoria dichiarata"}).
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-[600px] overflow-auto">
+                    {(() => {
+                      const out: React.ReactNode[] = [];
+                      let lastCat = "";
+                      let lastChap = "";
+                      kbCurrent.forEach((e) => {
+                        if (e.category !== lastCat) {
+                          out.push(
+                            <h4 key={`cat-${e.id}`} className="text-[11px] font-semibold uppercase tracking-wider text-primary border-b pb-1 pt-2">
+                              Categoria: <span className="font-mono">{e.category}</span>
+                            </h4>,
+                          );
+                          lastCat = e.category;
+                          lastChap = "";
+                        }
+                        const chap = e.chapter || "(senza capitolo)";
+                        if (chap !== lastChap) {
+                          out.push(
+                            <h5 key={`chap-${e.id}`} className="text-[11px] font-semibold text-muted-foreground mt-2">
+                              {chap}
+                            </h5>,
+                          );
+                          lastChap = chap;
+                        }
+                        out.push(
+                          <div
+                            key={e.id}
+                            className="rounded border bg-muted/20 p-2"
+                            title={`priority ${e.priority} · tags: ${e.tags?.join(", ") || "—"} · aggiornato ${new Date(e.updated_at).toLocaleString("it-IT")}`}
+                          >
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-xs font-medium">{e.title}</span>
+                              <Badge variant="outline" className="text-[9px]">prio {e.priority}</Badge>
+                              {(e.tags ?? []).slice(0, 4).map((t) => (
+                                <Badge key={t} variant="secondary" className="text-[9px]">{t}</Badge>
+                              ))}
+                            </div>
+                            <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed">
+                              {e.content}
+                            </pre>
+                          </div>,
+                        );
+                      });
+                      return out;
+                    })()}
+                  </div>
+                )}
+              </Section>
+            )}
           </div>
         </main>
       </div>
