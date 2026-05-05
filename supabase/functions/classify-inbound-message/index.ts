@@ -403,6 +403,27 @@ ${bodyBlock}`;
       }
     }
 
+    // ── Content Intelligence (Strato 2): legge il CONTENUTO con contesto
+    //    pieno e propone azioni. Fire-and-forget, mai blocca il flusso legacy.
+    if (channel === "email") {
+      try {
+        await supabase.functions.invoke("classify-inbound-content", {
+          body: {
+            message_id,
+            from_address,
+            subject: subject || "",
+            body_text: body_text || "",
+            partner_id: partner_id || null,
+            user_id: body.user_id ?? null,
+            // Step 1: solo lettura passiva. Settare a true per Step 2.
+            emit_pending_actions: false,
+          },
+        });
+      } catch (_e) {
+        // fail-safe
+      }
+    }
+
     endMetrics(metrics, true, 200);
     return new Response(JSON.stringify({
       success: true,
