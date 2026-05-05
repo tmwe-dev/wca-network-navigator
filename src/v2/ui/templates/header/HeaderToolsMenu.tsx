@@ -11,8 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   MoreHorizontal, Activity, DatabaseZap, FlaskConical, Stethoscope,
-  Sun, Moon, Plus,
+  Sun, Moon, Plus, LogOut,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   onAddContact: () => void;
@@ -30,6 +31,19 @@ export function HeaderToolsMenu({
   const openTraceConsole = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("trace-console-open"));
   }, []);
+
+  const handleLogout = React.useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.includes("supabase") || k.startsWith("sb-"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch { /* noop */ }
+      navigate("/v2/login", { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <DropdownMenu>
@@ -73,6 +87,11 @@ export function HeaderToolsMenu({
         <DropdownMenuItem onClick={onToggleTheme}>
           {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
           Tema {isDark ? "chiaro" : "scuro"}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="h-4 w-4 mr-2" /> Logout
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
