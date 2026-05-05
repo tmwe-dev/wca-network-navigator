@@ -91,7 +91,7 @@ const defaults: GlobalFilterState = {
   workspaceFilters: new Set(),
   emailGenFilter: "all",
   workspaceCountries: new Set(),
-  sortingFilter: "all",
+  sortingFilter: "unreviewed",
   sortingSearch: "",
   cockpitCountries: new Set(),
   cockpitChannels: new Set(),
@@ -131,7 +131,7 @@ const defaults: GlobalFilterState = {
   emailIntelHideClassified: true,
   emailIntelSort: "count-desc",
   funnemailFolder: "all",
-  funnemailView: "all",
+  funnemailView: "unread",
   funnemailSearch: "",
 };
 

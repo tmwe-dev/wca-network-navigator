@@ -168,6 +168,21 @@ export function EntityListWithDetail({
 
   const activeFiltersCount = countActiveFilters(filters);
 
+  // Auto-focus prima entità se non c'è dettaglio aperto e nessuna selezione attiva.
+  // Dispatcha l'handler appropriato (contatto o azienda) e il dettaglio si apre da solo.
+  const autoFocusedRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (isLoading) return;
+    if (detailSlot) { autoFocusedRef.current = null; return; }
+    if (selection.count > 0) return;
+    if (sorted.length === 0) return;
+    const first = sorted[0];
+    if (autoFocusedRef.current === first.id) return;
+    autoFocusedRef.current = first.id;
+    if (onOpenContact) onOpenContact({ id: first.id, raw: first }, first);
+    else if (onOpenCompany) onOpenCompany(first);
+  }, [isLoading, detailSlot, selection.count, sorted, onOpenContact, onOpenCompany]);
+
   const filterButton = (
     <button
       type="button"

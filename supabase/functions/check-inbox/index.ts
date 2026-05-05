@@ -21,6 +21,7 @@ import {
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
 import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "./postProcessing.ts";
 import { resyncUnreadFlags } from "./flagResync.ts";
+import { enqueueInboundEnrichment } from "./enqueueEnrichment.ts";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -184,6 +185,21 @@ Deno.serve(async (req) => {
     // ── Post-sync operations (best-effort, fire-and-forget) ──
     await applyEmailRules(supabase, supabaseUrl, serviceRoleKey, userId, messages);
     await classifyInboundEmails(supabaseUrl, serviceRoleKey, userId, messages);
+
+    // ── Enqueue arricchimento + classify per mittenti SCONOSCIUTI ──
+    try {
+      const enq = await enqueueInboundEnrichment(supabaseAdmin, userId, messages);
+      if (enq.enqueued > 0) {
+        console.log(JSON.stringify({
+          fn: "check-inbox",
+          step: "enrichment_enqueue",
+          enqueued: enq.enqueued,
+          skipped: enq.skipped,
+        }));
+      }
+    } catch (enqErr: unknown) {
+      console.warn("enrichment_enqueue skipped:", extractErrorMessage(enqErr));
+    }
 
     // ── Response ──
     const responsePayload = buildResponsePayload(messages, maxUid, remainingCount, hasMore);

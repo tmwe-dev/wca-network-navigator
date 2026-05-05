@@ -20,7 +20,7 @@ import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
 const ROW_HEIGHT = 142;
-const STORAGE_KEY = "funnemail_list_view_v1";
+const STORAGE_KEY = "funnemail_list_view_v2";
 
 interface StoredPrefs {
   sort: SortMode;
@@ -30,14 +30,14 @@ interface StoredPrefs {
 function loadPrefs(): StoredPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { sort: "date_desc", group: "none" };
+    if (!raw) return { sort: "company_asc", group: "none" };
     const parsed = JSON.parse(raw) as Partial<StoredPrefs>;
     return {
-      sort: parsed.sort ?? "date_desc",
+      sort: parsed.sort ?? "company_asc",
       group: parsed.group ?? "none",
     };
   } catch {
-    return { sort: "date_desc", group: "none" };
+    return { sort: "company_asc", group: "none" };
   }
 }
 
@@ -143,6 +143,10 @@ export function FunnemailMailList({
         ? holdingSet.has(`c:${msg.source_id}`)
         : false;
     const grp = getGroup(msg.from_address);
+    const aiRaw = (msg as ChannelMessage & { ai_classification_suggestion?: { category?: string; suggested_group?: string | null; reason?: string | null } | null }).ai_classification_suggestion;
+    const aiSuggestion = aiRaw && (aiRaw.suggested_group || aiRaw.category)
+      ? { label: aiRaw.suggested_group || aiRaw.category || "", reason: aiRaw.reason ?? null }
+      : null;
     return (
       <FunnemailMailCard
         message={msg}
@@ -151,7 +155,7 @@ export function FunnemailMailList({
         groupName={grp?.groupName ?? null}
         groupColor={grp?.groupColor ?? null}
         groupIcon={grp?.groupIcon ?? null}
-        aiSuggestion={null}
+        aiSuggestion={aiSuggestion}
         onSelect={() => onSelect(msg)}
         showCheckbox
         checked={checkedIds.has(msg.id)}

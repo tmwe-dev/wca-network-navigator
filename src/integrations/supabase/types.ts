@@ -3186,6 +3186,7 @@ export type Database = {
       }
       channel_messages: {
         Row: {
+          ai_classification_suggestion: Json | null
           bcc_addresses: string | null
           body_html: string | null
           body_text: string | null
@@ -3226,6 +3227,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_classification_suggestion?: Json | null
           bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
@@ -3266,6 +3268,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_classification_suggestion?: Json | null
           bcc_addresses?: string | null
           body_html?: string | null
           body_text?: string | null
@@ -6381,6 +6384,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inbound_enrichment_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          domain: string | null
+          from_address: string
+          id: string
+          last_error: string | null
+          message_id: string
+          processed_at: string | null
+          result: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          domain?: string | null
+          from_address: string
+          id?: string
+          last_error?: string | null
+          message_id: string
+          processed_at?: string | null
+          result?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          domain?: string | null
+          from_address?: string
+          id?: string
+          last_error?: string | null
+          message_id?: string
+          processed_at?: string | null
+          result?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       inbound_operative_actions: {
         Row: {
