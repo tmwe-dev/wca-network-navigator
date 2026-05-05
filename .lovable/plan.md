@@ -1,136 +1,76 @@
-## Piano: Identità TMWE + Routing per urgenza con alert WhatsApp ai responsabili
+## Obiettivi
 
-### Obiettivo
-1. Riscrivere l'identità del sistema (TMWE / Find Air, non WCA) e iniettarla in tutti i prompt AI inbound/outbound.
-2. Introdurre un **modello a 2 assi** (categoria business + urgenza testuale 0-100) per classificare ogni mail in arrivo.
-3. Costruire un **router di alert WhatsApp** che invia autonomamente messaggi ai responsabili quando l'urgenza è alta, con rubrica gestita da UI in Settings.
-4. Rinominare il sistema in **TMWE Partner Connect** (label UI/branding, no rename tecnico di tabelle/route).
+1. **Auto-focus prima entità + apertura dettaglio** su tutte le pagine lista (Funnemail, Inreach, Contatti, ecc.).
+2. **Default ordinamento**: in Inreach (client di posta) data DESC; in Funnemail brand azienda A-Z. Pulsante per raggruppare per mittente.
+3. **Pulsante "Letto"** che marca e fa sparire la mail se vista = "Non lette". Vista default = **Non lette**.
+4. **Loghi azienda** sempre presenti nelle card lista (Funnemail e Inreach) — verifica che `CompanyLogo` renderizzi anche con dominio sconosciuto (placeholder iniziali).
+5. **Deep search + arricchimento + classificazione automatici** all'ingresso di ogni mail da **mittente sconosciuto** (dominio non presente in CRM/contatti).
 
----
+## Cambi UI/Logica
 
-### Step 1 — KB canonica "TMWE Identity & Inbound Doctrine" (priorità 100)
+### 4.1 Auto-selezione prima riga (già presente in Funnemail e Inreach via useEffect)
+- Verificare/estendere a `EntityListWithDetail` (Contatti, CRM, ecc.): se nessun `urlContactId` e lista non vuota, autoselezionare il primo elemento ordinato e chiamare `onOpenContact`.
 
-Una sola card SSOT in `kb_entries`, riusata da tutti i prompt:
+### 4.2 Default filtri globali
+- `GlobalFiltersContext` → cambiare default:
+  - `funnemailView`: `"all"` → `"unread"`
+  - `sortingFilter`: `"all"` → `"unreviewed"` (Inreach default = non lette)
+  - `emailSort`: rimane `"date_desc"` (Inreach)
+- `funnemail_list_view_v1` (localStorage) default sort: `"date_desc"` → `"company_asc"`.
 
-- **Title**: `TMWE — Identità, Find Air, Doctrine inbound`
-- **Category**: `doctrine` · **Priority**: 100 · **Tags**: `business_context`, `tmwe`, `find_air`, `inbound_priority`, `funnemail`, `email_classification`, `outreach`, `content_intelligence`, `alert_routing`
-- **Contenuto**:
-  - **Chi siamo**: Transport Management Srl (Peschiera Borromeo) · brand TMWE · prodotto Find Air (booking ibrido real-time desktop+mobile per cargo aereo, corriere espresso, trasporti via terra; prezzi pickup+delivery+dogana inclusi; primo ibrido al mondo). NON siamo WCA.
-  - **5 categorie business** (esempi linguistici IT/EN per ciascuna):
-    - `operations` — esecuzione servizio: booking, ritiri, consegne, dogana, problemi cargo, tracking, missed pickup, delay
-    - `administrative` — fatture, pagamenti, statement, banche, carte di credito
-    - `commercial_demand` — cliente/partner che ci dà lavoro o chiede quotazione (money-in)
-    - `commercial_supply` — partner che si propone con tariffe/capacity
-    - `informational` / `system` / `newsletter` / `bounce`
-  - **Regola di priorità reale**: mancare un servizio o un alert urgente costa 100× più di mancare una mail commerciale. Operativo+amministrativo URGENTE batte tutto. Commercial demand viene secondo. Standard ops/admin terzo. Supply quarto. Newsletter quinto.
-  - **Pitch Find Air** da iniettare nelle risposte commerciali (demand e supply).
+### 4.3 Pulsante "Letto" sulle card
+- Aggiungere icona "✓ Letto" su `FunnemailMailCard` e `EmailMessageList` accanto alle altre azioni.
+- Click → `markAsRead.mutate(msg.id)` → invalidazione query → la mail sparisce automaticamente perché il filtro client-side esclude `read_at != null` quando vista=unread.
 
-### Step 2 — Nuovo prompt operativo "Inbound Triage" (context: `classification`, priority 95)
+### 4.4 Loghi nelle card Funnemail
+- Verificare che `CompanyLogo` con `email + name` mostri sempre fallback (iniziali colorate) quando il favicon non è disponibile.
+- Il caso reale è già gestito; aggiungere `fallbackInitials` esplicito e `bg-muted` per garantirne la visibilità anche con domini sconosciuti.
 
-Output AI (urgenza **aperta**, come richiesto):
+### 4.5 Toolbar Funnemail — sort default + raggruppa
+- `FunnemailListToolbar` esiste già con sort/group. Cambiare etichetta default a "Azienda A-Z" e mantenere "Raggruppa per mittente" come toggle visibile.
+
+## Backend: deep search + enrichment all'ingresso
+
+### 5.1 Trigger automatico in `check-inbox`
+**Nodo critico** — modifica isolata, dietro feature flag, senza toccare il flusso di download.
+
+- Dopo il salvataggio di un nuovo `channel_messages` inbound, per ogni mittente NUOVO (dominio non già in `partners` né in `partner_contacts`/`imported_contacts` dell'operatore):
+  - Inserire job in nuova tabella `inbound_enrichment_queue` (status pending).
+- Nessuna chiamata AI sincrona dentro `check-inbox` (per non rallentare il polling).
+
+### 5.2 Nuova edge function `process-inbound-enrichment`
+- Cron ogni 1 min, lock su job pending, batch max 5.
+- Per ogni job:
+  1. Estrae brand da `from_address`, dominio.
+  2. Chiama `invokeAi("deep_search.scout")` con scope esistente → arricchimento basico.
+  3. Chiama `invokeAi("funnemail.classify")` per suggerimento classificazione → salva su `channel_messages.ai_classification_suggestion` (jsonb).
+  4. Aggiorna `inbound_enrichment_queue.status = done`.
+- Hard guards e rate limit invariati.
+
+### 5.3 UI: mostra suggerimento AI sulla card
+- `AiSuggestionChip` già esiste ma riceve `null`. Connetterla via `useFunnemailInbox` leggendo il campo `ai_classification_suggestion` dal messaggio. Una volta accettato → assegna gruppo + mark suggestion as accepted.
+
+## File da modificare
+
+```text
+src/contexts/GlobalFiltersContext.tsx                  defaults unread
+src/v2/ui/pages/funnemail-inbox/FunnemailMailList.tsx  default sort company_asc
+src/v2/ui/pages/funnemail-inbox/FunnemailMailCard.tsx  pulsante Letto + logo fallback
+src/components/outreach/EmailMessageList.tsx           pulsante Letto
+src/v2/ui/organisms/EntityListWithDetail.tsx           auto-select first
+src/v2/hooks/useFunnemailInbox.ts                      pass ai_classification_suggestion
+supabase/functions/check-inbox/index.ts                enqueue enrichment per mittenti nuovi
+supabase/functions/process-inbound-enrichment/         nuova edge function
+migration                                              tabella inbound_enrichment_queue + colonna ai_classification_suggestion + cron
 ```
-{
-  "business_category": "operations|administrative|commercial_demand|commercial_supply|informational|system|newsletter|bounce",
-  "urgency_score": 0-100,
-  "urgency_reason": "frase libera che spiega perché",
-  "priority_bucket": "P1_urgent|P2_commercial|P3_standard_ops|P4_supply|P5_noise",
-  "should_alert": boolean,
-  "alert_categories": ["operations_urgent" | "admin_urgent" | ...],
-  "suggested_summary_for_alert": "max 280 char per WhatsApp"
-}
-```
 
-Iniettato in `classify-inbound-message` insieme ai prompt esistenti. Score 0-100 libero, niente enum chiuso (rispetta doctrine "AI Prompt Freedom").
+## Vincoli rispettati
 
-### Step 3 — Rubrica responsabili (DB + UI)
+- `check-inbox`: aggiunta solo enqueue, no chiamate AI sincrone (constraint "no modifiche senza autorizzazione" → richiedo OK esplicito qui).
+- AI Invocation Charter: tutto via `invokeAi()` con scope registrato.
+- Editorial review: non interessato (sola classificazione, non invio).
+- Soft-delete: invariato.
 
-**Tabella** `alert_recipients`:
-- `id`, `user_id` (owner), `name`, `role`, `whatsapp_e164` (validato, normalizzato), `email` (opzionale per copia)
-- `categories` (text[]) — es. `['operations_urgent','admin_urgent']`
-- `min_urgency_score` (int default 70) — soglia personale
-- `is_active`, `quiet_hours_start/end` (HH:MM, opzionale), `timezone` (default Europe/Rome)
-- `created_at/updated_at` · **RLS user-scoped**
+## Domanda di sblocco
 
-**Tabella** `alert_dispatch_log`:
-- `id`, `recipient_id`, `message_id` (FK channel_messages), `channel` (default `whatsapp`), `payload`, `status` (`sent|failed`), `dedup_key`, `error`, `sent_at`
-- Indice unique su `(recipient_id, message_id)` per **idempotenza** (no doppi alert).
-
-**UI** `/v2/settings/alert-routing`:
-- Lista card responsabili (nome, ruolo, WA, badge categorie attive, soglia)
-- CRUD via DAL `src/data/alertRecipients.ts`
-- Test button: "Invia alert di prova" → manda WA test al numero
-- Sezione "Ultimi 50 alert" da `alert_dispatch_log`
-
-### Step 4 — Edge function `dispatch-urgent-alert`
-
-Triggerata fire-and-forget da `classify-inbound-message` quando `should_alert=true`:
-1. Carica `alert_recipients` filtrati per `categories ∩ alert_categories` e `urgency_score ≥ min_urgency_score` e `is_active`.
-2. Per ciascun recipient:
-   - Verifica idempotenza su `alert_dispatch_log(recipient_id, message_id)`
-   - Verifica quiet_hours
-   - Compone messaggio template fisso (no AI, no journalistReview): `🚨 ALERT [CATEGORIA] · {summary} · da: {from} · {subject_truncated} · [link a /v2/email-intelligence?msg={id}]`
-   - Invia via `extension_dispatch_queue` (canale WhatsApp esistente) o direttamente via WA bridge esistente
-   - Logga su `alert_dispatch_log`
-3. **Bypass autorizzato di journalistReview** SOLO per alert template-based (no contenuto AI free-form). Richiede flag `is_system_alert=true` nel payload + commento in codice + memory update.
-
-### Step 5 — Aggiornare prompt esistenti (Prompt Lab DB, niente file TS)
-
-Snapshot automatico via trigger `snapshot_operative_prompt`:
-
-| Prompt | Modifica |
-|---|---|
-| Funnemail Classifier | Cita la nuova KB TMWE; chiede output a 2 assi |
-| Content Intelligence — Lettura Contenuto Mail | Aggiunge `urgency_score`, `should_alert`, `alert_categories` allo schema |
-| Group-Aware Classification | Sostituisce riferimenti "WCA" con "TMWE/Find Air" |
-| Outreach Flow + WCA Filosofia | Pitch riscritto su Find Air; titolo da rinominare "TMWE Filosofia & Find Air" |
-| Lead Qualification v2 | `commercial_supply` non promuove a `qualified` automatico (resta prospect con tag `wants_to_supply_us`) |
-| Quote Response (KB) | Specifica: si applica a `commercial_demand`, NON a `commercial_supply` |
-
-Nuova KB `public/kb-source/operative/supply-offer-response.md` (template ringraziamento+pitch Find Air).
-
-### Step 6 — Rebranding "TMWE Partner Connect"
-
-- Aggiornare `index.html` `<title>` + meta description
-- `src/i18n/index.ts` chiavi app name (cerco quelle già esistenti)
-- Sidebar/topbar logo testuale dove compare il nome prodotto
-- README e docs (solo i pubblici): aggiornamento minimo
-- **NESSUN rename** di tabelle, route `/v2/*`, edge functions, env vars (rischio rotture > beneficio)
-
-### Step 7 — Test di regressione
-
-In `prompt_test_cases` aggiungiamo 8 mail tipo:
-1. Cliente diretto urgente "merce ferma in dogana" → P1, alert_operations
-2. Banca "blocco conto domani" → P1, alert_admin
-3. Carta credito alert bloccata → P1, alert_admin
-4. Statement mensile carta → P3 standard
-5. Partner che ci dà lavoro EN "need pickup MXP" → P2 commercial_demand
-6. Trasportatore che propone tariffe → P4 commercial_supply
-7. Newsletter → P5
-8. OOO automatico → info_only no alert
-
-Eseguiti via `prompt-test-runner`.
-
----
-
-## Dettagli tecnici
-
-- **Loader unico** (`_shared/operativePromptsLoader.ts`) già in produzione: i nuovi prompt sono caricati automaticamente dopo INSERT in `operative_prompts`.
-- **Editorial review** resta obbligatoria per email/WA/LI **commerciali**. L'eccezione `is_system_alert=true` è **solo** per template fissi di alert tecnici (non testo generato dall'AI).
-- **Hard guards** invariati. **Soft-delete** invariato. **CORS whitelist** invariata.
-- **Vincolo IMAP**: nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `process-email-queue`.
-- **DAL only**: nuovo `src/data/alertRecipients.ts` + `src/data/alertDispatchLog.ts`. Nessun `supabase.from()` in UI.
-- **Type safety**: zero `any`, schemi Zod su payload alert.
-- **Memory update finale**:
-  - nuova entry `mem://business/tmwe-identity-and-find-air` (SSOT identità)
-  - nuova entry `mem://features/inbound-triage-and-wa-alert-routing`
-  - aggiornare core: rimuovere ogni "noi WCA" residuo nei mem
-  - eccezione documentata: `mem://tech/editorial-review-layer-mandatory` aggiunge nota su template-only system alerts
-
----
-
-## Aperto / da decidere durante implementazione
-
-- Quale canale WA usare in concreto: passare per `extension_dispatch_queue` (più sicuro, audit) vs. invocazione diretta del bridge WhatsApp. → propendo per la coda esistente per mantenere log unificato.
-- Dedup window: idempotenza per `(recipient_id, message_id)` è bastante; non servono retry custom.
-
-Pronto a procedere alla implementazione step 1→7 al tuo OK.
+Per l'arricchimento automatico devo aggiungere ~10 righe di enqueue in `check-inbox`. Confermo che è coperto dall'autorizzazione data nella scorsa modifica (flag re-sync) o vuoi un OK esplicito separato?
