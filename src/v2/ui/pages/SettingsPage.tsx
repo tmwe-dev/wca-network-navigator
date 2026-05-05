@@ -104,6 +104,7 @@ const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ lab
     items: [
       { label: "Admin Users", path: "/v2/settings/admin-users" },
       { label: "Email Download", path: "/v2/settings/email-download" },
+      { label: "Alert Routing (WhatsApp)", path: "/v2/settings/alert-routing" },
       { label: "Diagnostics", path: "/v2/settings/diagnostics" },
       { label: "Telemetry", path: "/v2/settings/telemetry" },
       { label: "Observability", path: "/v2/settings/observability" },
