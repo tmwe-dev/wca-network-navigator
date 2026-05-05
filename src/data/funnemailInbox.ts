@@ -100,7 +100,7 @@ export interface FunnemailGroupFolder {
   label: string;
   icon: string | null;
   color: string | null;
-  section: "priority" | "secondary" | "unclassified";
+  section: "operative" | "archive" | "sorting" | "priority" | "secondary" | "unclassified";
   sort_order: number;
   auto_mark_read?: boolean;
 }
@@ -316,7 +316,14 @@ export async function listFunnemailGroupedInbox(
   // `targetUserId` = utente di cui vogliamo vedere le email (impersonation).
   //   - null/undefined => "tutti gli operatori" (RLS decide la visibilità).
   //   - stringa        => filtra channel_messages.user_id su quell'operatore.
-  const [messages, groups, rules] = await Promise.all([
+  //
+  // Le cartelle sono i CONTENITORI Funnemail (funnemail_folders): Offerte/RFQ,
+  // Operations, Tasks, Supporto, Chat interna, Alert, Info, Newsletter, No-Reply,
+  // Promo, Spam, Archivio, Da smistare. Sono diverse dai gruppi mittente di
+  // Funny Mail (es. "fornitore Bosch") perché una mail dello stesso mittente
+  // può essere una fattura (Amministrativo) o una RFQ (Offerte) — il
+  // classificatore Funnemail decide il contenitore.
+  const [messages, foldersData, decisions, groups, rules] = await Promise.all([
     fetchAllPages<ChannelMessage>((from, to) => {
       let q = untypedFrom("channel_messages")
         .select(MESSAGE_LIST_SELECT)
@@ -328,67 +335,103 @@ export async function listFunnemailGroupedInbox(
         .order("created_at", { ascending: false })
         .range(from, to);
     }, MAX_MESSAGES),
+    listFunnemailFolders(),
+    fetchAllPages<{ message_id: string; folder_slug: string | null; override_folder_slug: string | null }>(
+      (from, to) => untypedFrom("funnemail_decisions")
+        .select("message_id, folder_slug, override_folder_slug")
+        .order("created_at", { ascending: false })
+        .range(from, to),
+      MAX_MESSAGES,
+    ),
     fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
       .range(from, to), MAX_RULES_OR_GROUPS),
     fetchAllPages<EmailAddressRuleRow>((from, to) => untypedFrom("email_address_rules")
-      .select("email_address,group_name")
+      .select("email_address,group_name,category")
       .eq("user_id", userId)
       .range(from, to), MAX_RULES_OR_GROUPS),
   ]);
 
-  const groupRows = groups;
-  const ruleRows = rules;
-  const groupByName = new Map(groupRows.map((g) => [g.nome_gruppo, g]));
-  const rulesByAddress = new Map<string, string>();
-  const rulesByDomain = new Map<string, string>();
+  // Mappa funnemail_folders -> FunnemailGroupFolder.
+  // Ordine: operative (priorità) > sorting (Da smistare) > archive.
+  const sectionOrder: Record<string, number> = { operative: 0, sorting: 1, archive: 2 };
+  const folders: FunnemailGroupFolder[] = foldersData
+    .slice()
+    .sort((a, b) => {
+      const sa = sectionOrder[a.section] ?? 9;
+      const sb = sectionOrder[b.section] ?? 9;
+      if (sa !== sb) return sa - sb;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    })
+    .map((f) => ({
+      slug: f.slug,
+      label: f.label,
+      icon: f.icon,
+      color: null,
+      section: f.section,
+      sort_order: f.sort_order ?? 0,
+      auto_mark_read: false,
+    }));
 
-  for (const rule of ruleRows) {
-    if (!rule.email_address || !rule.group_name) continue;
-    const key = rule.email_address.trim().toLowerCase();
-    if (key.startsWith("@")) rulesByDomain.set(key.slice(1), rule.group_name);
-    else if (!key.includes("@")) rulesByDomain.set(key, rule.group_name);
-    else rulesByAddress.set(key, rule.group_name);
+  // Helper: mappa categoria/gruppo mittente -> slug Funnemail (fallback senza decision).
+  const groupNameToFolder = (name: string | null | undefined): string | null => {
+    if (!name) return null;
+    const n = name.trim().toLowerCase();
+    if (n.includes("offert") || n.includes("quotaz") || n.includes("rfq") || n.includes("preventiv")) return "rfq";
+    if (n.includes("ammin") || n.includes("fattur") || n.includes("contab")) return "tasks";
+    if (n.includes("operat") || n.includes("logist") || n.includes("spediz")) return "operations";
+    if (n.includes("support") || n.includes("assist") || n.includes("recl")) return "support";
+    if (n.includes("commerc") || n.includes("vend")) return "rfq";
+    if (n.includes("newsletter")) return "newsletter";
+    if (n.includes("spam")) return "spam";
+    if (n.includes("promo") || n.includes("ads")) return "ads";
+    if (n.includes("notif") || n.includes("no-reply") || n.includes("noreply")) return "no_reply";
+    if (n.includes("alert") || n.includes("urgen")) return "alerts";
+    if (n.includes("info")) return "info";
+    if (n.includes("interna") || n.includes("collegh")) return "internal";
+    return null;
+  };
+
+  // Decision-based mapping (override prevale).
+  const decisionByMsgId = new Map<string, string>();
+  for (const d of decisions) {
+    const slug = d.override_folder_slug ?? d.folder_slug;
+    if (slug && d.message_id) decisionByMsgId.set(d.message_id, slug);
   }
 
-  // Prioritarie di default: la cassettiera della "segretaria AI".
-  // Lo Spam non è MAI prioritario. L'utente può riordinare via drag&drop
-  // (preferenza salvata in localStorage lato client).
-  const PRIORITY_NAMES = new Set([
-    "quotazioni",
-    "operativa",
-    "consulenza",
-    "commerciale",
-    "amministrativo",
-  ]);
-  const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => {
-    const order = g.sort_order ?? index;
-    const norm = g.nome_gruppo.trim().toLowerCase();
-    return {
-      slug: slugifyGroup(g.nome_gruppo),
-      label: g.nome_gruppo,
-      icon: g.icon,
-      color: g.colore,
-      section: PRIORITY_NAMES.has(norm) ? "priority" : "secondary",
-      sort_order: order,
-      auto_mark_read: Boolean(g.funnemail_policy?.auto_mark_read),
-    };
-  });
-  folders.push({ slug: "unclassified", label: "Non classificate", icon: "?", color: null, section: "unclassified", sort_order: 9999 });
+  // Fallback: mittente -> categoria/gruppo -> cartella.
+  const ruleFolderByAddress = new Map<string, string>();
+  const ruleFolderByDomain = new Map<string, string>();
+  for (const rule of rules as Array<EmailAddressRuleRow & { category?: string | null }>) {
+    if (!rule.email_address) continue;
+    const slug = groupNameToFolder(rule.group_name) ?? groupNameToFolder(rule.category ?? null);
+    if (!slug) continue;
+    const key = rule.email_address.trim().toLowerCase();
+    if (key.startsWith("@")) ruleFolderByDomain.set(key.slice(1), slug);
+    else if (!key.includes("@")) ruleFolderByDomain.set(key, slug);
+    else ruleFolderByAddress.set(key, slug);
+  }
 
-  const folderSlugByName = new Map(folders.map((f) => [f.label, f.slug]));
+  // Mantengo `groups` per evitare warning unused; sarà usato per badge futuri.
+  void groups;
+
+  const validSlugs = new Set(folders.map((f) => f.slug));
   const counts: Record<string, number> = Object.fromEntries(folders.map((f) => [f.slug, 0]));
 
   const groupedMessages = messages.map((message) => {
-    const address = extractEmail(message.from_address);
-    const domain = address?.split("@")[1] ?? null;
-    const groupName = address ? rulesByAddress.get(address) ?? (domain ? rulesByDomain.get(domain) : undefined) : undefined;
-    const knownGroup = groupName ? groupByName.get(groupName) : undefined;
-    const slug = knownGroup ? folderSlugByName.get(knownGroup.nome_gruppo) ?? slugifyGroup(knownGroup.nome_gruppo) : "unclassified";
+    let slug: string | null = null;
+    const externalId = (message as ChannelMessage & { message_id_external?: string | null }).message_id_external ?? null;
+    if (externalId) slug = decisionByMsgId.get(externalId) ?? null;
+    if (!slug) {
+      const address = extractEmail(message.from_address);
+      const domain = address?.split("@")[1] ?? null;
+      slug = (address ? ruleFolderByAddress.get(address) : undefined) ?? (domain ? ruleFolderByDomain.get(domain) : undefined) ?? null;
+    }
+    if (!slug || !validSlugs.has(slug)) slug = "to_sort";
     counts[slug] = (counts[slug] ?? 0) + 1;
-    return { ...message, funnemail_group_slug: slug, funnemail_group_name: knownGroup?.nome_gruppo ?? null };
+    return { ...message, funnemail_group_slug: slug, funnemail_group_name: null };
   });
 
   return { folders, counts, messages: groupedMessages };
