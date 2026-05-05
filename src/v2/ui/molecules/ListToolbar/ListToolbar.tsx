@@ -113,9 +113,9 @@ export function ListToolbar<K extends string = string>({
       )}
     >
       {/* Riga 1: count + holding badge + search + sort + actions */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 min-w-0">
         {countLabel && (
-          <span className="text-[11px] text-muted-foreground font-medium">
+          <span className="text-[11px] text-muted-foreground font-medium shrink-0 hidden md:inline">
             {countLabel}
           </span>
         )}
