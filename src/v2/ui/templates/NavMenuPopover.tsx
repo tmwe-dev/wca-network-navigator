@@ -214,6 +214,10 @@ export function NavMenuPopover({
             </div>
           )}
           <div className="my-1 border-t border-white/10" />
+          <div className="px-1">
+            <ThemePicker variant="menu-row" />
+          </div>
+          <div className="my-1 border-t border-white/10" />
           <button
             type="button"
             role="menuitem"
