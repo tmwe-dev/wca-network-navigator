@@ -9,7 +9,7 @@
  *  - Riga 6 (in basso a destra, sempre visibile): slot suggerimento AI +
  *    pulsanti standard "Azioni" e "Assegna gruppo" (stessi delle altre maschere).
  */
-import { Plane } from "lucide-react";
+import { Plane, MailOpen } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,6 +17,7 @@ import { CompanyLogo, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { InlineGroupAssigner } from "@/components/outreach/email/InlineGroupAssigner";
 import { EmailMessageActions } from "@/components/outreach/EmailMessageActions";
+import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { cn } from "@/lib/utils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { extractSenderName, makeSnippet, stripReplyPrefixes } from "./utils";
@@ -63,6 +64,7 @@ export function FunnemailMailCard({
   const snippet = makeSnippet(message.body_text, 220);
   const isUnread = !message.read_at;
   const displayDate = message.email_date || message.created_at;
+  const markRead = useMarkAsRead();
 
   return (
     <div
@@ -157,6 +159,17 @@ export function FunnemailMailCard({
         className="absolute bottom-1 right-2 flex items-center gap-1"
         onClick={(e) => e.stopPropagation()}
       >
+        {isUnread && (
+          <button
+            type="button"
+            title="Segna come letta"
+            onClick={() => markRead.mutate({ id: message.id, channel: message.channel, user_id: message.user_id })}
+            className="inline-flex h-6 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 text-[10px] font-medium text-primary hover:bg-primary/20"
+          >
+            <MailOpen className="h-3 w-3" />
+            Letta
+          </button>
+        )}
         <EmailMessageActions message={message} />
         <InlineGroupAssigner
           fromAddress={message.from_address}
