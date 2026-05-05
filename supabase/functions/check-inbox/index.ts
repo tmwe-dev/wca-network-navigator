@@ -159,6 +159,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Re-sync flag \Seen sulle mail locali ancora unread (best-effort) ──
+    // Risolve "letta su un altro client" senza ri-scaricare nulla.
+    try {
+      const resync = await resyncUnreadFlags(supabase, imapExec, userId);
+      if (resync.checked > 0) {
+        console.log(JSON.stringify({
+          fn: "check-inbox",
+          step: "flag_resync",
+          checked: resync.checked,
+          marked_read: resync.markedRead,
+        }));
+      }
+    } catch (resyncErr: unknown) {
+      console.warn("flag_resync skipped:", extractErrorMessage(resyncErr));
+    }
+
     try {
       client.disconnect();
     } catch (e: unknown) {
