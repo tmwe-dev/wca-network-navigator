@@ -147,6 +147,37 @@ export function useCrmContactsAsCompanies(): UseCrmContactsAsCompaniesResult {
         city: first.city ?? null,
         countryCode: deriveCountryCode(first.country, first.city),
         source: "crm",
+        origin: ((): string | null => {
+          const o = (first as Record<string, unknown>).origin as string | null | undefined;
+          return (o && o.trim()) || null;
+        })(),
+        enrichedAt: ((): string | null => {
+          const ts = g.rows
+            .map((r) => (r as Record<string, unknown>).deep_search_at as string | null | undefined)
+            .filter((v): v is string => !!v)
+            .sort()
+            .reverse();
+          return ts[0] ?? null;
+        })(),
+        logoUrl: ((): string | null => {
+          for (const r of g.rows) {
+            const ed = (r as Record<string, unknown>).enrichment_data as
+              | Record<string, unknown>
+              | null
+              | undefined;
+            const logo = ed && (ed.logo_url as string | undefined);
+            if (logo) return logo;
+          }
+          return null;
+        })(),
+        primaryEmail: ((): string | null => {
+          const r = g.rows.find((x) => !!x.email);
+          return (r?.email as string) ?? null;
+        })(),
+        primaryPhone: ((): string | null => {
+          const r = g.rows.find((x) => !!(x.phone || x.mobile));
+          return ((r?.phone as string) || (r?.mobile as string)) ?? null;
+        })(),
         badge: matched
           ? { label: "WCA", tone: "wca" }
           : { label: "CRM", tone: "neutral" },

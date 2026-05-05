@@ -51,13 +51,26 @@ export function CompanyCard({
   sherlockLevel = null,
   sherlockCompletedAt = null,
 }: CompanyCardProps): React.ReactElement {
-  const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
+  const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount, origin, enrichedAt, logoUrl, primaryEmail, primaryPhone } = company;
   const tone = sourceTone(source);
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
 
   const primaryContactFull = company.contacts?.[0];
-  const firstEmail = primaryContactFull?.email || null;
-  const firstPhone = primaryContactFull?.phone || null;
+  const firstEmail = primaryContactFull?.email || primaryEmail || null;
+  const firstPhone = primaryContactFull?.phone || primaryPhone || null;
+
+  const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
+  const isCustomer = leadStatus === "converted";
+  const enrichedLabel = React.useMemo(() => {
+    if (!enrichedAt) return null;
+    const t = new Date(enrichedAt).getTime();
+    if (Number.isNaN(t)) return null;
+    const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+    if (days < 1) return "DS oggi";
+    if (days < 30) return `DS ${days}g fa`;
+    if (days < 365) return `DS ${Math.floor(days / 30)}mes fa`;
+    return `DS ${Math.floor(days / 365)}a fa`;
+  }, [enrichedAt]);
 
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -136,6 +149,15 @@ export function CompanyCard({
 
   const titleSlot = (
     <>
+      {logoFromMeta && (
+        <img
+          src={logoFromMeta}
+          alt=""
+          loading="lazy"
+          className="w-4 h-4 rounded-sm object-contain bg-background border border-border/40 flex-shrink-0"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
       <span className="truncate text-foreground">{name || "—"}</span>
       {badge && (
         <Badge
@@ -159,6 +181,11 @@ export function CompanyCard({
       {hasBca && (
         <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
           BCA{bcaCount && bcaCount > 1 ? ` ${bcaCount}` : ""}
+        </Badge>
+      )}
+      {isCustomer && (
+        <Badge variant="outline" className="text-[9px] flex-shrink-0 px-1 py-0 h-4 bg-emerald-500/20 text-emerald-500 border-emerald-500/40 font-semibold">
+          Cliente
         </Badge>
       )}
       {leadStatusBadge}
@@ -199,6 +226,39 @@ export function CompanyCard({
       )}
       {contactsCount > 1 && (
         <span className="text-muted-foreground/60 flex-shrink-0">+{contactsCount - 1}</span>
+      )}
+      {(origin || enrichedLabel || firstEmail || firstPhone) && (
+        <span className="text-muted-foreground/40 flex-shrink-0">·</span>
+      )}
+      {origin && (
+        <span className="text-[10px] text-muted-foreground/70 truncate flex-shrink-0" title={`Origine: ${origin}`}>
+          {origin}
+        </span>
+      )}
+      {enrichedLabel && (
+        <span className="text-[10px] text-emerald-500/80 flex-shrink-0" title={enrichedAt ? `Ultima Deep Search: ${new Date(enrichedAt).toLocaleString()}` : undefined}>
+          {enrichedLabel}
+        </span>
+      )}
+      {firstEmail && (
+        <a
+          href={`mailto:${firstEmail}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-[10px] text-primary hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          title={firstEmail}
+        >
+          <Mail className="w-2.5 h-2.5" />
+        </a>
+      )}
+      {firstPhone && (
+        <a
+          href={`tel:${firstPhone.replace(/[^0-9+]/g, "")}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-[10px] text-chart-3 hover:underline flex-shrink-0 inline-flex items-center gap-0.5"
+          title={firstPhone}
+        >
+          <Phone className="w-2.5 h-2.5" />
+        </a>
       )}
     </>
   ) : (

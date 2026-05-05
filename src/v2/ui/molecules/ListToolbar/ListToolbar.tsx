@@ -113,9 +113,9 @@ export function ListToolbar<K extends string = string>({
       )}
     >
       {/* Riga 1: count + holding badge + search + sort + actions */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 min-w-0">
         {countLabel && (
-          <span className="text-[11px] text-muted-foreground font-medium">
+          <span className="text-[11px] text-muted-foreground font-medium shrink-0 hidden md:inline">
             {countLabel}
           </span>
         )}
@@ -176,7 +176,7 @@ export function ListToolbar<K extends string = string>({
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 shrink-0">
           {/* Sort: dropdown chiave + bottone direzione */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -186,7 +186,7 @@ export function ListToolbar<K extends string = string>({
                 title="Ordina per…"
               >
                 <ArrowUpDown className="w-3 h-3" />
-                <span className="hidden sm:inline">Ordina:</span>
+                <span className="hidden xl:inline">Ordina:</span>
                 <span className="text-foreground font-semibold">{currentSortLabel}</span>
               </button>
             </DropdownMenuTrigger>
