@@ -123,7 +123,10 @@ Deno.serve(async (req) => {
           },
         ],
         temperature: 0.2,
-        responseFormat: { type: "json_object" },
+        scope: "inbound-enrichment",
+        action: "classify",
+        groupCategory: "cron",
+        isCron: true,
       });
 
       const parsedRes = safeParseAiJson(result.content ?? "", SuggestionSchema, {
