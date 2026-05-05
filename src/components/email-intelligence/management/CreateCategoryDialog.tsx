@@ -73,7 +73,10 @@ export function CreateCategoryDialog({ open, onOpenChange, onSubmit, existingNam
             <Label htmlFor="nome_gruppo">Nome Categoria *</Label>
             <Input id="nome_gruppo" value={formData.nome_gruppo}
               onChange={(e) => { setFormData(prev => ({ ...prev, nome_gruppo: e.target.value })); setErrors(prev => ({ ...prev, nome_gruppo: '' })); }}
-              placeholder="es. Progetti Urgenti" maxLength={50} />
+              placeholder="es. Clienti, Fornitori, Banca" maxLength={50} />
+            <p className="text-xs text-muted-foreground">
+              Inserisci <strong>chi scrive</strong> (Clienti, Fornitori, Banca, Partners…). Non usare nomi di azione/destinazione (Operativo, Tasks, RFQ, Support): per quelli ci sono le cartelle FunneMail.
+            </p>
             {errors.nome_gruppo && <p className="text-sm text-destructive">{errors.nome_gruppo}</p>}
           </div>
           <div className="space-y-2">
