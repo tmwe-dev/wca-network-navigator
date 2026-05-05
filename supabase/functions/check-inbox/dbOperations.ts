@@ -17,6 +17,14 @@ export interface SenderMatch {
   source_id: string | null;
   partner_id: string | null;
   name: string;
+  /**
+   * Confidenza dell'attribuzione:
+   * - 'exact': match per email esatta o per contatto verificato
+   * - 'domain': match per dominio (un solo partner trovato con quel dominio)
+   * - 'domain_ambiguous': match per dominio ma più partner candidati
+   * - 'none': nessun match
+   */
+  match_confidence: 'exact' | 'domain' | 'domain_ambiguous' | 'none';
 }
 
 export async function matchSender(
@@ -25,7 +33,7 @@ export async function matchSender(
   userId?: string,
 ): Promise<SenderMatch> {
   if (!email || email === "@" || !email.includes("@"))
-    return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto" };
+    return { source_type: "unknown", source_id: null, partner_id: null, name: email || "sconosciuto", match_confidence: 'none' };
 
   const emailLower = email.toLowerCase();
   const domain = emailLower.split("@")[1];
@@ -47,12 +55,14 @@ export async function matchSender(
           company_name: string | null;
         };
         // Normalize source_type to legacy value (strip _domain suffix)
+        const isDomainMatch = /_domain$/.test(r.source_type);
         const normalizedType = r.source_type.replace(/_domain$/, "");
         return {
           source_type: normalizedType,
           source_id: r.source_id,
           partner_id: r.partner_id,
           name: r.display_name || r.company_name || email,
+          match_confidence: isDomainMatch ? 'domain' : 'exact',
         };
       }
       if (error) {
@@ -65,22 +75,51 @@ export async function matchSender(
 
   // Legacy fallback (used if RPC unavailable or userId missing)
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (partner) return { source_type: "partner", source_id: partner.id as string, partner_id: partner.id as string, name: partner.company_name as string };
+  if (partner) return { source_type: "partner", source_id: partner.id as string, partner_id: partner.id as string, name: partner.company_name as string, match_confidence: 'exact' };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (pc) return { source_type: "partner_contact", source_id: pc.id as string, partner_id: pc.partner_id as string, name: pc.name as string };
+  if (pc) return { source_type: "partner_contact", source_id: pc.id as string, partner_id: pc.partner_id as string, name: pc.name as string, match_confidence: 'exact' };
   const { data: ic } = await supabase.from("imported_contacts").select("id, company_name, name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (ic) return { source_type: "imported_contact", source_id: ic.id as string, partner_id: null, name: (ic.name || ic.company_name) as string };
+  if (ic) return { source_type: "imported_contact", source_id: ic.id as string, partner_id: null, name: (ic.name || ic.company_name) as string, match_confidence: 'exact' };
   const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
-  if (prospect) return { source_type: "prospect", source_id: prospect.id as string, partner_id: null, name: prospect.company_name as string };
+  if (prospect) return { source_type: "prospect", source_id: prospect.id as string, partner_id: null, name: prospect.company_name as string, match_confidence: 'exact' };
 
   if (domain) {
     const domainPattern = `%@${domain}`;
-    const { data: dp } = await supabase.from("partners").select("id, company_name").ilike("email", domainPattern).limit(1).maybeSingle();
-    if (dp) return { source_type: "partner", source_id: dp.id as string, partner_id: dp.id as string, name: dp.company_name as string };
-    const { data: dpc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", domainPattern).limit(1).maybeSingle();
-    if (dpc) return { source_type: "partner_contact", source_id: dpc.id as string, partner_id: dpc.partner_id as string, name: dpc.name as string };
+    // Domain match: leggi fino a 2 record per capire se è ambiguo. Order deterministico (created_at).
+    const { data: dpList } = await supabase.from("partners")
+      .select("id, company_name")
+      .ilike("email", domainPattern)
+      .order("created_at", { ascending: true })
+      .limit(2);
+    if (dpList && dpList.length > 0) {
+      const dp = dpList[0];
+      const ambiguous = dpList.length > 1;
+      return {
+        source_type: "partner",
+        source_id: dp.id as string,
+        partner_id: dp.id as string,
+        name: dp.company_name as string,
+        match_confidence: ambiguous ? 'domain_ambiguous' : 'domain',
+      };
+    }
+    const { data: dpcList } = await supabase.from("partner_contacts")
+      .select("id, partner_id, name")
+      .ilike("email", domainPattern)
+      .order("created_at", { ascending: true })
+      .limit(2);
+    if (dpcList && dpcList.length > 0) {
+      const dpc = dpcList[0];
+      const ambiguous = dpcList.length > 1;
+      return {
+        source_type: "partner_contact",
+        source_id: dpc.id as string,
+        partner_id: dpc.partner_id as string,
+        name: dpc.name as string,
+        match_confidence: ambiguous ? 'domain_ambiguous' : 'domain',
+      };
+    }
   }
-  return { source_type: "unknown", source_id: null, partner_id: null, name: email };
+  return { source_type: "unknown", source_id: null, partner_id: null, name: email, match_confidence: 'none' };
 }
 
 // ━━━ Attachment record shape ━━━
