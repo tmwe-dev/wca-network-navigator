@@ -39,6 +39,14 @@ Deno.serve(async (req) => {
     // FIX G1 — encrypt cookie before persisting
     const encryptedCookie = await encryptValue(cookie)
 
+    // PR-2 Step B: user-scoped session when caller is a real user
+    if (auth.authMethod === "jwt" && auth.userId !== "extension-anon") {
+      await supabase.from('user_linkedin_sessions').upsert(
+        { user_id: auth.userId, cookie_encrypted: encryptedCookie, status: 'ok', updated_at: now },
+        { onConflict: 'user_id' },
+      )
+    }
+
     await supabase.from('app_settings').upsert(
       { key: 'linkedin_li_at', value: encryptedCookie, updated_at: now },
       { onConflict: 'key' }

@@ -27,6 +27,14 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString()
 
+    // PR-2 Step B: user-scoped session when caller is a real user
+    if (auth.authMethod === "jwt" && auth.userId !== "extension-anon") {
+      await supabase.from('user_ra_sessions').upsert(
+        { user_id: auth.userId, cookie, status: 'ok', updated_at: now },
+        { onConflict: 'user_id' },
+      )
+    }
+
     await supabase.from('app_settings').upsert(
       { key: 'ra_session_cookie', value: cookie, updated_at: now },
       { onConflict: 'key' }

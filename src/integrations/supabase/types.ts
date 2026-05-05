@@ -10306,6 +10306,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_linkedin_sessions: {
+        Row: {
+          cookie_encrypted: string
+          expires_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cookie_encrypted: string
+          expires_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cookie_encrypted?: string
+          expires_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_ra_sessions: {
+        Row: {
+          cookie: string
+          expires_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cookie: string
+          expires_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cookie?: string
+          expires_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -10351,6 +10399,36 @@ export type Database = {
           user_id?: string
           wca_password?: string | null
           wca_username?: string
+        }
+        Relationships: []
+      }
+      user_wca_sessions: {
+        Row: {
+          cookie: string
+          expires_at: string | null
+          has_aspx_auth: boolean
+          has_wca_cookie: boolean
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cookie: string
+          expires_at?: string | null
+          has_aspx_auth?: boolean
+          has_wca_cookie?: boolean
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cookie?: string
+          expires_at?: string | null
+          has_aspx_auth?: boolean
+          has_wca_cookie?: boolean
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
