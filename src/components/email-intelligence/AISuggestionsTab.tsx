@@ -3,7 +3,7 @@
  * estetica delle card di Gestione Manuale: logo dominio, bandiera, badge
  * gruppo. Niente percentuali fittizie di "confidenza".
  */
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,7 @@ interface CardProps {
   groups: EmailSenderGroup[];
   isSelected: boolean;
   isFocused: boolean;
+  isRemoving: boolean;
   onToggleSelect: (email: string) => void;
   onFocus: (row: AddressRow) => void;
   onAnalyzeOne: (row: AddressRow) => void;
@@ -86,7 +87,7 @@ interface CardProps {
 }
 
 const SuggestionCard = memo(function SuggestionCard({
-  row, groups, isSelected, isFocused, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
+  row, groups, isSelected, isFocused, isRemoving, onToggleSelect, onFocus, onAnalyzeOne, onAccept, onIgnore, onAssign, onOpenActions, busy,
 }: CardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = row.domain || getDomain(row.email_address);
@@ -112,8 +113,10 @@ const SuggestionCard = memo(function SuggestionCard({
     <Card
       className={cn(
         "border-l-4 transition-all hover:shadow-md cursor-pointer",
+        "transition-[opacity,transform,max-height,margin,padding] duration-300 ease-out overflow-hidden",
         isFocused && "ring-2 ring-primary shadow-md",
         isSelected && "border-2 border-primary bg-primary/5",
+        isRemoving && "opacity-0 scale-95 -translate-y-1 max-h-0 my-0 py-0 border-0 pointer-events-none",
       )}
       style={{ borderLeftColor: accent }}
       onClick={() => onFocus(row)}
@@ -321,6 +324,30 @@ export default function AISuggestionsTab() {
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
   const [groupBySuggestion, setGroupBySuggestion] = useState(false);
   const [actionsRow, setActionsRow] = useState<AddressRow | null>(null);
+  // Card che stanno scomparendo (animazione fade-out prima di rimuoverle dalla lista)
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  // Override locale per nascondere subito una card (non ricompare quando React Query rinfresca)
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+
+  const animateRemoval = useCallback((id: string) => {
+    setRemovingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    window.setTimeout(() => {
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 320);
+  }, []);
 
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
@@ -382,10 +409,11 @@ export default function AISuggestionsTab() {
         group_icon: group.icon,
         ai_suggestion_accepted: true,
       }).eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.success("Suggerimento accettato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
@@ -394,7 +422,7 @@ export default function AISuggestionsTab() {
   const assignMutation = useMutation({
     mutationFn: async ({ row, groupId }: { row: AddressRow; groupId: string }) => {
       const group = groups.find((g) => g.id === groupId);
-      if (!group) return;
+      if (!group) return null;
       await supabase.from("email_address_rules").update({
         group_id: group.id,
         group_name: group.nome_gruppo,
@@ -402,11 +430,13 @@ export default function AISuggestionsTab() {
         group_icon: group.icon,
         ai_suggestion_accepted: false,
       }).eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.success("Gruppo assegnato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      if (id) animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
 
@@ -415,10 +445,11 @@ export default function AISuggestionsTab() {
       await supabase.from("email_address_rules")
         .update({ ai_suggestion_accepted: false, ai_suggested_group: null })
         .eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.info("Suggerimento ignorato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
@@ -426,10 +457,11 @@ export default function AISuggestionsTab() {
   const busy = acceptMutation.isPending || assignMutation.isPending || ignoreMutation.isPending;
 
   const visibleRows = useMemo(() => {
-    if (suggestedGroupFilter === "all") return rows;
-    if (suggestedGroupFilter === "none") return rows.filter((row) => !row.ai_suggested_group);
-    return rows.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
-  }, [rows, suggestedGroupFilter]);
+    const filtered = rows.filter((row) => !hiddenIds.has(row.id));
+    if (suggestedGroupFilter === "all") return filtered;
+    if (suggestedGroupFilter === "none") return filtered.filter((row) => !row.ai_suggested_group);
+    return filtered.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
+  }, [rows, suggestedGroupFilter, hiddenIds]);
 
   const sortedRows = useMemo(() => {
     const sorted = [...visibleRows];
@@ -702,6 +734,7 @@ export default function AISuggestionsTab() {
                                 groups={groups}
                                 isSelected={selectedEmails.has(row.email_address)}
                                 isFocused={previewRow?.email_address === row.email_address}
+                                isRemoving={removingIds.has(row.id)}
                                 onToggleSelect={toggleSelection}
                                 onFocus={(current) => setPreviewEmail(current.email_address)}
                                 onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
@@ -722,6 +755,7 @@ export default function AISuggestionsTab() {
                           groups={groups}
                           isSelected={selectedEmails.has(row.email_address)}
                           isFocused={previewRow?.email_address === row.email_address}
+                          isRemoving={removingIds.has(row.id)}
                           onToggleSelect={toggleSelection}
                           onFocus={(current) => setPreviewEmail(current.email_address)}
                           onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
