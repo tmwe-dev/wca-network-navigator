@@ -52,13 +52,25 @@ interface SuggestEmailGroupsResponse {
 // Sub-componenti locali
 // ──────────────────────────────────────────────────────────────────────────────
 
-type LetterRange = "all" | "A-D" | "E-L" | "M-P" | "Q-Z";
+type LetterRange =
+  | "all"
+  | "A-B" | "C-D" | "E-F" | "G-H" | "I-J" | "K-L"
+  | "M-N" | "O-P" | "Q-R" | "S-T" | "U-V" | "W-X" | "Y-Z";
 const LETTER_RANGES: { value: LetterRange; label: string }[] = [
   { value: "all", label: "Tutti" },
-  { value: "A-D", label: "A-D" },
-  { value: "E-L", label: "E-L" },
-  { value: "M-P", label: "M-P" },
-  { value: "Q-Z", label: "Q-Z" },
+  { value: "A-B", label: "A-B" },
+  { value: "C-D", label: "C-D" },
+  { value: "E-F", label: "E-F" },
+  { value: "G-H", label: "G-H" },
+  { value: "I-J", label: "I-J" },
+  { value: "K-L", label: "K-L" },
+  { value: "M-N", label: "M-N" },
+  { value: "O-P", label: "O-P" },
+  { value: "Q-R", label: "Q-R" },
+  { value: "S-T", label: "S-T" },
+  { value: "U-V", label: "U-V" },
+  { value: "W-X", label: "W-X" },
+  { value: "Y-Z", label: "Y-Z" },
 ];
 
 function inLetterRange(name: string, range: LetterRange): boolean {
