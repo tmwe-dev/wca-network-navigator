@@ -436,6 +436,26 @@ ${bodyBlock}`;
       }
     }
 
+    // ── Funnemail Auto-Route (gruppo mittente utente). Fire-and-forget. ──
+    // Crea una email_address_rules se confidence >= 0.85 (auto-instrada anche le
+    // prossime mail dello stesso mittente/dominio); altrimenti scrive solo un
+    // suggerimento in channel_messages.ai_classification_suggestion.
+    if (channel === "email" && body.user_id) {
+      try {
+        await supabase.functions.invoke("funnemail-auto-route", {
+          body: {
+            message_id,
+            from_address,
+            subject: subject || "",
+            body_text: body_text || "",
+            user_id: body.user_id,
+          },
+        });
+      } catch (_e) {
+        // fail-safe: routing è fire-and-forget, errori non bloccano nulla
+      }
+    }
+
     // ── Content Intelligence (Strato 2): legge il CONTENUTO con contesto
     //    pieno e propone azioni. Fire-and-forget, mai blocca il flusso legacy.
     if (channel === "email") {
