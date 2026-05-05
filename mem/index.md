@@ -4,3 +4,4 @@
 - [Agenda Sender Attribution](mem://features/agenda-sender-attribution) — 1 email = 1 mittente (match SOLO esatto, niente domain fallback). Trigger on_inbound_message filtra newsletter/spam/no-reply. UI agenda mostra from_address reale sotto il nome partner.
 - [Prompt Governance Doctrine](mem://architecture/prompt-governance-doctrine) — Runtime Bundle versionato + Change Kernel come unica via di modifica agenti; rubric engine deterministico; coverage matrix; ADR 0004
 - [Prompt Copilot + KB Index](mem://features/prompt-copilot-and-kb-index) — Chat copilota Prompt Reader, kb-index-map, intake KB → proposte (mai scrittura diretta)
+- [Lovable Codex Protocol](mem://standards/lovable-codex-protocol) — Trigger `codex` attiva protocollo `docs/governance/lovable-quick-codex.md`. Auto-attivo per CRITICAL. Output con CLASSE/OBIETTIVO + CHANGELOG con registri [VERIFICATO]/[ATTESO]/[ASSUNTO]. Vietate frasi "dovrebbe", "ho già fixato" senza verifica, "ne approfitto per…".
