@@ -1,1 +1,2 @@
 - [Content Intelligence Layer](mem://features/content-intelligence-layer) — Strato 2 inbound: classify-inbound-content legge contenuto mail con contesto pieno, prompt content-intelligence editabile, no enum chiusi, fail-safe
+- [Conversation Summary SSOT](mem://features/content-intelligence-layer) — `_shared/conversationSummaryLoader.ts` + edge `refresh-conversation-context` (debounced 5min). Sostituisce lettura "ultime 30 mail" con summary narrativo persistente in `contact_conversation_context`. Fire-and-forget post-inbound. Token -10×.
