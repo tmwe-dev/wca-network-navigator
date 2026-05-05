@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { createPromptChangeProposal } from "@/data/promptChangeProposals";
 import { createKbEntryProposal } from "@/data/kbProposals";
 
@@ -88,10 +89,12 @@ export interface PromptCopilotPanelProps {
   currentContent: string;
   promptId?: string | null;
   promptTable?: string;
+  /** When true, the panel is in fullscreen mode: chat and proposal box get more vertical room. */
+  expanded?: boolean;
 }
 
 export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
-  const { agentSlug, agentKbCategories, blockName, currentContent, promptId, promptTable } = props;
+  const { agentSlug, agentKbCategories, blockName, currentContent, promptId, promptTable, expanded = false } = props;
 
   // Modalità: 'block' (lavora sul blocco target) | 'global' (search-replace su tutto)
   const [mode, setMode] = useState<"block" | "global">("block");
@@ -375,7 +378,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
       </div>
 
       {/* SOPRA: Modifica proposta sul prompt */}
-      <div className="border-b bg-card max-h-[45%] overflow-hidden flex flex-col">
+      <div className={cn("border-b bg-card overflow-hidden flex flex-col", expanded ? "max-h-[60%]" : "max-h-[45%]")}>
         <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-primary tracking-wider border-b bg-muted/40">
           {mode === "global" ? "Batch di sostituzioni globali" : "Modifica proposta dall'AI"}
         </div>

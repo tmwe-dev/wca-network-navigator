@@ -1,92 +1,56 @@
+## Obiettivo
 
-## Cosa cambia
+Trasformare `/v2/prompt-reader` in un layout a 2 pannelli (Prompt Reader ↔ Co-pilot) **invertibili via drag & drop**, con il **menu agenti spostato dentro la sidebar a scomparsa** e il Co-pilot espandibile a tutta larghezza per leggere comodamente in verticale.
 
-Quando dal Cockpit si lavora a una **risposta a una mail entrante**, oggi succedono 3 cose sbagliate:
-
-1. La label "Risposta email: RE: …" viene mostrata **due volte** (una nella card contatto a sinistra, una nell'header del pannello bozza a destra) e ripete inutilmente la parola "Risposta" / "Email".
-2. Non c'è alcun modo di **leggere la mail originale** che ha generato la risposta.
-3. L'Oracolo (configurazione AI a sinistra) parte sempre con tipo email **"Primo contatto"**, anche quando in realtà stiamo rispondendo a una mail. Risultato: l'AI non capisce che deve agganciarsi al contesto della mail entrante.
-
-Interveniamo solo su frontend del Cockpit e sui default dell'Oracolo. Niente refactor, niente touch su submit, generazione, edge function, classify-email-response, holding pattern, batch.
-
----
-
-## 1. Niente più testo "Risposta" duplicato — solo icone
-
-Due punti di duplicazione, entrambi diventano **icona**:
-
-- **Card contatto (`src/components/cockpit/CockpitContactHeader.tsx`)**
-  - Oggi: chip `<Reply/> Risposta` + dettaglio.
-  - Dopo: solo icona `<Reply/>` (in tooltip "Risposta email"), senza la parola "Risposta". Stessa regola per `Riprogrammato` (icona `CalendarClock`) e azione generica (icona `Mail`).
-  - Il `detail` continua a mostrare il subject pulito (regex già presente che strippa `risposta email:` e `📅`).
-
-- **Header pannello bozza (`src/components/cockpit/AIDraftStudio.tsx`, righe ~67-82)**
-  - Oggi: `<Icon canale/> Email → Nome contatto`, e sotto `Lingua: it · Azienda`. Se `contactName` arriva valorizzato come "Risposta email: RE: RFP…" appare di nuovo la stringa.
-  - Dopo:
-    - Mostriamo `<Icon canale/>` + (se è risposta) un piccolo badge icona `<Reply/>` accanto, **senza** la parola "Email" né "Risposta".
-    - Puliamo `contactName` togliendo eventuali prefissi `Risposta email:` / `RE:` / `Re:` prima di renderizzarlo.
-    - Manteniamo `Lingua` e `companyName` come sono.
-
-Stessa pulizia del prefisso anche nel breadcrumb interno del Cockpit (`CockpitWorkspace.tsx`, riga ~156 `draftState.contactName`) per evitare che ricompaia altrove.
-
-## 2. Pulsante "Leggi mail originale"
-
-Quando la bozza è una risposta, aggiungiamo nell'header dell'`AIDraftStudio` un piccolo bottone-icona `<Mail/>` (tooltip: "Apri mail originale"). 
-
-- Sorgente del link: `draft.replySource` — nuovo campo opzionale su `DraftState` (`{ messageId: string; subject: string; channelMessageId?: string }`), popolato da `useCockpitLogic.handleDrop` quando il contatto del Cockpit deriva da un'attività di tipo risposta (oggi quell'info esiste già in `cockpit_queue`/`activities` come `source_id` + `source_type='channel_message'`).
-- Click: apre l'inbox FunneMail filtrata sul `messageId` (route già esistente `/v2/funnemail-inbox?msg=…`). Niente nuovi endpoint.
-- Se `replySource` non è disponibile, l'icona resta nascosta (no rumore).
-
-## 3. Default Oracolo: nuovo tipo "Contesto mail"
-
-In `src/data/defaultEmailTypes.ts` aggiungiamo un nuovo `EmailType`:
-
-- `id: "contesto_email"`, `name: "Contesto mail"`, `icon: "Reply"`, `category: "risposta"`, `tone: "professionale"`.
-- `kb_categories: ["identita", "vendita", "email_modelli"]`.
-- `prompt`: stile "professore" (Identità / Obiettivo / Metodo / Guardrail / Output) — riassunto:
-  - **Obiettivo**: rispondere alla mail in arrivo agganciandosi al suo reale contesto (oggetto, contenuto, richiesta esplicita).
-  - **Metodo**: leggere il thread, individuare la richiesta, rispondere in modo chiaro, lunghezza **media** (8-14 righe), tono **professionale**, mai aprire come fosse un primo contatto.
-  - **Guardrail**: niente pitch generico, niente "Mi chiamo / La nostra azienda…", niente CTA da first-touch.
-  - **Output**: subject `Re: <oggetto originale>` se non già impostato.
-
-Questo nuovo tipo viene aggiunto in coda alla lista (resta visibile come chip nei pannelli che usano `DEFAULT_EMAIL_TYPES`, incluso `OraclePanelV2`).
-
-### Selezione automatica del default
-
-Nelle pagine che inizializzano il tipo email:
-
-- **`src/v2/hooks/useForgeLabStore.ts`** (`emailType: DEFAULT_EMAIL_TYPES[0]` → calcolato).
-- **`src/v2/hooks/useEmailComposerV2.ts`** (`useState("primo_contatto")` → calcolato).
-- **`src/v2/ui/pages/command/tools/composeEmail.ts`** (defaults hard-coded a `primo_contatto`).
-
-Aggiungiamo un piccolo helper `pickDefaultEmailType(ctx: { isReply?: boolean })` che ritorna `contesto_email` se `isReply`, altrimenti `primo_contatto`. Il flag `isReply` arriva:
-
-- nel Cockpit dal `draft.replySource` di cui sopra;
-- in `composeEmail` dal payload del tool quando il command-loop sta rispondendo (campo già presente come `inboundMessageId`/contesto);
-- in `useEmailComposerV2` da una nuova prop opzionale `initialIsReply` (default `false` → comportamento invariato negli altri ingressi).
-
-Tono di default: invariato (`professionale`). Lunghezza: gestita dal nuovo prompt "Contesto mail" (media). Niente toggle aggiuntivi.
-
-## 4. Non tocchiamo
-
-- `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (vincolo memoria).
-- `journalistReview`, generate-email, classify-email-response.
-- Logica di submit, batch, dedup, holding pattern.
-- Tipi email esistenti e i loro prompt: solo **aggiunta** del nuovo tipo.
-
-## Mappa file
+## Layout target
 
 ```text
-edit  src/components/cockpit/CockpitContactHeader.tsx         # icona-only per Risposta/Riprogrammato
-edit  src/components/cockpit/AIDraftStudio.tsx                # header icone + pulsante "mail originale", clean contactName
-edit  src/components/cockpit/CockpitWorkspace.tsx             # clean contactName nel breadcrumb
-edit  src/types/cockpit.ts                                    # +DraftState.replySource opzionale
-edit  src/hooks/useCockpitLogic.ts                            # popola replySource al drop quando applicabile
-edit  src/data/defaultEmailTypes.ts                           # +EmailType "contesto_email"
-add   src/data/pickDefaultEmailType.ts                        # helper isReply→contesto_email|primo_contatto
-edit  src/v2/hooks/useForgeLabStore.ts                        # default via helper
-edit  src/v2/hooks/useEmailComposerV2.ts                      # default via helper (+ initialIsReply opzionale)
-edit  src/v2/ui/pages/command/tools/composeEmail.ts           # default via helper
+┌─────────────────────────────────────────────────────────────┐
+│ Header: Home / Prompt Reader   [Proposte][Ricarica][Export] │
+├──┬──────────────────────────────────────────────────────────┤
+│≡ │ ┌─ Pannello A ─────────┐  ┌─ Pannello B ──────────────┐ │
+│M │ │ ⠿ Prompt Reader      │  │ ⠿ Co-pilot                │ │
+│E │ │   (chiaro, blocchi)  │  │ (chat, proposte, KB)     │ │
+│N │ │                      │  │                           │ │
+│U │ │                      │  │            [⛶ espandi]   │ │
+└──┴────────────────────────┘  └──────────────────────────┘ │
 ```
 
-Nessuna migrazione DB, nessuna nuova edge function, nessun tocco a invokeAi / scope / RLS.
+- **Sidebar a scomparsa (sinistra)**: contiene la lista agenti raggruppata per categoria (oggi è inline). Tab/linguetta come quella già presente per aprire/chiudere.
+- **Pannello A / Pannello B**: due colonne 50/50. Hanno una **handle in alto** (icona `⠿ GripVertical`). Trascinando una handle sopra l'altra, i due pannelli si **scambiano di posto** (animazione 200ms). Lo stato dell'ordine è persistito in `localStorage` (`prompt-reader.panel-order`).
+- **Espansione Co-pilot**: bottone `⛶` in alto a destra del Co-pilot. Quando attivo, il Co-pilot occupa **entrambe le colonne** (full-width sull'area centrale, sidebar agenti resta a scomparsa). Stesso bottone per tornare a 50/50. Stato persistito (`prompt-reader.copilot-expanded`).
+- Quando Co-pilot è espanso, la chat e l'area "Modifica proposta" guadagnano spazio verticale: il pannello chat usa l'altezza disponibile (`flex-1`), e il box "Modifica proposta dall'AI" passa da `max-h-[45%]` a `max-h-[60%]` con `ScrollArea` interno per leggere proposte lunghe senza tagli.
+
+## Comportamenti chiave
+
+1. **Drag & drop swap**: implementato con `@dnd-kit/core` (già nel progetto se presente) o, se non disponibile, con HTML5 nativo (`draggable`, `onDragStart`, `onDrop`). Solo 2 zone di drop, nessuna libreria pesante. Animazione fade/translate via `transition-all`.
+2. **Sidebar agenti**:
+   - Linguetta verticale stile attuale, di default **chiusa** quando l'utente apre il Co-pilot espanso.
+   - Width 240px quando aperta, 0 quando chiusa.
+   - Manteniamo i 7 gruppi (`core/email/outreach/...`) e la search non c'è oggi: non la aggiungiamo.
+3. **Co-pilot espanso**:
+   - Pulsante `Maximize2 / Minimize2` (lucide) in header del pannello.
+   - In modalità espansa, il Pannello A (Prompt Reader) si nasconde con `hidden`, non viene smontato (state preservato in cache `cache[id]`).
+   - Quando l'utente clicca un blocco "Modifica con Co-pilot" nel Reader (futuro hook), il Co-pilot torna automaticamente a 50/50.
+4. **Ordine pannelli**: l'inversione cambia solo la posizione visiva. Le props passate a `PromptCopilotPanel` restano invariate (`agentSlug`, `blockName`, `currentContent`).
+
+## File toccati (solo presentation)
+
+- `src/v2/ui/pages/prompt-lab/PromptReaderPage.tsx`
+  - Estrarre la lista agenti in `<aside>` di sinistra (sidebar a scomparsa, già esiste: spostare DENTRO il menu navigazione che oggi sta inline) — oggi è già così, va solo confermato che il menu è UNICAMENTE in quella sidebar collassabile.
+  - Sostituire `<main> + <aside>` (Reader + Co-pilot) con un contenitore `SwapPanels` che gestisce ordine + espansione.
+  - Aggiungere stato: `panelOrder: ["reader","copilot"] | ["copilot","reader"]`, `copilotExpanded: boolean`. Persistenza `localStorage`.
+- Nuovo: `src/v2/ui/pages/prompt-lab/components/SwapPanels.tsx`
+  - Componente presentational con 2 slot (`left`, `right`), handle drag, swap on drop, supporto modalità "fullscreen right".
+- `src/v2/ui/pages/prompt-lab/PromptCopilotPanel.tsx`
+  - Aggiungere prop opzionale `expanded?: boolean` + `onToggleExpand?: () => void`. Bottone `Maximize2/Minimize2` in header. Quando `expanded`, alzare `max-h` del box "Modifica proposta" e dare più altezza alla chat.
+
+## Cosa NON cambia
+- Logica Co-pilot (`prompt-copilot-chat`, intake KB, proposte) invariata.
+- Sidebar agenti contenuto/ordine/categorie invariati.
+- ProposalsReviewPage invariato.
+- Nessuna modifica a edge functions, DAL, hook AI.
+
+## Risultato
+
+L'utente entra su `/v2/prompt-reader`, vede 2 pannelli affiancati. Se vuole più spazio per scrivere/leggere col Co-pilot, clicca `⛶` e occupa tutta l'area; se preferisce avere il Co-pilot a sinistra, trascina la handle e i due pannelli si scambiano. Il menu agenti è sempre raggiungibile dalla linguetta a sinistra ma non occupa spazio quando non serve.
