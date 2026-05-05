@@ -24,6 +24,9 @@ import type { CompanySortKey } from "@/v2/hooks/companyList/useSortedCompanies";
 import { EntityListWithDetail } from "@/v2/ui/organisms/EntityListWithDetail";
 import { PartnerDetailInline } from "@/v2/ui/organisms/PartnerDetailInline";
 import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
+import { supabase } from "@/integrations/supabase/client";
+import { insertCockpitQueueItems } from "@/data/cockpitQueue";
+import { addCockpitPreselection } from "@/lib/cockpitPreselection";
 
 const WCA_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
   { key: "name", label: "Nome" },
@@ -108,11 +111,38 @@ export function NetworkPage(): React.ReactElement {
     setSelectedPartnerId(c.id);
   }, []);
 
-  const handleBulkAddToCockpit = useCallback((sel: CompanyEntity[]) => {
-    window.dispatchEvent(
-      new CustomEvent("cockpit-add-bulk", { detail: { partnerIds: sel.map((s) => s.id) } })
-    );
-    toast.success(`${sel.length} partner aggiunti al Cockpit`);
+  const handleBulkAddToCockpit = useCallback(async (sel: CompanyEntity[]) => {
+    if (!sel.length) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) {
+        toast.error("Utente non autenticato");
+        return;
+      }
+      const items: Array<{ source_type: string; source_id: string; partner_id: string; user_id: string }> = [];
+      for (const c of sel) {
+        const contacts = c.contacts ?? [];
+        if (contacts.length > 0) {
+          for (const ct of contacts) {
+            items.push({ source_type: "partner_contact", source_id: ct.id, partner_id: c.id, user_id: userId });
+          }
+        } else {
+          // Fallback: invia il partner stesso (sarà mostrato come contatto generico)
+          items.push({ source_type: "partner_contact", source_id: c.id, partner_id: c.id, user_id: userId });
+        }
+      }
+      if (items.length === 0) {
+        toast.info("Nessun contatto da inviare");
+        return;
+      }
+      await insertCockpitQueueItems(items);
+      addCockpitPreselection(items.map((i) => i.source_id));
+      toast.success(`${sel.length} partner inviati al Cockpit (${items.length} contatti)`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Errore invio al Cockpit", { description: msg });
+    }
   }, []);
 
   const handleBulkDeepSearch = useCallback((sel: CompanyEntity[]) => {

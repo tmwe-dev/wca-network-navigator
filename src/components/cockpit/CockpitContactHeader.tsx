@@ -64,7 +64,7 @@ export function CockpitContactHeader({
           {/* Riga 1: NOME persona — il dato più importante */}
           <div className="flex items-center gap-1.5">
             {contact.origin === "bca" && <CreditCard className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-            <span className="text-[15px] font-bold text-foreground truncate leading-tight">
+            <span className="text-[15px] font-bold text-white truncate leading-tight drop-shadow-sm">
               {contact.name && contact.name !== "—" ? contact.name : (contact.company || "Contatto")}
             </span>
             <button
@@ -76,21 +76,31 @@ export function CockpitContactHeader({
             </button>
           </div>
           {/* Riga 2: AZIENDA · paese */}
-          <div className="flex items-center gap-1.5 text-xs text-foreground/85 truncate">
-            <span className="truncate font-medium">{contact.company}</span>
-            {contact.country && <span className="text-muted-foreground/70 text-[10px] uppercase tracking-wide">· {contact.country}</span>}
+          <div className="flex items-center gap-1.5 text-xs truncate">
+            <span className="truncate font-semibold text-sky-200">{contact.company}</span>
+            {contact.country && <span className="text-emerald-300/90 text-[10px] uppercase tracking-wide">· {contact.country}</span>}
           </div>
-          {contact.role && <div className="text-[11px] text-muted-foreground truncate">{contact.role}</div>}
+          {contact.role && <div className="text-[11px] text-foreground/80 truncate">{contact.role}</div>}
 
-          {/* Riga 3: TIPO AZIONE — icona + label invece di "Risposta email: ..." */}
-          <div className="mt-1 flex items-center gap-1.5">
+          {/* Riga 3: TIPO AZIONE + dettaglio leggibile (subject pulito o canale) */}
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             <span className={cn(
-              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
-              isReply ? "bg-primary/15 text-primary" : isScheduled ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"
+              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+              isReply
+                ? "bg-sky-500/20 text-sky-100 border-sky-400/40"
+                : isScheduled
+                  ? "bg-amber-500/20 text-amber-100 border-amber-400/40"
+                  : "bg-emerald-500/15 text-emerald-100 border-emerald-400/30"
             )}>
               <ActionIcon className="w-3 h-3" />
               {actionLabel}
             </span>
+            {/* Dettaglio: oggetto/contesto reale, non solo "Risposta email" */}
+            {detail && (
+              <span className="text-[11px] text-foreground/85 truncate max-w-[220px]" title={detail}>
+                {detail.replace(/^risposta email:\s*/i, "").replace(/^📅\s*/, "")}
+              </span>
+            )}
             {contactHeadline && (
               <span className="text-[10px] text-muted-foreground truncate">· {contactHeadline}</span>
             )}
