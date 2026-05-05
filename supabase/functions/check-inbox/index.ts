@@ -20,6 +20,7 @@ import {
 } from "./imapConnection.ts";
 import { processMessage, matchResponseActivity } from "./messageProcessor.ts";
 import { applyEmailRules, classifyInboundEmails, buildResponsePayload } from "./postProcessing.ts";
+import { resyncUnreadFlags } from "./flagResync.ts";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -156,6 +157,22 @@ Deno.serve(async (req) => {
           await updateSyncState(supabase, userId, uid);
         }
       }
+    }
+
+    // ── Re-sync flag \Seen sulle mail locali ancora unread (best-effort) ──
+    // Risolve "letta su un altro client" senza ri-scaricare nulla.
+    try {
+      const resync = await resyncUnreadFlags(supabase, imapExec, userId);
+      if (resync.checked > 0) {
+        console.log(JSON.stringify({
+          fn: "check-inbox",
+          step: "flag_resync",
+          checked: resync.checked,
+          marked_read: resync.markedRead,
+        }));
+      }
+    } catch (resyncErr: unknown) {
+      console.warn("flag_resync skipped:", extractErrorMessage(resyncErr));
     }
 
     try {
