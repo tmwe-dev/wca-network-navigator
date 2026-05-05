@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Quicksand:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -95,7 +95,7 @@ html, body {
 
   /* Lilac-Blue theme — light */
   .theme-lilac {
-    --font-sans: 'Manrope', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
     --primary: 245 75% 55%;
     --primary-foreground: 0 0% 100%;
     --secondary: 252 78% 70%;
@@ -129,7 +129,7 @@ html, body {
 
   /* Space theme — light */
   .theme-space {
-    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --font-sans: 'Quicksand', system-ui, sans-serif;
     --primary: 199 89% 48%;
     --primary-foreground: 0 0% 100%;
     --secondary: 187 85% 53%;
@@ -163,7 +163,7 @@ html, body {
 
   /* Notte theme — light overrides */
   .theme-notte {
-    --font-sans: 'Cormorant Garamond', 'Inter', serif;
+    --font-sans: 'Nunito', system-ui, sans-serif;
     --background: 25 15% 95%;
     --foreground: 25 25% 15%;
     --card: 30 20% 98%;
@@ -238,7 +238,7 @@ html, body {
 
   /* Dark + Lilac */
   .dark.theme-lilac {
-    --font-sans: 'Manrope', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
     --primary: 252 78% 70%;
     --accent: 262 83% 60%;
     --ring: 252 78% 70%;
@@ -253,7 +253,7 @@ html, body {
 
   /* Dark + Space */
   .dark.theme-space {
-    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --font-sans: 'Quicksand', system-ui, sans-serif;
     --background: 220 40% 5%;
     --card: 220 35% 8%;
     --primary: 192 91% 60%;
@@ -271,7 +271,7 @@ html, body {
 
   /* Dark + Notte */
   .dark.theme-notte {
-    --font-sans: 'Cormorant Garamond', 'Inter', serif;
+    --font-sans: 'Nunito', system-ui, sans-serif;
     --background: 25 15% 5%;
     --card: 25 12% 8%;
     --primary: 38 70% 55%;
@@ -299,6 +299,11 @@ html, body {
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56,139,253,0.12), transparent),
       radial-gradient(ellipse 60% 40% at 80% 80%, rgba(138,75,255,0.07), transparent);
     min-height: 100vh;
+  }
+  /* Forza il font del tema su TUTTI gli elementi (input, button, dialog, command palette, ecc.)
+     che altrimenti userebbero il font di sistema del browser. */
+  button, input, textarea, select, optgroup, [role="dialog"], [role="menu"], [cmdk-root] {
+    font-family: var(--font-sans);
   }
 }
 
