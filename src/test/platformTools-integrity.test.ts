@@ -59,17 +59,14 @@ describe("PLATFORM_TOOLS integrity", () => {
   });
 
   it("ogni tool ha type: 'function' e un oggetto function con name e parameters", () => {
-    // Verifica struttura base tramite regex sulle definizioni
-    const toolBlocks = source.split("export const PLATFORM_TOOLS")[1]?.split("];")[0] ?? "";
-    const entries = [...toolBlocks.matchAll(/\{\s*type:\s*"function",\s*function:\s*\{[^}]*name:\s*"([^"]+)"/g)];
+    const entries = [...defsSource.matchAll(/\{\s*type:\s*"function",\s*function:\s*\{[^}]*name:\s*"([^"]+)"/g)];
     expect(entries.length).toBe(toolNames.length);
   });
 
   it("ogni tool definition ha un campo parameters con type: 'object'", () => {
-    const toolBlock = source.split("export const PLATFORM_TOOLS")[1]?.split("];")[0] ?? "";
     for (const name of toolNames) {
       const pattern = new RegExp(`name:\\s*"${name}".*?parameters:\\s*\\{\\s*type:\\s*"object"`, "s");
-      expect(pattern.test(toolBlock)).toBe(true);
+      expect(pattern.test(defsSource)).toBe(true);
     }
   });
 });
