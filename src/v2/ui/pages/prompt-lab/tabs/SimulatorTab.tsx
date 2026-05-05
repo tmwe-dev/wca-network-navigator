@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { listAgentsForCapabilities } from "@/data/agentsForPromptLab";
-import { runAgentSimulator, type SimulatorResponse } from "@/data/agentSimulator";
+import { runAgentSimulator, listEdgeFnPseudoAgents, type SimulatorResponse } from "@/data/agentSimulator";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function SimulatorTab() {
@@ -35,6 +35,11 @@ export function SimulatorTab() {
     queryKey: queryKeys.agents.allForCapabilities(),
     queryFn: listAgentsForCapabilities,
     staleTime: 60_000,
+  });
+  const edgeFnsQuery = useQuery({
+    queryKey: ["prompt-lab", "edge-fn-pseudo-agents"] as const,
+    queryFn: listEdgeFnPseudoAgents,
+    staleTime: 5 * 60_000,
   });
 
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -65,6 +70,10 @@ export function SimulatorTab() {
     () => agentsQuery.data?.find((a) => a.id === selectedAgentId) ?? null,
     [agentsQuery.data, selectedAgentId],
   );
+  const selectedEdgeFn = useMemo(
+    () => edgeFnsQuery.data?.find((e) => e.id === selectedAgentId) ?? null,
+    [edgeFnsQuery.data, selectedAgentId],
+  );
 
   return (
     <div className="flex flex-col gap-3 h-full overflow-auto pr-1">
@@ -77,20 +86,45 @@ export function SimulatorTab() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
-            <Label className="text-xs">Agente</Label>
+            <Label className="text-xs">Agente / Edge function</Label>
             <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
               <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Seleziona agente" /></SelectTrigger>
               <SelectContent>
-                {agentsQuery.data?.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.avatar_emoji} {a.name} <span className="text-muted-foreground">· {a.role}</span>
-                  </SelectItem>
-                ))}
+                {agentsQuery.data && agentsQuery.data.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Agenti
+                    </div>
+                    {agentsQuery.data.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.avatar_emoji} {a.name} <span className="text-muted-foreground">· {a.role}</span>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {edgeFnsQuery.data && edgeFnsQuery.data.length > 0 && (
+                  <>
+                    <div className="mt-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Edge functions AI (pseudo-agenti)
+                    </div>
+                    {edgeFnsQuery.data.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        ⚙️ {e.label} <span className="text-muted-foreground">· {e.edge_function}</span>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
             {selectedAgent && (
               <p className="text-[11px] text-muted-foreground mt-2">
                 Simulazione per <strong>{selectedAgent.name}</strong>. Nessun tool verrà eseguito.
+              </p>
+            )}
+            {selectedEdgeFn && (
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Edge function <code>{selectedEdgeFn.edge_function}</code> trattata come pseudo-agente.{" "}
+                {selectedEdgeFn.description}
               </p>
             )}
           </div>
