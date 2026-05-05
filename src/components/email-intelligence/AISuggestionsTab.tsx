@@ -734,6 +734,7 @@ export default function AISuggestionsTab() {
                                 groups={groups}
                                 isSelected={selectedEmails.has(row.email_address)}
                                 isFocused={previewRow?.email_address === row.email_address}
+                                isRemoving={removingIds.has(row.id)}
                                 onToggleSelect={toggleSelection}
                                 onFocus={(current) => setPreviewEmail(current.email_address)}
                                 onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
@@ -754,6 +755,7 @@ export default function AISuggestionsTab() {
                           groups={groups}
                           isSelected={selectedEmails.has(row.email_address)}
                           isFocused={previewRow?.email_address === row.email_address}
+                          isRemoving={removingIds.has(row.id)}
                           onToggleSelect={toggleSelection}
                           onFocus={(current) => setPreviewEmail(current.email_address)}
                           onAnalyzeOne={(current) => analyzeMutation.mutate([current.email_address])}
