@@ -18,6 +18,7 @@ import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
+import { AutoPageTitle } from "./header/AutoPageTitle";
 import { Menu, Sparkles } from "lucide-react";
 
 interface OutreachQueue {
@@ -92,7 +93,9 @@ export function LayoutHeader({
         <ExploreContextHeader />
 
         {/* Slot per PageTitleHeader (Cockpit, Inbox, Email, ecc.) — riempito via Portal */}
-        <div id="page-title-slot" className="flex min-w-0 items-center gap-2" />
+        <div id="page-title-slot" className="flex min-w-0 items-center gap-2">
+          <AutoPageTitle />
+        </div>
 
         {/* Slot dinamico per controlli pagina (campagne, ecc.) — riservato ma compresso */}
         <div id="campaign-header-controls" className="flex min-w-0 items-center gap-2" />
