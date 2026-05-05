@@ -20,6 +20,7 @@ import {
   DEFAULT_CAPABILITIES,
 } from "../_shared/agentCapabilitiesLoader.ts";
 import { loadAgentPersona, renderPersonaBlock } from "../_shared/agentPersonaLoader.ts";
+import { EDGE_FN_REGISTRY, getEdgeFnSpec, isEdgeFnAgentId } from "../_shared/edgeFnPromptRegistry.ts";
 
 // Mirror of agent-loop tool registry. Kept here so the simulator stays
 // in sync without importing the live function (each edge fn is isolated).
@@ -79,6 +80,24 @@ serve(async (req: Request) => {
     const userMessage = typeof body.userMessage === "string" ? body.userMessage : "";
     const sessionContext = body.sessionContext ?? null;
     const dryRunAI = body.dryRunAI === true;
+    const listEdgeFns = body.listEdgeFns === true;
+
+    // ── Special endpoint: return the edge-fn pseudo-agent registry. ──
+    // The Simulator UI calls this once to populate the dropdown without
+    // hitting the agents table.
+    if (listEdgeFns) {
+      return jsonResp({
+        edge_fns: EDGE_FN_REGISTRY.map((s) => ({
+          id: s.id,
+          edge_function: s.edgeFunction,
+          label: s.label,
+          description: s.description,
+          default_model: s.defaultModel,
+          has_tools: s.hasTools,
+          loader_options: s.loaderOptions,
+        })),
+      }, 200, cors);
+    }
 
     if (!userMessage.trim()) {
       return jsonResp({ error: "userMessage obbligatorio" }, 400, cors);
@@ -88,6 +107,96 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // ── Branch: pseudo-agent for an AI edge function ──
+    if (isEdgeFnAgentId(agentId)) {
+      const spec = getEdgeFnSpec(agentId!);
+      if (!spec) return jsonResp({ error: `Edge function pseudo-agent sconosciuto: ${agentId}` }, 404, cors);
+
+      const lab = await loadOperativePrompts(supabaseSrv, userId, spec.loaderOptions);
+      const promptLabBlock = lab.block ? `\n\n${lab.block}` : "";
+      const systemPrompt = `${spec.basePrompt}${promptLabBlock}`;
+
+      let dryRun: Record<string, unknown> | null = null;
+      if (dryRunAI) {
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (!LOVABLE_API_KEY) {
+          dryRun = { error: "LOVABLE_API_KEY non configurata" };
+        } else {
+          const start = Date.now();
+          const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: spec.defaultModel.startsWith("claude") ? "google/gemini-2.5-flash" : spec.defaultModel,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userMessage },
+              ],
+              temperature: 0.2,
+              max_tokens: 500,
+            }),
+          });
+          const elapsed = Date.now() - start;
+          if (!resp.ok) {
+            const txt = await resp.text();
+            dryRun = { error: `AI gateway ${resp.status}`, detail: txt.slice(0, 400), elapsed_ms: elapsed };
+          } else {
+            const data = await resp.json();
+            const msg = data.choices?.[0]?.message;
+            dryRun = {
+              model: spec.defaultModel,
+              elapsed_ms: elapsed,
+              message: msg?.content ?? "",
+              proposed_tool_calls: [],
+              usage: data.usage ?? null,
+            };
+          }
+        }
+      }
+
+      return jsonResp({
+        kind: "edge_fn",
+        edge_fn: {
+          id: spec.id,
+          edge_function: spec.edgeFunction,
+          label: spec.label,
+          description: spec.description,
+          default_model: spec.defaultModel,
+          has_tools: spec.hasTools,
+          loader_options: spec.loaderOptions,
+        },
+        assembled: {
+          system_prompt: systemPrompt,
+          char_count: systemPrompt.length,
+        },
+        persona: { loaded: false, note: "Le edge function di classificazione/generazione non usano persona DB. Sono comandate solo dal base prompt + Prompt Lab." },
+        capabilities: {
+          loaded: false,
+          execution_mode: "edge-function",
+          preferred_model: spec.defaultModel,
+          temperature: 0.2,
+          max_tokens_per_call: 500,
+          max_iterations: 1,
+          max_concurrent_tools: 0,
+          step_timeout_ms: 30000,
+        },
+        operative_prompts: {
+          applied: lab.appliedNames,
+          has_mandatory: lab.hasMandatory,
+          matched: lab.matched,
+          block_preview: lab.block ?? "",
+        },
+        tools: {
+          all_registered: [],
+          effective: [],
+          filtered_out: [],
+          approval_map: [],
+        },
+        hard_guards: HARD_GUARDS_SUMMARY,
+        dry_run: dryRun,
+      }, 200, cors);
+    }
 
     // ── 1. Persona ──
     const persona = agentId ? await loadAgentPersona(supabaseSrv, agentId, userId) : null;
