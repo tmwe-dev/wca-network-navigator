@@ -288,6 +288,18 @@ export default function PromptReaderPage() {
     name: "system_prompt",
     content: "",
   });
+  const [panelOrder, setPanelOrder] = useState<[PanelId, PanelId]>(() => readPanelOrder());
+  const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(() => readExpanded());
+
+  useEffect(() => {
+    try { localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panelOrder)); } catch { /* noop */ }
+  }, [panelOrder]);
+  useEffect(() => {
+    try {
+      if (expandedPanel) localStorage.setItem(COPILOT_EXPANDED_KEY, expandedPanel);
+      else localStorage.removeItem(COPILOT_EXPANDED_KEY);
+    } catch { /* noop */ }
+  }, [expandedPanel]);
 
   const selected = allAgents.find((a) => a.id === selectedId) ?? allAgents[0];
   const data: SimulatorResponse | undefined = selected ? cache[selected.id] : undefined;
