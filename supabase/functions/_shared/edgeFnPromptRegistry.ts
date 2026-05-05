@@ -125,7 +125,7 @@ export const EDGE_FN_REGISTRY: ReadonlyArray<EdgeFnPromptSpec> = [
       "Devi smistare la mail in UNA cartella esistente e decidere azione/agenda/handoff commerciale.",
     ].join("\n\n"),
     loaderOptions: {
-      scope: "funnemail_classifier" as PromptScope,
+      scope: "funnemail_classifier",
       includeUniversal: true,
       limit: 3,
     },
