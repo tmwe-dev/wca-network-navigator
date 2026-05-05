@@ -55,7 +55,7 @@ export function CockpitContactHeader({
   const isReply = /risposta/i.test(detail);
   const isScheduled = /riprogrammat|schedul|📅/i.test(detail);
   const ActionIcon = isReply ? Reply : isScheduled ? CalendarClock : Mail;
-  const actionLabel = isReply ? "Risposta" : isScheduled ? "Riprogrammato" : "Azione";
+  const actionTooltip = isReply ? "Risposta a email ricevuta" : isScheduled ? "Riprogrammato" : "Azione";
 
   return (
     <>
@@ -84,21 +84,25 @@ export function CockpitContactHeader({
 
           {/* Riga 3: TIPO AZIONE + dettaglio leggibile (subject pulito o canale) */}
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-            <span className={cn(
-              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
-              isReply
-                ? "bg-sky-500/20 text-sky-100 border-sky-400/40"
-                : isScheduled
-                  ? "bg-amber-500/20 text-amber-100 border-amber-400/40"
-                  : "bg-emerald-500/15 text-emerald-100 border-emerald-400/30"
-            )}>
-              <ActionIcon className="w-3 h-3" />
-              {actionLabel}
-            </span>
+            <InfoTooltip content={actionTooltip}>
+              <span className={cn(
+                "inline-flex items-center justify-center rounded-md p-0.5 border",
+                isReply
+                  ? "bg-sky-500/20 text-sky-100 border-sky-400/40"
+                  : isScheduled
+                    ? "bg-amber-500/20 text-amber-100 border-amber-400/40"
+                    : "bg-emerald-500/15 text-emerald-100 border-emerald-400/30"
+              )}>
+                <ActionIcon className="w-3 h-3" />
+              </span>
+            </InfoTooltip>
             {/* Dettaglio: oggetto/contesto reale, non solo "Risposta email" */}
             {detail && (
               <span className="text-[11px] text-foreground/85 truncate max-w-[220px]" title={detail}>
-                {detail.replace(/^risposta email:\s*/i, "").replace(/^📅\s*/, "")}
+                {detail
+                  .replace(/^risposta(?:\s+(?:a\s+)?email[^:]*)?:\s*/i, "")
+                  .replace(/^re:\s*/i, "")
+                  .replace(/^📅\s*/, "")}
               </span>
             )}
             {contactHeadline && (
