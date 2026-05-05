@@ -164,6 +164,30 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500, headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
+    // Carica i prompt operativi dal Prompt Lab (scope: classification).
+    // Editabili dall'operatore via /v2/prompt-lab senza redeploy.
+    let operativeBlock = "";
+    let appliedPromptNames: string[] = [];
+    try {
+      const op = await loadOperativePrompts(supabase, user.id, {
+        scope: "classification",
+        extraTags: ["email-groups-classifier"],
+        includeUniversal: true,
+        limit: 6,
+      });
+      operativeBlock = op.block;
+      appliedPromptNames = op.appliedNames;
+    } catch (e) {
+      console.warn("[suggest-email-groups] operative prompts load failed:", (e as Error).message);
+    }
+
+    const systemPrompt = [
+      "Sei il classificatore degli indirizzi email mittente per TMWE / Find Air, azienda di freight forwarding e logistica internazionale.",
+      "Devi assegnare ogni address a UNO dei gruppi esistenti dell'operatore (mai inventarne di nuovi).",
+      "Distingui sempre i mittenti REALI con cui abbiamo rapporto operativo dai COLD OUTREACH / pitch commerciali non richiesti.",
+      operativeBlock || "",
+    ].filter(Boolean).join("\n\n");
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
