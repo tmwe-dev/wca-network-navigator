@@ -10,7 +10,10 @@ import { applyLeadStatusChange } from "../_shared/leadStatusGuard.ts";
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
 
-// ━━━ Sender matching (domain fallback) ━━━
+// ━━━ Sender matching (EXACT ONLY — no domain fallback) ━━━
+// Politica: 1 email = 1 mittente. Se l'address esatto non corrisponde a nessun
+// partner / contact / prospect, il mittente resta semplicemente l'email.
+// Mai inferire un partner per somiglianza di dominio.
 
 export interface SenderMatch {
   source_type: string;
@@ -19,12 +22,10 @@ export interface SenderMatch {
   name: string;
   /**
    * Confidenza dell'attribuzione:
-   * - 'exact': match per email esatta o per contatto verificato
-   * - 'domain': match per dominio (un solo partner trovato con quel dominio)
-   * - 'domain_ambiguous': match per dominio ma più partner candidati
-   * - 'none': nessun match
+   * - 'exact': match per email esatta (partner / contact / prospect)
+   * - 'none': nessun match — mittente = solo l'address
    */
-  match_confidence: 'exact' | 'domain' | 'domain_ambiguous' | 'none';
+  match_confidence: 'exact' | 'none';
 }
 
 export async function matchSender(
@@ -54,16 +55,18 @@ export async function matchSender(
           display_name: string | null;
           company_name: string | null;
         };
-        // Normalize source_type to legacy value (strip _domain suffix)
+        // I match per dominio dell'RPC (suffisso _domain) sono IGNORATI:
+        // accettiamo solo match esatti per email.
         const isDomainMatch = /_domain$/.test(r.source_type);
-        const normalizedType = r.source_type.replace(/_domain$/, "");
-        return {
-          source_type: normalizedType,
-          source_id: r.source_id,
-          partner_id: r.partner_id,
-          name: r.display_name || r.company_name || email,
-          match_confidence: isDomainMatch ? 'domain' : 'exact',
-        };
+        if (!isDomainMatch) {
+          return {
+            source_type: r.source_type,
+            source_id: r.source_id,
+            partner_id: r.partner_id,
+            name: r.display_name || r.company_name || email,
+            match_confidence: 'exact',
+          };
+        }
       }
       if (error) {
         console.warn(`[matchSender] RPC error, falling back to legacy queries:`, error.message);
@@ -73,7 +76,7 @@ export async function matchSender(
     }
   }
 
-  // Legacy fallback (used if RPC unavailable or userId missing)
+  // Legacy fallback EXACT-ONLY (RPC unavailable o userId mancante)
   const { data: partner } = await supabase.from("partners").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (partner) return { source_type: "partner", source_id: partner.id as string, partner_id: partner.id as string, name: partner.company_name as string, match_confidence: 'exact' };
   const { data: pc } = await supabase.from("partner_contacts").select("id, partner_id, name").ilike("email", emailLower).limit(1).maybeSingle();
@@ -83,42 +86,7 @@ export async function matchSender(
   const { data: prospect } = await supabase.from("prospects").select("id, company_name").ilike("email", emailLower).limit(1).maybeSingle();
   if (prospect) return { source_type: "prospect", source_id: prospect.id as string, partner_id: null, name: prospect.company_name as string, match_confidence: 'exact' };
 
-  if (domain) {
-    const domainPattern = `%@${domain}`;
-    // Domain match: leggi fino a 2 record per capire se è ambiguo. Order deterministico (created_at).
-    const { data: dpList } = await supabase.from("partners")
-      .select("id, company_name")
-      .ilike("email", domainPattern)
-      .order("created_at", { ascending: true })
-      .limit(2);
-    if (dpList && dpList.length > 0) {
-      const dp = dpList[0];
-      const ambiguous = dpList.length > 1;
-      return {
-        source_type: "partner",
-        source_id: dp.id as string,
-        partner_id: dp.id as string,
-        name: dp.company_name as string,
-        match_confidence: ambiguous ? 'domain_ambiguous' : 'domain',
-      };
-    }
-    const { data: dpcList } = await supabase.from("partner_contacts")
-      .select("id, partner_id, name")
-      .ilike("email", domainPattern)
-      .order("created_at", { ascending: true })
-      .limit(2);
-    if (dpcList && dpcList.length > 0) {
-      const dpc = dpcList[0];
-      const ambiguous = dpcList.length > 1;
-      return {
-        source_type: "partner_contact",
-        source_id: dpc.id as string,
-        partner_id: dpc.partner_id as string,
-        name: dpc.name as string,
-        match_confidence: ambiguous ? 'domain_ambiguous' : 'domain',
-      };
-    }
-  }
+  // Nessun match esatto: mittente = l'email stessa, niente partner_id.
   return { source_type: "unknown", source_id: null, partner_id: null, name: email, match_confidence: 'none' };
 }
 
