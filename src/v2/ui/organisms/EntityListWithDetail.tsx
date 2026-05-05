@@ -179,7 +179,7 @@ export function EntityListWithDetail({
     const first = sorted[0];
     if (autoFocusedRef.current === first.id) return;
     autoFocusedRef.current = first.id;
-    if (onOpenContact) onOpenContact({ id: first.id, raw: first });
+    if (onOpenContact) onOpenContact({ id: first.id, raw: first }, first);
     else if (onOpenCompany) onOpenCompany(first);
   }, [isLoading, detailSlot, selection.count, sorted, onOpenContact, onOpenCompany]);
 
