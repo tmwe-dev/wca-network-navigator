@@ -89,6 +89,7 @@ const PromptLabPage = lazy(() => import("./ui/pages/PromptLabPage").then((m) => 
 const AgentAtlasPage = lazy(() => import("./ui/pages/prompt-lab/atlas/AgentAtlasPage"));
 const SuggestionsReviewPage = lazy(() => import("./ui/pages/prompt-lab/SuggestionsReviewPage"));
 const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
+const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
 const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
