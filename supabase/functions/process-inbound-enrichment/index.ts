@@ -13,16 +13,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { callLLM } from "../_shared/callLLM.ts";
 import { safeParseAiJson } from "../_shared/aiJsonValidator.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 
 const BATCH_SIZE = 5;
 const MAX_ATTEMPTS = 3;
 
-interface Suggestion {
-  category: string;
-  reason: string;
-  confidence: number;
-  suggested_group?: string | null;
-}
+const SuggestionSchema = z.object({
+  category: z.string(),
+  reason: z.string(),
+  confidence: z.number().min(0).max(1),
+  suggested_group: z.string().nullable().optional(),
+});
+type Suggestion = z.infer<typeof SuggestionSchema>;
 
 const PROMPT_SYSTEM = `Sei un classificatore di email B2B in arrivo.
 Per ogni mail rispondi SOLO con JSON che rispetta lo schema fornito.
@@ -124,12 +126,17 @@ Deno.serve(async (req) => {
         responseFormat: { type: "json_object" },
       });
 
-      const parsed = safeParseAiJson<Suggestion>(result.content ?? "", {
-        category: "altro",
-        reason: "fallback",
-        confidence: 0,
-        suggested_group: null,
+      const parsedRes = safeParseAiJson(result.content ?? "", SuggestionSchema, {
+        fnName: "process-inbound-enrichment",
+        model: "google/gemini-2.5-flash",
+        fallback: {
+          category: "altro",
+          reason: "fallback",
+          confidence: 0,
+          suggested_group: null,
+        } as Suggestion,
       });
+      const parsed = parsedRes.data;
 
       await supabase
         .from("channel_messages")
