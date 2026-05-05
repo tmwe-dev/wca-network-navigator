@@ -126,13 +126,25 @@ interface EmailAddressRuleRow {
 }
 
 const FUNNEMAIL_QUERY_PAGE_SIZE = 500;
+/**
+ * Cap di sicurezza per evitare freeze del browser:
+ * - messaggi: ultimi 1000 (≈2 pagine) — più che sufficiente per la inbox attiva
+ * - regole/gruppi: 2000 — copre installazioni grandi senza loop infiniti
+ * Il loop precedente (`fetchAllPages` senza tetto) congelava la UI su account
+ * con decine di migliaia di email, soprattutto in modalità "viewingAll".
+ */
+const MAX_MESSAGES = 1000;
+const MAX_RULES_OR_GROUPS = 2000;
 
 interface QueryPage<T> {
   data: T[] | null;
   error: Error | null;
 }
 
-async function fetchAllPages<T>(createQuery: (from: number, to: number) => PromiseLike<QueryPage<T>>): Promise<T[]> {
+async function fetchAllPages<T>(
+  createQuery: (from: number, to: number) => PromiseLike<QueryPage<T>>,
+  maxRows = Number.POSITIVE_INFINITY,
+): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += FUNNEMAIL_QUERY_PAGE_SIZE) {
     const to = from + FUNNEMAIL_QUERY_PAGE_SIZE - 1;
@@ -141,6 +153,7 @@ async function fetchAllPages<T>(createQuery: (from: number, to: number) => Promi
     const page = data ?? [];
     out.push(...page);
     if (page.length < FUNNEMAIL_QUERY_PAGE_SIZE) return out;
+    if (out.length >= maxRows) return out.slice(0, maxRows);
   }
 }
 
@@ -314,16 +327,16 @@ export async function listFunnemailGroupedInbox(
         .order("email_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .range(from, to);
-    }),
+    }, MAX_MESSAGES),
     fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
-      .range(from, to)),
+      .range(from, to), MAX_RULES_OR_GROUPS),
     fetchAllPages<EmailAddressRuleRow>((from, to) => untypedFrom("email_address_rules")
       .select("email_address,group_name")
       .eq("user_id", userId)
-      .range(from, to)),
+      .range(from, to), MAX_RULES_OR_GROUPS),
   ]);
 
   const groupRows = groups;
