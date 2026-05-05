@@ -92,19 +92,20 @@ export function EmailDetailView({ message, onClose }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex-shrink-0 border-b border-border px-4 pt-3 pb-3">
-        <div className="flex items-start gap-3">
+      <div className="flex-shrink-0 border-b border-border px-3 py-2 lg:px-4 lg:py-3">
+        <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
           <CompanyLogo email={message.from_address} name={brand} size={40} className="flex-shrink-0" />
 
           <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <span className="truncate text-sm font-bold text-primary">{brand}</span>
               <CompanyLogoInline email={message.from_address} size={16} />
               <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
-              <span className="ml-2 truncate text-[11px] text-muted-foreground" title={senderDetail || message.from_address || ""}>
+              <span className="min-w-0 max-w-full truncate text-[11px] text-muted-foreground sm:max-w-[260px]" title={senderDetail || message.from_address || ""}>
                 {senderDetail || message.from_address}
               </span>
-              <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
+              <span className="whitespace-nowrap text-[11px] text-muted-foreground xl:ml-auto">
                 {formatDisplayDate(displayDate)}
               </span>
             </div>
@@ -159,8 +160,10 @@ export function EmailDetailView({ message, onClose }: Props) {
             )}
           </div>
 
-          <div className="flex flex-shrink-0 flex-col items-end gap-1">
-            <div className="flex items-center gap-1">
+          </div>
+
+          <div className="flex min-w-0 flex-shrink-0 flex-col items-start gap-1 xl:items-end">
+            <div className="flex max-w-full flex-wrap items-center justify-start gap-1 xl:justify-end">
               {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
