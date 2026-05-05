@@ -1,4 +1,6 @@
 export const TOOLS_INBOX_SEARCH = [
+  // ── Inbox & Conversations ──
+  {
     type: "function",
     function: {
       name: "get_inbox",
@@ -135,6 +137,4 @@ export const TOOLS_INBOX_SEARCH = [
     },
   },
 
-  // ── System ──
-  {
 ];

@@ -1,4 +1,5 @@
 export const TOOLS_ACTIVITIES_OUTREACH = [
+  // ── Activities ──
   {
     type: "function",
     function: {
@@ -209,6 +210,4 @@ export const TOOLS_ACTIVITIES_OUTREACH = [
     },
   },
 
-  // ── Inbox & Conversations ──
-  {
 ];

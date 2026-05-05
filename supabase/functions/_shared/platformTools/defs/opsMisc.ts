@@ -1,4 +1,6 @@
 export const TOOLS_OPS_MISC = [
+  // ── System ──
+  {
     type: "function",
     function: {
       name: "get_global_summary",

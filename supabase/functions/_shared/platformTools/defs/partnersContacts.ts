@@ -202,5 +202,4 @@ export const TOOLS_PARTNERS_CONTACTS = [
     },
   },
 
-  // ── Activities ──
 ];
