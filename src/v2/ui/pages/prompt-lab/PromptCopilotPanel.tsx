@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { createPromptChangeProposal } from "@/data/promptChangeProposals";
 import { createKbEntryProposal } from "@/data/kbProposals";
 
