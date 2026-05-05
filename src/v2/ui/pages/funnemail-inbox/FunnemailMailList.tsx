@@ -202,6 +202,7 @@ export function FunnemailMailList({
             onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
             onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
             onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+            selectedIds={checkedMessages.map((m) => m.id)}
           />
         )}
       </div>
@@ -230,6 +231,7 @@ export function FunnemailMailList({
           onAssignGroup={(name) => { void bulkAssignGroup(checkedMessages, name); clearChecked(); }}
           onArchive={() => { bulkArchive(checkedMessages); clearChecked(); }}
           onDelete={() => { bulkDelete(checkedMessages); clearChecked(); }}
+          selectedIds={checkedMessages.map((m) => m.id)}
         />
       )}
     </div>
