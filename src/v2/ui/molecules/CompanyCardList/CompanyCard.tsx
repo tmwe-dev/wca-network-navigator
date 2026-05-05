@@ -51,13 +51,26 @@ export function CompanyCard({
   sherlockLevel = null,
   sherlockCompletedAt = null,
 }: CompanyCardProps): React.ReactElement {
-  const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount } = company;
+  const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount, origin, enrichedAt, logoUrl, primaryEmail, primaryPhone } = company;
   const tone = sourceTone(source);
   const { handleSendEmail, handleSendWhatsApp } = useDirectContactActions();
 
   const primaryContactFull = company.contacts?.[0];
-  const firstEmail = primaryContactFull?.email || null;
-  const firstPhone = primaryContactFull?.phone || null;
+  const firstEmail = primaryContactFull?.email || primaryEmail || null;
+  const firstPhone = primaryContactFull?.phone || primaryPhone || null;
+
+  const logoFromMeta = meta?.logoUrl ?? logoUrl ?? null;
+  const isCustomer = leadStatus === "converted";
+  const enrichedLabel = React.useMemo(() => {
+    if (!enrichedAt) return null;
+    const t = new Date(enrichedAt).getTime();
+    if (Number.isNaN(t)) return null;
+    const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+    if (days < 1) return "DS oggi";
+    if (days < 30) return `DS ${days}g fa`;
+    if (days < 365) return `DS ${Math.floor(days / 30)}mes fa`;
+    return `DS ${Math.floor(days / 365)}a fa`;
+  }, [enrichedAt]);
 
   const onMenuEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -124,6 +137,7 @@ export function CompanyCard({
       holding: { label: "In attesa", cls: "bg-primary/15 text-primary border-primary/30" },
       archived: { label: "Archiviato", cls: "bg-muted/40 text-muted-foreground border-border/40" },
       blacklisted: { label: "Blacklist", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+      converted: { label: "Cliente", cls: "bg-emerald-500/20 text-emerald-500 border-emerald-500/40 font-semibold" },
     };
     const m = map[leadStatus];
     if (!m) return null;
