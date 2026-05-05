@@ -42,49 +42,49 @@ export function FunnemailListToolbar({
 }: Props) {
   const allSelected = totalCount > 0 && checkedCount >= totalCount;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-2 py-1.5 text-[10px] sm:flex-nowrap sm:overflow-x-auto">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2 text-sm sm:flex-nowrap sm:overflow-x-auto">
       {(onSelectAll || onClearSelection) && (
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="h-6 gap-1 px-1.5 text-[10px] shrink-0"
+          className="h-8 gap-1.5 px-2 text-xs shrink-0"
           onClick={() => (allSelected ? onClearSelection?.() : onSelectAll?.())}
           title={allSelected ? "Deseleziona tutte" : "Seleziona tutte"}
         >
-          {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+          {allSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
           <span>{checkedCount > 0 ? `${checkedCount}/${totalCount}` : "Seleziona"}</span>
         </Button>
       )}
-      <div className="flex items-center gap-1 shrink-0">
-        <ArrowDownWideNarrow className="h-3 w-3 text-muted-foreground" />
-        <span className="text-muted-foreground font-medium">Ordina:</span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <ArrowDownWideNarrow className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground font-medium">Ordina:</span>
         <Select value={sort} onValueChange={(v) => onSortChange(v as SortMode)}>
-          <SelectTrigger className="h-6 w-[140px] text-[10px]">
+          <SelectTrigger className="h-8 w-[160px] text-xs">
             <SelectValue>{SORT_LABELS[sort]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
-              <SelectItem key={k} value={k} className="text-[11px]">{SORT_LABELS[k]}</SelectItem>
+              <SelectItem key={k} value={k} className="text-sm">{SORT_LABELS[k]}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <FolderTree className="h-3 w-3 text-muted-foreground" />
-        <span className="text-muted-foreground font-medium">Raggruppa:</span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <FolderTree className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground font-medium">Raggruppa:</span>
         <Select value={group} onValueChange={(v) => onGroupChange(v as GroupMode)}>
-          <SelectTrigger className="h-6 w-[130px] text-[10px]">
+          <SelectTrigger className="h-8 w-[150px] text-xs">
             <SelectValue>{GROUP_LABELS[group]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(GROUP_LABELS) as GroupMode[]).map((k) => (
-              <SelectItem key={k} value={k} className="text-[11px]">{GROUP_LABELS[k]}</SelectItem>
+              <SelectItem key={k} value={k} className="text-sm">{GROUP_LABELS[k]}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      <span className="ml-0 shrink-0 text-[10px] text-muted-foreground tabular-nums sm:ml-auto">
+      <span className="ml-0 shrink-0 text-xs text-muted-foreground tabular-nums sm:ml-auto">
         <strong className="text-foreground">{totalCount}</strong> mail
       </span>
     </div>
