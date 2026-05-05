@@ -72,3 +72,21 @@ export async function runAgentSimulator(req: SimulatorRequest): Promise<Simulato
   if (error) throw error;
   return data as SimulatorResponse;
 }
+
+export interface EdgeFnSpecLite {
+  id: string;
+  edge_function: string;
+  label: string;
+  description: string;
+  default_model: string;
+  has_tools: boolean;
+  loader_options: Record<string, unknown>;
+}
+
+export async function listEdgeFnPseudoAgents(): Promise<EdgeFnSpecLite[]> {
+  const { data, error } = await supabase.functions.invoke("agent-simulate", {
+    body: { listEdgeFns: true, scope: "lab", context: { source: "agentSimulator", mode: "list-edge-fns" } },
+  });
+  if (error) throw error;
+  return ((data as { edge_fns?: EdgeFnSpecLite[] })?.edge_fns ?? []);
+}
