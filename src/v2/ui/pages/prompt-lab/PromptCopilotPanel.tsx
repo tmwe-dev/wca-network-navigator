@@ -357,23 +357,24 @@ function IntakeTab() {
             <div><span className="text-muted-foreground">Titolo:</span> {String(proposal.suggested_title ?? "—")}</div>
             <div><span className="text-muted-foreground">Tags:</span> {((proposal.suggested_tags as string[]) ?? []).join(", ") || "—"}</div>
             <div><span className="text-muted-foreground">Priorità:</span> {String(proposal.suggested_priority ?? "—")}</div>
-            {proposal.duplicates_of && (
+            {proposal.duplicates_of ? (
               <div className="text-amber-600 dark:text-amber-400">⚠ Duplicato sospetto di: {String(proposal.duplicates_of)}</div>
+            ) : null}
             )}
-            {((proposal.conflicts_with as string[]) ?? []).length > 0 && (
+            {((proposal.conflicts_with as string[]) ?? []).length > 0 ? (
               <div className="text-destructive">⚠ Conflitti con: {(proposal.conflicts_with as string[]).join(", ")}</div>
-            )}
-            {proposal.rationale && (
+            ) : null}
+            {proposal.rationale ? (
               <div className="text-muted-foreground italic mt-2">{String(proposal.rationale)}</div>
-            )}
-            {proposal.suggested_content && (
+            ) : null}
+            {proposal.suggested_content ? (
               <details className="mt-2">
                 <summary className="cursor-pointer text-[10px] font-semibold">Anteprima contenuto</summary>
                 <pre className="whitespace-pre-wrap break-words text-[11px] mt-1 bg-background p-2 rounded">
                   {String(proposal.suggested_content)}
                 </pre>
               </details>
-            )}
+            ) : null}
             <Button size="sm" onClick={save} disabled={saving} className="w-full mt-2 h-8 gap-1.5">
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Salva proposta KB
