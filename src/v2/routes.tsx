@@ -293,6 +293,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
           <Route path="prompt-lab/suggestions" element={guardedPage(SuggestionsReviewPage, "SuggestionsReview")} />
           <Route path="prompt-lab/catalog" element={guardedPage(PromptCatalogPage, "PromptCatalog")} />
+          <Route path="prompt-reader" element={guardedPage(PromptReaderPage, "PromptReader")} />
           <Route path="ai-interactions-log" element={guardedPage(AiInteractionLogPage, "AiInteractionLog")} />
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/settings/kb" replace />} />
