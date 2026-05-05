@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Building2, User, Plane } from "lucide-react";
+import { Building2, User, Plane, MailOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "./email/emailUtils";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useHoldingPatternEmails } from "@/hooks/useHoldingPatternEmails";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
+import { useMarkAsRead } from "@/hooks/useEmailActions";
 
 type Props = {
   messages: ChannelMessage[];
@@ -42,6 +43,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
   
   const holdingSet = useHoldingPatternEmails(sourceIds);
   const { getGroup } = useEmailAddressGroups();
+  const markRead = useMarkAsRead();
 
   const displayMessages = useMemo(() => {
     if (!holdingFilter) return messages;
@@ -142,7 +144,19 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                     </div>
                   )}
                 </div>
-                {isUnread && <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />}
+                {isUnread && (
+                  <button
+                    type="button"
+                    title="Segna come letta"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markRead.mutate({ id: msg.id, channel: msg.channel, user_id: msg.user_id });
+                    }}
+                    className="mt-1 inline-flex h-5 items-center gap-0.5 rounded-md border border-primary/30 bg-primary/10 px-1.5 text-[9px] font-medium text-primary hover:bg-primary/20"
+                  >
+                    <MailOpen className="h-3 w-3" />
+                  </button>
+                )}
               </div>
 
               {msg.source_type && msg.source_type !== "unknown" && (
