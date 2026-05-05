@@ -3,7 +3,7 @@
  * estetica delle card di Gestione Manuale: logo dominio, bandiera, badge
  * gruppo. Niente percentuali fittizie di "confidenza".
  */
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -329,7 +329,7 @@ export default function AISuggestionsTab() {
   // Override locale per nascondere subito una card (non ricompare quando React Query rinfresca)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
-  const animateRemoval = React.useCallback((id: string) => {
+  const animateRemoval = useCallback((id: string) => {
     setRemovingIds((prev) => {
       const next = new Set(prev);
       next.add(id);
