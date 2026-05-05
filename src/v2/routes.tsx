@@ -32,6 +32,7 @@ import { useAuth } from "@/providers/AuthProvider";
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const AuthCallbackPage = lazy(() => import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })));
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const KpiPage = lazy(() => import("./ui/pages/KpiPage").then((m) => ({ default: m.KpiPage })));
 const NetworkPage = lazy(() => import("./ui/pages/NetworkPage").then((m) => ({ default: m.NetworkPage })));
@@ -188,6 +189,7 @@ export function V2Routes(): React.ReactElement {
         <Route element={<PublicLayout />}>
           <Route path="login" element={guardedPage(LoginPage, "Login")} />
           <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
+          <Route path="auth-callback" element={guardedPage(AuthCallbackPage, "AuthCallback")} />
         </Route>
 
         {/* Public standalone pages (no layout wrapper) */}

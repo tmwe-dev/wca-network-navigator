@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
       const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email: authEmail,
-        options: { redirectTo: `${appOrigin()}/v2` },
+        options: { redirectTo: `${appOrigin()}/v2/auth-callback` },
       });
       if (linkErr || !linkData?.properties?.action_link) {
         return back("error", "magiclink_failed", "login");
