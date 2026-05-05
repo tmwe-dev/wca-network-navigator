@@ -304,14 +304,17 @@ export async function listFunnemailGroupedInbox(
   //   - null/undefined => "tutti gli operatori" (RLS decide la visibilità).
   //   - stringa        => filtra channel_messages.user_id su quell'operatore.
   const [messages, groups, rules] = await Promise.all([
-    fetchAllPages<ChannelMessage>((from, to) => untypedFrom("channel_messages")
-      .select(MESSAGE_LIST_SELECT)
-      .eq("channel", "email")
-      .eq("direction", "inbound")
-      .match(targetUserId ? { user_id: targetUserId } : {})
-      .order("email_date", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .range(from, to)),
+    fetchAllPages<ChannelMessage>((from, to) => {
+      let q = untypedFrom("channel_messages")
+        .select(MESSAGE_LIST_SELECT)
+        .eq("channel", "email")
+        .eq("direction", "inbound");
+      if (targetUserId) q = q.eq("user_id", targetUserId);
+      return q
+        .order("email_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+    }),
     fetchAllPages<EmailSenderGroupRow>((from, to) => untypedFrom("email_sender_groups")
       .select("id,nome_gruppo,colore,icon,sort_order,funnemail_policy")
       .eq("user_id", userId)
