@@ -143,6 +143,10 @@ export function FunnemailMailList({
         ? holdingSet.has(`c:${msg.source_id}`)
         : false;
     const grp = getGroup(msg.from_address);
+    const aiRaw = (msg as ChannelMessage & { ai_classification_suggestion?: { category?: string; suggested_group?: string | null; reason?: string | null } | null }).ai_classification_suggestion;
+    const aiSuggestion = aiRaw && (aiRaw.suggested_group || aiRaw.category)
+      ? { label: aiRaw.suggested_group || aiRaw.category || "", reason: aiRaw.reason ?? null }
+      : null;
     return (
       <FunnemailMailCard
         message={msg}
@@ -151,7 +155,7 @@ export function FunnemailMailList({
         groupName={grp?.groupName ?? null}
         groupColor={grp?.groupColor ?? null}
         groupIcon={grp?.groupIcon ?? null}
-        aiSuggestion={null}
+        aiSuggestion={aiSuggestion}
         onSelect={() => onSelect(msg)}
         showCheckbox
         checked={checkedIds.has(msg.id)}
