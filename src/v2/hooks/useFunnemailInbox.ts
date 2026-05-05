@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useAuth } from "@/providers/AuthProvider";
+import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   listFunnemailGroupedInbox,
@@ -48,6 +49,14 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const qc = useQueryClient();
   const g = useGlobalFilters();
   const { user } = useAuth();
+  const { activeOperator, viewingAll } = useActiveOperator();
+  // Allinea Funnemail al switcher operatore (come InArrivoTab).
+  // - viewingAll       => null (RLS decide la visibilità globale).
+  // - operatore scelto => filtra channel_messages.user_id su di lui.
+  // - fallback         => utente loggato.
+  const targetUserId: string | null = viewingAll
+    ? null
+    : activeOperator?.user_id ?? user?.id ?? null;
   const rawSelectedFolder = g.filters.funnemailFolder || "all";
   const setSelectedFolder = React.useCallback(
     (slug: string) => g.setFilter("funnemailFolder", slug),
@@ -56,8 +65,8 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const [selectedMessageId, setSelectedMessageId] = React.useState<string | null>(null);
 
   const groupedQ = useQuery({
-    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon"),
-    queryFn: () => listFunnemailGroupedInbox(user!.id),
+    queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon", targetUserId),
+    queryFn: () => listFunnemailGroupedInbox(user!.id, targetUserId),
     enabled: !!user?.id,
     staleTime: 60_000,
     refetchInterval: 60_000,
@@ -83,11 +92,18 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
 
   // Auto mark-as-read per gruppi con policy `auto_mark_read` (es. Pubblicità/Newsletter).
   // Best-effort: no toast, no errori bloccanti; refetch silenzioso a successo.
-  const autoReadDoneRef = React.useRef<Set<string>>(new Set());
+  // Map<id, ts> con TTL per evitare rimarcatura inutile al rimount.
+  const autoReadDoneRef = React.useRef<Map<string, number>>(new Map());
+  const AUTO_READ_TTL_MS = 10 * 60 * 1000;
   React.useEffect(() => {
     if (!folders.length || !mails.length) return;
     const autoSlugs = new Set(folders.filter((f) => f.auto_mark_read).map((f) => f.slug));
     if (autoSlugs.size === 0) return;
+    const now = Date.now();
+    // Pulizia TTL
+    for (const [id, ts] of autoReadDoneRef.current) {
+      if (now - ts > AUTO_READ_TTL_MS) autoReadDoneRef.current.delete(id);
+    }
     const toMark = mails.filter((m) => {
       if (m.read_at) return false;
       if (autoReadDoneRef.current.has(m.id)) return false;
@@ -96,9 +112,9 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     });
     if (toMark.length === 0) return;
     const ids = toMark.map((m) => m.id);
-    ids.forEach((id) => autoReadDoneRef.current.add(id));
+    ids.forEach((id) => autoReadDoneRef.current.set(id, now));
     void markFunnemailMessagesRead(ids).then(() => {
-      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon") });
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
     }).catch(() => { /* silent */ });
   }, [folders, mails, qc, user?.id]);
 
@@ -120,14 +136,12 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     return base;
   }, [mails, selectedFolder, g.filters.funnemailSearch, g.filters.funnemailView]);
 
-  const didRecoverEmptyFiltersRef = React.useRef(false);
   React.useEffect(() => {
-    if (didRecoverEmptyFiltersRef.current) return;
     if (groupedQ.isLoading || mails.length === 0 || filteredMails.length > 0) return;
     const hasActiveFilter = selectedFolder !== "all" || g.filters.funnemailSearch.trim() || g.filters.funnemailView !== "all";
     if (!hasActiveFilter) return;
-    didRecoverEmptyFiltersRef.current = true;
     g.batchUpdate({ funnemailFolder: "all", funnemailSearch: "", funnemailView: "all" });
+    toast.message("Filtri resettati: nessun risultato con i filtri attivi");
   }, [filteredMails.length, g, groupedQ.isLoading, mails.length, selectedFolder]);
 
   const selectedMail = React.useMemo<ChannelMessage | null>(
@@ -154,7 +168,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
       overrideFunnemailFolder(messageId, newSlug),
     onSuccess: () => {
       toast.success("Cartella aggiornata");
-      qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
     },
     onError: (e: unknown) => {
       toast.error(e instanceof Error ? e.message : "Errore aggiornamento");
@@ -176,7 +190,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     },
     onSuccess: () => {
       toast.success("Email riclassificata");
-      qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
     },
     onError: (e: unknown) => {
       toast.error(e instanceof Error ? e.message : "Errore riclassificazione");
@@ -206,7 +220,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
       return;
     }
     toast.success(`${ids.length} email segnate come lette`);
-    qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+    qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
     qc.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
   }, [qc]);
 
@@ -214,7 +228,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     if (msgs.length === 0) return;
     bulk.mutate(
       { messages: minimal(msgs), action: "archive" },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: ["funnemail-inbox"] }) },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
     );
   }, [bulk, minimal, qc]);
 
@@ -222,7 +236,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     if (msgs.length === 0) return;
     bulk.mutate(
       { messages: minimal(msgs), action: "delete" },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: ["funnemail-inbox"] }) },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }) },
     );
   }, [bulk, minimal, qc]);
 
@@ -246,7 +260,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     }
     toast.success(`${ok} mittente${ok === 1 ? "" : "i"} assegnato/i a "${groupName}"`);
     qc.invalidateQueries({ queryKey: ["email-address-groups"] });
-    qc.invalidateQueries({ queryKey: ["funnemail-inbox"] });
+    qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
   }, [qc, user?.id]);
 
   return {
