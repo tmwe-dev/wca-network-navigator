@@ -6616,6 +6616,81 @@ export type Database = {
           },
         ]
       }
+      kb_entry_proposals: {
+        Row: {
+          ai_rationale: string | null
+          approved_kb_entry_id: string | null
+          conflicts_with: string[] | null
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          duplicates_of: string | null
+          id: string
+          raw_content: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source: string
+          source_url: string | null
+          status: string
+          suggested_category: string | null
+          suggested_chapter: string | null
+          suggested_content: string | null
+          suggested_priority: number | null
+          suggested_tags: string[] | null
+          suggested_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_rationale?: string | null
+          approved_kb_entry_id?: string | null
+          conflicts_with?: string[] | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          duplicates_of?: string | null
+          id?: string
+          raw_content: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          source_url?: string | null
+          status?: string
+          suggested_category?: string | null
+          suggested_chapter?: string | null
+          suggested_content?: string | null
+          suggested_priority?: number | null
+          suggested_tags?: string[] | null
+          suggested_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_rationale?: string | null
+          approved_kb_entry_id?: string | null
+          conflicts_with?: string[] | null
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          duplicates_of?: string | null
+          id?: string
+          raw_content?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          source_url?: string | null
+          status?: string
+          suggested_category?: string | null
+          suggested_chapter?: string | null
+          suggested_content?: string | null
+          suggested_priority?: number | null
+          suggested_tags?: string[] | null
+          suggested_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       linkedin_flow_items: {
         Row: {
           company_name: string | null
@@ -8264,6 +8339,75 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_change_proposals: {
+        Row: {
+          assumptions: string | null
+          block_name: string
+          created_at: string
+          created_by: string
+          current_content: string | null
+          deleted_at: string | null
+          diff_text: string | null
+          id: string
+          kb_entries_consulted: string[] | null
+          prompt_id: string
+          prompt_table: string
+          proposed_content: string
+          rationale: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risks: string | null
+          source_tool: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assumptions?: string | null
+          block_name: string
+          created_at?: string
+          created_by?: string
+          current_content?: string | null
+          deleted_at?: string | null
+          diff_text?: string | null
+          id?: string
+          kb_entries_consulted?: string[] | null
+          prompt_id: string
+          prompt_table?: string
+          proposed_content: string
+          rationale?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: string | null
+          source_tool?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assumptions?: string | null
+          block_name?: string
+          created_at?: string
+          created_by?: string
+          current_content?: string | null
+          deleted_at?: string | null
+          diff_text?: string | null
+          id?: string
+          kb_entries_consulted?: string[] | null
+          prompt_id?: string
+          prompt_table?: string
+          proposed_content?: string
+          rationale?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risks?: string | null
+          source_tool?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
