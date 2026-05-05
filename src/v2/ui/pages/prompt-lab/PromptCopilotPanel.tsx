@@ -17,7 +17,7 @@
  * Nessuna scrittura diretta: tutto sale come proposta da revisionare.
  */
 import { useEffect, useRef, useState } from "react";
-import { Bot, Check, Loader2, Paperclip, Save, Send, Sparkles, X } from "lucide-react";
+import { Bot, Check, Globe, Loader2, Paperclip, Save, Send, Sparkles, Target, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,12 +49,36 @@ interface KbProposal {
 interface CopilotResponse {
   reply: string;
   proposal: PromptProposal | null;
+  global_proposal: GlobalProposal | null;
+  occurrences: Occurrence[];
   kb_consulted: KbConsulted[];
   families_used: string[];
   intent: string;
+  mode: "edit" | "global" | "diagnose";
 }
 interface IntakeResponse {
   proposal: KbProposal;
+}
+interface Occurrence {
+  kind: "operative_prompt" | "kb_entry";
+  id: string;
+  label: string;
+  field: string;
+  excerpt: string;
+}
+interface GlobalReplacement {
+  source_kind: "operative_prompt" | "kb_entry";
+  source_id: string;
+  source_label: string;
+  field: string;
+  old_excerpt: string;
+  new_excerpt: string;
+  rationale: string;
+  risk: "low" | "medium" | "high";
+}
+interface GlobalProposal {
+  global_replacements?: GlobalReplacement[];
+  skipped?: Array<{ source_id: string; reason: string }>;
 }
 
 export interface PromptCopilotPanelProps {
@@ -69,6 +93,10 @@ export interface PromptCopilotPanelProps {
 export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
   const { agentSlug, agentKbCategories, blockName, currentContent, promptId, promptTable } = props;
 
+  // Modalità: 'block' (lavora sul blocco target) | 'global' (search-replace su tutto)
+  const [mode, setMode] = useState<"block" | "global">("block");
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +105,10 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
   const [promptProposal, setPromptProposal] = useState<PromptProposal | null>(null);
   const [kbConsulted, setKbConsulted] = useState<KbConsulted[]>([]);
   const [savingPrompt, setSavingPrompt] = useState(false);
+
+  // Proposta GLOBALE corrente (batch di sostituzioni)
+  const [globalProposal, setGlobalProposal] = useState<GlobalProposal | null>(null);
+  const [savingGlobal, setSavingGlobal] = useState(false);
 
   // Allegato KB pendente (materiale che l'utente sta sottoponendo)
   const [attachedMaterial, setAttachedMaterial] = useState<string>("");
@@ -120,7 +152,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
 
   async function send() {
     const msg = input.trim();
-    if (!msg && !attachedMaterial.trim()) return;
+    if (!msg && !attachedMaterial.trim() && !(mode === "global" && searchTerm.trim())) return;
     if (busy) return;
 
     setBusy(true);
@@ -128,7 +160,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
       role: "user",
       content: attachedMaterial
         ? `${msg || "(materiale allegato per la KB)"}\n\n📎 ${attachedMaterial.slice(0, 200)}${attachedMaterial.length > 200 ? "…" : ""}`
-        : msg,
+        : (mode === "global" ? `🌐 Globale "${searchTerm}": ${msg}` : msg),
       kind: attachedMaterial ? "intake" : "chat",
     };
     setHistory((h) => [...h, userBubble]);
@@ -150,6 +182,27 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
         setKbProposal(resp.proposal);
         const summary = formatKbProposalSummary(resp.proposal);
         setHistory((h) => [...h, { role: "assistant", content: summary, kind: "intake" }]);
+      } else if (mode === "global") {
+        // ── GLOBALE: search-replace su prompt + KB
+        const { data, error } = await supabase.functions.invoke("prompt-copilot-chat", {
+          body: {
+            user_message: msg || `Cerca "${searchTerm}" e proponi sostituzioni dove ha senso.`,
+            search_term: searchTerm,
+            history: history.filter((h) => h.kind !== "intake").slice(-4).map((h) => ({ role: h.role, content: h.content })),
+            mode: "global",
+            scope: "lab",
+            context: { source: "prompt-reader-copilot-global" },
+          },
+        });
+        if (error) throw error;
+        const resp = data as CopilotResponse;
+        if (resp.global_proposal?.global_replacements?.length) {
+          setGlobalProposal(resp.global_proposal);
+        }
+        const occCount = resp.occurrences?.length ?? 0;
+        const planCount = resp.global_proposal?.global_replacements?.length ?? 0;
+        const header = `🌐 Trovate ${occCount} occorrenze · proposte ${planCount} sostituzioni\n\n`;
+        setHistory((h) => [...h, { role: "assistant", content: header + resp.reply, kind: "chat" }]);
       } else {
         // ── CHAT: editor sul blocco target
         const { data, error } = await supabase.functions.invoke("prompt-copilot-chat", {
@@ -238,23 +291,151 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
     }
   }
 
+  async function saveGlobalBatch() {
+    if (!globalProposal?.global_replacements?.length) return;
+    setSavingGlobal(true);
+    const batchId = crypto.randomUUID();
+    let okCount = 0;
+    try {
+      for (const r of globalProposal.global_replacements) {
+        try {
+          if (r.source_kind === "operative_prompt") {
+            await createPromptChangeProposal({
+              prompt_id: r.source_id,
+              prompt_table: "operative_prompts",
+              block_name: r.field,
+              current_content: r.old_excerpt,
+              proposed_content: r.new_excerpt,
+              rationale: `[GLOBAL "${searchTerm}"] ${r.rationale}`,
+              risks: `Rischio dichiarato: ${r.risk}`,
+              assumptions: `Sostituzione su ${r.source_label}`,
+              kb_entries_consulted: [],
+            });
+            okCount++;
+          } else {
+            await createKbEntryProposal({
+              source: "chat",
+              raw_content: r.new_excerpt,
+              suggested_title: r.source_label,
+              suggested_content: r.new_excerpt,
+              ai_rationale: `[GLOBAL "${searchTerm}"] ${r.rationale} (era: "${r.old_excerpt}")`,
+            });
+            okCount++;
+          }
+        } catch (err) {
+          console.error("global save fail", r.source_id, err);
+        }
+      }
+      toast.success(`${okCount}/${globalProposal.global_replacements.length} proposte salvate (batch ${batchId.slice(0, 8)})`);
+      setGlobalProposal(null);
+    } finally {
+      setSavingGlobal(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Header: blocco target */}
-      <div className="border-b px-3 py-2 text-[11px] text-muted-foreground bg-muted/30 flex items-center gap-2">
-        <Bot className="h-3 w-3 text-primary" />
-        Stai lavorando sul blocco <span className="font-mono text-foreground">{blockName}</span>
-        <span className="text-muted-foreground/60">·</span>
-        <span className="font-mono">{agentSlug}</span>
+      <div className="border-b px-3 py-2 bg-muted/30 space-y-1.5">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Bot className="h-3 w-3 text-primary" />
+          {mode === "block" ? (
+            <>Blocco <span className="font-mono text-foreground">{blockName}</span> · <span className="font-mono">{agentSlug}</span></>
+          ) : (
+            <>Modalità globale: cerca e sostituisci in tutti i prompt + KB</>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={mode === "block" ? "default" : "outline"}
+            className="h-6 text-[10px] gap-1 px-2"
+            onClick={() => setMode("block")}
+          >
+            <Target className="h-3 w-3" /> Blocco
+          </Button>
+          <Button
+            size="sm"
+            variant={mode === "global" ? "default" : "outline"}
+            className="h-6 text-[10px] gap-1 px-2"
+            onClick={() => setMode("global")}
+            title="Cerca un termine in tutti i prompt e tutte le entry KB e proponi sostituzioni"
+          >
+            <Globe className="h-3 w-3" /> Globale
+          </Button>
+          {mode === "global" && (
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Termine da cercare (es. WSI Network Navigator)"
+              className="flex-1 ml-2 text-[11px] h-6 rounded border bg-background px-2"
+            />
+          )}
+        </div>
       </div>
 
       {/* SOPRA: Modifica proposta sul prompt */}
       <div className="border-b bg-card max-h-[45%] overflow-hidden flex flex-col">
         <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-primary tracking-wider border-b bg-muted/40">
-          Modifica proposta dall'AI
+          {mode === "global" ? "Batch di sostituzioni globali" : "Modifica proposta dall'AI"}
         </div>
         <ScrollArea className="flex-1">
-          {!promptProposal ? (
+          {mode === "global" ? (
+            !globalProposal?.global_replacements?.length ? (
+              <div className="p-4 text-[11px] text-muted-foreground italic">
+                Scrivi cosa cercare e cosa cambiare. Esempio:<br />
+                <em>"Ovunque dica che Luca è direttore del CRM di WSI Network Navigator,
+                correggi: direttore del CRM di Transport Management Worldwide Express (TMWE)."</em>
+                <br /><br />
+                L'AI cerca in tutti i prompt e in tutte le KB, esamina ogni occorrenza nel
+                contesto e propone solo dove ha senso.
+              </div>
+            ) : (
+              <div className="p-3 space-y-2">
+                {globalProposal.global_replacements.map((r, i) => (
+                  <div key={i} className="rounded border bg-background p-2 space-y-1 text-[11px]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[9px]">{r.source_kind}</Badge>
+                      <span className="font-mono text-[10px] text-muted-foreground">{r.field}</span>
+                      <span className="font-medium truncate">{r.source_label}</span>
+                      <Badge
+                        variant={r.risk === "high" ? "destructive" : r.risk === "medium" ? "secondary" : "outline"}
+                        className="text-[9px] ml-auto"
+                      >
+                        {r.risk}
+                      </Badge>
+                    </div>
+                    <div className="bg-destructive/10 rounded px-2 py-1 text-[11px] line-through text-muted-foreground">
+                      {r.old_excerpt}
+                    </div>
+                    <div className="bg-emerald-500/10 rounded px-2 py-1 text-[11px]">
+                      {r.new_excerpt}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground italic">{r.rationale}</div>
+                  </div>
+                ))}
+                {globalProposal.skipped?.length ? (
+                  <details className="text-[10px] text-muted-foreground">
+                    <summary className="cursor-pointer">Saltate ({globalProposal.skipped.length})</summary>
+                    <ul className="mt-1 space-y-0.5">
+                      {globalProposal.skipped.map((s, i) => (
+                        <li key={i}><span className="font-mono">{s.source_id.slice(0, 8)}</span>: {s.reason}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                <div className="flex gap-1.5 pt-1">
+                  <Button size="sm" className="flex-1 h-7 gap-1.5 text-[11px]" onClick={saveGlobalBatch} disabled={savingGlobal}>
+                    {savingGlobal ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                    Salva tutte come proposte ({globalProposal.global_replacements.length})
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setGlobalProposal(null)}>
+                    Scarta
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : !promptProposal ? (
             <div className="p-4 text-[11px] text-muted-foreground italic">
               Nessuna proposta ancora. Scrivi nella chat sotto cosa vuoi migliorare
               (es. <em>"leggi il prompt e rendi più severo il guardrail"</em>) — l'AI
