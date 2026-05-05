@@ -1,16 +1,16 @@
 ---
 name: Agenda Sender Attribution
-description: Filtri trigger on_inbound_message + match_confidence per evitare attribuzioni errate e newsletter in agenda
+description: 1 email = 1 mittente. Match SOLO esatto. Filtri newsletter/no-reply nel trigger on_inbound_message.
 type: feature
 ---
-**Trigger `on_inbound_message`** (DB):
-1. Skip creazione `activities` se mittente classificato in `email_address_rules.category` ∈ (newsletter, transactional, marketing, spam, automation, promotion, notification, social).
-2. Skip se subject matcha pattern noti di notifiche (LinkedIn, newsletter, unsubscribe, pubblicità auto/dieta/€).
+**Politica (2026-05-05)**: un'email in entrata ha UN solo `from_address`. L'azienda associata deriva esclusivamente dal record con quell'email esatta in `partners`/`partner_contacts`/`imported_contacts`/`prospects`. **Mai** inferire partner per somiglianza di dominio.
+
+**`matchSender`** (`supabase/functions/check-inbox/dbOperations.ts`): ritorna `match_confidence: 'exact' | 'none'`. I risultati `_domain` dell'RPC `match_email_sender` vengono ignorati. Nessuna fallback query per dominio.
+
+**Trigger `on_inbound_message`** (DB) — filtri ancora attivi:
+1. Skip activity se mittente in `email_address_rules.category` ∈ (newsletter, transactional, marketing, spam, automation, promotion, notification, social).
+2. Skip se subject matcha pattern di notifiche (LinkedIn, newsletter, unsubscribe, pubblicità).
 3. Skip se from_address matcha `noreply|no-reply|notifications?@|mailer-daemon|bounce|newsletter@|info@bizzmail`.
-4. Legge `NEW.raw_payload->>'match_confidence'`. Se 'domain' o 'domain_ambiguous' crea l'activity SENZA partner_id (per non attribuire un'identità non verificata). Description include "Mittente da verificare".
+4. `partner_id` dell'activity = quello di `channel_messages` (esatto o NULL). Niente più branch "domain → strip partner_id".
 
-**`matchSender`** (`supabase/functions/check-inbox/dbOperations.ts`): ritorna `match_confidence: 'exact' | 'domain' | 'domain_ambiguous' | 'none'`. Match per dominio è deterministico (`order created_at asc`, `limit 2` per rilevare ambiguità).
-
-**`saveMessageToDb`**: salva `match_confidence` in `channel_messages.raw_payload`.
-
-**UI agenda** (`AgendaDayDetail.tsx`): mostra `from_address` reale sotto il nome partner + badge giallo "da verificare" quando description contiene "Mittente da verificare".
+**UI agenda** (`AgendaDayDetail.tsx`): mostra `from_address` reale sotto il nome partner. Nessun badge "da verificare" (non più necessario).
