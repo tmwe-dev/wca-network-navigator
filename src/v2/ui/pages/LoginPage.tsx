@@ -9,24 +9,25 @@ import * as React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
-import { Loader2, LogIn, UserPlus, Mail, Lock, User, Plane } from "lucide-react";
+import { Loader2, Plane } from "lucide-react";
 import { tmweLoginStart } from "@/data/tmwe";
+
+const REASON_MESSAGES: Record<string, string> = {
+  not_whitelisted: "Email non autorizzata. Contatta l'amministratore per essere aggiunto alla lista operatori.",
+  no_tmwe_email: "L'account TMWE non espone un'email. Impossibile procedere.",
+  user_create_failed: "Creazione account fallita. Riprova.",
+  tmwe_account_already_linked: "Questo account TMWE è già collegato a un altro utente.",
+  invalid_state: "Sessione di login scaduta. Riprova.",
+  expired_state: "Sessione di login scaduta. Riprova.",
+  magiclink_failed: "Generazione del link di accesso fallita. Riprova.",
+};
 
 export function LoginPage(): React.ReactElement {
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/v2";
 
-  const {
-    isAuthenticated, isLoading: authLoading, error, clearError,
-    signInWithEmail, signUp, resetPassword,
-  } = useAuthV2();
+  const { isAuthenticated, isLoading: authLoading } = useAuthV2();
 
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
   const [tmweSubmitting, setTmweSubmitting] = useState(false);
   const [tmweError, setTmweError] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ export function LoginPage(): React.ReactElement {
     const params = new URLSearchParams(location.search);
     if (params.get("tmwe") === "error") {
       const reason = params.get("reason") ?? "unknown";
-      setTmweError(`Login TMWE fallito: ${reason}`);
+      setTmweError(REASON_MESSAGES[reason] ?? `Login TMWE fallito: ${reason}`);
     }
   }, [location.search]);
 
@@ -52,261 +53,34 @@ export function LoginPage(): React.ReactElement {
     }
   }, []);
 
-  const handleLogin = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-    setSubmitting(true);
-    await signInWithEmail(email, password);
-    setSubmitting(false);
-  }, [email, password, signInWithEmail]);
-
-  const handleSignup = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password || !displayName) return;
-    setSubmitting(true);
-    await signUp(email, password, displayName);
-    setSubmitting(false);
-  }, [email, password, displayName, signUp]);
-
-  const handleForgot = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setSubmitting(true);
-    await resetPassword(email);
-    setResetSent(true);
-    setSubmitting(false);
-  }, [email, resetPassword]);
-
-  // If already authenticated, redirect to intended destination.
-  // MUST stay AFTER all hooks to keep hook order stable across renders.
+  // Hook order stable: redirect after all hooks.
   if (isAuthenticated && !authLoading) {
     return <Navigate to={from} replace />;
   }
 
-  const switchMode = (next: "login" | "signup" | "forgot") => {
-    clearError();
-    setResetSent(false);
-    setMode(next);
-  };
-
-  const isDisabled = submitting || authLoading;
-
   return (
-    <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-6">
-      {/* ── TMWE login button (always visible above the form) ─── */}
-      {mode === "login" && (
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={handleTmweLogin}
-            disabled={tmweSubmitting || isDisabled}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
-            Entra con TMWE
-          </button>
-          {tmweError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
-              {tmweError}
-            </div>
-          )}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">oppure</span>
-            </div>
-          </div>
+    <div className="rounded-lg border border-border bg-card p-6 shadow-sm space-y-4">
+      <div className="text-center space-y-1">
+        <h2 className="text-lg font-semibold text-foreground">Accesso operatori</h2>
+        <p className="text-xs text-muted-foreground">
+          Solo le email autorizzate possono entrare. L'autenticazione passa dal tuo account TMWE.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleTmweLogin}
+        disabled={tmweSubmitting || authLoading}
+        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+      >
+        {tmweSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plane className="w-4 h-4" />}
+        Entra con TMWE
+      </button>
+
+      {tmweError && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+          {tmweError}
         </div>
-      )}
-
-      {/* ── Login form ─────────────────────────────────────────── */}
-      {mode === "login" && (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" /> Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="nome@azienda.com"
-              autoComplete="email"
-              required
-              disabled={isDisabled}
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5" /> Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-              disabled={isDisabled}
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isDisabled || !email || !password}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-            Accedi
-          </button>
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <button type="button" onClick={() => switchMode("forgot")} className="hover:text-foreground transition-colors">
-              Password dimenticata?
-            </button>
-            <button type="button" onClick={() => switchMode("signup")} className="hover:text-foreground transition-colors">
-              Crea account
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* ── Signup form ────────────────────────────────────────── */}
-      {mode === "signup" && (
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="signup-name" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" /> Nome
-            </label>
-            <input
-              id="signup-name"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Mario Rossi"
-              autoComplete="name"
-              required
-              disabled={isDisabled}
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="signup-email" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" /> Email
-            </label>
-            <input
-              id="signup-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="nome@azienda.com"
-              autoComplete="email"
-              required
-              disabled={isDisabled}
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="signup-password" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5" /> Password
-            </label>
-            <input
-              id="signup-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Minimo 6 caratteri"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              disabled={isDisabled}
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isDisabled || !email || !password || !displayName}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-            Crea account
-          </button>
-
-          <div className="text-center text-xs text-muted-foreground">
-            <button type="button" onClick={() => switchMode("login")} className="hover:text-foreground transition-colors">
-              Hai già un account? Accedi
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* ── Forgot password form ───────────────────────────────── */}
-      {mode === "forgot" && (
-        <form onSubmit={handleForgot} className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Inserisci la tua email e riceverai un link per reimpostare la password.
-          </p>
-          <div className="space-y-2">
-            <label htmlFor="forgot-email" className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" /> Email
-            </label>
-            <input
-              id="forgot-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="nome@azienda.com"
-              autoComplete="email"
-              required
-              disabled={isDisabled}
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          {resetSent && (
-            <div className="rounded-md bg-green-500/10 border border-green-500/30 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-              Email inviata! Controlla la tua casella di posta.
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isDisabled || !email || resetSent}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/15 hover:border-primary disabled:opacity-50 disabled:pointer-events-none transition-colors"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            Invia link di reset
-          </button>
-
-          <div className="text-center text-xs text-muted-foreground">
-            <button type="button" onClick={() => switchMode("login")} className="hover:text-foreground transition-colors">
-              Torna al login
-            </button>
-          </div>
-        </form>
       )}
     </div>
   );
