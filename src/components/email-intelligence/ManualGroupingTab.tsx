@@ -739,6 +739,7 @@ export default function ManualGroupingTab() {
             ) : (
               <VirtualizedSenderList
                 senders={sortedSenders}
+                groups={groups}
                 selectedEmails={selectedSenders}
                 focusedEmail={previewSender?.email ?? null}
                 onDragStart={handleDragStartLocal}
