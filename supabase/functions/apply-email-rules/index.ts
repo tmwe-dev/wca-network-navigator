@@ -10,6 +10,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getCaCertsForHost } from "./caCerts.ts";
+import { assertOperatorOwned, assertAllMessagesOwned } from "../_shared/ownership.ts";
 
 interface RuleRow {
   id: string;
@@ -204,6 +205,7 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    let callerUserId: string | null = null;
     if (!isServiceCall) {
       // Verifica utente per chiamate dall'UI
       const userClient = createClient(supabaseUrl, anonKey, {
@@ -215,6 +217,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...cors, "Content-Type": "application/json" },
         });
       }
+      callerUserId = user.id;
     }
 
     const body = await req.json();
@@ -225,6 +228,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ processed: 0, applied: 0, errors: [] }), {
         headers: { ...cors, "Content-Type": "application/json" },
       });
+    }
+
+    // ── Ownership guards (only for user-driven calls) ──
+    // Service-role internal calls (check-inbox) already validated user ownership upstream.
+    if (!isServiceCall && callerUserId) {
+      const opErr = await assertOperatorOwned(supabase, operatorId, callerUserId, cors);
+      if (opErr) return opErr;
+      const msgErr = await assertAllMessagesOwned(supabase, messageIds, callerUserId, cors);
+      if (msgErr) return msgErr;
     }
 
     // Carica messaggi

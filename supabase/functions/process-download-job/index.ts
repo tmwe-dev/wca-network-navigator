@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { assertJobOwned } from "../_shared/ownership.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -34,12 +35,17 @@ Deno.serve(async (req) => {
     if (userError || !userData?.user?.id) {
       return respond({ success: false, error: 'Unauthorized' }, 401)
     }
+    const userId = userData.user.id
 
     const { jobId, action } = await req.json()
 
     if (!jobId) {
       return respond({ success: false, error: 'jobId is required' }, 400)
     }
+
+    // ── Ownership guard: job MUST belong to the authenticated user ──
+    const ownErr = await assertJobOwned(supabase, jobId, userId, getCorsHeaders(origin))
+    if (ownErr) return ownErr
 
     // Fetch the job
     const { data: job, error: jobError } = await supabase

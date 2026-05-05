@@ -5,6 +5,7 @@ import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { checkSmtpRateLimit } from "../_shared/smtpRateLimit.ts";
 import { journalistReview } from "../_shared/journalistReviewLayer.ts";
 import type { JournalistReviewInput } from "../_shared/journalistTypes.ts";
+import { assertDraftOwned } from "../_shared/ownership.ts";
 
 
 Deno.serve(async (req) => {
@@ -45,6 +46,10 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...dynCors, "Content-Type": "application/json" },
       });
     }
+
+    // ── Ownership guard: draft MUST belong to the authenticated user ──
+    const ownErr = await assertDraftOwned(supabase, draft_id, userId, dynCors);
+    if (ownErr) return ownErr;
 
     // Handle pause/cancel actions
     if (action === "pause") {

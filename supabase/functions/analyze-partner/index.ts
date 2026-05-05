@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { resolveCaller } from "../_shared/ownership.ts";
 
 const VALID_SERVICES = [
   'air_freight', 'ocean_fcl', 'ocean_lcl', 'road_freight', 'rail_freight',
@@ -79,12 +80,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // ── Auth & BYOK check ──
-    const userId = await getUserId(req, supabase)
-    const byok = userId ? await isByok(userId, supabase) : false
+    // ── Auth required (user JWT or service-role w/ body.user_id). No anon. ──
+    const caller = await resolveCaller(req, dynCors)
+    if (caller instanceof Response) return caller
+    const userId = caller.userId
+    const byok = await isByok(userId, supabase)
 
     // ── Pre-check credits ──
-    if (userId && !byok) {
+    if (!byok) {
       const { data: credits } = await supabase.from('user_credits').select('balance').eq('user_id', userId).single()
       if (!credits || credits.balance < 5) {
         return new Response(
@@ -94,7 +97,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { partnerId, profileData } = await req.json()
+    const parsed = caller.bodyJson ?? (await req.json().catch(() => ({})))
+    // deno-lint-ignore no-explicit-any
+    const { partnerId, profileData } = parsed as { partnerId?: string; profileData?: any }
 
     if (!partnerId || !profileData) {
       return new Response(
@@ -209,7 +214,7 @@ IMPORTANT: Only use service codes from the exact list above. Be conservative - o
     const aiData = await response.json()
 
     // ── Consume credits ──
-    if (userId && !byok && aiData.usage) {
+    if (!byok && aiData.usage) {
       await consumeCredits(userId, {
         prompt_tokens: aiData.usage.prompt_tokens || 0,
         completion_tokens: aiData.usage.completion_tokens || 0,
