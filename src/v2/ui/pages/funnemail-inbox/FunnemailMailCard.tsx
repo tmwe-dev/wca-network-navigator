@@ -83,7 +83,6 @@ export function FunnemailMailCard({
   selected,
   inHolding,
   groupName,
-  groupColor,
   groupIcon,
   aiSuggestion,
   onSelect,
