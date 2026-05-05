@@ -10,17 +10,21 @@ import { installRemoteSink } from "@/lib/log/remoteSink";
 import { installGlobalErrorCatchers } from "@/lib/errorCatchers";
 import "./i18n";
 
-document.documentElement.classList.add('dark');
-
-// Applica il tema visivo persistito (Amber/Lilac/Space/Notte) PRIMA del render
-// per evitare flash. Stesse chiavi usate da ThemePicker.
+// Applica modalità (dark/light) e tema visivo persistiti PRIMA del render
+// per evitare flash. Default = dark + amber.
 try {
+  const storedMode = localStorage.getItem('wcann.themeMode');
+  if (storedMode !== 'light') {
+    document.documentElement.classList.add('dark');
+  }
   const stored = localStorage.getItem('wcann.theme');
   const valid = ['amber', 'lilac', 'space', 'notte'];
   if (stored && valid.includes(stored) && stored !== 'amber') {
     document.documentElement.classList.add(`theme-${stored}`);
   }
-} catch { /* ignore */ }
+} catch {
+  document.documentElement.classList.add('dark');
+}
 
 // ── PWA: guard against iframe/preview contexts ──
 const isInIframe = (() => {
