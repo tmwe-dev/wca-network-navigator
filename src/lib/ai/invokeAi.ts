@@ -74,6 +74,7 @@ export const AI_FUNCTION_NAMES = new Set<string>([
   "improve-email",
   "classify-email-response",
   "classify-inbound-message",
+  "funnemail-classify",
   "categorize-content",
   "suggest-email-groups",
   "parse-business-card",
