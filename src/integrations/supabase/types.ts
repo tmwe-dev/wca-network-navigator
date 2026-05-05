@@ -9953,6 +9953,7 @@ export type Database = {
       }
       tmwe_oauth_state: {
         Row: {
+          app_origin: string | null
           created_at: string
           expires_at: string
           intent: string
@@ -9960,6 +9961,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          app_origin?: string | null
           created_at?: string
           expires_at?: string
           intent?: string
@@ -9967,6 +9969,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          app_origin?: string | null
           created_at?: string
           expires_at?: string
           intent?: string
