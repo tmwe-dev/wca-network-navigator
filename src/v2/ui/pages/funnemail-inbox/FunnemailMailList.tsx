@@ -58,6 +58,8 @@ interface Props {
   bulkDelete: (msgs: ChannelMessage[]) => void;
   bulkAssignGroup: (msgs: ChannelMessage[], groupName: string) => Promise<void>;
   bulkBusy: boolean;
+  onReclassify: (msg: ChannelMessage) => void;
+  reclassifying: boolean;
 }
 
 function getCompanyKey(msg: ChannelMessage): string {
@@ -99,6 +101,7 @@ function sortMessages(msgs: ChannelMessage[], mode: SortMode): ChannelMessage[] 
 export function FunnemailMailList({
   messages, selectedId, onSelect,
   bulkMarkRead, bulkArchive, bulkDelete, bulkAssignGroup, bulkBusy,
+  onReclassify, reclassifying,
 }: Props): JSX.Element {
   const [{ sort, group }, setPrefs] = useState<StoredPrefs>(() => loadPrefs());
   useEffect(() => { savePrefs({ sort, group }); }, [sort, group]);
@@ -163,6 +166,8 @@ export function FunnemailMailList({
         groupIcon={grp?.groupIcon ?? null}
         aiSuggestion={aiSuggestion}
         onSelect={() => onSelect(msg)}
+        onReclassify={() => onReclassify(msg)}
+        reclassifying={reclassifying}
         showCheckbox
         checked={checkedIds.has(msg.id)}
         onToggleChecked={() => toggleChecked(msg.id)}
