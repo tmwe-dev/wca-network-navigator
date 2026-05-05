@@ -20,6 +20,7 @@ import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
 import { AutoPageTitle } from "./header/AutoPageTitle";
 import { Menu, Sparkles } from "lucide-react";
+import { ThemePicker, useInitTheme } from "@/v2/ui/theme/ThemePicker";
 
 interface OutreachQueue {
   pendingCount: number;
@@ -62,6 +63,7 @@ export function LayoutHeader({
   // non occupa più spazio fisso nella barra.
   void onOpenCommandPalette;
   const { pathname } = useLocation();
+  useInitTheme();
 
   return (
     <header
@@ -104,6 +106,7 @@ export function LayoutHeader({
       {/* RIGHT cluster — solo essenziale */}
       <div className="flex items-center gap-0.5 shrink-0">
         <NotificationCenter />
+        <ThemePicker variant="icon" />
         <OperatorSelector />
         <HeaderToolsMenu
           onAddContact={onAddContact}
