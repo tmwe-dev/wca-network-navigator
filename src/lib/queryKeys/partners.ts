@@ -1,0 +1,31 @@
+export const partnersKeys = {
+  partners: {
+    all: ["partners"] as const,
+    filtered: (filters?: Record<string, unknown>) => ["partners", filters] as const,
+    paginated: (filters?: unknown) => ["partners-paginated", filters] as const,
+    byCountry: (countryCode?: string | null) => ["partners-by-country", countryCode] as const,
+    globe: ["partners-globe"] as const,
+    globeCountry: (code?: string | null) => ["partners-globe-country", code] as const,
+    countryPartnerCounts: ["country-partner-counts"] as const,
+    enrichment: (...args: unknown[]) => ["enrichment-partners", ...args] as const,
+    agendaCard: (ids?: unknown) => ["agenda-card-partners", ids] as const,
+    agendaList: (filters?: unknown) => ["agenda-list-partners", filters] as const,
+    downloadAgenda: (filters?: unknown) => ["download-agenda-partners", filters] as const,
+    picker: (...args: unknown[]) => ["picker-partners", ...args] as const,
+  },
+  partner: (id: string) => ["partner", id] as const,
+  partnerContacts: {
+    all: ["partner-contacts"] as const,
+    forCampaign: (ids: string) => ["partner-contacts-for-campaign", ids] as const,
+    map: (...args: unknown[]) => ["partner-contacts-map", ...args] as const,
+    picker: (filters?: unknown) => ["partner-contacts-picker", filters] as const,
+    pickerPartner: (filters?: unknown) => ["picker-partner-contacts", filters] as const,
+  },
+  socialLinks: {
+    all: ["social-links"] as const,
+    byPartner: (partnerId?: string | null) => ["social-links", partnerId] as const,
+    batch: (ids?: unknown) => ["social-links-batch", ids] as const,
+    linkedin: (filters?: unknown) => ["linkedin-links-workspace", filters] as const,
+  },
+  partnerStats: ["partner-stats"] as const,
+} as const;
