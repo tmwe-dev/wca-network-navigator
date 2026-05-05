@@ -19,7 +19,7 @@ import { FunnemailListToolbar, type GroupMode, type SortMode } from "./Funnemail
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
-const ROW_HEIGHT = 142;
+const ROW_HEIGHT = 92;
 const STORAGE_KEY = "funnemail_list_view_v3";
 
 interface StoredPrefs {
