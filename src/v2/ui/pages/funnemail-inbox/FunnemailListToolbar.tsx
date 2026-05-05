@@ -42,7 +42,7 @@ export function FunnemailListToolbar({
 }: Props) {
   const allSelected = totalCount > 0 && checkedCount >= totalCount;
   return (
-    <div className="flex flex-nowrap items-center gap-3 border-b border-border px-2 py-1.5 text-[10px] overflow-x-auto">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-2 py-1.5 text-[10px] sm:flex-nowrap sm:overflow-x-auto">
       {(onSelectAll || onClearSelection) && (
         <Button
           type="button"
@@ -84,7 +84,7 @@ export function FunnemailListToolbar({
           </SelectContent>
         </Select>
       </div>
-      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground tabular-nums">
+      <span className="ml-0 shrink-0 text-[10px] text-muted-foreground tabular-nums sm:ml-auto">
         <strong className="text-foreground">{totalCount}</strong> mail
       </span>
     </div>
