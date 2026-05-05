@@ -408,6 +408,7 @@ export function useGroupingData() {
     senders,
     setSenders,
     classifiedSenders,
+    setClassifiedSenders,
     groups,
     setGroups,
     isLoading,
