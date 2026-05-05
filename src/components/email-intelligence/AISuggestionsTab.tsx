@@ -324,6 +324,30 @@ export default function AISuggestionsTab() {
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
   const [groupBySuggestion, setGroupBySuggestion] = useState(false);
   const [actionsRow, setActionsRow] = useState<AddressRow | null>(null);
+  // Card che stanno scomparendo (animazione fade-out prima di rimuoverle dalla lista)
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  // Override locale per nascondere subito una card (non ricompare quando React Query rinfresca)
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+
+  const animateRemoval = React.useCallback((id: string) => {
+    setRemovingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    window.setTimeout(() => {
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 320);
+  }, []);
 
   const { data: groups = [] } = useQuery({
     queryKey: queryKeys.email.senderGroups,
@@ -385,10 +409,11 @@ export default function AISuggestionsTab() {
         group_icon: group.icon,
         ai_suggestion_accepted: true,
       }).eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.success("Suggerimento accettato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
@@ -397,7 +422,7 @@ export default function AISuggestionsTab() {
   const assignMutation = useMutation({
     mutationFn: async ({ row, groupId }: { row: AddressRow; groupId: string }) => {
       const group = groups.find((g) => g.id === groupId);
-      if (!group) return;
+      if (!group) return null;
       await supabase.from("email_address_rules").update({
         group_id: group.id,
         group_name: group.nome_gruppo,
@@ -405,11 +430,13 @@ export default function AISuggestionsTab() {
         group_icon: group.icon,
         ai_suggestion_accepted: false,
       }).eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.success("Gruppo assegnato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      if (id) animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.uncategorizedCount });
+      qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
 
@@ -418,10 +445,11 @@ export default function AISuggestionsTab() {
       await supabase.from("email_address_rules")
         .update({ ai_suggestion_accepted: false, ai_suggested_group: null })
         .eq("id", row.id);
+      return row.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       toast.info("Suggerimento ignorato");
-      qc.invalidateQueries({ queryKey: queryKeys.ai.suggestions });
+      animateRemoval(id);
       qc.invalidateQueries({ queryKey: queryKeys.emailIntel.aiSuggestionsCount });
     },
   });
@@ -429,10 +457,11 @@ export default function AISuggestionsTab() {
   const busy = acceptMutation.isPending || assignMutation.isPending || ignoreMutation.isPending;
 
   const visibleRows = useMemo(() => {
-    if (suggestedGroupFilter === "all") return rows;
-    if (suggestedGroupFilter === "none") return rows.filter((row) => !row.ai_suggested_group);
-    return rows.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
-  }, [rows, suggestedGroupFilter]);
+    const filtered = rows.filter((row) => !hiddenIds.has(row.id));
+    if (suggestedGroupFilter === "all") return filtered;
+    if (suggestedGroupFilter === "none") return filtered.filter((row) => !row.ai_suggested_group);
+    return filtered.filter((row) => row.ai_suggested_group === suggestedGroupFilter);
+  }, [rows, suggestedGroupFilter, hiddenIds]);
 
   const sortedRows = useMemo(() => {
     const sorted = [...visibleRows];
