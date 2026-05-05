@@ -172,7 +172,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Sei un assistente di classificazione email per un'azienda di freight forwarding / logistica internazionale.`
+            content: systemPrompt
           },
           {
             role: "user",
