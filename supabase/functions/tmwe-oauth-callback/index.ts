@@ -155,17 +155,7 @@ Deno.serve(async (req) => {
     if (intent === "login") {
       if (!authEmail) return back("error", "no_tmwe_email", "login");
 
-      // Whitelist gate: solo email presenti in authorized_users (attive) possono entrare.
-      const { data: whitelisted } = await svc
-        .from("authorized_users")
-        .select("id")
-        .ilike("email", authEmail)
-        .eq("is_active", true)
-        .maybeSingle();
-      if (!whitelisted) {
-        return back("error", "not_whitelisted", "login");
-      }
-
+      // Whitelist DISATTIVATA: chiunque autenticato via TMWE può entrare.
       const admin = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
