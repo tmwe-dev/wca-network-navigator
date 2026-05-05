@@ -168,7 +168,7 @@ export function EmailDetailView({ message, onClose }: Props) {
               <Button
                 size="sm"
                 variant="default"
-                className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-8 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90"
                 onClick={() => {
                   if (!message.read_at) markAsRead.mutate(message.id);
                   onClose();
@@ -249,7 +249,7 @@ export function EmailDetailView({ message, onClose }: Props) {
                 className="h-7 gap-1 px-2 text-xs"
               />
             </div>
-            <div className="flex items-center gap-0.5">
+            <div className="flex max-w-full flex-wrap items-center justify-start gap-0.5 xl:justify-end">
               <Button
                 size="sm"
                 variant={blockRemote ? "secondary" : "ghost"}
