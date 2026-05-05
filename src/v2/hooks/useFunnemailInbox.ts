@@ -81,6 +81,27 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     setSelectedMessageId(null);
   }, [selectedFolder]);
 
+  // Auto mark-as-read per gruppi con policy `auto_mark_read` (es. Pubblicità/Newsletter).
+  // Best-effort: no toast, no errori bloccanti; refetch silenzioso a successo.
+  const autoReadDoneRef = React.useRef<Set<string>>(new Set());
+  React.useEffect(() => {
+    if (!folders.length || !mails.length) return;
+    const autoSlugs = new Set(folders.filter((f) => f.auto_mark_read).map((f) => f.slug));
+    if (autoSlugs.size === 0) return;
+    const toMark = mails.filter((m) => {
+      if (m.read_at) return false;
+      if (autoReadDoneRef.current.has(m.id)) return false;
+      const slug = (m as ChannelMessage & { funnemail_group_slug?: string }).funnemail_group_slug;
+      return slug ? autoSlugs.has(slug) : false;
+    });
+    if (toMark.length === 0) return;
+    const ids = toMark.map((m) => m.id);
+    ids.forEach((id) => autoReadDoneRef.current.add(id));
+    void markFunnemailMessagesRead(ids).then(() => {
+      qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.grouped(user?.id ?? "anon") });
+    }).catch(() => { /* silent */ });
+  }, [folders, mails, qc, user?.id]);
+
   // Filtri client-side guidati dalla sidebar globale.
   const filteredMails = React.useMemo<ChannelMessage[]>(() => {
     const search = g.filters.funnemailSearch.trim().toLowerCase();
