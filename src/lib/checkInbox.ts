@@ -5,6 +5,24 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("callCheckInbox");
 
+let inFlightCheckInbox: Promise<unknown> | null = null;
+
+function isSkippableCheckInboxError(err: unknown): err is ApiError {
+  if (!(err instanceof ApiError)) return false;
+
+  const body = err.details?.body as Record<string, unknown> | undefined;
+  const bodyCode = typeof body?.code === "string" ? body.code : undefined;
+  const isRuntimeBootError =
+    err.httpStatus === 503 ||
+    /SUPABASE_EDGE_RUNTIME_ERROR|temporarily unavailable/i.test(err.message);
+  const isResourceLimitError =
+    err.httpStatus === 546 ||
+    bodyCode === "WORKER_RESOURCE_LIMIT" ||
+    /WORKER_RESOURCE_LIMIT|not having enough compute resources|CPU Time exceeded/i.test(err.message);
+
+  return isRuntimeBootError || isResourceLimitError;
+}
+
 /**
  * callCheckInbox — chiama la edge function `check-inbox` via invokeEdge.
  *
@@ -18,6 +36,19 @@ const log = createLogger("callCheckInbox");
  * extraction da FunctionsHttpError.
  */
 export async function callCheckInbox(): Promise<unknown> {
+  if (inFlightCheckInbox) {
+    log.warn("check-inbox already running, joining existing invocation");
+    return inFlightCheckInbox;
+  }
+
+  inFlightCheckInbox = callCheckInboxOnce().finally(() => {
+    inFlightCheckInbox = null;
+  });
+
+  return inFlightCheckInbox;
+}
+
+async function callCheckInboxOnce(): Promise<unknown> {
   try {
     const json = await invokeEdge<unknown>("check-inbox", {
       body: {},
@@ -27,19 +58,15 @@ export async function callCheckInbox(): Promise<unknown> {
     safeParseCheckInboxResult(json);
     return json;
   } catch (err) {
-    // Sess #25: il runtime Supabase Edge restituisce sporadicamente 503
-    // ({"code":"SUPABASE_EDGE_RUNTIME_ERROR"}) durante boot/restart del
-    // container. È transitorio: il prossimo tick di sync recupera senza
-    // perdita di email. Non propaghiamo per evitare toast/blank screen.
-    const isTransient =
-      err instanceof ApiError &&
-      (err.httpStatus === 503 ||
-        /SUPABASE_EDGE_RUNTIME_ERROR|temporarily unavailable/i.test(err.message));
-    if (isTransient) {
-      log.warn("check-inbox transient 503, skipping this tick", {
-        status: err instanceof ApiError ? err.httpStatus : undefined,
+    // Sess #25/26: runtime boot errors e CPU/resource-limit sono transitori
+    // per il client. Non propaghiamo: evitiamo crash/blank screen e il
+    // prossimo tick o scaricamento manuale riprenderà senza duplicare side effect.
+    if (isSkippableCheckInboxError(err)) {
+      log.warn("check-inbox skipped this tick", {
+        status: err.httpStatus,
+        code: (err.details?.body as Record<string, unknown> | undefined)?.code,
       });
-      return { total: 0, matched: 0, transient: true };
+      return { total: 0, matched: 0, transient: true, resourceLimit: err.httpStatus === 546 };
     }
     throw err;
   }
