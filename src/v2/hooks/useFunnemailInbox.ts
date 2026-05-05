@@ -106,18 +106,29 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   const filteredMails = React.useMemo<ChannelMessage[]>(() => {
     const search = g.filters.funnemailSearch.trim().toLowerCase();
     const view = g.filters.funnemailView;
-    return mails.filter((m) => {
+    const base = mails.filter((m) => {
       const groupedMail = m as ChannelMessage & { funnemail_group_slug?: string };
       if (selectedFolder !== "all" && groupedMail.funnemail_group_slug !== selectedFolder) return false;
       if (search) {
         const hay = `${m.subject ?? ""} ${m.from_address ?? ""}`.toLowerCase();
         if (!hay.includes(search)) return false;
       }
-      if (view === "unread" && m.read_at) return false;
-      if (view === "urgent" || view === "agenda" || view === "commercial") return false;
       return true;
     });
+    if (view === "unread") return base.filter((m) => !m.read_at);
+    if (view === "urgent" || view === "agenda" || view === "commercial") return base;
+    return base;
   }, [mails, selectedFolder, g.filters.funnemailSearch, g.filters.funnemailView]);
+
+  const didRecoverEmptyFiltersRef = React.useRef(false);
+  React.useEffect(() => {
+    if (didRecoverEmptyFiltersRef.current) return;
+    if (groupedQ.isLoading || mails.length === 0 || filteredMails.length > 0) return;
+    const hasActiveFilter = selectedFolder !== "all" || g.filters.funnemailSearch.trim() || g.filters.funnemailView !== "all";
+    if (!hasActiveFilter) return;
+    didRecoverEmptyFiltersRef.current = true;
+    g.batchUpdate({ funnemailFolder: "all", funnemailSearch: "", funnemailView: "all" });
+  }, [filteredMails.length, g, groupedQ.isLoading, mails.length, selectedFolder]);
 
   const selectedMail = React.useMemo<ChannelMessage | null>(
     () => filteredMails.find((m) => m.id === selectedMessageId) ?? null,
