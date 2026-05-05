@@ -537,6 +537,13 @@ export const queryKeys = {
   promptCatalog: {
     all: (userId: string) => ["prompt-lab-catalog", userId] as const,
   },
+  promptProposals: {
+    list: (filters?: unknown) => ["prompt-change-proposals", filters] as const,
+  },
+  kbProposals: {
+    list: (filters?: unknown) => ["kb-entry-proposals", filters] as const,
+  },
+  kbIndexMap: ["kb-index-map"] as const,
 
   // ── Deals & Pipeline ───────────────────────────────────
   dealsList: ["deals-list"] as const,

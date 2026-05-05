@@ -3,3 +3,4 @@
 - [TMWE Inbound Triage & Alerts](mem://features/tmwe-inbound-triage-and-alerts) — Doctrine TMWE/Find Air, prompt Inbound Triage (priority 95), alert_recipients/alert_dispatch_log, edge dispatch-urgent-alert, UI /v2/settings/alert-routing
 - [Agenda Sender Attribution](mem://features/agenda-sender-attribution) — 1 email = 1 mittente (match SOLO esatto, niente domain fallback). Trigger on_inbound_message filtra newsletter/spam/no-reply. UI agenda mostra from_address reale sotto il nome partner.
 - [Prompt Governance Doctrine](mem://architecture/prompt-governance-doctrine) — Runtime Bundle versionato + Change Kernel come unica via di modifica agenti; rubric engine deterministico; coverage matrix; ADR 0004
+- [Prompt Copilot + KB Index](mem://features/prompt-copilot-and-kb-index) — Chat copilota Prompt Reader, kb-index-map, intake KB → proposte (mai scrittura diretta)
