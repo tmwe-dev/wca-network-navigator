@@ -27,6 +27,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { createPromptChangeProposal } from "@/data/promptChangeProposals";
 import { createKbEntryProposal } from "@/data/kbProposals";
+import { DiffViewer } from "./components/DiffViewer";
+import { buildDiffText } from "@/lib/textDiff";
 
 type ChatMsg = {
   role: "user" | "assistant";
@@ -91,10 +93,15 @@ export interface PromptCopilotPanelProps {
   promptTable?: string;
   /** When true, the panel is in fullscreen mode: chat and proposal box get more vertical room. */
   expanded?: boolean;
+  /**
+   * When true, container è abbastanza largo per il layout a 2 colonne
+   * (proposta SX, chat DX). Calcolato dal parent via ResizeObserver.
+   */
+  compactWidth?: boolean;
 }
 
 export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
-  const { agentSlug, agentKbCategories, blockName, currentContent, promptId, promptTable, expanded = false } = props;
+  const { agentSlug, agentKbCategories, blockName, currentContent, promptId, promptTable, expanded = false, compactWidth = false } = props;
 
   // Modalità: 'block' (lavora sul blocco target) | 'global' (search-replace su tutto)
   const [mode, setMode] = useState<"block" | "global">("block");
@@ -244,12 +251,14 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
     }
     setSavingPrompt(true);
     try {
+      const diffText = buildDiffText(currentContent ?? "", promptProposal.proposed_content);
       await createPromptChangeProposal({
         prompt_id: promptId,
         prompt_table: promptTable ?? "operative_prompts",
         block_name: blockName,
         current_content: currentContent,
         proposed_content: promptProposal.proposed_content,
+        diff_text: diffText,
         rationale: promptProposal.rationale ?? null,
         risks: promptProposal.risks ?? null,
         assumptions: promptProposal.assumptions ?? null,
