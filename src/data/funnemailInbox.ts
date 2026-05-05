@@ -329,10 +329,16 @@ export async function listFunnemailGroupedInbox(
     else rulesByAddress.set(key, rule.group_name);
   }
 
-  // Prioritarie di default: solo le 3 cartelle core operative.
-  // Lo Spam non è MAI prioritario. L'utente può poi riordinare via drag&drop
+  // Prioritarie di default: la cassettiera della "segretaria AI".
+  // Lo Spam non è MAI prioritario. L'utente può riordinare via drag&drop
   // (preferenza salvata in localStorage lato client).
-  const PRIORITY_NAMES = new Set(["operativo", "commerciale", "amministrativo"]);
+  const PRIORITY_NAMES = new Set([
+    "quotazioni",
+    "operativa",
+    "consulenza",
+    "commerciale",
+    "amministrativo",
+  ]);
   const folders: FunnemailGroupFolder[] = groupRows.map((g, index) => {
     const order = g.sort_order ?? index;
     const norm = g.nome_gruppo.trim().toLowerCase();
