@@ -1,139 +1,177 @@
 /**
  * ThemePicker — Selettore globale dei temi (Amber, Lilac, Space, Notte).
- * Applica una delle classi `theme-*` su <html> e persiste in localStorage.
- * Usato sia nell'header (vicino alla campanella) sia nel NavMenuPopover.
+ * Applica una delle classi `theme-*` su <html>, persiste in localStorage
+ * e cambia anche il font-family via --font-sans (gestito in index.css).
+ *
+ * Due varianti:
+ *  - "icon": pulsante 🎨 con piccolo popover di scelta (uso header desktop/mobile).
+ *  - "menu-row": riga full-width con 4 swatch inline cliccabili
+ *    (uso dentro NavMenuPopover, dove non possiamo annidare un Radix dropdown).
  */
 import * as React from "react";
 import { Palette, Check } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 
 export type ThemeId = "amber" | "lilac" | "space" | "notte";
 
 const STORAGE_KEY = "wcann.theme";
 const THEME_CLASSES = ["theme-lilac", "theme-space", "theme-notte"] as const;
+const THEME_EVENT = "wcann:theme-change";
 
 const THEMES: ReadonlyArray<{
   id: ThemeId;
   label: string;
-  swatch: string; // tailwind/inline color for preview dot
+  swatch: string;
   description: string;
 }> = [
-  { id: "amber", label: "Amber", swatch: "#b45309", description: "Default — oro caldo" },
-  { id: "lilac", label: "Lilac Blue", swatch: "#4f46e5", description: "Indaco / lilla" },
-  { id: "space", label: "Space", swatch: "#22d3ee", description: "Notte cosmica + ciano" },
-  { id: "notte", label: "Notte", swatch: "#b48232", description: "Marrone notturno" },
+  { id: "amber", label: "Amber",      swatch: "#b45309", description: "Default · Inter" },
+  { id: "lilac", label: "Lilac Blue", swatch: "#4f46e5", description: "Indaco · Manrope" },
+  { id: "space", label: "Space",      swatch: "#22d3ee", description: "Cosmico · Space Grotesk" },
+  { id: "notte", label: "Notte",      swatch: "#b48232", description: "Notturno · Cormorant" },
 ];
 
 function applyTheme(id: ThemeId): void {
   const root = document.documentElement;
   THEME_CLASSES.forEach((c) => root.classList.remove(c));
   if (id !== "amber") root.classList.add(`theme-${id}`);
-  try {
-    localStorage.setItem(STORAGE_KEY, id);
-  } catch {
-    /* ignore */
-  }
+  try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: id }));
 }
 
 function readStoredTheme(): ThemeId {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "amber" || v === "lilac" || v === "space" || v === "notte") return v;
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
   return "amber";
 }
 
-/** Hook che inizializza il tema all'avvio dell'app (chiamato in App). */
+/** Hook che inizializza il tema all'avvio. (main.tsx già lo applica pre-render). */
 export function useInitTheme(): void {
-  React.useEffect(() => {
-    applyTheme(readStoredTheme());
-  }, []);
+  React.useEffect(() => { applyTheme(readStoredTheme()); }, []);
 }
 
 function useCurrentTheme(): [ThemeId, (id: ThemeId) => void] {
   const [current, setCurrent] = React.useState<ThemeId>(() => readStoredTheme());
-  const change = React.useCallback((id: ThemeId) => {
-    applyTheme(id);
-    setCurrent(id);
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<ThemeId>).detail;
+      if (id) setCurrent(id);
+    };
+    window.addEventListener(THEME_EVENT, handler);
+    return () => window.removeEventListener(THEME_EVENT, handler);
   }, []);
+  const change = React.useCallback((id: ThemeId) => { applyTheme(id); }, []);
   return [current, change];
 }
 
 interface ThemePickerProps {
-  /** Variante visiva del trigger: icona compatta (header) o riga full-width (sidebar/menu). */
   variant?: "icon" | "menu-row";
 }
 
 export function ThemePicker({ variant = "icon" }: ThemePickerProps): React.ReactElement {
   const [current, change] = useCurrentTheme();
+
+  if (variant === "menu-row") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Palette className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-xs text-muted-foreground mr-1">Tema</span>
+        <div className="flex items-center gap-1.5 ml-auto">
+          {THEMES.map((t) => {
+            const active = t.id === current;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => change(t.id)}
+                aria-label={`Tema ${t.label}`}
+                title={`${t.label} — ${t.description}`}
+                className={
+                  "h-5 w-5 rounded-full ring-1 ring-white/20 transition-transform hover:scale-110 flex items-center justify-center " +
+                  (active ? "ring-2 ring-primary scale-110" : "")
+                }
+                style={{ background: t.swatch }}
+              >
+                {active && <Check className="h-3 w-3 text-white drop-shadow" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return <ThemePickerIcon current={current} onChange={change} />;
+}
+
+function ThemePickerIcon({
+  current,
+  onChange,
+}: { current: ThemeId; onChange: (id: ThemeId) => void }): React.ReactElement {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   const currentTheme = THEMES.find((t) => t.id === current) ?? THEMES[0];
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {variant === "icon" ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-foreground/70 hover:text-primary transition-colors"
-            aria-label={`Tema corrente: ${currentTheme.label}. Cambia tema`}
-            title={`Tema · ${currentTheme.label}`}
-          >
-            <Palette className="h-4 w-4" />
-          </Button>
-        ) : (
-          <button
-            type="button"
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-left text-foreground/90 hover:bg-white/5 hover:text-foreground w-full"
-          >
-            <span className="text-muted-foreground"><Palette className="h-4 w-4" /></span>
-            <span className="flex-1">Tema</span>
-            <span
-              aria-hidden
-              className="inline-block h-3 w-3 rounded-full ring-1 ring-white/20"
-              style={{ background: currentTheme.swatch }}
-            />
-            <span className="text-xs text-muted-foreground">{currentTheme.label}</span>
-          </button>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          Tema visivo
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {THEMES.map((t) => {
-          const active = t.id === current;
-          return (
-            <DropdownMenuItem
-              key={t.id}
-              onClick={() => change(t.id)}
-              className="gap-2"
-            >
-              <span
-                aria-hidden
-                className="inline-block h-3 w-3 rounded-full ring-1 ring-white/20 shrink-0"
-                style={{ background: t.swatch }}
-              />
-              <span className="flex-1">
-                <span className="block text-sm">{t.label}</span>
-                <span className="block text-[10px] text-muted-foreground">{t.description}</span>
-              </span>
-              {active && <Check className="h-3.5 w-3.5 text-primary" />}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`Tema corrente: ${currentTheme.label}. Cambia tema`}
+        title={`Tema · ${currentTheme.label}`}
+        className="h-9 w-9 md:h-7 md:w-7 inline-flex items-center justify-center rounded-md text-foreground/70 hover:text-primary hover:bg-white/5 transition-colors"
+      >
+        <Palette className="h-4 w-4" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-56 z-[100] rounded-md border border-border/60 bg-popover/95 backdrop-blur-xl shadow-xl p-1"
+        >
+          <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Tema visivo
+          </div>
+          <div className="h-px bg-border/60 my-1" />
+          {THEMES.map((t) => {
+            const active = t.id === current;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="menuitem"
+                onClick={() => { onChange(t.id); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-sm text-left hover:bg-accent/40 transition-colors"
+              >
+                <span
+                  aria-hidden
+                  className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-white/20 shrink-0"
+                  style={{ background: t.swatch }}
+                />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm leading-tight">{t.label}</span>
+                  <span className="block text-[10px] text-muted-foreground leading-tight">{t.description}</span>
+                </span>
+                {active && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

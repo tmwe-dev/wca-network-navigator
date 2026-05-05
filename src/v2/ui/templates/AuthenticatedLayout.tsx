@@ -43,6 +43,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { scheduleIdlePrefetch } from "@/lib/prefetchRoutes";
 import { BcaFiltersProvider } from "@/components/contacts/bca/BcaFiltersContext";
 import { ComposeAiConfigProvider } from "@/contexts/ComposeAiConfigContext";
+import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 
 const ContactRecordDrawer = lazyRetry(() => import("@/components/contact-drawer/ContactRecordDrawer").then(m => ({ default: m.ContactRecordDrawer })));
 const MissionDrawer = lazyRetry(() => import("@/components/global/MissionDrawer").then(m => ({ default: m.MissionDrawer })));
@@ -277,6 +278,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
                         <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
                         <div className="flex items-center gap-2">
+                          <ThemePicker variant="icon" />
                           <button
                             onClick={() => setCommandOpen(true)}
                             className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
