@@ -19,8 +19,8 @@ import { FunnemailListToolbar, type GroupMode, type SortMode } from "./Funnemail
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
-const ROW_HEIGHT = 92;
-const STORAGE_KEY = "funnemail_list_view_v3";
+const ROW_HEIGHT = 124;
+const STORAGE_KEY = "funnemail_list_view_v4";
 
 interface StoredPrefs {
   sort: SortMode;
@@ -30,14 +30,14 @@ interface StoredPrefs {
 function loadPrefs(): StoredPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { sort: "company_asc", group: "company" };
+    if (!raw) return { sort: "date_desc", group: "none" };
     const parsed = JSON.parse(raw) as Partial<StoredPrefs>;
     return {
-      sort: parsed.sort ?? "company_asc",
-      group: parsed.group ?? "company",
+      sort: parsed.sort ?? "date_desc",
+      group: parsed.group ?? "none",
     };
   } catch {
-    return { sort: "company_asc", group: "company" };
+    return { sort: "date_desc", group: "none" };
   }
 }
 
@@ -58,6 +58,8 @@ interface Props {
   bulkDelete: (msgs: ChannelMessage[]) => void;
   bulkAssignGroup: (msgs: ChannelMessage[], groupName: string) => Promise<void>;
   bulkBusy: boolean;
+  onReclassify: (msg: ChannelMessage) => void;
+  reclassifying: boolean;
 }
 
 function getCompanyKey(msg: ChannelMessage): string {
@@ -99,6 +101,7 @@ function sortMessages(msgs: ChannelMessage[], mode: SortMode): ChannelMessage[] 
 export function FunnemailMailList({
   messages, selectedId, onSelect,
   bulkMarkRead, bulkArchive, bulkDelete, bulkAssignGroup, bulkBusy,
+  onReclassify, reclassifying,
 }: Props): JSX.Element {
   const [{ sort, group }, setPrefs] = useState<StoredPrefs>(() => loadPrefs());
   useEffect(() => { savePrefs({ sort, group }); }, [sort, group]);
@@ -163,6 +166,8 @@ export function FunnemailMailList({
         groupIcon={grp?.groupIcon ?? null}
         aiSuggestion={aiSuggestion}
         onSelect={() => onSelect(msg)}
+        onReclassify={() => onReclassify(msg)}
+        reclassifying={reclassifying}
         showCheckbox
         checked={checkedIds.has(msg.id)}
         onToggleChecked={() => toggleChecked(msg.id)}

@@ -62,6 +62,19 @@ export interface SenderIntelRow {
   role_guess: string | null;
 }
 
+export interface FunnemailPartnerSnapshot {
+  id: string;
+  company_name: string;
+  company_alias: string | null;
+  country_code: string | null;
+  country_name: string | null;
+  city: string | null;
+  logo_url: string | null;
+  lead_status: string | null;
+  partner_type: string | null;
+  website: string | null;
+}
+
 const MESSAGE_LIST_SELECT = [
   "id",
   "user_id",
@@ -75,6 +88,9 @@ const MESSAGE_LIST_SELECT = [
   "cc_addresses",
   "bcc_addresses",
   "subject",
+  "category",
+  "folder",
+  "ai_classification_suggestion",
   "body_text",
   "raw_payload",
   "message_id_external",
@@ -108,7 +124,15 @@ export interface FunnemailGroupFolder {
 export interface FunnemailGroupedInbox {
   folders: FunnemailGroupFolder[];
   counts: Record<string, number>;
-  messages: Array<ChannelMessage & { funnemail_group_slug: string; funnemail_group_name: string | null }>;
+  messages: Array<ChannelMessage & {
+    funnemail_group_slug: string;
+    funnemail_group_name: string | null;
+    funnemail_folder_label: string | null;
+    funnemail_folder_icon: string | null;
+    funnemail_decision: FunnemailDecisionRow | null;
+    sender_intel: SenderIntelRow | null;
+    partner_snapshot: FunnemailPartnerSnapshot | null;
+  }>;
 }
 
 interface EmailSenderGroupRow {
@@ -336,9 +360,9 @@ export async function listFunnemailGroupedInbox(
         .range(from, to);
     }, MAX_MESSAGES),
     listFunnemailFolders(),
-    fetchAllPages<{ message_id: string; folder_slug: string | null; override_folder_slug: string | null }>(
+    fetchAllPages<FunnemailDecisionRow>(
       (from, to) => untypedFrom("funnemail_decisions")
-        .select("message_id, folder_slug, override_folder_slug")
+        .select("id,message_id,folder_slug,suggested_action,goes_to_agenda,urgency,confidence,reasoning,commercial_handoff,from_address,partner_id,override_folder_slug,created_at")
         .order("created_at", { ascending: false })
         .range(from, to),
       MAX_MESSAGES,
@@ -418,11 +442,36 @@ export async function listFunnemailGroupedInbox(
   void groups;
 
   const validSlugs = new Set(folders.map((f) => f.slug));
+  const folderBySlug = new Map(folders.map((f) => [f.slug, f]));
+  const domains = Array.from(new Set(messages.map((m) => extractEmail(m.from_address)?.split("@")[1]).filter((d): d is string => Boolean(d))));
+  const partnerIds = Array.from(new Set([
+    ...messages.map((m) => m.partner_id),
+    ...decisions.map((d) => d.partner_id),
+  ].filter((id): id is string => Boolean(id))));
+  const intelPromise: Promise<SenderIntelRow[]> = domains.length > 0
+    ? untypedFrom("funnemail_sender_intel")
+      .select("email_domain,is_known_partner,partner_id,company_type,country,website,role_guess")
+      .in("email_domain", domains)
+      .then(({ data, error }: { data: SenderIntelRow[] | null; error: Error | null }) => { if (error) throw error; return data ?? []; })
+    : Promise.resolve([]);
+  const partnerPromise: Promise<FunnemailPartnerSnapshot[]> = partnerIds.length > 0
+    ? untypedFrom("partners")
+      .select("id,company_name,company_alias,country_code,country_name,city,logo_url,lead_status,partner_type,website")
+      .in("id", partnerIds)
+      .then(({ data, error }: { data: FunnemailPartnerSnapshot[] | null; error: Error | null }) => { if (error) throw error; return data ?? []; })
+    : Promise.resolve([]);
+  const [intelRows, partnerRows] = await Promise.all([
+    intelPromise,
+    partnerPromise,
+  ]);
+  const intelByDomain = new Map(intelRows.map((row) => [row.email_domain, row]));
+  const partnerById = new Map(partnerRows.map((row) => [row.id, row]));
   const counts: Record<string, number> = Object.fromEntries(folders.map((f) => [f.slug, 0]));
 
   const groupedMessages = messages.map((message) => {
     let slug: string | null = null;
     const externalId = (message as ChannelMessage & { message_id_external?: string | null }).message_id_external ?? null;
+    const decision = externalId ? decisions.find((d) => d.message_id === externalId) ?? null : null;
     if (externalId) slug = decisionByMsgId.get(externalId) ?? null;
     if (!slug) {
       const address = extractEmail(message.from_address);
@@ -431,7 +480,24 @@ export async function listFunnemailGroupedInbox(
     }
     if (!slug || !validSlugs.has(slug)) slug = "to_sort";
     counts[slug] = (counts[slug] ?? 0) + 1;
-    return { ...message, funnemail_group_slug: slug, funnemail_group_name: null };
+    const address = extractEmail(message.from_address);
+    const domain = address?.split("@")[1] ?? null;
+    const intel = domain ? intelByDomain.get(domain) ?? null : null;
+    const partner = (message.partner_id ? partnerById.get(message.partner_id) : null)
+      ?? (decision?.partner_id ? partnerById.get(decision.partner_id) : null)
+      ?? (intel?.partner_id ? partnerById.get(intel.partner_id) : null)
+      ?? null;
+    const folder = folderBySlug.get(slug) ?? null;
+    return {
+      ...message,
+      funnemail_group_slug: slug,
+      funnemail_group_name: null,
+      funnemail_folder_label: folder?.label ?? slug,
+      funnemail_folder_icon: folder?.icon ?? null,
+      funnemail_decision: decision,
+      sender_intel: intel,
+      partner_snapshot: partner,
+    };
   });
 
   return { folders, counts, messages: groupedMessages };

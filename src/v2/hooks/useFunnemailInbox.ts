@@ -6,11 +6,11 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { useAuth } from "@/providers/AuthProvider";
 import { useActiveOperator } from "@/contexts/ActiveOperatorContext";
 import { queryKeys } from "@/lib/queryKeys";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import {
   listFunnemailGroupedInbox,
   markFunnemailMessagesRead,
@@ -36,7 +36,7 @@ export interface UseFunnemailInboxResult {
   setSelectedMessageId: (id: string | null) => void;
   selectedMail: ChannelMessage | null;
   overrideFolder: (messageId: string, newSlug: string) => void;
-  reclassify: (messageId: string) => void;
+  reclassify: (message: ChannelMessage) => void;
   reclassifying: boolean;
   bulkMarkRead: (messages: ChannelMessage[]) => Promise<void>;
   bulkArchive: (messages: ChannelMessage[]) => void;
@@ -182,13 +182,20 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   );
 
   const reclassifyMutation = useMutation({
-    mutationFn: async (messageId: string) => {
-      const { data, error } = await supabase.functions.invoke("funnemail-classify", {
-        body: { message_id: messageId, force: true },
-      });
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: async (message: ChannelMessage) => invokeAi("funnemail-classify", {
+      scope: "classify",
+      context: { source: "useFunnemailInbox", route: "/v2/funnemail-inbox", mode: "reclassify" },
+      body: {
+        message_id: message.message_id_external ?? message.id,
+        from_address: message.from_address ?? "",
+        subject: message.subject ?? "",
+        body_text: message.body_text ?? "",
+        partner_id: message.partner_id,
+        user_id: message.user_id,
+        prior_classification: (message as ChannelMessage & { category?: string | null }).category ?? undefined,
+        force: true,
+      },
+    }),
     onSuccess: () => {
       toast.success("Email riclassificata");
       qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
@@ -199,7 +206,7 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
   });
 
   const reclassify = React.useCallback(
-    (messageId: string) => reclassifyMutation.mutate(messageId),
+    (message: ChannelMessage) => reclassifyMutation.mutate(message),
     [reclassifyMutation],
   );
 
