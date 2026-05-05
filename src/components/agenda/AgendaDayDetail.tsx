@@ -11,7 +11,7 @@ import {
 import {
   Mail, MessageCircle, Linkedin, Phone, StickyNote, MoreVertical, CheckCircle2,
   Calendar as CalendarIcon, ArrowUpRight,
-  Check, Clock, Archive, Plane,
+  Check, Clock, Archive, Plane, AlertTriangle,
 } from "lucide-react";
 import { useAgendaDayActivities } from "@/hooks/useAgendaDayActivities";
 import { useUpdateActivity } from "@/hooks/useActivities";
@@ -109,6 +109,19 @@ function senderFromDescription(desc: string | null | undefined): string | null {
   const email = m[1];
   const domain = email.split("@")[1] ?? "";
   return domain || email;
+}
+
+/** Estrae l'email completa del mittente dalla description del trigger on_inbound_message. */
+function senderEmailFromDescription(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const m = desc.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+  return m ? m[1] : null;
+}
+
+/** Vero se il trigger ha marcato l'attribuzione come "match per dominio, da verificare". */
+function isUnverifiedDomainMatch(desc: string | null | undefined): boolean {
+  if (!desc) return false;
+  return /Mittente da verificare/i.test(desc);
 }
 
 export default function AgendaDayDetail({
@@ -292,6 +305,8 @@ function ActivityRow({
     activity.partners?.company_name ||
     senderFromDescription(activity.description) ||
     "Mittente sconosciuto";
+  const senderEmail = senderEmailFromDescription(activity.description);
+  const unverifiedDomain = isUnverifiedDomainMatch(activity.description);
   const flag = activity.partners?.country_code
     ? getCountryFlag(activity.partners.country_code)
     : null;
@@ -333,6 +348,14 @@ function ActivityRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium truncate">{partnerName}</span>
+          {unverifiedDomain && (
+            <span
+              title="Match solo per dominio email — verificare l'identità reale del mittente"
+              className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[9px] border border-amber-500/40 text-amber-500 bg-amber-500/10 shrink-0"
+            >
+              <AlertTriangle className="w-2.5 h-2.5" /> da verificare
+            </span>
+          )}
           {inHolding && (
             <span
               title="In circuito di attesa"
@@ -348,6 +371,12 @@ function ActivityRow({
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5 truncate">
           <Clock className="w-2.5 h-2.5 shrink-0" />
           <span>{relativeAge(activity.created_at)}</span>
+          {senderEmail && (
+            <>
+              <span className="opacity-30">·</span>
+              <span className="truncate font-mono">{senderEmail}</span>
+            </>
+          )}
           <span className="opacity-30">·</span>
           <span className="truncate">{cleanTitle(activity.title)}</span>
         </div>
