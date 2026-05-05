@@ -101,8 +101,40 @@ serve(async (req) => {
       .order("email_count", { ascending: false })
       .limit(250);
 
-    // 3. For each address, get last 5 subjects
-    const addressData: Array<{ email: string; display_name: string | null; email_count: number; subjects: string[]; ruleId: string }> = [];
+    // 3. For each address, get last 5 subjects + dominio noto + first contact
+    const addressData: Array<{
+      email: string;
+      display_name: string | null;
+      email_count: number;
+      subjects: string[];
+      ruleId: string;
+      is_first_contact: boolean;
+      domain_known: "yes" | "no";
+      domain_known_group?: string | null;
+    }> = [];
+
+    // Pre-carica i domini già classificati (una sola query) per non interrogare
+    // il DB per ogni address.
+    const domainsToCheck = Array.from(new Set(
+      addresses
+        .map((a: { email_address: string }) => (a.email_address.split("@")[1] || "").toLowerCase())
+        .filter(Boolean),
+    ));
+    const domainGroupMap = new Map<string, string>();
+    if (domainsToCheck.length > 0) {
+      const { data: domainRules } = await supabase
+        .from("email_address_rules")
+        .select("domain, group_name, email_count")
+        .eq("user_id", user.id)
+        .in("domain", domainsToCheck)
+        .not("group_name", "is", null)
+        .order("email_count", { ascending: false });
+      for (const r of (domainRules ?? []) as Array<{ domain: string | null; group_name: string | null }>) {
+        if (r.domain && r.group_name && !domainGroupMap.has(r.domain.toLowerCase())) {
+          domainGroupMap.set(r.domain.toLowerCase(), r.group_name);
+        }
+      }
+    }
 
     for (const addr of addresses) {
       const { data: msgs } = await supabase
@@ -113,12 +145,19 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(5);
 
+      const emailCount = addr.email_count ?? 0;
+      const dom = (addr.email_address.split("@")[1] || "").toLowerCase();
+      const knownGroup = dom ? domainGroupMap.get(dom) ?? null : null;
+
       addressData.push({
         email: addr.email_address,
         display_name: addr.display_name,
-        email_count: addr.email_count ?? 0,
+        email_count: emailCount,
         subjects: (msgs || []).map((m: Record<string, unknown>) => m.subject || "").filter(Boolean),
         ruleId: addr.id,
+        is_first_contact: emailCount <= 1,
+        domain_known: knownGroup ? "yes" : "no",
+        domain_known_group: knownGroup,
       });
     }
 
@@ -149,9 +188,20 @@ serve(async (req) => {
       ].filter((value): value is string => value !== null);
       return parts.join(" | ");
     }).join("\n");
-    const addressList = addressData.map((a) =>
-      `Email: ${a.email}, Nome: ${a.display_name || "N/A"}, Volume: ${a.email_count}, Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`
-    ).join("\n");
+    const addressList = addressData.map((a) => {
+      const domHint = a.domain_known === "yes" && a.domain_known_group
+        ? `dominio noto → già classificato come "${a.domain_known_group}"`
+        : "dominio sconosciuto";
+      const firstHint = a.is_first_contact ? "PRIMO CONTATTO" : `relazione esistente (${a.email_count} email)`;
+      return [
+        `Email: ${a.email}`,
+        `Nome: ${a.display_name || "N/A"}`,
+        `Volume: ${a.email_count}`,
+        firstHint,
+        domHint,
+        `Ultimi oggetti: ${a.subjects.slice(0, 5).join(" | ") || "N/A"}`,
+      ].join(", ");
+    }).join("\n");
     const examplesList = groups.map((g: Record<string, unknown>) => {
       const groupName = String(g.nome_gruppo);
       const samples = groupedExamples.get(groupName) ?? [];
@@ -200,7 +250,7 @@ serve(async (req) => {
           },
           {
             role: "user",
-            content: `Gruppi disponibili:\n${groupsList}\n\nEsempi reali già classificati dall'operatore (usali come mini-guida di stile e perimetro, senza copiarli meccanicamente):\n${examplesList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra: l'obiettivo è RIDURRE i gruppi, non moltiplicarli\n- Preferisci sempre gruppi ampi e operativi (es. amministrativo, commerciale, banca, fornitori, clienti, spam, social) invece di micro-segmenti geografici o troppo specifici\n- Per mittenti LinkedIn/social automatici (inviti, notifiche, newsletter, noreply) scegli il gruppo social esistente più vicino: Social_Notification per notifiche/inviti, Social_News per newsletter/news, Social Spam solo se chiaramente indesiderato\n- Non creare sottogruppi tipo "clienti Francia" o "clienti Germania" se esiste già un gruppo più generale adeguato\n- Usa gli esempi già classificati per capire come l'azienda raggruppa davvero i mittenti\n- Basa la decisione su dominio email, struttura del dominio, display name, contenuto subject e pattern del sender\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Rispondi SOLO con i dati del tool, niente testo extra\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare:\n${addressList}`
+            content: `Gruppi disponibili:\n${groupsList}\n\nEsempi reali già classificati dall'operatore (usali come mini-guida di stile e perimetro, senza copiarli meccanicamente):\n${examplesList}\n\nPer ogni address email qui sotto, suggerisci il gruppo più appropriato.\n\nREGOLE:\n- Usa SOLO gruppi esistenti dalla lista sopra: l'obiettivo è RIDURRE i gruppi, non moltiplicarli\n- Preferisci sempre gruppi ampi e operativi (es. amministrativo, commerciale, banca, fornitori, clienti, spam, social) invece di micro-segmenti geografici o troppo specifici\n- Per mittenti LinkedIn/social automatici (inviti, notifiche, newsletter, noreply) scegli il gruppo social esistente più vicino: Social_Notification per notifiche/inviti, Social_News per newsletter/news, Social Spam solo se chiaramente indesiderato\n- Non creare sottogruppi tipo "clienti Francia" o "clienti Germania" se esiste già un gruppo più generale adeguato\n- Usa gli esempi già classificati per capire come l'azienda raggruppa davvero i mittenti\n- Basa la decisione su DOMINIO email, struttura del dominio, display name, OGGETTI ricorrenti, pattern del sender E sul CONTESTO RELAZIONALE (PRIMO CONTATTO vs relazione esistente, dominio noto vs sconosciuto)\n- **Cold_Outreach guardrail**: se è PRIMO CONTATTO + dominio sconosciuto + tono pitch/sales (growth manager, "we help", demo, lead gen) → suggerisci "Cold_Outreach" anche se il testo parla di logistica. Operativo richiede SEMPRE riferimento esplicito a spedizione/AWB/MAWB/B/L/booking/fattura/dogana o thread esistente.\n- Se il dominio è già stato classificato in un gruppo (vedi "dominio noto"), usa di norma lo stesso gruppo a meno che il pattern oggetti dica chiaramente l'opposto.\n- Se non sei sicuro (confidence < 0.4), suggerisci "uncategorized"\n- Rispondi SOLO con i dati del tool, niente testo extra\n\nFormato risposta: [{"email":"...","suggested_group":"nome_gruppo","confidence":0.0-1.0,"reasoning":"breve spiegazione"}]\n\nAddress da classificare (con feature relazionali):\n${addressList}`
           }
         ],
         tools: [{
