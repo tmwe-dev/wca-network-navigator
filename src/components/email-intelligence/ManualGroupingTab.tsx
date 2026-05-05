@@ -223,6 +223,7 @@ function GroupGridPanel(props: {
  */
 function VirtualizedSenderList(props: {
   senders: SenderAnalysis[];
+  groups: EmailSenderGroup[];
   selectedEmails: Set<string>;
   focusedEmail: string | null;
   onDragStart: (s: SenderAnalysis) => void;
@@ -278,6 +279,7 @@ function VirtualizedSenderList(props: {
             >
               <SenderCard
                 sender={sender}
+                groups={props.groups}
                 onDragStart={props.onDragStart}
                 onDragEnd={props.onDragEnd}
                 isSelected={props.selectedEmails.has(sender.email)}
