@@ -22,6 +22,7 @@ import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
 import { loadConversationSummary } from "../_shared/conversationSummaryLoader.ts";
+import { resolveCaller, assertMessageOwned } from "../_shared/ownership.ts";
 
 interface RequestBody {
   message_id: string;
@@ -171,7 +172,13 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("classify-inbound-content");
 
   try {
-    const body: RequestBody = await req.json();
+    const cors = getCorsHeaders(req.headers.get("origin"));
+    const caller = await resolveCaller(req, cors);
+    if (caller instanceof Response) {
+      endMetrics(metrics, false, caller.status);
+      return caller;
+    }
+    const body: RequestBody = (caller.bodyJson ?? {}) as RequestBody;
     if (!body.message_id || !body.from_address) {
       endMetrics(metrics, false, 400);
       return new Response(
@@ -185,6 +192,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } },
     );
+
+    // For user-JWT callers: force user_id = JWT sub + verify message ownership.
+    // Service-role: trust body.user_id (trigger context).
+    if (!caller.isService) {
+      body.user_id = caller.userId;
+      const ownErr = await assertMessageOwned(supabase, body.message_id, caller.userId, cors);
+      if (ownErr) {
+        endMetrics(metrics, false, ownErr.status);
+        return ownErr;
+      }
+    }
 
     // Idempotenza
     const { data: existing } = await supabase
