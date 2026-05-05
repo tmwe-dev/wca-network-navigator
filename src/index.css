@@ -18,46 +18,140 @@ html, body {
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 215 25% 15%;
+    /* Premium Navy & Gold Palette — ported from WueForm (light) */
+    --background: 220 25% 97%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 262 70% 58%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 260 30% 96%;
-    --secondary-foreground: 260 25% 27%;
-    --muted: 260 30% 96%;
-    --muted-foreground: 260 16% 47%;
-    --accent: 262 70% 94%;
-    --accent-foreground: 262 70% 35%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 20%;
+    --primary-foreground: 60 9% 98%;
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 60 9% 98%;
+    --accent: 213 94% 68%;
+    --accent-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
+    --destructive-foreground: 60 9% 98%;
+    --success: 160 84% 39%;
+    --success-foreground: 60 9% 98%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 262 70% 58%;
-    --radius: 0.5rem;
-    /* Design system IntelliFlow */
+    --warning-foreground: 222 47% 11%;
+    --gold: 45 93% 47%;
+    --gold-light: 45 93% 58%;
+    --gold-dark: 40 88% 38%;
+    --gold-foreground: 222 47% 11%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+    --radius: 1rem;
+    /* Design system IntelliFlow (kept) */
     --info: 262 60% 66%;
     --info-foreground: 262 60% 95%;
-    --sidebar-background: 260 28% 17%;
-    --sidebar-foreground: 260 30% 98%;
-    --sidebar-primary: 262 70% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 25% 22%;
-    --sidebar-accent-foreground: 260 30% 98%;
-    --sidebar-border: 260 25% 25%;
-    --sidebar-ring: 262 70% 58%;
-    --chart-1: 262 70% 58%;
+    /* Glass & gradients */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.3;
+    --glass-shadow: 220 25% 10% / 0.1;
+    --gradient-start: 217 91% 60%;
+    --gradient-mid: 213 94% 68%;
+    --gradient-end: 199 89% 70%;
+    --glow-primary: 217 91% 60%;
+    --glow-gold: 45 93% 55%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
+    --chart-1: 217 91% 60%;
     --chart-2: 173 80% 40%;
     --chart-3: 262 83% 58%;
-    --chart-4: 38 92% 50%;
+    --chart-4: 45 93% 47%;
     --chart-5: 0 84% 60%;
+    /* Theme accent variables — Amber default (light) */
+    --theme-accent-bg: rgba(146, 64, 14, 0.08);
+    --theme-accent-border: rgba(180, 83, 9, 0.15);
+    --theme-accent-hover: rgba(146, 64, 14, 0.12);
+    --theme-accent-icon-bg: rgba(180, 83, 9, 0.08);
+    --theme-header-start: rgba(120, 60, 10, 0.45);
+    --theme-header-mid: rgba(180, 100, 30, 0.25);
+    --theme-header-end: rgba(220, 160, 80, 0.08);
+    --theme-cta-border-mid: rgba(180, 120, 60, 0.15);
+    --theme-cta-border-end: rgba(200, 140, 70, 0.25);
+    --theme-dot-color: rgba(180, 130, 60, 0.5);
+    --theme-active-bg: rgba(146, 64, 14, 0.8);
+    --theme-active-border: rgba(180, 83, 9, 0.5);
+    --theme-icon-active: rgba(146, 64, 14, 1);
+    --theme-notice-bg: rgba(69, 26, 3, 0.7);
+    --theme-notice-border: rgba(146, 64, 14, 0.4);
+    --theme-section-bg: rgba(146, 64, 14, 0.04);
+  }
+
+  /* Lilac-Blue theme — light */
+  .theme-lilac {
+    --theme-accent-bg: rgba(79, 70, 229, 0.08);
+    --theme-accent-border: rgba(99, 89, 232, 0.15);
+    --theme-accent-hover: rgba(79, 70, 229, 0.12);
+    --theme-accent-icon-bg: rgba(99, 89, 232, 0.08);
+    --theme-header-start: rgba(40, 20, 80, 0.45);
+    --theme-header-mid: rgba(70, 40, 120, 0.25);
+    --theme-header-end: rgba(100, 80, 160, 0.08);
+    --theme-cta-border-mid: rgba(120, 80, 200, 0.15);
+    --theme-cta-border-end: rgba(140, 100, 220, 0.25);
+    --theme-dot-color: rgba(139, 92, 246, 0.5);
+    --theme-active-bg: rgba(79, 70, 229, 0.8);
+    --theme-active-border: rgba(99, 89, 232, 0.5);
+    --theme-icon-active: rgba(79, 70, 229, 1);
+    --theme-notice-bg: rgba(30, 27, 75, 0.7);
+    --theme-notice-border: rgba(79, 70, 229, 0.4);
+    --theme-section-bg: rgba(79, 70, 229, 0.04);
+  }
+
+  /* Space theme — light */
+  .theme-space {
+    --theme-accent-bg: rgba(15, 23, 42, 0.08);
+    --theme-accent-border: rgba(34, 211, 238, 0.15);
+    --theme-accent-hover: rgba(15, 23, 42, 0.12);
+    --theme-accent-icon-bg: rgba(34, 211, 238, 0.08);
+    --theme-header-start: rgba(5, 10, 30, 0.5);
+    --theme-header-mid: rgba(10, 20, 50, 0.3);
+    --theme-header-end: rgba(20, 40, 80, 0.1);
+    --theme-cta-border-mid: rgba(34, 211, 238, 0.12);
+    --theme-cta-border-end: rgba(56, 189, 248, 0.2);
+    --theme-dot-color: rgba(56, 189, 248, 0.4);
+    --theme-active-bg: rgba(15, 23, 42, 0.8);
+    --theme-active-border: rgba(34, 211, 238, 0.5);
+    --theme-icon-active: rgba(34, 211, 238, 1);
+    --theme-notice-bg: rgba(15, 23, 42, 0.7);
+    --theme-notice-border: rgba(34, 211, 238, 0.4);
+    --theme-section-bg: rgba(15, 23, 42, 0.04);
+  }
+
+  /* Notte theme — light overrides */
+  .theme-notte {
+    --background: 25 15% 95%;
+    --foreground: 25 25% 15%;
+    --card: 30 20% 98%;
+    --card-foreground: 25 25% 15%;
+    --primary: 38 70% 45%;
+    --primary-foreground: 30 20% 98%;
+    --accent: 35 50% 70%;
+    --accent-foreground: 25 25% 15%;
+    --border: 30 15% 85%;
+    --ring: 38 70% 45%;
+    --theme-accent-bg: rgba(180, 130, 50, 0.08);
+    --theme-accent-border: rgba(200, 150, 70, 0.15);
+    --theme-accent-hover: rgba(180, 130, 50, 0.15);
+    --theme-accent-icon-bg: rgba(200, 150, 70, 0.1);
+    --theme-dot-color: rgba(200, 150, 70, 0.4);
+    --theme-active-bg: rgba(180, 130, 50, 0.8);
+    --theme-active-border: rgba(200, 150, 70, 0.5);
+    --theme-icon-active: rgba(180, 130, 50, 1);
+    --theme-section-bg: rgba(180, 130, 50, 0.04);
   }
 
   .dark {
