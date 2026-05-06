@@ -16,39 +16,37 @@ interface ChatMsg {
   content: string;
 }
 
-const TMWE_OPS = [
+const FALLBACK_OPS = [
   { op: "profile.me", desc: "Profilo utente TMWE corrente." },
-  { op: "tracking.byAwb", desc: "Tracking di una spedizione per AWB. Params: { awb: string }" },
-  { op: "shipment.list", desc: "Elenco spedizioni dell'utente. Params filtro opzionali." },
-  { op: "shipment.unified", desc: "Dettaglio unificato di una spedizione. Params libero (vedi TMWE)." },
-  { op: "rubrica.search", desc: "Cerca contatti/aziende nella rubrica TMWE. Params: { q: string }" },
-  { op: "system.health", desc: "Stato del sistema TMWE." },
-] as const;
+  { op: "tracking.byAwb", desc: "Tracking spedizione per AWB. Params: { awb: string }" },
+  { op: "shipment.list", desc: "Elenco spedizioni dell'utente." },
+  { op: "shipment.unified", desc: "Dettaglio unificato spedizione." },
+  { op: "rubrica.search", desc: "Cerca contatti rubrica. Params: { q: string }" },
+  { op: "system.health", desc: "Stato sistema TMWE." },
+];
 
-const SYSTEM_PROMPT = `Sei "Finder API", un agente conversazionale-tecnico dedicato all'API TMWE/Findair.
+const BASE_PROMPT = `Sei "Finder API", un agente conversazionale-tecnico dedicato all'API TMWE/Findair.
 
 Identità: collega tecnico, breve, mostri cosa fai.
 Obiettivo: tradurre la richiesta in chiamate TMWE e rispondere con i dati esposti.
 
-Operazioni consentite (whitelist):
-${TMWE_OPS.map((o) => `- ${o.op}: ${o.desc}`).join("\n")}
-
 Regole:
 1. Usa la SCHEMA MAP qui sotto per sapere subito quale op e quale campo usare. Non tirare a indovinare.
-2. Read-only: niente scritture.
+2. Per default privilegia op read; per write segnala all'utente prima di chiamare.
 3. Output sempre via tool. Quando esponi dati, includi i campi con role ∈ {id_interno, tracking_code, data, stato, servizio, note}.
 4. propose_kb_entry SOLO se la mappa non basta o l'API risponde in modo inatteso.`;
 
-const TOOLS = [
+function buildTools(allowedOps: string[]) {
+  return [
   {
     type: "function",
     function: {
       name: "call_tmwe",
-      description: "Invoca un'operazione TMWE/Findair via proxy whitelistato.",
+      description: "Invoca un'operazione TMWE/Findair via proxy. L'op DEVE essere tra quelle elencate nel system prompt.",
       parameters: {
         type: "object",
         properties: {
-          op: { type: "string", enum: TMWE_OPS.map((o) => o.op) },
+          op: { type: "string", enum: allowedOps },
           params: { type: "object", description: "Parametri specifici dell'operazione." },
         },
         required: ["op"],
@@ -92,7 +90,8 @@ const TOOLS = [
       },
     },
   },
-];
+  ];
+}
 
 async function callTmweProxy(authHeader: string, op: string, params: Record<string, unknown>) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/tmwe-proxy`;
@@ -122,6 +121,25 @@ async function loadApprovedKb(supabase: ReturnType<typeof createClient>): Promis
   if (error || !data || data.length === 0) return "";
   const lines = data.map((k) => `• ${k.title}: ${k.body}`).join("\n");
   return `\n\n=== Knowledge Base approvata (Finder API) ===\n${lines}\n=== fine KB ===`;
+}
+
+async function loadEnabledOps(supabase: ReturnType<typeof createClient>): Promise<Array<{ op: string; desc: string; risk: string; method: string }>> {
+  const { data, error } = await supabase
+    .from("tmwe_api_catalog")
+    .select("op, description, risk_level, method, api_group")
+    .eq("enabled", true)
+    .order("api_group", { ascending: true })
+    .order("op", { ascending: true })
+    .limit(500);
+  if (error || !data || data.length === 0) {
+    return FALLBACK_OPS.map((o) => ({ op: o.op, desc: o.desc, risk: "read", method: "GET" }));
+  }
+  return (data as Array<{ op: string; description: string | null; risk_level: string; method: string }>).map((r) => ({
+    op: r.op,
+    desc: r.description ?? "",
+    risk: r.risk_level,
+    method: r.method,
+  }));
 }
 
 async function loadSchemaMap(supabase: ReturnType<typeof createClient>): Promise<string> {
@@ -159,10 +177,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const [kbContext, schemaContext] = await Promise.all([
+    const [kbContext, schemaContext, enabledOps] = await Promise.all([
       loadApprovedKb(supabase),
       loadSchemaMap(supabase),
+      loadEnabledOps(supabase),
     ]);
+
+    // Costruisci elenco operazioni per il system prompt (max 120 per non saturare i token)
+    const opsForPrompt = enabledOps.slice(0, 120);
+    const opsList = opsForPrompt
+      .map((o) => `- ${o.op} [${o.method} · ${o.risk}]${o.desc ? `: ${o.desc.slice(0, 120)}` : ""}`)
+      .join("\n");
+    const opsBlock = `\n\nOperazioni TMWE disponibili (solo queste sono chiamabili):\n${opsList}\n${enabledOps.length > opsForPrompt.length ? `(+ altre ${enabledOps.length - opsForPrompt.length} disponibili: filtra per gruppo se serve)` : ""}`;
+    const allowedOpNames = enabledOps.map((o) => o.op);
+    const TOOLS = buildTools(allowedOpNames);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -171,7 +199,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const systemMsg = { role: "system", content: SYSTEM_PROMPT + schemaContext + kbContext };
+    const systemMsg = { role: "system", content: BASE_PROMPT + opsBlock + schemaContext + kbContext };
     const convo: Array<Record<string, unknown>> = [systemMsg, ...messages];
 
     // Tool-loop, max 5 round-trip
@@ -233,7 +261,7 @@ Deno.serve(async (req) => {
         if (fn === "call_tmwe") {
           const op = String(args.op ?? "");
           const params = (args.params as Record<string, unknown>) ?? {};
-          const allowed = TMWE_OPS.some((o) => o.op === op);
+          const allowed = allowedOpNames.includes(op);
           let result: { ok: boolean; status: number; data: unknown };
           if (!allowed) {
             result = { ok: false, status: 400, data: { error: `Op non consentita: ${op}` } };
