@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/table";
 import { Loader2, RefreshCw, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FinderApiCatalogTab from "./FinderApiCatalogTab";
 import {
   listFinderApiSchemaMap,
   upsertFinderApiSchemaField,
@@ -109,11 +111,20 @@ const FinderApiSchemaMapPage = () => {
       <div>
         <h1 className="text-2xl font-bold">Finder API · Schema Map</h1>
         <p className="text-sm text-muted-foreground">
-          Mappa campi → ruolo per ogni operazione TMWE. Iniettata nel prompt dell'agente
-          per evitare ricerche cieche. Verifica e aggiorna ogni mese.
+          Catalogo dei 443 endpoint TMWE Findair + mappa campi→ruolo per le op più usate.
+          Tutto è iniettato nel prompt dell'agente Finder API per evitare ricerche cieche.
         </p>
       </div>
 
+      <Tabs defaultValue="catalog">
+        <TabsList>
+          <TabsTrigger value="catalog">Catalogo (443 endpoint)</TabsTrigger>
+          <TabsTrigger value="schema">Schema Map (campi → ruoli)</TabsTrigger>
+        </TabsList>
+        <TabsContent value="catalog" className="mt-4">
+          <FinderApiCatalogTab />
+        </TabsContent>
+        <TabsContent value="schema" className="mt-4 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Discover campi da un'op</CardTitle>
@@ -151,6 +162,8 @@ const FinderApiSchemaMapPage = () => {
           Nessun campo mappato. Usa "Discover" per iniziare.
         </div>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 
