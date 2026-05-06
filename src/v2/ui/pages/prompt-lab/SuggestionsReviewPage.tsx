@@ -41,7 +41,7 @@ import { toast } from "sonner";
 function priorityColor(p: SuggestionPriority): string {
   switch (p) {
     case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
-    case "high": return "bg-orange-500/15 text-orange-700 border-orange-500/40";
+    case "high": return "bg-warning/15 text-warning border-warning/40";
     case "medium": return "bg-warning/15 text-warning border-warning/40";
     case "low": return "bg-muted text-muted-foreground border-border";
   }

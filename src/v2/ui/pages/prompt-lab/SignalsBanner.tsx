@@ -25,7 +25,7 @@ function severityColor(severity: PromptLabSignal["severity"]) {
   switch (severity) {
     case "critical": return "bg-destructive/10 border-destructive/40 text-destructive";
     case "warning": return "bg-warning/10 border-warning/40 text-warning";
-    default: return "bg-blue-500/10 border-blue-500/40 text-blue-700";
+    default: return "bg-info/10 border-info/40 text-info";
   }
 }
 

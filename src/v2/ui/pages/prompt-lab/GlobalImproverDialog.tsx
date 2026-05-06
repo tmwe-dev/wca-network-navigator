@@ -386,19 +386,19 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                     </Badge>
                   )}
                   {contractNeededCount > 0 && (
-                    <Badge variant="outline" className="gap-1 border-amber-500 text-warning">
+                    <Badge variant="outline" className="gap-1 border-warning text-warning">
                       <Wrench className="h-3 w-3" />
                       {contractNeededCount} contratto backend
                     </Badge>
                   )}
                   {codePolicyCount > 0 && (
-                    <Badge variant="outline" className="gap-1 border-purple-500 text-purple-700">
+                    <Badge variant="outline" className="gap-1 border-accent text-accent">
                       <Code2 className="h-3 w-3" />
                       {codePolicyCount} policy codice
                     </Badge>
                   )}
                   {kbFixCount > 0 && (
-                    <Badge variant="outline" className="gap-1 border-blue-500 text-blue-700">
+                    <Badge variant="outline" className="gap-1 border-info text-info">
                       <BookOpen className="h-3 w-3" />
                       {kbFixCount} fix KB
                     </Badge>
@@ -451,17 +451,17 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                               {isSkipped && <Badge variant="secondary" className="text-[10px]">Già ottimo</Badge>}
                               {/* LOVABLE-109: outcome_type badges */}
                               {p.outcomeType === "contract_needed" && (
-                                <Badge variant="outline" className="text-[10px] border-amber-500 text-warning gap-0.5">
+                                <Badge variant="outline" className="text-[10px] border-warning text-warning gap-0.5">
                                   <Wrench className="h-2.5 w-2.5" /> Contratto backend
                                 </Badge>
                               )}
                               {p.outcomeType === "code_policy_needed" && (
-                                <Badge variant="outline" className="text-[10px] border-purple-500 text-purple-700 gap-0.5">
+                                <Badge variant="outline" className="text-[10px] border-accent text-accent gap-0.5">
                                   <Code2 className="h-2.5 w-2.5" /> Policy codice
                                 </Badge>
                               )}
                               {p.outcomeType === "kb_fix" && (
-                                <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-700 gap-0.5">
+                                <Badge variant="outline" className="text-[10px] border-info text-info gap-0.5">
                                   <BookOpen className="h-2.5 w-2.5" /> Fix KB
                                 </Badge>
                               )}
@@ -477,7 +477,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                               </p>
                             )}
                             {p.architecturalNote && (
-                              <p className="text-[10px] text-warning bg-amber-50 rounded px-1.5 py-0.5 mt-1">
+                              <p className="text-[10px] text-warning bg-warning/10 rounded px-1.5 py-0.5 mt-1">
                                 <span className="font-medium">Nota architetturale:</span> {p.architecturalNote}
                               </p>
                             )}

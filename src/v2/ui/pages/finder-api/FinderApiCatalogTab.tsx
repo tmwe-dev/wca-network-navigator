@@ -27,7 +27,7 @@ const RISK_BADGE: Record<TmweRiskLevel, string> = {
   read: "bg-success/15 text-success dark:text-success",
   write: "bg-warning/15 text-warning dark:text-warning",
   destructive: "bg-destructive/15 text-destructive dark:text-destructive",
-  admin: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  admin: "bg-accent/15 text-accent",
 };
 
 export const FinderApiCatalogTab = () => {

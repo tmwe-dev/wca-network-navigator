@@ -270,7 +270,7 @@ function ToolGrid({
           ? variant === "danger"
             ? "border-destructive bg-destructive/10"
             : variant === "warning"
-            ? "border-amber-500 bg-warning/10"
+            ? "border-warning bg-warning/10"
             : "border-primary bg-primary/10"
           : "border-border";
         return (

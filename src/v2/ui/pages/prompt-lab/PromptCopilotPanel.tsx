@@ -552,7 +552,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
 
             {/* Box proposta KB (intake) */}
             {kbProposal && (
-              <div className="rounded border bg-amber-50 dark:bg-warning/30 p-2 mr-6 text-[11px] space-y-1.5">
+              <div className="rounded border bg-warning/10 p-2 mr-6 text-[11px] space-y-1.5">
                 <div className="font-semibold text-[11px] flex items-center gap-1">
                   <Sparkles className="h-3 w-3" /> L'AI propone di salvarlo così:
                 </div>
