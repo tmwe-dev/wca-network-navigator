@@ -243,7 +243,7 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
 export async function updateActivityDepartment(id: string, department: ActivityDepartment | null): Promise<void> {
   const { error } = await supabase
     .from("activities")
-    .update({ department } as ActivityUpdate)
+    .update({ department } as unknown as ActivityUpdate)
     .eq("id", id);
   if (error) throw error;
 }
