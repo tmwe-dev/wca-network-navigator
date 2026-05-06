@@ -15,6 +15,7 @@
  */
 
 import { PROVIDER_CONFIG, MODEL_MAP, ALLOWED_MODELS, type ProviderKey } from "./aiGatewayConfig.ts";
+import { createLogger } from "./structuredLogger.ts";
 import {
   AiGatewayError,
   isRetryableStatus,
