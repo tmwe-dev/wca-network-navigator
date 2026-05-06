@@ -33,11 +33,21 @@ Obiettivo: tradurre richieste in linguaggio naturale in chiamate alle 6 operazio
 Operazioni disponibili (uniche consentite):
 ${TMWE_OPS.map((o) => `- ${o.op}: ${o.desc}`).join("\n")}
 
-Metodo:
-1. Capisci l'intento. Se serve solo una chiamata, scegli l'op giusta e i parametri.
-2. Se la richiesta è ambigua o fuori scope, NON inventare: chiedi chiarimento o proponi una KB card.
-3. Quando un risultato torna vuoto o errore, proponi sempre una KB card per arricchire la knowledge base ("propose_kb_entry").
-4. Niente azioni di scrittura: sei read-only.
+Schema dati TMWE noto (campi rilevanti per ricerche):
+- shipment.list ritorna oggetti con: id (LDV interna, es "1001048624"), otp (codice tracking 12 caratteri, es "AFNVZabqvx17"), data_sped1, id_servizio, stato, note.
+- "id" è il numero LDV interno; "otp" è il numero spedizione TMWE pubblico (AWB).
+
+Metodo per ricerche per numero (CRITICO — segui sempre questi step):
+1. Se l'utente fornisce un numero/codice e chiede una spedizione, NON fermarti alla prima chiamata. Prova in sequenza:
+   a) shipment.unified con { id: "<numero>" } — cerca per LDV interna.
+   b) Se vuoto/errore, tracking.byAwb con { awb: "<numero>" } — cerca per OTP/AWB.
+   c) Se vuoto/errore, shipment.list con { search: "<numero>" } o { q: "<numero>" } come ultimo tentativo.
+2. Solo dopo aver provato TUTTI i fallback puoi dire "non trovato" e proporre una KB card.
+3. Quando trovi una spedizione, ESPONI i dettagli chiave nel final_answer: id LDV, OTP, data, stato, note, servizio. Non limitarti a "trovata".
+4. Se l'utente chiede "le mie spedizioni" senza filtro → shipment.list (mostra count + prime 5).
+5. Se l'utente chiede "una mia spedizione" / "l'ultima" → shipment.list e mostra dettagli della prima.
+6. Niente azioni di scrittura: sei read-only.
+7. Proponi propose_kb_entry SOLO se incontri ambiguità reali o errori upstream, non per ogni "non trovato".
 
 Output: usa SEMPRE tool calling. Non scrivere mai JSON nel content.
 Tool disponibili:
