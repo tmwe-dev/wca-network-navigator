@@ -69,6 +69,9 @@ const FinderApiPage = () => {
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
       <CommandPageBackButton currentPath="/v2/finder-api" />
+      <div className="fixed top-6 left-[120px] z-50 flex items-center px-3 py-2 rounded-xl text-[11px] font-medium text-foreground/90 bg-white/5 backdrop-blur-md border border-white/[0.06]">
+        Finder API
+      </div>
       <CommandPageBackground />
       <CommandPageHeader
         flowPhase={f.busy ? "executing" : "idle"}
