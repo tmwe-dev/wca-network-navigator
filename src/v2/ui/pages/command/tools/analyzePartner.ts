@@ -1,7 +1,7 @@
 /**
  * Tool: analyze-partner — AI analysis of a partner via edge function
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult } from "./types";
 
 export const analyzePartnerTool: Tool = {
@@ -13,11 +13,11 @@ export const analyzePartnerTool: Tool = {
   execute: async (prompt): Promise<ToolResult> => {
     const idMatch = prompt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
 
-    const { data, error } = await supabase.functions.invoke("analyze-partner", {
+    const data = await invokeAi<{ sections?: Record<string, unknown>[]; analysis?: string }>("analyze-partner", {
+      scope: "command",
+      context: { source: "analyzePartnerTool", mode: "analyze" },
       body: { partnerId: idMatch?.[0] ?? "", query: prompt },
     });
-
-    if (error) throw new Error(error.message);
 
     const sections = Array.isArray(data?.sections) ? data.sections : [
       { heading: "Analisi", body: typeof data?.analysis === "string" ? data.analysis : JSON.stringify(data ?? {}) },
