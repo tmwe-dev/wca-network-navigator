@@ -5,6 +5,8 @@ export const aiAndAnalyticsKeys = {
     pendingActions: ["ai-pending-actions"] as const,
     agentPendingActions: ["agent-pending-actions"] as const,
     decisionLog: (...args: unknown[]) => ["ai-decision-log", ...args] as const,
+    classificationInsights: (status?: string) => ["ai-classification-insights", status ?? "pending"] as const,
+    classificationInsightsCount: ["ai-classification-insights-count"] as const,
     performance: {
       kpi: ["ai-performance-kpi"] as const,
       types: ["ai-performance-types"] as const,
