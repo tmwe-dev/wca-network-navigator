@@ -9,9 +9,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Building2, RefreshCw } from "lucide-react";
+import { Sparkles, Building2, RefreshCw, Brain, Zap } from "lucide-react";
 import type { FunnemailFolder, FunnemailMailRow, SenderIntelRow } from "@/data/funnemailInbox";
 import { getSenderIntelByDomain } from "@/data/funnemailInbox";
+import { fetchContentIntelligence, type EmailContentIntelligenceRow } from "@/data/emailContentIntelligence";
 
 interface Props {
   mail: FunnemailMailRow | null;
@@ -72,6 +73,8 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
 
   // Scout intel per il dominio mittente (lazy)
   const [intel, setIntel] = React.useState<SenderIntelRow | null>(null);
+  // Content Intelligence (Strato 2): intent + business value + azioni suggerite.
+  const [ci, setCi] = React.useState<EmailContentIntelligenceRow | null>(null);
   React.useEffect(() => {
     let cancelled = false;
     setIntel(null);
@@ -81,6 +84,15 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
     getSenderIntelByDomain(m[1]).then((x) => { if (!cancelled) setIntel(x); }).catch(() => {});
     return () => { cancelled = true; };
   }, [mail.from_address, mail.message_id]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setCi(null);
+    fetchContentIntelligence(mail.message_id)
+      .then((row) => { if (!cancelled) setCi(row); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [mail.message_id]);
 
   return (
     <section className="flex-1 flex flex-col h-full min-w-0">
@@ -182,6 +194,79 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">Nessun handoff commerciale richiesto.</p>
+              )}
+            </div>
+
+            {/* Content Intelligence — Strato 2 */}
+            <div className="pt-3 border-t border-border/40">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Brain className="h-3.5 w-3.5 text-violet-600" />
+                <h4 className="text-xs font-semibold uppercase tracking-wide">Lettura contenuto</h4>
+              </div>
+              {!ci && (
+                <p className="text-xs text-muted-foreground">In attesa di analisi…</p>
+              )}
+              {ci && (
+                <div className="space-y-1.5 text-xs">
+                  {ci.content_label && (
+                    <Field label="Tipo">
+                      <Badge variant="secondary" className="text-[10px]">{ci.content_label}</Badge>
+                    </Field>
+                  )}
+                  {ci.intent_summary && (
+                    <div>
+                      <div className="text-[10px] uppercase text-muted-foreground mt-1 mb-1">Intento</div>
+                      <p className="text-xs text-foreground/90">{ci.intent_summary}</p>
+                    </div>
+                  )}
+                  {ci.business_value && (
+                    <Field label="Valore">
+                      <span className="text-foreground/80">{ci.business_value}</span>
+                    </Field>
+                  )}
+                  {ci.urgency && (
+                    <Field label="Urgenza">
+                      <Badge variant="outline" className="text-[10px]">{URGENCY_LABEL[ci.urgency] ?? ci.urgency}</Badge>
+                    </Field>
+                  )}
+                  {ci.target_role && (
+                    <Field label="Per">
+                      <span className="text-foreground/80">{ci.target_role}</span>
+                    </Field>
+                  )}
+                  <Field label="Confidenza">
+                    <span className="tabular-nums">{Math.round((ci.confidence ?? 0) * 100)}%</span>
+                  </Field>
+                  {Array.isArray(ci.suggested_actions) && ci.suggested_actions.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase text-muted-foreground mt-2 mb-1 flex items-center gap-1">
+                        <Zap className="h-3 w-3" /> Azioni suggerite
+                      </div>
+                      <ul className="space-y-1">
+                        {ci.suggested_actions.map((a, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs">
+                            <span className="text-violet-600 mt-0.5">•</span>
+                            <span className="text-foreground/85">
+                              <span className="font-medium">{a.label ?? a.title ?? a.type}</span>
+                              {a.reason && <span className="text-muted-foreground"> — {a.reason}</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {ci.pending_action_ids && ci.pending_action_ids.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-1.5 italic">
+                          {ci.pending_action_ids.length} azione/i materializzate in coda approvazioni.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {ci.reasoning && (
+                    <div>
+                      <div className="text-[10px] uppercase text-muted-foreground mt-2 mb-1">Ragionamento</div>
+                      <p className="text-xs text-foreground/70 italic">"{ci.reasoning}"</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
