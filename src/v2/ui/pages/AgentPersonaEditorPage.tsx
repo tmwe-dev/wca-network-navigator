@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Eye, Plus, X, Sparkles } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 const TONE_OPTIONS = ["professional", "friendly", "formal", "casual", "assertive", "empathetic", "direct"];
 const LANG_OPTIONS = [
@@ -121,27 +122,28 @@ export function AgentPersonaEditorPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/v2/agents")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            {agent?.avatar_emoji} Persona: {agent?.name || "..."}
-            <Badge variant="outline">{agent?.role}</Badge>
-          </h1>
-          <p className="text-sm text-muted-foreground">Configura tono, stile e vocabolario dell'agente</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
-          <Eye className="h-4 w-4 mr-1" /> Preview
-        </Button>
-        <Button size="sm" onClick={handleSave} disabled={upsert.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Salva
-        </Button>
-      </div>
-
+    <PageShell
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/v2/agents")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <span>{agent?.avatar_emoji} Persona: {agent?.name || "..."}</span>
+          <Badge variant="outline">{agent?.role}</Badge>
+        </span>
+      }
+      description="Configura tono, stile e vocabolario dell'agente"
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
+            <Eye className="h-4 w-4 mr-1" /> Preview
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={upsert.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Salva
+          </Button>
+        </>
+      }
+    >
       <div className={`grid gap-6 ${showPreview ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}>
         {/* Editor */}
         <div className="space-y-4">
@@ -287,6 +289,6 @@ export function AgentPersonaEditorPage() {
           </Card>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
