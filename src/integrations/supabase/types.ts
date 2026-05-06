@@ -5790,6 +5790,36 @@ export type Database = {
         }
         Relationships: []
       }
+      funnemail_message_claims: {
+        Row: {
+          claimed_at: string
+          claimed_by: string
+          group_id: string | null
+          message_id: string
+          released_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          claimed_by: string
+          group_id?: string | null
+          message_id: string
+          released_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          claimed_by?: string
+          group_id?: string | null
+          message_id?: string
+          released_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       funnemail_sender_intel: {
         Row: {
           company_type: string | null
@@ -10864,6 +10894,10 @@ export type Database = {
           partner_id: string
           source: string
         }[]
+      }
+      force_claim_message: {
+        Args: { p_group_id: string; p_message_id: string }
+        Returns: undefined
       }
       get_active_operator_id: { Args: never; Returns: string }
       get_contact_filter_options: {
