@@ -579,6 +579,7 @@ export default function AISuggestionsTab() {
 
   return (
     <div className="flex flex-col h-full gap-4">
+      <ClassificationInsightsPanel />
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
         <Button
