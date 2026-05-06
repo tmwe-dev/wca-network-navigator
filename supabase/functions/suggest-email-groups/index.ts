@@ -57,11 +57,19 @@ serve(async (req) => {
       ? body.emails.map((value: unknown) => String(value).trim().toLowerCase()).filter(Boolean)
       : [];
 
-    // 1. Load groups
-    const { data: groups } = await supabase
+    // 1. Load groups — prima i gruppi dell'utente, fallback su gruppi
+    // condivisi (uso interno aziendale, vedi memoria "Visibilità Globale").
+    let { data: groups } = await supabase
       .from("email_sender_groups")
       .select("id, nome_gruppo, descrizione, classification_hint, response_style_hint")
       .eq("user_id", user.id);
+
+    if (!groups || groups.length === 0) {
+      const { data: sharedGroups } = await supabase
+        .from("email_sender_groups")
+        .select("id, nome_gruppo, descrizione, classification_hint, response_style_hint");
+      groups = sharedGroups ?? [];
+    }
 
     if (!groups || groups.length === 0) {
       return new Response(JSON.stringify({ error: "No groups configured" }), { status: 400, headers: { ...dynCors, "Content-Type": "application/json" } });
