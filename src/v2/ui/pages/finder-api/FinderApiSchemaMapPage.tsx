@@ -28,6 +28,7 @@ import { Loader2, RefreshCw, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinderApiCatalogTab from "./FinderApiCatalogTab";
+import { CommandPageBackButton } from "../command/components/CommandPageBackButton";
 import {
   listFinderApiSchemaMap,
   upsertFinderApiSchemaField,
@@ -107,7 +108,8 @@ const FinderApiSchemaMapPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 pt-20 space-y-6">
+      <CommandPageBackButton currentPath="/v2/finder-api/schema" />
       <div>
         <h1 className="text-2xl font-bold">Finder API · Schema Map</h1>
         <p className="text-sm text-muted-foreground">
