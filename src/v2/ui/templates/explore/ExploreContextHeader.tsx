@@ -63,16 +63,16 @@ export function ExploreContextHeader(): React.ReactElement | null {
   const counters = useExploreTabCounters();
 
   const activeIdx = findActiveIndex(pathname);
-  // Se la rotta corrente non è nel cycler, nascondiamo la barra (es. /settings, /agents)
-  if (activeIdx === -1) return null;
-  const active = TABS[activeIdx];
-  const Icon = active.icon;
-
   const goTo = React.useCallback((delta: number) => {
     const safeIdx = activeIdx < 0 ? 0 : activeIdx;
     const next = (safeIdx + delta + TABS.length) % TABS.length;
     navigate(TABS[next].to);
   }, [activeIdx, navigate]);
+
+  // Se la rotta corrente non è nel cycler, nascondiamo la barra (es. /settings, /agents)
+  if (activeIdx === -1) return null;
+  const active = TABS[activeIdx];
+  const Icon = active.icon;
 
   const counterValue = active.counterKey ? counters[active.counterKey] : null;
   const showCounter = active.counterKey !== undefined;
