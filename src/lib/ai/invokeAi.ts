@@ -13,6 +13,7 @@
 import { invokeEdge, type InvokeEdgeOptions } from "@/lib/api/invokeEdge";
 import { traceCollector } from "@/v2/observability/traceCollector";
 import { Sentry } from "@/lib/sentry";
+import { logAiInteraction } from "@/data/aiInteractionLog";
 
 export type AiScope =
   | "home"
@@ -124,8 +125,12 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
   const corr = traceCollector.startCorrelation();
   const route = typeof window !== "undefined" ? window.location.pathname : undefined;
   const start = Date.now();
+  let _result: unknown = null;
+  let _ok = true;
+  let _errMsg: string | null = null;
   try {
     const res = await invokeEdge<TResponse>(functionName, invokeOpts);
+    _result = res;
     traceCollector.push({
       type: "ai.invoke",
       scope,
@@ -138,7 +143,9 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     });
     return res;
   } catch (err) {
+    _ok = false;
     const e = err as { message?: string; code?: string; httpStatus?: number };
+    _errMsg = e?.message ?? String(err);
     traceCollector.push({
       type: "ai.invoke",
       scope,
@@ -165,5 +172,30 @@ export async function invokeAi<TResponse = unknown, TBody = Record<string, unkno
     throw err;
   } finally {
     traceCollector.endCorrelation(corr);
+    // Telemetria persistente in ai_interaction_log (best-effort, mai throw).
+    void logAiInteraction({
+      interaction_type: "chat_text",
+      role: "assistant",
+      content: _ok
+        ? `[ok] ${functionName}`
+        : `[err] ${functionName}: ${_errMsg ?? "unknown error"}`,
+      surface: scope,
+      page_context: route ?? null,
+      duration_ms: Date.now() - start,
+      metadata: {
+        function: functionName,
+        scope,
+        source: context.source,
+        mode: context.mode,
+        ok: _ok,
+        error: _errMsg,
+        correlation_id: corr,
+        // riassunto risposta (limitato per non gonfiare DB)
+        response_keys:
+          _result && typeof _result === "object"
+            ? Object.keys(_result as Record<string, unknown>).slice(0, 20)
+            : null,
+      },
+    });
   }
 }
