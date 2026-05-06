@@ -19,6 +19,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/queryKeys";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   findActivitiesForKanban,
   updateActivityDepartment,
   invalidateActivityCache,
@@ -67,10 +74,30 @@ function relativeDue(dueDate: string | null): string | null {
   return `+${diffDays}g`;
 }
 
+/**
+ * Costruisce un titolo "parlante" per la card:
+ * priorità a email_subject, poi description, poi title pulito da prefissi ripetitivi.
+ */
+function cardHeadline(j: KanbanJobCard): string {
+  const subj = (j.email_subject || "").trim();
+  if (subj) return subj;
+  const desc = (j.description || "").trim().split("\n")[0];
+  if (desc && desc.length > 4) return desc.slice(0, 120);
+  const t = (j.title || "").replace(/^Risposta email:\s*/i, "").trim();
+  return t || "(senza dettaglio)";
+}
+
+function cardKindLabel(j: KanbanJobCard): string {
+  const t = (j.title || "").toLowerCase();
+  if (t.startsWith("risposta email")) return "Risposta email";
+  return j.activity_type.replace(/_/g, " ");
+}
+
 export function DepartmentKanbanView(): React.ReactElement {
   const qc = useQueryClient();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<ColumnId | null>(null);
+  const [detail, setDetail] = useState<KanbanJobCard | null>(null);
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: queryKeys.activities.departmentKanban,
@@ -174,6 +201,7 @@ export function DepartmentKanbanView(): React.ReactElement {
                         key={j.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, j.id)}
+                        onClick={() => setDetail(j)}
                         className={cn(
                           "group cursor-grab rounded-md border border-border/60 bg-card p-2.5 text-sm shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:cursor-grabbing",
                           draggedId === j.id && "opacity-40",
@@ -182,7 +210,12 @@ export function DepartmentKanbanView(): React.ReactElement {
                         <div className="flex items-start gap-1.5">
                           <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground" />
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-foreground">{j.title || "(senza titolo)"}</div>
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                              {cardKindLabel(j)}
+                            </div>
+                            <div className="line-clamp-2 font-medium text-foreground">
+                              {cardHeadline(j)}
+                            </div>
                             {j.partner_name && (
                               <div className="mt-0.5 truncate text-xs text-muted-foreground">
                                 {j.partner_country ? `${j.partner_country} · ` : ""}{j.partner_name}
@@ -199,7 +232,6 @@ export function DepartmentKanbanView(): React.ReactElement {
                                   <CalendarDays className="h-3 w-3" /> {due}
                                 </span>
                               )}
-                              <span className="text-[10px] text-muted-foreground/70">{j.activity_type}</span>
                             </div>
                           </div>
                         </div>
@@ -212,6 +244,63 @@ export function DepartmentKanbanView(): React.ReactElement {
           </div>
         );
       })}
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-base">
+                  {detail.email_subject || cardHeadline(detail)}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {cardKindLabel(detail)}
+                  {detail.partner_name ? ` · ${detail.partner_name}` : ""}
+                  {detail.partner_country ? ` (${detail.partner_country})` : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>Creato: {new Date(detail.created_at).toLocaleString("it-IT")}</span>
+                  {detail.due_date && <span>Scadenza: {new Date(detail.due_date).toLocaleString("it-IT")}</span>}
+                  {detail.scheduled_at && <span>Schedulato: {new Date(detail.scheduled_at).toLocaleString("it-IT")}</span>}
+                  <span>Stato: {detail.status}</span>
+                </div>
+
+                {detail.description && (
+                  <section>
+                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrizione</h4>
+                    <p className="whitespace-pre-line">{detail.description}</p>
+                  </section>
+                )}
+
+                {detail.email_body && (
+                  <section>
+                    <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email originale</h4>
+                    <pre className="whitespace-pre-wrap break-words rounded bg-muted/40 p-3 text-xs">
+                      {detail.email_body}
+                    </pre>
+                  </section>
+                )}
+
+                {!detail.description && !detail.email_body && (
+                  <p className="text-xs italic text-muted-foreground">Nessun dettaglio aggiuntivo registrato per questo job.</p>
+                )}
+
+                {detail.partner_id && (
+                  <a
+                    href={`/v2/partner/${detail.partner_id}`}
+                    className="inline-block text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    Apri partner →
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
