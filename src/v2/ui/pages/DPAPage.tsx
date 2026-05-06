@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Shield, FileText, Download, Lock, Server, Eye, Trash2 } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 const SOC2_CHECKLIST = [
   { label: "Crittografia dati at-rest (AES-256)", done: true },
@@ -59,17 +60,17 @@ const DPA_SECTIONS = [
 
 export function DPAPage(): React.ReactElement {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h1 className="text-3xl font-bold">Sicurezza e Compliance</h1>
-          <p className="text-muted-foreground mt-2">GDPR, DPA e SOC2 starter</p>
-        </div>
-
+    <PageShell
+      width="narrow"
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Shield className="h-6 w-6 text-primary" /> Sicurezza e Compliance
+        </span>
+      }
+      description="GDPR, DPA e SOC2 starter checklist"
+    >
         {/* SOC2 Checklist */}
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
@@ -93,7 +94,7 @@ export function DPAPage(): React.ReactElement {
         </Card>
 
         {/* GDPR Summary */}
-        <Card className="mb-8">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
@@ -122,10 +123,10 @@ export function DPAPage(): React.ReactElement {
         </Card>
 
         {/* DPA */}
-        <div className="mb-8">
+        <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
               Data Processing Agreement (DPA)
             </h2>
             <Button variant="outline" size="sm" className="gap-2">
@@ -152,7 +153,6 @@ export function DPAPage(): React.ReactElement {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </PageShell>
   );
 }
