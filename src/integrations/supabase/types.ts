@@ -5820,6 +5820,123 @@ export type Database = {
         }
         Relationships: []
       }
+      funnemail_message_reminders: {
+        Row: {
+          created_at: string
+          created_by: string
+          deleted_at: string | null
+          dismissed_at: string | null
+          group_id: string | null
+          id: string
+          message_id: string
+          note: string | null
+          remind_at: string
+          triggered_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deleted_at?: string | null
+          dismissed_at?: string | null
+          group_id?: string | null
+          id?: string
+          message_id: string
+          note?: string | null
+          remind_at: string
+          triggered_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deleted_at?: string | null
+          dismissed_at?: string | null
+          group_id?: string | null
+          id?: string
+          message_id?: string
+          note?: string | null
+          remind_at?: string
+          triggered_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      funnemail_message_status: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          created_at: string
+          deleted_at: string | null
+          group_id: string | null
+          message_id: string
+          status: string
+          status_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          created_at?: string
+          deleted_at?: string | null
+          group_id?: string | null
+          message_id: string
+          status?: string
+          status_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          created_at?: string
+          deleted_at?: string | null
+          group_id?: string | null
+          message_id?: string
+          status?: string
+          status_reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      funnemail_message_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          from_status: string | null
+          group_id: string | null
+          id: string
+          message_id: string
+          reason: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          from_status?: string | null
+          group_id?: string | null
+          id?: string
+          message_id: string
+          reason?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          from_status?: string | null
+          group_id?: string | null
+          id?: string
+          message_id?: string
+          reason?: string | null
+          to_status?: string
+        }
+        Relationships: []
+      }
       funnemail_sender_intel: {
         Row: {
           company_type: string | null
@@ -10703,6 +10820,36 @@ export type Database = {
           prompt_log_tokens_in: number | null
           provider: string | null
           user_id: string | null
+        }
+        Relationships: []
+      }
+      funnemail_sorting_queue: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          group_id: string | null
+          message_id: string | null
+          status: string | null
+          status_reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          group_id?: string | null
+          message_id?: string | null
+          status?: string | null
+          status_reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          group_id?: string | null
+          message_id?: string | null
+          status?: string | null
+          status_reason?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
