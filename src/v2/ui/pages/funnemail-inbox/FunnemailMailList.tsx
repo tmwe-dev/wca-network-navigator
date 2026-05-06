@@ -19,6 +19,8 @@ import { FunnemailListToolbar, type GroupMode, type SortMode } from "./Funnemail
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 import { useFunnemailClaims } from "@/v2/hooks/useFunnemailClaims";
+import { useFunnemailStatuses } from "@/v2/hooks/useFunnemailStatuses";
+import { useFunnemailReminders } from "@/v2/hooks/useFunnemailReminders";
 
 const ESTIMATED_ROW_HEIGHT = 168;
 const STORAGE_KEY = "funnemail_list_view_v4";
@@ -111,6 +113,8 @@ export function FunnemailMailList({
 
   // "Lo prendo io" — claims globali (visibili a tutti gli operatori)
   const claimsCtl = useFunnemailClaims(null);
+  const statusesCtl = useFunnemailStatuses(null);
+  const remindersCtl = useFunnemailReminders(null);
 
   // Multi-selezione manuale
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
@@ -162,6 +166,8 @@ export function FunnemailMailList({
       : null;
     const claim = claimsCtl.claimsByMessageId.get(msg.id) ?? null;
     const claimPending = claimsCtl.pendingMessageId === msg.id;
+    const status = statusesCtl.statusesByMessageId.get(msg.id) ?? null;
+    const reminder = remindersCtl.remindersByMessageId.get(msg.id) ?? null;
     return (
       <FunnemailMailCard
         message={msg}
@@ -182,6 +188,11 @@ export function FunnemailMailList({
         claimPending={claimPending}
         onClaim={() => { void claimsCtl.claim({ messageId: msg.id }); }}
         onRelease={() => { void claimsCtl.release(msg.id); }}
+        status={status}
+        onSetStatus={(s) => { void statusesCtl.setStatus({ messageId: msg.id, status: s }); }}
+        reminder={reminder}
+        onCreateReminder={(remindAt, note) => { void remindersCtl.create({ messageId: msg.id, remindAt, note }); }}
+        onDismissReminder={(id) => { void remindersCtl.dismiss(id); }}
       />
     );
   };
