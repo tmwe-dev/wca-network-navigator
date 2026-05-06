@@ -189,8 +189,7 @@ export function KpiPage() {
               </section>
             </>
           )}
-        </div>
-      </ScrollArea>
+      </PageShell>
     </div>
   );
 }
