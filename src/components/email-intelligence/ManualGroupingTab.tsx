@@ -438,7 +438,7 @@ export default function ManualGroupingTab() {
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap ml-auto">
                 <span className="font-semibold text-foreground">{sortedSenders.length}</span>
                 <span> / {allSenders.length}</span>
                 <span className="mx-1 opacity-50">·</span>
