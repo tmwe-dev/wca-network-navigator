@@ -6,6 +6,12 @@ import { CRMFiltersSection } from "@/components/global/filters-drawer/CRMFilters
 import { BCAFiltersRailContent } from "@/components/contacts/bca/BCAFiltersRailContent";
 import { EmailIntelligenceFiltersSection } from "@/components/global/filters-drawer/EmailIntelligenceFiltersSection";
 import { EmailComposeFiltersSection } from "@/components/global/filters-drawer/EmailComposeFiltersSection";
+import { AgendaFiltersSection } from "@/components/global/filters-drawer/AgendaFiltersSection";
+import { CampaignsFiltersSection } from "@/components/global/filters-drawer/CampaignsFiltersSection";
+import { FunnemailInboxFiltersSection } from "@/components/global/filters-drawer/FunnemailInboxFiltersSection";
+import { SortingFiltersSection } from "@/components/global/filters-drawer/SortingFiltersSection";
+import { ArenaFiltersSection } from "@/components/global/filters-drawer/ArenaFiltersSection";
+import { EmailForgeFiltersSection } from "@/components/global/filters-drawer/EmailForgeFiltersSection";
 import { SidebarBanner } from "@/components/global/filters-drawer/SidebarBanner";
 import {
   SIDEBAR_BANNER_REGISTRY,
@@ -68,6 +74,30 @@ function getFilterContext(
       content: <EmailComposeFiltersSection />,
       bannerKey: "email-forge",
     };
+  }
+
+  if (pathname.startsWith("/v2/ai-staff/email-forge")) {
+    return { title: "Email Forge — Lab AI", content: <EmailForgeFiltersSection />, bannerKey: "email-forge" };
+  }
+
+  if (pathname.startsWith("/v2/agenda") || pathname.startsWith("/v2/pipeline/agenda")) {
+    return { title: "Filtri Agenda", content: <AgendaFiltersSection />, bannerKey: "agenda" };
+  }
+
+  if (pathname.startsWith("/v2/campaigns")) {
+    return { title: "Filtri Campagne", content: <CampaignsFiltersSection />, bannerKey: "campaigns" };
+  }
+
+  if (pathname.startsWith("/v2/funnemail-inbox") || pathname.startsWith("/v2/inbox")) {
+    return { title: "Filtri Funnemail", content: <FunnemailInboxFiltersSection />, bannerKey: "funnemail-inbox" };
+  }
+
+  if (pathname.startsWith("/v2/sorting")) {
+    return { title: "Filtri Approvazioni", content: <SortingFiltersSection />, bannerKey: "sorting" };
+  }
+
+  if (pathname.startsWith("/v2/ai-arena")) {
+    return { title: "AI Arena — Focus", content: <ArenaFiltersSection />, bannerKey: "arena" };
   }
 
   return null;
