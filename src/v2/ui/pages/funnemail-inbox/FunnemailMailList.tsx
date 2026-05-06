@@ -19,7 +19,7 @@ import { FunnemailListToolbar, type GroupMode, type SortMode } from "./Funnemail
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
 
-const ROW_HEIGHT = 124;
+const ESTIMATED_ROW_HEIGHT = 168;
 const STORAGE_KEY = "funnemail_list_view_v4";
 
 interface StoredPrefs {
@@ -267,8 +267,10 @@ function FlatVirtualList({ messages, selectedId, renderCard }: FlatProps): JSX.E
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 5,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 6,
+    measureElement: (el) => el?.getBoundingClientRect().height ?? ESTIMATED_ROW_HEIGHT,
+    getItemKey: (i) => messages[i]?.id ?? i,
   });
 
   useEffect(() => {
@@ -285,10 +287,11 @@ function FlatVirtualList({ messages, selectedId, renderCard }: FlatProps): JSX.E
           return (
             <div
               key={msg.id}
+              data-index={row.index}
+              ref={virtualizer.measureElement}
               style={{
                 position: "absolute",
                 top: 0, left: 0, width: "100%",
-                height: `${row.size}px`,
                 transform: `translateY(${row.start}px)`,
               }}
             >
