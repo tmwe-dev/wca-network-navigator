@@ -11,7 +11,7 @@
  * della inbox standard. Le azioni rapide ("Azioni", "Assegna gruppo")
  * compaiono in overlay sull'hover, e la checkbox di bulk è opzionale.
  */
-import { Brain, CalendarClock, Gauge, MailOpen, Plane, Sparkles, Tag } from "lucide-react";
+import { Brain, CalendarClock, Gauge, Hand, MailOpen, Plane, Sparkles, Tag, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } f
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { extractSenderName, stripReplyPrefixes } from "./utils";
 import { AiSuggestionChip, type AiSuggestion } from "./AiSuggestionChip";
+import type { FunnemailClaimWithOperator } from "@/data/funnemailClaims";
 
 type DecoratedMessage = ChannelMessage & {
   category?: string | null;
@@ -54,6 +55,11 @@ interface Props {
   checked?: boolean;
   onToggleChecked?: () => void;
   showCheckbox?: boolean;
+  claim?: FunnemailClaimWithOperator | null;
+  myUserId?: string | null;
+  claimPending?: boolean;
+  onClaim?: () => void;
+  onRelease?: () => void;
 }
 
 function formatListDate(value: string): string {
@@ -92,6 +98,11 @@ export function FunnemailMailCard({
   checked,
   onToggleChecked,
   showCheckbox,
+  claim,
+  myUserId,
+  claimPending,
+  onClaim,
+  onRelease,
 }: Props) {
   const meta = message as DecoratedMessage;
   const partner = meta.partner_snapshot ?? null;
@@ -109,6 +120,9 @@ export function FunnemailMailCard({
   const funnemailFolder = meta.funnemail_folder_label ?? meta.folder ?? meta.category ?? null;
   const category = meta.category ?? null;
   const senderIntel = meta.sender_intel ?? null;
+  const claimedByMe = !!claim && !!myUserId && claim.claimed_by === myUserId;
+  const claimedByOther = !!claim && !claimedByMe;
+  const claimMinutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
 
   return (
     <div
@@ -189,6 +203,23 @@ export function FunnemailMailCard({
             </div>
           </div>
         </button>
+        {claimedByOther && (
+          <span
+            className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-2 text-xs font-medium text-warning"
+            title={`Preso da ${claim?.operator_display_name ?? "operatore"} ${claimMinutes} min fa`}
+          >
+            <Hand className="h-3 w-3" />
+            {claim?.operator_display_name ?? "preso"}
+          </span>
+        )}
+        {claimedByMe && (
+          <span
+            className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 text-xs font-medium text-primary"
+            title={`In carico a te da ${claimMinutes} min`}
+          >
+            <Hand className="h-3 w-3" />tu
+          </span>
+        )}
         {isUnread && (
           <button
             type="button"
@@ -205,6 +236,30 @@ export function FunnemailMailCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+        {!claim && onClaim && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-xs"
+            onClick={onClaim}
+            disabled={claimPending}
+            title="Prendi in carico questo messaggio"
+          >
+            <Hand className="h-3.5 w-3.5" />Lo prendo io
+          </Button>
+        )}
+        {claimedByMe && onRelease && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-xs"
+            onClick={onRelease}
+            disabled={claimPending}
+            title="Rilascia presa in carico"
+          >
+            <Undo2 className="h-3.5 w-3.5" />Rilascia
+          </Button>
+        )}
         <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onReclassify} disabled={reclassifying} title="Riclassifica con AI">
           <Brain className="h-3.5 w-3.5" />AI classifica
         </Button>
