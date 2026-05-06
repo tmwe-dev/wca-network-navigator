@@ -2,6 +2,7 @@
  * AI function calls — extract and decide.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 const MAX_MARKDOWN_CHARS = 8_000;
 const MAX_PRIOR_FINDINGS_CHARS = 2_000;
