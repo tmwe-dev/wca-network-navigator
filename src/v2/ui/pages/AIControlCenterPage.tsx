@@ -5,6 +5,7 @@ import * as React from "react";
 import { useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Sparkles, Clock, BarChart3, Eye, ListTodo, Bot, Pause, CreditCard, Linkedin, Zap } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 const AIAutomationDashboard = lazy(() => import("@/components/ai-control/AIAutomationDashboard").then(m => ({ default: m.AIAutomationDashboard })));
 const PendingActionsPanel = lazy(() => import("@/components/ai-control/PendingActionsPanel").then(m => ({ default: m.PendingActionsPanel })));
@@ -27,19 +28,16 @@ export function AIControlCenterPage(): React.ReactElement {
   const [subView, setSubView] = useState<SubView>("dashboard");
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6 space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">AI Control Center</h1>
-          <p className="text-xs text-muted-foreground">Supervisione decisioni AI, azioni pending e performance</p>
-        </div>
-      </div>
-
-      {/* Sub-navigation buttons (tmwengine pattern) */}
-      <div className="flex items-center gap-2 flex-wrap">
+    <PageShell
+      width="wide"
+      title={
+        <span className="inline-flex items-center gap-2">
+          <ShieldCheck className="h-6 w-6 text-primary" /> AI Control Center
+        </span>
+      }
+      description="Supervisione decisioni AI, azioni pending e performance"
+      toolbar={
+        <>
         <Button variant={subView === "dashboard" ? "default" : "outline"} size="sm" onClick={() => setSubView("dashboard")}>
           <Sparkles className="mr-2 h-4 w-4" /> Dashboard
         </Button>
@@ -70,10 +68,11 @@ export function AIControlCenterPage(): React.ReactElement {
         <Button variant={subView === "token-settings" ? "default" : "outline"} size="sm" onClick={() => setSubView("token-settings")}>
           <Zap className="mr-2 h-4 w-4" /> Token Settings
         </Button>
-      </div>
-
+        </>
+      }
+    >
       {/* Content */}
-      <div className="flex-1">
+      <div>
         <Suspense fallback={<TabFallback />}>
           {subView === "dashboard" && <AIAutomationDashboard />}
           {subView === "pending" && <PendingActionsPanel />}
@@ -87,6 +86,6 @@ export function AIControlCenterPage(): React.ReactElement {
           {subView === "token-settings" && <TokenSettingsPanel />}
         </Suspense>
       </div>
-    </div>
+    </PageShell>
   );
 }
