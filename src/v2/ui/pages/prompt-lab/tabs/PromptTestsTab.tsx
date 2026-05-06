@@ -44,7 +44,7 @@ const qkRuns = (promptId: string) => ["prompt-tests", "runs", promptId] as const
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-destructive/15 text-destructive border-destructive/30",
   warning: "bg-warning/15 text-warning dark:text-warning border-warning/30",
-  info: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  info: "bg-info/15 text-info border-info/30",
 };
 
 const STATUS_ICON: Record<string, ReactNode> = {

@@ -28,7 +28,7 @@ function StatusIcon({ status }: { status: CapturedPage["status"] }) {
       <Loader2 className={`${cls} animate-spin text-primary shrink-0`} />
     );
   if (status === "done")
-    return <div className={`${cls} rounded-full bg-emerald-500 shrink-0`} />;
+    return <div className={`${cls} rounded-full bg-success shrink-0`} />;
   if (status === "pending")
     return (
       <div

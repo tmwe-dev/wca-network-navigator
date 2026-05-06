@@ -57,7 +57,7 @@ function priorityBadge(p: string | null): { label: string; cls: string } | null 
   const v = p.toLowerCase();
   if (v === "high" || v === "p0" || v === "critical") return { label: "P0", cls: "bg-destructive/15 text-destructive border-destructive/30" };
   if (v === "medium" || v === "p1") return { label: "P1", cls: "bg-warning/15 text-warning border-warning/30" };
-  if (v === "low" || v === "p2") return { label: "P2", cls: "bg-blue-500/15 text-blue-300 border-blue-500/30" };
+  if (v === "low" || v === "p2") return { label: "P2", cls: "bg-info/15 text-info border-info/30" };
   return null;
 }
 
