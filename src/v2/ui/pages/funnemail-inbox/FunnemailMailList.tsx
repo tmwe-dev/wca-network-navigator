@@ -18,6 +18,7 @@ import { FunnemailMailCard } from "./FunnemailMailCard";
 import { FunnemailListToolbar, type GroupMode, type SortMode } from "./FunnemailListToolbar";
 import { FunnemailGroupHeader } from "./FunnemailGroupHeader";
 import { FunnemailBulkBar } from "./FunnemailBulkBar";
+import { useFunnemailClaims } from "@/v2/hooks/useFunnemailClaims";
 
 const ESTIMATED_ROW_HEIGHT = 168;
 const STORAGE_KEY = "funnemail_list_view_v4";
@@ -108,6 +109,9 @@ export function FunnemailMailList({
 
   const { getGroup } = useEmailAddressGroups();
 
+  // "Lo prendo io" — claims globali (visibili a tutti gli operatori)
+  const claimsCtl = useFunnemailClaims(null);
+
   // Multi-selezione manuale
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const toggleChecked = (id: string) =>
@@ -156,6 +160,8 @@ export function FunnemailMailList({
     const aiSuggestion = aiRaw && (aiRaw.suggested_group || aiRaw.category)
       ? { label: aiRaw.suggested_group || aiRaw.category || "", reason: aiRaw.reason ?? null }
       : null;
+    const claim = claimsCtl.claimsByMessageId.get(msg.id) ?? null;
+    const claimPending = claimsCtl.pendingMessageId === msg.id;
     return (
       <FunnemailMailCard
         message={msg}
@@ -171,6 +177,11 @@ export function FunnemailMailList({
         showCheckbox
         checked={checkedIds.has(msg.id)}
         onToggleChecked={() => toggleChecked(msg.id)}
+        claim={claim}
+        myUserId={claimsCtl.myUserId}
+        claimPending={claimPending}
+        onClaim={() => { void claimsCtl.claim({ messageId: msg.id }); }}
+        onRelease={() => { void claimsCtl.release(msg.id); }}
       />
     );
   };
