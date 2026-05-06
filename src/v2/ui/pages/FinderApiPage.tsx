@@ -7,7 +7,7 @@
  * Canvas: pannello laterale con risultati JSON e proposta KB.
  */
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { CommandHistory } from "./command/components/CommandHistory";
 import { CommandInput } from "./command/components/CommandInput";
 import { CommandPageBackButton } from "./command/components/CommandPageBackButton";
@@ -16,9 +16,13 @@ import { CommandPageBackground } from "./command/components/CommandPageBackgroun
 import FloatingDock from "@/components/layout/FloatingDock";
 import { useFinderApi } from "./finder-api/useFinderApi";
 import { FinderApiCanvas } from "./finder-api/FinderApiCanvas";
+import VoicePresence from "@/components/workspace/VoicePresence";
+import { useVoiceInput } from "./command/hooks/useVoiceInput";
+import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
 
 const FinderApiPage = () => {
   const f = useFinderApi();
+  const voiceOut = useVoiceOutput();
 
   useEffect(() => {
     f.chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +36,35 @@ const FinderApiPage = () => {
     f.setInput("");
     void f.sendMessage(content);
   };
+
+  const voice = useVoiceInput({
+    onTranscript: (t) => f.setInput(t),
+    onAutoSubmit: (t) => {
+      f.setInput("");
+      void f.sendMessage(t);
+    },
+    lang: "it-IT",
+  });
+
+  useEffect(() => {
+    if (voice.error) sonnerToast.error(voice.error);
+  }, [voice.error]);
+
+  // Quando arriva la risposta dell'agente, leggila ad alta voce.
+  const lastAssistantContent = (() => {
+    for (let i = f.messages.length - 1; i >= 0; i -= 1) {
+      const m = f.messages[i] as { role?: string; content?: string };
+      if (m?.role === "assistant" && m.content) return m.content;
+    }
+    return null;
+  })();
+
+  useEffect(() => {
+    if (lastAssistantContent && !voiceOut.muted) {
+      voiceOut.speak(lastAssistantContent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastAssistantContent]);
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
@@ -59,18 +92,24 @@ const FinderApiPage = () => {
             chatEndRef={f.chatEndRef}
           />
 
+          <VoicePresence
+            active={voiceOut.speaking || voice.listening}
+            listening={voice.listening && !voice.speaking}
+            speaking={voice.speaking || voiceOut.speaking}
+          />
+
           <CommandInput
             input={f.input}
             onInputChange={f.setInput}
             onSend={() => handleSend()}
-            onVoiceToggle={() => toast.info("Voice non attivo su Finder API")}
-            onVolumeMute={() => {}}
+            onVoiceToggle={() => voice.toggle()}
+            onVolumeMute={() => voiceOut.toggleMute()}
             inputFocused={f.inputFocused}
             onFocus={() => f.setInputFocused(true)}
             onBlur={() => f.setInputFocused(false)}
-            voiceSpeaking={false}
-            voiceListening={false}
-            voiceSupported={false}
+            voiceSpeaking={voiceOut.speaking}
+            voiceListening={voice.listening}
+            voiceSupported={voice.supported}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
         </div>
