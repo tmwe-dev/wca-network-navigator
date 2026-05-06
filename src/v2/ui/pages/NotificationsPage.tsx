@@ -18,6 +18,7 @@ import { useNotifications, useDismissNotification, useMarkAsRead } from "@/hooks
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Trash2, Mail, TrendingUp, Bot, AlertTriangle, MessageSquare, Clock, Bell } from "lucide-react";
 import type { NotificationType, NotificationPriority, Notification } from "@/data/notifications";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 export default function NotificationsPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -71,26 +72,17 @@ export default function NotificationsPage(): React.ReactElement {
   };
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Notifiche</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gestisci tutte le tue notifiche in un unico posto
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate(-1)}
-        >
+    <PageShell
+      title="Notifiche"
+      description="Gestisci tutte le tue notifiche in un unico posto"
+      actions={
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
           Indietro
         </Button>
-      </div>
-
+      }
+    >
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-secondary/30 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-muted/40 rounded-lg border border-border">
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
           <SelectTrigger className="bg-background border-input">
             <SelectValue placeholder="Tipo notifica" />
@@ -133,19 +125,17 @@ export default function NotificationsPage(): React.ReactElement {
 
       {/* Notifications List */}
       {notifications.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Bell className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground">Nessuna notifica</p>
-          </div>
+        <div className="rounded-xl border border-dashed border-border bg-card/40 py-16 text-center">
+          <Bell className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nessuna notifica</p>
         </div>
       ) : (
-        <ScrollArea className="flex-1 border rounded-lg bg-card">
+        <ScrollArea className="max-h-[60vh] border border-border rounded-lg bg-card">
           <div className="divide-y">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className="hover:bg-secondary/50 transition-colors"
+                className="hover:bg-muted/50 transition-colors"
               >
                 <NotificationItem
                   notification={notification}
@@ -160,7 +150,7 @@ export default function NotificationsPage(): React.ReactElement {
 
       {/* Pagination */}
       {notifications.length > 0 && (
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-secondary/20">
+        <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/30">
           <span className="text-sm text-muted-foreground">
             Mostrando {offset + 1} - {offset + notifications.length} di molti risultati
           </span>
@@ -184,6 +174,6 @@ export default function NotificationsPage(): React.ReactElement {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
