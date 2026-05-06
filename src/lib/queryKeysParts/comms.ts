@@ -80,6 +80,10 @@ export const commsKeys = {
       ["funnemail-inbox", "mails", slug, limit] as const,
     decision: (messageId?: string | null) => ["funnemail-inbox", "decision", messageId ?? "none"] as const,
     mail: (messageId?: string | null) => ["funnemail-inbox", "mail", messageId ?? "none"] as const,
+    claims: {
+      byGroup: (groupId?: string | null) => ["funnemail-inbox", "claims", "group", groupId ?? "all"] as const,
+      active: () => ["funnemail-inbox", "claims", "active"] as const,
+    },
   },
   alertRouting: {
     recipients: (userId?: string) => ["alert-recipients", userId ?? "current"] as const,

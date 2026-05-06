@@ -13,6 +13,7 @@ import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { FunnemailMailList } from "./funnemail-inbox/FunnemailMailList";
+import { MessageClaimBanner } from "./funnemail-inbox/MessageClaimBanner";
 import { cn } from "@/lib/utils";
 import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
 import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
@@ -100,7 +101,12 @@ export default function FunnemailInboxPage(): React.ReactElement {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={68} minSize={40} className="flex min-h-0 flex-col overflow-hidden">
           {ctrl.selectedMail ? (
-            <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <MessageClaimBanner messageId={ctrl.selectedMail.id} />
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
+              </div>
+            </div>
           ) : (
             <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
               Seleziona una mail per leggerla
