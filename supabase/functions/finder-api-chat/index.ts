@@ -27,35 +27,17 @@ const TMWE_OPS = [
 
 const SYSTEM_PROMPT = `Sei "Finder API", un agente conversazionale-tecnico dedicato all'API TMWE/Findair.
 
-Identità: parli come un collega tecnico che ragiona ad alta voce, è breve, mostra cosa sta facendo.
-Obiettivo: tradurre richieste in linguaggio naturale in chiamate alle 6 operazioni TMWE consentite, mostrare il risultato grezzo nel canvas e commentare in modo umano.
+Identità: collega tecnico, breve, mostri cosa fai.
+Obiettivo: tradurre la richiesta in chiamate TMWE e rispondere con i dati esposti.
 
-Operazioni disponibili (uniche consentite):
+Operazioni consentite (whitelist):
 ${TMWE_OPS.map((o) => `- ${o.op}: ${o.desc}`).join("\n")}
 
-Schema dati TMWE noto (campi rilevanti per ricerche):
-- shipment.list ritorna oggetti con: id (LDV interna, es "1001048624"), otp (codice tracking 12 caratteri, es "AFNVZabqvx17"), data_sped1, id_servizio, stato, note.
-- "id" è il numero LDV interno; "otp" è il numero spedizione TMWE pubblico (AWB).
-
-Metodo per ricerche per numero (CRITICO — segui sempre questi step):
-1. Se l'utente fornisce un numero/codice e chiede una spedizione, NON fermarti alla prima chiamata. Prova in sequenza:
-   a) shipment.unified con { id: "<numero>" } — cerca per LDV interna.
-   b) Se vuoto/errore, tracking.byAwb con { awb: "<numero>" } — cerca per OTP/AWB.
-   c) Se vuoto/errore, shipment.list con { search: "<numero>" } o { q: "<numero>" } come ultimo tentativo.
-2. Solo dopo aver provato TUTTI i fallback puoi dire "non trovato" e proporre una KB card.
-3. Quando trovi una spedizione, ESPONI i dettagli chiave nel final_answer: id LDV, OTP, data, stato, note, servizio. Non limitarti a "trovata".
-4. Se l'utente chiede "le mie spedizioni" senza filtro → shipment.list (mostra count + prime 5).
-5. Se l'utente chiede "una mia spedizione" / "l'ultima" → shipment.list e mostra dettagli della prima.
-6. Niente azioni di scrittura: sei read-only.
-7. Proponi propose_kb_entry SOLO se incontri ambiguità reali o errori upstream, non per ogni "non trovato".
-
-Output: usa SEMPRE tool calling. Non scrivere mai JSON nel content.
-Tool disponibili:
-- call_tmwe(op, params) — chiama un endpoint TMWE.
-- propose_kb_entry(title, body, trigger_query, trigger_op?, trigger_error?, tags?) — suggerisci articolo KB.
-- final_answer(text, spoken_summary?) — chiudi il turno con risposta umana.
-
-Guardrail: se l'utente chiede qualcosa che non rientra nelle 6 op, spiega cosa puoi fare e proponi una KB card.`;
+Regole:
+1. Usa la SCHEMA MAP qui sotto per sapere subito quale op e quale campo usare. Non tirare a indovinare.
+2. Read-only: niente scritture.
+3. Output sempre via tool. Quando esponi dati, includi i campi con role ∈ {id_interno, tracking_code, data, stato, servizio, note}.
+4. propose_kb_entry SOLO se la mappa non basta o l'API risponde in modo inatteso.`;
 
 const TOOLS = [
   {
@@ -142,6 +124,22 @@ async function loadApprovedKb(supabase: ReturnType<typeof createClient>): Promis
   return `\n\n=== Knowledge Base approvata (Finder API) ===\n${lines}\n=== fine KB ===`;
 }
 
+async function loadSchemaMap(supabase: ReturnType<typeof createClient>): Promise<string> {
+  const { data, error } = await supabase
+    .from("finder_api_schema_map")
+    .select("op, field, role, description, example")
+    .order("op", { ascending: true })
+    .order("role", { ascending: true });
+  if (error || !data || data.length === 0) return "";
+  const byOp: Record<string, string[]> = {};
+  for (const r of data as Array<{ op: string; field: string; role: string; description: string | null; example: string | null }>) {
+    const line = `  - ${r.field} [${r.role}]${r.description ? ` — ${r.description}` : ""}${r.example ? ` (es: ${r.example})` : ""}`;
+    (byOp[r.op] ??= []).push(line);
+  }
+  const sections = Object.entries(byOp).map(([op, lines]) => `${op}:\n${lines.join("\n")}`).join("\n\n");
+  return `\n\n=== SCHEMA MAP TMWE ===\n${sections}\n=== fine schema ===`;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -161,7 +159,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const kbContext = await loadApprovedKb(supabase);
+    const [kbContext, schemaContext] = await Promise.all([
+      loadApprovedKb(supabase),
+      loadSchemaMap(supabase),
+    ]);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const systemMsg = { role: "system", content: SYSTEM_PROMPT + kbContext };
+    const systemMsg = { role: "system", content: SYSTEM_PROMPT + schemaContext + kbContext };
     const convo: Array<Record<string, unknown>> = [systemMsg, ...messages];
 
     // Tool-loop, max 5 round-trip
