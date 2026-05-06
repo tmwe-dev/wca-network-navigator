@@ -29,7 +29,7 @@ const AUTO_ACTIONS = [
 
 const CHANNELS = ["email", "whatsapp", "linkedin", "phone"] as const;
 const TONES = [
-  { value: "", label: "Default" },
+  { value: "default", label: "Default" },
   { value: "formal", label: "Formale" },
   { value: "casual", label: "Casual" },
   { value: "technical", label: "Tecnico" },
@@ -225,7 +225,7 @@ export function AddressRulesManager() {
               </div>
               <div>
                 <Label className="text-xs">Tono</Label>
-                <Select value={editingRule.tone_override ?? ""} onValueChange={(v) => setEditingRule({ ...editingRule, tone_override: v || null })}>
+                <Select value={editingRule.tone_override ?? "default"} onValueChange={(v) => setEditingRule({ ...editingRule, tone_override: v === "default" ? null : v })}>
                   <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>{TONES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                 </Select>
