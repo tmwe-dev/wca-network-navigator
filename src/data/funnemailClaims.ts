@@ -40,15 +40,14 @@ export async function listActiveFunnemailClaims(
 
   const { data: ops } = await supabase
     .from("operators")
-    .select("user_id, display_name, email")
+    .select("user_id, name, email")
     .in("user_id", ids);
 
   const map = new Map<string, string>();
-  for (const o of ops ?? []) {
-    const name = (o as { display_name?: string | null; email?: string | null }).display_name
-      ?? (o as { email?: string | null }).email
-      ?? null;
-    if (name) map.set((o as { user_id: string }).user_id, name);
+  for (const o of (ops ?? []) as Array<{ user_id: string | null; name: string | null; email: string | null }>) {
+    if (!o.user_id) continue;
+    const name = o.name ?? o.email ?? null;
+    if (name) map.set(o.user_id, name);
   }
 
   return rows.map((r) => ({
