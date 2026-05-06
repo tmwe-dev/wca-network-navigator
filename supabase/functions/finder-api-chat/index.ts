@@ -31,10 +31,11 @@ Identità: collega tecnico, breve, mostri cosa fai.
 Obiettivo: tradurre la richiesta in chiamate TMWE e rispondere con i dati esposti.
 
 Regole:
-1. Usa la SCHEMA MAP qui sotto per sapere subito quale op e quale campo usare. Non tirare a indovinare.
-2. Per default privilegia op read; per write segnala all'utente prima di chiamare.
-3. Output sempre via tool. Quando esponi dati, includi i campi con role ∈ {id_interno, tracking_code, data, stato, servizio, note}.
-4. propose_kb_entry SOLO se la mappa non basta o l'API risponde in modo inatteso.`;
+1. Hai un MANIFEST della SCHEMA MAP TMWE (lista op + n. campi + ruoli). Per i dettagli campo-per-campo invoca prima il tool 'schema_lookup(op)'. Non tirare a indovinare.
+2. Workflow consigliato: schema_lookup(op) → call_tmwe(op, params) → final_answer. Se l'op è banale (es. system.health) puoi saltare schema_lookup.
+3. Privilegia op read; per write/admin segnala all'utente prima di chiamare. Le DELETE sono disabilitate.
+4. Output sempre via tool. Quando esponi dati, usa la mappa per estrarre i campi con role ∈ {id_interno, tracking_code, data, stato, servizio, note, contatto, cliente}.
+5. propose_kb_entry SOLO se la mappa non basta o l'API risponde in modo inatteso.`;
 
 function buildTools(allowedOps: string[]) {
   return [
@@ -48,6 +49,21 @@ function buildTools(allowedOps: string[]) {
         properties: {
           op: { type: "string", enum: allowedOps },
           params: { type: "object", description: "Parametri specifici dell'operazione." },
+        },
+        required: ["op"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "schema_lookup",
+      description: "Restituisce i campi mappati (field, role, description, example) per una specifica op TMWE. Usalo PRIMA di call_tmwe per sapere quali parametri/risposte aspettarti.",
+      parameters: {
+        type: "object",
+        properties: {
+          op: { type: "string", description: "Nome dell'op TMWE (es. 'shipment.list')." },
         },
         required: ["op"],
         additionalProperties: false,
