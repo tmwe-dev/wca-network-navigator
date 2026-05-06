@@ -121,3 +121,10 @@ Per ognuna: solo wrap in `<PageShell title=... description=... actions=... toolb
 4. Eventuali residui non bonificabili senza toccare logica → segnalati per sprint futuro
 
 Approva e dimmi da quale gruppo partire (suggerito: **4.1 bonifica colori operativi** — basso rischio, alto impatto visivo).
+
+---
+
+## Stato avanzamento (2026-05-06)
+
+- Fase 4.1 colori: completata sui file ad alta visibilità (operativo, AI/Lab, admin, network, prompt-lab, finder-api). Restano 24 occorrenze in `cestinone/meta.ts`, `agenda/DepartmentKanbanView.tsx` e `prompt-lab/SplitBlockEditor.tsx` che sono color-coding intenzionali (canali WA/Email/LI/Voce, dipartimenti, semantica diff verde/ambra) — **non bonificare** senza ridisegnare la mappa colori canali.
+- Fase 4.3 PageShell: AdminUsersPage, AnalyticsPage, KpiPage, DocsPage, GuidaPage già migrate. SettingsPage e ObservabilityPage restano in standby (header e tab custom, alto rischio).
