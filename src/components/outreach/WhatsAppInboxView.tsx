@@ -10,6 +10,8 @@ import { WhatsAppChatList } from "./WhatsAppChatList";
 import { WhatsAppChatThread } from "./WhatsAppChatThread";
 import { isSidebarGhostMessage } from "./whatsappTypes";
 import type { ChatThread } from "./whatsappTypes";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 type WhatsAppInboxViewProps = {
   syncState?: { focusedChat: string | null; focusOn: (c: string) => void; isAvailable: boolean };
@@ -72,17 +74,25 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
 
   return (
     <div className="flex h-full bg-background overflow-hidden">
-      <WhatsAppChatList
-        threads={threads}
-        isLoading={isLoading}
-        activeTab={activeTab}
-        openTabs={openTabs}
-        focusedChat={focusedChat}
-        syncEnabled={false}
-        onOpenChat={openChat}
-      />
-
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+      <PersistentResizablePanelGroup
+        storageId="inbox-whatsapp:list-vs-thread"
+        direction="horizontal"
+        className="h-full w-full"
+      >
+        <ResizablePanel defaultSize={26} minSize={15} maxSize={60} className="min-h-0">
+          <WhatsAppChatList
+            threads={threads}
+            isLoading={isLoading}
+            activeTab={activeTab}
+            openTabs={openTabs}
+            focusedChat={focusedChat}
+            syncEnabled={false}
+            onOpenChat={openChat}
+          />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={74} minSize={30} className="min-h-0">
+          <div className="flex h-full flex-col min-w-0 min-h-0 overflow-hidden relative">
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
             {openTabs.map(contact => {
@@ -128,7 +138,9 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
             </div>
           </div>
         )}
-      </div>
+          </div>
+        </ResizablePanel>
+      </PersistentResizablePanelGroup>
     </div>
   );
 }
