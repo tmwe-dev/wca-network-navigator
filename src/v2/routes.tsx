@@ -81,6 +81,7 @@ const SystemHealthPage = lazy(() => import("@/components/admin/SystemHealthDashb
 const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
+const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
@@ -202,6 +203,7 @@ export function V2Routes(): React.ReactElement {
         <Route element={<V2AuthGateRaw />}>
           <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
+          <Route path="finder-api" element={guardedPage(FinderApiPage, "FinderAPI")} />
           <Route path="guided-onboarding" element={guardedPage(GuidedOnboardingPage, "GuidedOnboarding")} />
         </Route>
 
