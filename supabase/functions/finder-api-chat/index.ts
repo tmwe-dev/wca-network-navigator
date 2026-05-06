@@ -102,7 +102,7 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          text: { type: "string", description: "Messaggio testuale, in italiano, max 4 righe." },
+          text: { type: "string", description: "Messaggio testuale, in italiano. Quando esponi una spedizione includi i campi chiave (LDV, OTP, data, stato, servizio, note)." },
           spoken_summary: { type: "string", description: "Versione vocale brevissima (max 1 frase)." },
         },
         required: ["text"],
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     let finalText = "";
     let spoken = "";
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
