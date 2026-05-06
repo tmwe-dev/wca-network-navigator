@@ -17,9 +17,9 @@ function coverageColor(pct: number) {
 }
 
 function progressColor(pct: number) {
-  if (pct >= 60) return "[&>div]:bg-emerald-500";
-  if (pct >= 30) return "[&>div]:bg-yellow-500";
-  return "[&>div]:bg-red-500";
+  if (pct >= 60) return "[&>div]:bg-success";
+  if (pct >= 30) return "[&>div]:bg-warning";
+  return "[&>div]:bg-destructive";
 }
 
 function getRoleInfo(role: string) {
