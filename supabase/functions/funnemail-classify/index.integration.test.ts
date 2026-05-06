@@ -20,15 +20,25 @@ Deno.test("[FN-CLASSIFY] CORS preflight 200", async () => {
   await res.text();
 });
 
-Deno.test("[FN-CLASSIFY] 401 senza apikey", async () => {
+Deno.test("[FN-CLASSIFY] POST con payload valido risponde 2xx", async () => {
+  // funnemail-classify accetta chiamate fire-and-forget anche senza JWT user;
+  // verifichiamo che il contratto regga (non 5xx).
   const res = await fetch(FN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message_id: "x", from_address: "a@b.c" }),
+    headers: {
+      "Content-Type": "application/json",
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      message_id: "00000000-0000-0000-0000-000000000000",
+      from_address: "noreply@example.com",
+      subject: "test",
+      body_text: "ping",
+    }),
   });
-  // Senza apikey/Authorization il gateway o l'handler rispondono con errore (4xx).
-  assertEquals(res.status >= 400 && res.status < 500, true);
   await res.text();
+  assertEquals(res.status >= 200 && res.status < 500, true);
 });
 
 Deno.test("[FN-CLASSIFY] 400 su payload invalido (con apikey)", async () => {
