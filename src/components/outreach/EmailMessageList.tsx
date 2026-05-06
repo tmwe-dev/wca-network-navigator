@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Building2, User, Plane, MailOpen } from "lucide-react";
+import { Building2, User, Plane, MailOpen, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "./email/emailUtils";
@@ -11,6 +11,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useHoldingPatternEmails } from "@/hooks/useHoldingPatternEmails";
 import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
+import { EmailMessageActions } from "./EmailMessageActions";
+import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
+import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 
 type Props = {
   messages: ChannelMessage[];
@@ -19,7 +22,7 @@ type Props = {
   holdingFilter?: boolean;
 };
 
-const ROW_HEIGHT = 88;
+const ROW_HEIGHT = 132;
 
 function formatListDate(value: string): string {
   const date = new Date(value);
@@ -109,7 +112,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               )}
             >
               <div className="flex items-start gap-2.5">
-                <CompanyLogo email={msg.from_address} name={brand} size={28} className="mt-0.5 flex-shrink-0" />
+                <CompanyLogo email={msg.from_address} name={brand} size={36} className="mt-0.5 flex-shrink-0" showFlag />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className={cn("truncate text-sm flex items-center gap-1.5", isUnread ? "font-semibold text-primary" : "font-medium")}>
@@ -128,10 +131,10 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                   </div>
                   <p className={cn("truncate text-xs", isUnread ? "text-foreground" : "text-muted-foreground")}>{msg.subject || "(nessun oggetto)"}</p>
                   <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{secondaryLine}</p>
-                  {group?.groupName && (
-                    <div className="mt-0.5 flex items-center gap-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    {group?.groupName ? (
                       <span
-                        className="inline-flex items-center gap-1 rounded-sm px-1 py-0 text-[9px] font-medium leading-tight"
+                        className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight"
                         style={{
                           backgroundColor: `${group.groupColor ?? "#3B82F6"}20`,
                           color: group.groupColor ?? "#3B82F6",
@@ -141,8 +144,19 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                         {group.groupIcon && <span>{group.groupIcon}</span>}
                         <span className="truncate max-w-[140px]">{group.groupName}</span>
                       </span>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground/70 border border-dashed border-border">
+                        <span>Senza gruppo</span>
+                      </span>
+                    )}
+                    <span
+                      className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground/70"
+                      title="Suggerimento AI: in arrivo"
+                    >
+                      <Sparkles className="h-2.5 w-2.5" />
+                      <span>AI: —</span>
+                    </span>
+                  </div>
                 </div>
                 {isUnread && (
                   <button
@@ -169,6 +183,25 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                   </Badge>
                 </div>
               )}
+
+              <div
+                className="ml-9 mt-1.5 flex flex-wrap items-center justify-end gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DeepSearchEmailButton
+                  email={(msg.from_address?.match(/<(.+?)>/)?.[1] || msg.from_address || "")}
+                  source={{ displayName: brand, partnerId: msg.partner_id ?? null }}
+                  size="sm"
+                  variant="outline"
+                  label="Deep Search"
+                  className="h-6 gap-1 text-[10px]"
+                />
+                <EmailMessageActions message={msg} />
+                <InlineGroupAssigner
+                  fromAddress={msg.from_address}
+                  currentGroupName={group?.groupName ?? null}
+                />
+              </div>
             </button>
           );
         })}
