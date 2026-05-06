@@ -1,8 +1,9 @@
 ---
-name: Whitelist disattivata - TMWE-only auth
-description: Dal 2026-05-05 nessuna whitelist; chiunque autenticato via TMWE OAuth entra. Auto-create utente Lovable.
+name: Whitelist riattivata server-side (TMWE auth + authorized_users gate)
+description: Dal 2026-05-06 il callback TMWE controlla l'email contro authorized_users prima di creare utente Lovable o salvare token.
 type: feature
 ---
-- `tmwe-oauth-callback` NON controlla più `authorized_users`. La tabella resta in DB ma è ignorata dal gate di login.
-- Chiunque completi OAuth TMWE viene auto-creato come utente Lovable (admin.createUser) e riceve sessione via magic link.
-- Memorie precedenti "Whitelist Standard" e "TMWE-only auth con whitelist" sono SUPERATE.
+- Autenticazione = TMWE OAuth (sandbox.findair.net). Autorizzazione = whitelist `authorized_users`.
+- `tmwe-oauth-callback` (intent=login): dopo `get_my_profile`, normalizza email (trim+lowercase), rifiuta alias `@tmwe.local`, chiama RPC `is_email_authorized`. Se false → redirect `/v2/login?tmwe=error&reason=not_whitelisted` SENZA creare utente né salvare token.
+- Token TMWE mai esposto al client; tutte le chiamate runtime passano da `tmwe-proxy`.
+- Sostituisce la memoria precedente "Whitelist disattivata".
