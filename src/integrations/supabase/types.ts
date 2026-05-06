@@ -10188,6 +10188,78 @@ export type Database = {
         }
         Relationships: []
       }
+      tmwe_api_catalog: {
+        Row: {
+          alias_of: string | null
+          api_group: string | null
+          call_count: number
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          identity: string
+          is_alias: boolean
+          last_called_at: string | null
+          method: string
+          op: string
+          parameters: Json
+          path: string
+          requires_confirmation: boolean
+          responses: Json
+          risk_level: Database["public"]["Enums"]["tmwe_api_risk_level"]
+          scopes: string[]
+          source: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          alias_of?: string | null
+          api_group?: string | null
+          call_count?: number
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          identity?: string
+          is_alias?: boolean
+          last_called_at?: string | null
+          method: string
+          op: string
+          parameters?: Json
+          path: string
+          requires_confirmation?: boolean
+          responses?: Json
+          risk_level?: Database["public"]["Enums"]["tmwe_api_risk_level"]
+          scopes?: string[]
+          source?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          alias_of?: string | null
+          api_group?: string | null
+          call_count?: number
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          identity?: string
+          is_alias?: boolean
+          last_called_at?: string | null
+          method?: string
+          op?: string
+          parameters?: Json
+          path?: string
+          requires_confirmation?: boolean
+          responses?: Json
+          risk_level?: Database["public"]["Enums"]["tmwe_api_risk_level"]
+          scopes?: string[]
+          source?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       tmwe_oauth_state: {
         Row: {
           app_origin: string | null
@@ -11506,6 +11578,7 @@ export type Database = {
         | "instagram"
         | "twitter"
         | "whatsapp"
+      tmwe_api_risk_level: "read" | "write" | "destructive" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -11718,6 +11791,7 @@ export const Constants = {
         "twitter",
         "whatsapp",
       ],
+      tmwe_api_risk_level: ["read", "write", "destructive", "admin"],
     },
   },
 } as const
