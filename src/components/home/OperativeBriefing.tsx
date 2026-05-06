@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AIMarkdown from "@/components/intelliflow/AIMarkdown";
 import { BriefingStatsBar } from "@/components/home/BriefingStatsBar";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BriefingAction, BriefingStats } from "@/hooks/useDailyBriefing";
@@ -65,7 +65,11 @@ export function OperativeBriefing({
           .single();
         if (taskErr) throw taskErr;
 
-        await invokeEdge("agent-execute", { body: { agent_id: agentId, task_id: (task as Record<string, string>).id }, context: "OperativeBriefing.agent_execute" });
+        await invokeAi("agent-execute", {
+          scope: "agent",
+          context: { source: "OperativeBriefing.agent_execute", mode: "briefing-action" },
+          body: { agent_id: agentId, task_id: (task as Record<string, string>).id },
+        });
 
         toast.success(`Task assegnato a ${action.agentName}`);
         qc.invalidateQueries({ queryKey: queryKeys.agents.tasks() });

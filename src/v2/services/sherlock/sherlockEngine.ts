@@ -100,20 +100,25 @@ async function callExtractAI(args: {
   const { truncateMarkdownSmart, compactFindings } = await import("./aiIntegrations.ts");
   const safeMarkdown = truncateMarkdownSmart(args.markdown, args.targetFields);
   const compactPrior = compactFindings(args.priorFindings);
-  const { data, error } = await supabase.functions.invoke("sherlock-extract", {
-    body: {
-      markdown: safeMarkdown,
-      extract_prompt: args.step.ai_extract_prompt,
-      target_fields: args.targetFields,
-      prior_findings: compactPrior,
-      label: args.step.label,
-      // Charter R1+R2
+  const { invokeAi } = await import("@/lib/ai/invokeAi");
+  let data: unknown;
+  try {
+    data = await invokeAi<unknown>("sherlock-extract", {
       scope: "sherlock",
       context: { source: "sherlock.callExtractAI", mode: "extract" },
-    },
-  });
+      body: {
+        markdown: safeMarkdown,
+        extract_prompt: args.step.ai_extract_prompt,
+        target_fields: args.targetFields,
+        prior_findings: compactPrior,
+        label: args.step.label,
+      },
+    });
+  } catch (err) {
+    if (args.signal.aborted) throw new Error("Aborted");
+    throw new Error((err as Error)?.message ?? "AI extract failed");
+  }
   if (args.signal.aborted) throw new Error("Aborted");
-  if (error) throw new Error(error.message ?? "AI extract failed");
   const d = (data ?? {}) as Record<string, unknown>;
 
   // Unifica fields + other_findings in un singolo oggetto findings, mantenendo
