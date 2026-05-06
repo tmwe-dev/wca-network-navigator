@@ -196,7 +196,7 @@ export function FunnemailMailCard({
                   {countryCode ? <span className="text-base leading-none" title={partner?.country_name ?? countryCode}>{getCountryFlag(countryCode)}</span> : <CountryFlag email={message.from_address} size={18} />}
                   {inHolding && <Plane className="h-4 w-4 animate-pulse text-warning" />}
                 </div>
-                <p className="truncate text-sm text-muted-foreground">{secondaryLine}</p>
+                <p className="truncate text-sm text-foreground">{secondaryLine}</p>
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">{formatListDate(displayDate)}</span>
             </div>
