@@ -7,6 +7,7 @@
  * Canvas: pannello laterale con risultati JSON e proposta KB.
  */
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { CommandHistory } from "./command/components/CommandHistory";
 import { CommandInput } from "./command/components/CommandInput";
@@ -37,6 +38,13 @@ const FinderApiPage = () => {
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
       <CommandPageBackButton currentPath="/v2/finder-api" />
       <CommandPageBackground />
+      <Link
+        to="/v2/finder-api/schema"
+        className="absolute top-3 right-3 z-20 text-[10px] uppercase tracking-wider text-muted-foreground/60 hover:text-foreground transition-colors"
+        title="Schema map TMWE (pagina nascosta)"
+      >
+        schema
+      </Link>
       <CommandPageHeader
         flowPhase={f.busy ? "executing" : "idle"}
         lang="it"

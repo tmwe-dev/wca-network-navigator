@@ -82,6 +82,7 @@ const AnalyticsPage = lazy(() => import("./ui/pages/AnalyticsPage").then((m) => 
 const DesignSystemPreviewPage = lazy(() => import("./ui/pages/DesignSystemPreviewPage").then((m) => ({ default: m.DesignSystemPreviewPage })));
 const CommandPage = lazy(() => import("./ui/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
 const FinderApiPage = lazy(() => import("./ui/pages/FinderApiPage").then((m) => ({ default: m.FinderApiPage })));
+const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderApiSchemaMapPage").then((m) => ({ default: m.FinderApiSchemaMapPage })));
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
@@ -204,6 +205,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="command" element={guardedPage(CommandPage, "Command")} />
           <Route path="command/help" element={guardedPage(CommandHelpPage, "CommandHelp")} />
           <Route path="finder-api" element={guardedPage(FinderApiPage, "FinderAPI")} />
+          <Route path="finder-api/schema" element={guardedPage(FinderApiSchemaMapPage, "FinderAPISchema")} />
           <Route path="guided-onboarding" element={guardedPage(GuidedOnboardingPage, "GuidedOnboarding")} />
         </Route>
 
