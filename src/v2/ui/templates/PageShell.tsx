@@ -83,8 +83,10 @@ export function PageShell({
         )}
 
         {toolbar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 backdrop-blur-sm">
-            {toolbar}
+          <div className="rounded-xl border border-border bg-card/60 px-3 py-2 backdrop-blur-sm">
+            <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 [scrollbar-width:thin]">
+              {toolbar}
+            </div>
           </div>
         )}
 
