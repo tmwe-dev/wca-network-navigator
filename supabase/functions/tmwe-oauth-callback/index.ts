@@ -161,7 +161,28 @@ Deno.serve(async (req) => {
     if (intent === "login") {
       if (!authEmail) return back("error", "no_tmwe_email", "login");
 
-      // Whitelist DISATTIVATA: chiunque autenticato via TMWE può entrare.
+      // ─── Whitelist gate (authorization) ─────────────────────────────
+      // L'autenticazione è già fatta da TMWE. Qui controlliamo SOLO se
+      // l'email autoritativa restituita da get_my_profile è presente in
+      // `authorized_users` (is_active=true). Se no, blocco SENZA creare
+      // l'utente Lovable né salvare token.
+      const normalizedEmail = authEmail.trim().toLowerCase();
+      // Reject TMWE local aliases — non possono mai essere whitelisted.
+      if (normalizedEmail.endsWith("@tmwe.local")) {
+        return back("error", "not_whitelisted", "login");
+      }
+      const { data: isAuthorized, error: wlErr } = await svc.rpc(
+        "is_email_authorized",
+        { p_email: normalizedEmail },
+      );
+      if (wlErr) {
+        console.error("[tmwe-oauth-callback] whitelist check failed:", wlErr.message);
+        return back("error", "whitelist_check_failed", "login");
+      }
+      if (!isAuthorized) {
+        return back("error", "not_whitelisted", "login");
+      }
+
       const admin = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
