@@ -224,11 +224,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Dedupe per `op` (conflict key) — più endpoint possono generare lo stesso op,
+    // e Postgres rifiuta ON CONFLICT se lo stesso op compare due volte nello stesso batch.
+    // Strategia: l'ultima occorrenza vince, ma le entry NON-alias hanno priorità sugli alias
+    // se collidono per nome.
+    const dedup = new Map<string, typeof rows[number]>();
+    for (const r of rows) {
+      const existing = dedup.get(r.op);
+      if (!existing) { dedup.set(r.op, r); continue; }
+      // se l'esistente è alias e il nuovo no, sostituisci; altrimenti mantieni il più recente
+      if (existing.is_alias && !r.is_alias) dedup.set(r.op, r);
+      else if (!existing.is_alias && r.is_alias) { /* keep existing */ }
+      else dedup.set(r.op, r);
+    }
+    const dedupedRows = Array.from(dedup.values());
+
     // Upsert a batch (chunk per evitare payload enormi)
     const CHUNK = 200;
     let upserted = 0;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const slice = rows.slice(i, i + CHUNK);
+    for (let i = 0; i < dedupedRows.length; i += CHUNK) {
+      const slice = dedupedRows.slice(i, i + CHUNK);
       const { error } = await svc
         .from("tmwe_api_catalog")
         .upsert(slice, { onConflict: "op", ignoreDuplicates: false });
@@ -246,8 +261,9 @@ Deno.serve(async (req) => {
         ok: true,
         total_endpoints: eps.length,
         upserted,
+        deduped_from: rows.length,
         aliases: Object.keys(ALIAS_MAP).length,
-        groups: [...new Set(rows.map((r) => r.api_group))].length,
+        groups: [...new Set(dedupedRows.map((r) => r.api_group))].length,
       }),
       { status: 200, headers },
     );
