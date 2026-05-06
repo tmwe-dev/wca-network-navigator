@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { createPromptChangeProposal } from "@/data/promptChangeProposals";
 import { createKbEntryProposal } from "@/data/kbProposals";
 import { DiffViewer } from "./components/DiffViewer";
@@ -179,7 +180,9 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
     try {
       if (attachedMaterial.trim()) {
         // ── INTAKE: l'AI valuta nuovo materiale per la KB
-        const { data, error } = await supabase.functions.invoke("kb-intake-analyze", {
+        const resp = await invokeAi<IntakeResponse>("kb-intake-analyze", {
+          scope: "kb-supervisor",
+          context: { source: "PromptCopilotPanel", mode: "intake" },
           body: {
             raw_content: attachedMaterial,
             source: attachedUrl ? "url" : "paste",
@@ -187,25 +190,21 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
             user_hint: msg || undefined,
           },
         });
-        if (error) throw error;
-        const resp = data as IntakeResponse;
         setKbProposal(resp.proposal);
         const summary = formatKbProposalSummary(resp.proposal);
         setHistory((h) => [...h, { role: "assistant", content: summary, kind: "intake" }]);
       } else if (mode === "global") {
         // ── GLOBALE: search-replace su prompt + KB
-        const { data, error } = await supabase.functions.invoke("prompt-copilot-chat", {
+        const resp = await invokeAi<CopilotResponse>("prompt-copilot-chat", {
+          scope: "lab",
+          context: { source: "PromptCopilotPanel", mode: "global" },
           body: {
             user_message: msg || `Cerca "${searchTerm}" e proponi sostituzioni dove ha senso.`,
             search_term: searchTerm,
             history: history.filter((h) => h.kind !== "intake").slice(-4).map((h) => ({ role: h.role, content: h.content })),
             mode: "global",
-            scope: "lab",
-            context: { source: "prompt-reader-copilot-global" },
           },
         });
-        if (error) throw error;
-        const resp = data as CopilotResponse;
         if (resp.global_proposal?.global_replacements?.length) {
           setGlobalProposal(resp.global_proposal);
         }
@@ -215,7 +214,9 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
         setHistory((h) => [...h, { role: "assistant", content: header + resp.reply, kind: "chat" }]);
       } else {
         // ── CHAT: editor sul blocco target
-        const { data, error } = await supabase.functions.invoke("prompt-copilot-chat", {
+        const resp = await invokeAi<CopilotResponse>("prompt-copilot-chat", {
+          scope: "lab",
+          context: { source: "PromptCopilotPanel", mode: "edit" },
           body: {
             agent_slug: agentSlug,
             agent_kb_categories: agentKbCategories,
@@ -224,12 +225,8 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
             user_message: msg,
             history: history.filter((h) => h.kind !== "intake").slice(-6).map((h) => ({ role: h.role, content: h.content })),
             mode: "edit",
-            scope: "lab",
-            context: { source: "prompt-reader-copilot" },
           },
         });
-        if (error) throw error;
-        const resp = data as CopilotResponse;
         if (resp.proposal?.proposed_content) {
           setPromptProposal(resp.proposal);
           setKbConsulted(resp.kb_consulted);
