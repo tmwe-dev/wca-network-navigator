@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
+import { rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -81,12 +81,6 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
 
   if (!data || data.length === 0) return ["user"];
   return data.map((row) => row.role as AppRole);
-}
-
-// ── Helper: check whitelist (throws on network error) ────────────────
-
-async function isEmailAuthorized(email: string): Promise<boolean> {
-  return rpcIsEmailAuthorized(normalizeEmail(email));
 }
 
 // ── Helper: record login ─────────────────────────────────────────────
@@ -168,65 +162,17 @@ export function useAuthV2(): UseAuthV2Return {
 
   // ── Actions ──────────────────────────────────────────────────────
 
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    setError(null);
-    setIsLoading(true);
+  // ── LEGACY DISABLED — auth passa esclusivamente da TMWE OAuth + whitelist ──
+  // Le firme restano stabili per non rompere chiamanti residui, ma queste
+  // azioni non creano più sessioni: l'unico ingresso è "Entra con TMWE".
+  const LEGACY_DISABLED_MSG = "Login email/password disabilitato. Usa \"Entra con TMWE\".";
 
-    const normalizedEmail = normalizeEmail(email);
-
-    try {
-      const authorized = await isEmailAuthorized(normalizedEmail);
-      if (!authorized) {
-        setError("Email non autorizzata. Contatta l'amministratore.");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      setError("Errore di connessione al server. Riprova tra qualche istante.");
-      setIsLoading(false);
-      return;
-    }
-
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-    if (authError) {
-      setError(authError.message);
-      setIsLoading(false);
-    }
+  const signInWithEmail = useCallback(async (_email: string, _password: string) => {
+    setError(LEGACY_DISABLED_MSG);
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    setError(null);
-    setIsLoading(true);
-
-    const normalizedEmail = normalizeEmail(email);
-
-    try {
-      const authorized = await isEmailAuthorized(normalizedEmail);
-      if (!authorized) {
-        setError("Email non autorizzata. Contatta l'amministratore per essere aggiunto alla whitelist.");
-        setIsLoading(false);
-        return;
-      }
-    } catch (err) {
-      setError("Errore di connessione al server. Riprova tra qualche istante.");
-      setIsLoading(false);
-      return;
-    }
-
-    const { error: authError } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth`,
-        data: { display_name: displayName },
-      },
-    });
-
-    if (authError) {
-      setError(authError.message);
-    }
-
-    setIsLoading(false);
+  const signUp = useCallback(async (_email: string, _password: string, _displayName: string) => {
+    setError(LEGACY_DISABLED_MSG);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -246,18 +192,12 @@ export function useAuthV2(): UseAuthV2Return {
     window.location.href = "/auth";
   }, []);
 
-  const resetPassword = useCallback(async (email: string) => {
-    setError(null);
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (authError) setError(authError.message);
+  const resetPassword = useCallback(async (_email: string) => {
+    setError(LEGACY_DISABLED_MSG);
   }, []);
 
-  const updatePassword = useCallback(async (newPassword: string) => {
-    setError(null);
-    const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-    if (authError) setError(authError.message);
+  const updatePassword = useCallback(async (_newPassword: string) => {
+    setError(LEGACY_DISABLED_MSG);
   }, []);
 
   const clearError = useCallback(() => setError(null), []);

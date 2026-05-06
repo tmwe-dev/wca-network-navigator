@@ -31,7 +31,7 @@ import { useAuth } from "@/providers/AuthProvider";
 
 // ── Lazy pages ───────────────────────────────────────────────────────
 const LoginPage = lazy(() => import("./ui/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
-const ResetPasswordPage = lazy(() => import("./ui/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+// ResetPasswordPage legacy disabilitato — auth passa esclusivamente da TMWE OAuth.
 const AuthCallbackPage = lazy(() => import("./ui/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage })));
 const DashboardPage = lazy(() => import("./ui/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const KpiPage = lazy(() => import("./ui/pages/KpiPage").then((m) => ({ default: m.KpiPage })));
@@ -191,7 +191,7 @@ export function V2Routes(): React.ReactElement {
         {/* Public routes (login, reset-password) */}
         <Route element={<PublicLayout />}>
           <Route path="login" element={guardedPage(LoginPage, "Login")} />
-          <Route path="reset-password" element={guardedPage(ResetPasswordPage, "ResetPassword")} />
+          <Route path="reset-password" element={<Navigate to="/v2/login" replace />} />
           <Route path="auth-callback" element={guardedPage(AuthCallbackPage, "AuthCallback")} />
         </Route>
 
