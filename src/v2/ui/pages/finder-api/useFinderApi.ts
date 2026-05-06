@@ -63,7 +63,7 @@ export function useFinderApi() {
         kb_proposal?: FinderKbProposal | null;
         error?: string;
       }>("finder-api-chat", {
-        scope: "finder_api" as never,
+        scope: "finder_api",
         context: { source: "FinderApiPage", route: "/v2/finder-api", mode: "query" },
         body: { messages: historyRef.current },
       });
