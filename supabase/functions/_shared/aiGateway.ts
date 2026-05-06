@@ -52,6 +52,10 @@ type ToolCallRaw = { id?: string; function?: { name?: string; arguments?: string
 
 export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
   const startedAt = Date.now();
+  const metricsLog = createLogger(opts.functionName ?? opts.context ?? "ai_gateway", {
+    userId: opts.userId ?? null,
+    scope: opts.scope ?? null,
+  });
 
   // Resolve provider
   const provider = (Deno.env.get("AI_PROVIDER") || "lovable") as string;
@@ -157,6 +161,18 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
             tokens: usage.totalTokens,
             toolCalls: toolCalls.length,
           });
+          metricsLog.metric("ai_call", {
+            duration_ms: Date.now() - startedAt,
+            status_code: 200,
+            tags: ["ai", provider, model, "ok"],
+            provider, model, nativeModel,
+            tokens_in: usage.promptTokens,
+            tokens_out: usage.completionTokens,
+            attempts: totalAttempts,
+            tool_calls: toolCalls.length,
+          });
+          // Best-effort flush, never blocks response on failure.
+          await metricsLog.flush().catch(() => undefined);
 
           // Log token usage if tracking context provided
           if (opts.supabase && opts.userId && opts.functionName) {
@@ -297,6 +313,13 @@ export async function aiChat(opts: AiChatOptions): Promise<AiChatResult> {
     ctx, provider, models: opts.models, attempts: totalAttempts,
     lastError: lastError?.kind,
   });
+  metricsLog.error("ai_gateway_all_failed", lastError ?? new Error("all_models_failed"), {
+    duration_ms: Date.now() - startedAt,
+    status_code: lastError?.status ?? 500,
+    tags: ["ai", provider, "error", lastError?.kind ?? "unknown"],
+    provider, models: opts.models, attempts: totalAttempts,
+  });
+  await metricsLog.flush().catch(() => undefined);
   throw lastError ?? new AiGatewayError("all_models_failed", "All models exhausted");
 }
 
