@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
@@ -145,13 +147,11 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
 
   // No more auto-sync timer
 
-  return (
-    <div className="flex h-full bg-background overflow-hidden">
-      {/* Sidebar */}
-      <div className={cn(
-        "flex flex-col border-r border-border bg-background shrink-0 transition-all duration-200",
-        sidebarOpen ? "w-[280px] min-w-[280px]" : "w-[48px] min-w-[48px]"
-      )}>
+  const sidebarNode = (
+    <div className={cn(
+      "flex flex-col h-full border-r border-border bg-background",
+      !sidebarOpen && "w-[48px] min-w-[48px] shrink-0"
+    )}>
         {!sidebarOpen ? (
           <div className="flex flex-col items-center pt-2 gap-2">
             <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
