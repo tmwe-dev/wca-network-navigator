@@ -19,7 +19,7 @@ import {
 import {
   ChevronLeft, ChevronRight, Mail, Loader2,
   ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin,
-  ListCollapse, ListTree, Search,
+  ListCollapse, ListTree, Search, ZoomIn, ZoomOut, RotateCcw,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -347,38 +347,121 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
       )}
 
       {/* Dialog full-page email */}
-      <Dialog open={fullViewEmail !== null} onOpenChange={(o) => { if (!o) setFullViewEmail(null); }}>
-        <DialogContent className="max-w-4xl w-[92vw] max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-5 py-3 border-b flex-shrink-0">
-            <DialogTitle className="text-base flex items-center gap-2 pr-8">
-              {fullViewEmail && <ChannelIcon channel={fullViewEmail.channel} className="h-4 w-4 flex-shrink-0" />}
-              <span className="truncate">{fullViewEmail?.subject || "(senza oggetto)"}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <FullPageEmailDialog
+        email={fullViewEmail}
+        onClose={() => setFullViewEmail(null)}
+        senderLabel={titleLabel}
+        flag={flag}
+        faviconUrl={faviconUrl && !faviconError ? faviconUrl : null}
+      />
+    </div>
+  );
+}
 
-          {fullViewEmail && (
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="px-5 py-3 space-y-3">
+/**
+ * FullPageEmailDialog — popup a tutta pagina per leggere comodamente la mail
+ * con controlli di zoom in / zoom out / reset.
+ */
+function FullPageEmailDialog({
+  email, onClose, senderLabel, flag, faviconUrl,
+}: {
+  email: PreviewEmail | null;
+  onClose: () => void;
+  senderLabel: string;
+  flag: string | null;
+  faviconUrl: string | null;
+}) {
+  const [zoom, setZoom] = useState(1);
+  useEffect(() => { if (email) setZoom(1); }, [email?.id]);
+  const inc = () => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)));
+  const dec = () => setZoom((z) => Math.max(0.6, +(z - 0.1).toFixed(2)));
+  const reset = () => setZoom(1);
+
+  return (
+    <Dialog open={email !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] max-h-[94vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-5 py-3 border-b flex-shrink-0">
+          <div className="flex items-center gap-2 pr-8">
+            {faviconUrl ? (
+              <img src={faviconUrl} alt="" className="h-5 w-5 rounded flex-shrink-0" />
+            ) : (
+              email && <ChannelIcon channel={email.channel} className="h-5 w-5 flex-shrink-0" />
+            )}
+            {flag && <span className="text-base leading-none" aria-hidden>{flag}</span>}
+            <DialogTitle className="text-base truncate flex-1 min-w-0 text-left">
+              <span className="font-semibold mr-2">{senderLabel}</span>
+              <span className="text-muted-foreground font-normal">·</span>
+              <span className="ml-2 font-normal">{email?.subject || "(senza oggetto)"}</span>
+            </DialogTitle>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={dec} aria-label="Zoom out">
+                      <ZoomOut className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">Zoom out</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <button
+                type="button"
+                onClick={reset}
+                className="text-[11px] tabular-nums px-1.5 py-0.5 rounded hover:bg-muted text-muted-foreground"
+                title="Reset zoom"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={inc} aria-label="Zoom in">
+                      <ZoomIn className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">Zoom in</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset} aria-label="Reset zoom">
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-[10px]">Reset zoom</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {email && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div
+              className="px-5 py-3 space-y-3 origin-top-left transition-transform"
+              style={{ transform: `scale(${zoom})`, width: `${100 / zoom}%` }}
+            >
                 {/* Meta */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className="gap-1 text-[10px]">
-                    <ChannelIcon channel={fullViewEmail.channel} className="h-2.5 w-2.5" />
-                    {fullViewEmail.channel || "email"}
+                    <ChannelIcon channel={email.channel} className="h-2.5 w-2.5" />
+                    {email.channel || "email"}
                   </Badge>
                   <Badge
-                    variant={fullViewEmail.direction === "inbound" ? "default" : "secondary"}
+                    variant={email.direction === "inbound" ? "default" : "secondary"}
                     className="gap-1 text-[10px]"
                   >
-                    {fullViewEmail.direction === "inbound" ? (
+                    {email.direction === "inbound" ? (
                       <ArrowDownLeft className="h-2.5 w-2.5" />
                     ) : (
                       <ArrowUpRight className="h-2.5 w-2.5" />
                     )}
-                    {fullViewEmail.direction === "inbound" ? "ricevuta" : "inviata"}
+                    {email.direction === "inbound" ? "ricevuta" : "inviata"}
                   </Badge>
-                  {fullViewEmail.email_date && (
+                  {email.email_date && (
                     <span className="text-xs text-muted-foreground ml-auto">
-                      {new Date(fullViewEmail.email_date).toLocaleString("it-IT", {
+                      {new Date(email.email_date).toLocaleString("it-IT", {
                         day: "2-digit", month: "long", year: "numeric",
                         hour: "2-digit", minute: "2-digit",
                       })}
@@ -390,24 +473,23 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
                 <div className="text-xs space-y-1 border rounded-md p-3 bg-muted/20">
                   <div className="flex gap-2">
                     <span className="text-muted-foreground font-medium w-10 flex-shrink-0">Da:</span>
-                    <span className="text-foreground break-all">{fullViewEmail.from_address || "—"}</span>
+                    <span className="text-foreground break-all">{email.from_address || "—"}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-muted-foreground font-medium w-10 flex-shrink-0">A:</span>
-                    <span className="text-foreground break-all">{fullViewEmail.to_address || "—"}</span>
+                    <span className="text-foreground break-all">{email.to_address || "—"}</span>
                   </div>
                 </div>
 
                 {/* Corpo full — stesso renderer di Outreach. */}
                 <div className="pt-1">
-                  <EmailBody message={fullViewEmail} />
+                  <EmailBody message={email} />
                 </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
   );
 }
 
