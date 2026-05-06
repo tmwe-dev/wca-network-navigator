@@ -173,7 +173,7 @@ function InvocationRowView({ row }: { row: InvocationRow }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {ok ? (
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <CheckCircle2 className="h-4 w-4 text-success" />
           ) : (
             <AlertCircle className="h-4 w-4 text-destructive" />
           )}

@@ -97,7 +97,7 @@ function FieldDiff({ field, base, target }: { field: string; base: string; targe
         {blocks.map((b, idx) => {
           const cls =
             b.kind === "add"
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              ? "bg-success/15 text-success dark:text-success"
               : b.kind === "del"
               ? "bg-destructive/15 text-destructive line-through"
               : "text-muted-foreground";
@@ -260,7 +260,7 @@ export function PromptHistoryTab() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-5 px-1.5 text-[9px] ml-auto text-amber-600 hover:text-amber-700"
+                        className="h-5 px-1.5 text-[9px] ml-auto text-warning hover:text-warning"
                         disabled={rollbackMutation.isPending}
                         onClick={() => {
                           if (confirm(`Ripristinare il prompt alla versione v${v.version_number}? Verrà creata una nuova versione di rollback.`)) {

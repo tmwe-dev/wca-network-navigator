@@ -319,9 +319,9 @@ export function ScheduledImproverConfig({ onRunNow }: ScheduledImproverConfigPro
 
       {/* Info e avviso */}
       {config.enabled && (
-        <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2.5 flex gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-700 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700">
+        <div className="rounded border border-warning/40 bg-warning/5 p-2.5 flex gap-2">
+          <AlertCircle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-warning">
             L'esecuzione automatica richiede che il sistema sia attivo. Verificare i log nelle impostazioni di sistema.
           </p>
         </div>

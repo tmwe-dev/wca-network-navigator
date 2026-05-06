@@ -225,7 +225,7 @@ function JobsPanel({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
               <div key={job.id as string} className="space-y-3 pb-4 last:border-0 last:pb-0 border-b border-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {job.status === "in_progress" ? <Activity className="w-4 h-4 text-primary animate-spin" /> : job.status === "completed" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <AlertCircle className="w-4 h-4 text-destructive" />}
+                    {job.status === "in_progress" ? <Activity className="w-4 h-4 text-primary animate-spin" /> : job.status === "completed" ? <CheckCircle className="w-4 h-4 text-success" /> : <AlertCircle className="w-4 h-4 text-destructive" />}
                     <span className="text-xs sm:text-sm font-medium text-foreground">{job.status === "in_progress" ? "In Elaborazione" : job.status === "completed" ? "Completato" : "Errore"}</span>
                   </div>
                   <Badge variant="outline">{Math.round(progress)}%</Badge>
@@ -235,7 +235,7 @@ function JobsPanel({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
                     <div className="bg-primary h-full transition-all" style={{ width: `${progress}%` }} />
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-xs">
-                    {[["Totali", job.total_items, "text-foreground"], ["Elaborati", job.processed_items, "text-primary"], ["Salvati", job.saved_items, "text-emerald-400"], ["Errori", job.error_count, "text-destructive"]].map(([label, val, color]) => (
+                    {[["Totali", job.total_items, "text-foreground"], ["Elaborati", job.processed_items, "text-primary"], ["Salvati", job.saved_items, "text-success"], ["Errori", job.error_count, "text-destructive"]].map(([label, val, color]) => (
                       <div key={label as string} className="rounded p-2 bg-muted/30">
                         <div className={`font-medium ${color}`}>{val as number}</div>
                         <div className="text-muted-foreground">{label as string}</div>

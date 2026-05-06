@@ -103,7 +103,7 @@ export function KnowledgeBasePage() {
                   <div className="text-sm font-medium text-foreground truncate">{agent.name}</div>
                   <div className="text-[11px] text-muted-foreground capitalize">{agent.role}</div>
                 </div>
-                <Circle className={cn("w-2 h-2 fill-current shrink-0", agent.is_active ? "text-emerald-500" : "text-muted-foreground")} />
+                <Circle className={cn("w-2 h-2 fill-current shrink-0", agent.is_active ? "text-success" : "text-muted-foreground")} />
               </div>
             </button>
           ))}
@@ -129,7 +129,7 @@ export function KnowledgeBasePage() {
                   <div className="flex items-center gap-2 mt-1 text-muted-foreground">
                     <span className={cn(
                       "px-1.5 py-0.5 rounded text-[9px] font-medium",
-                      j.status === "completed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                      j.status === "completed" ? "bg-emerald-100 text-success dark:bg-success/30 dark:text-success" :
                       j.status === "in_progress" ? "bg-primary/10 text-primary" :
                       "bg-muted text-muted-foreground"
                     )}>

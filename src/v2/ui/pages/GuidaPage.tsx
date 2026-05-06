@@ -70,12 +70,12 @@ const Guida = () => {
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               {["🇮🇹 Italy (324)", "🇩🇪 Germany (218)", "🇺🇸 USA (195)"].map(c => (
-                <div key={c} className="p-2 rounded bg-white/5 text-xs text-white/50 text-center">{c}</div>
+                <div key={c} className="p-2 rounded bg-white/5 text-xs text-primary-foreground/50 text-center">{c}</div>
               ))}
             </div>
             <div className="p-3 rounded bg-white/5 border border-white/10">
-              <span className="text-xs text-emerald-400">● Terminal Live</span>
-              <div className="mt-2 text-xs text-white/30 font-mono space-y-1">
+              <span className="text-xs text-success">● Terminal Live</span>
+              <div className="mt-2 text-xs text-primary-foreground/30 font-mono space-y-1">
                 <p>[14:32] Downloading IT partner 142/324...</p>
                 <p>[14:33] ✓ Found 3 contacts for ABC Srl</p>
               </div>
@@ -102,15 +102,15 @@ const Guida = () => {
           <div className="space-y-3">
             <div className="flex gap-2 flex-wrap">
               {["IATA ✓", "ISO 9001 ✓", "AEO", "BASC"].map(f => (
-                <span key={f} className="px-2 py-1 rounded-full bg-white/5 text-xs text-white/40">{f}</span>
+                <span key={f} className="px-2 py-1 rounded-full bg-white/5 text-xs text-primary-foreground/40">{f}</span>
               ))}
             </div>
             <div className="p-3 rounded bg-white/5 border border-white/10 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs text-primary">AL</span>
                 <div>
-                  <p className="text-sm text-white font-medium">ABC Logistics</p>
-                  <p className="text-xs text-white/30">Istanbul, Turkey · ★★★★☆</p>
+                  <p className="text-sm text-primary-foreground font-medium">ABC Logistics</p>
+                  <p className="text-xs text-primary-foreground/30">Istanbul, Turkey · ★★★★☆</p>
                 </div>
               </div>
             </div>
@@ -157,10 +157,10 @@ const Guida = () => {
         screenshotContent={
           <div className="space-y-3">
             <div className="p-3 rounded bg-white/5 border border-white/10">
-              <p className="text-xs text-white/30 mb-2">To: info@abc-logistics.com</p>
-              <p className="text-xs text-white/50">Subject: Partnership — {"{{city}}"} corridor</p>
+              <p className="text-xs text-primary-foreground/30 mb-2">To: info@abc-logistics.com</p>
+              <p className="text-xs text-primary-foreground/50">Subject: Partnership — {"{{city}}"} corridor</p>
             </div>
-            <div className="p-3 rounded bg-white/5 text-xs text-white/30">
+            <div className="p-3 rounded bg-white/5 text-xs text-primary-foreground/30">
               Dear {"{{contact_name}}"},<br />
               We would like to explore a partnership with {"{{company_name}}"}...
             </div>
@@ -184,11 +184,11 @@ const Guida = () => {
         screenshotContent={
           <div className="space-y-3">
             <div className="flex gap-2">
-              <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs">✓ Enriched</span>
+              <span className="px-2 py-1 rounded-full bg-success/10 text-success text-xs">✓ Enriched</span>
               <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs">🌐 Website</span>
               <span className="px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs">in LinkedIn</span>
             </div>
-            <div className="p-3 rounded bg-white/5 border border-primary/20 text-xs text-white/40">
+            <div className="p-3 rounded bg-white/5 border border-primary/20 text-xs text-primary-foreground/40">
               <Sparkles className="w-4 h-4 text-primary inline mr-1" />
               Generating personalized email based on partner profile...
             </div>
@@ -214,12 +214,12 @@ const Guida = () => {
           <div className="space-y-3">
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className={`p-2 rounded text-center text-xs ${i === 3 ? "bg-primary/20 text-primary" : "bg-white/5 text-white/30"}`}>
+                <div key={i} className={`p-2 rounded text-center text-xs ${i === 3 ? "bg-primary/20 text-primary" : "bg-white/5 text-primary-foreground/30"}`}>
                   {10 + i}
                 </div>
               ))}
             </div>
-            <div className="p-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+            <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-xs text-destructive">
               ⚠️ 3 attività in scadenza oggi
             </div>
           </div>
@@ -244,8 +244,8 @@ const Guida = () => {
             {["WCA World", "LinkedIn", "Report Aziende"].map(ext => (
               <div key={ext} className="flex items-center gap-3 p-2 rounded bg-white/5">
                 <Chrome className="w-5 h-5 text-primary" />
-                <span className="text-sm text-white/60">{ext}</span>
-                <span className="ml-auto text-xs text-emerald-400">● Attiva</span>
+                <span className="text-sm text-primary-foreground/60">{ext}</span>
+                <span className="ml-auto text-xs text-success">● Attiva</span>
               </div>
             ))}
           </div>
@@ -270,7 +270,7 @@ const Guida = () => {
         screenshotContent={
           <div className="space-y-2">
             {["Generale", "Email", "Connessioni", "Import/Export", "Blacklist", "Template", "Profilo AI"].map((tab, i) => (
-              <div key={tab} className={`px-3 py-1.5 rounded text-xs ${i === 1 ? "bg-primary/10 text-primary" : "bg-white/5 text-white/30"}`}>
+              <div key={tab} className={`px-3 py-1.5 rounded text-xs ${i === 1 ? "bg-primary/10 text-primary" : "bg-white/5 text-primary-foreground/30"}`}>
                 {tab}
               </div>
             ))}

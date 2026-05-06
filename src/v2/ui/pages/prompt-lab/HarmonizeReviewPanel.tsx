@@ -116,21 +116,21 @@ interface Props {
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
   UPDATE: "bg-primary/10 text-primary border-primary/20",
-  INSERT: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  MOVE: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  INSERT: "bg-success/10 text-success border-success/20",
+  MOVE: "bg-warning/10 text-warning border-warning/20",
   DELETE: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const LAYER_META: Record<HarmonizeProposal["resolution_layer"], { label: string; icon: typeof FileText; cls: string }> = {
   text: { label: "Testo", icon: FileText, cls: "bg-muted text-muted-foreground" },
-  contract: { label: "Contratto backend", icon: Wrench, cls: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+  contract: { label: "Contratto backend", icon: Wrench, cls: "bg-warning/10 text-warning border-warning/20" },
   code_policy: { label: "Policy nel codice", icon: Code2, cls: "bg-destructive/10 text-destructive border-destructive/20" },
   kb_governance: { label: "Governance KB", icon: BookOpen, cls: "bg-primary/10 text-primary border-primary/20" },
 };
 
 const SEVERITY_CLS: Record<NonNullable<HarmonizeProposal["severity"]>, string> = {
   low: "bg-muted text-muted-foreground",
-  medium: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  medium: "bg-warning/10 text-warning border-warning/20",
   high: "bg-orange-500/10 text-orange-700 border-orange-500/20",
   critical: "bg-destructive/15 text-destructive border-destructive/30",
 };
@@ -263,17 +263,17 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
               {remaining(proposals)}/{proposals.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="safe" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700">
+          <TabsTrigger value="safe" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-success/10 data-[state=active]:text-success">
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>Sicure</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30" title={`${remaining(safeAll)} da gestire su ${safeAll.length} sicure`}>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-success/15 text-success border-success/30" title={`${remaining(safeAll)} da gestire su ${safeAll.length} sicure`}>
               {remaining(safeAll)}/{safeAll.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="review" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-700">
+          <TabsTrigger value="review" className="gap-1.5 py-2 flex-col sm:flex-row data-[state=active]:bg-warning/10 data-[state=active]:text-warning">
             <Eye className="h-3.5 w-3.5" />
             <span>Da rivedere</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30" title={`${remaining(reviewAll)} da gestire su ${reviewAll.length} da rivedere`}>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30" title={`${remaining(reviewAll)} da gestire su ${reviewAll.length} da rivedere`}>
               {remaining(reviewAll)}/{reviewAll.length}
             </Badge>
           </TabsTrigger>
@@ -361,12 +361,12 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       {safe ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 gap-1" title="Modifica di solo testo, basso impatto, reversibile">
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/30 gap-1" title="Modifica di solo testo, basso impatto, reversibile">
                           <ShieldCheck className="h-3 w-3" />
                           Sicura
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30 gap-1" title="Da rivedere a mano: inserimento, eliminazione o impatto alto">
+                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 gap-1" title="Da rivedere a mano: inserimento, eliminazione o impatto alto">
                           <Eye className="h-3 w-3" />
                           Da rivedere
                         </Badge>
@@ -486,7 +486,7 @@ export function HarmonizeReviewPanel({ proposals, approvedIds, onToggle, onAppro
                           <div className="text-xs">
                             <span className="font-semibold">Dipendenze:</span> {p.dependencies.length}
                             {blockedByDeps && (
-                              <span className="text-amber-600 ml-1">
+                              <span className="text-warning ml-1">
                                 ({missingDeps.length} non ancora approvat{missingDeps.length === 1 ? "a" : "e"})
                               </span>
                             )}

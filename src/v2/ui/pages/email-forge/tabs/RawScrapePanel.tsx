@@ -155,14 +155,14 @@ export function RawScrapePanel({ partnerId, contactId, enrichmentData, rawProfil
 
   if (allEntries.length === 0) {
     return (
-      <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+      <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
         <div className="flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-warning dark:text-warning shrink-0 mt-0.5" />
           <div className="flex-1">
-            <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+            <div className="text-[11px] font-semibold text-warning dark:text-warning">
               Nessun markdown grezzo disponibile
             </div>
-            <div className="text-[10px] text-amber-800/80 dark:text-amber-200/80 mt-0.5">
+            <div className="text-[10px] text-warning/80 dark:text-warning/80 mt-0.5">
               Lancia una Deep Search per popolare i markdown da FireScrape, oppure verifica che la pipeline V2 stia salvando i risultati.
               Per ispezionare gli scrape manuali apri <span className="font-mono">chrome://extensions</span> → Partner Connect → "service worker" → tab Console.
             </div>

@@ -105,7 +105,7 @@ export default function AgentTimeline({ state, onStop, onApprove, onReject, auto
             </div>
             <span className="flex-shrink-0">
               {step.result.success ? (
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                <CheckCircle className="w-3.5 h-3.5 text-success" />
               ) : (
                 <XCircle className="w-3.5 h-3.5 text-destructive" />
               )}

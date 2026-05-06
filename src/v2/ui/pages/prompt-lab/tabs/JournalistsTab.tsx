@@ -19,9 +19,9 @@ type Field = "prompt_full" | "prompt_voice" | "prompt_writing" | "tone" | "rules
 
 const JOURNALISTS: Array<{ role: Role; label: string; icon: LucideIcon; color: string; desc: string; states: string[] }> = [
   { role: "rompighiaccio", label: "Rompighiaccio", icon: Zap, color: "text-blue-500 bg-blue-500/10", desc: "Primo contatto. Apertura dialogo.", states: ["new", "first_touch_sent"] },
-  { role: "risvegliatore", label: "Risvegliatore", icon: Newspaper, color: "text-amber-500 bg-amber-500/10", desc: "Dopo silenzio. Riattivazione.", states: ["holding", "archived"] },
+  { role: "risvegliatore", label: "Risvegliatore", icon: Newspaper, color: "text-warning bg-warning/10", desc: "Dopo silenzio. Riattivazione.", states: ["holding", "archived"] },
   { role: "chiusore", label: "Chiusore", icon: Gavel, color: "text-destructive bg-destructive/10", desc: "Momento decisione. Chiusura.", states: ["qualified", "negotiation"] },
-  { role: "accompagnatore", label: "Accompagnatore", icon: Handshake, color: "text-emerald-500 bg-emerald-500/10", desc: "Relazione attiva. Continuità.", states: ["converted"] },
+  { role: "accompagnatore", label: "Accompagnatore", icon: Handshake, color: "text-success bg-success/10", desc: "Relazione attiva. Continuità.", states: ["converted"] },
 ];
 
 const FIELD_LABELS: Record<Field, string> = {
@@ -79,7 +79,7 @@ export function JournalistsTab() {
       </div>
 
       <div className="p-2 rounded border border-border/30 bg-muted/30 text-[11px] space-y-1">
-        <div><span className="text-emerald-500 font-medium">FA:</span> corregge tono/ritmo/CTA · adatta al giornalista attivo · segnala incoerenze brief↔testo · blocca promesse non verificabili.</div>
+        <div><span className="text-success font-medium">FA:</span> corregge tono/ritmo/CTA · adatta al giornalista attivo · segnala incoerenze brief↔testo · blocca promesse non verificabili.</div>
         <div><span className="text-destructive font-medium">NON FA:</span> non cambia strategia/stato/canale/playbook · non bypassa guardrail · non inventa informazioni.</div>
       </div>
 

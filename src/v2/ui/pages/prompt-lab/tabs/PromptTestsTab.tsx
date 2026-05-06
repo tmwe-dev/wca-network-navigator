@@ -43,14 +43,14 @@ const qkRuns = (promptId: string) => ["prompt-tests", "runs", promptId] as const
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-destructive/15 text-destructive border-destructive/30",
-  warning: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
+  warning: "bg-warning/15 text-warning dark:text-warning border-warning/30",
   info: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
 };
 
 const STATUS_ICON: Record<string, ReactNode> = {
-  passed: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
+  passed: <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
   failed: <XCircle className="h-3.5 w-3.5 text-destructive" />,
-  error: <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />,
+  error: <AlertTriangle className="h-3.5 w-3.5 text-warning" />,
   skipped: <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />,
 };
 

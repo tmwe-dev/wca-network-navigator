@@ -336,7 +336,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
           {/* DONE */}
           {state.phase === "done" && (
             <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+              <CheckCircle2 className="h-10 w-10 text-success" />
               <p className="text-base font-semibold">Armonizzazione completata</p>
               <p className="text-sm text-muted-foreground">
                 Eseguite: {state.executedCount} · Fallite: {state.failedCount}
@@ -355,7 +355,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
           <TabsContent value="ingestion" className="flex-1 overflow-auto pr-2 mt-4">
             {/* Banner sessione ripresabile */}
             {ingestion.state.resumable && ingestion.state.phase === "idle" && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 mb-4">
+              <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 mb-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="text-xs">
                     <p className="font-semibold flex items-center gap-1">
@@ -445,7 +445,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             {c.status === "running" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                            {c.status === "completed" && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                            {c.status === "completed" && <CheckCircle2 className="h-3 w-3 text-success" />}
                             {c.status === "error" && <AlertCircle className="h-3 w-3 text-destructive" />}
                             <Badge variant="outline" className="text-[10px]">#{c.chunkIndex}</Badge>
                             <span className="font-medium">{c.chunkName}</span>
@@ -502,7 +502,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
             {/* REVIEW (post-pipeline) */}
             {ingestion.state.phase === "review" && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-emerald-600">
+                <div className="flex items-center gap-2 text-success">
                   <CheckCircle2 className="h-5 w-5" />
                   <p className="text-sm font-semibold">Pipeline completata · {ingestion.state.totalProposals} proposte pronte</p>
                 </div>
@@ -533,7 +533,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                   </p>
                 </div>
                 {sessionConflictsCount > 0 && (
-                  <div className="rounded border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+                  <div className="rounded border border-warning/40 bg-warning/5 p-3 text-xs">
                     <p className="font-semibold mb-1">Top conflitti da risolvere</p>
                     <ul className="space-y-1">
                       {ingestion.state.session?.conflicts_found.slice(0, 10).map((c, i) => (
@@ -574,7 +574,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
 
             {/* Banner ripristino dopo refresh: stato in cache, lavoro precedente recuperato. */}
             {(agentic.state.phase === "cancelled" || agentic.state.phase === "done") && agentic.state.entities.length > 0 && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs mb-4 flex items-start justify-between gap-3">
+              <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold flex items-center gap-1">
                     <RotateCw className="h-3.5 w-3.5" /> Sessione ripristinata da cache
@@ -655,9 +655,9 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                   {agentic.state.entities.slice(0, agentic.state.currentIndex + 5).map((e, i) => (
                     <div key={e.id ?? i} className="flex items-center gap-2 text-xs border border-border rounded p-1.5">
                       {e.status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                      {e.status === "done" && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                      {e.status === "done" && <CheckCircle2 className="h-3 w-3 text-success" />}
                       {e.status === "skipped" && <X className="h-3 w-3 text-muted-foreground" />}
-                      {e.status === "needs_review" && <AlertCircle className="h-3 w-3 text-amber-500" />}
+                      {e.status === "needs_review" && <AlertCircle className="h-3 w-3 text-warning" />}
                       {e.status === "error" && <AlertCircle className="h-3 w-3 text-destructive" />}
                       <Badge variant="outline" className="text-[10px]">{e.inferredTable}</Badge>
                       <span className="flex-1 truncate">{e.title}</span>
@@ -673,7 +673,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
 
             {agentic.state.phase === "done" && agentic.state.stats && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-emerald-600">
+                <div className="flex items-center gap-2 text-success">
                   <CheckCircle2 className="h-5 w-5" />
                   <p className="text-sm font-semibold">Pipeline completata</p>
                 </div>
@@ -689,7 +689,7 @@ export function HarmonizeSystemDialog({ open, onOpenChange }: Props) {
                   Insert rate: {(agentic.state.stats.insertRate * 100).toFixed(0)}% · Fatti estratti: {agentic.state.stats.factsExtracted}
                 </div>
                 {agentic.state.warnings.length > 0 && (
-                  <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2 text-xs space-y-1">
+                  <div className="rounded border border-warning/40 bg-warning/5 p-2 text-xs space-y-1">
                     {agentic.state.warnings.map((w, i) => (
                       <p key={i}><Badge variant="outline" className="text-[10px] mr-1">{w.level}</Badge>{w.message}</p>
                     ))}

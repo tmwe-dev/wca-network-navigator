@@ -101,9 +101,9 @@ export function ProspectPage() {
               <div className={`flex items-center justify-center gap-8 px-6 py-2.5 rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                 <StatItem icon={Building2} label="Prospect" value={stats.total.toLocaleString()} color="text-primary" isDark={isDark} />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Mail} label="Email" value={stats.withEmail.toLocaleString()} color="text-emerald-400" isDark={isDark} />
+                <StatItem icon={Mail} label="Email" value={stats.withEmail.toLocaleString()} color="text-success" isDark={isDark} />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
-                <StatItem icon={Mail} label="PEC" value={stats.withPec.toLocaleString()} color="text-emerald-400" isDark={isDark} />
+                <StatItem icon={Mail} label="PEC" value={stats.withPec.toLocaleString()} color="text-success" isDark={isDark} />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
                 <StatItem icon={Phone} label="Telefoni" value={stats.withPhone.toLocaleString()} color="text-primary" isDark={isDark} />
                 <div className={`w-px h-4 ${isDark ? "bg-white/10" : "bg-border"}`} />
@@ -150,10 +150,10 @@ export function ProspectPage() {
             <div className="flex-1 min-h-0 flex flex-col">
               <Tabs defaultValue="prospect" className="flex-1 min-h-0 flex flex-col">
                 <TabsList className={`self-start mb-2 ${isDark ? "bg-white/[0.06] border border-white/[0.08]" : "bg-white/60 border border-white/80"}`}>
-                  <TabsTrigger value="prospect" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-white" : ""}`}>
+                  <TabsTrigger value="prospect" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}>
                     <FileText className="w-3.5 h-3.5" /> Prospect
                   </TabsTrigger>
-                  <TabsTrigger value="import" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-white" : ""}`}>
+                  <TabsTrigger value="import" className={`text-xs gap-1.5 ${isDark ? "data-[state=active]:bg-white/10 data-[state=active]:text-primary-foreground" : ""}`}>
                     <Download className="w-3.5 h-3.5" /> Importa
                   </TabsTrigger>
                 </TabsList>
@@ -179,7 +179,7 @@ export function ProspectPage() {
                   ) : selectedAteco.length === 0 ? (
                     <div className={`h-full flex items-center justify-center rounded-2xl border ${isDark ? "bg-white/[0.03] backdrop-blur-xl border-white/[0.08]" : "bg-white/50 backdrop-blur-xl border-white/80 shadow-sm"}`}>
                       <div className="text-center space-y-3">
-                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-white/10" : "text-slate-200"}`} />
+                        <FileText className={`w-20 h-20 mx-auto ${isDark ? "text-primary-foreground/10" : "text-slate-200"}`} />
                         <p className={`text-lg ${th.h2}`}>Seleziona un codice ATECO</p>
                         <p className={`text-sm ${th.sub}`}>Clicca su uno o più codici ATECO per visualizzare i prospect associati</p>
                         <p className={`text-xs ${th.dim}`}>oppure usa la ricerca per nome / P.IVA</p>

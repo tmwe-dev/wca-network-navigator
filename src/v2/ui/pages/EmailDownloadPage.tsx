@@ -145,7 +145,7 @@ export function EmailDownloadPage() {
         <div className={cn(
           "flex-shrink-0 border-b border-border px-4 py-3 space-y-2",
           isServerRunning && "bg-primary/5",
-          isServerPaused && "bg-amber-500/5",
+          isServerPaused && "bg-warning/5",
           isServerError && "bg-destructive/5",
         )}>
           <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export function EmailDownloadPage() {
                 <><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-primary">Download autonomo in corso...</span></>
               )}
               {isServerPaused && (
-                <><Pause className="h-4 w-4 text-amber-500" /><span className="text-amber-600">Download in pausa</span></>
+                <><Pause className="h-4 w-4 text-warning" /><span className="text-warning">Download in pausa</span></>
               )}
               {isServerError && (
                 <><AlertCircle className="h-4 w-4 text-destructive" /><span className="text-destructive">Errore nel download</span></>

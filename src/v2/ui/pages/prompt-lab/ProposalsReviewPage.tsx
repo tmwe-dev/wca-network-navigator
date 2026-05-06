@@ -228,7 +228,7 @@ function PromptProposalCard({
       {(p.rationale || p.risks || p.assumptions) && (
         <div className="grid grid-cols-3 gap-2 text-[10px]">
           {p.rationale && <div><span className="font-semibold">Razionale:</span> {p.rationale}</div>}
-          {p.risks && <div><span className="font-semibold text-amber-600">Rischi:</span> {p.risks}</div>}
+          {p.risks && <div><span className="font-semibold text-warning">Rischi:</span> {p.risks}</div>}
           {p.assumptions && <div><span className="font-semibold">Assunzioni:</span> {p.assumptions}</div>}
         </div>
       )}
@@ -411,7 +411,7 @@ function KbProposalCard({
       )}
 
       {p.duplicates_of && (
-        <div className="text-[10px] text-amber-600">⚠ Duplicato sospetto di: {p.duplicates_of}</div>
+        <div className="text-[10px] text-warning">⚠ Duplicato sospetto di: {p.duplicates_of}</div>
       )}
       {p.conflicts_with.length > 0 && (
         <div className="text-[10px] text-destructive">⚠ Conflitti con: {p.conflicts_with.join(", ")}</div>

@@ -44,8 +44,8 @@ export function ChannelDropdown({
   const opts: ReadonlyArray<{ v: CestinoChannel | "all"; label: string; Icon: typeof Mail; tone: string; count: number }> = [
     { v: "all",      label: "Tutti i canali", Icon: Inbox,         tone: "text-foreground",     count: counts.total },
     { v: "email",    label: "Email",          Icon: Mail,          tone: "text-violet-500",     count: counts.byChannel.email },
-    { v: "whatsapp", label: "WhatsApp",       Icon: MessageCircle, tone: "text-emerald-500",    count: counts.byChannel.whatsapp },
-    { v: "linkedin", label: "LinkedIn",       Icon: Linkedin,      tone: "text-sky-500",        count: counts.byChannel.linkedin },
+    { v: "whatsapp", label: "WhatsApp",       Icon: MessageCircle, tone: "text-success",    count: counts.byChannel.whatsapp },
+    { v: "linkedin", label: "LinkedIn",       Icon: Linkedin,      tone: "text-info",        count: counts.byChannel.linkedin },
   ];
   const current = opts.find((o) => o.v === value) ?? opts[0];
   return (

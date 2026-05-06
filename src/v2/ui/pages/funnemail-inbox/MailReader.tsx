@@ -184,7 +184,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
             {/* Commercial */}
             <div className="pt-3 border-t border-border/40">
               <div className="flex items-center gap-1.5 mb-2">
-                <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                <Building2 className="h-3.5 w-3.5 text-success" />
                 <h4 className="text-xs font-semibold uppercase tracking-wide">Commerciale</h4>
               </div>
               {decision?.commercial_handoff ? (
@@ -273,7 +273,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
             {/* Scout intel mittente */}
             <div className="pt-3 border-t border-border/40">
               <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                <Sparkles className="h-3.5 w-3.5 text-warning" />
                 <h4 className="text-xs font-semibold uppercase tracking-wide">Scout mittente</h4>
               </div>
               {!intel && (

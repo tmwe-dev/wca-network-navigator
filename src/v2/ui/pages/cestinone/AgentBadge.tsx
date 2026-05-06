@@ -30,9 +30,9 @@ export function EmptyPane({ label }: { label: string }): React.ReactElement {
 
 export function CheckRow({ ok, warn, label, detail }: { ok: boolean; warn?: boolean; label: string; detail?: string }): React.ReactElement {
   const tone = warn
-    ? "text-amber-600 dark:text-amber-400"
+    ? "text-warning dark:text-warning"
     : ok
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-success dark:text-success"
       : "text-muted-foreground";
   const Icon = ok && !warn ? CheckCircle2 : AlertOctagon;
   return (

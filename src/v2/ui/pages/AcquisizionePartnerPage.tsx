@@ -89,14 +89,14 @@ export function AcquisizionePartner() {
                 {pipelineStatus === "scanning" ? "Scansione..." : "Scansiona"}
               </Button>
 
-              <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${extensionAvailable ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}`}>
+              <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${extensionAvailable ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                 <Plug className="w-3 h-3" />
                 <span>{extensionAvailable ? "Ext ✓" : "Ext ✗"}</span>
               </div>
 
               {(pipelineStatus === "running" || pipelineStatus === "paused") && (
                 <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
-                  sessionHealth === "active" ? "bg-emerald-500/10 text-emerald-500" :
+                  sessionHealth === "active" ? "bg-success/10 text-success" :
                   sessionHealth === "dead" ? "bg-destructive/10 text-destructive" :
                   "bg-muted text-muted-foreground"
                 }`}>
@@ -119,7 +119,7 @@ export function AcquisizionePartner() {
             {scanStats && (
               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
                 <span>Trovati: <strong className="text-foreground">{scanStats.total}</strong></span>
-                <span>Già: <strong className="text-emerald-500">{scanStats.existing}</strong></span>
+                <span>Già: <strong className="text-success">{scanStats.existing}</strong></span>
                 <span>Nuovi: <strong className="text-primary">{scanStats.missing}</strong></span>
               </div>
             )}
@@ -139,7 +139,7 @@ export function AcquisizionePartner() {
               </div>
               <span className="text-muted-foreground flex items-center gap-0.5"><Mail className="w-3 h-3" />{liveStats.withEmail}</span>
               <span className="text-primary flex items-center gap-0.5"><Phone className="w-3 h-3" />{liveStats.withPhone}</span>
-              <span className="text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />{liveStats.complete}</span>
+              <span className="text-success flex items-center gap-0.5"><CheckCircle2 className="w-3 h-3" />{liveStats.complete}</span>
               {liveStats.empty > 0 && <span className="text-destructive flex items-center gap-0.5"><XCircle className="w-3 h-3" />{liveStats.empty}</span>}
               {liveStats.failedLoads > 0 && <span className="text-primary flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" />{liveStats.failedLoads}</span>}
             </div>

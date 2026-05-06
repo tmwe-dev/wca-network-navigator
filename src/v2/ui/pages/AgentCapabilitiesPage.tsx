@@ -11,9 +11,9 @@ import { AGENT_ROLES } from "@/data/agentTemplates/roles";
 import { Bot, AlertTriangle, CheckCircle2, BarChart3, Loader2 } from "lucide-react";
 
 function coverageColor(pct: number) {
-  if (pct >= 60) return "text-emerald-400";
-  if (pct >= 30) return "text-yellow-400";
-  return "text-red-400";
+  if (pct >= 60) return "text-success";
+  if (pct >= 30) return "text-warning";
+  return "text-destructive";
 }
 
 function progressColor(pct: number) {
@@ -113,13 +113,13 @@ function AgentDetail({ agent }: { agent: AgentCapability }) {
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-yellow-400" />
+            <AlertTriangle className="h-4 w-4 text-warning" />
             Gap Operativi ({agent.missingTools.length} tool mancanti)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {missingCategories.length === 0 ? (
-            <p className="text-sm text-emerald-400">✅ Nessun gap — copertura completa!</p>
+            <p className="text-sm text-success">✅ Nessun gap — copertura completa!</p>
           ) : (
             <div className="space-y-3">
               {missingCategories.map(([cat, tools]) => (

@@ -76,7 +76,7 @@ export function ListRow({ item, selected, onSelect, departingSoon, checked, onTo
               <Rocket className="h-2.5 w-2.5" /> in partenza
             </Badge>
           )}
-          {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-rose-500" />}
+          {item.status === "blocked" && <AlertOctagon className="h-3 w-3 text-destructive" />}
           <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">{ageLabel}</span>
           {flag && <span className="text-base leading-none" title={item.partnerCountryCode ?? ""}>{flag}</span>}
         </div>

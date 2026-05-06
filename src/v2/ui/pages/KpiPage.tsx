@@ -33,8 +33,8 @@ function StatCard({
       <div
         className={cn(
           "mt-1.5 text-2xl font-semibold tabular-nums",
-          tone === "good" && "text-emerald-500",
-          tone === "warn" && "text-amber-500",
+          tone === "good" && "text-success",
+          tone === "warn" && "text-warning",
           tone === "bad" && "text-destructive"
         )}
       >

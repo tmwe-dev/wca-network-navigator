@@ -42,7 +42,7 @@ function priorityColor(p: SuggestionPriority): string {
   switch (p) {
     case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
     case "high": return "bg-orange-500/15 text-orange-700 border-orange-500/40";
-    case "medium": return "bg-amber-500/15 text-amber-700 border-amber-500/40";
+    case "medium": return "bg-warning/15 text-warning border-warning/40";
     case "low": return "bg-muted text-muted-foreground border-border";
   }
 }
@@ -337,7 +337,7 @@ export default function SuggestionsReviewPage() {
             </Badge>
           )}
           {counts.applied > 0 && (
-            <Badge variant="outline" className="ml-1 bg-emerald-500/10 text-emerald-700 border-emerald-500/30" title="Già applicati al sistema">
+            <Badge variant="outline" className="ml-1 bg-success/10 text-success border-success/30" title="Già applicati al sistema">
               {counts.applied} applicati
             </Badge>
           )}
@@ -426,8 +426,8 @@ export default function SuggestionsReviewPage() {
                 </div>
                 <ul className="space-y-1 text-muted-foreground leading-snug pl-5 list-disc">
                   <li><span className="font-medium text-foreground">Proposta</span>: una modifica suggerita dall'AI a un prompt, una regola o una scheda KB.</li>
-                  <li><span className="font-medium text-emerald-600">Sicura ✓</span> = modifica di solo testo, basso impatto, reversibile. Si può approvare in massa.</li>
-                  <li><span className="font-medium text-amber-600">Da rivedere</span> = inserimenti nuovi, eliminazioni, agenti, o impatto alto. Vanno lette una a una.</li>
+                  <li><span className="font-medium text-success">Sicura ✓</span> = modifica di solo testo, basso impatto, reversibile. Si può approvare in massa.</li>
+                  <li><span className="font-medium text-warning">Da rivedere</span> = inserimenti nuovi, eliminazioni, agenti, o impatto alto. Vanno lette una a una.</li>
                   <li><span className="font-medium text-foreground">"Approva tutte le sicure"</span>: spunta solo le proposte verdi. Quelle gialle restano da approvare a mano.</li>
                   <li>Per applicare davvero le modifiche selezionate al database, premi <span className="font-medium text-foreground">"Salva nel DB"</span> in basso.</li>
                 </ul>
@@ -516,8 +516,8 @@ export default function SuggestionsReviewPage() {
           {approved.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-warning">
                   Approvati — in attesa dell'Architect ({approved.length})
                 </h2>
               </div>
@@ -526,9 +526,9 @@ export default function SuggestionsReviewPage() {
                 Verranno iniettati nel contesto al prossimo "Migliora tutto".
               </p>
               {approved.map((item) => (
-                <div key={item.id} className="rounded border bg-green-500/5 border-green-500/30 p-3">
+                <div key={item.id} className="rounded border bg-success/5 border-success/30 p-3">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] gap-1 border-green-500/40 text-green-700">
+                    <Badge variant="outline" className="text-[10px] gap-1 border-success/40 text-success">
                       {typeIcon(item.suggestion_type)}
                       {typeLabel(item.suggestion_type)}
                     </Badge>

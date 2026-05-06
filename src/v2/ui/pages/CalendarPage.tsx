@@ -37,16 +37,16 @@ export function CalendarPage() {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-950">
+    <div className="h-full flex flex-col bg-card">
       {/* Header */}
-      <div className="border-b border-gray-800 bg-gray-900 px-6 py-4">
+      <div className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Calendario</h1>
+          <h1 className="text-3xl font-bold text-primary-foreground">Calendario</h1>
 
           <div className="flex items-center gap-2">
             <Button
               onClick={() => setCreateDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-primary text-primary-foreground"
             >
               <Plus className="w-4 h-4 mr-2" />
               Nuovo Evento
@@ -67,7 +67,7 @@ export function CalendarPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-80 border-l border-gray-800 bg-gray-900 overflow-auto p-6 space-y-6">
+        <div className="w-80 border-l border-border bg-card overflow-auto p-6 space-y-6">
           {/* Upcoming Events Widget */}
           <UpcomingEventsWidget
             limit={5}
@@ -77,8 +77,8 @@ export function CalendarPage() {
           {/* Filters */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-300">Filtra per tipo</h3>
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">Filtra per tipo</h3>
             </div>
 
             <div className="space-y-2">
@@ -86,8 +86,8 @@ export function CalendarPage() {
                 onClick={() => setEventTypeFilter(null)}
                 className={`w-full px-3 py-2 rounded text-sm font-medium text-left transition-colors ${
                   eventTypeFilter === null
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card text-foreground hover:bg-gray-700"
                 }`}
               >
                 Tutti gli eventi
@@ -99,8 +99,8 @@ export function CalendarPage() {
                   onClick={() => setEventTypeFilter(opt.value)}
                   className={`w-full px-3 py-2 rounded text-sm font-medium text-left transition-colors ${
                     eventTypeFilter === opt.value
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-foreground hover:bg-gray-700"
                   }`}
                 >
                   {opt.label}
@@ -110,50 +110,50 @@ export function CalendarPage() {
           </div>
 
           {/* Legend */}
-          <div className="border-t border-gray-800 pt-6 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-300">Legenda</h3>
+          <div className="border-t border-border pt-6 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Legenda</h3>
 
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-blue-500" />
-                <span className="text-gray-400">Riunioni</span>
+                <span className="text-muted-foreground">Riunioni</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-green-500" />
-                <span className="text-gray-400">Chiamate</span>
+                <span className="text-muted-foreground">Chiamate</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-yellow-500" />
-                <span className="text-gray-400">Attività</span>
+                <span className="text-muted-foreground">Attività</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-purple-500" />
-                <span className="text-gray-400">Promemoria</span>
+                <span className="text-muted-foreground">Promemoria</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded bg-orange-500" />
-                <span className="text-gray-400">Follow-up</span>
+                <span className="text-muted-foreground">Follow-up</span>
               </div>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="border-t border-gray-800 pt-6 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-300">Statistiche</h3>
+          <div className="border-t border-border pt-6 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Statistiche</h3>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-gray-800 rounded p-3">
-                <p className="text-gray-400">Programmati</p>
-                <p className="text-2xl font-bold text-white mt-1">
+              <div className="bg-card rounded p-3">
+                <p className="text-muted-foreground">Programmati</p>
+                <p className="text-2xl font-bold text-primary-foreground mt-1">
                   {eventTypeFilter
                     ? new Date().getTime() // Placeholder
                     : "—"}
                 </p>
               </div>
 
-              <div className="bg-gray-800 rounded p-3">
-                <p className="text-gray-400">Completati</p>
-                <p className="text-2xl font-bold text-white mt-1">—</p>
+              <div className="bg-card rounded p-3">
+                <p className="text-muted-foreground">Completati</p>
+                <p className="text-2xl font-bold text-primary-foreground mt-1">—</p>
               </div>
             </div>
           </div>

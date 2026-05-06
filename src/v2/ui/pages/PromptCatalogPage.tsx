@@ -243,7 +243,7 @@ export default function PromptCatalogPage() {
                     </TableCell>
                     <TableCell className="text-xs">
                       {it.is_active ? (
-                        <Badge className="text-[10px] h-5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">attivo</Badge>
+                        <Badge className="text-[10px] h-5 bg-success/15 text-success dark:text-success border-success/30">attivo</Badge>
                       ) : (
                         <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">disattivo</Badge>
                       )}

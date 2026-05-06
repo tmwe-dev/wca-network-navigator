@@ -194,7 +194,7 @@ export function AgentCapabilitiesTab() {
             />
 
             <div className="flex items-center gap-2 pt-2 border-t">
-              <Shield className="h-4 w-4 text-amber-500" />
+              <Shield className="h-4 w-4 text-warning" />
               <h3 className="text-sm font-semibold">Tool che richiedono approvazione</h3>
               <span className="text-[11px] text-muted-foreground">
                 In aggiunta agli hard guards di sicurezza.
@@ -270,7 +270,7 @@ function ToolGrid({
           ? variant === "danger"
             ? "border-destructive bg-destructive/10"
             : variant === "warning"
-            ? "border-amber-500 bg-amber-500/10"
+            ? "border-amber-500 bg-warning/10"
             : "border-primary bg-primary/10"
           : "border-border";
         return (

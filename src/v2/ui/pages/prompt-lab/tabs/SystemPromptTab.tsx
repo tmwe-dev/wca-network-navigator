@@ -87,10 +87,10 @@ export function SystemPromptTab() {
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
           <span className="font-medium text-foreground">{state.blocks.length} blocchi</span>
           {dirtyCount > 0 && (
-            <span className="text-amber-600">· {dirtyCount} non salvati</span>
+            <span className="text-warning">· {dirtyCount} non salvati</span>
           )}
           {improvedCount > 0 && (
-            <span className="text-green-600">· {improvedCount} con proposta AI</span>
+            <span className="text-success">· {improvedCount} con proposta AI</span>
           )}
           <TooltipProvider>
             <Tooltip>

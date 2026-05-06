@@ -168,10 +168,10 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
 
               {/* LOVABLE-110: Banner suggerimenti approvati pronti per l'Architect */}
               {suggestionCounts.approved > 0 && (
-                <div className="rounded border border-green-500/40 bg-green-500/5 p-3 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <div className="rounded border border-success/40 bg-success/5 p-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-success flex-shrink-0" />
                   <div className="text-xs flex-1">
-                    <span className="font-medium text-green-700">
+                    <span className="font-medium text-success">
                       {suggestionCounts.approved} suggeriment{suggestionCounts.approved === 1 ? "o approvato" : "i approvati"} pronto{suggestionCounts.approved > 1 ? "i" : ""} per l'Architect.
                     </span>
                     <span className="text-muted-foreground ml-1">
@@ -386,7 +386,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                     </Badge>
                   )}
                   {contractNeededCount > 0 && (
-                    <Badge variant="outline" className="gap-1 border-amber-500 text-amber-700">
+                    <Badge variant="outline" className="gap-1 border-amber-500 text-warning">
                       <Wrench className="h-3 w-3" />
                       {contractNeededCount} contratto backend
                     </Badge>
@@ -451,7 +451,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                               {isSkipped && <Badge variant="secondary" className="text-[10px]">Già ottimo</Badge>}
                               {/* LOVABLE-109: outcome_type badges */}
                               {p.outcomeType === "contract_needed" && (
-                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700 gap-0.5">
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-warning gap-0.5">
                                   <Wrench className="h-2.5 w-2.5" /> Contratto backend
                                 </Badge>
                               )}
@@ -477,7 +477,7 @@ export function GlobalImproverDialog({ open, onOpenChange, defaultGrouping = "ta
                               </p>
                             )}
                             {p.architecturalNote && (
-                              <p className="text-[10px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1">
+                              <p className="text-[10px] text-warning bg-amber-50 rounded px-1.5 py-0.5 mt-1">
                                 <span className="font-medium">Nota architetturale:</span> {p.architecturalNote}
                               </p>
                             )}

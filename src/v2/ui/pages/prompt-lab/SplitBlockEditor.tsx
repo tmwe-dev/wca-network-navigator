@@ -138,7 +138,7 @@ export function SplitBlockEditor({
             )}
             <h3 className="text-sm font-semibold truncate">{blockTitle}</h3>
             {block.dirty && (
-              <span className="text-[10px] text-amber-600 font-medium flex-shrink-0">non salvato</span>
+              <span className="text-[10px] text-warning font-medium flex-shrink-0">non salvato</span>
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -195,16 +195,16 @@ export function SplitBlockEditor({
 
         {/* Diff inline + accept/discard */}
         {block.improved && showDiff && (
-          <div className="flex flex-col min-h-0 flex-[1.5] border border-green-300 dark:border-green-800 rounded-md bg-green-50/50 dark:bg-green-950/20 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-green-200 dark:border-green-900 bg-green-100/50 dark:bg-green-950/40 flex-shrink-0">
-              <span className="text-xs font-semibold text-green-800 dark:text-green-300">
+          <div className="flex flex-col min-h-0 flex-[1.5] border border-green-300 dark:border-green-800 rounded-md bg-green-50/50 dark:bg-success/20 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-green-200 dark:border-green-900 bg-success/50 dark:bg-success/40 flex-shrink-0">
+              <span className="text-xs font-semibold text-success dark:text-success">
                 Proposta AI · diff inline
               </span>
               <div className="flex items-center gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 text-xs gap-1 text-green-700 dark:text-green-400 hover:bg-green-200/50"
+                  className="h-6 px-2 text-xs gap-1 text-success dark:text-success hover:bg-success/50"
                   onClick={() => onAccept(block.id)}
                 >
                   <Check className="h-3 w-3" /> Accetta
@@ -238,15 +238,15 @@ function InlineDiff({ original, improved }: { original: string; improved: string
       {parts.map((p, i) => {
         const lines = p.value.replace(/\n$/, "").split("\n");
         const bg = p.added
-          ? "bg-green-100/70 dark:bg-green-900/30"
+          ? "bg-success/70 dark:bg-success/30"
           : p.removed
-            ? "bg-red-100/70 dark:bg-red-900/30"
+            ? "bg-destructive/70 dark:bg-destructive/30"
             : "bg-transparent";
         const prefix = p.added ? "+" : p.removed ? "−" : " ";
         const prefixColor = p.added
-          ? "text-green-700 dark:text-green-400"
+          ? "text-success dark:text-success"
           : p.removed
-            ? "text-red-700 dark:text-red-400"
+            ? "text-destructive dark:text-destructive"
             : "text-muted-foreground/40";
         return (
           <div key={i} className={cn("py-0.5", bg)}>

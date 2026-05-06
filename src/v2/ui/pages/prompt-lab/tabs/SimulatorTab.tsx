@@ -242,7 +242,7 @@ export function SimulatorTab() {
                 >
                   <span className="font-mono truncate">{t.name}</span>
                   {t.requires_approval && (
-                    <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">
+                    <Badge variant="outline" className="text-[9px] border-amber-500 text-warning">
                       approva
                     </Badge>
                   )}
@@ -283,7 +283,7 @@ export function SimulatorTab() {
               <ul className="text-xs space-y-0.5">
                 {result.operative_prompts.applied.map((n) => (
                   <li key={n} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    <CheckCircle2 className="h-3 w-3 text-success" />
                     <span>{n}</span>
                   </li>
                 ))}
@@ -305,9 +305,9 @@ export function SimulatorTab() {
             )}
           </Card>
 
-          <Card className="p-3 space-y-2 border-amber-500/40">
+          <Card className="p-3 space-y-2 border-warning/40">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-amber-600" />
+              <ShieldCheck className="h-4 w-4 text-warning" />
               <h3 className="text-sm font-semibold">Hard guards (sempre attivi)</h3>
             </div>
             <div className="text-xs space-y-1">
@@ -379,7 +379,7 @@ export function SimulatorTab() {
                               tc.would_be_blocked
                                 ? "border-destructive bg-destructive/5"
                                 : tc.would_require_approval
-                                ? "border-amber-500 bg-amber-500/5"
+                                ? "border-amber-500 bg-warning/5"
                                 : "border-border"
                             }`}
                           >
@@ -389,7 +389,7 @@ export function SimulatorTab() {
                                 <Badge variant="destructive" className="text-[9px]">bloccato</Badge>
                               )}
                               {tc.would_require_approval && !tc.would_be_blocked && (
-                                <Badge variant="outline" className="text-[9px] border-amber-500 text-amber-600">
+                                <Badge variant="outline" className="text-[9px] border-amber-500 text-warning">
                                   richiede approvazione
                                 </Badge>
                               )}
