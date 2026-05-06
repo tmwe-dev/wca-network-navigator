@@ -85,21 +85,27 @@ export async function callExtractAI(args: {
 }): Promise<ExtractResult> {
   const safeMarkdown = truncateMarkdownSmart(args.markdown, args.targetFields);
   const compactPrior = compactFindings(args.priorFindings);
-  const { data, error } = await supabase.functions.invoke("sherlock-extract", {
-    body: {
-      markdown: safeMarkdown,
-      extract_prompt: `Estrai dalla pagina "${args.label}" tutto ciò che sia utile per scrivere
+  let data: unknown;
+  try {
+    data = await invokeAi("sherlock-extract", {
+      scope: "sherlock",
+      context: { source: "sherlock.callExtractAI", mode: "extract" },
+      body: {
+        markdown: safeMarkdown,
+        extract_prompt: `Estrai dalla pagina "${args.label}" tutto ciò che sia utile per scrivere
 una mail commerciale a questa azienda. Dai priorità ai target_fields ma cattura anche
 findings extra significativi (servizi, segmenti clienti, certificazioni, presenze geografiche,
 notizie recenti). Ignora cookie banner, navigazione, footer.`,
-      target_fields: args.targetFields,
-      prior_findings: compactPrior,
-      label: args.label,
-    },
-  });
-
+        target_fields: args.targetFields,
+        prior_findings: compactPrior,
+        label: args.label,
+      },
+    });
+  } catch (e) {
+    if (args.signal.aborted) throw new Error("Aborted");
+    throw new Error(e instanceof Error ? e.message : "AI extract failed");
+  }
   if (args.signal.aborted) throw new Error("Aborted");
-  if (error) throw new Error(error.message ?? "AI extract failed");
 
   const d = (data ?? {}) as Record<string, unknown>;
 
