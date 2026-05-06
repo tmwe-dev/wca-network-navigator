@@ -12,6 +12,7 @@ export const commsKeys = {
     aiGenerated: ["ai-generated-activities"] as const,
     workedToday: ["worked-today"] as const,
     agendaDay: (...args: unknown[]) => ["agenda-day", ...args] as const,
+    departmentKanban: ["activities-department-kanban"] as const,
   },
   outreach: {
     scheduled: (filters?: unknown) => ["outreach-scheduled", filters] as const,
