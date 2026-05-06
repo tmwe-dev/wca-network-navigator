@@ -468,8 +468,10 @@ ${bodyBlock}`;
             body_text: body_text || "",
             partner_id: partner_id || null,
             user_id: body.user_id ?? null,
-            // Step 1: solo lettura passiva. Settare a true per Step 2.
-            emit_pending_actions: false,
+            // Step 2 ATTIVO: materializza suggested_actions in ai_pending_actions
+            // (risk gate + two-phase commit garantiscono che WRITE/DELETE restino
+            // bloccati dietro approvazione operatore).
+            emit_pending_actions: true,
           },
         });
       } catch (_e) {
