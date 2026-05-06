@@ -223,7 +223,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
     );
   }
 
-  const wcaStatusColor = wcaSession.sessionActive === true ? "text-emerald-400" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
+  const wcaStatusColor = wcaSession.sessionActive === true ? "text-success" : wcaSession.isChecking ? "text-primary animate-pulse" : "text-muted-foreground";
   const wcaStatusLabel = wcaSession.sessionActive === true ? "WCA Online" : wcaSession.isChecking ? "Verifica…" : wcaSession.sessionActive === false ? "WCA Offline" : "WCA";
 
   return (
