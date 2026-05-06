@@ -59,7 +59,7 @@ export function WhatsAppChatList({
   }
 
   return (
-    <div className="flex flex-col border-r border-border bg-background shrink-0 w-[280px] min-w-[280px]">
+    <div className="flex flex-col h-full w-full border-r border-border bg-background">
       <div className="flex-shrink-0 p-2 border-b border-border">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
