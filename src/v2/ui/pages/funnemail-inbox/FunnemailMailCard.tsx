@@ -11,18 +11,14 @@
  * della inbox standard. Le azioni rapide ("Azioni", "Assegna gruppo")
  * compaiono in overlay sull'hover, e la checkbox di bulk è opzionale.
  */
-import { Bell, BellOff, Brain, CalendarClock, Gauge, Hand, MailOpen, Plane, Sparkles, Tag, Undo2 } from "lucide-react";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { Bell, Brain, CalendarClock, Gauge, Hand, MailOpen, Sparkles, Tag, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
 import { extractSenderBrand } from "@/components/outreach/email/emailUtils";
 import { InlineGroupAssigner } from "@/components/outreach/email/InlineGroupAssigner";
 import { EmailMessageActions } from "@/components/outreach/EmailMessageActions";
 import { useMarkAsRead } from "@/hooks/useEmailActions";
 import { cn } from "@/lib/utils";
-import { getCountryFlag } from "@/lib/countries";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import type { FunnemailDecisionRow, FunnemailPartnerSnapshot, SenderIntelRow } from "@/data/funnemailInbox";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
@@ -46,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ReminderPopover } from "./ReminderPopover";
+import { MailRowChrome } from "@/v2/ui/molecules/email/MailRowChrome";
 
 type DecoratedMessage = ChannelMessage & {
   category?: string | null;
@@ -82,12 +79,6 @@ interface Props {
   reminder?: FunnemailReminderRow | null;
   onCreateReminder?: (remindAt: Date, note?: string) => void;
   onDismissReminder?: (id: string) => void;
-}
-
-function formatListDate(value: string): string {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return format(d, "dd/MM HH:mm", { locale: it });
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -162,49 +153,9 @@ export function FunnemailMailCard({
     return `tra ${Math.round(reminderMinutes / (60 * 24))}g`;
   })();
 
-  return (
-    <div
-      className={cn(
-        "group relative w-full border-b border-border p-3 text-left transition-colors",
-        selected && "bg-muted",
-        !selected && isUnread && "bg-primary/5",
-        !selected && !isUnread && "hover:bg-muted/50",
-        inHolding && "border-l-2 border-l-warning",
-      )}
-    >
-      <div className="flex w-full items-start gap-2.5">
-        {showCheckbox && (
-          <div
-            className="mt-0.5 flex-shrink-0"
-            onClick={(e) => { e.stopPropagation(); onToggleChecked?.(); }}
-          >
-            <Checkbox checked={!!checked} aria-label="Seleziona email" />
-          </div>
-        )}
-        <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-          {partner?.logo_url ? (
-            <img src={partner.logo_url} alt={displayBrand} className="mt-0.5 h-10 w-10 flex-shrink-0 rounded-md object-contain" loading="lazy" />
-          ) : (
-            <CompanyLogo email={message.from_address} name={displayBrand} size={40} className="mt-0.5 flex-shrink-0" showFlag />
-          )}
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className={cn("truncate text-base", isUnread ? "font-semibold text-primary" : "font-semibold text-foreground")}>{displayBrand}</span>
-                  <CompanyLogoInline email={message.from_address} size={18} />
-                  {countryCode ? <span className="text-base leading-none" title={partner?.country_name ?? countryCode}>{getCountryFlag(countryCode)}</span> : <CountryFlag email={message.from_address} size={18} />}
-                  {inHolding && <Plane className="h-4 w-4 animate-pulse text-warning" />}
-                </div>
-                <p className="truncate text-sm text-foreground">{secondaryLine}</p>
-              </div>
-              <span className="shrink-0 text-xs text-muted-foreground">{formatListDate(displayDate)}</span>
-            </div>
-
-            <p className={cn("truncate text-sm", isUnread ? "font-medium text-foreground" : "text-muted-foreground")}>{cleanSubject}</p>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {funnemailFolder && (
+  const chips = (
+    <>
+      {funnemailFolder && (
                 <span className="inline-flex items-center gap-1 rounded border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground" title="Cartella Funny Mail Inbox">
                   <Tag className="h-3 w-3" />{meta.funnemail_folder_icon && <span>{meta.funnemail_folder_icon}</span>}<span className="max-w-[160px] truncate">{funnemailFolder}</span>
                 </span>
@@ -281,10 +232,12 @@ export function FunnemailMailCard({
                   <Bell className="h-3 w-3" />{reminderLabel}
                 </span>
               )}
-            </div>
-          </div>
-        </button>
-        {claimedByOther && (
+    </>
+  );
+
+  const trailing = (
+    <>
+      {claimedByOther && (
           <span
             className="mt-1 inline-flex h-7 items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-2 text-xs font-medium text-warning"
             title={`Preso da ${claim?.operator_display_name ?? "operatore"} ${claimMinutes} min fa`}
@@ -314,10 +267,12 @@ export function FunnemailMailCard({
             <MailOpen className="h-3 w-3" />
           </button>
         )}
-      </div>
+    </>
+  );
 
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-        {onCreateReminder && (
+  const actions = (
+    <>
+      {onCreateReminder && (
           <ReminderPopover
             onCreate={(remindAt: Date, note?: string) => onCreateReminder(remindAt, note)}
             existing={reminder ?? null}
@@ -364,7 +319,39 @@ export function FunnemailMailCard({
           fromAddress={message.from_address}
           currentGroupName={groupName}
         />
-      </div>
+    </>
+  );
+
+  const leading = showCheckbox ? (
+    <div
+      className="absolute left-1 top-3 z-10"
+      onClick={(e) => { e.stopPropagation(); onToggleChecked?.(); }}
+    >
+      <Checkbox checked={!!checked} aria-label="Seleziona email" />
+    </div>
+  ) : null;
+
+  return (
+    <div className={cn("relative", showCheckbox && "pl-6")}>
+      {leading}
+      <MailRowChrome
+        fromAddress={message.from_address}
+        brand={displayBrand}
+        subject={cleanSubject}
+        secondaryLine={secondaryLine}
+        date={displayDate}
+        isUnread={isUnread}
+        isSelected={selected}
+        inHolding={inHolding}
+        countryCode={countryCode}
+        countryName={partner?.country_name ?? null}
+        logoUrl={partner?.logo_url ?? null}
+        size="md"
+        chips={chips}
+        trailing={trailing}
+        actions={actions}
+        onClick={onSelect}
+      />
     </div>
   );
 }
