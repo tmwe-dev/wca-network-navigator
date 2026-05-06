@@ -123,10 +123,10 @@ Deno.serve(async (req) => {
 
     const result = await callTmwe(op, bearer, body.params);
 
-    // best-effort: aggiorna stats catalogo
+    // best-effort: aggiorna timestamp ultima chiamata
     if (catRow) {
       svc.from("tmwe_api_catalog")
-        .update({ last_called_at: new Date().toISOString(), call_count: (catRow as { call_count?: number }).call_count ? undefined : undefined })
+        .update({ last_called_at: new Date().toISOString() })
         .eq("op", opName)
         .then(() => undefined);
     }
