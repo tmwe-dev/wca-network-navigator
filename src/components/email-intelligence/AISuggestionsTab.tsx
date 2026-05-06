@@ -32,6 +32,7 @@ import { MultiSelectBulkBar } from "./management/MultiSelectBulkBar";
 import { SenderActionsDialog } from "./management/SenderActionsDialog";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 import { DeepSearchEmailBulkButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailBulkButton";
+import { ClassificationInsightsPanel } from "./ClassificationInsightsPanel";
 
 interface AddressRow {
   id: string;
@@ -430,6 +431,17 @@ export default function AISuggestionsTab() {
         group_icon: group.icon,
         ai_suggestion_accepted: false,
       }).eq("id", row.id);
+      // Trigger Refiner se la scelta diverge dal suggerimento AI (best-effort)
+      if (row.ai_suggested_group && row.ai_suggested_group !== group.nome_gruppo) {
+        invokeEdge("refine-classification-rule", {
+          body: { address_rule_id: row.id, chosen_group_id: group.id },
+          context: "ai-suggestions-tab-assign",
+        }).then(() => {
+          qc.invalidateQueries({ queryKey: queryKeys.ai.classificationInsights("pending") });
+        }).catch((err: Error) => {
+          console.warn("[refine] skipped:", err.message);
+        });
+      }
       return row.id;
     },
     onSuccess: (id) => {
