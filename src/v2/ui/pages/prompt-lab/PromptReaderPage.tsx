@@ -10,8 +10,9 @@
  *  - ReaderContent.tsx        → contenuto pannello reader
  *  - usePromptReaderState.ts  → state, cache, KB load, download handlers
  */
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, BookText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { cn } from "@/lib/utils";
 import PromptCopilotPanel from "./PromptCopilotPanel";
 import { SwapPanels } from "./components/SwapPanels";
@@ -26,6 +27,7 @@ export default function PromptReaderPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
+      <PageTitleHeader icon={BookText} title="Prompt Reader" subtitle="Lettura prompt operativi" />
       <Header
         selectedId={s.selected?.id}
         loadingId={s.loadingId}

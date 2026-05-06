@@ -8,7 +8,8 @@
  * Le cartelle e il classificatore sono governati da DB (zero hardcode).
  */
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { EmailDetailView } from "@/components/outreach/EmailDetailView";
 import { useFunnemailInbox } from "@/v2/hooks/useFunnemailInbox";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
@@ -44,6 +45,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
+      <PageTitleHeader icon={Sparkles} title="Funnemail" subtitle="Inbox classificata AI" />
       <PersistentResizablePanelGroup
         storageId="funnemail-inbox:list-vs-reader"
         direction="horizontal"

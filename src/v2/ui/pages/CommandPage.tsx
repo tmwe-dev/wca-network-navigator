@@ -31,6 +31,8 @@ import { CommandPageBackButton } from "./command/components/CommandPageBackButto
 import { CommandPageHeader } from "./command/components/CommandPageHeader";
 import { CommandPageBackground } from "./command/components/CommandPageBackground";
 import CommandThread from "./command/components/CommandThread";
+import { Command as CommandIcon } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 // NB: BriefingPanel, useCommandBriefing e useRecentCommandPrompts intenzionalmente
 // non importati: lo stato vuoto della Command resta zen (solo titolo + orb + input).
 // I componenti restano sul filesystem per un futuro "next best action" ragionato.
@@ -178,6 +180,7 @@ const CommandPage = () => {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
+      <PageTitleHeader icon={CommandIcon} title="Command" subtitle="Orchestratore conversazionale" />
       <CommandPageBackButton currentPath="/v2/command" />
       <CommandPageBackground />
       <CommandPageHeader

@@ -19,6 +19,8 @@ import { FinderApiCanvas } from "./finder-api/FinderApiCanvas";
 import VoicePresence from "@/components/workspace/VoicePresence";
 import { useVoiceInput } from "./command/hooks/useVoiceInput";
 import { useVoiceOutput } from "./command/hooks/useVoiceOutput";
+import { Plug } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 const FinderApiPage = () => {
   const f = useFinderApi();
@@ -68,10 +70,8 @@ const FinderApiPage = () => {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden flex flex-col">
+      <PageTitleHeader icon={Plug} title="Finder API" subtitle="Interroga TMWE/Findair" />
       <CommandPageBackButton currentPath="/v2/finder-api" />
-      <div className="fixed top-6 left-[120px] z-50 flex items-center px-3 py-2 rounded-xl text-[11px] font-medium text-foreground/90 bg-white/5 backdrop-blur-md border border-white/[0.06]">
-        Finder API
-      </div>
       <CommandPageBackground />
       <CommandPageHeader
         flowPhase={f.busy ? "executing" : "idle"}
