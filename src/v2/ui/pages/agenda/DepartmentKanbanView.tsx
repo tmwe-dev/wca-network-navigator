@@ -47,7 +47,7 @@ interface ColumnDef {
 const COLUMNS: readonly ColumnDef[] = [
   { id: "unassigned", label: "Da assegnare",     icon: <HelpCircle className="h-3.5 w-3.5" />, colorClass: "text-muted-foreground", bgClass: "bg-muted/30",       borderClass: "border-border/40" },
   { id: "commercial", label: "Commerciale",      icon: <Briefcase className="h-3.5 w-3.5" />,  colorClass: "text-blue-400",         bgClass: "bg-blue-500/10",    borderClass: "border-blue-500/20" },
-  { id: "operations", label: "Operativo",        icon: <Truck className="h-3.5 w-3.5" />,      colorClass: "text-amber-400",        bgClass: "bg-amber-500/10",   borderClass: "border-amber-500/20" },
+  { id: "operations", label: "Operativo",        icon: <Truck className="h-3.5 w-3.5" />,      colorClass: "text-warning",        bgClass: "bg-warning/10",   borderClass: "border-warning/20" },
   { id: "admin",      label: "Amministrativo",   icon: <Receipt className="h-3.5 w-3.5" />,    colorClass: "text-indigo-400",       bgClass: "bg-indigo-500/10",  borderClass: "border-indigo-500/20" },
   { id: "general",    label: "Servizi Generali", icon: <Wrench className="h-3.5 w-3.5" />,     colorClass: "text-purple-400",       bgClass: "bg-purple-500/10",  borderClass: "border-purple-500/20" },
 ] as const;
@@ -55,8 +55,8 @@ const COLUMNS: readonly ColumnDef[] = [
 function priorityBadge(p: string | null): { label: string; cls: string } | null {
   if (!p) return null;
   const v = p.toLowerCase();
-  if (v === "high" || v === "p0" || v === "critical") return { label: "P0", cls: "bg-red-500/15 text-red-300 border-red-500/30" };
-  if (v === "medium" || v === "p1") return { label: "P1", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+  if (v === "high" || v === "p0" || v === "critical") return { label: "P0", cls: "bg-destructive/15 text-destructive border-destructive/30" };
+  if (v === "medium" || v === "p1") return { label: "P1", cls: "bg-warning/15 text-warning border-warning/30" };
   if (v === "low" || v === "p2") return { label: "P2", cls: "bg-blue-500/15 text-blue-300 border-blue-500/30" };
   return null;
 }

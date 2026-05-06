@@ -255,7 +255,7 @@ export function AgentPersonasTab() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs text-emerald-600 dark:text-emerald-400">Usa sempre (uno per riga)</Label>
+                <Label className="text-xs text-success dark:text-success">Usa sempre (uno per riga)</Label>
                 <Textarea
                   className="mt-1 font-mono text-xs"
                   rows={5}

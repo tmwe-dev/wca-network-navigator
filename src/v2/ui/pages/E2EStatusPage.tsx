@@ -9,9 +9,9 @@ import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Activity } from "lucide-react";
 
 function StatusIcon({ status }: { status: E2ESpecResult["status"] }) {
-  if (status === "passed") return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-  if (status === "failed" || status === "timedOut") return <XCircle className="w-4 h-4 text-red-600" />;
-  if (status === "flaky") return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+  if (status === "passed") return <CheckCircle2 className="w-4 h-4 text-success" />;
+  if (status === "failed" || status === "timedOut") return <XCircle className="w-4 h-4 text-destructive" />;
+  if (status === "flaky") return <AlertTriangle className="w-4 h-4 text-warning" />;
   return <MinusCircle className="w-4 h-4 text-muted-foreground" />;
 }
 
@@ -142,8 +142,8 @@ export function E2EStatusPage() {
               {runs.slice(1).map((r) => (
                 <div key={r.id} className="flex items-center gap-2 py-1 border-b border-border/40 last:border-0">
                   <span className="text-muted-foreground tabular-nums w-36">{new Date(r.finished_at).toLocaleString()}</span>
-                  <span className="text-green-600">{r.passed}P</span>
-                  <span className={r.failed > 0 ? "text-red-600" : "text-muted-foreground"}>{r.failed}F</span>
+                  <span className="text-success">{r.passed}P</span>
+                  <span className={r.failed > 0 ? "text-destructive" : "text-muted-foreground"}>{r.failed}F</span>
                   <span className="text-muted-foreground">{r.skipped}S</span>
                   <span className="text-muted-foreground ml-auto">{fmtDuration(r.duration_ms)}</span>
                 </div>
@@ -158,9 +158,9 @@ export function E2EStatusPage() {
 
 function Stat({ label, value, tone = "default" }: { label: string; value: number; tone?: "green" | "red" | "amber" | "muted" | "default" }) {
   const colors = {
-    green: "text-green-600",
-    red: "text-red-600",
-    amber: "text-amber-500",
+    green: "text-success",
+    red: "text-destructive",
+    amber: "text-warning",
     muted: "text-muted-foreground",
     default: "text-foreground",
   };

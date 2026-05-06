@@ -306,10 +306,10 @@ function StatPill({ icon: Icon, value, label, isDark: _isDark, onClick, active, 
 }) {
   const isComplete = variant === "ok" || (variant === "warn" && value === 0);
   const pillClass = isComplete || value === 0
-    ? "bg-emerald-500/15 border-emerald-500/25 text-emerald-300"
+    ? "bg-success/15 border-success/25 text-success"
     : value <= 10
-      ? "bg-amber-500/15 border-amber-500/25 text-amber-300"
-      : "bg-red-500/15 border-red-500/25 text-red-300";
+      ? "bg-warning/15 border-warning/25 text-warning"
+      : "bg-destructive/15 border-destructive/25 text-destructive";
 
   return (
     <Tooltip>

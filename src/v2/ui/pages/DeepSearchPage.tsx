@@ -30,10 +30,10 @@ const LEVEL_META: Record<SherlockLevel, { label: string; icon: string; eta: stri
 
 function StatusIcon({ status }: { status: SherlockStepResult["status"] }) {
   if (status === "running") return <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />;
-  if (status === "done")    return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />;
+  if (status === "done")    return <CheckCircle2 className="w-3.5 h-3.5 text-success" />;
   if (status === "error")   return <AlertCircle className="w-3.5 h-3.5 text-destructive" />;
   if (status === "skipped") return <SkipForward className="w-3.5 h-3.5 text-muted-foreground" />;
-  if (status === "cached")  return <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />;
+  if (status === "cached")  return <CheckCircle2 className="w-3.5 h-3.5 text-warning" />;
   return <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/40" />;
 }
 

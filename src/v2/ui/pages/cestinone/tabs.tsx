@@ -34,7 +34,7 @@ export function PreviewTab({ item }: { item: CestinoItem }): React.ReactElement 
           <span className="text-muted-foreground">a</span>
           <span className="font-medium">{item.recipientHandle ?? "—"}</span>
           {limit && (
-            <span className={cn("ml-auto text-[10px]", charCount > limit ? "text-rose-500" : "text-muted-foreground")}>
+            <span className={cn("ml-auto text-[10px]", charCount > limit ? "text-destructive" : "text-muted-foreground")}>
               {charCount}/{limit} caratteri
             </span>
           )}
@@ -133,7 +133,7 @@ export function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOri
       {item.previousMessage && (
         <div className="rounded-lg border bg-card p-4 space-y-2">
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+            <ArrowUpRight className="h-4 w-4 text-success" />
             <span>Messaggio originale a cui stiamo rispondendo</span>
             <span className="ml-auto text-[10px] text-muted-foreground">
               {format(new Date(item.previousMessage.date), "dd MMM yyyy HH:mm", { locale: itLocale })}
@@ -143,7 +143,7 @@ export function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOri
             <div className="text-sm font-medium">{item.previousMessage.subject}</div>
           )}
           {item.previousMessage.snippet && (
-            <blockquote className="text-xs text-muted-foreground border-l-4 border-emerald-500/40 pl-3 py-1 italic whitespace-pre-wrap">
+            <blockquote className="text-xs text-muted-foreground border-l-4 border-success/40 pl-3 py-1 italic whitespace-pre-wrap">
               {item.previousMessage.snippet}
             </blockquote>
           )}
@@ -213,7 +213,7 @@ export function ChecksTab({ item, onRunSherlock }: { item: CestinoItem; onRunShe
       </div>
 
       {item.lastError && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 text-rose-600 dark:text-rose-400 text-xs space-y-1">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive dark:text-destructive text-xs space-y-1">
           <div className="flex items-center gap-1.5 font-semibold">
             <AlertOctagon className="h-3.5 w-3.5" /> Ultimo errore
           </div>

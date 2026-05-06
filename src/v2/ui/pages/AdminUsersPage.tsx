@@ -14,6 +14,7 @@ import { Plus, Trash2, Shield, UserCheck, UserX, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { queryKeys } from "@/lib/queryKeys";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 type AuthorizedUser = {
   id: string;
@@ -103,38 +104,42 @@ export function AdminUsersPage() {
   });
 
   if (profileLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <PageShell title="Utenti Autorizzati" description="Whitelist accesso piattaforma">
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+      </PageShell>
+    );
   }
   if (!isAdmin) {
-    return <div className="p-8 text-center text-muted-foreground">Accesso riservato agli amministratori</div>;
+    return (
+      <PageShell title="Utenti Autorizzati">
+        <div className="rounded-xl border border-dashed border-border bg-card/40 p-10 text-center text-muted-foreground">
+          Accesso riservato agli amministratori.
+        </div>
+      </PageShell>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <PageShell
+      title={<span className="inline-flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Utenti Autorizzati</span>}
+      description="Solo le email presenti in questa lista possono accedere alla piattaforma."
+    >
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <CardTitle>Utenti Autorizzati</CardTitle>
-          </div>
-          <CardDescription>
-            Solo le email presenti in questa lista possono accedere alla piattaforma.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="space-y-4 pt-6">
+          <div className="flex flex-wrap gap-2">
             <Input
               placeholder="email@esempio.com"
               type="email"
               value={newEmail}
               onChange={e => setNewEmail(e.target.value)}
-              className="flex-1"
+              className="flex-1 min-w-[200px]"
             />
             <Input
               placeholder="Nome (opzionale)"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              className="w-48"
+              className="w-full sm:w-48"
             />
             <Button
               onClick={() => addUser.mutate()}
@@ -152,11 +157,11 @@ export function AdminUsersPage() {
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border bg-card/40 py-10 text-center text-muted-foreground">
               Nessun utente autorizzato. Aggiungi il primo per attivare la whitelist.
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="rounded-lg border border-border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -220,6 +225,6 @@ export function AdminUsersPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

@@ -56,12 +56,12 @@ const ROLES: SchemaRole[] = [
 const ROLE_COLORS: Record<SchemaRole, string> = {
   id_interno: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   tracking_code: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-  data: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  stato: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  note: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
+  data: "bg-success/15 text-success dark:text-success",
+  stato: "bg-warning/15 text-warning dark:text-warning",
+  note: "bg-slate-500/15 text-foreground dark:text-slate-300",
   servizio: "bg-pink-500/15 text-pink-700 dark:text-pink-300",
   cliente: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
-  contatto: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
+  contatto: "bg-info/15 text-info dark:text-info",
   altro: "bg-muted text-muted-foreground",
 };
 

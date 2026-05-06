@@ -33,8 +33,8 @@ interface Props {
 
 const ACTION_VARIANT: Record<HarmonizeProposal["action"], string> = {
   UPDATE: "bg-primary/10 text-primary border-primary/20",
-  INSERT: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  MOVE: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  INSERT: "bg-success/10 text-success border-success/20",
+  MOVE: "bg-warning/10 text-warning border-warning/20",
   DELETE: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
@@ -73,9 +73,9 @@ function getProposalStatus(p: HarmonizeProposal): {
     p.impact !== "high" &&
     !(p.action === "INSERT" && p.target.table === "agents");
   if (isSafe) {
-    return { kind: "safe", label: "Sicura", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40", Icon: ShieldCheck, tip: "Modifica di solo testo, basso impatto, reversibile." };
+    return { kind: "safe", label: "Sicura", cls: "bg-success/15 text-success border-success/40", Icon: ShieldCheck, tip: "Modifica di solo testo, basso impatto, reversibile." };
   }
-  return { kind: "review", label: "Da rivedere", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40", Icon: Eye, tip: "Inserimento, eliminazione o impatto alto: leggi attentamente prima di approvare." };
+  return { kind: "review", label: "Da rivedere", cls: "bg-warning/15 text-warning border-warning/40", Icon: Eye, tip: "Inserimento, eliminazione o impatto alto: leggi attentamente prima di approvare." };
 }
 
 function EditableAfterInline({
@@ -243,8 +243,8 @@ export function SingleProposalReview({
             {proposal.target.id && (
               <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{proposal.target.id.slice(0, 8)}…</code>
             )}
-            {isApproved && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">Selezionata</Badge>}
-            {proposal.edited_by_user && <Badge variant="outline" className="text-amber-600 border-amber-500/40">Modificata da te</Badge>}
+            {isApproved && <Badge className="bg-success/15 text-success border-success/30" variant="outline">Selezionata</Badge>}
+            {proposal.edited_by_user && <Badge variant="outline" className="text-warning border-warning/40">Modificata da te</Badge>}
           </div>
 
           {proposal.block_label && (

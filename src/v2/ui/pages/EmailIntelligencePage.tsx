@@ -173,8 +173,8 @@ function KpiPill({
 }): React.ReactElement {
   const toneCls = {
     primary: "text-primary",
-    amber: "text-amber-500 dark:text-amber-400",
-    emerald: "text-emerald-500 dark:text-emerald-400",
+    amber: "text-warning dark:text-warning",
+    emerald: "text-success dark:text-success",
     muted: "text-muted-foreground",
   }[tone];
   return (

@@ -155,7 +155,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
             </Button>
           )}
           {skippedCount > 0 && (
-            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400">
+            <Badge variant="outline" className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning">
               <SkipForward className="w-3 h-3" />
               {skippedCount} step saltati
             </Badge>
@@ -264,15 +264,15 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
 
                       {/* Oracle Escalation CTA */}
                       {selected && selected.confidence !== null && selected.confidence < 0.8 && sherlock.running === null && (
-                        <div className="rounded-md border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-2">
+                        <div className="rounded-md border border-warning/30 bg-amber-50 dark:bg-warning/20 p-4 space-y-2">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400">
+                            <Badge variant="outline" className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning">
                               Confidenza: {Math.round(selected.confidence * 100)}%
                             </Badge>
                           </div>
                           {sherlock.currentLevel && sherlock.currentLevel < 3 && (
                             <div className="space-y-2">
-                              <p className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+                              <p className="text-xs text-warning dark:text-warning font-medium">
                                 La ricerca attuale ha bassa confidenza. Approfondisci per risultati più affidabili.
                               </p>
                               <Button
@@ -288,7 +288,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
                             </div>
                           )}
                           {sherlock.currentLevel === 3 && (
-                            <p className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+                            <p className="text-xs text-warning dark:text-warning font-medium">
                               Massimo livello raggiunto — questa è la ricerca più profonda disponibile.
                             </p>
                           )}
@@ -350,7 +350,7 @@ function StepRow({ result, active, onClick }: { result: SherlockStepResult; acti
 function StatusIcon({ status, small }: { status: SherlockStepResult["status"]; small?: boolean }) {
   const cls = small ? "w-3 h-3 mt-0.5" : "w-3.5 h-3.5";
   if (status === "running") return <Loader2 className={`${cls} animate-spin text-primary shrink-0`} />;
-  if (status === "done") return <CheckCircle2 className={`${cls} text-emerald-500 shrink-0`} />;
+  if (status === "done") return <CheckCircle2 className={`${cls} text-success shrink-0`} />;
   if (status === "cached") return <Database className={`${cls} text-blue-500 shrink-0`} />;
   if (status === "skipped") return <SkipForward className={`${cls} text-muted-foreground shrink-0`} />;
   if (status === "pending") return <div className={`${cls} rounded-full border border-muted-foreground/40 shrink-0`} />;

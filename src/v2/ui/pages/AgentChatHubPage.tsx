@@ -233,7 +233,7 @@ export function AgentChatHub() {
                 </span>
                 <span>·</span>
                 <span className="flex items-center gap-1">
-                  <Circle className={cn("w-2 h-2 fill-current", activeAgent.is_active ? "text-emerald-500" : "text-muted-foreground")} />
+                  <Circle className={cn("w-2 h-2 fill-current", activeAgent.is_active ? "text-success" : "text-muted-foreground")} />
                   {activeAgent.is_active ? "Attivo" : "Inattivo"}
                 </span>
               </div>
@@ -310,7 +310,7 @@ export function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10"
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-success hover:bg-success/10"
                       )}
                     >
                       <ThumbsUp className="w-3 h-3" />
@@ -320,7 +320,7 @@ export function AgentChatHub() {
                       disabled={feedbackGiven.has(`${activeId}-${i}`)}
                       className={cn(
                         "p-1 rounded-full transition-colors",
-                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                        feedbackGiven.has(`${activeId}-${i}`) ? "text-muted-foreground/30" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       )}
                     >
                       <ThumbsDown className="w-3 h-3" />

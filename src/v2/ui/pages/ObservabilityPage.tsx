@@ -204,13 +204,13 @@ function CronTab() {
                   {job.last_status && (
                     <div className="flex items-center gap-1.5 justify-end">
                       {job.last_status === "succeeded" ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                       ) : (
                         <XCircle className="w-3.5 h-3.5 text-destructive" />
                       )}
                       <span className={cn(
                         "text-xs font-medium",
-                        job.last_status === "succeeded" ? "text-emerald-500" : "text-destructive"
+                        job.last_status === "succeeded" ? "text-success" : "text-destructive"
                       )}>
                         {job.last_status}
                       </span>

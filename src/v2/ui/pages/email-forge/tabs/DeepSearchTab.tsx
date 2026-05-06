@@ -270,18 +270,18 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
       {/* PROFILE STATUS */}
       {isPartnerKind && (
-        <div className={`rounded-md border p-2.5 ${profileMissing ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/40 bg-emerald-500/10"}`}>
+        <div className={`rounded-md border p-2.5 ${profileMissing ? "border-warning/40 bg-warning/10" : "border-success/40 bg-success/10"}`}>
           <div className="flex items-start gap-2">
             {profileMissing ? (
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-warning dark:text-warning shrink-0 mt-0.5" />
             ) : (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-success dark:text-success shrink-0 mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
-              <div className={`text-[11px] font-semibold ${profileMissing ? "text-amber-900 dark:text-amber-200" : "text-emerald-900 dark:text-emerald-200"}`}>
+              <div className={`text-[11px] font-semibold ${profileMissing ? "text-warning dark:text-warning" : "text-success dark:text-success"}`}>
                 {profileMissing ? "Profilo testuale assente" : "Profilo sincronizzato disponibile"}
               </div>
-              <div className={`text-[10px] ${profileMissing ? "text-amber-800/80 dark:text-amber-200/80" : "text-emerald-800/80 dark:text-emerald-200/80"}`}>
+              <div className={`text-[10px] ${profileMissing ? "text-warning/80 dark:text-warning/80" : "text-success/80 dark:text-success/80"}`}>
                 {profileMissing
                   ? "Nessuna descrizione, HTML o markdown presente. La Deep Search funzionerà ma senza contesto testuale."
                   : "L'AI dispone del profilo sincronizzato. La Deep Search aggiunge social, contatti e rating."}
@@ -333,7 +333,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
               {t.status === "running" ? (
                 <Loader2 className="w-2.5 h-2.5 animate-spin text-primary shrink-0" />
               ) : t.results && t.results > 0 ? (
-                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-2.5 h-2.5 text-success dark:text-success shrink-0" />
               ) : (
                 <Circle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
               )}
@@ -349,7 +349,7 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
         <Badge variant="outline">{recipient.source}</Badge>
         {deepAt ? (
-          <Badge className="bg-green-500/10 text-green-700 border-green-500/30 dark:text-green-400">
+          <Badge className="bg-success/10 text-success border-success/30 dark:text-success">
             <CheckCircle2 className="w-2.5 h-2.5 mr-1" />
             Deep Search · {new Date(deepAt).toLocaleString("it-IT")}
           </Badge>
@@ -377,19 +377,19 @@ export function DeepSearchTab({ recipient, onRefreshGeneration }: Props) {
 
       {/* CARD RIEPILOGO POST-RUN — mostra esplicitamente cosa è stato salvato in DB */}
       {savedSummary && (
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2.5">
+        <div className="rounded-md border border-success/40 bg-success/10 p-2.5">
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 text-success dark:text-success shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-200">
+              <div className="text-[11px] font-semibold text-success dark:text-success">
                 ✅ Salvato in database — Deep Search {savedSummary.quality.toUpperCase()}
               </div>
-              <div className="text-[10px] text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
+              <div className="text-[10px] text-success/80 dark:text-success/80 mt-0.5">
                 {savedSummary.when}
               </div>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono text-emerald-900 dark:text-emerald-200">
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono text-success dark:text-success">
             <SourceRow label="partner_social_links" value={`+${savedSummary.socialLinks}`} />
             <SourceRow label="contact_profiles" value={`+${savedSummary.contactProfiles}`} />
             <SourceRow label="rating ricalcolato" value={savedSummary.rating > 0 ? `${savedSummary.rating}/100` : "—"} />

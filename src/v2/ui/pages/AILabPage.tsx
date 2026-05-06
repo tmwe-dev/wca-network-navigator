@@ -384,9 +384,9 @@ export function AILab() {
               <Card 
                 key={scenario.id} 
                 className={`cursor-pointer transition-all ${
-                  result?.status === "pass" ? "border-green-500/30" :
-                  result?.status === "fail" ? "border-red-500/30" :
-                  result?.status === "warn" ? "border-yellow-500/30" :
+                  result?.status === "pass" ? "border-success/30" :
+                  result?.status === "fail" ? "border-destructive/30" :
+                  result?.status === "warn" ? "border-warning/30" :
                   result?.status === "running" ? "border-blue-500/30 animate-pulse" : ""
                 }`}
                 onClick={() => setExpandedId(isExpanded ? null : scenario.id)}
@@ -395,9 +395,9 @@ export function AILab() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground w-6">#{scenario.id}</span>
-                      {result?.status === "pass" && <CheckCircle className="h-4 w-4 text-green-500" />}
-                      {result?.status === "fail" && <XCircle className="h-4 w-4 text-red-500" />}
-                      {result?.status === "warn" && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                      {result?.status === "pass" && <CheckCircle className="h-4 w-4 text-success" />}
+                      {result?.status === "fail" && <XCircle className="h-4 w-4 text-destructive" />}
+                      {result?.status === "warn" && <AlertTriangle className="h-4 w-4 text-warning" />}
                       {result?.status === "running" && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
                       <CardTitle className="text-sm font-medium">{scenario.name}</CardTitle>
                       <Badge variant="outline" className="text-xs">{scenario.endpoint}</Badge>

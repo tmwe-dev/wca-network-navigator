@@ -432,7 +432,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
                     <div className="bg-destructive/10 rounded px-2 py-1 text-[11px] line-through text-muted-foreground">
                       {r.old_excerpt}
                     </div>
-                    <div className="bg-emerald-500/10 rounded px-2 py-1 text-[11px]">
+                    <div className="bg-success/10 rounded px-2 py-1 text-[11px]">
                       {r.new_excerpt}
                     </div>
                     <div className="text-[10px] text-muted-foreground italic">{r.rationale}</div>
@@ -486,7 +486,7 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
               )}
               {promptProposal.risks && (
                 <div className="text-[11px]">
-                  <span className="font-semibold text-amber-600 dark:text-amber-400">Rischi:</span>{" "}
+                  <span className="font-semibold text-warning dark:text-warning">Rischi:</span>{" "}
                   <span className="text-muted-foreground">{promptProposal.risks}</span>
                 </div>
               )}
@@ -552,14 +552,14 @@ export default function PromptCopilotPanel(props: PromptCopilotPanelProps) {
 
             {/* Box proposta KB (intake) */}
             {kbProposal && (
-              <div className="rounded border bg-amber-50 dark:bg-amber-950/30 p-2 mr-6 text-[11px] space-y-1.5">
+              <div className="rounded border bg-amber-50 dark:bg-warning/30 p-2 mr-6 text-[11px] space-y-1.5">
                 <div className="font-semibold text-[11px] flex items-center gap-1">
                   <Sparkles className="h-3 w-3" /> L'AI propone di salvarlo così:
                 </div>
                 <div><span className="text-muted-foreground">Categoria:</span> <span className="font-mono">{kbProposal.suggested_category ?? "—"}</span> / {kbProposal.suggested_chapter ?? "—"}</div>
                 <div><span className="text-muted-foreground">Titolo:</span> {kbProposal.suggested_title ?? "—"}</div>
                 {kbProposal.duplicates_of && (
-                  <div className="text-amber-700 dark:text-amber-400">⚠ Possibile duplicato di: {kbProposal.duplicates_of}</div>
+                  <div className="text-warning dark:text-warning">⚠ Possibile duplicato di: {kbProposal.duplicates_of}</div>
                 )}
                 {(kbProposal.conflicts_with ?? []).length > 0 && (
                   <div className="text-destructive">⚠ Conflitti: {(kbProposal.conflicts_with ?? []).join(", ")}</div>

@@ -91,7 +91,7 @@ export function CestinonePage(): React.ReactElement {
             <div className="text-sm text-muted-foreground p-6 text-center">Carico...</div>
           ) : s.items.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-muted-foreground py-16 px-4 text-center">
-              <CheckCircle2 className="h-10 w-10 mb-2 text-emerald-500/60" />
+              <CheckCircle2 className="h-10 w-10 mb-2 text-success/60" />
               <div className="text-sm">Cestinone vuoto.</div>
             </div>
           ) : (

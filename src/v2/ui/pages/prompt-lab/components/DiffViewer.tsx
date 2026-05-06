@@ -55,7 +55,7 @@ export function DiffViewer({ before, after, className, compact = false }: Props)
   return (
     <div className={cn("rounded border bg-background overflow-hidden", className)}>
       <div className="flex items-center gap-2 border-b bg-muted/40 px-2 py-1 text-[10px]">
-        <span className="text-emerald-600 dark:text-emerald-400 font-mono">+{stats.add}</span>
+        <span className="text-success dark:text-success font-mono">+{stats.add}</span>
         <span className="text-destructive font-mono">−{stats.rem}</span>
         <span className="text-muted-foreground ml-auto">diff line-by-line</span>
       </div>
@@ -65,7 +65,7 @@ export function DiffViewer({ before, after, className, compact = false }: Props)
             key={i}
             className={cn(
               "flex gap-2 px-2 whitespace-pre-wrap break-words",
-              l.type === "add" && "bg-emerald-500/10 text-emerald-900 dark:text-emerald-200",
+              l.type === "add" && "bg-success/10 text-success dark:text-success",
               l.type === "remove" && "bg-destructive/10 text-destructive line-through opacity-90",
               l.type === "context" && "text-muted-foreground",
             )}

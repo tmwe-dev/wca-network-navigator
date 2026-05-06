@@ -24,7 +24,7 @@ interface SignalsBannerProps {
 function severityColor(severity: PromptLabSignal["severity"]) {
   switch (severity) {
     case "critical": return "bg-destructive/10 border-destructive/40 text-destructive";
-    case "warning": return "bg-amber-500/10 border-amber-500/40 text-amber-700";
+    case "warning": return "bg-warning/10 border-warning/40 text-warning";
     default: return "bg-blue-500/10 border-blue-500/40 text-blue-700";
   }
 }
@@ -44,10 +44,10 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge, onCo
   // Compact badge (when no analysis done yet but badge count > 0)
   if (state.signals.length === 0 && state.badgeCount > 0) {
     return (
-      <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2.5 flex items-center justify-between gap-2">
+      <div className="rounded border border-warning/40 bg-warning/5 p-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs">
-          <Bell className="h-3.5 w-3.5 text-amber-600" />
-          <span className="text-amber-700 font-medium">
+          <Bell className="h-3.5 w-3.5 text-warning" />
+          <span className="text-warning font-medium">
             Possibili anomalie rilevate nei log ({state.badgeCount} segnali)
           </span>
         </div>
@@ -72,11 +72,11 @@ export function SignalsBanner({ state, onAnalyze, onDismiss, onAcknowledge, onCo
   if (activeSignals.length === 0) return null;
 
   return (
-    <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2.5 space-y-2">
+    <div className="rounded border border-warning/40 bg-warning/5 p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs">
-          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-          <span className="text-amber-700 font-medium">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+          <span className="text-warning font-medium">
             {activeSignals.length} segnalazione{activeSignals.length > 1 ? "i" : ""} dal sistema
           </span>
           {activeSignals.some((s) => s.severity === "critical") && (

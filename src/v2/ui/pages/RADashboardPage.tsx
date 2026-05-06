@@ -44,7 +44,7 @@ function KPICard({ icon, label, value, color }: KPICardProps) {
         <div className="flex items-center justify-between mb-3">
           <span className={`${color} text-lg`}>{icon}</span>
           <Badge variant="secondary" className="text-xs">
-            {color === "text-emerald-400" ? "+2.4%" : "+0.8%"}
+            {color === "text-success" ? "+2.4%" : "+0.8%"}
           </Badge>
         </div>
         <div className="text-2xl font-bold text-foreground mb-1 font-mono">
@@ -125,8 +125,8 @@ export function RADashboard() {
         {/* KPI Row */}
         <div className="grid grid-cols-4 gap-4">
           <KPICard icon={<Building2 className="w-5 h-5" />} label="Prospect Totali" value={stats.totalProspects} color="text-primary" />
-          <KPICard icon={<Mail className="w-5 h-5" />} label="Con Email" value={stats.withEmail} color="text-emerald-400" />
-          <KPICard icon={<FileText className="w-5 h-5" />} label="Con PEC" value={stats.withPec} color="text-emerald-400" />
+          <KPICard icon={<Mail className="w-5 h-5" />} label="Con Email" value={stats.withEmail} color="text-success" />
+          <KPICard icon={<FileText className="w-5 h-5" />} label="Con PEC" value={stats.withPec} color="text-success" />
           <KPICard icon={<Phone className="w-5 h-5" />} label="Con Telefono" value={stats.withPhone} color="text-primary" />
         </div>
 
@@ -234,7 +234,7 @@ export function RADashboard() {
                           </div>
                         </div>
                       </div>
-                      <Badge variant={isRunning ? "secondary" : "outline"} className={`text-xs ${isRunning ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : ""}`}>
+                      <Badge variant={isRunning ? "secondary" : "outline"} className={`text-xs ${isRunning ? "bg-success/20 text-success border-success/30" : ""}`}>
                         {isRunning ? "In Corso" : "Completato"}
                       </Badge>
                     </div>

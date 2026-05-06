@@ -80,7 +80,7 @@ export function DPAPage(): React.ReactElement {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {SOC2_CHECKLIST.map((item) => (
                 <div key={item.label} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className={`h-4 w-4 mt-0.5 shrink-0 ${item.done ? "text-emerald-500" : "text-muted-foreground"}`} />
+                  <CheckCircle2 className={`h-4 w-4 mt-0.5 shrink-0 ${item.done ? "text-success" : "text-muted-foreground"}`} />
                   <span className={item.done ? "" : "text-muted-foreground"}>{item.label}</span>
                   {!item.done && <Badge variant="outline" className="text-[10px] ml-auto">Pianificato</Badge>}
                 </div>

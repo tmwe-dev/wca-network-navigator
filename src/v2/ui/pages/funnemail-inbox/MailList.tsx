@@ -84,12 +84,12 @@ export function MailList({ mails, loading, selectedId, onSelect, folderLabel }: 
                       </Badge>
                     )}
                     {m.decision?.commercial_handoff && (
-                      <Badge className="text-[9px] px-1 py-0 h-4 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+                      <Badge className="text-[9px] px-1 py-0 h-4 bg-success/15 text-success border-success/30 hover:bg-success/15">
                         Commerciale
                       </Badge>
                     )}
                     {m.decision?.goes_to_agenda && (
-                      <Badge className="text-[9px] px-1 py-0 h-4 bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15">
+                      <Badge className="text-[9px] px-1 py-0 h-4 bg-warning/15 text-warning border-warning/30 hover:bg-warning/15">
                         Agenda
                       </Badge>
                     )}

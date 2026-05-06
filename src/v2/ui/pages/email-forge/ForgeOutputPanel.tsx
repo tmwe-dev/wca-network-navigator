@@ -74,9 +74,9 @@ export function ForgeOutputPanel({
             <div className="px-3 pt-2 shrink-0">
               <div className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md border ${
                 isGeneric
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
+                  ? "bg-warning/10 border-warning/30 text-warning"
                   : dataPointsBadge.used >= 2
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                    ? "bg-success/10 border-success/30 text-success"
                     : "bg-card border-border/60 text-foreground/70"
               }`}>
                 <Brain className="w-3.5 h-3.5 shrink-0" />

@@ -24,9 +24,9 @@ import {
 } from "@/data/tmweApiCatalog";
 
 const RISK_BADGE: Record<TmweRiskLevel, string> = {
-  read: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  write: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  destructive: "bg-red-500/15 text-red-700 dark:text-red-300",
+  read: "bg-success/15 text-success dark:text-success",
+  write: "bg-warning/15 text-warning dark:text-warning",
+  destructive: "bg-destructive/15 text-destructive dark:text-destructive",
   admin: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
 };
 

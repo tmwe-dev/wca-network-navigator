@@ -29,7 +29,7 @@ function severityClass(s: DiagnosticSeverity): string {
   switch (s) {
     case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
     case "high": return "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40";
-    case "medium": return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40";
+    case "medium": return "bg-warning/15 text-warning dark:text-warning border-warning/40";
     case "low": return "bg-muted text-muted-foreground border-border";
   }
 }
@@ -207,7 +207,7 @@ export function ArchitectReviewPanel({ agent }: { agent: AgentRegistryEntry }) {
             <div className="mt-1 flex items-center gap-2">
               <span className="text-[9px] opacity-70">Test: {d.testUrgency}</span>
               {d.applyRecommended && (
-                <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] font-medium text-green-700 dark:text-green-300">
+                <span className="rounded bg-success/15 px-1.5 py-0.5 text-[9px] font-medium text-success dark:text-success">
                   Applica consigliato
                 </span>
               )}

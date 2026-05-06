@@ -13,6 +13,7 @@ import {
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { cn } from "@/lib/utils";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 type DateRangePreset = "7d" | "30d" | "90d" | "custom";
 
@@ -76,28 +77,14 @@ export function AnalyticsPage() {
   const formattedDateRange = `${dateRange.from.toLocaleDateString("it-IT")} - ${dateRange.to.toLocaleDateString("it-IT")}`;
 
   return (
-    <div
-      data-testid="page-analytics"
-      className="h-full min-h-0 overflow-hidden bg-background text-foreground flex flex-col"
-    >
-      {/* Header */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto space-y-4">
-          {/* Title */}
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Calendar className="w-6 h-6" />
-              Analisi
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Metriche e KPI dei tuoi dati di outreach, partner e AI
-            </p>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            {/* Preset buttons */}
-            <div className="flex gap-2">
+    <div data-testid="page-analytics" className="h-full min-h-0 overflow-y-auto">
+      <PageShell
+        title={<span className="inline-flex items-center gap-2"><Calendar className="h-5 w-5" /> Analisi</span>}
+        description="Metriche e KPI dei tuoi dati di outreach, partner e AI."
+        width="wide"
+        toolbar={
+          <>
+            <div className="flex gap-2 flex-wrap">
               {["7d", "30d", "90d"].map((p) => (
                 <Button
                   key={p}
@@ -113,9 +100,7 @@ export function AnalyticsPage() {
                 </Button>
               ))}
             </div>
-
-            {/* Date selector and navigation */}
-            <div className="flex gap-2 items-center flex-wrap">
+            <div className="flex gap-1 items-center flex-wrap ml-auto">
               <Button
                 variant="ghost"
                 size="sm"
@@ -124,11 +109,9 @@ export function AnalyticsPage() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-
               <div className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded whitespace-nowrap">
                 {formattedDateRange}
               </div>
-
               <Button
                 variant="ghost"
                 size="sm"
@@ -137,7 +120,6 @@ export function AnalyticsPage() {
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
-
               <Button
                 variant={preset === "custom" ? "default" : "outline"}
                 size="sm"
@@ -147,11 +129,11 @@ export function AnalyticsPage() {
                 Personalizzato
               </Button>
             </div>
-          </div>
-
-          {/* Custom date inputs */}
-          {preset === "custom" && (
-            <div className="flex gap-2 items-center flex-wrap pt-2 border-t border-border/30">
+          </>
+        }
+      >
+        {preset === "custom" && (
+          <div className="rounded-xl border border-border bg-card/60 px-3 py-2 flex gap-2 items-center flex-wrap">
               <span className="text-xs text-muted-foreground">Dal:</span>
               <input
                 type="date"
@@ -166,15 +148,10 @@ export function AnalyticsPage() {
                 onChange={(e) => setCustomEndDate(e.target.value)}
                 className="px-2 py-1 text-xs rounded border border-border/50 bg-background text-foreground"
               />
-            </div>
+          </div>
           )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
         <AnalyticsDashboard dateRange={dateRange} />
-      </div>
+      </PageShell>
     </div>
   );
 }

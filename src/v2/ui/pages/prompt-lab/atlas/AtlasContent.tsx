@@ -169,7 +169,7 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                 <ul className="space-y-0.5">
                   {agent.criticalProcedures.map((p, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-[11px]">
-                      <ShieldAlert className="text-amber-500 mt-0.5 h-3 w-3 shrink-0" />
+                      <ShieldAlert className="text-warning mt-0.5 h-3 w-3 shrink-0" />
                       <span className="leading-snug">{p}</span>
                     </li>
                   ))}
@@ -243,8 +243,8 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
             <Section icon={AlertTriangle} title="Diagnostica">
               <div className="space-y-2">
                 {agent.requiredVars.length > 0 && (
-                  <div className="flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/5 p-3">
-                    <Variable className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <div className="flex items-start gap-2 rounded border border-warning/30 bg-warning/5 p-3">
+                    <Variable className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                     <div>
                       <p className="text-xs font-medium">Variabili obbligatorie</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px]">
@@ -256,8 +256,8 @@ export function AtlasContent({ agent }: { agent: AgentRegistryEntry }) {
                   </div>
                 )}
                 {agent.criticalProcedures.length > 5 && (
-                  <div className="flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/5 p-3">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <div className="flex items-start gap-2 rounded border border-warning/30 bg-warning/5 p-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                     <div>
                       <p className="text-xs font-medium">Prompt molto lungo</p>
                       <p className="text-muted-foreground mt-0.5 text-[11px]">

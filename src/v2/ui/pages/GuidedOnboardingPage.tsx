@@ -126,12 +126,12 @@ export function GuidedOnboardingPage(): React.ReactElement {
               onClick={() => setCurrent(i)}
               className={cn(
                 "flex flex-col items-center gap-1 text-[10px] sm:text-xs transition-colors",
-                i === current ? "text-primary" : completed.has(i) ? "text-emerald-500" : "text-muted-foreground"
+                i === current ? "text-primary" : completed.has(i) ? "text-success" : "text-muted-foreground"
               )}
             >
               <div className={cn(
                 "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                i === current ? "border-primary bg-primary/10" : completed.has(i) ? "border-emerald-500 bg-emerald-500/10" : "border-border"
+                i === current ? "border-primary bg-primary/10" : completed.has(i) ? "border-emerald-500 bg-success/10" : "border-border"
               )}>
                 {completed.has(i) ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
               </div>
@@ -237,7 +237,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
                   <div className="space-y-2">
                     {STEPS.map((step, i) => (
                       <div key={step.id} className="flex items-center gap-3 p-2 rounded border text-sm">
-                        <CheckCircle2 className={cn("h-4 w-4 shrink-0", completed.has(i) ? "text-emerald-500" : "text-muted-foreground")} />
+                        <CheckCircle2 className={cn("h-4 w-4 shrink-0", completed.has(i) ? "text-success" : "text-muted-foreground")} />
                         <span className={completed.has(i) ? "" : "text-muted-foreground"}>{step.title}</span>
                         <Badge variant={completed.has(i) ? "default" : "secondary"} className="ml-auto text-[10px]">
                           {completed.has(i) ? "Completato" : "Saltato"}
