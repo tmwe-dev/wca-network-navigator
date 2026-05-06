@@ -80,34 +80,48 @@ serve(async (req) => {
     // filtri "non classificato" e "min_email_count": è una richiesta puntuale
     // di rianalisi e deve sempre passare. Il filtro classico vale solo per la
     // modalità "scopri suggerimenti su tutto".
-    let addressQuery = supabase
-      .from("email_address_rules")
-      .select("id, email_address, display_name, email_count")
-      .eq("user_id", user.id)
-      .order("email_count", { ascending: false });
+    const buildAddressQuery = (scopeToUser: boolean) => {
+      let q = supabase
+        .from("email_address_rules")
+        .select("id, email_address, display_name, email_count, user_id")
+        .order("email_count", { ascending: false });
+      if (scopeToUser) q = q.eq("user_id", user.id);
+      if (requestedEmails.length > 0) {
+        q = q.in("email_address", requestedEmails);
+      } else {
+        q = q.is("group_id", null).gte("email_count", minEmailCount).limit(batchSize);
+      }
+      return q;
+    };
 
-    if (requestedEmails.length > 0) {
-      addressQuery = addressQuery.in("email_address", requestedEmails);
-    } else {
-      addressQuery = addressQuery
-        .is("group_id", null)
-        .gte("email_count", minEmailCount)
-        .limit(batchSize);
+    let { data: addresses } = await buildAddressQuery(true);
+    if (!addresses || addresses.length === 0) {
+      // Fallback: uso interno aziendale → se l'utente non ha record propri,
+      // analizza i record condivisi (stesso pattern dei gruppi).
+      const { data: shared } = await buildAddressQuery(false);
+      addresses = shared ?? [];
     }
-
-    const { data: addresses } = await addressQuery;
 
     if (!addresses || addresses.length === 0) {
       return new Response(JSON.stringify({ processed: 0, suggestions: [] }), { headers: { ...dynCors, "Content-Type": "application/json" } });
     }
 
-    const { data: learningRules } = await supabase
+    let { data: learningRules } = await supabase
       .from("email_address_rules")
       .select("group_name, email_address, display_name, company_name, domain, custom_prompt, email_count")
       .eq("user_id", user.id)
       .not("group_name", "is", null)
       .order("email_count", { ascending: false })
       .limit(250);
+    if (!learningRules || learningRules.length === 0) {
+      const { data: sharedLearning } = await supabase
+        .from("email_address_rules")
+        .select("group_name, email_address, display_name, company_name, domain, custom_prompt, email_count")
+        .not("group_name", "is", null)
+        .order("email_count", { ascending: false })
+        .limit(250);
+      learningRules = sharedLearning ?? [];
+    }
 
     // 3. For each address, get last 5 subjects + dominio noto + first contact
     const addressData: Array<{
@@ -130,13 +144,22 @@ serve(async (req) => {
     ));
     const domainGroupMap = new Map<string, string>();
     if (domainsToCheck.length > 0) {
-      const { data: domainRules } = await supabase
+      let { data: domainRules } = await supabase
         .from("email_address_rules")
         .select("domain, group_name, email_count")
         .eq("user_id", user.id)
         .in("domain", domainsToCheck)
         .not("group_name", "is", null)
         .order("email_count", { ascending: false });
+      if (!domainRules || domainRules.length === 0) {
+        const { data: sharedDomain } = await supabase
+          .from("email_address_rules")
+          .select("domain, group_name, email_count")
+          .in("domain", domainsToCheck)
+          .not("group_name", "is", null)
+          .order("email_count", { ascending: false });
+        domainRules = sharedDomain ?? [];
+      }
       for (const r of (domainRules ?? []) as Array<{ domain: string | null; group_name: string | null }>) {
         if (r.domain && r.group_name && !domainGroupMap.has(r.domain.toLowerCase())) {
           domainGroupMap.set(r.domain.toLowerCase(), r.group_name);
