@@ -1,66 +1,97 @@
-# Audit profondo — regressioni post-fix "operatore + inbox"
 
-## Sintomo confermato (screenshot)
-- `/v2/funnemail-inbox` mostra spinner permanente con contatore "0 · Tutte le email".
-- Header in alto a dx: `Viewing: Luca Arcanà` → modalità impersonation attiva.
-- Schermo grigio della sessione precedente: oggi non più, ma resta lo stato "0 mail".
+`CLASSE: STANDARD — OBIETTIVO: Aggiungere un Kanban "Agenda per Reparto" che riusa l'estetica e l'interazione di ContactPipelineView, mostrando i job (activities) raggruppati per reparto invece che per lead_status.`
 
-## Findings (priorità decrescente)
+## Cosa costruire
 
-### F3 — Disallineamento operatore tra Inbox classica e Funnemail [CRITICO — root cause schermata vuota]
-- `useFunnemailInbox` interroga sempre con `user.id` (utente loggato).
-- `InArrivoTab` invece passa `activeOperator.user_id` (rispettando il switcher).
-- In modalità "Viewing: altro operatore" Funnemail filtra ancora sul tuo `user_id` → 0 risultati se l'utente loggato non ha email proprie.
+Una nuova vista Kanban dentro la sezione Agenda esistente, che chiamiamo **"Reparti"**, con 4 colonne fisse corrispondenti alle 4 agende del documento:
 
-### F6 — Query key drift su Funnemail [ALTO]
-`useFunnemailInbox` usa `queryKeys.funnemailInbox.grouped(...)` per leggere, ma le 5 invalidazioni sono hard-coded `["funnemail-inbox"]`. Se il prefix centralizzato non combacia, dopo bulk/override/reclassify la lista resta stantia.
+```
+COMMERCIALE  |  OPERATIVO  |  AMMINISTRATIVO  |  SERVIZI GENERALI
+```
 
-### F2 — `ActiveOperatorContext`: persistenza fragile [MEDIO]
-- Doppia lettura/parse di `localStorage` negli initializer.
-- L'effect "default a currentOp" può sovrascrivere la scelta persistita in race con il caricamento async di `currentOp`.
-- `STORAGE_KEY` dichiarato dentro al componente.
+Ogni card è un job (`activities`). Drag-and-drop fra colonne aggiorna il reparto del job. Stessa estetica del Kanban Pipeline (icona + label colorata per colonna, badge contatore, card draggable con grip).
 
-### F4 — `useFunnemailInbox`: recovery filtri "una sola volta" [MEDIO]
-`didRecoverEmptyFiltersRef` non si resetta. Se l'utente in seguito riapplica un filtro che svuota la lista, il sistema non recupera più. Reset silenzioso → UX confusa.
+Niente nuove pagine, niente 4 agende separate. Solo una nuova tab dentro `/v2/agenda`.
 
-### F5 — Tab inattivi in `FunnemailInboxPage` [MEDIO]
-"Urgenti / In agenda / Commerciali" sono presenti nei tab ma in `useFunnemailInbox` cadono nel ramo `return base` → identici a "Tutte". Tab che non fanno nulla.
+---
 
-### F7 — Auto mark-as-read: rischio loop al rimount [BASSO]
-`autoReadDoneRef` (Set in ref) si svuota al rimount → possibile rimarcatura inutile.
+## Dove vive
 
-### F1 — Resizable: blindare commento [BASSO]
-`ui/resizable.tsx` riportato a function components standard. Aggiungere doc-comment che vieta forwardRef per prevenire ricaduta.
+`src/v2/ui/pages/sections/AgendaSection.tsx` ha già 3 tab (Agenda, Pipeline, Duplicati). Ne aggiungiamo una:
 
-### F8 — Smoke test mancante [BASSO]
-Nessun test E2E protegge `/v2/funnemail-inbox` con/senza impersonation.
+```
+Agenda  |  Reparti  |  Pipeline  |  Duplicati
+```
 
-## Piano di ripristino (commit atomici, in ordine)
+La tab **Reparti** punta a `/v2/agenda/reparti` e renderizza il nuovo componente.
 
-1. **F3** — In `useFunnemailInbox` calcolare `targetUserId = viewingAll ? null : (activeOperator?.user_id ?? user.id)`, passarlo a `listFunnemailGroupedInbox` e includerlo nella `queryKey`. Adeguare il DAL `src/data/funnemailInbox.ts` se necessario (param opzionale; se `null` → query "tutti gli operatori" rispettando RLS).
-2. **F6** — Sostituire le 5 `invalidateQueries(["funnemail-inbox"])` con `queryKeys.funnemailInbox.root`. Verificare/estendere `src/lib/queryKeys.ts`.
-3. **F2** — Refactor minimale: `STORAGE_KEY` modulo-level, una sola lettura `localStorage` con try/catch unico, mantenere il fallback a `currentOp.id` solo se nulla è persistito E `viewingAll === false`.
-4. **F4** — Rimuovere il flag "una volta sola"; aggiungere toast `"Filtri resettati: nessun risultato"` quando scatta il recovery.
-5. **F5** — Nascondere i tab "Urgenti / In agenda / Commerciali" finché non implementati (decisione: hide vs implement; default = hide per non rompere il contratto dei dati).
-6. **F1** — Aggiungere commento doc in `ui/resizable.tsx`: "react-resizable-panels gestisce i ref internamente, non avvolgere in forwardRef".
-7. **F7** — Spostare `autoReadDoneRef` su `Map<id, timestamp>` con TTL 10 min, oppure flag locale sul messaggio in cache.
-8. **F8** — Smoke test Vitest sul mount di `FunnemailInboxPage` con e senza `viewingAll`.
+---
 
-## Vincoli rispettati
-- Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria).
-- Nessuna alterazione a `journalistReview` o pipeline AI.
-- Nessun cambio DB/RLS richiesto.
-- Cambi solo frontend + DAL.
+## Schema dati (modifica minima)
 
-## File toccati
-- `src/v2/hooks/useFunnemailInbox.ts`
-- `src/contexts/ActiveOperatorContext.tsx`
-- `src/data/funnemailInbox.ts` (firma)
-- `src/lib/queryKeys.ts` (verifica)
-- `src/v2/ui/pages/FunnemailInboxPage.tsx` (tab visibility)
-- `src/components/ui/resizable.tsx` (commento)
+Aggiungiamo una colonna `department` su `activities`:
 
-## Cosa NON faremo
-- Nessuna implementazione "Urgenti/Agenda/Commerciali" reale (richiede signal DB dedicati: separato).
-- Nessun refactor del sistema globale di filtri.
-- Nessuna modifica all'edge `funnemail-classify`.
+```sql
+ALTER TABLE activities ADD COLUMN department text
+  CHECK (department IN ('commercial','operations','admin','general'))
+  DEFAULT NULL;
+CREATE INDEX idx_activities_department ON activities(department) WHERE deleted_at IS NULL;
+```
+
+Nessuna migrazione di dati: tutti i job esistenti restano `NULL` finché qualcuno non li sposta o finché il decision→job converter (P1 §4 del backlog) non li scrive valorizzati. La quinta colonna virtuale **"Da assegnare"** mostra i job con `department IS NULL`.
+
+Quindi le colonne effettive del Kanban sono **5**:
+
+```
+DA ASSEGNARE | COMMERCIALE | OPERATIVO | AMMINISTRATIVO | SERVIZI GENERALI
+```
+
+---
+
+## Componente nuovo
+
+`src/v2/ui/pages/agenda/DepartmentKanbanView.tsx` — copia 1:1 della struttura di `ContactPipelineView`, con questi adattamenti:
+
+- `STAGES` → `DEPARTMENTS` con icone: `Briefcase` (Commerciale), `Truck` (Operativo), `Receipt` (Amministrativo), `Wrench` (Servizi), `HelpCircle` (Da assegnare)
+- Query: legge `activities` (via DAL `findAllActivities` esteso o nuova funzione `findActivitiesForKanban`) invece di `imported_contacts`. Filtra solo job non completati/cancellati.
+- `PipelineContact` → `JobCard` con `{ id, title, partner_name, priority, due_date, department, activity_type }`
+- Card mostra: titolo, azienda partner, badge priorità (P0/P1/P2/P3 — già allineata al P0 del backlog), data scadenza in formato relativo
+- Drag-and-drop chiama `updateActivityDepartment(id, newDept)` (nuovo DAL) → UPDATE su `activities.department`
+- Stessa palette colore (muted, blue, amber, indigo, purple), stesso `border-2 border-dashed` su drag-over
+
+---
+
+## Hook + DAL
+
+- `src/data/activities.ts`: aggiungere `findActivitiesForKanban()` e `updateActivityDepartment(id, dept)`. Invalidate `activityKeys.all` dopo update.
+- `src/hooks/useActivitiesKanban.ts`: thin wrapper React Query.
+- `src/lib/queryKeys.ts`: aggiungere `queryKeys.activities.kanban()` (no inline keys).
+
+---
+
+## Cosa NON tocchiamo
+
+- `AgendaPage` esistente (vista lista per giorno) resta identica
+- `ContactPipelineView` resta identico (Kanban lifecycle clienti)
+- Nessuna modifica a `cadence-engine`, `funnemail-classify`, edge AI
+- Nessuna modifica all'enum `activity_type` (uso `department` come dimensione ortogonale)
+
+---
+
+## Verifica post-implementazione
+
+1. Migrazione DB applicata, RLS invariata (eredita policy `activities`)
+2. Tab "Reparti" appare in `/v2/agenda` e carica
+3. Card draggabili fra le 5 colonne, persistenza su refresh
+4. Job esistenti compaiono tutti in "Da assegnare"
+5. Nessuna regressione su Agenda/Pipeline/Duplicati esistenti
+
+---
+
+## Fuori scope (lo facciamo dopo, sono i punti P1 del backlog approvato)
+
+- Decision→Job converter (popolerà `department` automaticamente)
+- Bottone "Lo prendo io" sulla card (richiede colonne `claimed_by/claimed_at`)
+- Filtro per priorità nel Kanban (arriva con la standardizzazione P0-P3)
+
+Ti basta approvare e parto con la migrazione + componente.

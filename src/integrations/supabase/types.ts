@@ -423,6 +423,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
+          department: string | null
           description: string | null
           due_date: string | null
           email_body: string | null
@@ -459,6 +460,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          department?: string | null
           description?: string | null
           due_date?: string | null
           email_body?: string | null
@@ -495,6 +497,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          department?: string | null
           description?: string | null
           due_date?: string | null
           email_body?: string | null

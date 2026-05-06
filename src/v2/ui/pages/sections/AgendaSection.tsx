@@ -20,6 +20,11 @@ const ContactPipelineView = lazy(() =>
     default: m.ContactPipelineView,
   })),
 );
+const DepartmentKanbanView = lazy(() =>
+  import("@/v2/ui/pages/agenda/DepartmentKanbanView").then((m) => ({
+    default: m.DepartmentKanbanView,
+  })),
+);
 const DuplicateDetector = lazy(() =>
   import("@/components/contacts/DuplicateDetector").then((m) => ({
     default: m.DuplicateDetector,
@@ -28,6 +33,7 @@ const DuplicateDetector = lazy(() =>
 
 const TABS: readonly SectionTab[] = [
   { key: "today",     label: "Agenda",    to: "/v2/agenda" },
+  { key: "reparti",   label: "Reparti",   to: "/v2/agenda/reparti" },
   { key: "pipeline",  label: "Pipeline",  to: "/v2/agenda/pipeline" },
   { key: "duplicati", label: "Duplicati", to: "/v2/agenda/duplicati" },
 ];
@@ -43,6 +49,14 @@ export function AgendaSection(): React.ReactElement {
       <SectionTabs tabs={TABS} rootPath="/v2/agenda" contentOverflow="contain">
         <Routes>
           <Route index element={<AgendaPage />} />
+          <Route
+            path="reparti"
+            element={
+              <Suspense fallback={<TabFallback />}>
+                <DepartmentKanbanView />
+              </Suspense>
+            }
+          />
           <Route
             path="pipeline"
             element={
