@@ -84,6 +84,18 @@ export const commsKeys = {
       byGroup: (groupId?: string | null) => ["funnemail-inbox", "claims", "group", groupId ?? "all"] as const,
       active: () => ["funnemail-inbox", "claims", "active"] as const,
     },
+    statuses: {
+      byGroup: (groupId?: string | null) => ["funnemail-inbox", "statuses", "group", groupId ?? "all"] as const,
+      history: (messageId?: string | null) => ["funnemail-inbox", "statuses", "history", messageId ?? "none"] as const,
+    },
+    sorting: {
+      queue: () => ["funnemail-inbox", "sorting", "queue"] as const,
+      count: () => ["funnemail-inbox", "sorting", "count"] as const,
+    },
+    reminders: {
+      byGroup: (groupId?: string | null) => ["funnemail-inbox", "reminders", "group", groupId ?? "all"] as const,
+      active: () => ["funnemail-inbox", "reminders", "active"] as const,
+    },
   },
   alertRouting: {
     recipients: (userId?: string) => ["alert-recipients", userId ?? "current"] as const,
