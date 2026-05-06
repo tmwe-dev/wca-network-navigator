@@ -5624,6 +5624,54 @@ export type Database = {
           },
         ]
       }
+      finder_api_kb: {
+        Row: {
+          approved_by: string | null
+          body: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          status: string
+          tags: string[]
+          title: string
+          trigger_error: string | null
+          trigger_op: string | null
+          trigger_query: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          body: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          tags?: string[]
+          title: string
+          trigger_error?: string | null
+          trigger_op?: string | null
+          trigger_query?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          trigger_error?: string | null
+          trigger_op?: string | null
+          trigger_query?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnemail_actions_log: {
         Row: {
           action: string
