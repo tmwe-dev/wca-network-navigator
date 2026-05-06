@@ -63,10 +63,10 @@ export function SenderProfileCard({ profile, onViewConversation, onEditRules, on
               {extractInitials(profile.email_address)}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold truncate">
+              <div className="font-semibold text-base truncate">
                 {profile.display_name || profile.email_address.split('@')[0]}
               </div>
-              <div className="text-sm text-muted-foreground truncate">
+              <div className="text-sm text-foreground truncate">
                 {profile.email_address}
               </div>
             </div>
