@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, BookText, Plug,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, BookText, Plug, Database,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -33,6 +33,7 @@ export interface NavGroupDef {
 export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.command",            path: "/v2/command",            icon: <Command className="h-4 w-4" />,  pinned: true, pinOrder: 1 },
   { labelKey: "nav.finder_api",         path: "/v2/finder-api",         icon: <Plug className="h-4 w-4" />,     pinned: true, pinOrder: 1.5, badge: "NEW" },
+  { labelKey: "nav.finder_api_catalog", path: "/v2/finder-api/schema",  icon: <Database className="h-4 w-4" />, pinned: true, pinOrder: 1.6, badge: "443" },
   { labelKey: "nav.explore",            path: "/v2/explore/network",    icon: <Search className="h-4 w-4" />,   pinned: true, pinOrder: 2 },
   { labelKey: "nav.cestinone",          path: "/v2/cestinone",          icon: <Trash2 className="h-4 w-4" />,   pinned: true, pinOrder: 4, badge: "NEW" },
   { labelKey: "nav.cockpit",            path: "/v2/cockpit",            icon: <Rocket className="h-4 w-4" />,   pinned: true, pinOrder: 5 },
