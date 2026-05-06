@@ -38,7 +38,8 @@ export type AiScope =
   | "cockpit"
   | "contacts"
   | "import"
-  | "extension";
+  | "extension"
+  | "finder_api";
 
 export interface AiContext {
   /** componente o hook chiamante, es. "HomeAIPrompt" */
@@ -83,6 +84,7 @@ export const AI_FUNCTION_NAMES = new Set<string>([
   "prompt-test-runner",
   "daily-briefing",
   "save-correction-memory",
+  "finder-api-chat",
 ]);
 
 export async function invokeAi<TResponse = unknown, TBody = Record<string, unknown>>(
