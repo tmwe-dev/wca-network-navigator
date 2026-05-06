@@ -11,6 +11,7 @@ import { Check, X, Clock, Bot, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 
 interface AgentTask {
@@ -168,19 +169,17 @@ export function AgentTasksPage() {
   const pending = tasks || [];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" />
-            Task Agenti da Confermare
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {pending.length} task in attesa di approvazione
-          </p>
-        </div>
-        {pending.length > 1 && (
-          <div className="flex gap-2">
+    <PageShell
+      width="narrow"
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Bot className="h-6 w-6 text-primary" /> Task Agenti da Confermare
+        </span>
+      }
+      description={`${pending.length} task in attesa di approvazione`}
+      actions={
+        pending.length > 1 ? (
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -198,10 +197,10 @@ export function AgentTasksPage() {
               <Check className="h-4 w-4 mr-1" />
               Approva tutti
             </Button>
-          </div>
-        )}
-      </div>
-
+          </>
+        ) : undefined
+      }
+    >
       {pending.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
@@ -225,6 +224,6 @@ export function AgentTasksPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

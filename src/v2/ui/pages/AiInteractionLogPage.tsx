@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Download, ThumbsUp, ThumbsDown, RefreshCw, Mic, MessageSquare, Volume2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 import {
   listAiInteractions, listFeedbackForInteractions, upsertFeedback, deleteFeedback,
   type AiInteractionLogRow, type AiFeedbackRow, type AiInteractionType,
@@ -148,15 +149,12 @@ export default function AiInteractionLogPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Registro Interazioni AI</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tutte le chat, le risposte vocali e i prompt utente. Marca le risposte sbagliate per migliorare i prompt nel tempo.
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageShell
+      width="wide"
+      title="Registro Interazioni AI"
+      description="Tutte le chat, le risposte vocali e i prompt utente. Marca le risposte sbagliate per migliorare i prompt nel tempo."
+      actions={
+        <>
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Aggiorna
           </Button>
@@ -166,9 +164,9 @@ export default function AiInteractionLogPage() {
           <Button size="sm" onClick={exportJson} disabled={rows.length === 0}>
             <Download className="h-4 w-4 mr-2" /> JSON
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Totali</div><div className="text-2xl font-bold">{stats.total}</div></CardContent></Card>
         <Card><CardContent className="pt-4"><div className="text-xs text-muted-foreground">Chat testo</div><div className="text-2xl font-bold">{stats.byType.get("chat_text") ?? 0}</div></CardContent></Card>
@@ -243,6 +241,6 @@ export default function AiInteractionLogPage() {
           );
         })}
       </div>
-    </div>
+    </PageShell>
   );
 }

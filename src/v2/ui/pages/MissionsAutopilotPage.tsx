@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Play, Pause, Square, Rocket, Clock, Target, Zap, AlertTriangle } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 interface AgentMission {
   id: string;
@@ -128,12 +129,14 @@ export function MissionsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Agent Missions</h1>
-          <p className="text-muted-foreground">Missioni autonome con KPI e budget vincolato</p>
-        </div>
+    <PageShell
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Rocket className="h-6 w-6 text-primary" /> Agent Missions
+        </span>
+      }
+      description="Missioni autonome con KPI e budget vincolato"
+      actions={
         <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Nuova Missione</Button>
@@ -145,8 +148,8 @@ export function MissionsPage() {
             <MissionWizard onSubmit={(m) => createMut.mutate(m)} isLoading={createMut.isPending} />
           </DialogContent>
         </Dialog>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <div className="text-muted-foreground">Caricamento...</div>
       ) : missions.length === 0 ? (
@@ -198,7 +201,7 @@ export function MissionsPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageShell>
   );
 }
 

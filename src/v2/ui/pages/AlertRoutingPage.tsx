@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Trash2, Plus, AlertTriangle } from "lucide-react";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 const CATEGORIES = [
   { id: "operations_urgent", label: "Operations urgent" },
@@ -102,17 +103,14 @@ export function AlertRoutingPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <AlertTriangle className="h-6 w-6 text-destructive" />
-          Alert Routing — TMWE
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Quando un'email inbound viene classificata urgente (operativo/amministrativo/commerciale), il sistema invia un alert WhatsApp ai responsabili qui sotto.
-        </p>
-      </header>
-
+    <PageShell
+      title={
+        <span className="inline-flex items-center gap-2">
+          <AlertTriangle className="h-6 w-6 text-destructive" /> Alert Routing — TMWE
+        </span>
+      }
+      description="Quando un'email inbound viene classificata urgente, il sistema invia un alert WhatsApp ai responsabili qui sotto."
+    >
       <Card className="p-4 space-y-4">
         <h2 className="font-semibold">Aggiungi responsabile</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -200,7 +198,7 @@ export function AlertRoutingPage() {
           )}
         </div>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 
