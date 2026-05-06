@@ -319,9 +319,9 @@ export function FunnemailMailCard({
       <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
         {onCreateReminder && (
           <ReminderPopover
-            onCreate={(remindAt, note) => onCreateReminder(remindAt, note)}
+            onCreate={(remindAt: Date, note?: string) => onCreateReminder(remindAt, note)}
             existing={reminder ?? null}
-            onDismiss={onDismissReminder ? (id) => onDismissReminder(id) : undefined}
+            onDismiss={onDismissReminder ? (id: string) => onDismissReminder(id) : undefined}
           />
         )}
         {!claim && onClaim && (
