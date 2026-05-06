@@ -8,7 +8,7 @@
  *
  * Auth: requires a valid Supabase JWT (preview-session or app session).
  */
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 interface ChatMsg {
@@ -133,6 +133,7 @@ async function loadApprovedKb(supabase: ReturnType<typeof createClient>): Promis
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
