@@ -58,31 +58,35 @@ export async function classifyInboundEmails(
   userId: string,
   messages: MessageRecord[]
 ): Promise<void> {
-  // Fire-and-forget: classify inbound emails (max 10 per sync to avoid overwhelming AI)
+  // Fire-and-forget: classify inbound emails via classify-inbound-message
+  // (orchestratore unico: legacy classify-email-response + scout + funnemail-classify
+  //  + auto-route + content + refine-classification-rule).
+  // Fallback rete in caso il trigger DB on_inbound_message non riesca a invocare
+  // l'edge function (es. GUC service_role_key non configurata).
+  // Max 10 per sync per non saturare AI.
   try {
     const toClassify = messages
       .filter((m) => (m.raw_payload as Record<string, unknown>)?.direction === "inbound")
-      .slice(0, 10); // Rate limiting: max 10 classifications per sync cycle
+      .slice(0, 10);
 
     if (toClassify.length === 0) return;
 
-    // Fire each classification request asynchronously without awaiting
     for (const msg of toClassify) {
       const payload = msg.raw_payload as Record<string, unknown>;
       const classifyPayload = {
+        message_id: msg.id as string,
+        activity_id: (payload?.source_activity_id as string) || null,
+        channel: "email",
+        body_text: (msg.body_text as string) || (msg.body_html as string) || "",
+        from_address: msg.from_address as string,
+        subject: (msg.subject as string) || "",
+        partner_id: (msg.partner_id as string) || null,
+        mission_id: (payload?.mission_id as string) || null,
         user_id: userId,
-        email_address: msg.from_address as string,
-        subject: msg.subject as string,
-        body: (msg.body_text as string) || (msg.body_html as string) || "",
-        direction: "inbound",
-        partner_id: (msg.partner_id as string) || undefined,
-        contact_id: (payload?.contact_id as string) || undefined,
-        source_activity_id: (payload?.source_activity_id as string) || undefined,
-        sender_name: (payload?.sender_name as string) || undefined,
       };
 
       // Fire-and-forget: don't await, let it run in background
-      fetch(`${supabaseUrl}/functions/v1/classify-email-response`, {
+      fetch(`${supabaseUrl}/functions/v1/classify-inbound-message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
