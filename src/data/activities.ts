@@ -185,6 +185,69 @@ export async function approveActivity(id: string) {
   if (error) throw error;
 }
 
+// ─── Department Kanban ─────────────────────────────────
+
+export type ActivityDepartment = "commercial" | "operations" | "admin" | "general";
+
+export interface KanbanJobCard {
+  id: string;
+  title: string;
+  activity_type: string;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+  created_at: string;
+  department: ActivityDepartment | null;
+  partner_id: string | null;
+  partner_name: string | null;
+  partner_country: string | null;
+}
+
+interface KanbanRow {
+  id: string;
+  title: string;
+  activity_type: string;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+  created_at: string;
+  department: ActivityDepartment | null;
+  partner_id: string | null;
+  partners: { company_name: string | null; country_code: string | null } | null;
+}
+
+export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCard[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, title, activity_type, status, priority, due_date, created_at, department, partner_id, partners(company_name, country_code)")
+    .not("status", "in", "(completed,cancelled)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const rows = (data || []) as unknown as KanbanRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    activity_type: r.activity_type,
+    status: r.status,
+    priority: r.priority,
+    due_date: r.due_date,
+    created_at: r.created_at,
+    department: r.department,
+    partner_id: r.partner_id,
+    partner_name: r.partners?.company_name ?? null,
+    partner_country: r.partners?.country_code ?? null,
+  }));
+}
+
+export async function updateActivityDepartment(id: string, department: ActivityDepartment | null): Promise<void> {
+  const { error } = await supabase
+    .from("activities")
+    .update({ department } as ActivityUpdate)
+    .eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Cache Invalidation ────────────────────────────────
 export function invalidateActivityCache(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: activityKeys.all });
