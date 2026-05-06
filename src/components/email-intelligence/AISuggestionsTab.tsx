@@ -150,7 +150,7 @@ const SuggestionCard = memo(function SuggestionCard({
             >
               {company}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-foreground/70 mt-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-foreground mt-0.5">
               {flag && (
                 <span className="text-sm leading-none flex-shrink-0" title={domain}>
                   {flag}
