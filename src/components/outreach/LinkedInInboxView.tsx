@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useChannelMessages, useMarkAsRead, type ChannelMessage } from "@/hooks/useChannelMessages";
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
@@ -145,13 +147,11 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
 
   // No more auto-sync timer
 
-  return (
-    <div className="flex h-full bg-background overflow-hidden">
-      {/* Sidebar */}
-      <div className={cn(
-        "flex flex-col border-r border-border bg-background shrink-0 transition-all duration-200",
-        sidebarOpen ? "w-[280px] min-w-[280px]" : "w-[48px] min-w-[48px]"
-      )}>
+  const sidebarNode = (
+    <div className={cn(
+      "flex flex-col h-full border-r border-border bg-background",
+      !sidebarOpen && "w-[48px] min-w-[48px] shrink-0"
+    )}>
         {!sidebarOpen ? (
           <div className="flex flex-col items-center pt-2 gap-2">
             <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)} className="h-8 w-8" title="Apri contatti" aria-label="Visualizza">
@@ -283,10 +283,11 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
             </ScrollArea>
           </>
         )}
-      </div>
+    </div>
+  );
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+  const mainNode = (
+    <div className="flex h-full flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Tabs */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
@@ -396,7 +397,31 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full bg-background overflow-hidden">
+      {sidebarOpen ? (
+        <PersistentResizablePanelGroup
+          storageId="inbox-linkedin:list-vs-thread"
+          direction="horizontal"
+          className="h-full w-full"
+        >
+          <ResizablePanel defaultSize={26} minSize={15} maxSize={60} className="min-h-0">
+            {sidebarNode}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={74} minSize={30} className="min-h-0">
+            {mainNode}
+          </ResizablePanel>
+        </PersistentResizablePanelGroup>
+      ) : (
+        <>
+          {sidebarNode}
+          <div className="flex-1 min-w-0 min-h-0">{mainNode}</div>
+        </>
+      )}
     </div>
   );
 }
