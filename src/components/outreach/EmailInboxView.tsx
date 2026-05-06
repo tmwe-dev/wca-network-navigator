@@ -10,6 +10,8 @@ import { EmailMessageList } from "./EmailMessageList";
 import { EmailDetailView } from "./EmailDetailView";
 import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 import { extractSenderBrand } from "./email/emailUtils";
+import { PersistentResizablePanelGroup } from "@/v2/ui/atoms/PersistentResizablePanelGroup";
+import { ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -115,10 +117,9 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
     }
   };
 
-  return (
-    <div className="flex h-full min-h-0 overflow-hidden">
-      <div className={cn("flex min-h-0 flex-col overflow-hidden border-r border-border", selectedMsg ? "w-[340px]" : "flex-1")}>
-        {/* Compact header: search + stats in one row */}
+  const listPanel = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
+      {/* Compact header: search + stats in one row */}
         <div className="flex-shrink-0 border-b border-border px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -242,9 +243,28 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
             </Button>
           </div>
         )}
-      </div>
+    </div>
+  );
 
-      {selectedMsg && <EmailDetailView message={selectedMsg} onClose={() => setSelectedId(null)} />}
+  return (
+    <div className="flex h-full min-h-0 overflow-hidden">
+      {selectedMsg ? (
+        <PersistentResizablePanelGroup
+          storageId="inbox-email:list-vs-detail"
+          direction="horizontal"
+          className="h-full w-full"
+        >
+          <ResizablePanel defaultSize={32} minSize={20} maxSize={70} className="min-h-0">
+            {listPanel}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={68} minSize={30} className="min-h-0">
+            <EmailDetailView message={selectedMsg} onClose={() => setSelectedId(null)} />
+          </ResizablePanel>
+        </PersistentResizablePanelGroup>
+      ) : (
+        <div className="flex-1 min-h-0">{listPanel}</div>
+      )}
     </div>
   );
 }
