@@ -19,6 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { queryKeys } from "@/lib/queryKeys";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DeferredOnVisible } from "@/components/shared/DeferredOnVisible";
+import { LayoutDashboard } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 const SmartActions = lazyRetry(() => import("@/components/home/SmartActions").then(m => ({ default: m.SmartActions })));
 const OperativeMetricsGrid = lazyRetry(() => import("@/components/home/OperativeMetricsGrid").then(m => ({ default: m.OperativeMetricsGrid })));
@@ -76,6 +78,7 @@ export function DashboardPage() {
 
   return (
     <div data-testid="page-dashboard" className="h-full min-h-0 overflow-hidden bg-background text-foreground">
+      <PageTitleHeader icon={LayoutDashboard} title="Dashboard" subtitle="Panoramica operativa" />
       <ScrollArea className="h-full">
       <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 sm:px-6">
 
