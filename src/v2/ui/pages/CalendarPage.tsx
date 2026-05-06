@@ -37,26 +37,17 @@ export function CalendarPage() {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-card">
-      {/* Header */}
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-primary-foreground">Calendario</h1>
-
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setCreateDialogOpen(true)}
-              className="bg-primary hover:bg-primary text-primary-foreground"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nuovo Evento
-            </Button>
-          </div>
-        </div>
+    <div className="h-full flex flex-col bg-background">
+      <div className="border-b border-border bg-card/40 backdrop-blur-sm px-4 sm:px-6 py-3 flex items-center justify-between">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">Calendario</h1>
+        <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-2" />
+          Nuovo Evento
+        </Button>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Calendar View - Main Content */}
         <div className="flex-1 overflow-auto p-6">
           <CalendarView
@@ -67,7 +58,7 @@ export function CalendarPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-80 border-l border-border bg-card overflow-auto p-6 space-y-6">
+        <div className="w-full lg:w-80 lg:border-l border-t lg:border-t-0 border-border bg-card/40 overflow-auto p-4 sm:p-6 space-y-6">
           {/* Upcoming Events Widget */}
           <UpcomingEventsWidget
             limit={5}
@@ -87,7 +78,7 @@ export function CalendarPage() {
                 className={`w-full px-3 py-2 rounded text-sm font-medium text-left transition-colors ${
                   eventTypeFilter === null
                     ? "bg-primary text-primary-foreground"
-                    : "bg-card text-foreground hover:bg-gray-700"
+                    : "bg-card text-foreground hover:bg-accent"
                 }`}
               >
                 Tutti gli eventi
@@ -100,7 +91,7 @@ export function CalendarPage() {
                   className={`w-full px-3 py-2 rounded text-sm font-medium text-left transition-colors ${
                     eventTypeFilter === opt.value
                       ? "bg-primary text-primary-foreground"
-                      : "bg-card text-foreground hover:bg-gray-700"
+                      : "bg-card text-foreground hover:bg-accent"
                   }`}
                 >
                   {opt.label}

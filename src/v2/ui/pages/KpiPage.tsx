@@ -6,8 +6,8 @@
 import { useSystemKpis } from "@/v2/hooks/useSystemKpis";
 import { SystemDiagnosticsBadge } from "@/v2/ui/components/admin/SystemDiagnosticsBadge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/v2/ui/templates/PageShell";
 
 function pct(n: number, digits = 1): string {
   if (!Number.isFinite(n)) return "—";
@@ -57,21 +57,12 @@ export function KpiPage() {
   const { data, isLoading } = useSystemKpis();
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
-      <ScrollArea className="h-full">
-        <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
-          <header className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">KPI Sistema</h1>
-              <p className="text-sm text-muted-foreground">
-                Metriche reali aggregate sugli ultimi 30 giorni.
-              </p>
-            </div>
-            <div className="w-64">
-              <SystemDiagnosticsBadge />
-            </div>
-          </header>
-
+    <div className="h-full overflow-y-auto">
+      <PageShell
+        title="KPI Sistema"
+        description="Metriche reali aggregate sugli ultimi 30 giorni."
+        actions={<div className="w-full sm:w-64"><SystemDiagnosticsBadge /></div>}
+      >
           {isLoading || !data ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
