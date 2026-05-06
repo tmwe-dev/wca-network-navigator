@@ -215,11 +215,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const [kbContext, schemaContext, enabledOps] = await Promise.all([
+    const [kbContext, schemaMap, enabledOps] = await Promise.all([
       loadApprovedKb(supabase),
-      loadSchemaMap(supabase),
+      loadSchemaMapFull(supabase),
       loadEnabledOps(supabase),
     ]);
+    const schemaContext = buildSchemaManifest(schemaMap);
 
     // Costruisci elenco operazioni per il system prompt (max 120 per non saturare i token)
     const opsForPrompt = enabledOps.slice(0, 120);
@@ -307,10 +308,23 @@ Deno.serve(async (req) => {
             result = await callTmweProxy(authHeader, op, params);
           }
           toolResults.push({ op, ok: result.ok, data: result.data });
+          // Post-call hint: se la mappa contiene quest'op, allega i campi come riferimento.
+          const mapped = schemaMap.get(op);
+          const hint = mapped && mapped.length > 0
+            ? { schema_hint: mapped.map((f) => ({ field: f.field, role: f.role, description: f.description })) }
+            : {};
           convo.push({
             role: "tool",
             tool_call_id: tc.id,
-            content: JSON.stringify(result).slice(0, 8000),
+            content: JSON.stringify({ ...result, ...hint }).slice(0, 8000),
+          });
+        } else if (fn === "schema_lookup") {
+          const op = String(args.op ?? "");
+          const res = lookupSchema(schemaMap, op);
+          convo.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify(res),
           });
         } else if (fn === "propose_kb_entry") {
           kbProposal = args;
