@@ -162,12 +162,12 @@ export function TokenCockpitPage() {
       <div data-testid="page-token-cockpit" className="h-[calc(100vh-3.5rem)] overflow-hidden bg-background text-foreground">
         <ScrollArea className="h-full">
           <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-foreground">Cockpit Token</h1>
-              <p className="text-muted-foreground">
+            <header className="space-y-1">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Cockpit Token</h1>
+              <p className="text-sm text-muted-foreground">
                 Monitora l'utilizzo dei token e il consumo del budget AI in tempo reale
               </p>
-            </div>
+            </header>
 
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <TokenCockpitContent />
