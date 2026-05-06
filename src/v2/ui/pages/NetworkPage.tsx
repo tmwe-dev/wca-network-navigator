@@ -27,6 +27,8 @@ import type { CompanyEntity } from "@/v2/ui/molecules/CompanyCardList";
 import { supabase } from "@/integrations/supabase/client";
 import { insertCockpitQueueItems } from "@/data/cockpitQueue";
 import { addCockpitPreselection } from "@/lib/cockpitPreselection";
+import { Search } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 
 const WCA_SORT_OPTIONS: ReadonlyArray<SortOption<CompanySortKey>> = [
   { key: "name", label: "Nome" },
@@ -148,6 +150,7 @@ export function NetworkPage(): React.ReactElement {
 
   return (
     <div data-testid="page-network" className="flex flex-col h-full min-h-0 overflow-hidden">
+      <PageTitleHeader icon={Search} title="Esplora" subtitle="Network WCA" />
       <EntityListWithDetail
         source="wca"
         companies={focusedCompanies}
