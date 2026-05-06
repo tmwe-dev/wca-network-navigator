@@ -158,20 +158,42 @@ async function loadEnabledOps(supabase: ReturnType<typeof createClient>): Promis
   }));
 }
 
-async function loadSchemaMap(supabase: ReturnType<typeof createClient>): Promise<string> {
+type SchemaRow = { op: string; field: string; role: string; description: string | null; example: string | null };
+
+async function loadSchemaMapFull(supabase: ReturnType<typeof createClient>): Promise<Map<string, SchemaRow[]>> {
   const { data, error } = await supabase
     .from("finder_api_schema_map")
     .select("op, field, role, description, example")
-    .order("op", { ascending: true })
-    .order("role", { ascending: true });
-  if (error || !data || data.length === 0) return "";
-  const byOp: Record<string, string[]> = {};
-  for (const r of data as Array<{ op: string; field: string; role: string; description: string | null; example: string | null }>) {
-    const line = `  - ${r.field} [${r.role}]${r.description ? ` — ${r.description}` : ""}${r.example ? ` (es: ${r.example})` : ""}`;
-    (byOp[r.op] ??= []).push(line);
+    .order("op", { ascending: true });
+  const map = new Map<string, SchemaRow[]>();
+  if (error || !data) return map;
+  for (const r of data as SchemaRow[]) {
+    const arr = map.get(r.op) ?? [];
+    arr.push(r);
+    map.set(r.op, arr);
   }
-  const sections = Object.entries(byOp).map(([op, lines]) => `${op}:\n${lines.join("\n")}`).join("\n\n");
-  return `\n\n=== SCHEMA MAP TMWE ===\n${sections}\n=== fine schema ===`;
+  return map;
+}
+
+function buildSchemaManifest(map: Map<string, SchemaRow[]>): string {
+  if (map.size === 0) return "";
+  const lines: string[] = [];
+  for (const [op, fields] of map) {
+    const roleCounts: Record<string, number> = {};
+    for (const f of fields) roleCounts[f.role] = (roleCounts[f.role] ?? 0) + 1;
+    const roles = Object.entries(roleCounts).map(([r, n]) => `${r}×${n}`).join(", ");
+    lines.push(`- ${op}: ${fields.length} campi [${roles}]`);
+  }
+  return `\n\n=== SCHEMA MAP TMWE — Manifest (${map.size} op, ${[...map.values()].reduce((s, a) => s + a.length, 0)} campi) ===\n` +
+    `Per i campi dettagliati di un'op usa il tool 'schema_lookup(op)'.\n` +
+    lines.join("\n") +
+    `\n=== fine manifest ===`;
+}
+
+function lookupSchema(map: Map<string, SchemaRow[]>, op: string): { op: string; fields: SchemaRow[] } | { op: string; error: string } {
+  const fields = map.get(op);
+  if (!fields || fields.length === 0) return { op, error: `Nessun campo mappato per '${op}'. Chiama l'op e usa 'discover' dalla UI per popolarla.` };
+  return { op, fields };
 }
 
 Deno.serve(async (req) => {
