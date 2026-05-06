@@ -5672,6 +5672,45 @@ export type Database = {
         }
         Relationships: []
       }
+      finder_api_schema_map: {
+        Row: {
+          created_at: string
+          description: string | null
+          example: string | null
+          field: string
+          id: string
+          op: string
+          role: string
+          sample_value: string | null
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          example?: string | null
+          field: string
+          id?: string
+          op: string
+          role?: string
+          sample_value?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          example?: string | null
+          field?: string
+          id?: string
+          op?: string
+          role?: string
+          sample_value?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       funnemail_actions_log: {
         Row: {
           action: string
