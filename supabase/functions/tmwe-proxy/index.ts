@@ -44,14 +44,48 @@ Deno.serve(async (req) => {
     if (!limit.allowed) return rateLimitResponse(limit, corsH);
 
     const body = (await req.json().catch(() => ({}))) as ProxyBody;
-    const opName = body.op as TmweOpName | undefined;
-    if (!opName || !(opName in TMWE_OPS)) {
+    const opName = body.op;
+    if (!opName || typeof opName !== "string") {
       return new Response(
         JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }),
         { status: 400, headers },
       );
     }
-    const op = TMWE_OPS[opName];
+
+    const svc = serviceClient();
+
+    // 1) Lookup nel catalogo DB (fonte di verità)
+    let op: { method: "GET" | "POST"; path: string; identity: "user" | "system"; scope: string } | null = null;
+    const { data: catRow } = await svc
+      .from("tmwe_api_catalog")
+      .select("op, method, path, identity, enabled, scopes, risk_level")
+      .eq("op", opName)
+      .maybeSingle();
+
+    if (catRow) {
+      if (!catRow.enabled) {
+        return new Response(
+          JSON.stringify({ error: "OP_DISABLED", code: "FORBIDDEN" }),
+          { status: 403, headers },
+        );
+      }
+      const method = String(catRow.method).toUpperCase();
+      op = {
+        method: (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") ? "POST" : "GET",
+        path: catRow.path as string,
+        identity: (catRow.identity as "user" | "system") ?? "user",
+        scope: Array.isArray(catRow.scopes) && catRow.scopes.length ? catRow.scopes[0] : "profile:read",
+      };
+    } else if (opName in TMWE_OPS) {
+      // 2) Fallback whitelist hard-coded (backward-compat se sync non eseguito)
+      op = TMWE_OPS[opName as TmweOpName];
+    } else {
+      return new Response(
+        JSON.stringify({ error: "UNKNOWN_OP", code: "VALIDATION_ERROR" }),
+        { status: 400, headers },
+      );
+    }
+
     const identity = body.identity ?? op.identity;
     if (identity !== op.identity) {
       return new Response(
@@ -60,7 +94,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const svc = serviceClient();
     const startedAt = Date.now();
     let bearer: string;
     let tmweUserId: number | null = null;
@@ -89,6 +122,14 @@ Deno.serve(async (req) => {
     }
 
     const result = await callTmwe(op, bearer, body.params);
+
+    // best-effort: aggiorna stats catalogo
+    if (catRow) {
+      svc.from("tmwe_api_catalog")
+        .update({ last_called_at: new Date().toISOString(), call_count: (catRow as { call_count?: number }).call_count ? undefined : undefined })
+        .eq("op", opName)
+        .then(() => undefined);
+    }
 
     if (identity === "user" && tmweUserId !== null) {
       // best-effort last_used_at
