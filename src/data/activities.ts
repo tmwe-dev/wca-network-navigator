@@ -201,6 +201,10 @@ export interface KanbanJobCard {
   partner_id: string | null;
   partner_name: string | null;
   partner_country: string | null;
+  description: string | null;
+  email_subject: string | null;
+  email_body: string | null;
+  scheduled_at: string | null;
 }
 
 interface KanbanRow {
@@ -214,13 +218,22 @@ interface KanbanRow {
   department: ActivityDepartment | null;
   partner_id: string | null;
   partners: { company_name: string | null; country_code: string | null } | null;
+  description: string | null;
+  email_subject: string | null;
+  email_body: string | null;
+  scheduled_at: string | null;
 }
 
 export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCard[]> {
+  // Solo job creati o schedulati da oggi in poi (no backlog storico).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const sinceIso = startOfToday.toISOString();
   const { data, error } = await supabase
     .from("activities")
-    .select("id, title, activity_type, status, priority, due_date, created_at, department, partner_id, partners(company_name, country_code)")
+    .select("id, title, activity_type, status, priority, due_date, created_at, department, partner_id, description, email_subject, email_body, scheduled_at, partners(company_name, country_code)")
     .not("status", "in", "(completed,cancelled)")
+    .or(`created_at.gte.${sinceIso},due_date.gte.${sinceIso},scheduled_at.gte.${sinceIso}`)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -237,6 +250,10 @@ export async function findActivitiesForKanban(limit = 500): Promise<KanbanJobCar
     partner_id: r.partner_id,
     partner_name: r.partners?.company_name ?? null,
     partner_country: r.partners?.country_code ?? null,
+    description: r.description,
+    email_subject: r.email_subject,
+    email_body: r.email_body,
+    scheduled_at: r.scheduled_at,
   }));
 }
 
