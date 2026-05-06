@@ -283,10 +283,11 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
             </ScrollArea>
           </>
         )}
-      </div>
+    </div>
+  );
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+  const mainNode = (
+    <div className="flex h-full flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Tabs */}
         {openTabs.length > 0 && (
           <div className="flex-shrink-0 flex items-center border-b border-border bg-muted/30 overflow-x-auto">
@@ -396,7 +397,31 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full bg-background overflow-hidden">
+      {sidebarOpen ? (
+        <PersistentResizablePanelGroup
+          storageId="inbox-linkedin:list-vs-thread"
+          direction="horizontal"
+          className="h-full w-full"
+        >
+          <ResizablePanel defaultSize={26} minSize={15} maxSize={60} className="min-h-0">
+            {sidebarNode}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={74} minSize={30} className="min-h-0">
+            {mainNode}
+          </ResizablePanel>
+        </PersistentResizablePanelGroup>
+      ) : (
+        <>
+          {sidebarNode}
+          <div className="flex-1 min-w-0 min-h-0">{mainNode}</div>
+        </>
+      )}
     </div>
   );
 }
