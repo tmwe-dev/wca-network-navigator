@@ -147,27 +147,30 @@ export async function callDecideAI(args: {
   signal: AbortSignal;
 }): Promise<DecideResult> {
   const compactFindingsText = compactFindings(args.findings);
-  const { data, error } = await supabase.functions.invoke("agentic-decide", {
-    body: {
-      company_name: args.companyName,
-      city: args.city,
-      country: args.country,
-      website: args.website,
-      budget_remaining: args.budgetRemaining,
-      visited_urls: args.visitedUrls,
-      candidate_links: args.candidateLinks,
-      google_results: args.googleResults,
-      findings_so_far: compactFindingsText,
-      target_fields: args.targetFields,
-      last_page_summary: args.lastSummary,
-      // Charter R1+R2
+  let data: unknown;
+  try {
+    data = await invokeAi("agentic-decide", {
       scope: "sherlock",
       context: { source: "sherlock.callDecideAI", mode: "decide" },
-    },
-  });
-
+      body: {
+        company_name: args.companyName,
+        city: args.city,
+        country: args.country,
+        website: args.website,
+        budget_remaining: args.budgetRemaining,
+        visited_urls: args.visitedUrls,
+        candidate_links: args.candidateLinks,
+        google_results: args.googleResults,
+        findings_so_far: compactFindingsText,
+        target_fields: args.targetFields,
+        last_page_summary: args.lastSummary,
+      },
+    });
+  } catch (e) {
+    if (args.signal.aborted) throw new Error("Aborted");
+    throw new Error(e instanceof Error ? e.message : "Decide AI failed");
+  }
   if (args.signal.aborted) throw new Error("Aborted");
-  if (error) throw new Error(error.message ?? "Decide AI failed");
 
   const d = (data ?? {}) as Record<string, unknown>;
 
