@@ -1,135 +1,128 @@
 /**
- * classify-emails-batch — esegue la classificazione retroattiva su un set
- * di `channel_messages` già presenti in DB.
+ * classify-emails-batch — Cron fallback per inbound non classificati.
  *
- * Per ogni message_id richiama internamente `classify-inbound-message` (che
- * a sua volta innesca `classify-inbound-content` e popola
- * `email_classifications`). Esegue in serie con piccolo delay per non
- * superare i rate-limit AI. Risposta sincrona con counters.
+ * Trova channel_messages.direction='inbound' senza riga in reply_classifications
+ * (ultime 24h) e invoca classify-inbound-message per ciascuno (max 50/cycle).
  *
- * Body: { message_ids?: string[]; limit?: number; only_unclassified?: boolean }
- * - se `message_ids` è omesso prende le ultime N inbound non classificate.
+ * Indipendente dal trigger DB on_inbound_message: garantisce che, se il trigger
+ * fallisce (es. GUC service_role_key non set, network error), la classificazione
+ * AI + funnemail + post-pipeline parta comunque.
+ *
+ * Idempotente lato classify-inbound-message (vedi guard reply_classifications).
  */
-import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-interface BatchBody {
-  message_ids?: string[];
-  limit?: number;
-  only_unclassified?: boolean;
-}
+const BATCH_SIZE = 50;
+const LOOKBACK_HOURS = 24;
 
 Deno.serve(async (req) => {
-  const cors = getCorsHeaders(req);
-  const sec = getSecurityHeaders();
-  if (req.method === "OPTIONS") return corsPreflight(req);
+  const pre = corsPreflight(req);
+  if (pre) return pre;
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405, headers: { ...cors, ...sec, "Content-Type": "application/json" },
-    });
-  }
+  const corsH = getCorsHeaders(req.headers.get("origin"));
+  const headers = getSecurityHeaders(corsH);
 
-  // Auth: usa il JWT dell'utente per RLS
-  const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Missing auth" }), {
-      status: 401, headers: { ...cors, ...sec, "Content-Type": "application/json" },
-    });
-  }
-  const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
   });
-  const { data: userData } = await userClient.auth.getUser();
-  const user = userData?.user;
-  if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...cors, ...sec, "Content-Type": "application/json" },
-    });
-  }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  try {
+    const sinceIso = new Date(
+      Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000,
+    ).toISOString();
 
-  let body: BatchBody = {};
-  try { body = await req.json(); } catch { /* empty body ok */ }
-
-  // Risolvi la lista dei message_ids
-  let ids: string[] = Array.isArray(body.message_ids) ? body.message_ids.filter(Boolean) : [];
-  const cap = Math.min(Math.max(body.limit ?? 50, 1), 200);
-
-  if (ids.length === 0) {
-    let q = admin.from("channel_messages")
-      .select("id, from_address")
-      .eq("user_id", user.id)
+    // Trova candidati: inbound recenti senza classificazione.
+    const { data: pending, error: selErr } = await supabase
+      .from("channel_messages")
+      .select("id, channel, from_address, subject, body_text, body_html, partner_id, user_id, raw_payload")
       .eq("direction", "inbound")
-      .eq("channel", "email")
-      .is("deleted_at", null)
+      .gte("created_at", sinceIso)
       .order("created_at", { ascending: false })
-      .limit(cap);
+      .limit(500);
 
-    if (body.only_unclassified !== false) {
-      // prendi solo quelli senza riga in email_classifications collegata
-      const { data: rows } = await q;
-      const candidateIds = (rows ?? []).map((r) => r.id as string);
-      if (candidateIds.length === 0) {
-        return new Response(JSON.stringify({ ok: true, total: 0, processed: 0, errors: 0 }), {
-          headers: { ...cors, ...sec, "Content-Type": "application/json" },
+    if (selErr) {
+      return new Response(
+        JSON.stringify({ error: "select_failed", details: selErr.message }),
+        { status: 500, headers },
+      );
+    }
+
+    const candidateIds = (pending ?? []).map((m) => m.id as string);
+    if (candidateIds.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, processed: 0, candidates: 0 }),
+        { status: 200, headers },
+      );
+    }
+
+    const { data: alreadyClassified } = await supabase
+      .from("reply_classifications")
+      .select("message_id")
+      .in("message_id", candidateIds);
+
+    const classifiedSet = new Set(
+      (alreadyClassified ?? []).map((r) => r.message_id as string),
+    );
+
+    const toProcess = (pending ?? [])
+      .filter((m) => !classifiedSet.has(m.id as string))
+      .slice(0, BATCH_SIZE);
+
+    if (toProcess.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, processed: 0, candidates: candidateIds.length }),
+        { status: 200, headers },
+      );
+    }
+
+    let dispatched = 0;
+    for (const msg of toProcess) {
+      const payload = (msg.raw_payload ?? {}) as Record<string, unknown>;
+      try {
+        const resp = await fetch(`${supabaseUrl}/functions/v1/classify-inbound-message`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            message_id: msg.id,
+            activity_id: (payload.source_activity_id as string) || null,
+            channel: msg.channel || "email",
+            body_text: (msg.body_text as string) || (msg.body_html as string) || "",
+            from_address: msg.from_address || "",
+            subject: msg.subject || "",
+            partner_id: msg.partner_id || null,
+            mission_id: (payload.mission_id as string) || null,
+            user_id: msg.user_id || null,
+          }),
         });
+        // Consume body to avoid resource leak (Deno).
+        try { await resp.text(); } catch (_) { /* noop */ }
+        if (resp.ok) dispatched += 1;
+      } catch (_e) {
+        // continue
       }
-      const { data: alreadyClassified } = await admin
-        .from("email_classifications")
-        .select("source_activity_id")
-        .in("source_activity_id", candidateIds);
-      const done = new Set((alreadyClassified ?? []).map((r) => r.source_activity_id));
-      ids = candidateIds.filter((id) => !done.has(id));
-    } else {
-      const { data: rows } = await q;
-      ids = (rows ?? []).map((r) => r.id as string);
     }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        candidates: candidateIds.length,
+        unclassified: toProcess.length,
+        dispatched,
+      }),
+      { status: 200, headers },
+    );
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ error: "batch_failed", details: (e as Error).message }),
+      { status: 500, headers },
+    );
   }
-
-  ids = ids.slice(0, cap);
-
-  let processed = 0;
-  let errors = 0;
-  const errorDetail: Array<{ id: string; error: string }> = [];
-
-  for (const id of ids) {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/classify-inbound-message`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
-        body: JSON.stringify({ message_id: id, force: true }),
-      });
-      if (!res.ok) {
-        errors++;
-        errorDetail.push({ id, error: `HTTP ${res.status}` });
-      } else {
-        processed++;
-      }
-    } catch (e) {
-      errors++;
-      errorDetail.push({ id, error: e instanceof Error ? e.message : String(e) });
-    }
-    // Rate-limit guard
-    await new Promise((r) => setTimeout(r, 150));
-  }
-
-  return new Response(JSON.stringify({
-    ok: true,
-    total: ids.length,
-    processed,
-    errors,
-    error_detail: errorDetail.slice(0, 20),
-  }), {
-    headers: { ...cors, ...sec, "Content-Type": "application/json" },
-  });
 });

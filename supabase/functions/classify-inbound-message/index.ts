@@ -126,6 +126,26 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // ── Idempotency guard ──
+    // Il messaggio può essere classificato sia dal trigger DB on_inbound_message
+    // sia dal fallback check-inbox/postProcessing. Se esiste già una riga
+    // reply_classifications per questo message_id, ritorniamo senza ri-eseguire
+    // AI/postClassificationPipeline/funnemail (evita doppi side-effect).
+    {
+      const { data: existingClass } = await supabase
+        .from("reply_classifications")
+        .select("id")
+        .eq("message_id", message_id)
+        .maybeSingle();
+      if (existingClass) {
+        endMetrics(metrics, true, 200);
+        return new Response(
+          JSON.stringify({ success: true, deduped: true, message_id }),
+          { status: 200, headers },
+        );
+      }
+    }
+
     // ── Anti-Prompt-Injection Guard ──
     // Se il testo inbound contiene pattern HIGH (override istruzioni, esfiltrazione
     // system prompt, jailbreak, ecc.) e c'è un utente proprietario, bloccare
