@@ -20,6 +20,10 @@ const REASON_MESSAGES: Record<string, string> = {
   invalid_state: "Sessione di login scaduta. Riprova.",
   expired_state: "Sessione di login scaduta. Riprova.",
   magiclink_failed: "Generazione del link di accesso fallita. Riprova.",
+  profile_fetch_failed: "Impossibile recuperare il profilo TMWE. Riprova tra qualche istante.",
+  whitelist_check_failed: "Verifica autorizzazione non disponibile. Riprova tra qualche istante.",
+  no_tmwe_user_id: "L'account TMWE non espone un identificativo valido.",
+  missing_params: "Parametri di login mancanti. Riprova.",
 };
 
 export function LoginPage(): React.ReactElement {
