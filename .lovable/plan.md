@@ -1,58 +1,79 @@
-## Diagnosi
+# Auto-learning Loop sui Suggerimenti Email
 
-I tracking falliscono **non per colpa dell'agente**, ma per due bug infrastrutturali:
+## Cosa fa (in 3 frasi)
 
-### Bug #1 — 273 endpoint del catalogo hanno path sbagliato (404 Apache)
+Quando assegni un gruppo diverso da quello suggerito dall'AI, il sistema raccoglie un campione delle email di quel mittente e chiede a un agente "Refiner" di capire perché l'AI ha sbagliato. L'agente produce una **proposta di modifica** alle regole di classificazione (descrizione del gruppo, hint, esempi negativi) con una motivazione testuale. Tu vedi la proposta in un pannello dedicato e decidi se applicarla, modificarla o ignorarla.
 
-```text
-Solo 6 op (le hard-coded originali) hanno path con prefisso /erp/...
-Le altre 273 sincronizzate dalla doc TMWE hanno path /tmwe_json/...
-```
+## Esempio pratico
 
-→ `callTmwe()` fa `https://sandbox.findair.net/tmwe_json/ext_tracking` ma TMWE risponde solo su `https://sandbox.findair.net/erp/tmwe_json/ext_tracking`. Da qui il **404 HTML Apache** che hai visto su `tracking.ext_tracking` e `courier.tracking_aggregator`.
+- AI ha suggerito *"Amministrativo"* per `info@brandX.com`.
+- Tu correggi in *"Spam commerciale"*.
+- Il Refiner legge le ultime 5 email di `info@brandX.com`: tutte listini, prezzi, broadcast.
+- Propone: **«Aggiungi al gruppo Spam commerciale: "broadcast di listini/prezzi anche se intestati come 'Amministrazione'"»** + nota: «"Amministrativo" deve restare su comunicazioni 1-a-1 di natura contabile/contrattuale, non su mailing list di prodotti».
+- Tu vedi nel pannello "Proposte AI", clicchi **Applica** e l'hint viene aggiunto al gruppo `Spam commerciale` (o al prompt operativo).
 
-**Fix:** una riga in `supabase/functions/_shared/tmweClient.ts → callTmwe()`:
+## Componenti
 
-```ts
-let path = op.path;
-if (path.startsWith("/tmwe_json/")) path = "/erp" + path; // normalizza
-let url = `${baseUrl()}${path}`;
-```
+### 1. Tabella `ai_classification_insights`
+Salva le proposte. Campi chiave: `trigger_address`, `ai_suggested_group`, `user_chosen_group`, `sample_message_ids[]`, `proposed_target` (group | prompt), `proposed_target_id`, `proposed_change_text`, `reasoning`, `confidence`, `user_note`, `status` (pending/applied/rejected/superseded), `applied_at`, `applied_by`.
 
-Sistema **tutti i 273 endpoint** in un colpo, senza toccare il sync né la tabella.
+### 2. Edge function `refine-classification-rule`
+Trigger automatico al click "Assegna" quando il gruppo scelto ≠ `ai_suggested_group`. Input: `address_rule_id`, `chosen_group_id`, `user_note?`. Logica:
+- Carica 5 email recenti del mittente (subject + estratto body)
+- Carica definizione gruppo AI proposto + gruppo scelto + prompt operativo "Email Groups Classifier"
+- Chiama Lovable AI con prompt strutturato → tool-call con schema `{target, change_type, change_text, reasoning, confidence}`
+- Inserisce riga in `ai_classification_insights` con `status='pending'`
 
-### Bug #2 — `tracking.byAwb` risponde 400
+### 3. Pannello UI "Proposte di apprendimento"
+Nuova sezione in cima alla tab Suggerimenti AI con badge contatore. Per ogni proposta:
+- Mittente trigger + gruppo AI vs gruppo utente
+- Testo proposta in evidenza + reasoning collassabile
+- Campioni email cliccabili (apre la pop-up zoom esistente)
+- Campo libero per aggiungere/modificare la nota utente
+- Pulsanti **Applica**, **Modifica e applica**, **Ignora**
 
-L'agente ha mandato `{awb: "9352100542"}`. L'endpoint `/erp/tmwe_json/shipment_tracking` non accetta l'AWB pubblico ma il `shipment_id` interno TMWE. La SCHEMA MAP per quell'op è già curata (`rubrica.search`, `shipment.list`, `shipment.unified` ecc.), ma manca un'indicazione esplicita su `tracking.byAwb` parametri.
+### 4. Edge function `apply-classification-insight`
+On approval:
+- Se `target=group`: aggiorna `email_sender_groups.classification_hint` (append controllato, dedup)
+- Se `target=prompt`: crea nuova versione del prompt operativo "Email Groups Classifier" con la regola aggiunta in sezione "Anti-pattern noti"
+- Marca insight `applied`, registra autore + timestamp
+- Logga in `ai_interaction_log`
 
-**Fix doppio:**
+### 5. Auto-promozione (opzionale, on by default)
+Se 3+ correzioni indipendenti convergono sulla stessa proposta entro 7 giorni → l'insight passa direttamente a `auto_apply_pending` con notifica e applicazione automatica dopo 24h salvo veto.
 
-a) **Schema map**: aggiungere voci canoniche per `tracking.byAwb` con `shipment_id [id_interno]` come param obbligatorio + esempio. Così `schema_lookup(tracking.byAwb)` glielo dirà.
+## Come ti tocca operativamente
 
-b) **Prompt agente**: regola esplicita "se hai solo un AWB (numero pubblico), prima cerca la spedizione: chiama `shipment.list` (o `shipment_management.ext_my_shipments`) filtrando per quel numero, estrai `shipment_id` dalla risposta, poi `tracking.byAwb({shipment_id})`." Niente più resa al primo 400.
+- Lavori normalmente sulla tab Suggerimenti AI: assegni un gruppo diverso quando serve.
+- Compare un badge **"3 proposte da rivedere"** in alto.
+- Apri il pannello, leggi la proposta in 10 secondi, clicchi Applica (o modifichi il testo).
+- Le prossime classificazioni AI useranno automaticamente la regola aggiornata, su tutti gli operatori.
 
-### Bug #3 — Agente si arrende troppo presto
+## Dettagli tecnici
 
-Anche con i fix sopra, va rinforzato:
-- regola "su 400/404 prova SEMPRE prima a cercare l'oggetto via `shipment.list`/`ext_my_shipments` filtrando per il numero, poi richiama il tracking col vero ID interno"
-- regola "non chiedere mai il corriere se hai un AWB: l'aggregator (quando funziona) lo deduce, altrimenti il tracking interno TMWE non ne ha bisogno"
+- **DAL**: `src/data/aiClassificationInsights.ts` (no `supabase.from()` in UI).
+- **Query keys**: nuova famiglia in `src/lib/queryKeys.ts` → `aiInsights`.
+- **AI Charter**: `refine-classification-rule` registrato in `ai_scope_registry` con scope `learning.classification`.
+- **Editorial review**: non si applica (non è messaging outbound).
+- **Soft-delete**: insight rifiutati restano in tabella con `status='rejected'` per audit.
+- **RLS**: visibilità globale tra operatori autenticati (coerente con `email_address_rules` shared).
+- **Hard guard**: `apply-classification-insight` richiede operatore autenticato; modifica prompt = nuova versione (mai overwrite).
+- **Fallback**: se AI non produce proposta valida (low confidence < 0.5), insight non viene creato.
 
-### Bonus — Warning console residuo
+## Scope NON incluso (su richiesta)
 
-`Function components cannot be given refs. Check the render method of EmailPreviewDialog.` Cosmetico, fuori dallo scope di questa richiesta. Lo lasciamo o lo includo? (Default: lascio fuori.)
+- Niente propagazione automatica per dominio (l'utente vuole ragionamento qualitativo, non pattern matching).
+- Niente conferma a 2 voci come trigger (basta 1 correzione per scatenare l'analisi; l'auto-apply richiede invece convergenza).
 
----
+## File da creare/modificare
 
-## File toccati
+**Nuovi:**
+- `supabase/functions/refine-classification-rule/index.ts`
+- `supabase/functions/apply-classification-insight/index.ts`
+- `src/data/aiClassificationInsights.ts`
+- `src/components/email-intelligence/ClassificationInsightsPanel.tsx`
+- migrazione: tabella + RLS + insert in `ai_scope_registry`
 
-```text
-supabase/functions/_shared/tmweClient.ts      → fix path /erp prefix in callTmwe (1 riga)
-supabase/functions/finder-api-chat/index.ts   → prompt: workflow AWB→shipment_id→tracking
-+ insert dati: finder_api_schema_map per tracking.byAwb (shipment_id, awb opzionale, ecc.)
-```
-
-Nessun cambio schema DB. Nessun toccare di sync, edge protette, RLS.
-
-## Verifica
-
-Dopo deploy: chiediamo ancora `9352100542 dammi il tracking`. Atteso: agente chiama `shipment.list` filtrando AWB → ottiene shipment_id → `tracking.byAwb({shipment_id})` → restituisce stato + eventi. Se ancora 0 risultati, allora la spedizione realmente non è dell'utente connesso e l'agente lo dice spiegando "nessuna spedizione tua con AWB X".
+**Modificati:**
+- `src/components/email-intelligence/AISuggestionsTab.tsx` (pannello in alto + trigger refine post-assign)
+- `src/lib/queryKeys.ts`

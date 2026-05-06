@@ -1194,6 +1194,99 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_classification_insights: {
+        Row: {
+          ai_suggested_group_id: string | null
+          ai_suggested_group_name: string | null
+          applied_at: string | null
+          applied_by_user_id: string | null
+          applied_change_summary: string | null
+          change_type: string
+          confidence: number | null
+          created_at: string
+          created_by_operator_id: string | null
+          created_by_user_id: string | null
+          id: string
+          proposed_change_text: string
+          proposed_target: string
+          proposed_target_id: string | null
+          proposed_target_name: string | null
+          reasoning: string | null
+          rejected_at: string | null
+          rejected_by_user_id: string | null
+          rejection_reason: string | null
+          sample_message_ids: string[] | null
+          sample_subjects: string[] | null
+          status: string
+          trigger_address: string
+          trigger_address_rule_id: string | null
+          updated_at: string
+          user_chosen_group_id: string
+          user_chosen_group_name: string
+          user_note: string | null
+        }
+        Insert: {
+          ai_suggested_group_id?: string | null
+          ai_suggested_group_name?: string | null
+          applied_at?: string | null
+          applied_by_user_id?: string | null
+          applied_change_summary?: string | null
+          change_type?: string
+          confidence?: number | null
+          created_at?: string
+          created_by_operator_id?: string | null
+          created_by_user_id?: string | null
+          id?: string
+          proposed_change_text: string
+          proposed_target: string
+          proposed_target_id?: string | null
+          proposed_target_name?: string | null
+          reasoning?: string | null
+          rejected_at?: string | null
+          rejected_by_user_id?: string | null
+          rejection_reason?: string | null
+          sample_message_ids?: string[] | null
+          sample_subjects?: string[] | null
+          status?: string
+          trigger_address: string
+          trigger_address_rule_id?: string | null
+          updated_at?: string
+          user_chosen_group_id: string
+          user_chosen_group_name: string
+          user_note?: string | null
+        }
+        Update: {
+          ai_suggested_group_id?: string | null
+          ai_suggested_group_name?: string | null
+          applied_at?: string | null
+          applied_by_user_id?: string | null
+          applied_change_summary?: string | null
+          change_type?: string
+          confidence?: number | null
+          created_at?: string
+          created_by_operator_id?: string | null
+          created_by_user_id?: string | null
+          id?: string
+          proposed_change_text?: string
+          proposed_target?: string
+          proposed_target_id?: string | null
+          proposed_target_name?: string | null
+          reasoning?: string | null
+          rejected_at?: string | null
+          rejected_by_user_id?: string | null
+          rejection_reason?: string | null
+          sample_message_ids?: string[] | null
+          sample_subjects?: string[] | null
+          status?: string
+          trigger_address?: string
+          trigger_address_rule_id?: string | null
+          updated_at?: string
+          user_chosen_group_id?: string
+          user_chosen_group_name?: string
+          user_note?: string | null
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
