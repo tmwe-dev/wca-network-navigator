@@ -1,7 +1,7 @@
 /**
  * Tool: calculate-lead-scores — Bulk recalculation (requires approval)
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 export const calculateLeadScoresTool: Tool = {
@@ -27,11 +27,11 @@ export const calculateLeadScoresTool: Tool = {
       };
     }
 
-    const { data, error } = await supabase.functions.invoke("calculate-lead-scores", {
+    const data = await invokeAi<{ updated?: number }>("calculate-lead-scores", {
+      scope: "command",
+      context: { source: "calculateLeadScoresTool", mode: "bulk-recalc" },
       body: {},
     });
-
-    if (error) throw new Error(error.message);
 
     return {
       kind: "result",

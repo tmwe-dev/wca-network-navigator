@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 import { useConversation } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { findIntentByKey, listNavigationIntents, matchIntentLocally } from "@/data/uiNavigationMap";
 
 const log = createLogger("useFloatingCoPilotVoice");
@@ -73,7 +74,9 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
         const question = (params?.question || "").trim();
         if (!question) return "Domanda vuota.";
         try {
-          const { data, error: err } = await supabase.functions.invoke("command-ask-brain", {
+          const data = await invokeAi<{ answer?: string } | null>("command-ask-brain", {
+            scope: "command",
+            context: { source: "useFloatingCoPilotVoice", mode: "ask_brain" },
             body: {
               question,
               bridge_token: bridgeTokenRef.current,
@@ -81,8 +84,7 @@ export function useFloatingCoPilotVoice(opts?: { onAction?: (label: string) => v
               language: "it",
             },
           });
-          if (err) return "Brain non raggiungibile.";
-          return (data as { answer?: string } | null)?.answer || "Nessuna risposta.";
+          return data?.answer || "Nessuna risposta.";
         } catch {
           return "Errore tecnico.";
         }

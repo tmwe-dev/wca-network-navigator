@@ -1,7 +1,7 @@
 /**
  * Tool: deduplicate-contacts — Find and merge duplicates (requires approval)
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { Tool, ToolResult, ToolContext } from "./types";
 
 export const deduplicateContactsTool: Tool = {
@@ -27,11 +27,11 @@ export const deduplicateContactsTool: Tool = {
       };
     }
 
-    const { data, error } = await supabase.functions.invoke("deduplicate-contacts", {
+    const data = await invokeAi<{ merged?: number; scanned?: number }>("deduplicate-contacts", {
+      scope: "command",
+      context: { source: "deduplicateContactsTool", mode: "bulk-merge" },
       body: {},
     });
-
-    if (error) throw new Error(error.message);
 
     return {
       kind: "result",

@@ -86,6 +86,13 @@ export const AI_FUNCTION_NAMES = new Set<string>([
   "daily-briefing",
   "save-correction-memory",
   "finder-api-chat",
+  "command-ask-brain",
+  "kb-intake-analyze",
+  "prompt-copilot-chat",
+  "optimus-analyze",
+  "analyze-partner",
+  "calculate-lead-scores",
+  "deduplicate-contacts",
 ]);
 
 export async function invokeAi<TResponse = unknown, TBody = Record<string, unknown>>(

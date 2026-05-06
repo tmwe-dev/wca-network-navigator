@@ -1,7 +1,7 @@
 /**
  * AI function calls — extract and decide.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 const MAX_MARKDOWN_CHARS = 8_000;
 const MAX_PRIOR_FINDINGS_CHARS = 2_000;
@@ -84,21 +84,27 @@ export async function callExtractAI(args: {
 }): Promise<ExtractResult> {
   const safeMarkdown = truncateMarkdownSmart(args.markdown, args.targetFields);
   const compactPrior = compactFindings(args.priorFindings);
-  const { data, error } = await supabase.functions.invoke("sherlock-extract", {
-    body: {
-      markdown: safeMarkdown,
-      extract_prompt: `Estrai dalla pagina "${args.label}" tutto ciò che sia utile per scrivere
+  let data: unknown;
+  try {
+    data = await invokeAi("sherlock-extract", {
+      scope: "sherlock",
+      context: { source: "sherlock.callExtractAI", mode: "extract" },
+      body: {
+        markdown: safeMarkdown,
+        extract_prompt: `Estrai dalla pagina "${args.label}" tutto ciò che sia utile per scrivere
 una mail commerciale a questa azienda. Dai priorità ai target_fields ma cattura anche
 findings extra significativi (servizi, segmenti clienti, certificazioni, presenze geografiche,
 notizie recenti). Ignora cookie banner, navigazione, footer.`,
-      target_fields: args.targetFields,
-      prior_findings: compactPrior,
-      label: args.label,
-    },
-  });
-
+        target_fields: args.targetFields,
+        prior_findings: compactPrior,
+        label: args.label,
+      },
+    });
+  } catch (e) {
+    if (args.signal.aborted) throw new Error("Aborted");
+    throw new Error(e instanceof Error ? e.message : "AI extract failed");
+  }
   if (args.signal.aborted) throw new Error("Aborted");
-  if (error) throw new Error(error.message ?? "AI extract failed");
 
   const d = (data ?? {}) as Record<string, unknown>;
 
@@ -147,27 +153,30 @@ export async function callDecideAI(args: {
   signal: AbortSignal;
 }): Promise<DecideResult> {
   const compactFindingsText = compactFindings(args.findings);
-  const { data, error } = await supabase.functions.invoke("agentic-decide", {
-    body: {
-      company_name: args.companyName,
-      city: args.city,
-      country: args.country,
-      website: args.website,
-      budget_remaining: args.budgetRemaining,
-      visited_urls: args.visitedUrls,
-      candidate_links: args.candidateLinks,
-      google_results: args.googleResults,
-      findings_so_far: compactFindingsText,
-      target_fields: args.targetFields,
-      last_page_summary: args.lastSummary,
-      // Charter R1+R2
+  let data: unknown;
+  try {
+    data = await invokeAi("agentic-decide", {
       scope: "sherlock",
       context: { source: "sherlock.callDecideAI", mode: "decide" },
-    },
-  });
-
+      body: {
+        company_name: args.companyName,
+        city: args.city,
+        country: args.country,
+        website: args.website,
+        budget_remaining: args.budgetRemaining,
+        visited_urls: args.visitedUrls,
+        candidate_links: args.candidateLinks,
+        google_results: args.googleResults,
+        findings_so_far: compactFindingsText,
+        target_fields: args.targetFields,
+        last_page_summary: args.lastSummary,
+      },
+    });
+  } catch (e) {
+    if (args.signal.aborted) throw new Error("Aborted");
+    throw new Error(e instanceof Error ? e.message : "Decide AI failed");
+  }
   if (args.signal.aborted) throw new Error("Aborted");
-  if (error) throw new Error(error.message ?? "Decide AI failed");
 
   const d = (data ?? {}) as Record<string, unknown>;
 

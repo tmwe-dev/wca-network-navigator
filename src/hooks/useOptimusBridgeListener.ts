@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 const log = createLogger("useOptimusBridgeListener");
 
@@ -57,16 +57,27 @@ export function useOptimusBridgeListener() {
 
       try {
         const t0 = performance.now();
-        const { data: result, error } = await supabase.functions.invoke("optimus-analyze", {
-          body: {
-            channel: data.channel,
-            page_type: data.pageType,
-            dom_snapshot: data.snapshot,
-            dom_hash: data.hash,
-            previous_plan_failed: !!data.previousPlanFailed,
-            failure_context: data.failureContext || undefined,
-          },
-        });
+        let result: {
+          stale?: boolean; cached?: boolean; plan_version?: number;
+          ai_latency_ms?: number; confidence?: number; plan?: unknown;
+        } | null = null;
+        let error: { message: string } | null = null;
+        try {
+          result = await invokeAi("optimus-analyze", {
+            scope: "extension",
+            context: { source: "useOptimusBridgeListener", mode: "analyze" },
+            body: {
+              channel: data.channel,
+              page_type: data.pageType,
+              dom_snapshot: data.snapshot,
+              dom_hash: data.hash,
+              previous_plan_failed: !!data.previousPlanFailed,
+              failure_context: data.failureContext || undefined,
+            },
+          });
+        } catch (e) {
+          error = { message: e instanceof Error ? e.message : String(e) };
+        }
         const latency = Math.round(performance.now() - t0);
 
         if (error) {

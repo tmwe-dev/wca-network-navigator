@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Merge, Ban, RefreshCw, AlertTriangle } from "lucide-react";
@@ -112,11 +113,12 @@ export function DuplicateDetector() {
     setMerging(group[0].id);
     try {
       const ids = group.map(c => c.id);
-      const { data, error } = await supabase.functions.invoke("deduplicate-contacts", {
+      const data = await invokeAi<{ deletedRecords?: number }>("deduplicate-contacts", {
+        scope: "command",
+        context: { source: "DuplicateDetector", mode: "merge-group" },
         body: { contactIds: ids },
       });
-      if (error) throw error;
-      toast.success(`Uniti ${data.deletedRecords} duplicati`);
+      toast.success(`Uniti ${data?.deletedRecords ?? 0} duplicati`);
       scan();
     } catch (_e) {
       toast.error("Errore durante il merge");

@@ -3,7 +3,7 @@
  * Ported from wca-test-runner/agent.js concept.
  * Client orchestrates: calls edge for AI decision, executes DOM tools locally.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 import type { AgentTool, AgentToolResult } from "./tools";
 import { AGENT_TOOLS } from "./tools";
 import { isForbidden } from "./safety";
@@ -116,17 +116,11 @@ async function callAgentEdge(
 ): Promise<{ message: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }> }> {
   const trimmed = trimContext(history);
 
-  const { data, error } = await supabase.functions.invoke("agent-loop", {
-    // Charter R1+R2
-    body: {
-      goal, history: trimmed, sessionContext,
-      scope: "agent",
-      context: { source: "agentLoop", mode: "iteration" },
-    },
+  return await invokeAi<{ message: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }> }>("agent-loop", {
+    scope: "agent",
+    context: { source: "agentLoop", mode: "iteration" },
+    body: { goal, history: trimmed, sessionContext },
   });
-
-  if (error) throw new Error(`agent-loop edge error: ${error.message}`);
-  return data as { message: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown>; id: string }> };
 }
 
 /**

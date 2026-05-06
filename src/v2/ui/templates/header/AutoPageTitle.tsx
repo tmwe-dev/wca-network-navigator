@@ -7,7 +7,66 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { buildCrumbs } from "../breadcrumbConfig";
-import { FileText } from "lucide-react";
+import {
+  FileText, LayoutDashboard, Search, Kanban, Radar, Brain, Settings,
+  Calendar, Inbox, Mail, Users, BookOpen, FlaskConical, Activity,
+  Database, Globe, MessageSquare, Sparkles, Bot, ListChecks, Shield,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+/**
+ * Mappa icona per il primo segmento del path V2 (e alias legacy).
+ * Permette al fallback automatico di mostrare un'icona contestuale
+ * senza che ogni pagina debba dichiarare PageTitleHeader.
+ */
+const SEGMENT_ICON: Record<string, LucideIcon> = {
+  // 6 sezioni canoniche
+  explore: Search,
+  pipeline: Kanban,
+  communicate: Radar,
+  intelligence: Brain,
+  settings: Settings,
+  // legacy / sub
+  dashboard: LayoutDashboard,
+  cockpit: LayoutDashboard,
+  contacts: Users,
+  crm: Kanban,
+  agenda: Calendar,
+  calendar: Calendar,
+  inbox: Inbox,
+  "funnemail-inbox": Inbox,
+  outreach: Mail,
+  inreach: Mail,
+  composer: Mail,
+  "email-forge": Mail,
+  agents: Bot,
+  "agent-tasks": ListChecks,
+  "prompt-lab": FlaskConical,
+  "kb-supervisor": BookOpen,
+  kb: BookOpen,
+  "ai-control-center": Shield,
+  "ai-arena": Sparkles,
+  "ai-lab": FlaskConical,
+  diagnostics: Activity,
+  analytics: Activity,
+  command: MessageSquare,
+  network: Globe,
+  globe: Globe,
+  campaigns: Sparkles,
+  "deep-search": Search,
+  import: Database,
+  "admin-users": Shield,
+};
+
+function pickIcon(pathname: string): LucideIcon {
+  // /v2/<segment>/...
+  const parts = pathname.replace(/^\/v2\/?/, "").split("/").filter(Boolean);
+  for (const p of parts) {
+    const icon = SEGMENT_ICON[p];
+    if (icon) return icon;
+  }
+  return FileText;
+}
 
 export function AutoPageTitle(): React.ReactElement | null {
   const { pathname } = useLocation();
@@ -36,13 +95,15 @@ export function AutoPageTitle(): React.ReactElement | null {
   const last = crumbs[crumbs.length - 1];
   if (!last) return null;
 
+  const Icon = pickIcon(pathname);
+
   return (
     <div
       data-auto-page-title
-      className="flex items-center gap-2 min-w-0"
+      className="inline-flex items-center gap-1.5 rounded-md bg-primary-foreground/95 px-2 py-1 border border-primary/30 shadow-sm min-w-0"
     >
-      <FileText className="h-4 w-4 text-primary shrink-0" />
-      <span className="text-sm font-semibold text-foreground truncate">
+      <Icon className="h-4 w-4 text-primary shrink-0" />
+      <span className="text-sm font-semibold text-primary truncate">
         {last.label}
       </span>
     </div>
