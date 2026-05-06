@@ -11,7 +11,7 @@
  * della inbox standard. Le azioni rapide ("Azioni", "Assegna gruppo")
  * compaiono in overlay sull'hover, e la checkbox di bulk è opzionale.
  */
-import { Brain, CalendarClock, Gauge, Hand, MailOpen, Plane, Sparkles, Tag, Undo2 } from "lucide-react";
+import { Bell, BellOff, Brain, CalendarClock, Gauge, Hand, MailOpen, Plane, Sparkles, Tag, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,23 @@ import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmai
 import { extractSenderName, stripReplyPrefixes } from "./utils";
 import { AiSuggestionChip, type AiSuggestion } from "./AiSuggestionChip";
 import type { FunnemailClaimWithOperator } from "@/data/funnemailClaims";
+import {
+  FUNNEMAIL_JOB_STATUSES,
+  FUNNEMAIL_JOB_STATUS_CLASSES,
+  FUNNEMAIL_JOB_STATUS_LABELS,
+  type FunnemailJobStatus,
+  type FunnemailStatusRow,
+} from "@/data/funnemailStatuses";
+import type { FunnemailReminderRow } from "@/data/funnemailReminders";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ReminderPopover } from "./ReminderPopover";
 
 type DecoratedMessage = ChannelMessage & {
   category?: string | null;
@@ -60,6 +77,11 @@ interface Props {
   claimPending?: boolean;
   onClaim?: () => void;
   onRelease?: () => void;
+  status?: FunnemailStatusRow | null;
+  onSetStatus?: (status: FunnemailJobStatus) => void;
+  reminder?: FunnemailReminderRow | null;
+  onCreateReminder?: (remindAt: Date, note?: string) => void;
+  onDismissReminder?: (id: string) => void;
 }
 
 function formatListDate(value: string): string {
@@ -103,6 +125,11 @@ export function FunnemailMailCard({
   claimPending,
   onClaim,
   onRelease,
+  status,
+  onSetStatus,
+  reminder,
+  onCreateReminder,
+  onDismissReminder,
 }: Props) {
   const meta = message as DecoratedMessage;
   const partner = meta.partner_snapshot ?? null;
@@ -123,6 +150,17 @@ export function FunnemailMailCard({
   const claimedByMe = !!claim && !!myUserId && claim.claimed_by === myUserId;
   const claimedByOther = !!claim && !claimedByMe;
   const claimMinutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
+  const currentStatus: FunnemailJobStatus = (status?.status ?? "nuovo") as FunnemailJobStatus;
+  const reminderMinutes = reminder
+    ? Math.round((new Date(reminder.remind_at).getTime() - Date.now()) / 60000)
+    : null;
+  const reminderLabel = (() => {
+    if (reminderMinutes == null) return null;
+    if (reminderMinutes <= 0) return "ora";
+    if (reminderMinutes < 60) return `tra ${reminderMinutes}m`;
+    if (reminderMinutes < 60 * 24) return `tra ${Math.round(reminderMinutes / 60)}h`;
+    return `tra ${Math.round(reminderMinutes / (60 * 24))}g`;
+  })();
 
   return (
     <div
@@ -200,6 +238,49 @@ export function FunnemailMailCard({
                 <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">{senderIntel.company_type}</span>
               )}
               {aiSuggestion && <AiSuggestionChip suggestion={aiSuggestion} onAccept={onAcceptAiSuggestion} className="text-xs" />}
+              {onSetStatus ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium",
+                        FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus],
+                      )}
+                      title="Cambia stato lavorazione"
+                    >
+                      ● {FUNNEMAIL_JOB_STATUS_LABELS[currentStatus]}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuLabel>Stato lavorazione</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {FUNNEMAIL_JOB_STATUSES.map((s) => (
+                      <DropdownMenuItem key={s} onSelect={() => onSetStatus(s)} disabled={s === currentStatus}>
+                        {FUNNEMAIL_JOB_STATUS_LABELS[s]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium",
+                    FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus],
+                  )}
+                >
+                  ● {FUNNEMAIL_JOB_STATUS_LABELS[currentStatus]}
+                </span>
+              )}
+              {reminder && reminderLabel && (
+                <span
+                  className="inline-flex items-center gap-1 rounded border border-accent bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground"
+                  title={reminder.note ?? `Reminder: ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
+                >
+                  <Bell className="h-3 w-3" />{reminderLabel}
+                </span>
+              )}
             </div>
           </div>
         </button>
@@ -236,6 +317,13 @@ export function FunnemailMailCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+        {onCreateReminder && (
+          <ReminderPopover
+            onCreate={(remindAt, note) => onCreateReminder(remindAt, note)}
+            existing={reminder ?? null}
+            onDismiss={onDismissReminder ? (id) => onDismissReminder(id) : undefined}
+          />
+        )}
         {!claim && onClaim && (
           <Button
             size="sm"
