@@ -13,6 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, X, Mail, MessageCircle, Linkedin, Phone, StickyNote } from "lucide-react";
+import { CalendarDays } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -96,6 +98,7 @@ export function AgendaPage() {
 
   return (
     <div data-testid="page-agenda" className="flex flex-col h-full">
+      <PageTitleHeader icon={CalendarDays} title="Agenda" subtitle="Azioni del giorno" />
       {/* ── Barra superiore: tabs giorni + filtri attivi ─────────────────── */}
       <div className="shrink-0 border-b border-border/30 bg-card/20">
         <div className="flex items-center gap-2 px-3 py-2">
