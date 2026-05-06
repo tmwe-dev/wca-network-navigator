@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TopCommandBar } from "@/components/cockpit/TopCommandBar";
 import { ContactStream } from "@/components/cockpit/ContactStream";
 import { ActiveFilterChips } from "@/components/cockpit/ActiveFilterChips";
-import { Mail, Linkedin } from "lucide-react";
+import { Mail, Linkedin, Rocket } from "lucide-react";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import { LinkedInFlowPanel } from "@/components/cockpit/LinkedInFlowPanel";
 import { toast } from "sonner";
 import {
@@ -78,6 +79,7 @@ export function CockpitPage() {
 
   return (
     <div data-testid="page-cockpit" className="h-full flex flex-col overflow-hidden">
+      <PageTitleHeader icon={Rocket} title="Cockpit" subtitle="Pipeline outbound" />
       <TopCommandBar
         onAIActions={executeAIActions} viewMode={viewMode} onViewChange={setViewMode}
         searchQuery={searchQuery} onSearchChange={() => {}}
