@@ -1,79 +1,123 @@
+# Piano Fase 4 + 5 — Responsive sweep & QA finale UI/UX
 
-## Stato attuale (cosa già esiste)
+Le fasi 1-3 sono già state applicate (token semantici, PageShell, 3 pagine pilota). Restano da chiudere:
+- **Fase 4**: passaggio responsive su tutte le pagine già migrate + bonifica colori hard-coded.
+- **Fase 5**: QA finale temi/accessibilità.
 
-Lo step 1 server-side è già completato nella scorsa iterazione:
+Vincolo invariato: nessuna modifica a logica, query, hook, DAL, edge functions, routing, RLS, auth, comportamento filtri/realtime.
 
-- `tmwe-oauth-callback` riceve il `code` dopo l'autenticazione TMWE esistente.
-- Scambia il code per `access_token` TMWE (token esistente, mai esposto al client).
-- Chiama `GET /erp/tmwe_json/get_my_profile` con `Authorization: Bearer {token}`.
-- Estrae l'email autoritativa dal profilo, la **normalizza** (`trim().toLowerCase()`).
-- Rifiuta gli alias `@tmwe.local`.
-- Chiama `is_email_authorized(p_email)` (RPC che legge `authorized_users.is_active=true`).
-- Se non whitelisted → redirect `/v2/login?tmwe=error&reason=not_whitelisted` **senza** creare utente Lovable né salvare token.
-- Se autorizzato → crea/risolve l'utente Lovable, salva token TMWE in `tmwe_user_tokens` (service-role only) e genera magic link → sessione Supabase.
+---
 
-`LoginPage` mostra già solo il pulsante "Entra con TMWE" e mappa i `reason` in messaggi italiani (incluso `not_whitelisted`).
+## Stato attuale (mappa rapida)
 
-## Cosa manca per chiudere lo step 1
+- 78 pagine in `src/v2/ui/pages/`
+- 3 già su PageShell: Diagnostics, Telemetry, Notifications
+- 28 file con colori Tailwind hard-coded (`text-green-500`, `bg-blue-100`, ecc.) — vanno migrati a token semantici (`text-success`, `bg-info/15`, `bg-muted/40`)
+- Sidebar/drawer globali: `LayoutSidebarNav`, `ContextFiltersRail`, `FiltersDrawer`, `MissionDrawer` — già conformi al pattern overlay (mem `drawer-overlay-pattern`), da verificare solo a 360-414px
 
-Il flusso autoritativo è in piedi, ma sopravvivono **entry-point legacy email/password** in `useAuthV2` e nelle route. Vanno **scollegati** (non ancora rimossi del tutto, come chiesto) per impedire qualunque accesso che bypassi il gate `get_my_profile + whitelist`.
+---
 
-## Piano di intervento (minimo, locale, reversibile)
+## Fase 4 — Responsive + bonifica colori
 
-### 1. `src/v2/hooks/useAuthV2.ts`
-Trasformare gli action legacy in **no-op che restituiscono errore esplicito**, mantenendo la firma per non rompere chiamanti residui:
+### 4.1 Bonifica colori hard-coded (28 file)
+Sostituzione mappata 1:1, nessuna modifica strutturale:
 
-- `signInWithEmail` → setta `error = "Login email/password disabilitato. Usa Entra con TMWE."` e ritorna.
-- `signUp` → idem.
-- `resetPassword` / `updatePassword` → idem.
-
-In questo modo nessun codice residuo può creare sessioni che bypassano la whitelist, ma la API del hook resta stabile (zero rischio di rompere import). I tipi e i nomi sono preservati.
-
-### 2. Route legacy (`src/v2/routes.tsx` + `src/App.tsx`)
-- In `V2Routes`: la route `reset-password` → redirect a `/v2/login` (rimosso il render di `ResetPasswordPage`, l'import lazy va eliminato).
-- In `App.tsx`: il `LegacyRedirect` `/reset-password → /v2/reset-password` resta (atterra comunque su `/v2/login` per la regola sopra).
-- `ResetPasswordPage.tsx` **non viene cancellato** (codice legacy preservato come da vincolo "non eliminare ancora tutto il legacy").
-
-### 3. Centralizzazione del gate
-Il gate è **già centralizzato server-side** in `tmwe-oauth-callback` (un solo punto di verità: profilo TMWE + whitelist). Sul client la sorgente unica per lo stato auth resta `AuthProvider` + `useAuthV2`. Non si introducono nuovi hook: il vincolo è "intervento minimo".
-
-Stati già coperti dal flusso end-to-end:
-| Stato | Dove |
+| Hard-coded | Token semantico |
 |---|---|
-| autenticazione in corso | `AuthProvider.status === "loading"` |
-| token assente | `tmwe-oauth-callback` `missing_params` / `invalid_state` |
-| caricamento profilo | fetch `get_my_profile` nel callback |
-| profilo caricato | continua il flusso |
-| email mancante | `reason=no_tmwe_email` su `/v2/login` |
-| email non in whitelist | `reason=not_whitelisted` su `/v2/login` |
-| utente autorizzato | magic link → sessione Supabase → `/v2/command` |
-| errore get_my_profile | `reason=profile_fetch_failed` su `/v2/login` |
+| `text-green-*`, `bg-green-*` | `text-success`, `bg-success/15`, `border-success/30` |
+| `text-red-*`, `bg-red-*` | `text-destructive`, `bg-destructive/15` |
+| `text-yellow-*`, `text-amber-*`, `bg-yellow-*` | `text-warning`, `bg-warning/15` |
+| `text-blue-*`, `bg-blue-*` | `text-info`, `bg-info/15` |
+| `bg-gray-*`, `bg-slate-*` | `bg-muted`, `bg-muted/40`, `border-border` |
+| `text-gray-*`, `text-slate-*` | `text-muted-foreground`, `text-foreground` |
 
-L'unica aggiunta UI: estendere `REASON_MESSAGES` in `LoginPage.tsx` con `profile_fetch_failed` e `whitelist_check_failed` (oggi cadono nel fallback generico).
+File coinvolti (raggruppati per area, in ordine di priorità):
 
-### 4. Fuori scope (per restare minimi)
-- Nessuna modifica a DB, RLS, edge functions, endpoint TMWE, struttura `authorized_users`.
-- Nessuna modifica al flusso magic link / `AuthCallbackPage`.
-- Nessuna rimozione fisica di `ResetPasswordPage`, `signInWithEmail` body, RPC.
+**Operativo (alta visibilità)**
+- `agenda/DepartmentKanbanView.tsx`
+- `funnemail-inbox/MailReader.tsx`
+- `email-forge/SherlockCanvas.tsx`, `components/DeepSearchHeader.tsx`, `DeepSearchContent.tsx`, `DeepSearchPageList.tsx`
+- `cestinone/Toolbar.tsx`, `meta.ts`
 
-## File toccati (3)
+**AI / Lab**
+- `AILabPage.tsx`, `AgentCapabilitiesPage.tsx`
+- `prompt-lab/HarmonizeReviewPanel.tsx`, `GlobalImproverDialog.tsx`, `SignalsBanner.tsx`, `SuggestionsReviewPage.tsx`, `RunHistoryPanel.tsx`, `PromptCopilotPanel.tsx`, `SplitBlockEditor.tsx`
+- `prompt-lab/tabs/PromptTestsTab.tsx`, `JournalistsTab.tsx`, `SimulatorTab.tsx`
+- `prompt-lab/atlas/ArchitectReviewPanel.tsx`
 
-1. `src/v2/hooks/useAuthV2.ts` — neutralizza le 4 action legacy (no-op + error message).
-2. `src/v2/routes.tsx` — rimuove l'import lazy di `ResetPasswordPage` e sostituisce la route con redirect a `login`.
-3. `src/v2/ui/pages/LoginPage.tsx` — aggiunge 2 messaggi a `REASON_MESSAGES`.
+**Admin / Network**
+- `KnowledgeBasePage.tsx`, `StaffPage.tsx`, `RADashboardPage.tsx`, `RAScrapingEnginePage.tsx`, `AcquisizionePartnerPage.tsx`, `CalendarPage.tsx`, `GuidaPage.tsx`
+- `finder-api/FinderApiCatalogTab.tsx`, `FinderApiSchemaMapPage.tsx`
+- `telemetry/SharedUI.tsx`
 
-## Test post-modifica
+### 4.2 Responsive sweep — controlli mobile-first
+Per ogni pagina migrata + per le 28 sopra, verifica veloce a 3 viewport (375 / 768 / 1280):
 
-1. **Login OK**: utente con email in `authorized_users` → click "Entra con TMWE" → callback → magic link → atterra su `/v2/command`.
-2. **Whitelist deny**: utente TMWE valido ma email non in `authorized_users` → redirect a `/v2/login?tmwe=error&reason=not_whitelisted` con messaggio chiaro, **nessun** record creato in `auth.users` né in `tmwe_user_tokens`.
-3. **Profilo fail**: token TMWE invalido (simulato) → `reason=profile_fetch_failed` mostrato in italiano.
-4. **Legacy bloccato**: chiamata diretta a `signInWithEmail("x","y")` da console → restituisce error "disabilitato", nessuna sessione creata.
-5. **Route legacy**: visita manuale `/v2/reset-password` → redirect immediato a `/v2/login`.
-6. **Sessione esistente**: utente già loggato non viene buttato fuori (nessuna re-check whitelist al restore session, comportamento già garantito da `useAuthV2`).
-7. **Nessun log sensibile**: `console.log` esistenti non emettono token o password (verificato leggendo callback).
+- **Container**: usare `PageShell` (`max-w-7xl`, `px-4 sm:px-6 lg:px-8`); rimuovere `w-[NNNpx]` fisse sostituendole con `w-full max-w-*`.
+- **Header pagina**: titolo + descrizione + actions in `flex-col sm:flex-row` (già nel PageShell).
+- **Toolbar/tab**: `flex-nowrap overflow-x-auto sm:flex-wrap` (già nel PageShell); badge tab non devono andare a capo singolo carattere.
+- **Tabelle**: wrap in `<div class="overflow-x-auto rounded-md border">`; mai forzare colonne fisse <120px.
+- **Form**: griglia `grid grid-cols-1 sm:grid-cols-2 gap-4`; input/select altezza `h-10`; label `text-sm`.
+- **Sidebar/drawer**: a <768 sempre overlay (Sheet) con backdrop, mai flex item che spinge il contenuto. ContextFiltersRail già conforme.
+- **Card grid**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` con `gap-4`.
+- **Bottoni**: nelle azioni di header su mobile `w-full sm:w-auto`.
 
-## Prossimo step sicuro (NON in questo intervento)
+### 4.3 Pagine grandi da migrare a PageShell (lista chiusa)
+Una alla volta, in ordine di rischio crescente (lasciate per ultime quelle con realtime/drawer custom):
 
-- Rimuovere fisicamente `ResetPasswordPage.tsx`, `ROUTE_RESET_PASSWORD`, e i body delle 4 action neutralizzate.
-- Sostituire in `tmwe-oauth-callback` la `listUsers({perPage:200})` con lookup deterministico per email (hardening per workspace > 200 utenti).
-- Considerare la rimozione della tabella `authorized_users` a favore di un check basato su un attributo del profilo TMWE (se mai disponibile).
+1. KpiPage, AnalyticsPage, AdminUsersPage, DocsPage, GuidaPage (sicure)
+2. SettingsPage, ObservabilityPage, StaffPage, KnowledgeBasePage (medie)
+3. DashboardPage, CockpitPage, AgendaPage (delicate — ha grouping)
+4. CRMPage, ContactsPage, OutreachPage (drawer/filtri pesanti)
+5. EmailComposerPage, FunnemailInboxPage, EmailIntelligencePage (realtime + claim)
+
+Per ognuna: solo wrap in `<PageShell title=... description=... actions=... toolbar=...>`; il contenuto interno NON viene rifattorizzato.
+
+---
+
+## Fase 5 — QA finale UI/UX/temi/accessibilità
+
+### 5.1 Checklist temi (per ogni pagina toccata)
+- [ ] Light: testo primario `text-foreground`, secondario `text-muted-foreground`, contrasto AA ≥ 4.5:1
+- [ ] Dark: nessun grigio sotto `text-muted-foreground`; card `bg-card` + `border-border`
+- [ ] Nessun colore Tailwind hard-coded residuo (`rg "(text|bg)-(green|red|blue|yellow|amber|emerald|sky|violet|rose)-[0-9]" src/v2/ui/pages/`)
+- [ ] Badge: solo varianti shadcn semantiche (`success|warning|info|gold|destructive|muted|default|secondary|outline`)
+
+### 5.2 Checklist componenti UI
+- **Form**: label `text-sm font-medium`, errore `text-destructive text-xs mt-1`, helper `text-muted-foreground text-xs`
+- **Tabelle**: header `bg-muted/40 text-muted-foreground text-xs uppercase`, row hover `hover:bg-muted/30`, empty state coerente
+- **Bottoni**: variants `default|outline|secondary|ghost|destructive|link` — niente `bg-blue-500` inline
+- **Sidebar**:
+  - Sinistra (LayoutSidebarNav): navigazione, sezione attiva evidenziata
+  - Destra (ContextFiltersRail / FiltersDrawer): filtri contestuali pagina, mai duplicare azioni dell'header
+  - Mobile: entrambe in Sheet/drawer con backdrop
+
+### 5.3 Accessibilità
+- Focus visibile su tutti gli elementi interattivi (`focus-visible:ring-2 focus-visible:ring-ring`)
+- `aria-label` su bottoni icon-only
+- Heading hierarchy: 1 `<h1>` per pagina (già nel PageShell), poi `<h2>` per Section
+- Contrasto verificato sui badge con trasparenza (`bg-*-500/15 text-*-500` — il foreground deve restare leggibile in dark)
+
+### 5.4 Smoke test responsive
+3 viewport, 6 pagine campione: Dashboard, CRM, Outreach, EmailIntelligence, PromptLab, Settings.
+
+---
+
+## Rischi da evitare
+
+- Toccare logica/hook/DAL → vietato
+- Rimuovere classi che pilotano comportamenti (es. `data-state`, `aria-*`)
+- Cambiare struttura DOM di componenti che hanno hook su selettori (drawer, sheet, command)
+- Modificare colori tema (`index.css`) — i token sono già definiti, va solo applicato
+- Toccare `LayoutHeader.tsx`, `LayoutSidebarNav.tsx` core senza necessità
+
+---
+
+## Output finale atteso
+
+1. Lista file modificati per fase
+2. Diff colori hard-coded → token (conteggio prima/dopo via `rg`)
+3. Pagine migrate a PageShell (con check responsive 375/768/1280)
+4. Eventuali residui non bonificabili senza toccare logica → segnalati per sprint futuro
+
+Approva e dimmi da quale gruppo partire (suggerito: **4.1 bonifica colori operativi** — basso rischio, alto impatto visivo).
