@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { rpcIsEmailAuthorized, rpcRecordUserLogin } from "@/data/rpc";
+import { rpcRecordUserLogin } from "@/data/rpc";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -81,12 +81,6 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
 
   if (!data || data.length === 0) return ["user"];
   return data.map((row) => row.role as AppRole);
-}
-
-// ── Helper: check whitelist (throws on network error) ────────────────
-
-async function isEmailAuthorized(email: string): Promise<boolean> {
-  return rpcIsEmailAuthorized(normalizeEmail(email));
 }
 
 // ── Helper: record login ─────────────────────────────────────────────
