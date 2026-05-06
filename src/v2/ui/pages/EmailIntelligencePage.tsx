@@ -95,8 +95,8 @@ export function EmailIntelligencePage(): React.ReactElement {
     <div data-testid="page-email-intelligence" className="flex h-full min-h-0 flex-col overflow-hidden">
       <PageTitleHeader
         icon={Brain}
-        title="Funnemail"
-        subtitle="email intelligence"
+        title="Email Intelligence"
+        subtitle="classificazione mittenti"
         right={
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <KpiPill label="Da classificare" value={uncategorizedCount} tone="primary" />

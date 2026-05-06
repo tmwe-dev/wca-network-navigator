@@ -380,8 +380,8 @@ export default function ManualGroupingTab() {
         {/* COL 2 — Sender cards in COLONNA verticale */}
         <ResizablePanel defaultSize={showPreview ? 30 : 40} minSize={20}>
           <div className="h-full flex flex-col overflow-hidden border-l-0">
-            <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="px-3 py-2 border-b bg-muted/30 flex-shrink-0 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -438,7 +438,7 @@ export default function ManualGroupingTab() {
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap ml-auto">
                 <span className="font-semibold text-foreground">{sortedSenders.length}</span>
                 <span> / {allSenders.length}</span>
                 <span className="mx-1 opacity-50">·</span>
