@@ -19,7 +19,7 @@ import {
 import {
   ChevronLeft, ChevronRight, Mail, Loader2,
   ArrowDownLeft, ArrowUpRight, MessageCircle, Linkedin,
-  ListCollapse, ListTree,
+  ListCollapse, ListTree, Search,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -29,6 +29,13 @@ import { cn } from "@/lib/utils";
 import { useEmailMessageContent } from "@/hooks/useEmailMessageContent";
 import { normalizeEmailContent } from "@/components/outreach/email/emailContentNormalization";
 import { EmailHtmlFrame } from "@/components/outreach/email/EmailHtmlFrame";
+import { getFlagFromDomain, getDomainFaviconUrl } from "@/lib/domainUtils";
+
+function getDomainFromEmail(email: string | null): string {
+  if (!email) return "";
+  const at = email.indexOf("@");
+  return at >= 0 ? email.slice(at + 1).toLowerCase() : email.toLowerCase();
+}
 
 interface PreviewEmail {
   id: string;
@@ -122,6 +129,9 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
    *  l'utente naviga con i chevron sopra il preview e l'apertura dell'elenco
    *  è on-demand tramite l'icona dedicata. */
   const [showList, setShowList] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
+
+  useEffect(() => { setFaviconError(false); }, [senderEmail]);
 
   useEffect(() => {
     if (!senderEmail) {
@@ -164,17 +174,54 @@ export function SenderEmailPreviewPanel({ senderEmail, companyName }: SenderEmai
     );
   }
 
+  const domain = getDomainFromEmail(senderEmail);
+  const flag = getFlagFromDomain(domain);
+  const faviconUrl = domain ? getDomainFaviconUrl(domain) : null;
+  const titleLabel = companyName || senderEmail;
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Mail className="h-4 w-4 text-primary flex-shrink-0" />
-          <span className="text-xs font-semibold truncate">
-            Email da {companyName || senderEmail}
+          {faviconUrl && !faviconError ? (
+            <img
+              src={faviconUrl}
+              alt=""
+              className="h-4 w-4 rounded flex-shrink-0"
+              onError={() => setFaviconError(true)}
+            />
+          ) : (
+            <Mail className="h-4 w-4 text-primary flex-shrink-0" />
+          )}
+          {flag && <span className="text-sm leading-none flex-shrink-0" aria-hidden>{flag}</span>}
+          <span className="text-xs font-semibold truncate" title={titleLabel}>
+            {titleLabel}
           </span>
+          {domain && (
+            <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">
+              · {domain}
+            </span>
+          )}
         </div>
         {emails.length > 0 && (
           <div className="flex items-center gap-1 flex-shrink-0">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon" variant="ghost" className="h-6 w-6"
+                    onClick={() => current && setFullViewEmail(current)}
+                    disabled={!current}
+                    aria-label="Apri email a tutta pagina"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-[10px]">
+                  Apri a tutta pagina (zoom)
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
