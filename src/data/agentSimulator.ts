@@ -1,7 +1,7 @@
 /**
  * DAL — agent-simulate edge function client.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export interface SimulatorRequest {
   agentId: string | null;
@@ -65,12 +65,11 @@ export interface SimulatorResponse {
 }
 
 export async function runAgentSimulator(req: SimulatorRequest): Promise<SimulatorResponse> {
-  const { data, error } = await supabase.functions.invoke("agent-simulate", {
-    // Charter R1+R2
-    body: { ...req, scope: "lab", context: { source: "agentSimulator", mode: "simulate" } },
+  return await invokeAi<SimulatorResponse>("agent-simulate", {
+    scope: "lab",
+    context: { source: "agentSimulator", mode: "simulate" },
+    body: { ...req },
   });
-  if (error) throw error;
-  return data as SimulatorResponse;
 }
 
 export interface EdgeFnSpecLite {
@@ -84,9 +83,10 @@ export interface EdgeFnSpecLite {
 }
 
 export async function listEdgeFnPseudoAgents(): Promise<EdgeFnSpecLite[]> {
-  const { data, error } = await supabase.functions.invoke("agent-simulate", {
-    body: { listEdgeFns: true, scope: "lab", context: { source: "agentSimulator", mode: "list-edge-fns" } },
+  const data = await invokeAi<{ edge_fns?: EdgeFnSpecLite[] }>("agent-simulate", {
+    scope: "lab",
+    context: { source: "agentSimulator", mode: "list-edge-fns" },
+    body: { listEdgeFns: true },
   });
-  if (error) throw error;
-  return ((data as { edge_fns?: EdgeFnSpecLite[] })?.edge_fns ?? []);
+  return data?.edge_fns ?? [];
 }
