@@ -58,7 +58,7 @@ export function GoldenLayout({
         {!hasDetail ? (
           <div className="h-full">{list}</div>
         ) : (
-          <div className="fixed inset-0 z-40 bg-background animate-in slide-in-from-right duration-200">
+          <div className="fixed inset-0 z-40 bg-background animate-in slide-in-from-right duration-200 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             {detail}
           </div>
         )}

@@ -275,20 +275,20 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                       </div>
 
                        {/* Mobile header */}
-                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-4 py-2 flex items-center justify-between" role="banner">
-                        <h2 className="text-sm font-bold text-foreground">WCA Partners</h2>
-                        <div className="flex items-center gap-2">
+                       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2 flex items-center justify-between gap-2" role="banner">
+                        <h2 className="text-sm font-bold text-foreground truncate min-w-0">WCA Partners</h2>
+                        <div className="flex items-center gap-1 shrink-0">
                           <ThemePicker variant="icon" />
                           <button
                             onClick={() => setCommandOpen(true)}
-                            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
+                            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-primary"
                             aria-label="Apri Command"
                             data-testid="mobile-command-button"
                           >
                             <Command className="h-5 w-5" />
                           </button>
-                          <button onClick={() => setIntelliflowOpen(true)} className="min-h-[44px] min-w-[44px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
-                          <button onClick={() => setMobileOpen(!mobileOpen)} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+                          <button onClick={() => setIntelliflowOpen(true)} aria-label="Apri IntelliFlow" className="min-h-[40px] min-w-[40px] flex items-center justify-center"><Sparkles className="h-5 w-5 text-primary" /></button>
+                          <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"} className="min-h-[40px] min-w-[40px] flex items-center justify-center">
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                           </button>
                         </div>
