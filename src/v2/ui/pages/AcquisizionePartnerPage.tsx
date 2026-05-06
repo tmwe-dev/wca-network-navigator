@@ -101,7 +101,7 @@ export function AcquisizionePartner() {
                   "bg-muted text-muted-foreground"
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${
-                    sessionHealth === "active" ? "bg-emerald-500" :
+                    sessionHealth === "active" ? "bg-success" :
                     sessionHealth === "checking" || sessionHealth === "recovering" ? "bg-primary animate-pulse" :
                     sessionHealth === "dead" ? "bg-destructive" : "bg-muted-foreground"
                   }`} />

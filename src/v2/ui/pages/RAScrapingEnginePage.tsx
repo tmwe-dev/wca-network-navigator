@@ -31,7 +31,7 @@ export function RAScrapingEngine() {
       <div className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 bg-card/40 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs sm:text-sm">
           <div className="flex items-center gap-2 min-w-0">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${s.isAvailable ? "bg-emerald-400" : "bg-destructive"}`} />
+            <div className={`w-2 h-2 rounded-full animate-pulse ${s.isAvailable ? "bg-success" : "bg-destructive"}`} />
             <span className="font-medium text-foreground">{s.isAvailable ? "Connesso" : "Disconnesso"}</span>
           </div>
           <Badge variant="outline" className="text-xs">
@@ -200,7 +200,7 @@ function SearchResults({ s }: { s: ReturnType<typeof useRAScrapingState> }) {
         </div>
         {s.selectedResults.size > 0 && (
           <div className="pt-2 border-t border-border">
-            <Button onClick={s.handleScrapeSelected} disabled={s.isScraping || !s.isAvailable} className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-primary-foreground">
+            <Button onClick={s.handleScrapeSelected} disabled={s.isScraping || !s.isAvailable} className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-success hover:bg-success/90 text-primary-foreground">
               <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" /> {s.isScraping ? "Scraping..." : `Scraping Selezionati (${s.selectedResults.size})`}
             </Button>
           </div>

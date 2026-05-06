@@ -36,7 +36,7 @@ export function Card({ title, children }: { title: string; children: React.React
 
 export function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
-    ok: "bg-emerald-100 text-success dark:bg-success/30 dark:text-success",
+    ok: "bg-success/15 text-success",
     error: "bg-destructive/10 text-destructive",
     timeout: "bg-primary/10 text-primary",
     rate_limited: "bg-primary/10 text-primary",

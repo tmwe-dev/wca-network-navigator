@@ -185,8 +185,8 @@ const Guida = () => {
           <div className="space-y-3">
             <div className="flex gap-2">
               <span className="px-2 py-1 rounded-full bg-success/10 text-success text-xs">✓ Enriched</span>
-              <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs">🌐 Website</span>
-              <span className="px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs">in LinkedIn</span>
+              <span className="px-2 py-1 rounded-full bg-info/10 text-info text-xs">🌐 Website</span>
+              <span className="px-2 py-1 rounded-full bg-accent/10 text-accent text-xs">in LinkedIn</span>
             </div>
             <div className="p-3 rounded bg-white/5 border border-primary/20 text-xs text-primary-foreground/40">
               <Sparkles className="w-4 h-4 text-primary inline mr-1" />

@@ -32,7 +32,7 @@ export function DeepSearchHeader({
   return (
     <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-card/50 shrink-0">
       <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
-        <Flame className="w-4 h-4 text-orange-500" />
+        <Flame className="w-4 h-4 text-warning" />
         FireScrape Canvas
         {recipient && (
           <Badge variant="outline" className="ml-2 text-[10px] font-normal">
