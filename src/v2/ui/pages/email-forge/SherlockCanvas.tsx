@@ -264,7 +264,7 @@ export function SherlockCanvas({ open, onOpenChange, recipient }: Props) {
 
                       {/* Oracle Escalation CTA */}
                       {selected && selected.confidence !== null && selected.confidence < 0.8 && sherlock.running === null && (
-                        <div className="rounded-md border border-warning/30 bg-amber-50 dark:bg-warning/20 p-4 space-y-2">
+                        <div className="rounded-md border border-warning/30 bg-warning/10 p-4 space-y-2">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[10px] gap-1 border-warning/40 text-warning dark:text-warning">
                               Confidenza: {Math.round(selected.confidence * 100)}%
@@ -351,7 +351,7 @@ function StatusIcon({ status, small }: { status: SherlockStepResult["status"]; s
   const cls = small ? "w-3 h-3 mt-0.5" : "w-3.5 h-3.5";
   if (status === "running") return <Loader2 className={`${cls} animate-spin text-primary shrink-0`} />;
   if (status === "done") return <CheckCircle2 className={`${cls} text-success shrink-0`} />;
-  if (status === "cached") return <Database className={`${cls} text-blue-500 shrink-0`} />;
+  if (status === "cached") return <Database className={`${cls} text-info shrink-0`} />;
   if (status === "skipped") return <SkipForward className={`${cls} text-muted-foreground shrink-0`} />;
   if (status === "pending") return <div className={`${cls} rounded-full border border-muted-foreground/40 shrink-0`} />;
   return <AlertCircle className={`${cls} text-destructive shrink-0`} />;

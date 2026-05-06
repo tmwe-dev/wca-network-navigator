@@ -131,7 +131,7 @@ const LAYER_META: Record<HarmonizeProposal["resolution_layer"], { label: string;
 const SEVERITY_CLS: Record<NonNullable<HarmonizeProposal["severity"]>, string> = {
   low: "bg-muted text-muted-foreground",
   medium: "bg-warning/10 text-warning border-warning/20",
-  high: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+  high: "bg-warning/10 text-warning border-warning/30",
   critical: "bg-destructive/15 text-destructive border-destructive/30",
 };
 

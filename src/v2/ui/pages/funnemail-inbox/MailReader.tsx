@@ -200,7 +200,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
             {/* Content Intelligence — Strato 2 */}
             <div className="pt-3 border-t border-border/40">
               <div className="flex items-center gap-1.5 mb-2">
-                <Brain className="h-3.5 w-3.5 text-violet-600" />
+                <Brain className="h-3.5 w-3.5 text-accent" />
                 <h4 className="text-xs font-semibold uppercase tracking-wide">Lettura contenuto</h4>
               </div>
               {!ci && (
@@ -245,7 +245,7 @@ export function MailReader({ mail, folders, onOverrideFolder, onReclassify, recl
                       <ul className="space-y-1">
                         {ci.suggested_actions.map((a, i) => (
                           <li key={i} className="flex items-start gap-1.5 text-xs">
-                            <span className="text-violet-600 mt-0.5">•</span>
+                            <span className="text-accent mt-0.5">•</span>
                             <span className="text-foreground/85">
                               <span className="font-medium">{a.label ?? a.title ?? a.type}</span>
                               {a.reason && <span className="text-muted-foreground"> — {a.reason}</span>}

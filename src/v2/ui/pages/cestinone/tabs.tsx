@@ -92,7 +92,7 @@ export function OriginTab({ item, onOpenOrigin }: { item: CestinoItem; onOpenOri
 
         {item.campaignName && (
           <div className="flex items-center gap-2 text-xs border-t pt-3">
-            <Megaphone className="h-3.5 w-3.5 text-fuchsia-500" />
+            <Megaphone className="h-3.5 w-3.5 text-accent" />
             <span className="text-muted-foreground">Campagna:</span>
             <span className="font-medium">{item.campaignName}</span>
           </div>

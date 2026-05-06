@@ -69,7 +69,7 @@ export function E2EStatusPage() {
         )}
 
         {err && (
-          <div className="float-panel p-4 border-l-4 border-red-500 text-sm">
+          <div className="float-panel p-4 border-l-4 border-destructive text-sm">
             Errore caricamento risultati: {err}
           </div>
         )}

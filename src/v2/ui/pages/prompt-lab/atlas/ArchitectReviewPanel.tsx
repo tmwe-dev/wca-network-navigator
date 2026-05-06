@@ -28,7 +28,7 @@ import type { Block } from "../types";
 function severityClass(s: DiagnosticSeverity): string {
   switch (s) {
     case "critical": return "bg-destructive/15 text-destructive border-destructive/40";
-    case "high": return "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40";
+    case "high": return "bg-warning/15 text-warning border-warning/40";
     case "medium": return "bg-warning/15 text-warning dark:text-warning border-warning/40";
     case "low": return "bg-muted text-muted-foreground border-border";
   }

@@ -238,8 +238,8 @@ function RunHistory({ onLoadRun }: { onLoadRun: (results: TestResultRow[]) => vo
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">{new Date(run.started_at).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                 <Badge variant="outline" className="text-[10px]">{run.total_score}/{run.max_score}</Badge>
-                <Badge variant="default" className="bg-green-600 text-[10px]">✅{run.pass_count}</Badge>
-                {run.warn_count > 0 && <Badge variant="default" className="bg-yellow-600 text-[10px]">⚠️{run.warn_count}</Badge>}
+                <Badge variant="default" className="bg-success text-[10px]">✅{run.pass_count}</Badge>
+                {run.warn_count > 0 && <Badge variant="default" className="bg-warning text-[10px]">⚠️{run.warn_count}</Badge>}
                 {run.fail_count > 0 && <Badge variant="destructive" className="text-[10px]">❌{run.fail_count}</Badge>}
               </div>
               <div className="flex gap-1">
@@ -359,8 +359,8 @@ export function AILab() {
         <div className="flex items-center gap-4">
           {results.size > 0 && (
             <div className="flex gap-2 text-sm">
-              <Badge variant="default" className="bg-green-600">✅ {passCount}</Badge>
-              <Badge variant="default" className="bg-yellow-600">⚠️ {warnCount}</Badge>
+              <Badge variant="default" className="bg-success">✅ {passCount}</Badge>
+              <Badge variant="default" className="bg-warning">⚠️ {warnCount}</Badge>
               <Badge variant="destructive">❌ {failCount}</Badge>
               <Badge variant="outline">Score: {totalScore}/{maxScore} ({Math.round(totalScore/maxScore*10000)}/10000)</Badge>
             </div>
@@ -387,7 +387,7 @@ export function AILab() {
                   result?.status === "pass" ? "border-success/30" :
                   result?.status === "fail" ? "border-destructive/30" :
                   result?.status === "warn" ? "border-warning/30" :
-                  result?.status === "running" ? "border-blue-500/30 animate-pulse" : ""
+                  result?.status === "running" ? "border-info/30 animate-pulse" : ""
                 }`}
                 onClick={() => setExpandedId(isExpanded ? null : scenario.id)}
               >
@@ -398,7 +398,7 @@ export function AILab() {
                       {result?.status === "pass" && <CheckCircle className="h-4 w-4 text-success" />}
                       {result?.status === "fail" && <XCircle className="h-4 w-4 text-destructive" />}
                       {result?.status === "warn" && <AlertTriangle className="h-4 w-4 text-warning" />}
-                      {result?.status === "running" && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+                      {result?.status === "running" && <Loader2 className="h-4 w-4 animate-spin text-info" />}
                       <CardTitle className="text-sm font-medium">{scenario.name}</CardTitle>
                       <Badge variant="outline" className="text-xs">{scenario.endpoint}</Badge>
                     </div>

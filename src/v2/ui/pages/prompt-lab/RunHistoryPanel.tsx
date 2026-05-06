@@ -124,7 +124,7 @@ export function RunHistoryPanel() {
                 {/* Riepilogo proposte */}
                 <div className="flex flex-wrap gap-2">
                   {savedProposals(run.proposals) > 0 && (
-                    <Badge variant="outline" className="gap-1 text-success border-green-500">
+                    <Badge variant="outline" className="gap-1 text-success border-success/50">
                       <CheckCircle2 className="h-3 w-3" />
                       {savedProposals(run.proposals)} salvate
                     </Badge>
@@ -136,7 +136,7 @@ export function RunHistoryPanel() {
                     </Badge>
                   )}
                   {errorProposals(run.proposals) > 0 && (
-                    <Badge variant="outline" className="gap-1 text-destructive border-red-500">
+                    <Badge variant="outline" className="gap-1 text-destructive border-destructive/50">
                       <AlertCircle className="h-3 w-3" />
                       {errorProposals(run.proposals)} errori
                     </Badge>
@@ -162,8 +162,8 @@ export function RunHistoryPanel() {
                       <div
                         key={`${run.id}-${proposal.block_id}-${idx}`}
                         className={`rounded border p-2 text-sm ${
-                          isSaved ? "bg-green-50/50 border-green-200" :
-                          isError ? "bg-red-50/50 border-red-200" :
+                          isSaved ? "bg-success/10 border-success/30" :
+                          isError ? "bg-destructive/10 border-destructive/30" :
                           isSkipped ? "bg-muted/50 border-border opacity-60" :
                           "bg-background border-border"
                         }`}
@@ -176,7 +176,7 @@ export function RunHistoryPanel() {
                               </Badge>
                               <span className="text-xs font-medium">{proposal.label}</span>
                               {isSaved && (
-                                <Badge variant="default" className="bg-green-600 text-primary-foreground text-[10px]">
+                                <Badge variant="default" className="bg-success text-primary-foreground text-[10px]">
                                   Salvato
                                 </Badge>
                               )}
@@ -213,7 +213,7 @@ export function RunHistoryPanel() {
                             </div>
                             <div>
                               <p className="text-[10px] font-medium text-success mb-1">Dopo</p>
-                              <pre className="text-[10px] font-mono bg-green-50 rounded p-1.5 max-h-24 overflow-auto whitespace-pre-wrap break-words">
+                              <pre className="text-[10px] font-mono bg-success/10 rounded p-1.5 max-h-24 overflow-auto whitespace-pre-wrap break-words">
                                 {proposal.after}
                               </pre>
                             </div>

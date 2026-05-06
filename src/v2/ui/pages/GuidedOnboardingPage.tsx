@@ -131,7 +131,7 @@ export function GuidedOnboardingPage(): React.ReactElement {
             >
               <div className={cn(
                 "h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                i === current ? "border-primary bg-primary/10" : completed.has(i) ? "border-emerald-500 bg-success/10" : "border-border"
+                i === current ? "border-primary bg-primary/10" : completed.has(i) ? "border-success bg-success/10" : "border-border"
               )}>
                 {completed.has(i) ? <CheckCircle2 className="h-4 w-4" /> : <step.icon className="h-4 w-4" />}
               </div>

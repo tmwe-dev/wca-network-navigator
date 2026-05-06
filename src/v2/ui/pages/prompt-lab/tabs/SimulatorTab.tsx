@@ -190,7 +190,7 @@ export function SimulatorTab() {
                 <Sparkles className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Persona</h3>
                 {result.persona.loaded
-                  ? <Badge className="text-[10px] bg-emerald-600">caricata</Badge>
+                  ? <Badge className="text-[10px] bg-success">caricata</Badge>
                   : <Badge variant="outline" className="text-[10px]">default</Badge>}
               </div>
               {result.persona.loaded ? (
@@ -211,7 +211,7 @@ export function SimulatorTab() {
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Capabilities</h3>
                 {result.capabilities.loaded
-                  ? <Badge className="text-[10px] bg-emerald-600">DB</Badge>
+                  ? <Badge className="text-[10px] bg-success">DB</Badge>
                   : <Badge variant="outline" className="text-[10px]">default</Badge>}
               </div>
               <div className="text-xs grid grid-cols-2 gap-1.5">
@@ -242,7 +242,7 @@ export function SimulatorTab() {
                 >
                   <span className="font-mono truncate">{t.name}</span>
                   {t.requires_approval && (
-                    <Badge variant="outline" className="text-[9px] border-amber-500 text-warning">
+                    <Badge variant="outline" className="text-[9px] border-warning text-warning">
                       approva
                     </Badge>
                   )}
@@ -272,7 +272,7 @@ export function SimulatorTab() {
                 {result.operative_prompts.applied.length} applicati
               </Badge>
               {result.operative_prompts.has_mandatory && (
-                <Badge className="text-[10px] bg-amber-600">OBBLIGATORIA presente</Badge>
+                <Badge className="text-[10px] bg-warning">OBBLIGATORIA presente</Badge>
               )}
             </div>
             {result.operative_prompts.applied.length === 0 ? (
@@ -379,7 +379,7 @@ export function SimulatorTab() {
                               tc.would_be_blocked
                                 ? "border-destructive bg-destructive/5"
                                 : tc.would_require_approval
-                                ? "border-amber-500 bg-warning/5"
+                                ? "border-warning bg-warning/5"
                                 : "border-border"
                             }`}
                           >
@@ -389,7 +389,7 @@ export function SimulatorTab() {
                                 <Badge variant="destructive" className="text-[9px]">bloccato</Badge>
                               )}
                               {tc.would_require_approval && !tc.would_be_blocked && (
-                                <Badge variant="outline" className="text-[9px] border-amber-500 text-warning">
+                                <Badge variant="outline" className="text-[9px] border-warning text-warning">
                                   richiede approvazione
                                 </Badge>
                               )}

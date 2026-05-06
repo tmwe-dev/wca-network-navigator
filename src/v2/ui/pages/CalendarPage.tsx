@@ -106,7 +106,7 @@ export function CalendarPage() {
 
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-blue-500" />
+                <div className="w-3 h-3 rounded bg-info" />
                 <span className="text-muted-foreground">Riunioni</span>
               </div>
               <div className="flex items-center gap-2">
@@ -118,11 +118,11 @@ export function CalendarPage() {
                 <span className="text-muted-foreground">Attività</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-purple-500" />
+                <div className="w-3 h-3 rounded bg-accent" />
                 <span className="text-muted-foreground">Promemoria</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-orange-500" />
+                <div className="w-3 h-3 rounded bg-warning" />
                 <span className="text-muted-foreground">Follow-up</span>
               </div>
             </div>

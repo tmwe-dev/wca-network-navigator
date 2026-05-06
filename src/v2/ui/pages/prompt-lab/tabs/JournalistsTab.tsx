@@ -18,7 +18,7 @@ type Role = "rompighiaccio" | "risvegliatore" | "chiusore" | "accompagnatore";
 type Field = "prompt_full" | "prompt_voice" | "prompt_writing" | "tone" | "rules" | "donts" | "kb_sources" | "must_know";
 
 const JOURNALISTS: Array<{ role: Role; label: string; icon: LucideIcon; color: string; desc: string; states: string[] }> = [
-  { role: "rompighiaccio", label: "Rompighiaccio", icon: Zap, color: "text-blue-500 bg-blue-500/10", desc: "Primo contatto. Apertura dialogo.", states: ["new", "first_touch_sent"] },
+  { role: "rompighiaccio", label: "Rompighiaccio", icon: Zap, color: "text-info bg-info/10", desc: "Primo contatto. Apertura dialogo.", states: ["new", "first_touch_sent"] },
   { role: "risvegliatore", label: "Risvegliatore", icon: Newspaper, color: "text-warning bg-warning/10", desc: "Dopo silenzio. Riattivazione.", states: ["holding", "archived"] },
   { role: "chiusore", label: "Chiusore", icon: Gavel, color: "text-destructive bg-destructive/10", desc: "Momento decisione. Chiusura.", states: ["qualified", "negotiation"] },
   { role: "accompagnatore", label: "Accompagnatore", icon: Handshake, color: "text-success bg-success/10", desc: "Relazione attiva. Continuità.", states: ["converted"] },
@@ -89,8 +89,8 @@ export function JournalistsTab() {
         ))}
       </div>
 
-      <div className="p-2 rounded border border-purple-500/20 bg-purple-500/5 text-[11px] text-foreground/70">
-        <span className="text-purple-500 font-medium">engaged</span> → auto-selezione contestuale: risposta positiva &lt;5gg → Accompagnatore | silenzio &gt;5gg → Risvegliatore. <span className="text-destructive font-medium">blacklisted</span> → blocco totale.
+      <div className="p-2 rounded border border-accent/20 bg-accent/5 text-[11px] text-foreground/70">
+        <span className="text-accent font-medium">engaged</span> → auto-selezione contestuale: risposta positiva &lt;5gg → Accompagnatore | silenzio &gt;5gg → Risvegliatore. <span className="text-destructive font-medium">blacklisted</span> → blocco totale.
       </div>
     </div>
   );
