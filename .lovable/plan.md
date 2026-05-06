@@ -1,60 +1,118 @@
-## Stato
+## Obiettivo
 
-- 1 edge function proxy (`tmwe-proxy`) con whitelist hard-coded di **6 op**
-- **443 endpoint reali** documentati su `/client_api_docs`, **tutti accessibili** con i tuoi 9 scope (hai `admin`)
-- **48 gruppi funzionali** (shipment_management, cargo, fatturazione, anagrafica, listini, rating_booking, crm, labels, pickups, tracking, ecc.)
-- Gap: **437 endpoint non esposti** (98,6%)
+Tre interventi mirati su Finder API, senza toccare logica di submit/AI/edge critiche oltre lo stretto necessario.
 
-## Soluzione — Whitelist dinamica DB-driven
+---
 
-### A. Nuova tabella `tmwe_api_catalog`
-Sorgente di verità unica. Campi: `op` (es. `shipment_management.create`), `method`, `path`, `description`, `scopes` (text[]), `parameters` (jsonb), `responses` (jsonb), `group`, `risk_level` (enum `read|write|destructive|admin`), `enabled` (bool), `verified_at`, `last_called_at`. RLS: read autenticati, write service-role.
+### 1. Fix warning "Function components cannot be given refs"
 
-### B. Edge function `tmwe-catalog-sync`
-Chiama `GET /client_api_docs` con system token, fa upsert dei 443 endpoint, calcola `risk_level` automaticamente:
-- GET + scope `*:read` → **read**, `enabled=true`
-- POST/PUT/PATCH non-DELETE → **write**, `enabled=true`
-- DELETE → **destructive**, `enabled=false`
-- gruppo `admin`/`permissions` → **admin**, `enabled=false`
+**File:** `src/components/ui/badge.tsx`
 
-Auto-popola anche `finder_api_schema_map` con role inferito (id→id_interno, awb/otp→tracking_code, data*→data, stato/status→stato, ecc.).
+Convertire `Badge` in `React.forwardRef<HTMLDivElement, BadgeProps>`. Modifica isolata, retro-compatibile (nessuna prop cambia).
 
-### C. Refactor `tmwe-proxy` + `_shared/tmweClient.ts`
-Sostituire `TMWE_OPS` hard-coded con lookup su `tmwe_api_catalog`:
-- valida `op` contro DB
-- check `enabled` + intersezione scope token-utente
-- audit log invariato
-- **alias backward-compat** per i 6 nomi vecchi (`profile.me` → `profile.api_profile`, ecc.) — così `finder-api-chat` e altri caller non si rompono
+```text
+- function Badge({...}) { return <div .../> }
++ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(({...}, ref) =>
++   <div ref={ref} ... />)
++ Badge.displayName = "Badge"
+```
 
-### D. UI `/v2/finder-api/schema` aggiornata
-- Tab **Catalog** — 443 endpoint navigabili per gruppo, badge risk, toggle `enabled`, bottone "Sync from /client_api_docs"
-- Tab **Schema map** (esistente, ora auto-popolata)
+Nessuna modifica nei call-site (incluso `FinderApiCatalogTab.tsx`).
 
-### E. `finder-api-chat` aggiornato
-Riceve l'elenco delle op `enabled` filtrate per gruppo rilevante alla query (non più i 6 statici).
+---
 
-## Default di esposizione (decisi)
+### 2. Pulsante "indietro" in alto a sinistra su Finder API e Schema
 
-- **Read (GET, 191 ep)** → enabled = **true** all'attivazione
-- **Write (POST/PUT/PATCH, 213 ep)** → enabled = **true** ma flaggati `requires_confirmation` (l'agente dovrà chiedere conferma prima di chiamarli)
-- **Destructive (DELETE, 39 ep)** → enabled = **false**, attivabili manualmente dalla UI Catalog
-- **Admin (gruppo admin/permissions, ~18 ep)** → enabled = **false**
+**Stato attuale:**
+- `FinderApiPage.tsx` già monta `CommandPageBackButton` → ✅ ok, ma verifichiamo che sia visibile.
+- `FinderApiSchemaMapPage.tsx` non ha alcun back button.
 
-Backward-compat: alias mantenuti per le 6 op vecchie.
+**Azione:**
+- Aggiungere in cima a `FinderApiSchemaMapPage.tsx` un pulsante (icona `ArrowLeft` da lucide) ancorato top-left che chiama `navigate(-1)` (fallback `/v2`). Stile coerente con `CommandPageBackButton` ma standalone (la pagina non usa il background Command).
+- Verificare che su `FinderApiPage` il `CommandPageBackButton` non sia coperto dall'header → in caso, aumentare z-index.
 
-## File toccati
+> Nota: "Finder" come pagina separata non esiste; esistono solo `/v2/finder-api` e `/v2/finder-api/schema`. Interpreto la richiesta come "entrambe le pagine Finder API".
 
-- Migrazione: `tmwe_api_catalog` + enum `tmwe_api_risk_level` + indici + RLS
-- Nuova edge fn: `supabase/functions/tmwe-catalog-sync/index.ts`
-- Refactor: `supabase/functions/_shared/tmweClient.ts` (loader DB + alias map), `supabase/functions/tmwe-proxy/index.ts`
-- Refactor: `supabase/functions/finder-api-chat/index.ts` (carica catalog enabled + schema map)
-- DAL: `src/data/tmweApiCatalog.ts`
-- UI: `src/v2/ui/pages/finder-api/FinderApiSchemaMapPage.tsx` (Tab Catalog)
+---
 
-## Sequenza di esecuzione
+### 3. Sfruttare appieno la schema map nell'agente (`finder-api-chat`)
 
-1. Migrazione tabella + enum
-2. Deploy `tmwe-catalog-sync` + prima esecuzione → popola 443 righe
-3. Refactor `tmweClient.ts` + `tmwe-proxy` con alias
-4. Refactor `finder-api-chat` per usare catalog enabled
-5. UI Tab Catalog + bottone sync
+**Stato attuale:** `loadSchemaMap` carica già **tutti** i 1.360 campi e li inietta nel system prompt come testo flat. Problemi:
+
+- 1.360 righe = ~50-80k token → satura contesto e costo.
+- L'agente non sa **che la mappa esiste come strumento**: la legge come "muro di testo".
+- Nessun filtro per op chiamata.
+
+**Refactor minimo (file `supabase/functions/finder-api-chat/index.ts`):**
+
+a) **Sommario invece di dump**: nel system prompt iniettare solo il **manifest**: `op → numero campi → ruoli presenti` (1 riga per op, ~185 righe). L'agente sa cosa c'è.
+
+   ```
+   === SCHEMA MAP TMWE (manifest) ===
+   shipment.list: 12 campi [id_interno×3, data×4, stato×2, contatto×3]
+   tracking.byAwb: 8 campi [tracking_code×2, data×3, stato×3]
+   ...
+   ```
+
+b) **Tool nuovo `schema_lookup(op)`**: aggiungere a `buildTools` un tool che restituisce i campi di una singola op. L'agente lo invoca **prima** di `tmwe_call` quando deve mappare una risposta.
+
+c) **Iniezione automatica post-tmwe_call**: dopo ogni esecuzione `tmwe_call(op, …)`, se la mappa contiene quell'op, allegare i campi corrispondenti come "hint" nel turno successivo (già abbiamo i dati in memoria).
+
+**Vantaggi della mappa per le query future** (da spiegare all'utente in chat di risposta, non nel codice):
+
+| Senza mappa | Con mappa |
+|---|---|
+| L'agente "indovina" dove sta l'AWB nel JSON | Sa che `data.shipments[].awb_code = tracking_code` |
+| Risposte testuali generiche | Estrae il valore esatto e formatta tabelle/card |
+| Errori di field non trovato | Validation pre-call dei filtri |
+| Impossibile fare cross-op (es. AWB di una shipment → tracking) | Joint reasoning su campi con stesso `role` |
+| 200+ token per "esplorare" il payload ad ogni chiamata | 0 token (mappa pre-caricata) |
+| Latenza: spesso 2 chiamate (lista + dettaglio) | 1 chiamata + estrazione locale |
+
+---
+
+### 4. Abilitare endpoint admin GET/POST/PUT (mantenere DELETE off per sicurezza)
+
+**Stato DB attuale** (`tmwe_api_catalog`):
+
+```text
+GET  read         enabled  78
+GET  admin        OFF      28   ← abilitare
+POST read         enabled   3
+POST write        enabled  76
+POST admin        OFF      49   ← abilitare
+PUT  write        enabled   3
+PUT  admin        OFF       3   ← abilitare
+PATCH write       enabled   2
+DELETE destructive OFF     22   ← lasciare off (safety)
+DELETE admin      OFF      15   ← lasciare off (safety)
+```
+
+**Migration:**
+
+```sql
+UPDATE tmwe_api_catalog
+SET enabled = true
+WHERE enabled = false
+  AND method IN ('GET','POST','PUT','PATCH')
+  AND risk_level = 'admin';
+```
+
+Effetto: +80 endpoint disponibili all'agente (tot 245 abilitati su 279). DELETE restano off — possono essere abilitati on-demand dal toggle UI quando serve davvero (hard guard di sicurezza richiesto dal Charter AI). Lo dichiaro all'utente nel messaggio finale.
+
+---
+
+### File toccati
+
+```text
+src/components/ui/badge.tsx                                   (forwardRef)
+src/v2/ui/pages/finder-api/FinderApiSchemaMapPage.tsx         (back button)
+src/v2/ui/pages/FinderApiPage.tsx                             (z-index back button se serve)
+supabase/functions/finder-api-chat/index.ts                   (manifest + schema_lookup tool + post-call hint)
++ migration: UPDATE tmwe_api_catalog ... admin GET/POST/PUT
+```
+
+### Fuori scope
+- DELETE admin/destructive: lasciati off per safety. Se vuoi anche quelli, dimmelo e aggiungo alla migration.
+- Non tocco `tmwe-catalog-sync`, `check-inbox`, `email-imap-proxy` (protetti).
+- Nessun refactor opportunistico su `loadEnabledOps` o `buildTools` oltre l'aggiunta del tool.
