@@ -222,7 +222,12 @@ export async function callTmwe(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    let url = `${baseUrl()}${op.path}`;
+    // Normalizza path: tutti gli endpoint TMWE vivono sotto /erp/tmwe_json.
+    // Il catalogo sincronizzato dalla doc esporta path "/tmwe_json/..." senza
+    // prefisso /erp e Apache risponde 404. Iniettiamo qui il prefisso mancante.
+    let path = op.path;
+    if (path.startsWith("/tmwe_json/")) path = "/erp" + path;
+    let url = `${baseUrl()}${path}`;
     const init: RequestInit = {
       method: op.method,
       headers: {
