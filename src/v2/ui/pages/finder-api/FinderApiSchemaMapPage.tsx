@@ -12,7 +12,6 @@
  * Non è in sidebar: si raggiunge solo da link diretto o dalla pagina Finder API.
  */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +24,11 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, RefreshCw, Trash2, Save, ArrowLeft } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinderApiCatalogTab from "./FinderApiCatalogTab";
+import { CommandPageBackButton } from "../command/components/CommandPageBackButton";
 import {
   listFinderApiSchemaMap,
   upsertFinderApiSchemaField,
@@ -67,7 +67,6 @@ const ROLE_COLORS: Record<SchemaRole, string> = {
 
 const FinderApiSchemaMapPage = () => {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const { data: rows = [], isLoading } = useQuery({
     queryKey: finderApiSchemaKeys.list(),
     queryFn: listFinderApiSchemaMap,
@@ -109,15 +108,8 @@ const FinderApiSchemaMapPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(-1)}
-        className="gap-2 -ml-2"
-      >
-        <ArrowLeft className="w-4 h-4" /> Indietro
-      </Button>
+    <div className="container mx-auto p-6 pt-20 space-y-6">
+      <CommandPageBackButton currentPath="/v2/finder-api/schema" />
       <div>
         <h1 className="text-2xl font-bold">Finder API · Schema Map</h1>
         <p className="text-sm text-muted-foreground">
