@@ -3,6 +3,7 @@
  */
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAi } from "@/lib/ai/invokeAi";
 
 export type CheckStatus = "idle" | "checking" | "ok" | "error";
 
