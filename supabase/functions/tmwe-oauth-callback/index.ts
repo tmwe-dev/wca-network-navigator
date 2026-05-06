@@ -49,6 +49,14 @@ function back(status: "ok" | "error", reason?: string, intent: "connect" | "logi
   const u = new URL(path, appOrigin());
   u.searchParams.set("tmwe", status);
   if (reason) u.searchParams.set("reason", reason);
+  console.log(JSON.stringify({
+    type: "tmwe_oauth_callback_redirect",
+    status,
+    reason: reason ?? null,
+    intent,
+    location: u.toString(),
+    ts: new Date().toISOString(),
+  }));
   return htmlRedirect(u.toString());
 }
 
