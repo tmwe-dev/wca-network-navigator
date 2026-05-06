@@ -15,11 +15,11 @@ interface StatusBadgeProps {
 }
 
 const variantStyles: Record<StatusVariant, string> = {
-  success: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  error: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  info: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  neutral: "bg-muted text-muted-foreground",
+  success: "bg-success/15 text-success border border-success/30",
+  warning: "bg-warning/15 text-warning border border-warning/30",
+  error: "bg-destructive/15 text-destructive border border-destructive/30",
+  info: "bg-info/15 text-info border border-info/30",
+  neutral: "bg-muted text-muted-foreground border border-border",
 };
 
 export function StatusBadge({ status, label, className }: StatusBadgeProps): React.ReactElement {
