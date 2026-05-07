@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
-import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { useAuth } from "@/providers/AuthProvider";
 
