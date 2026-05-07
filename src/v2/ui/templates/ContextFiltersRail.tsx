@@ -68,15 +68,11 @@ function getFilterContext(
     };
   }
 
-  if (pathname.startsWith("/v2/email-forge")) {
-    return {
-      title: "Configurazione Email AI",
-      content: <EmailComposeFiltersSection />,
-      bannerKey: "email-forge",
-    };
-  }
-
-  if (pathname.startsWith("/v2/ai-staff/email-forge")) {
+  if (
+    pathname.startsWith("/v2/email/forge") ||
+    pathname.startsWith("/v2/email-forge") ||
+    pathname.startsWith("/v2/ai-staff/email-forge")
+  ) {
     return { title: "Email Forge — Lab AI", content: <EmailForgeFiltersSection />, bannerKey: "email-forge" };
   }
 
