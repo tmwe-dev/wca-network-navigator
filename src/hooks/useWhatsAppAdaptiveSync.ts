@@ -312,6 +312,60 @@ export function useWhatsAppAdaptiveSync() {
     }
   }, [listSidebarChats, readThread, loadCursors, saveThreadMessages, queryClient, focusedChat]);
 
+  // ── Single-thread sync (Chat Mode) ──
+  const syncSingleThread = useCallback(async (contact: string): Promise<number> => {
+    if (!isAvailable || !isAuthenticated) return 0;
+    if (readingRef.current) return 0;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return 0;
+      const userId = session.user.id;
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const operatorId = opRow?.id;
+      if (!operatorId) return 0;
+
+      // Cursor del solo contatto: prendi il created_at più recente in DB.
+      const lower = contact.toLowerCase().trim();
+      const { data: lastRows } = await supabase
+        .from("channel_messages")
+        .select("created_at,direction,from_address,to_address")
+        .eq("user_id", userId)
+        .eq("channel", "whatsapp")
+        .or(`from_address.ilike.${lower},to_address.ilike.${lower}`)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const cursorMs = lastRows && lastRows.length > 0 ? new Date(lastRows[0].created_at).getTime() : 0;
+
+      const threadRes = await readThread(contact, 60);
+      if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
+      const newCount = await saveThreadMessages(
+        contact,
+        threadRes.messages as ThreadMessage[],
+        cursorMs,
+        userId,
+        operatorId,
+      );
+      if (newCount > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+        queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
+        window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+          detail: { newMessages: newCount, threads: 1, errors: 0, mode: "chat" },
+        }));
+      }
+      return newCount;
+    } catch (err) {
+      log.warn("chat_mode.tick.failed", { error: err instanceof Error ? err.message : String(err) });
+      if (isAuthError(err)) {
+        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+      }
+      return 0;
+    }
+  }, [isAvailable, isAuthenticated, readThread, saveThreadMessages, queryClient]);
+
   const focusOn = useCallback((contact: string | null) => {
     setFocusedChat(contact);
   }, []);
@@ -335,6 +389,7 @@ export function useWhatsAppAdaptiveSync() {
     focusedChat,
     focusOn,
     readNow,
+    syncSingleThread,
     progress,
     domIsStale,
     lastLearnedAt,
