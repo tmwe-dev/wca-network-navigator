@@ -171,6 +171,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 isSelected={isSelected}
                 inHolding={isInHolding}
                 size="sm"
+                previewText={(msg.body_text || "").replace(/\s+/g, " ").trim().slice(0, 220) || null}
                 chips={chips}
                 trailing={trailing}
                 actions={actions}

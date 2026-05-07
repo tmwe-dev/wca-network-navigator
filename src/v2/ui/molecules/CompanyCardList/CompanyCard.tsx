@@ -164,7 +164,7 @@ export function CompanyCard({
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
       )}
-      <span className="truncate text-foreground">{name || "—"}</span>
+      <span className="truncate uppercase tracking-wide text-foreground">{name || "—"}</span>
       {badge && (
         <Badge
           variant="outline"

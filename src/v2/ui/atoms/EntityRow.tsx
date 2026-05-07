@@ -17,13 +17,16 @@ import { EntityRowFlag } from "./EntityRowFlag";
 import { ChannelIcons } from "./ChannelIcons";
 import { ScorePill } from "./ScorePill";
 
-export type EntityRowTone = "wca" | "crm" | "bca" | "neutral";
+export type EntityRowTone = "wca" | "crm" | "bca" | "neutral" | "email" | "lead" | "agenda";
 
 const TONE_STRIPE: Record<EntityRowTone, string> = {
   wca: "bg-gradient-to-b from-primary/80 to-primary/30",
   crm: "bg-gradient-to-b from-chart-2/80 to-chart-2/30",
   bca: "bg-gradient-to-b from-emerald-500/80 to-emerald-500/30",
   neutral: "bg-gradient-to-b from-muted-foreground/40 to-muted-foreground/10",
+  email: "bg-gradient-to-b from-primary/80 to-primary/30",
+  lead: "bg-gradient-to-b from-chart-2/80 to-chart-2/30",
+  agenda: "bg-gradient-to-b from-chart-3/80 to-chart-3/30",
 };
 
 const TONE_BORDER: Record<EntityRowTone, string> = {
@@ -31,6 +34,9 @@ const TONE_BORDER: Record<EntityRowTone, string> = {
   crm: "border-chart-2/25 hover:border-chart-2/50",
   bca: "border-emerald-500/25 hover:border-emerald-500/50",
   neutral: "border-border/50 hover:border-border",
+  email: "border-primary/25 hover:border-primary/50",
+  lead: "border-chart-2/25 hover:border-chart-2/50",
+  agenda: "border-chart-3/25 hover:border-chart-3/50",
 };
 
 export interface EntityRowProps {
@@ -47,6 +53,10 @@ export interface EntityRowProps {
   titleSlot: React.ReactNode;
   /** Slot 3b — sub-header sotto al titolo (es. "Mario Rossi · Sales"). */
   subTitleSlot?: React.ReactNode;
+  /** Slot 3c — preview body multi-riga (es. corpo email, motivo contatto). */
+  previewSlot?: React.ReactNode;
+  /** Slot 3d — righe meta extra rientrate sotto il titolo. */
+  extraRowsSlot?: React.ReactNode;
 
   /** Slot 4a — città / location (default: stringa). */
   city?: string | null;
@@ -82,6 +92,8 @@ export function EntityRow({
   countryCode,
   titleSlot,
   subTitleSlot,
+  previewSlot,
+  extraRowsSlot,
   city,
   channels,
   score,
@@ -99,11 +111,13 @@ export function EntityRow({
   );
   const flagInteractive = onCountryClick && countryCode;
   const cityInteractive = onCityClick && city;
+  const hasMultiline = !!previewSlot || !!extraRowsSlot;
   return (
     <div
       onClick={onClick}
       className={cn(
-        "relative grid items-center gap-2 px-2 py-2 rounded-lg border bg-card/40 transition-all overflow-hidden",
+        "relative grid gap-2 px-2 py-2 rounded-lg border bg-card/40 transition-all overflow-hidden",
+        hasMultiline ? "items-start" : "items-center",
         compact
           ? "grid-cols-[36px_44px_minmax(0,1fr)_56px]"
           : "grid-cols-[44px_56px_minmax(0,1fr)_200px_96px]",
@@ -123,7 +137,7 @@ export function EntityRow({
 
       {/* Col 1: checkbox + chevron */}
       <div
-        className="flex items-center justify-center gap-0.5 pl-2"
+        className={cn("flex justify-center gap-0.5 pl-2", hasMultiline ? "items-start pt-1" : "items-center")}
         onClick={(e) => e.stopPropagation()}
       >
         {chevronSlot}
@@ -131,7 +145,7 @@ export function EntityRow({
       </div>
 
       {/* Col 2: bandiera */}
-      <div className="flex items-center justify-center">
+      <div className={cn("flex justify-center", hasMultiline ? "items-start pt-0.5" : "items-center")}>
         {flagInteractive ? (
           <button
             type="button"
@@ -158,6 +172,16 @@ export function EntityRow({
         {subTitleSlot && (
           <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5 min-w-0">
             {subTitleSlot}
+          </div>
+        )}
+        {previewSlot && (
+          <div className="text-[12px] text-muted-foreground/90 line-clamp-2 leading-snug min-w-0 mt-0.5">
+            {previewSlot}
+          </div>
+        )}
+        {extraRowsSlot && (
+          <div className="flex flex-col gap-0.5 min-w-0 mt-0.5">
+            {extraRowsSlot}
           </div>
         )}
         {compact && (city || channels || score != null) && (
@@ -248,7 +272,7 @@ export function EntityRow({
 
       {/* Col 5: actions */}
       <div
-        className="flex items-center justify-end gap-1 pr-1"
+        className={cn("flex justify-end gap-1 pr-1", hasMultiline ? "items-start pt-1" : "items-center")}
         onClick={(e) => e.stopPropagation()}
       >
         {actionsSlot}
