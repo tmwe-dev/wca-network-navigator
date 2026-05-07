@@ -2,6 +2,7 @@ import "../_shared/llmFetchInterceptor.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
 import { edgeError, extractErrorMessage } from "../_shared/handleEdgeError.ts";
 import { aiChat } from "../_shared/aiGateway.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
@@ -370,6 +371,7 @@ serve(async (req) => {
         }
       }
     } catch (aiSuggestErr) {
+      swallowedError("classify_email_response.ai_suggest_failed", aiSuggestErr);
     }
 
     // ═══ Post-classification via EmailProcessManager (event-driven) ═══
@@ -396,6 +398,7 @@ serve(async (req) => {
       });
       postClassResult = pmResult.pipelineResult;
     } catch (pcErr) {
+      swallowedError("classify_email_response.post_classification_failed", pcErr);
     }
     metrics.userId = input.user_id;
     endMetrics(metrics, true, 200);
