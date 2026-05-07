@@ -18,80 +18,9 @@ import {
 import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
+import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
 
-const DEV_PAGE_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<{ label: string; path: string }> }> = [
-  {
-    title: "Acquisizione & Ricerca",
-    items: [
-      { label: "Acquisizione Partner", path: "/v2/crm/acquisition" },
-      { label: "Prospects", path: "/v2/crm/prospects" },
-      { label: "Research", path: "/v2/research" },
-      { label: "RA Explorer", path: "/v2/ra-explorer" },
-      { label: "RA Scraping Engine", path: "/v2/ra-scraping" },
-      { label: "Sorting", path: "/v2/sorting" },
-    ],
-  },
-  {
-    title: "Agenti & Missioni",
-    items: [
-      { label: "Agent Capabilities", path: "/v2/agents/capabilities" },
-      { label: "Agent Tasks", path: "/v2/agents/tasks" },
-      { label: "Editor Persona", path: "/v2/agents/persona" },
-      { label: "Mission Builder", path: "/v2/agents/missions" },
-      { label: "Missioni Autopilot", path: "/v2/agents/autopilot" },
-    ],
-  },
-  {
-    title: "AI Staff",
-    items: [
-      { label: "AI Arena 3D", path: "/v2/ai-arena" },
-      { label: "AI Lab Test", path: "/v2/ai-staff/lab" },
-      { label: "AI Staff Hub", path: "/v2/ai-staff" },
-      { label: "Email Forge", path: "/v2/ai-staff/email-forge" },
-      { label: "KB Supervisor", path: "/v2/ai-staff/kb-supervisor" },
-    ],
-  },
-  {
-    title: "Calendario & Campagne",
-    items: [
-      { label: "Calendar", path: "/v2/calendar" },
-      { label: "Campaign Jobs", path: "/v2/campaigns/jobs" },
-      { label: "Outreach Agenda", path: "/v2/outreach/agenda" },
-    ],
-  },
-  {
-    title: "Cockpit & Analytics",
-    items: [
-      { label: "AI Control Center", path: "/v2/ai-control" },
-      { label: "Analytics", path: "/v2/analytics" },
-      { label: "KPI Dashboard", path: "/v2/kpi" },
-      { label: "Notifications", path: "/v2/notifications" },
-      { label: "Token Cockpit", path: "/v2/token-cockpit" },
-    ],
-  },
-  {
-    title: "Prompt Lab",
-    items: [
-      { label: "Agent Atlas", path: "/v2/prompt-lab/atlas" },
-      { label: "Prompt Catalog", path: "/v2/prompt-lab/catalog" },
-      { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
-      { label: "Suggestions Review", path: "/v2/prompt-lab/suggestions" },
-    ],
-  },
-  {
-    title: "Sistema & Admin",
-    items: [
-      { label: "Admin Users", path: "/v2/settings/admin-users" },
-      { label: "Design System", path: "/v2/design-system-preview" },
-      { label: "Diagnostics", path: "/v2/settings/diagnostics" },
-      { label: "Email Download", path: "/v2/settings/email-download" },
-      { label: "Guida", path: "/v2/guida" },
-      { label: "Observability", path: "/v2/settings/observability" },
-      { label: "System Health", path: "/v2/settings/health" },
-      { label: "Telemetry", path: "/v2/settings/telemetry" },
-    ],
-  },
-];
+const DEV_PAGE_GROUPS = SECONDARY_NAV;
 
 /** Estrae la radice di sezione: `/v2/intelligence/agents` → `/v2/intelligence`. */
 function sectionRoot(path: string): string {
@@ -127,7 +56,7 @@ export function NavMenuPopover({
 
   const activeRoot = currentPath ? sectionRoot(currentPath) : null;
   const activeGroupTitle = React.useMemo(
-    () => DEV_PAGE_GROUPS.find((g) => g.items.some((i) => i.path === currentPath))?.title ?? null,
+    () => findSecondaryNavGroup(currentPath ?? null),
     [currentPath],
   );
   const isInDev = activeGroupTitle !== null;
