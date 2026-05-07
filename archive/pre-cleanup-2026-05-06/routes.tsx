@@ -110,6 +110,7 @@ const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
+const ConfigSection       = lazy(() => import("./ui/pages/sections/ConfigSection"));
 const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection"));
 
 // ── Cestinone (unified pre-send queue) ───────────────────────────────

@@ -1,71 +1,164 @@
 
-# Piano di verifica complessiva del sistema
+# Piano operativo — Audit, canonical routes e cleanup sovrapposizioni
 
-Obiettivo: validare che la piattaforma funzioni end-to-end, che la logica di business sia coerente, e individuare sovrapposizioni (codice duplicato, flussi paralleli, componenti che fanno la stessa cosa in posti diversi).
+Sorgente: `mem://reference/audit-debug-riparazione-2026-05-06`.
+Approccio: **redirect + rimozione fisica**, ma SOLO dopo backup completo e creazione versione "old" navigabile.
+Verifica tra fasi: `tsc --noEmit` + report scritto. Procedo automaticamente, ti fermo solo se tsc rompe o se trovo ambiguità di scope.
 
-Lavoro diviso in 5 fasi, ognuna produce un report concreto in `/mnt/documents/audit/`.
+---
 
-## Fase 1 — Mappa strutturale del sistema
-Cosa: inventario di rotte V2, pagine, hook, edge functions, tabelle DB, scope AI.
-Output: `01-map.md` con
-- elenco rotte V2 con pagina/hook collegati
-- elenco edge functions con scope AI e tabelle toccate
-- matrice "feature → file → edge → tabella"
-Serve come base oggettiva per le fasi successive.
+## Fase 0 — Backup & versione "old" (prerequisito intoccabile)
 
-## Fase 2 — Caccia alle sovrapposizioni
-Cosa: trovare duplicazioni reali (non stilistiche).
-- componenti che fanno lo stesso lavoro (es. card email: `EmailMessageList` vs `FunnemailMailCard`, sidebar gruppi duplicate, multipli "deep search button")
-- hook con responsabilità sovrapposte (più hook che leggono gli stessi dati)
-- edge functions con scope simile (es. più classificatori, più "improve email")
-- query keys non centralizzate
-- prompt operativi duplicati per stesso `context+tag`
-- chiamate AI dirette che bypassano `invokeAi()` (violazione AI Charter)
-Output: `02-overlaps.md` con tabella "duplicato → file canonico proposto → azione (unify / deprecate / leave)".
+Obiettivo: avere una via di ritorno completa **prima** di toccare una sola route.
 
-## Fase 3 — Verifica logica dei flussi critici
-Per ogni nodo critico, ricostruisco il flusso reale leggendo il codice e poi lo provo nel preview con browser tool su un caso reale non distruttivo.
+1. Snapshot del repo in `archive/pre-cleanup-2026-05-06/` (copia ricorsiva di `src/v2/ui/pages`, `src/components`, `src/v2/routes.tsx`, `src/v2/ui/templates/sidebar/*`, `src/components/SettingsPage*`, `src/components/ConfigSection*`, `OrphanPagesNav`, `NavMenuPopover`).
+2. Esportazione dump dei prompt/route-related: query a `operative_prompts`, `ai_scope_registry`, `system_doctrine` salvata in `/mnt/documents/audit/db-dump-2026-05-06.json`.
+3. Versione "old" navigabile: nuovo gruppo di route `/v2-legacy/*` che monta i componenti destinati alla rimozione (ConfigSection, PipelineSection, EmailForge legacy, Calendar legacy, Inbox legacy duplicata) prima di toglierli dal menu/route principali. Accesso solo via deep-link, **non in menu**, banner "Legacy — sarà rimosso".
+4. Tag git tramite messaggio Lovable "snapshot pre-cleanup" (l'utente avrà il rollback via History).
 
-Flussi da verificare:
-1. Acquisizione lead → CRM (import + dedup + soft-delete)
-2. Outreach email: generate → editorial review → approve → send → log → side-effects
-3. Outreach WhatsApp/LinkedIn via bridge
-4. Inbound email: download → classify → lead status escalation → suggerimento AI
-5. Holding pattern e Same-Location Guard
-6. Agent loop: persona + capabilities + prompt operativi + hard guards + risk gate
-7. Auth + whitelist + RBAC
-8. Soft-delete trigger su tabelle business
+Output: `/mnt/documents/audit/00-backup-manifest.md` con elenco file copiati e mapping `legacy → canonical`.
 
-Per ognuno: "atteso vs osservato", anomalie, log edge function correlati.
-Output: `03-flows.md`.
+Verifica: `tsc --noEmit`.
 
-## Fase 4 — Health check tecnico
-- linter Supabase (RLS, indici, policy)
-- query a `edge_metrics` e `ai_interaction_log` ultimi 7gg: errori, latenze anomale, scope mai usati
-- `prompt_test_runs` recenti: regressioni prompt
-- `prompt_injection_reviews` pendenti
-- `ai_pending_actions` bloccate dal risk gate
-- `cloud_status`
-- `bunx tsc --noEmit` + dependency scan
-Output: `04-health.md`.
+---
 
-## Fase 5 — Piano di rimedio prioritizzato
-Output: `05-remediation.md` con backlog ordinato per impatto:
-- P0 = rotture funzionali o rischi di sicurezza
-- P1 = sovrapposizioni che causano bug o confusione operativa (es. due card email diverse nello stesso prodotto)
-- P2 = pulizia/uniformità UI e debito tecnico
-Ogni voce ha: file coinvolti, modifica minima proposta, rischio di regressione, test di verifica.
+## Fase 1 — Inventario reale (read-only, niente modifiche)
 
-## Cosa NON faccio in questa fase
-- nessuna modifica al codice
-- nessuna scrittura su DB
-- nessun invio reale (email/WA/LI)
-- niente refactor opportunistici: la fase di fix arriva DOPO che approvi il report `05-remediation.md`
+Obiettivo: matrice oggettiva menu × routes × redirect × orfane.
 
-## Dettagli tecnici
-- Uso `code--exec` con `rg` per mappature, `supabase--read_query` per metriche, `supabase--linter` per RLS, `browser--*` solo su flussi read-only o su account di test.
-- Tutti i report in `/mnt/documents/audit/` come `.md` consultabili.
-- Tempo stimato: Fase 1-2 rapide, Fase 3 è la più lunga (richiede letture estese).
+1. Parsing di `src/v2/routes.tsx` → estrai `path`, `element`, `redirect`.
+2. Parsing di `navItemsDef`, `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS`, `Sidebar` mobile.
+3. Cross-check: ogni voce menu → route esiste? ogni route → ha menu? quali sono solo deep-link?
+4. Cataloga redirect legacy (`/v1/*`, `/pipeline/*`, `/agent-tasks`, `/agent-chat`, ecc.).
+5. Output: `/mnt/documents/audit/01-route-map.md` (tabella) + `/mnt/documents/audit/01-orphans.md` (elenco pagine senza menu) + `/mnt/documents/audit/01-conflicts.md` (route presenti in più liste con label diverse).
 
-## Domanda prima di partire
-Vuoi che parta da tutte e 5 le fasi in sequenza, oppure preferisci che faccia prima solo Fase 1+2 (mappa + sovrapposizioni) così decidi tu su cosa concentrare la Fase 3?
+Verifica: nessuna, è read-only.
+
+---
+
+## Fase 2 — Consolidamento NAVIGAZIONE (P0 del documento)
+
+Sovrapposizione più pericolosa secondo l'utente: 5 fonti diverse di navigazione (`SettingsPage`, `ConfigSection`, `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS`).
+
+1. Definisci **fonte unica** `src/v2/navigation/registry.ts`:
+   - `MAIN_NAV` (le 14 voci canoniche)
+   - `SECONDARY_NAV` (sotto-route Settings)
+   - `DEV_NAV` (orfane / dev-only, mostrate solo in build dev o dietro flag)
+   - `LEGACY_REDIRECTS` (path vecchio → canonical)
+2. Refactor di `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS` → leggono dal registry, niente più liste hard-coded.
+3. `ConfigSection` (sembra fantasma) → spostato in `archive/` se non montato; se montato in qualche route, marcato `@deprecated` e ricondotto a `SettingsPage`.
+4. Rimozione fisica dei componenti duplicati che non sono più referenziati dopo lo step 2.
+
+Verifica: `tsc --noEmit` + grep che nessuno importi i file rimossi + apertura visiva `/v2/settings` dal preview (no crash).
+
+---
+
+## Fase 3 — Canonical EMAIL (Leggi / Funnemail Inbox / Email Intelligence / Scrivi / Email Forge / Cestinone)
+
+Confini target (dal documento):
+- `Leggi /v2/inbox` = posta ricevuta grezza
+- `Funnemail Inbox /v2/funnemail-inbox` = posta lavorata da AI
+- `Funnemail /v2/email-intelligence` = regole/classificazione
+- `Scrivi /v2/email` = composer operativo
+- `Email Forge` = laboratorio AI (sotto `/v2/email/forge` o legacy)
+- `Cestinone /v2/cestinone` = approvazioni
+
+Lavoro:
+1. Verifica con `MailRowChrome` (già adottato) che non ci siano divergenze visive.
+2. `Email Forge` standalone → diventa tab dentro `/v2/email`, route legacy → redirect.
+3. `Funnemail` vs `Funnemail Inbox`: copia label e descrizioni in alto-pagina per chiarire ruolo, sposta sezione "regole" da Inbox a Intelligence se duplicata.
+4. Catalogo legacy redirect aggiornato in `LEGACY_REDIRECTS`.
+5. Rimozione fisica componenti duplicati composer/inbox dopo aver migrato gli import.
+
+Verifica: `tsc --noEmit` + apertura preview delle 6 pagine.
+
+---
+
+## Fase 4 — Canonical TEMPO/AZIONI (Agenda / Calendar / Pipeline)
+
+Target:
+- `Agenda /v2/agenda` = cosa fare oggi (action-grouping già in mem)
+- `Calendar` = eventi appuntamenti veri (decidi: o vive in `/v2/agenda/calendar` o in `/v2/calendar` standalone)
+- `Pipeline /v2/agenda/pipeline` = stato contatti
+
+Lavoro:
+1. `PipelineSection` legacy → redirect a `/v2/agenda/pipeline`, componente vecchio archiviato e rimosso.
+2. E2E `calendar-flow.spec.ts` allineato (era marcato come potenzialmente obsoleto).
+3. Decisione su Calendar: tab dentro Agenda o pagina separata. Se separata, va in `MAIN_NAV` o `DEV_NAV`?
+
+Verifica: `tsc --noEmit` + run `e2e/agenda-flow.spec.ts` se possibile in sandbox (non bloccante).
+
+---
+
+## Fase 5 — Canonical AI (Agenti / AI Staff / Missioni / Prompt Lab / Prompt Reader / AI Control)
+
+Target:
+- `Agenti /v2/intelligence` = conversazione operativa
+- `AI Staff /v2/staff-direzionale` = consulenti direzionali
+- `Missioni` = obiettivi/automazioni
+- `Prompt Lab /v2/settings/prompt-lab` = prompt/KB/governance
+- `Prompt Reader /v2/prompt-reader` → valuta merge dentro Prompt Lab (tab "Reader") e redirect
+- `AI Control /v2/settings/ai-control` = monitoraggio
+
+Lavoro:
+1. Decisione canonical per Prompt Reader (merge consigliato).
+2. Aggiornamento `MAIN_NAV` di conseguenza (slot 13 si libera o ospita altro).
+3. Redirect + rimozione del componente standalone se merge approvato.
+
+Verifica: `tsc --noEmit`.
+
+---
+
+## Fase 6 — Canonical CAMPAGNE / OUTREACH (Cockpit / Campagne / Campaign Jobs / Cestinone)
+
+Target chiarezza:
+- `Cockpit /v2/cockpit` = dashboard outreach in corso
+- `Campaigns /v2/explore/campaigns` = generazione campagne
+- `Campaign Jobs` = monitoraggio esecuzione job (sotto Cockpit o standalone?)
+- `Cestinone /v2/cestinone` = solo coda approvazione pre-invio
+
+Lavoro:
+1. Sposta job monitor sotto Cockpit (tab) se duplicato.
+2. Verifica che il flusso `Scrivi → Cestinone` e `Campaigns → Jobs → Cestinone` non passino da componenti duplicati di approvazione.
+3. Redirect path legacy.
+
+Verifica: `tsc --noEmit`.
+
+---
+
+## Fase 7 — Hardening: smoke route + osservabilità
+
+1. Test `e2e/app-routing-access.spec.ts` esteso: apre tutte le entry di `MAIN_NAV` + tutte le `LEGACY_REDIRECTS` e verifica che la destinazione canonical risponda.
+2. Aggiorna `mem://architecture/v1-deprecation-redirect` con la nuova mappa unificata.
+3. Aggiorna `docs/v2/MIGRATION_STATUS.md`.
+4. Report finale `/mnt/documents/audit/07-final.md` con: cosa è stato canonicalizzato, cosa redirezionato, cosa rimosso fisicamente, cosa archiviato in `/v2-legacy/*`.
+
+Verifica: `tsc --noEmit` + smoke route test.
+
+---
+
+## Vincoli rispettati lungo tutte le fasi
+
+- **No DAL bypass**: nessuna nuova `supabase.from()` fuori da `src/data/`.
+- **AI Charter**: nessuna invocazione AI diretta, solo `invokeAi()`.
+- **Editorial Review**: non tocco i flussi che lo invocano, solo route/menu.
+- **No physical delete su tabelle business**: solo file frontend rimossi.
+- **Code lifecycle governance**: i componenti `src/components/` non utilizzati ma in sviluppo NON vengono rimossi a meno che siano nella matrice esplicita di Fase 2/3/4/5/6.
+- **invokeAi/MailRowChrome**: già canonicizzati, non si tocca la business logic.
+
+## Cosa NON è in questo piano
+
+- Nessuna modifica a check-inbox / email-imap-proxy / mark-imap-seen.
+- Nessuna modifica RLS o schema DB.
+- Nessuna modifica ai prompt operativi (gestiti da Prompt Lab a runtime).
+- Nessun refactor opportunistico di hooks o DAL non legato alle route.
+
+## Stima
+
+- Fase 0: 1 step (backup + versione old).
+- Fasi 1-7: ~2-3 step ciascuna.
+- Tempo: lungo, ma incrementale e rollbackabile fase per fase.
+
+## Punto di stop esplicito
+
+Tra Fase 6 e Fase 7 ti chiederò conferma esplicita prima di rimuovere fisicamente i componenti delle fasi 3-6 (ultima finestra di reversibilità prima del cleanup definitivo).
