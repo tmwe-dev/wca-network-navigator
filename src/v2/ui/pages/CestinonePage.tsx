@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
+import { FilterToolbar } from "@/v2/ui/atoms/FilterToolbar";
 import { ListRow } from "./cestinone/ListRow";
 import { DetailPanel } from "./cestinone/DetailPanel";
 import { ChipGroup, ChannelDropdown } from "./cestinone/Toolbar";
@@ -28,7 +29,7 @@ export function CestinonePage(): React.ReactElement {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <PageTitleHeader icon={Trash2} title="Cestinone" subtitle="conferma, modifica o rinvia" />
-      <div className="px-4 py-2 flex flex-wrap items-center gap-3 border-b bg-muted/20">
+      <FilterToolbar>
         <ChipGroup
           value={s.status}
           onChange={(v) => s.setStatus(v as "pending" | "queued")}
@@ -49,7 +50,7 @@ export function CestinonePage(): React.ReactElement {
             />
           </div>
         </div>
-      </div>
+      </FilterToolbar>
 
       {s.bulkIds.size > 0 && (
         <div className="px-4 py-2 flex items-center gap-2 border-b bg-primary/5 text-xs">
