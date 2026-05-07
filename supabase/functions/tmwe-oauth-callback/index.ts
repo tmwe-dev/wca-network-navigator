@@ -157,6 +157,16 @@ Deno.serve(async (req) => {
     const tmweEmail = firstString(profile.email, nestedUser.email, nestedData.email);
     const tmweUsername = firstString(profile.username, nestedUser.username, nestedData.username);
     const authEmail = tmweEmail ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@tmwe.local` : null);
+    console.log(JSON.stringify({
+      type: "tmwe_oauth_callback_email_resolution",
+      tmweEmail,
+      tmweUsername,
+      authEmail,
+      profile_top_keys: Object.keys(profile),
+      nested_user_keys: Object.keys(nestedUser),
+      nested_data_keys: Object.keys(nestedData),
+      profile_sample: JSON.stringify(profile).slice(0, 800),
+    }));
     const tmweCompany = firstString(
       profile.company,
       profile.company_name,
@@ -177,6 +187,13 @@ Deno.serve(async (req) => {
       const normalizedEmail = authEmail.trim().toLowerCase();
       // Reject TMWE local aliases — non possono mai essere whitelisted.
       if (normalizedEmail.endsWith("@tmwe.local")) {
+        console.error(JSON.stringify({
+          type: "tmwe_oauth_callback_blocked",
+          reason: "tmwe_local_alias",
+          authEmail,
+          tmweUsername,
+          hint: "TMWE get_my_profile non ha restituito un campo 'email' — il sistema ha sintetizzato un alias @tmwe.local che non può passare la whitelist.",
+        }));
         return back("error", "not_whitelisted", "login");
       }
       const { data: isAuthorized, error: wlErr } = await svc.rpc(
@@ -188,6 +205,12 @@ Deno.serve(async (req) => {
         return back("error", "whitelist_check_failed", "login");
       }
       if (!isAuthorized) {
+        console.warn(JSON.stringify({
+          type: "tmwe_oauth_callback_blocked",
+          reason: "not_in_whitelist",
+          normalizedEmail,
+          tmweUsername,
+        }));
         return back("error", "not_whitelisted", "login");
       }
 
