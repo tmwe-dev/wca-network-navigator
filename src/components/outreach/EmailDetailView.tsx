@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, Shield, User, Users } from "lucide-react";
+import { AlertCircle, Building2, Calendar, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, RefreshCw, Shield, Sparkles, Tag, User, Users } from "lucide-react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,9 +25,28 @@ import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
 import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
 
+interface FunnemailDecisionLite {
+  folder_slug: string | null;
+  override_folder_slug: string | null;
+  urgency?: "critical" | "high" | "normal" | "low";
+  goes_to_agenda?: boolean;
+  reasoning?: string | null;
+  confidence?: number;
+}
+
+type EnrichedMessage = ChannelMessage & {
+  funnemail_decision?: FunnemailDecisionLite | null;
+  funnemail_folder_label?: string | null;
+  funnemail_folder_icon?: string | null;
+  funnemail_group_slug?: string | null;
+  ai_classification_suggestion?: string | null;
+};
+
 type Props = {
-  message: ChannelMessage;
+  message: EnrichedMessage;
   onClose: () => void;
+  onReclassify?: (message: ChannelMessage) => void;
+  reclassifying?: boolean;
 };
 
 function formatDisplayDate(value: string): string {
@@ -39,7 +58,7 @@ function formatDisplayDate(value: string): string {
   return format(date, "dd MMM yyyy HH:mm", { locale: it });
 }
 
-export function EmailDetailView({ message, onClose }: Props) {
+export function EmailDetailView({ message, onClose, onReclassify, reclassifying }: Props) {
   const navigate = useAppNavigate();
   const { data: attachments = [] } = useMessageAttachments(message.id);
   const { getGroup } = useEmailAddressGroups();
@@ -48,6 +67,16 @@ export function EmailDetailView({ message, onClose }: Props) {
   const [viewMode, setViewMode] = useState<"safe" | "faithful">("safe");
   const [blockRemote, setBlockRemote] = useState(false);
   const displayDate = message.email_date || message.created_at;
+  const decision = message.funnemail_decision ?? null;
+  const effectiveSlug = decision?.override_folder_slug ?? decision?.folder_slug ?? message.funnemail_group_slug ?? null;
+  const folderLabel = message.funnemail_folder_label ?? effectiveSlug;
+  const folderIcon = message.funnemail_folder_icon ?? null;
+  const aiSuggestion = (message.ai_classification_suggestion ?? "").trim();
+  const urgency = decision?.urgency ?? "normal";
+  const urgencyClass =
+    urgency === "critical" ? "bg-destructive/15 text-destructive border-destructive/30"
+    : urgency === "high" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+    : "bg-muted text-muted-foreground border-border";
   const { bodyHtml, bodyText, isLoading: isContentLoading, isError: isContentError } = useEmailMessageContent(message.id, {
     bodyHtml: message.body_html,
     bodyText: message.body_text,
