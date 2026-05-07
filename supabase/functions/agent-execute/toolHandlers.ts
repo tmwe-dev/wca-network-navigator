@@ -114,7 +114,19 @@ const SIDE_EFFECT_TOOLS = new Set<string>([
   "execute_decision",
 ]);
 
-async function isApprovalRequired(userId: string): Promise<boolean> {
+// Tools per cui l'approvazione umana è SEMPRE obbligatoria quando il chiamante è
+// l'agente AI (sistema), indipendentemente dal flag `agent_require_approval`.
+// Regola di prodotto: messaggi WA/LinkedIn predisposti dal sistema vanno in
+// uscita "da autorizzare" come le email. Le chat manuali e gli invii singoli
+// dell'operatore restano diretti perché non passano da agent-execute.
+const ALWAYS_APPROVAL_TOOLS = new Set<string>([
+  "send_whatsapp",
+  "send_linkedin",
+  "send_linkedin_message",
+]);
+
+async function isApprovalRequired(userId: string, toolName: string): Promise<boolean> {
+  if (ALWAYS_APPROVAL_TOOLS.has(toolName)) return true;
   const { data } = await supabase
     .from("app_settings")
     .select("value")
@@ -132,8 +144,8 @@ export async function executeTool(
   context?: ExecuteContext
 ): Promise<unknown> {
   // ── Centralized approval gate for side-effect tools ──
-  if (SIDE_EFFECT_TOOLS.has(name)) {
-    const requiresApproval = await isApprovalRequired(userId);
+  if (SIDE_EFFECT_TOOLS.has(name) || ALWAYS_APPROVAL_TOOLS.has(name)) {
+    const requiresApproval = await isApprovalRequired(userId, name);
     if (requiresApproval) {
       const partnerId = (args.partner_id ?? args.partnerId) as string | undefined;
       const recipient = (args.to_email ??
