@@ -44,7 +44,7 @@ export default function FunnemailInboxPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 overflow-hidden">
+    <div className="flex h-full min-h-0 overflow-hidden">
       <PageTitleHeader icon={Sparkles} title="Funnemail" subtitle="Inbox classificata AI" />
       <PersistentResizablePanelGroup
         storageId="funnemail-inbox:list-vs-reader"
