@@ -27,6 +27,7 @@ import {
 } from "./journalistSelector.ts";
 import type { CompanyProfile } from "./journalistTypes.ts";
 import { aiChat } from "./aiGateway.ts";
+import { scoreBrandVoice, persistBrandVoiceAudit } from "./brandVoiceScorer.ts";
 
 export interface JournalistReviewOptions {
   overrideRole?: JournalistRole;
@@ -153,14 +154,38 @@ export async function journalistReview(
       ? input.final_draft // anche su block: non sovrascriviamo, l'UI mostra banner
       : parsed.edited_text;
 
+  // === Step 5: Brand Voice Score (deterministico, non bloccante) ===
+  const bv = scoreBrandVoice(editedText, input.channel);
+  // fire-and-forget audit
+  persistBrandVoiceAudit(supabase, {
+    user_id: userId,
+    partner_id: input.partner.id,
+    channel: input.channel,
+    journalist_role: journalist.role,
+    result: bv,
+    message_excerpt: editedText,
+  });
+
+  // Soft warning se score basso (no nuovo gate bloccante)
+  const bvWarnings: JournalistWarning[] = [];
+  if (bv.score < 60) {
+    bvWarnings.push({
+      type: "tone_violation",
+      description: `Brand Voice score ${bv.score}/100 — ${bv.deviations.map((d) => d.type).join(", ")}`,
+      severity: bv.score < 40 ? "warning" : "info",
+    });
+  }
+
   return {
     journalist,
     verdict: parsed.verdict,
     edited_text: editedText,
-    warnings: [...overrideWarnings, ...parsed.warnings],
+    warnings: [...overrideWarnings, ...parsed.warnings, ...bvWarnings],
     edits: parsed.edits,
     reasoning_summary: parsed.reasoning_summary,
     quality_score: parsed.quality_score,
+    brand_voice_score: bv.score,
+    brand_voice_deviations: bv.deviations,
   };
 }
 
