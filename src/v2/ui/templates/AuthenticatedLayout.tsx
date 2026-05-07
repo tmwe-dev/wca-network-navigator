@@ -28,6 +28,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActiveOperatorProvider } from "@/contexts/ActiveOperatorContext";
+import { ActiveMailboxProvider } from "@/contexts/ActiveMailboxContext";
 import { DeepSearchContext, useDeepSearchRunner } from "@/hooks/useDeepSearchRunner";
 import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext";
 import { MissionProvider } from "@/contexts/MissionContext";
@@ -231,6 +232,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ActiveOperatorProvider>
+          <ActiveMailboxProvider>
             <DeepSearchContext.Provider value={deepSearch}>
               <GlobalFiltersProvider>
                 <MissionProvider>
@@ -423,6 +425,7 @@ export function AuthenticatedLayout(): React.ReactElement | null {
                   </MissionProvider>
                 </GlobalFiltersProvider>
               </DeepSearchContext.Provider>
+          </ActiveMailboxProvider>
           </ActiveOperatorProvider>
         </TooltipProvider>
       </QueryClientProvider>
