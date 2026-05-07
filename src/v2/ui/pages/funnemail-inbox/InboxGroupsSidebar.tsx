@@ -6,7 +6,7 @@
  * Ordine personalizzato persistito in localStorage per-utente.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Folder, GripVertical, HelpCircle, Star, Inbox, Mail } from "lucide-react";
+import { Archive, GripVertical, HelpCircle, Star, Inbox, Mail } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -245,27 +245,13 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
           : "h-full w-[260px] shrink-0 border-r border-border",
       )}
     >
-      <div className="flex-shrink-0 border-b border-border px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {isDrawer ? "Cartelle posta" : "Funny Mail"}
-        </p>
-        <button
-          type="button"
-          onClick={() => onSelect("all")}
-          className={cn(
-            "mt-2 flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-sm transition-colors",
-            selectedFolder === "all" ? "bg-primary/15 text-primary" : "hover:bg-muted/50",
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-2 font-semibold">
-            <Folder className="h-4 w-4 shrink-0" />
-            <span className="truncate">Tutte le inbox</span>
-          </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-            {totalCount}
-          </span>
-        </button>
-      </div>
+      {!isDrawer && (
+        <div className="flex-shrink-0 border-b border-border px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Funny Mail
+          </p>
+        </div>
+      )}
 
       <ScrollArea className="min-h-0 flex-1">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -281,24 +267,6 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
                       <MetaIcon className="h-3 w-3" />
                       {SECTION_META[section].label}
                     </span>
-                    {section !== "unclassified" && (
-                      <Select
-                        value={section === "priority" ? prioritySortMode : secondarySortMode}
-                        onValueChange={(v) => {
-                          if (section === "priority") setPrioritySortMode(v as SidebarSort);
-                          else setSecondarySortMode(v as SidebarSort);
-                        }}
-                      >
-                        <SelectTrigger className="h-6 w-[112px] text-[10px] normal-case tracking-normal">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="default" className="text-[11px]">Default</SelectItem>
-                          <SelectItem value="name_asc" className="text-[11px]">Nome A→Z</SelectItem>
-                          <SelectItem value="count_desc" className="text-[11px]">Email ↓</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
                   </div>
                   <SortableContext items={items.map((f) => f.slug)} strategy={verticalListSortingStrategy}>
                     {items.length > 0 ? (
@@ -309,7 +277,7 @@ export function InboxGroupsSidebar({ folders, counts, selectedFolder, totalCount
                           active={selectedFolder === folder.slug}
                           count={counts[folder.slug] ?? 0}
                           onSelect={onSelect}
-                          draggable={section === "priority" ? prioritySortMode === "default" : section === "secondary" && secondarySortMode === "default"}
+                          draggable={section === "priority" || section === "secondary"}
                         />
                       ))
                     ) : (
