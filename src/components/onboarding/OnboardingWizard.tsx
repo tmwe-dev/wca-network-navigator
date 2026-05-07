@@ -1,138 +1,101 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StepProfile } from "./StepProfile";
-import { StepWCA } from "./StepWCA";
-import { StepAI } from "./StepAI";
-import { StepImport } from "./StepImport";
-import { cn } from "@/lib/utils";
+import { StepOperatorIdentity, type OperatorIdentityValues } from "./StepOperatorIdentity";
 
 interface OnboardingWizardProps {
   onComplete: () => void;
 }
 
-const STEP_LABELS = ["Profilo", "Network", "AI", "Contatti"];
-
+/**
+ * Wizard di primo accesso: gira UNA sola volta (gated da
+ * profiles.onboarding_completed). Cattura solo i dati operatore
+ * aziendali necessari alla whitelist e all'attribuzione dei messaggi.
+ * Tutto il resto (chiavi API, network, import) è opzionale e gestito
+ * altrove. Le chiavi tecniche sono già riempite via OAuth TMWE.
+ */
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
-  const [step, setStep] = useState(0);
-  const [displayName, setDisplayName] = useState("");
-  const [language, setLanguage] = useState("it");
-  const [wcaUsername, setWcaUsername] = useState("");
-  const [wcaPassword, setWcaPassword] = useState("");
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [email, setEmail] = useState("");
+  const [initial, setInitial] = useState<OperatorIdentityValues>({
+    displayName: "",
+    language: "it",
+    phone: "",
+    whatsapp: "",
+    linkedinUrl: "",
+  });
 
-  const next = () => setStep(s => Math.min(s + 1, 3));
-
-  const saveSetting = async (key: string, value: string) => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-    if (!user) return;
-    await supabase.from("app_settings").upsert(
-      { user_id: user.id, key, value },
-      { onConflict: "user_id,key" }
-    );
-  };
-
-  const handleProfileNext = async () => {
-    await saveSetting("display_name", displayName);
-    await saveSetting("preferred_language", language);
-    next();
-  };
-
-  const markOnboardingComplete = async () => {
-    const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
-    if (user) {
-      await supabase
+  // Pre-fill from auth session + existing profile (TMWE OAuth callback may
+  // have already set display_name in user_metadata).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user || cancelled) return;
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const { data: profile } = await supabase
         .from("profiles")
-        .update({ onboarding_completed: true })
+        .select("display_name, language, phone, whatsapp_number, linkedin_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setEmail(user.email ?? "");
+      setInitial({
+        displayName:
+          (profile?.display_name as string | undefined) ??
+          (meta.display_name as string | undefined) ??
+          (meta.full_name as string | undefined) ??
+          "",
+        language: (profile?.language as string | undefined) ?? "it",
+        phone: (profile?.phone as string | undefined) ?? "",
+        whatsapp: (profile?.whatsapp_number as string | undefined) ?? "",
+        linkedinUrl: (profile?.linkedin_url as string | undefined) ?? "",
+      });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSubmit = async (values: OperatorIdentityValues) => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) throw new Error("no_session");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: values.displayName.trim(),
+          language: values.language,
+          phone: values.phone.trim() || null,
+          whatsapp_number: values.whatsapp.trim() || null,
+          linkedin_url: values.linkedinUrl.trim() || null,
+          onboarding_completed: true,
+        })
         .eq("user_id", user.id);
-    }
-  };
+      if (error) throw error;
 
-  const handleFinish = async () => {
-    setSaving(true);
-    try {
-      for (const [provider, key] of Object.entries(apiKeys)) {
-        if (key.trim()) await saveSetting(`ai_key_${provider}`, key.trim());
-      }
-      await markOnboardingComplete();
-      toast.success("Configurazione completata!");
+      toast.success("Profilo configurato. Benvenuto!");
       onComplete();
-    } catch {
-      toast.error("Errore nel salvataggio");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSkipToEnd = async () => {
-    setSaving(true);
-    try {
-      await markOnboardingComplete();
-      onComplete();
-    } catch {
-      toast.error("Errore");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "errore";
+      toast.error(`Salvataggio fallito: ${msg}`);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        {/* Progress */}
-        <div className="flex gap-2 mb-8">
-          {STEP_LABELS.map((label, i) => (
-            <div key={i} className="flex-1 space-y-1">
-              <div className={cn(
-                "h-1.5 rounded-full transition-colors",
-                i <= step ? "bg-primary" : "bg-muted"
-              )} />
-              <p className={cn(
-                "text-[10px] text-center",
-                i <= step ? "text-primary" : "text-muted-foreground"
-              )}>{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Steps */}
+    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-lg my-8">
         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-lg">
-          {step === 0 && (
-            <StepProfile
-              displayName={displayName}
-              language={language}
-              onDisplayNameChange={setDisplayName}
-              onLanguageChange={setLanguage}
-              onNext={handleProfileNext}
-            />
-          )}
-          {step === 1 && (
-            <StepWCA
-              wcaUsername={wcaUsername}
-              wcaPassword={wcaPassword}
-              onUsernameChange={setWcaUsername}
-              onPasswordChange={setWcaPassword}
-              onNext={next}
-              onSkip={next}
-            />
-          )}
-          {step === 2 && (
-            <StepAI
-              apiKeys={apiKeys}
-              onApiKeyChange={(p, k) => setApiKeys(prev => ({ ...prev, [p]: k }))}
-              onFinish={next}
-              onSkip={next}
-              loading={saving}
-            />
-          )}
-          {step === 3 && (
-            <StepImport
-              onFinish={handleFinish}
-              onSkip={handleSkipToEnd}
-              loading={saving}
-            />
-          )}
+          <StepOperatorIdentity
+            initial={initial}
+            email={email}
+            saving={saving}
+            onSubmit={handleSubmit}
+          />
         </div>
       </div>
     </div>
