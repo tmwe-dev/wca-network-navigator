@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Edit, Shield, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { OperatorMailboxAccessEditor } from "./OperatorMailboxAccessEditor";
 
 export default function OperatorsSettings() {
   const { data: operators = [], isLoading } = useOperators();
@@ -110,6 +111,11 @@ export default function OperatorsSettings() {
                 {op.imap_user && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {op.imap_user}</span>}
                 {op.whatsapp_phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {op.whatsapp_phone}</span>}
               </div>
+              {isAdmin && op.id && (
+                <div className="mt-3 pt-3 border-t">
+                  <OperatorMailboxAccessEditor operatorId={op.id} />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
