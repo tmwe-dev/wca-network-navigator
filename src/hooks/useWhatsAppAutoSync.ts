@@ -88,6 +88,11 @@ export function useWhatsAppAutoSync(opts: { paused: boolean }) {
 
     async function runTick() {
       if (!enabledRef.current) return;
+      // Pausa se Chat Mode attivo: il single-thread sync gestisce già la chat.
+      if (typeof window !== "undefined" && window.__waChatModeActive) {
+        scheduleNext();
+        return;
+      }
       if (readingRef.current) {
         // single-flight: riprogramma soltanto
         scheduleNext();
