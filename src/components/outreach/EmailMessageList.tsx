@@ -82,30 +82,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
 
           const chips = (
             <>
-              {group?.groupName ? (
-                <span
-                  className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight"
-                  style={{
-                    backgroundColor: `${group.groupColor ?? "#3B82F6"}20`,
-                    color: group.groupColor ?? "#3B82F6",
-                  }}
-                  title={`Gruppo: ${group.groupName}`}
-                >
-                  {group.groupIcon && <span>{group.groupIcon}</span>}
-                  <span className="truncate max-w-[140px]">{group.groupName}</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground/70 border border-dashed border-border">
-                  <span>Senza gruppo</span>
-                </span>
-              )}
-              <span
-                className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-tight text-muted-foreground/70"
-                title="Suggerimento AI: in arrivo"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                <span>AI: —</span>
-              </span>
               {msg.source_type && msg.source_type !== "unknown" && (
                 <Badge variant="outline" className="h-4 gap-0.5 text-[9px]">
                   {msg.source_type === "partner" && <Building2 className="h-2.5 w-2.5" />}
@@ -116,6 +92,16 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
               )}
             </>
           );
+
+          const groupBadge = group?.groupName ? (
+            <span
+              className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-foreground"
+              title={`Gruppo: ${group.groupName}`}
+            >
+              {group.groupIcon && <span>{group.groupIcon}</span>}
+              <span className="max-w-[140px] truncate">{group.groupName}</span>
+            </span>
+          ) : null;
 
           const trailing = isUnread ? (
             <button
@@ -172,6 +158,7 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 inHolding={isInHolding}
                 size="sm"
                 previewText={(msg.body_text || "").replace(/\s+/g, " ").trim().slice(0, 220) || null}
+                groupBadge={groupBadge}
                 chips={chips}
                 trailing={trailing}
                 actions={actions}
