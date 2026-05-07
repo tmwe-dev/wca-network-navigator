@@ -1,6 +1,7 @@
 import "../_shared/llmFetchInterceptor.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
 import { assertSafePublicUrl } from "../_shared/inputValidator.ts";
 
 // LOVABLE-75 — LEGACY
