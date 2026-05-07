@@ -96,6 +96,12 @@ export const commsKeys = {
       byGroup: (groupId?: string | null) => ["funnemail-inbox", "reminders", "group", groupId ?? "all"] as const,
       active: () => ["funnemail-inbox", "reminders", "active"] as const,
     },
+    jobs: {
+      list: (filters?: { status?: string | null; ownerId?: string | null; limit?: number }) =>
+        ["funnemail-inbox", "jobs", "list", filters ?? {}] as const,
+      byMessage: (messageId?: string | null) =>
+        ["funnemail-inbox", "jobs", "by-message", messageId ?? "none"] as const,
+    },
   },
   alertRouting: {
     recipients: (userId?: string) => ["alert-recipients", userId ?? "current"] as const,
