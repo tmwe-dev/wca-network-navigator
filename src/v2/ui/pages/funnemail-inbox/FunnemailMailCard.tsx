@@ -166,17 +166,12 @@ export function FunnemailMailCard({
                 </span>
               )}
               {category && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground" title="Classificazione email">
+                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground" title="Classificazione email">
                   <Sparkles className="h-3 w-3" />{category}
                 </span>
               )}
-              {groupName && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground" title={`Gruppo: ${groupName}`}>
-                  {groupIcon && <span>{groupIcon}</span>}<span className="max-w-[140px] truncate">{groupName}</span>
-                </span>
-              )}
               {partner?.lead_status && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground" title="Stato commerciale">
+                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground" title="Stato commerciale">
                   <Gauge className="h-3 w-3" />{partner.lead_status.replace(/_/g, " ")}
                 </span>
               )}
@@ -191,9 +186,9 @@ export function FunnemailMailCard({
                 </span>
               )}
               {senderIntel?.company_type && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">{senderIntel.company_type}</span>
+                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">{senderIntel.company_type}</span>
               )}
-              {aiSuggestion && <AiSuggestionChip suggestion={aiSuggestion} onAccept={onAcceptAiSuggestion} className="text-xs" />}
+              {aiSuggestion && !groupName && <AiSuggestionChip suggestion={aiSuggestion} onAccept={onAcceptAiSuggestion} className="text-xs" />}
               {onSetStatus ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -239,6 +234,24 @@ export function FunnemailMailCard({
               )}
     </>
   );
+
+  const groupBadge = groupName ? (
+    <span
+      className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-foreground"
+      title={`Gruppo: ${groupName}`}
+    >
+      {groupIcon && <span>{groupIcon}</span>}
+      <span className="max-w-[140px] truncate">{groupName}</span>
+    </span>
+  ) : aiSuggestion?.label ? (
+    <span
+      className="inline-flex items-center gap-1 rounded border border-dashed border-primary/40 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-foreground"
+      title={aiSuggestion.reason ? `Suggerito AI · ${aiSuggestion.reason}` : "Suggerito dall'AI"}
+    >
+      <Sparkles className="h-3 w-3 opacity-70" />
+      <span className="max-w-[140px] truncate">Suggerito: {aiSuggestion.label}</span>
+    </span>
+  ) : null;
 
   const trailing = (
     <>
@@ -353,6 +366,7 @@ export function FunnemailMailCard({
         logoUrl={partner?.logo_url ?? null}
         size="md"
         previewText={bodyPreview}
+        groupBadge={groupBadge}
         chips={chips}
         trailing={trailing}
         actions={actions}
