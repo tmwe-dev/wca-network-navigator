@@ -118,7 +118,7 @@ export function BrandVoicePage() {
         </div>
 
         {/* Channel × Role table */}
-        <SurfaceCard as="section" padding="none" className="overflow-hidden">
+        <SurfaceCard padding="none" className="overflow-hidden">
           <header className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Score per canale × ruolo editoriale</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Aggregato dagli ultimi 30 giorni di audit.</p>
@@ -160,7 +160,7 @@ export function BrandVoicePage() {
         </SurfaceCard>
 
         {/* Top deviations */}
-        <SurfaceCard as="section" padding="none" className="overflow-hidden">
+        <SurfaceCard padding="none" className="overflow-hidden">
           <header className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Top 10 deviazioni ricorrenti</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
