@@ -24,6 +24,7 @@ import { useEmailAddressGroups } from "@/hooks/useEmailAddressGroups";
 import { InlineGroupAssigner } from "./email/InlineGroupAssigner";
 import { stripReplyPrefixes } from "@/v2/ui/pages/funnemail-inbox/utils";
 import { DeepSearchEmailButton } from "@/v2/ui/organisms/sherlock/DeepSearchEmailButton";
+import { cn } from "@/lib/utils";
 
 interface FunnemailDecisionLite {
   folder_slug: string | null;
