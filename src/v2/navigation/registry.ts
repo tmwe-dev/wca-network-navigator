@@ -62,8 +62,14 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
       { label: "AI Arena 3D",          path: "/v2/ai-arena" },
       { label: "AI Lab Test",          path: "/v2/ai-staff/lab" },
       { label: "AI Staff Hub",         path: "/v2/ai-staff" },
-      { label: "Email Forge",          path: "/v2/ai-staff/email-forge" },
       { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
+    ],
+  },
+  {
+    title: "Email & Comunicazione",
+    items: [
+      { label: "Email Forge (Lab AI)", path: "/v2/email/forge" },
+      { label: "Funnemail Sorting",    path: "/v2/funnemail-inbox/sorting" },
     ],
   },
   {
