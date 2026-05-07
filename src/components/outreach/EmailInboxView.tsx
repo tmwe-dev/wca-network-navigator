@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, Inbox, Database, Mail, CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, Plane } from "lucide-react";
+import { Loader2, Search, Inbox, Database, Mail, CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, Plane, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -151,6 +151,21 @@ export function EmailInboxView({ operatorUserId }: { operatorUserId?: string }) 
               <Plane className="h-3 w-3" />
               ✈️
             </button>
+            <Button
+              type="button"
+              size="sm"
+              variant={g.filters.sortingFilter === "unreviewed" ? "default" : "ghost"}
+              className="h-7 gap-1.5 px-2 text-xs shrink-0"
+              onClick={() =>
+                g.setSortingFilter(g.filters.sortingFilter === "unreviewed" ? "all" : "unreviewed")
+              }
+              title={g.filters.sortingFilter === "unreviewed" ? "Mostra anche le lette" : "Nascondi le lette"}
+            >
+              {g.filters.sortingFilter === "unreviewed"
+                ? <EyeOff className="h-3.5 w-3.5" />
+                : <Eye className="h-3.5 w-3.5" />}
+              <span>{g.filters.sortingFilter === "unreviewed" ? "Solo non lette" : "Tutte"}</span>
+            </Button>
           </div>
           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
