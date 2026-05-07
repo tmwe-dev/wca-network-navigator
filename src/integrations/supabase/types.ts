@@ -2851,6 +2851,45 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_voice_audits: {
+        Row: {
+          brand_voice_score: number
+          channel: string
+          created_at: string
+          deviations: Json
+          id: string
+          journalist_role: string | null
+          message_excerpt: string | null
+          partner_id: string | null
+          signals: Json
+          user_id: string | null
+        }
+        Insert: {
+          brand_voice_score: number
+          channel: string
+          created_at?: string
+          deviations?: Json
+          id?: string
+          journalist_role?: string | null
+          message_excerpt?: string | null
+          partner_id?: string | null
+          signals?: Json
+          user_id?: string | null
+        }
+        Update: {
+          brand_voice_score?: number
+          channel?: string
+          created_at?: string
+          deviations?: Json
+          id?: string
+          journalist_role?: string | null
+          message_excerpt?: string | null
+          partner_id?: string | null
+          signals?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bridge_tokens: {
         Row: {
           agent_id: string | null

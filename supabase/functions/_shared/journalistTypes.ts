@@ -140,4 +140,8 @@ export interface JournalistReviewOutput {
   reasoning_summary: string;
   /** Punteggio qualità 0-100; -1 = review non eseguita (errore) */
   quality_score: number;
+  /** Punteggio aderenza Brand Voice TMWE 0-100; -1 = non calcolato. Deterministico, no LLM. */
+  brand_voice_score?: number;
+  /** Deviazioni Brand Voice rilevate (tipo + descrizione breve). */
+  brand_voice_deviations?: Array<{ type: string; description: string }>;
 }
