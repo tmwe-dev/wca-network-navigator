@@ -27,6 +27,7 @@ import { EntityFiltersDrawer } from "./EntityFiltersDrawer";
 import { BulkActionsPanel } from "./BulkActionsPanel";
 import type { ActiveFilterChip } from "@/v2/ui/molecules/ActiveFiltersBar";
 import { useBusyPartners } from "@/v2/hooks/useBusyPartners";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
 
 export interface EntityListWithDetailProps {
   source: "wca" | "crm" | "bca";
@@ -86,6 +87,7 @@ export function EntityListWithDetail({
   testId,
   sortOverride,
 }: EntityListWithDetailProps): React.ReactElement {
+  const { filters: globalFilters, batchUpdate } = useGlobalFilters();
   const internal = useListSort<CompanySortKey>(sortStorageKey, "name");
   const sortKey = sortOverride?.sortKey ?? internal.sortKey;
   const sortDir = sortOverride?.sortDir ?? internal.sortDir;
@@ -119,6 +121,38 @@ export function EntityListWithDetail({
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<CompanyFiltersState>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Click bandiera → toggle paese (sync con global filters per WCA/CRM così
+  // si allinea a CountryGridV2). Per BCA usiamo solo lo stato locale.
+  const handleCountryClick = React.useCallback((code: string) => {
+    const upper = (code || "").toUpperCase();
+    if (!upper) return;
+    if (source === "wca") {
+      const current = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
+      if (current.has(upper)) current.delete(upper);
+      else { current.clear(); current.add(upper); }
+      batchUpdate({ networkSelectedCountries: current });
+      return;
+    }
+    if (source === "crm") {
+      const current = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
+      if (current.has(upper)) current.delete(upper);
+      else { current.clear(); current.add(upper); }
+      batchUpdate({ crmSelectedCountries: current });
+      return;
+    }
+    setFilters((f) => ({ ...f, country: f.country === upper ? null : upper }));
+  }, [source, globalFilters, batchUpdate]);
+
+  const handleCityClick = React.useCallback((city: string) => {
+    const v = (city || "").trim();
+    if (!v) return;
+    setFilters((f) => ({
+      ...f,
+      city: (f.city ?? "").toLowerCase() === v.toLowerCase() ? null : v,
+    }));
+  }, []);
+
   // Default: escludi holding pattern. Persistito per source.
   const holdingStorageKey = `list:${source}:holding`;
   const [holdingFilter, setHoldingFilter] = useState<HoldingFilterMode>(() => {
@@ -260,6 +294,8 @@ export function EntityListWithDetail({
           selectedIds={selection.selectedIds}
           onToggleSelect={selection.toggle}
           onOpenCompany={onOpenCompany}
+          onCountryClick={handleCountryClick}
+          onCityClick={handleCityClick}
         />
       </div>
 
