@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTrackPage } from "@/hooks/useTrackPage";
 import { useRequireRole } from "@/v2/hooks/useRequireRole";
 import { PageShell } from "@/v2/ui/templates/PageShell";
+import { SurfaceCard } from "@/v2/ui/atoms/SurfaceCard";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   fetchBrandVoiceOutcomes,
@@ -102,22 +103,22 @@ export function BrandVoicePage() {
       <div className="space-y-6">
         {/* KPI summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-lg border border-border bg-card p-4">
+          <SurfaceCard>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Audit totali (30g)</div>
             <div className="mt-2 text-2xl font-semibold text-foreground">{totalAudits}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+          </SurfaceCard>
+          <SurfaceCard>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Score medio</div>
             <div className={`mt-2 text-2xl font-semibold ${scoreColor(overallAvg)}`}>{overallAvg || "—"}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+          </SurfaceCard>
+          <SurfaceCard>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Deviazioni distinte</div>
             <div className="mt-2 text-2xl font-semibold text-foreground">{deviations.length}</div>
-          </div>
+          </SurfaceCard>
         </div>
 
         {/* Channel × Role table */}
-        <section className="rounded-lg border border-border bg-card">
+        <SurfaceCard padding="none" className="overflow-hidden">
           <header className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Score per canale × ruolo editoriale</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Aggregato dagli ultimi 30 giorni di audit.</p>
@@ -156,10 +157,10 @@ export function BrandVoicePage() {
               </table>
             </div>
           )}
-        </section>
+        </SurfaceCard>
 
         {/* Top deviations */}
-        <section className="rounded-lg border border-border bg-card">
+        <SurfaceCard padding="none" className="overflow-hidden">
           <header className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Top 10 deviazioni ricorrenti</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -180,7 +181,7 @@ export function BrandVoicePage() {
               ))}
             </ul>
           )}
-        </section>
+        </SurfaceCard>
       </div>
     </PageShell>
   );
