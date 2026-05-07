@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import { it } from "date-fns/locale";
-import { Check, CheckCheck, Paperclip, Mic, Upload, Send, Loader2, Radio } from "lucide-react";
+import { Check, CheckCheck, Paperclip, Mic, Upload, Send, Loader2, Radio, Zap } from "lucide-react";
 import { MessageCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sendWhatsApp as sendWhatsAppUnified } from "@/lib/inbox/sendMessage";
 import { useLogAction } from "@/hooks/useLogAction";
+import { markUserSentMessage } from "@/hooks/useWhatsAppChatMode";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { ChatThread } from "./whatsappTypes";
 import { extractPhoneFromThread, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from "./whatsappTypes";
@@ -28,9 +29,10 @@ interface WhatsAppChatThreadProps {
   focusedChat: string | null;
   syncEnabled: boolean;
   sendWhatsApp: (phone: string, text: string) => Promise<{ success: boolean; error?: string }>;
+  chatMode?: { active: boolean; source: "manual" | "auto"; toggle: () => void };
 }
 
-export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhatsApp }: WhatsAppChatThreadProps) {
+export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhatsApp, chatMode }: WhatsAppChatThreadProps) {
   const [replyText, setReplyText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -122,6 +124,7 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
         return;
       }
       toast.success("Inviato ✓");
+      markUserSentMessage();
       logAction.mutate({
         channel: "whatsapp",
         sourceType: "imported_contact",
@@ -180,7 +183,36 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
             </div>
           </div>
         </div>
-        <span className="text-[10px] text-muted-foreground">{thread.messages.length} messaggi</span>
+        <div className="flex items-center gap-2">
+          {chatMode?.active && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "h-5 px-1.5 gap-1 text-[10px] border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+                "animate-pulse",
+              )}
+              title={chatMode.source === "auto"
+                ? "Chat Mode attivato automaticamente (refresh entro 30s da invio)"
+                : "Chat Mode attivo — verifica ogni 5s"}
+            >
+              <Zap className="w-3 h-3" />
+              Chat Mode {chatMode.source === "auto" ? "· auto" : ""}
+            </Badge>
+          )}
+          {chatMode && (
+            <Button
+              size="sm"
+              variant={chatMode.active ? "default" : "outline"}
+              onClick={chatMode.toggle}
+              className={cn("h-6 px-2 text-[10px] gap-1", chatMode.active && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+              title={chatMode.active ? "Disattiva Chat Mode" : "Attiva Chat Mode (verifica ogni 5s solo questa chat)"}
+            >
+              <Zap className="w-3 h-3" />
+              {chatMode.active ? "Live" : "Live off"}
+            </Button>
+          )}
+          <span className="text-[10px] text-muted-foreground">{thread.messages.length} messaggi</span>
+        </div>
       </div>
 
       {/* Messages */}
