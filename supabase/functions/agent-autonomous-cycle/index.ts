@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { isOutsideWorkHours, loadWorkHourSettings } from "../_shared/timeUtils.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
 import { evaluateTransitions, applyTransition } from "../_shared/stateTransitions.ts";
 import { LeadProcessManager } from "../_shared/processManagers/leadProcessManager.ts";
 import { getNextEngagementStep } from "../_shared/cadenceEngine.ts";
@@ -444,6 +445,7 @@ serve(async (req) => {
             critical: auditResult.summary?.critical || 0,
           });
         } catch (auditErr) {
+          swallowedError("agent_autonomous_cycle.audit_insert_failed", auditErr);
         }
       }
     }

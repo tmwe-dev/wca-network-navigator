@@ -8,6 +8,7 @@ import "../_shared/llmFetchInterceptor.ts";
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
 import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { initEmailProcessManager } from "../_shared/processManagers/emailProcessManager.ts";
@@ -392,6 +393,7 @@ ${bodyBlock}`;
         });
         postClassResult = pmResult.pipelineResult;
       } catch (pcErr) {
+        swallowedError("classify_inbound_message.post_classification_failed", pcErr);
       }
     }
 
