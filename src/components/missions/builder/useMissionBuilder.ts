@@ -244,7 +244,7 @@ export function useMissionBuilder() {
       toast.success(`🚀 Missione "${title}" lanciata con ${totalContacts} contatti!`);
       setPendingPlan(null);
       setMessages(prev => [...prev, { role: "assistant", content: `✅ **Missione approvata e lanciata!**\n\n${pendingPlan.actions.length} azioni in esecuzione per ${totalContacts} contatti. Puoi monitorare lo stato nel pannello laterale.` }]);
-      setTimeout(() => navigate("/v2/outreach"), 2000);
+      setTimeout(() => navigate("/v2/cockpit"), 2000);
     } catch (e: unknown) {
       toast.error("Errore: " + (e instanceof Error ? e.message : "Riprova"));
     } finally {

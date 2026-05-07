@@ -28,14 +28,14 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, v1Path: "/v1", v2Path: "/v2" },
   { label: "Network", icon: Globe, v1Path: "/v1/network", v2Path: "/v2/network" },
   { label: "CRM Contatti", icon: Users, v1Path: "/v1/crm", v2Path: "/v2/crm" },
-  { label: "Outreach", icon: Rocket, v1Path: "/v1/outreach", v2Path: "/v2/outreach" },
+  { label: "Outreach", icon: Rocket, v1Path: "/v1/outreach", v2Path: "/v2/cockpit" },
   { label: "Inreach", icon: Inbox, v1Path: "/v1/inreach", v2Path: "/v2/inreach" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/outreach/composer" },
+  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email" },
   { label: "AI Arena", icon: Gamepad2, v1Path: "/v1/ai-arena", v2Path: "/v2/ai-arena" },
   { label: "AI Control", icon: Target, v1Path: "/v1/ai-control", v2Path: "/v2/ai-control" },
   { label: "Email Intelligence", icon: Brain, v1Path: "/v1/email-intelligence", v2Path: "/v2/email-intelligence" },
-  { label: "Campagne", icon: Send, v1Path: "/v1/campaigns", v2Path: "/v2/campaigns" },
-  { label: "Agenda", icon: Calendar, v1Path: "/v1/agenda", v2Path: "/v2/outreach/agenda" },
+  { label: "Campagne", icon: Send, v1Path: "/v1/campaigns", v2Path: "/v2/explore/campaigns" },
+  { label: "Agenda", icon: Calendar, v1Path: "/v1/agenda", v2Path: "/v2/agenda" },
   { label: "Chat Agenti", icon: MessageCircle, v1Path: "/v1/agent-chat", v2Path: "/v2/agents" },
   { label: "Staff Direzionale", icon: BookOpen, v1Path: "/v1/staff-direzionale", v2Path: "/v2/ai-staff" },
   { label: "Mission Builder", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
@@ -46,7 +46,7 @@ const NAV_ITEMS = [
 
 const QUICK_ACTIONS = [
   { label: "Nuova Missione", icon: Target, v1Path: "/v1/mission-builder", v2Path: "/v2/agents/missions" },
-  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/outreach/composer" },
+  { label: "Nuova Email", icon: Mail, v1Path: "/v1/email-composer", v2Path: "/v2/email" },
   { label: "Visualizza Preferiti", icon: Star, v1Path: "/v1/network?favorites=true", v2Path: "/v2/network?favorites=true" },
 ];
 

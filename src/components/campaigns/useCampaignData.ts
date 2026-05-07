@@ -181,7 +181,7 @@ export function useCampaignData() {
     toast.success(`${campaignPartners.length} aziende inviate al Cockpit — Goal: ${goalLabel}`);
     setCampaignPartners([]);
     setShowGoalDialog(false);
-    navigate("/v2/outreach");
+    navigate("/v2/cockpit");
   }, [campaignPartners, selectedGoal, navigate]);
 
   return {
