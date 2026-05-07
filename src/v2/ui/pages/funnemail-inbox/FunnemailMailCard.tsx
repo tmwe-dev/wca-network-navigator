@@ -176,8 +176,15 @@ export function FunnemailMailCard({
                 </span>
               )}
               {decision && (
-                <span className="inline-flex items-center gap-1 rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary" title={decision.reasoning ?? "Decisione AI Funnemail"}>
-                  <Brain className="h-3 w-3" />{ACTION_LABELS[decision.suggested_action] ?? decision.suggested_action} · {URGENCY_LABELS[decision.urgency] ?? decision.urgency} · {Math.round(decision.confidence * 100)}%
+                <span
+                  className="inline-flex items-center gap-1 rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                  title={`${decision.reasoning ?? "Decisione AI Funnemail"} · confidence ${Math.round(decision.confidence * 100)}%`}
+                >
+                  <Brain className="h-3 w-3" />
+                  {ACTION_LABELS[decision.suggested_action] ?? decision.suggested_action}
+                  {decision.urgency !== "normal" && decision.urgency !== "low" && (
+                    <> · {URGENCY_LABELS[decision.urgency] ?? decision.urgency}</>
+                  )}
                 </span>
               )}
               {decision?.goes_to_agenda && (
@@ -186,10 +193,12 @@ export function FunnemailMailCard({
                 </span>
               )}
               {senderIntel?.company_type && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">{senderIntel.company_type}</span>
+                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">
+                  {senderIntel.company_type}
+                </span>
               )}
-              {aiSuggestion && !groupName && <AiSuggestionChip suggestion={aiSuggestion} onAccept={onAcceptAiSuggestion} className="text-xs" />}
-              {onSetStatus ? (
+              {/* Status lavorazione: mostrato solo se diverso da "nuovo" per ridurre rumore */}
+              {onSetStatus && currentStatus !== "nuovo" ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -214,22 +223,13 @@ export function FunnemailMailCard({
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium",
-                    FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus],
-                  )}
-                >
-                  ● {FUNNEMAIL_JOB_STATUS_LABELS[currentStatus]}
-                </span>
-              )}
+              ) : null}
               {reminder && reminderLabel && (
                 <span
                   className="inline-flex items-center gap-1 rounded border border-accent bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground"
-                  title={reminder.note ?? `Reminder: ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
+                  title={`Reminder ${reminderLabel}${reminder.note ? ` · ${reminder.note}` : ""} · ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
                 >
-                  <Bell className="h-3 w-3" />{reminderLabel}
+                  <Bell className="h-3 w-3" />Reminder
                 </span>
               )}
     </>
