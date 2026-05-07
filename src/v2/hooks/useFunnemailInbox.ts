@@ -137,13 +137,11 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     return base;
   }, [mails, selectedFolder, g.filters.funnemailSearch, g.filters.funnemailView]);
 
-  React.useEffect(() => {
-    if (groupedQ.isLoading || mails.length === 0 || filteredMails.length > 0) return;
-    const hasActiveFilter = selectedFolder !== "all" || g.filters.funnemailSearch.trim() || g.filters.funnemailView !== "all";
-    if (!hasActiveFilter) return;
-    g.batchUpdate({ funnemailFolder: "all", funnemailSearch: "", funnemailView: "all" });
-    toast.message("Filtri resettati: nessun risultato con i filtri attivi");
-  }, [filteredMails.length, g, groupedQ.isLoading, mails.length, selectedFolder]);
+  // NOTA: rimosso l'autoreset filtri (audit 2026-05-07).
+  // L'effetto precedente "resettava" funnemailFolder/View/Search appena
+  // la lista filtrata era vuota, rendendo impossibile selezionare cartelle
+  // momentaneamente vuote (race con refetch / vista "non lette").
+  // La UI mostra ora uno stato vuoto esplicito senza toccare i filtri.
 
   const selectedMail = React.useMemo<ChannelMessage | null>(
     () => filteredMails.find((m) => m.id === selectedMessageId) ?? null,
