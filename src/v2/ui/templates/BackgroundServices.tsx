@@ -11,6 +11,7 @@ import { useOutreachQueue } from "@/hooks/useOutreachQueue";
 import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
 import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
+import { useWhatsAppAutoSync } from "@/hooks/useWhatsAppAutoSync";
 
 export interface BackgroundServicesValues {
   outreachQueue: ReturnType<typeof useOutreachQueue>;
@@ -29,6 +30,9 @@ function ActiveBackgroundServices({ children }: Props): React.ReactElement {
   useAiExtractBridgeListener();
   const outreachQueue = useOutreachQueue();
   const globalSync = useGlobalAutoSync();
+  // Auto-sync WhatsApp con cadenza irregolare. Si attiva da solo quando
+  // l'estensione WA risulta connessa+autenticata; rispetta la pausa notturna.
+  useWhatsAppAutoSync({ paused: globalSync.nightPause });
   return <>{children({ outreachQueue, globalSync })}</>;
 }
 
