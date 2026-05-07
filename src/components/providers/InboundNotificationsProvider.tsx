@@ -4,6 +4,7 @@
  */
 
 import { useInboundNotifications } from "@/hooks/useInboundNotifications";
+import { useFunnemailUrgencyAlerts } from "@/hooks/useFunnemailUrgencyAlerts";
 
 /**
  * Global notifications initializer component.
@@ -12,6 +13,8 @@ import { useInboundNotifications } from "@/hooks/useInboundNotifications";
 export function InboundNotificationsProvider({ children }: { children?: React.ReactNode }) {
   // Initialize the hook (this starts the realtime subscription)
   useInboundNotifications();
+  // Realtime alert su classificazioni Funnemail urgency=critical|high
+  useFunnemailUrgencyAlerts();
 
   // This is a headless provider — it doesn't render anything
   return <>{children}</>;

@@ -208,6 +208,51 @@ export function useFunnemailInbox(): UseFunnemailInboxResult {
     [reclassifyMutation],
   );
 
+  // ─── Fase 2: auto deep-search/classify all'apertura ───────────────
+  // Quando l'utente apre una mail senza alcun segnale di classificazione
+  // (no decision, no sender_intel, no partner_snapshot), scattiamo UNA
+  // sola volta una riclassificazione AI. TTL 30 min per evitare loop.
+  const autoClassifyDoneRef = React.useRef<Map<string, number>>(new Map());
+  const AUTO_CLASSIFY_TTL_MS = 30 * 60 * 1000;
+  React.useEffect(() => {
+    if (!selectedMessageId) return;
+    const sel = filteredMails.find((m) => m.id === selectedMessageId);
+    if (!sel) return;
+    type Enriched = ChannelMessage & {
+      funnemail_decision?: unknown;
+      sender_intel?: unknown;
+      partner_snapshot?: unknown;
+      funnemail_group_slug?: string;
+    };
+    const enriched = sel as Enriched;
+    const hasDecision = !!enriched.funnemail_decision;
+    const hasIntel = !!enriched.sender_intel;
+    const hasPartner = !!enriched.partner_snapshot;
+    const inSorting = (enriched.funnemail_group_slug ?? "to_sort") === "to_sort";
+    if (hasDecision || hasIntel || hasPartner) return;
+    if (!inSorting) return;
+    const now = Date.now();
+    const last = autoClassifyDoneRef.current.get(sel.id) ?? 0;
+    if (now - last < AUTO_CLASSIFY_TTL_MS) return;
+    autoClassifyDoneRef.current.set(sel.id, now);
+    // best-effort: niente toast, niente errori bloccanti
+    invokeAi("funnemail-classify", {
+      scope: "classify",
+      context: { source: "useFunnemailInbox", route: "/v2/funnemail-inbox", mode: "auto-on-open" },
+      body: {
+        message_id: sel.message_id_external ?? sel.id,
+        from_address: sel.from_address ?? "",
+        subject: sel.subject ?? "",
+        body_text: sel.body_text ?? "",
+        partner_id: sel.partner_id,
+        user_id: sel.user_id,
+        force: false,
+      },
+    })
+      .then(() => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root }))
+      .catch(() => { /* silent */ });
+  }, [selectedMessageId, filteredMails, qc]);
+
   // ─── Bulk actions per gruppi della lista ──────────────────────────
   const bulk = useBulkEmailAction();
 
