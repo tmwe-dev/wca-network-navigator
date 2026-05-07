@@ -1,6 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
 import { Building2, User, MailOpen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -80,28 +79,33 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
 
           const group = getGroup(msg.from_address);
 
-          const chips = (
-            <>
-              {msg.source_type && msg.source_type !== "unknown" && (
-                <Badge variant="outline" className="h-4 gap-0.5 text-[9px]">
-                  {msg.source_type === "partner" && <Building2 className="h-2.5 w-2.5" />}
-                  {msg.source_type === "partner_contact" && <User className="h-2.5 w-2.5" />}
-                  {msg.source_type === "imported_contact" && <User className="h-2.5 w-2.5" />}
-                  {msg.source_type.replace("_", " ")}
-                </Badge>
-              )}
-            </>
-          );
-
-          const groupBadge = group?.groupName ? (
+          // Sorgente (partner / contact) mostrata come piccolo chip in alto a destra,
+          // sopra al group badge — niente più chip “buttati al centro card”.
+          const sourceChip = (msg.source_type && msg.source_type !== "unknown") ? (
             <span
-              className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-foreground"
-              title={`Gruppo: ${group.groupName}`}
+              className="inline-flex items-center gap-1 rounded border border-border/60 bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+              title={msg.source_type.replace("_", " ")}
             >
-              {group.groupIcon && <span>{group.groupIcon}</span>}
-              <span className="max-w-[140px] truncate">{group.groupName}</span>
+              {msg.source_type === "partner"
+                ? <Building2 className="h-2.5 w-2.5" />
+                : <User className="h-2.5 w-2.5" />}
             </span>
           ) : null;
+
+          const groupBadge = (
+            <div className="flex items-center gap-1">
+              {sourceChip}
+              {group?.groupName ? (
+                <span
+                  className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                  title={`Gruppo: ${group.groupName}`}
+                >
+                  {group.groupIcon && <span>{group.groupIcon}</span>}
+                  <span className="max-w-[140px] truncate">{group.groupName}</span>
+                </span>
+              ) : null}
+            </div>
+          );
 
           const trailing = isUnread ? (
             <button
@@ -159,7 +163,6 @@ export function EmailMessageList({ messages, selectedId, onSelect, holdingFilter
                 size="sm"
                 previewText={(msg.body_text || "").replace(/\s+/g, " ").trim().slice(0, 220) || null}
                 groupBadge={groupBadge}
-                chips={chips}
                 trailing={trailing}
                 actions={actions}
                 onClick={() => onSelect(msg)}
