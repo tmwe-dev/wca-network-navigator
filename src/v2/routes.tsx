@@ -257,6 +257,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="cockpit" element={guardedPage(OutreachPage, "Cockpit")} />
           <Route path="inbox"   element={guardedPage(InreachPage, "Inbox")} />
           <Route path="email"   element={guardedPage(EmailComposerPage, "Email")} />
+          {/* Canonical Email Forge under /v2/email/forge (Fase 3) */}
+          <Route path="email/forge" element={guardedPage(EmailForgePage, "EmailForge")} />
           {/* Legacy redirects → nuove voci top-level */}
           <Route path="outreach" element={<Navigate to="/v2/cockpit" replace />} />
           <Route path="outreach/composer" element={<PreserveStateRedirect to="/v2/email" />} />
@@ -296,7 +298,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
-          <Route path="ai-staff/email-forge" element={guardedPage(EmailForgePage, "EmailForge")} />
+          {/* Legacy → canonical /v2/email/forge */}
+          <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
           <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
           <Route path="prompt-lab" element={<Navigate to="/v2/settings/prompt-lab" replace />} />
           <Route path="prompt-lab/atlas" element={guardedPage(AgentAtlasPage, "AgentAtlas")} />
