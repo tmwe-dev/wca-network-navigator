@@ -56,6 +56,9 @@ const NextStepSchema = z.object({
   due_in_hours: z.number().min(0).max(720).default(24),
   reason: z.string().max(400).default(""),
   status: z.string().max(20).default("open"),
+  // R3 (audit Funnemail): true se questo step deve sostituire un job già pianificato
+  // per il contatto (es. quando arriva una risposta in anticipo).
+  replaces_existing: z.boolean().optional().default(false),
 }).passthrough();
 
 const ResultSchema = z.object({
@@ -386,6 +389,30 @@ Deno.serve(async (req) => {
         { type: "badge", label: "Next-step mancante - rivedere", color: "amber" },
         ...result.suggested_actions,
       ].slice(0, 8);
+    }
+
+    // R2 (audit Funnemail): coerenza urgency <-> due_in_hours.
+    // Se l'AI sceglie urgency alta ma due_in_hours irrealistici, riallineiamo
+    // ai cap massimi della doctrine (critical<=2, high<=8, medium<=24, low<=72).
+    if (result.next_step) {
+      const URGENCY_CAPS: Record<string, number> = {
+        critical: 2,
+        high: 8,
+        medium: 24,
+        low: 72,
+      };
+      const cap = URGENCY_CAPS[result.next_step.urgency?.toLowerCase?.() ?? "medium"];
+      if (typeof cap === "number" && result.next_step.due_in_hours > cap) {
+        result.next_step.due_in_hours = cap;
+        result.next_step.reason = `${result.next_step.reason || ""} [auto-cap: due_in_hours allineato a urgency=${result.next_step.urgency}]`.trim();
+      }
+      // owner_role obbligatorio non-vuoto
+      if (!result.next_step.owner_role || result.next_step.owner_role === "operator") {
+        // mantieni "operator" come fallback ma marca per review
+        if (result.business_value === "high" || result.urgency === "high" || result.urgency === "critical") {
+          requires_human_review = true;
+        }
+      }
     }
 
     // Persist
