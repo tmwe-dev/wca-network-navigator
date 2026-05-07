@@ -149,6 +149,7 @@ export function InArrivoTab() {
                 focusedChat: waSync.focusedChat,
                 focusOn: waSync.focusOn,
                 isAvailable: waSync.isAvailable,
+                syncSingleThread: waSync.syncSingleThread,
               }}
               operatorUserId={operatorUserId}
             />
