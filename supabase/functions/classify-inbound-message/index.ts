@@ -197,28 +197,39 @@ Deno.serve(async (req) => {
         ? "This is a LinkedIn message (professional networking)."
         : "This is an email reply (business communication).";
 
-      const systemPrompt = `You are a B2B inbound message classifier for a logistics CRM.
+      // Fallback hardcoded — usato SOLO se il Prompt Lab non ha "Inbound Message System".
+      const fallbackSystemPrompt = `You are a B2B inbound message classifier for a logistics CRM.
 ${channelHint}
 
 Classify the message and extract structured metadata using the provided tool.
 Consider the channel context when evaluating tone and intent.`;
 
-      // Inject Prompt Lab rules (Lead Qualification v2 9-stati, channel rules).
+      // Inject Prompt Lab rules: il system prompt principale è ora editabile come
+      // "Inbound Message System" + le regole universali (Lead Qualification v2, ecc.).
       let promptLabBlock = "";
+      let hasSystemFromLab = false;
       if (body.user_id) {
         try {
           const opResult = await loadOperativePrompts(supabase, body.user_id, {
             scope: "classification",
             channel: channel as "email" | "whatsapp" | "linkedin",
+            extraTags: ["system", "inbound"],
             includeUniversal: true,
-            limit: 5,
+            limit: 6,
           });
-          if (opResult.block) promptLabBlock = `\n\n${opResult.block}`;
+          if (opResult.block) {
+            promptLabBlock = opResult.block;
+            hasSystemFromLab = (opResult.appliedNames ?? []).some((n) => n === "Inbound Message System");
+          }
         } catch (e) {
           console.warn("[classify-inbound-message] prompt lab load failed:", (e as Error).message);
         }
       }
-      const finalSystemPrompt = systemPrompt + promptLabBlock;
+      // Se il Prompt Lab fornisce "Inbound Message System", usalo come system principale
+      // (il channelHint resta sempre prepended). Altrimenti fallback hardcoded.
+      const finalSystemPrompt = hasSystemFromLab
+        ? `${channelHint}\n\n${promptLabBlock}`
+        : `${fallbackSystemPrompt}${promptLabBlock ? `\n\n${promptLabBlock}` : ""}`;
 
       // Normalizza+sanitizza il contenuto inbound prima di iniettarlo nel prompt:
       // rimuove HTML, quoted-replies, firme, OCR/zero-width noise; poi anti-injection.

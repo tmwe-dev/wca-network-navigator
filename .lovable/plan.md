@@ -1,111 +1,92 @@
-# Audit Sistema Funnemail — Piano Operativo
+CLASSE: CRITICAL — OBIETTIVO: applicare la roadmap dell'audit Funnemail (00-EXECUTIVE-SUMMARY.md) seguendo Quick Codex, senza toccare nodi intoccabili (`check-inbox`, `email-imap-proxy`, `mark-imap-seen`) e senza bypassare `journalistReview` o l'AI Invocation Charter.
 
-Applico il protocollo **Codex Cobra** (`codex_quick_access.md`) come guida operativa e le **istruzioni Funnemail** (docx caricato) come spec funzionale di riferimento. L'audit è **read-only**: nessuna modifica al codice, solo report finali.
+## Decisioni bloccanti prima di partire
 
-**Classe intervento:** `STANDARD/READ-ONLY` — è un audit, non una modifica. Output = report con findings classificati per severità + raccomandazioni.
+Due item della roadmap **non posso eseguirli senza tua scelta esplicita**. Ti chiedo di confermare in chat prima dell'implementazione:
 
----
+1. **C1 / G4 — Autoresponder "presa in carico"** (conflitto spec docx vs `editorial-review-layer-mandatory`). Tre opzioni:
+   - **(a) Sospendere** il requisito spec → niente autoresponder, marker UI "ricevuto" e basta.
+   - **(b) Eccezione policy** con template fisso pre-approvato (passa comunque da `journalistReview` ma con `mode: silent_audit` su template whitelisted).
+   - **(c) UI quick-approve 1-click** in `/v2/funnemail` che invia con review umana lampo.
+2. **C3 — Eval set 200 messaggi etichettati**: serve il **dataset reale** (non posso inventarlo). Posso preparare la **struttura tabellare** (`prompt_test_cases` per scope `classify`) e lo **script di import CSV**, poi tu carichi i 200 esempi etichettati. Confermi?
 
-## §1 — Perimetro
-
-**Edge functions Funnemail (9):**
-`check-inbox`, `classify-email-response`, `classify-emails-batch`, `classify-inbound-content`, `classify-inbound-message`, `funnemail-auto-route`, `funnemail-classify`, `funnemail-reminders-tick`, `funnemail-scout-sender` + helper `_shared/funnemailDispatcher.ts`, `_shared/operativePromptsLoader.ts`, `_shared/edgeFnPromptRegistry.ts`.
-
-**UI / hooks:** `src/v2/ui/pages/funnemail-inbox/*`, `FunnemailInboxPage`, `EmailIntelligencePage`, `DepartmentKanbanView`, `useFunnemailStatuses`, `useFunnemailInboxSidebarData`, `MessageClaimBanner`.
-
-**DB:** tabelle `funnemail_*` (statuses, message_claims, reminders), `operative_prompts`, `prompt_versions`, `agent_capabilities`, `agent_personas`, `ai_interaction_log`.
-
-**Spec funzionale:** docx 26 pagine (next-step obbligatorio, lampadina su risposta, classificazione 11 categorie risposta, 5 reparti agenda, alert WhatsApp, "Lo prendo io", deep search iniziale, presa in carico, escalation).
+Procedo con tutto il resto già ora. Le fasi sotto sono **indipendenti** e ordinate per rischio crescente.
 
 ---
 
-## §2 — Fasi dell'audit
+## Fase TRIM (zero migrazioni, low-risk)
 
-### Fase A — Mappa strutturale (SC:CLASSIFY + PILLAR.I.3)
-1. Catalogare ogni edge function: input, output, prompt usato, modello AI, scope `invokeAi`, dove viene chiamata.
-2. Catalogare ogni pagina/hook UI: cosa legge, cosa scrive, quale edge function chiama (via DAL).
-3. Verificare assenza chiamate dirette `supabase.functions.invoke` su edge AI (Charter).
-4. Verificare RLS + soft-delete su tabelle `funnemail_*`.
-5. **Output:** `audit/funnemail/01-structure-map.md` con grafo `Email arriva → check-inbox → classify-* → auto-route → reparto → reminders → UI`.
+**T1 — [S2] Adottare `normalizeSanitizeAndWrap` in 2 edge function classifier**
+- File: `supabase/functions/_shared/inboundTriage.ts`, `supabase/functions/classify-email-response/index.ts`.
+- Modifica minima: avvolgere il body inbound prima di passarlo all'LLM (pattern già usato in `classify-inbound-message`).
+- Rischio: nullo (sanitizer è additivo, fail-open).
+- Test: aggiungere caso a `src/test/` o smoke curl.
 
-### Fase B — Audit prompt (PILLAR.I.4 + standard accademici)
-6. Estrarre da DB (`operative_prompts`) ogni prompt usato dalle 9 edge function Funnemail (scope `classification`, `routing`, `reminder`, `inbound`).
-7. **Deep search online** (websearch) su standard accademici prompt engineering 2025: OpenAI Prompt Engineering Guide, Anthropic prompt patterns, Google Prompt Eng. whitepaper, paper "The Prompt Report" (Schulhoff et al.), framework CRISPE/RACE/CARE.
-8. Verificare per ciascun prompt:
-   - **Posizionamento istruzioni:** ruolo/identità in cima, vincoli prima degli esempi, formato output in fondo (regola "primacy + recency");
-   - **Struttura sezioni:** Identità, Obiettivo, Metodo, Guardrail, Output (memoria `professor-prompt-template`);
-   - **Wrapping untrusted:** contenuto email passato via `wrapUntrusted` con fence;
-   - **JSON schema:** richiesta strutturata + validazione `safeParseAiJson`;
-   - **Few-shot:** presenti dove la classificazione è multi-categoria (11 tipi);
-   - **Negative constraints:** "non rispondere mai a", "non inventare";
-   - **Persona consistency:** persona caricata da `agent_personas`.
-9. **Output:** `audit/funnemail/02-prompt-audit.md` — matrice prompt × criterio con score 0-3 e fix consigliati.
+**T2 — [S10] Spostare system prompt `classify-inbound-message` in DB**
+- Creare entry in `operative_prompts` con `scope='classify'`, `tag='inbound-message-system'`.
+- Refactor `classify-inbound-message/index.ts` per caricarlo via `loadOperativePrompts()` (loader unificato già esistente).
+- Fallback hardcoded preservato se DB vuoto (no regressione).
 
-### Fase C — Audit logica & matching (PILLAR.II.1 + tracciamento flusso)
-10. Tracciare per ogni categoria di risposta del docx (11 tipi: interesse reale → escalation commerciale, partner che offre lavoro, fattura, ritardo, ecc.) come viene **realmente** classificata e routata oggi.
-11. Confrontare la mappa categorie-spec con l'enum reale in `classify-inbound-message` / `funnemail-auto-route`.
-12. Verificare regole-chiave del docx:
-    - **next-step automatico** dopo invio (esiste? dove?);
-    - **lampadina su risposta** a campagna (UI evidence);
-    - **anticipo job** se cliente risponde prima della data;
-    - **assegnazione 5 agende** (commerciale, operativa, amministrativa, legale-fiscale, servizi generali);
-    - **"Lo prendo io"** (claim system — già in memoria);
-    - **alert WhatsApp** su urgenza (dispatcher);
-    - **risposta automatica di presa in carico** sulle email operative.
-13. Identificare **gap** tra spec docx e implementazione.
-14. **Output:** `audit/funnemail/03-logic-matching.md` — tabella `Spec → Implementazione → Stato (OK / Parziale / Mancante / Divergente)` con esempi codice.
+**T3 — [C5/G2] Few-shot "partner offre lavoro" → `operative_request`**
+- Editare prompt `Funnemail Classifier` in `operative_prompts` aggiungendo 2 esempi few-shot (operazione DB via `supabase--insert`, niente codice).
+- Versione automaticamente snapshotata in `prompt_versions` dal trigger esistente.
 
-### Fase D — Test E2E e funzionali (SC:TEST)
-15. Eseguire i test Deno esistenti: `funnemail-classify/index.integration.test.ts`, `funnemail-auto-route/index.integration.test.ts`.
-16. Lanciare smoke test edge function reali (curl) con email sintetiche per ognuna delle 11 categorie del docx → verificare classificazione + routing + reparto assegnato.
-17. Verificare idempotenza `check-inbox` (memoria: NON modificare il codice, solo testare).
-18. Verificare deduplica messaggi e ordering.
-19. Smoke UI sulla rotta `/v2/agenda/reparti` e `/v2/funnemail`: render, filtri, claim, reminder.
-20. **Output:** `audit/funnemail/04-e2e-functional.md` — pass/fail per scenario + log.
+## Fase STANDARD (migration richiesta)
 
-### Fase E — Test logica end-to-end di un ciclo completo
-21. Simulare workflow completo: invio campagna → risposta cliente "interesse reale" → classify → auto-route → reparto commerciale → next-step creato → claim operatore → reminder.
-22. Ripetere con altri 3 scenari: rifiuto gentile, partner che offre servizi, urgenza operativa con alert WhatsApp.
-23. **Output:** `audit/funnemail/05-cycle-tests.md`.
+**S1 — [C2/G3] Aggiungere 3 cartelle agenda mancanti**
+- Migration: estendere enum `funnemail_folder_kind` (o tabella `funnemail_folders`, da verificare struttura) con `administrative`, `legal_fiscal`, `general_services`.
+- Popolare `funnemail_routing_rules` con 3 regole base (pattern dominio/keyword).
+- Aggiornare `funnemail-classify` enum response e relativo Zod/JSON schema.
+- UI `/v2/agenda/reparti` legge da DB → nessuna modifica frontend richiesta.
 
-### Fase F — Confronto accademico (deep search)
-24. Web search dedicate su:
-    - "Email intent classification taxonomy 2024-2025" (per validare le 11 categorie);
-    - "LLM prompt structure best practice 2025";
-    - "AI agent routing reliability patterns";
-    - Anthropic agent skills, OpenAI Cookbook email triage, paper IEEE/ACL su email intent.
-25. Confronto: cosa lo stato dell'arte raccomanda vs cosa abbiamo.
-26. **Output:** `audit/funnemail/06-academic-benchmark.md` con citazioni.
+**S2 — [C4] Strict JSON schema su 2 edge function**
+- `supabase/functions/classify-inbound-content/index.ts` e `funnemail-scout-sender/index.ts`.
+- Convertire chiamata LLM da free-form JSON a `tools: [{ type:'function', function:{ name, parameters: { type:'object', properties:{...}, required:[...] } } }]` con `tool_choice` forzato.
+- Validazione Zod post-call (pattern già usato in `_shared/aiJsonValidator.ts`).
 
-### Fase G — Report finale (SC:CHANGELOG style)
-27. **Output:** `audit/funnemail/00-EXECUTIVE-SUMMARY.md`:
-    - Score globale (0-100) per dimensione: Struttura, Prompt, Logica, Matching, E2E, Conformità accademica.
-    - Top 5 finding **CRITICAL** (con riferimento Codex Cobra: PILLAR/ANTI/COMM).
-    - Top 10 **STANDARD**.
-    - Roadmap fix prioritizzata (Trim/Standard/Critical) — solo proposta, nessuna esecuzione.
-    - Sezione `[VERIFICATO] / [ATTESO] / [ASSUNTO]` per ogni claim.
+**S3 — [S1] Promuovere 2 prompt a template Professore**
+- Editare in `operative_prompts`: `Group-Aware Classifier` e `Operative Dispatcher Routing`.
+- Riscrivere secondo `docs/prompt-standard.md` (5 sezioni: Identità/Obiettivo/Metodo/Guardrail/Output).
+- Nessun cambio codice, solo DB insert (snapshot auto via trigger).
+
+**S4 — [S3/G5] Bucket "interesse potenziale"**
+- Post-classification in `classify-email-response`: se `category=interested` ma `confidence<0.85` → marcare `lead_status_hint='potential_interest'` invece di `interested`.
+- Logica deterministica, niente nuovo prompt.
+
+## Fase CRITICAL (dipende da decisioni sopra)
+
+**Cr1 — C1/G4** → eseguibile solo dopo scelta a/b/c.
+**Cr2 — C3** → preparo struttura + script import, esecuzione attende dataset reale.
+**Cr3 — S4/G1** ("anticipo job"): hook su `applyLeadStatusChange` che cancella `ai_pending_actions` future con `partner_id+contact_id` matching quando arriva risposta positiva. Migration + edge function patch.
+
+## Fase MISURAZIONE (defer)
+
+BP1 (calibration) e BP5 (A/B test) richiedono eval-set vivo → after C3.
 
 ---
 
-## §3 — Vincoli operativi
+## Guardrail (Codex)
 
-- **Read-only assoluto:** nessuna modifica a codice, prompt DB, edge function, schema. Se trovo bug critico → finding nel report, non fix.
-- **Nodi intoccabili rispettati:** `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria) — solo lettura/test funzionale via curl, nessuna modifica.
-- **Editorial review** rispettato: l'audit non bypassa journalistReview.
-- **AI Invocation Charter** verificato come criterio, non violato dall'audit stesso.
-- **Output `/mnt/documents/audit/funnemail/`** con 7 file markdown.
+- **No tocchi** a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `journalistReviewLayer.ts`, `journalistSelector.ts`.
+- **No bypass** AI Invocation Charter: tutte le edge AI continuano a passare da `invokeAi` lato client.
+- **No DELETE fisico**: tutte le modifiche DB su tabelle business rispettano soft-delete.
+- **Modifiche DB business** solo via `supabase--migration` o `supabase--insert`, mai SQL ad-hoc.
+- Dopo ogni fase: deploy edge function modificate + smoke curl + verifica `prompt_test_runner` (quando applicabile).
+- **Rollback scritto** per ogni migration (Cr3 + S1 includono down-migration nei commenti).
 
-## §4 — Cosa NON faccio
+## CHANGELOG atteso
 
-- Non scrivo codice né migrazioni.
-- Non modifico prompt in DB.
-- Non eseguo invii email reali (solo classify/route in dry-run).
-- Non tocco produzione: tutti i test su edge function già deployate, lette in sola lettura.
+- [ATTESO] T1: 2 file edge function patchati, 0 migration, smoke curl OK.
+- [ATTESO] T2: 1 prompt nuovo in `operative_prompts`, 1 file edge function patchato, fallback preservato.
+- [ATTESO] T3: 1 row DB aggiornata, snapshot in `prompt_versions`.
+- [ATTESO] S1: 1 migration (3 cartelle + enum + routing rules), 1 file edge patchato, UI invariata.
+- [ATTESO] S2: 2 file edge patchati (strict schema), 1 set di test Zod aggiunti.
+- [ATTESO] S3: 2 prompt riscritti in DB, snapshot auto.
+- [ATTESO] S4: 1 file edge patchato, logica deterministica post-LLM.
+- [BLOCCATO] Cr1, Cr2, Cr3 in attesa decisioni utente.
 
-## §5 — Tempo stimato
+## Domande per te (rispondi prima che parta)
 
-5–7 step lunghi (deep search + analisi prompt richiede letture estese). Ti aggiorno alla fine di ogni Fase.
-
-## §6 — Conferma richiesta
-
-Confermi questo perimetro e l'output a 7 file in `/mnt/documents/audit/funnemail/`? Vuoi che includa anche un **diff visivo prompt vs template-professore** (memoria `professor-prompt-template`) come allegato extra?
+1. **C1**: opzione (a), (b) o (c)?
+2. **C3**: ok preparare struttura + import CSV e attendere dataset?
+3. Vuoi che esegua **TRIM + STANDARD** in un'unica passata, o preferisci **TRIM** prima, verifichi, poi STANDARD?

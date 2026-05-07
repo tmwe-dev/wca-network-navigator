@@ -4,6 +4,7 @@
  * fire-and-forget. Mai blocca il flusso legacy.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { normalizeSanitizeAndWrap } from "./contentNormalizer.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient<any>>;
@@ -49,11 +50,25 @@ export async function runInboundTriage(input: TriageInput): Promise<TriageResult
 
   const system = `Sei il triage operativo di TMWE / Find Air. Restituisci SOLO JSON valido conforme allo schema della tool call.
 ${promptBlock ? "\n" + promptBlock : ""}`;
+  // Normalizza+sanitizza il contenuto inbound (anti-injection + dewrap HTML/firme)
+  // PRIMA di farlo vedere al modello. Fail-safe: in caso di errore, fallback al raw troncato.
+  let bodyBlock: string;
+  try {
+    const wrapped = await normalizeSanitizeAndWrap(
+      input.bodyText || "",
+      "INBOUND BODY",
+      "email-inbound",
+      { maxChars: 3000, policy: "redact" },
+    );
+    bodyBlock = wrapped.block;
+  } catch (_) {
+    bodyBlock = (input.bodyText || "").slice(0, 3000);
+  }
   const user = `Channel: ${input.channel}
 From: ${input.fromAddress}
 Subject: ${(input.subject || "").slice(0, 240)}
 Body:
-${(input.bodyText || "").slice(0, 3000)}`;
+${bodyBlock}`;
 
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
