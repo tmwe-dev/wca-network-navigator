@@ -12,6 +12,7 @@ import { useGlobalAutoSync } from "@/hooks/useGlobalAutoSync";
 import { useOptimusBridgeListener } from "@/hooks/useOptimusBridgeListener";
 import { useAiExtractBridgeListener } from "@/hooks/useAiExtractBridgeListener";
 import { useWhatsAppAutoSync } from "@/hooks/useWhatsAppAutoSync";
+import { useLinkedInAutoSync } from "@/hooks/useLinkedInAutoSync";
 
 export interface BackgroundServicesValues {
   outreachQueue: ReturnType<typeof useOutreachQueue>;
@@ -33,6 +34,9 @@ function ActiveBackgroundServices({ children }: Props): React.ReactElement {
   // Auto-sync WhatsApp con cadenza irregolare. Si attiva da solo quando
   // l'estensione WA risulta connessa+autenticata; rispetta la pausa notturna.
   useWhatsAppAutoSync({ paused: globalSync.nightPause });
+  // Auto-sync LinkedIn LENTO: 2-3 letture al giorno (configurabile da settings),
+  // slot random nella finestra operativa, rispetta pausa notturna.
+  useLinkedInAutoSync({ paused: globalSync.nightPause });
   return <>{children({ outreachQueue, globalSync })}</>;
 }
 
