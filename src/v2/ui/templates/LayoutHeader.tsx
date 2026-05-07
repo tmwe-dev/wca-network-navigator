@@ -14,6 +14,7 @@ import { useLocation } from "react-router-dom";
 import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { OperatorSelector } from "@/components/header/OperatorSelector";
+import { MailboxSelector } from "@/components/header/MailboxSelector";
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
@@ -108,6 +109,7 @@ export function LayoutHeader({
         <NotificationCenter />
         <ThemePicker variant="icon" />
         <OperatorSelector />
+        <MailboxSelector />
         <HeaderToolsMenu
           onAddContact={onAddContact}
           onAgentDash={onAgentDash}
