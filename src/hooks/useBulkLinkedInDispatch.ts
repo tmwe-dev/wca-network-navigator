@@ -10,7 +10,7 @@
  *  - linkedin_min_delay_seconds / linkedin_max_delay_seconds
  */
 import { useState, useCallback } from "react";
-import { invokeEdge } from "@/lib/api/invokeEdge";
+import { supabase } from "@/integrations/supabase/client";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
@@ -86,17 +86,30 @@ export function useBulkLinkedInDispatch() {
       const scheduledFor = slots[i].toISOString();
 
       try {
-        const res = await invokeEdge("send-linkedin", {
-          body: {
+        // Bulk LinkedIn = predisposto dal sistema → richiede autorizzazione
+        // (regola: messaggi WA/LI di sistema NON sono istantanei).
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) { failed++; continue; }
+        const { error } = await supabase.from("ai_pending_actions").insert({
+          user_id: userId,
+          partner_id: t.partnerId || null,
+          action_type: "send_linkedin",
+          action_payload: {
             recipient: t.profileUrl,
             message_text: personalized,
             contact_id: t.contactId || null,
             partner_id: t.partnerId || null,
             scheduled_for: scheduledFor,
+            contactName: t.contactName,
+            companyName: t.companyName,
           },
-          context: "useBulkLinkedInDispatch",
+          reasoning: `Bulk LinkedIn predisposto dal sistema per ${t.contactName || t.profileUrl}. In attesa di autorizzazione.`,
+          confidence: 0.85,
+          source: "bulk_linkedin_dispatch",
+          status: "pending",
         });
-        if ((res as { success?: boolean })?.success) {
+        if (!error) {
           queued++;
         } else {
           failed++;
@@ -112,8 +125,8 @@ export function useBulkLinkedInDispatch() {
 
     const lastSlot = slots[slots.length - 1];
     toast({
-      title: `${queued} messaggi LinkedIn programmati`,
-      description: `Finestra ${timing.startHour}:00-${timing.endHour}:00 · delay ${timing.minDelaySeconds}-${timing.maxDelaySeconds}s. Ultimo invio: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}${capped ? ` CAPPED@${bulkMax}` : ""}`,
+      title: `${queued} messaggi LinkedIn in attesa di autorizzazione`,
+      description: `Predisposti dal sistema. Approva da "Da Inviare". Finestra ${timing.startHour}:00-${timing.endHour}:00. Ultima programmazione: ${lastSlot.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}.${failed > 0 ? ` ${failed} falliti.` : ""}${capped ? ` CAPPED@${bulkMax}` : ""}`,
     });
 
     return { queued, failed };
