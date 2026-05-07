@@ -160,6 +160,7 @@ Deno.serve(async (req) => {
             .substring(0, 15000);
         }
       } catch (e) {
+        swallowedError("enrich_partner_website.fetch_page_failed", e);
       }
     }
 
@@ -319,6 +320,7 @@ Estrai queste informazioni (metti null se non trovate):
       const { triggerQualityScoreRecalculation } = await import("../_shared/enrichmentAdapter.ts");
       await triggerQualityScoreRecalculation(supabase, partnerId);
     } catch (e) {
+      swallowedError("enrich_partner_website.quality_score_recalc_failed", e);
     }
 
     return new Response(
