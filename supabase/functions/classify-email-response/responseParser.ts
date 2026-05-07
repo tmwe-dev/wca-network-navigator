@@ -102,6 +102,22 @@ export function getNextStatusGated(
     return null;
   }
   if (["interested", "meeting_request", "question", "request_info"].includes(cat)) {
+    // S4 / Gap G5: bucket "interesse potenziale" — quando l'AI dice `interested`
+    // ma con confidence < 0.85, trattiamo come potenziale (no escalation oltre
+    // first_touch_sent / holding). `meeting_request` ignora la soglia perché
+    // un meeting esplicito è già un segnale forte.
+    const isPotentialInterest = cat === "interested" && classification.confidence < 0.85;
+    if (isPotentialInterest) {
+      switch (currentStatus) {
+        case "new": return "first_touch_sent";
+        case "first_touch_sent":
+        case "holding":
+        case "engaged":
+        case "qualified":
+          return null; // non promuovere oltre senza segnale forte
+        default: return null;
+      }
+    }
     switch (currentStatus) {
       case "new": return "first_touch_sent";
       case "first_touch_sent": return "engaged";
