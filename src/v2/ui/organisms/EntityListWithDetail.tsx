@@ -202,6 +202,19 @@ export function EntityListWithDetail({
 
   const activeFiltersCount = countActiveFilters(filters);
 
+  // Estendi i chip globali con i filtri locali country/city (display-only:
+  // l'utente li toglie ri-cliccando bandiera/città oppure dal drawer filtri).
+  const mergedChips = useMemo<ActiveFilterChip[]>(() => {
+    const out: ActiveFilterChip[] = [...(globalChips ?? [])];
+    if (filters.country) {
+      out.push({ key: `local-country:${filters.country}`, label: `Paese: ${filters.country}`, tone: "primary" });
+    }
+    if (filters.city) {
+      out.push({ key: `local-city:${filters.city}`, label: `Città: ${filters.city}`, tone: "primary" });
+    }
+    return out;
+  }, [globalChips, filters.country, filters.city]);
+
   // Auto-focus prima entità se non c'è dettaglio aperto e nessuna selezione attiva.
   // Dispatcha l'handler appropriato (contatto o azienda) e il dettaglio si apre da solo.
   const autoFocusedRef = React.useRef<string | null>(null);
@@ -275,7 +288,7 @@ export function EntityListWithDetail({
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={searchPlaceholder ?? "Cerca…"}
-        chips={globalChips}
+        chips={mergedChips}
         holdingFilter={holdingFilter}
         onHoldingFilterChange={updateHoldingFilter}
         rightSlot={
