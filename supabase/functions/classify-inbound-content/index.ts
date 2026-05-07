@@ -49,6 +49,15 @@ const SuggestedActionSchema = z.object({
   template_hint: z.string().max(80).optional(),
 }).passthrough();
 
+const NextStepSchema = z.object({
+  action_type: z.string().min(1).max(40),
+  owner_role: z.string().max(40).default("operator"),
+  urgency: z.string().max(20).default("medium"),
+  due_in_hours: z.number().min(0).max(720).default(24),
+  reason: z.string().max(400).default(""),
+  status: z.string().max(20).default("open"),
+}).passthrough();
+
 const ResultSchema = z.object({
   content_label: z.string().min(1).max(160),
   intent_summary: z.string().max(400).default(""),
@@ -62,6 +71,8 @@ const ResultSchema = z.object({
   reasoning: z.string().max(600).default(""),
   confidence: z.number().min(0).max(1).default(0),
   suggested_actions: z.array(SuggestedActionSchema).max(8).default([]),
+  next_step: NextStepSchema.optional().nullable(),
+  closure_reason: z.string().max(80).optional().nullable(),
 });
 
 type Result = z.infer<typeof ResultSchema>;
@@ -318,6 +329,23 @@ Deno.serve(async (req) => {
                         required: ["type"],
                       },
                     },
+                    next_step: {
+                      type: ["object", "null"],
+                      description: "Obbligatorio se la mail richiede azione; altrimenti null e popolare closure_reason.",
+                      properties: {
+                        action_type: { type: "string" },
+                        owner_role: { type: "string", description: "commercial|operations|admin|legal|operator" },
+                        urgency: { type: "string", description: "low|medium|high|critical" },
+                        due_in_hours: { type: "number" },
+                        reason: { type: "string" },
+                        status: { type: "string", description: "open|in_progress|blocked" },
+                      },
+                      required: ["action_type", "owner_role", "urgency", "due_in_hours", "reason", "status"],
+                    },
+                    closure_reason: {
+                      type: ["string", "null"],
+                      description: "Obbligatorio se non serve next_step (es. newsletter, spam, noise, out_of_scope).",
+                    },
                   },
                   required: ["content_label", "urgency", "target_role", "confidence", "suggested_actions"],
                   additionalProperties: false,
@@ -345,6 +373,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Next-step enforcement (audit Funnemail Gap 2):
+    // ogni email rilevante deve avere next_step OPPURE closure_reason esplicita.
+    const isRelevant = result.confidence >= 0.5 && result.business_value !== "none";
+    const hasNextStep = !!result.next_step && !!result.next_step.action_type;
+    const hasClosure = typeof result.closure_reason === "string" && result.closure_reason.length > 0;
+    let requires_human_review = false;
+    if (isRelevant && !hasNextStep && !hasClosure) {
+      requires_human_review = true;
+      // fallback safe: una badge esplicita per supervisore
+      result.suggested_actions = [
+        { type: "badge", label: "Next-step mancante - rivedere", color: "amber" },
+        ...result.suggested_actions,
+      ].slice(0, 8);
+    }
+
     // Persist
     const row = {
       message_id: body.message_id,
@@ -361,7 +404,12 @@ Deno.serve(async (req) => {
       confidence: result.confidence,
       suggested_actions: result.suggested_actions,
       model,
-      context_summary: { keys: Object.keys(context) },
+      context_summary: {
+        keys: Object.keys(context),
+        next_step: result.next_step ?? null,
+        closure_reason: result.closure_reason ?? null,
+        requires_human_review,
+      },
       pending_action_ids: [] as string[],
     };
 

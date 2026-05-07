@@ -1,92 +1,63 @@
-CLASSE: CRITICAL — OBIETTIVO: applicare la roadmap dell'audit Funnemail (00-EXECUTIVE-SUMMARY.md) seguendo Quick Codex, senza toccare nodi intoccabili (`check-inbox`, `email-imap-proxy`, `mark-imap-seen`) e senza bypassare `journalistReview` o l'AI Invocation Charter.
 
-## Decisioni bloccanti prima di partire
+## Comparazione audit esterno vs roadmap interna
 
-Due item della roadmap **non posso eseguirli senza tua scelta esplicita**. Ti chiedo di confermare in chat prima dell'implementazione:
+L'audit esterno (`audit_funny_mail`) è **complementare**, non in conflitto. Mappa:
 
-1. **C1 / G4 — Autoresponder "presa in carico"** (conflitto spec docx vs `editorial-review-layer-mandatory`). Tre opzioni:
-   - **(a) Sospendere** il requisito spec → niente autoresponder, marker UI "ricevuto" e basta.
-   - **(b) Eccezione policy** con template fisso pre-approvato (passa comunque da `journalistReview` ma con `mode: silent_audit` su template whitelisted).
-   - **(c) UI quick-approve 1-click** in `/v2/funnemail` che invia con review umana lampo.
-2. **C3 — Eval set 200 messaggi etichettati**: serve il **dataset reale** (non posso inventarlo). Posso preparare la **struttura tabellare** (`prompt_test_cases` per scope `classify`) e lo **script di import CSV**, poi tu carichi i 200 esempi etichettati. Confermi?
+| Audit esterno | Roadmap interna | Stato |
+|---|---|---|
+| Gap 6 — Triage sanitizer | T1 (`normalizeSanitizeAndWrap` su inboundTriage) | ✅ già fatto |
+| Prompt registry / Prompt Lab | T2 + S3 (loader + Professore template) | ✅ già fatto / in corso |
+| Gap 4 — Stati/sub-status | S1 (folders mancanti) parziale | 🟡 da estendere |
+| Next-step obbligatorio (Gap 2) | — non previsto | ➕ NUOVO |
+| Job unico / vista aggregata (Gap 1) | — non previsto | ➕ NUOVO |
+| Escalation multilivello (Gap 3) | Cr3 hook lead status, parziale | ➕ ESTENDERE |
+| Guard dominio auto-route | — non previsto | ➕ NUOVO |
+| Golden dataset + metriche P/R/F1 | C3 (struttura + import CSV) | ✅ allineato |
+| Drift edgeFnPromptRegistry | — non previsto | ➕ NUOVO P3 |
+| Strict JSON funnemail-scout/content | C4/S2 | ✅ già pianificato |
 
-Procedo con tutto il resto già ora. Le fasi sotto sono **indipendenti** e ordinate per rischio crescente.
+Conclusione: tre temi nuovi (P1) da incorporare nelle fasi STANDARD/CRITICAL — **next-step obbligatorio**, **vista job aggregata**, **escalation multilivello con domain guard**.
 
----
+## Piano integrato (delta sulla roadmap già approvata)
 
-## Fase TRIM (zero migrazioni, low-risk)
+### TRIM (completare ciò che resta)
+- T2 bis — Spostare anche `Operative Dispatcher Routing` e `Group-Aware Classification` a Professore template (già parziale). Verificare che `edgeFnPromptRegistry` punti al loader dinamico, non alle copie statiche → marcare static come `legacy_fallback_only`.
+- T3 bis — Aggiungere regola obbligatoria al system prompt `Inbound Message System` e `Funnemail Classifier`:
+  > "Se la mail è rilevante, devi sempre produrre almeno un `next_step` (action_type, owner_role, urgency, due_in_hours, reason, status=open). Altrimenti devi indicare `closure_reason`."
 
-**T1 — [S2] Adottare `normalizeSanitizeAndWrap` in 2 edge function classifier**
-- File: `supabase/functions/_shared/inboundTriage.ts`, `supabase/functions/classify-email-response/index.ts`.
-- Modifica minima: avvolgere il body inbound prima di passarlo all'LLM (pattern già usato in `classify-inbound-message`).
-- Rischio: nullo (sanitizer è additivo, fail-open).
-- Test: aggiungere caso a `src/test/` o smoke curl.
+### STANDARD (estensioni audit esterno)
+- S5 (NUOVO) — **Next-step enforcement**: Zod schema in `classify-inbound-content` aggiunge `next_step | closure_reason` come union obbligatoria. Edge function rifiuta output senza uno dei due (fallback safe → marca `requires_human_review`).
+- S6 (NUOVO) — **Domain guard auto-route**: lista `generic_domains` (gmail, outlook, libero, hotmail, yahoo, …) caricata da DB (`funnemail_routing_config`) → su questi domini soglia confidence sale a 0.95 e auto-route disabilitata se sender non ha già almeno 1 partner_id mappato.
+- S7 (NUOVO) — **Sub-status job**: aggiunta enum `funnemail_job_substatus` (`unassigned`, `assigned`, `in_progress`, `waiting_external`, `waiting_internal`, `blocked`, `closed_done`, `closed_dropped`) sulla tabella stati esistente, senza rompere lo schema attuale (campo nullable + default mapping).
 
-**T2 — [S10] Spostare system prompt `classify-inbound-message` in DB**
-- Creare entry in `operative_prompts` con `scope='classify'`, `tag='inbound-message-system'`.
-- Refactor `classify-inbound-message/index.ts` per caricarlo via `loadOperativePrompts()` (loader unificato già esistente).
-- Fallback hardcoded preservato se DB vuoto (no regressione).
+### CRITICAL (nuovi)
+- Cr4 (NUOVO) — **Vista `funnemail_jobs_v`** (read-only) che aggrega per `message_id`: claim, status, sub_status, reminders aperti, pending actions, alert dispatched, owner, due_at calcolato come `min(reminder.due_at, alert.escalate_at)`. Niente nuova tabella: solo VIEW + indici sulle FK già esistenti. Esposta via DAL `src/data/funnemailJobs.ts`.
+- Cr5 (NUOVO) — **Escalation multilivello**: estensione `funnemail-reminders-tick` (NON tocca check-inbox/imap):
+  - L1 = reminder al claim owner.
+  - L2 = se non preso entro `escalation_l2_minutes` (default 30 per P1 urgent) → notifica admin + log `escalation_events`.
+  - L3 = se ancora aperto dopo `escalation_l3_minutes` (default 120) → broadcast WhatsApp via `dispatch-urgent-alert` con flag `escalation: true`.
+  - Tabella `funnemail_escalation_events(message_id, level, dispatched_at, reason, target_user_id)` per audit.
+- Cr6 (NUOVO) — **Drift check Prompt Registry**: edge function `prompt-registry-drift-check` (cron daily) compara hash dei prompt in `operative_prompts` vs snapshot statici in `edgeFnPromptRegistry`. Su drift → record in `prompt_test_runs` con `status=drift_warning`.
 
-**T3 — [C5/G2] Few-shot "partner offre lavoro" → `operative_request`**
-- Editare prompt `Funnemail Classifier` in `operative_prompts` aggiungendo 2 esempi few-shot (operazione DB via `supabase--insert`, niente codice).
-- Versione automaticamente snapshotata in `prompt_versions` dal trigger esistente.
+### Cr1 / C1 (autoresponder) — invariato, attende decisione utente.
 
-## Fase STANDARD (migration richiesta)
+## Guardrail (invariati)
+- Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `journalistReviewLayer`.
+- Tutto via `supabase--migration` / `supabase--insert`. Soft-delete enforced.
+- Nessuna nuova invocazione AI fuori da `invokeAi()` + scope registrato.
+- Le 3 viste/tabelle nuove (`funnemail_jobs_v`, `funnemail_escalation_events`, `funnemail_routing_config`) con RLS standard (`has_role` + ownership).
 
-**S1 — [C2/G3] Aggiungere 3 cartelle agenda mancanti**
-- Migration: estendere enum `funnemail_folder_kind` (o tabella `funnemail_folders`, da verificare struttura) con `administrative`, `legal_fiscal`, `general_services`.
-- Popolare `funnemail_routing_rules` con 3 regole base (pattern dominio/keyword).
-- Aggiornare `funnemail-classify` enum response e relativo Zod/JSON schema.
-- UI `/v2/agenda/reparti` legge da DB → nessuna modifica frontend richiesta.
+## Verifica post-fase
+- `prompt-test-runner` su 6 casi golden esistenti (RFQ urgent, ops urgent, invoice, partner supply, interest, newsletter).
+- `supabase--curl_edge_functions` su `funnemail-reminders-tick` con seed forzato L2/L3.
+- Smoke E2E: `e2e/alert-routing-flow.spec.ts` esteso con scenario "non preso in carico → escalation L2".
 
-**S2 — [C4] Strict JSON schema su 2 edge function**
-- `supabase/functions/classify-inbound-content/index.ts` e `funnemail-scout-sender/index.ts`.
-- Convertire chiamata LLM da free-form JSON a `tools: [{ type:'function', function:{ name, parameters: { type:'object', properties:{...}, required:[...] } } }]` con `tool_choice` forzato.
-- Validazione Zod post-call (pattern già usato in `_shared/aiJsonValidator.ts`).
+## Ordine di esecuzione proposto
+1. T2 bis + T3 bis (regola next-step nel prompt) — zero migrazioni.
+2. S5 next-step enforcement + S6 domain guard (1 migration: `funnemail_routing_config`).
+3. Cr4 vista `funnemail_jobs_v` (1 migration: VIEW + DAL).
+4. Cr5 escalation (1 migration: `funnemail_escalation_events` + estensione tick).
+5. S7 sub-status + Cr6 drift check (1 migration finale).
+6. Cr1 autoresponder — solo dopo decisione (a/b/c).
 
-**S3 — [S1] Promuovere 2 prompt a template Professore**
-- Editare in `operative_prompts`: `Group-Aware Classifier` e `Operative Dispatcher Routing`.
-- Riscrivere secondo `docs/prompt-standard.md` (5 sezioni: Identità/Obiettivo/Metodo/Guardrail/Output).
-- Nessun cambio codice, solo DB insert (snapshot auto via trigger).
-
-**S4 — [S3/G5] Bucket "interesse potenziale"**
-- Post-classification in `classify-email-response`: se `category=interested` ma `confidence<0.85` → marcare `lead_status_hint='potential_interest'` invece di `interested`.
-- Logica deterministica, niente nuovo prompt.
-
-## Fase CRITICAL (dipende da decisioni sopra)
-
-**Cr1 — C1/G4** → eseguibile solo dopo scelta a/b/c.
-**Cr2 — C3** → preparo struttura + script import, esecuzione attende dataset reale.
-**Cr3 — S4/G1** ("anticipo job"): hook su `applyLeadStatusChange` che cancella `ai_pending_actions` future con `partner_id+contact_id` matching quando arriva risposta positiva. Migration + edge function patch.
-
-## Fase MISURAZIONE (defer)
-
-BP1 (calibration) e BP5 (A/B test) richiedono eval-set vivo → after C3.
-
----
-
-## Guardrail (Codex)
-
-- **No tocchi** a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `journalistReviewLayer.ts`, `journalistSelector.ts`.
-- **No bypass** AI Invocation Charter: tutte le edge AI continuano a passare da `invokeAi` lato client.
-- **No DELETE fisico**: tutte le modifiche DB su tabelle business rispettano soft-delete.
-- **Modifiche DB business** solo via `supabase--migration` o `supabase--insert`, mai SQL ad-hoc.
-- Dopo ogni fase: deploy edge function modificate + smoke curl + verifica `prompt_test_runner` (quando applicabile).
-- **Rollback scritto** per ogni migration (Cr3 + S1 includono down-migration nei commenti).
-
-## CHANGELOG atteso
-
-- [ATTESO] T1: 2 file edge function patchati, 0 migration, smoke curl OK.
-- [ATTESO] T2: 1 prompt nuovo in `operative_prompts`, 1 file edge function patchato, fallback preservato.
-- [ATTESO] T3: 1 row DB aggiornata, snapshot in `prompt_versions`.
-- [ATTESO] S1: 1 migration (3 cartelle + enum + routing rules), 1 file edge patchato, UI invariata.
-- [ATTESO] S2: 2 file edge patchati (strict schema), 1 set di test Zod aggiunti.
-- [ATTESO] S3: 2 prompt riscritti in DB, snapshot auto.
-- [ATTESO] S4: 1 file edge patchato, logica deterministica post-LLM.
-- [BLOCCATO] Cr1, Cr2, Cr3 in attesa decisioni utente.
-
-## Domande per te (rispondi prima che parta)
-
-1. **C1**: opzione (a), (b) o (c)?
-2. **C3**: ok preparare struttura + import CSV e attendere dataset?
-3. Vuoi che esegua **TRIM + STANDARD** in un'unica passata, o preferisci **TRIM** prima, verifichi, poi STANDARD?
+Tre questioni bloccanti restano sul tavolo: (1) opzione autoresponder C1, (2) ok preparare struttura golden dataset C3, (3) eseguire tutto in pass unico o spezzato fase-per-fase.
