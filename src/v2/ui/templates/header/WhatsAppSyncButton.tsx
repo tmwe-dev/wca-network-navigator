@@ -1,27 +1,38 @@
 /**
- * WhatsAppSyncButton — Icona WA in header globale.
+ * GlobalSyncButton — "Scarica ora" globale (Email + WhatsApp + LinkedIn).
  *
- * Stati visivi:
- *  - grigia statica  → nessun nuovo messaggio
- *  - verde + pulse + badge → N nuovi messaggi sincronizzati non visti
- *  - rossa muted     → servizio scollegato
- *  - spinner         → sync in corso
+ * Click → richiesta IMMEDIATA su tutti e 3 i canali in parallelo:
+ *  - Email   : invoca `check-inbox` direttamente (single-flight via callCheckInbox)
+ *  - WhatsApp: dispatch `wa-sync-trigger` (consumato da useWhatsAppAutoSync)
+ *  - LinkedIn: dispatch `li-sync-trigger` (consumato da useLinkedInAutoSync)
  *
- * Click → dispatch `wa-sync-trigger` (consumato da useWhatsAppAutoSync se attivo)
- *         + reset indicatore.
+ * Funziona "liberamente" anche quando gli auto-sync sono in pausa: gli
+ * adaptive-sync hook ascoltano comunque il trigger event e processano la
+ * richiesta senza resettare la sequenza programmata.
+ *
+ * L'indicatore mantiene il badge "nuovi messaggi WA" per retrocompat.
+ * Esportato anche come `WhatsAppSyncButton` per non rompere call site esistenti.
  */
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Loader2 } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWhatsAppNewMessagesIndicator } from "@/hooks/useWhatsAppNewMessagesIndicator";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
+import { callCheckInbox } from "@/lib/checkInbox";
+import { toast } from "sonner";
+import { createLogger } from "@/lib/log";
 
-export function WhatsAppSyncButton(): React.ReactElement {
-  const { isAvailable, isAuthenticated } = useWhatsAppExtensionBridge();
+const log = createLogger("GlobalSyncButton");
+
+export function GlobalSyncButton(): React.ReactElement {
+  const wa = useWhatsAppExtensionBridge();
+  const li = useLinkedInExtensionBridge();
   const { count, pulse, clear } = useWhatsAppNewMessagesIndicator();
   const [syncing, setSyncing] = React.useState(false);
 
+  // Mantiene lo spinner sincronizzato con WA auto-sync se in corso da altrove.
   React.useEffect(() => {
     function onStart() { setSyncing(true); }
     function onDone() { setSyncing(false); }
@@ -33,38 +44,54 @@ export function WhatsAppSyncButton(): React.ReactElement {
     };
   }, []);
 
-  const connected = isAvailable && isAuthenticated;
+  const waConnected = wa.isAvailable && wa.isAuthenticated;
+  const liConnected = li.isAvailable;
   const hasNew = count > 0;
 
-  const colorClass = !connected
-    ? "text-destructive/60"
+  const colorClass = hasNew
+    ? "text-emerald-500"
+    : "text-foreground/70 hover:text-primary";
+
+  const title = syncing
+    ? "Sincronizzazione in corso…"
     : hasNew
-      ? "text-emerald-500"
-      : "text-foreground/70 hover:text-primary";
+      ? `Scarica ora · ${count} nuovi messaggi WA`
+      : "Scarica ora (Email · WhatsApp · LinkedIn)";
 
-  const title = !isAvailable
-    ? "WhatsApp: estensione non rilevata"
-    : !isAuthenticated
-      ? "WhatsApp: sessione non autenticata"
-      : syncing
-        ? "Sincronizzazione WhatsApp in corso…"
-        : hasNew
-          ? `WhatsApp: ${count} nuovi messaggi · click per sync`
-          : "Sincronizza WhatsApp ora";
-
-  const handleClick = React.useCallback(() => {
+  const handleClick = React.useCallback(async () => {
     clear();
-    if (connected) {
-      window.dispatchEvent(new CustomEvent("wa-sync-trigger"));
+    setSyncing(true);
+    try {
+      // Email: chiamata diretta single-flight. WA/LI: trigger event ai loro
+      // adaptive-sync (non resettano sequenza). Tutto in parallelo.
+      const tasks: Array<Promise<unknown>> = [];
+      tasks.push(
+        callCheckInbox().catch((e) => {
+          log.warn("email sync failed", { error: e instanceof Error ? e.message : String(e) });
+          return null;
+        }),
+      );
+      if (waConnected) {
+        window.dispatchEvent(new CustomEvent("wa-sync-trigger"));
+      }
+      if (liConnected) {
+        window.dispatchEvent(new CustomEvent("li-sync-trigger"));
+      }
+      await Promise.allSettled(tasks);
+      toast.success("Sincronizzazione avviata", {
+        description: `Email${waConnected ? " · WhatsApp" : ""}${liConnected ? " · LinkedIn" : ""}`,
+      });
+    } finally {
+      setSyncing(false);
     }
-  }, [clear, connected]);
+  }, [clear, waConnected, liConnected]);
 
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={handleClick}
-      disabled={!connected && !hasNew}
+      disabled={syncing}
       aria-label={title}
       title={title}
       className={cn("relative h-7 w-7 transition-colors", colorClass)}
@@ -72,7 +99,7 @@ export function WhatsAppSyncButton(): React.ReactElement {
       {syncing ? (
         <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
-        <MessageCircle className={cn("h-4 w-4", hasNew && pulse && "animate-pulse")} />
+        <RefreshCw className={cn("h-4 w-4", hasNew && pulse && "animate-pulse")} />
       )}
       {hasNew && (
         <span
@@ -88,3 +115,6 @@ export function WhatsAppSyncButton(): React.ReactElement {
     </Button>
   );
 }
+
+/** Alias di retrocompatibilità: il bottone ora copre tutti e 3 i canali. */
+export const WhatsAppSyncButton = GlobalSyncButton;
