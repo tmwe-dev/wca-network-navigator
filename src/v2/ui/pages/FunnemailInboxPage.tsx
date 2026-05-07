@@ -106,7 +106,12 @@ export default function FunnemailInboxPage(): React.ReactElement {
             <div className="flex min-h-0 flex-1 flex-col">
               <MessageClaimBanner messageId={ctrl.selectedMail.id} />
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <EmailDetailView message={ctrl.selectedMail} onClose={() => ctrl.setSelectedMessageId(null)} />
+                <EmailDetailView
+                  message={ctrl.selectedMail}
+                  onClose={() => ctrl.setSelectedMessageId(null)}
+                  onReclassify={ctrl.reclassify}
+                  reclassifying={ctrl.reclassifying}
+                />
               </div>
             </div>
           ) : (
