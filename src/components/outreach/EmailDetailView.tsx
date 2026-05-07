@@ -167,15 +167,15 @@ export function EmailDetailView({ message, onClose }: Props) {
               {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
-                variant="default"
-                className="h-8 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
                 onClick={() => {
                   if (!message.read_at) markAsRead.mutate(message.id);
                   onClose();
                 }}
                 title="Marca come letta e nascondi dalla lista"
               >
-                <Check className="h-3.5 w-3.5" /> Letto, nascondi
+                <Check className="h-3 w-3" /> Letto, nascondi
               </Button>
               <Button
                 size="sm"
