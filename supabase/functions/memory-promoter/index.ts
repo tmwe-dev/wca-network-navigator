@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { embedBatch, DEFAULT_EMBEDDING_MODEL } from "../_shared/embeddings.ts";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { swallowedError } from "../_shared/swallowedError.ts";
 
 interface MemoryRow {
   id: string;
@@ -142,6 +143,7 @@ serve(async (req) => {
               });
             }
           } catch (conflictErr: unknown) {
+            swallowedError("memory_promoter.conflict_resolution_failed", conflictErr);
           }
         }
 
@@ -266,6 +268,7 @@ serve(async (req) => {
               }
             }
           } catch (consolErr: unknown) {
+            swallowedError("memory_promoter.consolidation_failed", consolErr);
           }
         }
       }
@@ -324,6 +327,7 @@ serve(async (req) => {
         }
       }
     } catch (threshErr: unknown) {
+      swallowedError("memory_promoter.threshold_eval_failed", threshErr);
     }
 
 
