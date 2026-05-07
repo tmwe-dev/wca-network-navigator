@@ -54,6 +54,8 @@ export interface EntityRowProps {
   channels?: { email?: boolean; whatsapp?: boolean; linkedin?: boolean; phone?: boolean; website?: boolean };
   /** Slot 4c — score 0-100 (default: <ScorePill />). */
   score?: number | null;
+  /** Slot 4d — meta extra in cima alla col 4 (es. recency). Allineato a sinistra. */
+  recencySlot?: React.ReactNode;
 
   /** Slot 5 — azioni a destra (⋯ menu, apri drawer, ecc.). */
   actionsSlot?: React.ReactNode;
@@ -79,6 +81,7 @@ export function EntityRow({
   city,
   channels,
   score,
+  recencySlot,
   actionsSlot,
   onClick,
   selected,
@@ -133,6 +136,9 @@ export function EntityRow({
         )}
         {compact && (city || channels || score != null) && (
           <div className="flex items-center gap-2 min-w-0 mt-0.5 flex-wrap">
+            {recencySlot && (
+              <span className="flex items-center">{recencySlot}</span>
+            )}
             {city && (
               <span className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%]">
                 {city}
@@ -156,6 +162,11 @@ export function EntityRow({
       {/* Col 4 (solo wide): città + canali + score */}
       {!compact && (
         <div className="flex flex-col gap-0.5 min-w-0">
+          {recencySlot && (
+            <div className="flex items-center min-w-0">
+              {recencySlot}
+            </div>
+          )}
           <div className="text-[12px] text-foreground/90 truncate font-medium">
             {city || <span className="text-muted-foreground/50 italic">—</span>}
           </div>

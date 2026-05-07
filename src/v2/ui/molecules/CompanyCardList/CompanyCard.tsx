@@ -200,19 +200,22 @@ export function CompanyCard({
           <Plane className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
         </span>
       )}
-      <span
-        className={cn(
-          "ml-auto inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded flex-shrink-0",
-          recency.tone === "ok" && "text-emerald-500",
-          recency.tone === "warn" && "text-amber-500",
-          recency.tone === "alert" && "text-destructive",
-          recency.tone === "muted" && "text-muted-foreground/50"
-        )}
-        title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
-      >
-        <Clock className="w-2.5 h-2.5" /> {recency.label}
-      </span>
     </>
+  );
+
+  const recencySlot = (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[9px] font-medium px-1 py-0 rounded flex-shrink-0",
+        recency.tone === "ok" && "text-emerald-500",
+        recency.tone === "warn" && "text-amber-500",
+        recency.tone === "alert" && "text-destructive",
+        recency.tone === "muted" && "text-muted-foreground/50"
+      )}
+      title={lastInteractionAt ? `Ultimo contatto: ${new Date(lastInteractionAt).toLocaleString()}` : "Mai contattato"}
+    >
+      <Clock className="w-2.5 h-2.5" /> {recency.label}
+    </span>
   );
 
   const subTitleSlot = primaryContact ? (
@@ -294,6 +297,7 @@ export function CompanyCard({
         city={city}
         channels={channels}
         score={score ?? null}
+        recencySlot={recencySlot}
         actionsSlot={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
