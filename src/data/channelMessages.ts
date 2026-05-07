@@ -20,6 +20,85 @@ export async function insertChannelMessage(msg: ChannelMessageInsert) {
   return { inserted: true };
 }
 
+/**
+ * Upsert con dedup deterministico via message_id_external. Ritorna true se
+ * la riga è stata effettivamente inserita (HTTP 201), false se duplicato.
+ * Usato dai sync canali (WhatsApp, LinkedIn) per delta-merge atomici.
+ */
+export async function upsertChannelMessageDedup(
+  msg: ChannelMessageInsert,
+): Promise<{ inserted: boolean }> {
+  const { error, status } = await supabase
+    .from("channel_messages")
+    .upsert([msg], { onConflict: "message_id_external", ignoreDuplicates: true });
+  if (error) throw error;
+  return { inserted: status === 201 };
+}
+
+/**
+ * Cursori per-contact per un canale (es. "whatsapp"). Per ogni contact
+ * (lowercased) restituisce il timestamp ms del messaggio più recente in DB.
+ * Aggregazione client-side su pagine da 1000, capped a 20k righe.
+ */
+export async function getChannelContactCursors(
+  userId: string,
+  channel: string,
+): Promise<Map<string, number>> {
+  const cursors = new Map<string, number>();
+  const PAGE = 1000;
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("channel_messages")
+      .select("from_address,to_address,direction,created_at")
+      .eq("user_id", userId)
+      .eq("channel", channel)
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const row of data as Array<{
+      from_address: string | null;
+      to_address: string | null;
+      direction: string;
+      created_at: string;
+    }>) {
+      const contact = (row.direction === "outbound" ? row.to_address : row.from_address)
+        ?.toLowerCase()
+        .trim();
+      if (!contact) continue;
+      const t = new Date(row.created_at).getTime();
+      const prev = cursors.get(contact);
+      if (prev === undefined || t > prev) cursors.set(contact, t);
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
+    if (from > 20000) break;
+  }
+  return cursors;
+}
+
+/**
+ * Cursore singolo per un contatto su un canale: ritorna il timestamp ms
+ * del messaggio più recente in DB, o 0 se nessuno.
+ */
+export async function getChannelContactCursor(
+  userId: string,
+  channel: string,
+  contactLower: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("created_at")
+    .eq("user_id", userId)
+    .eq("channel", channel)
+    .or(`from_address.ilike.${contactLower},to_address.ilike.${contactLower}`)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? new Date(data[0].created_at).getTime() : 0;
+}
+
 export async function countChannelMessages(channel?: string) {
   let q = supabase.from("channel_messages").select("id", { count: "planned", head: true });
   if (channel) q = q.eq("channel", channel);
