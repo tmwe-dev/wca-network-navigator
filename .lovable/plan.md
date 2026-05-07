@@ -1,31 +1,58 @@
-# LinkedIn — Fase A+B applicata (2026-05-07)
+# Click-to-filter su città, paese e gruppo — parità con BCA
 
-## Cosa è stato fatto
+Obiettivo: rendere coerente il comportamento dei filtri tra BCA (biglietti da visita) e le maschere Network/CRM/Partner. Cliccando bandiera/città dentro le card si applica il filtro corrispondente.
 
-### Migration DB
-- Dedup di tutte le righe duplicate in `app_settings`.
-- Nuovo vincolo `app_settings_key_unique (key)` per impedire futuri duplicati.
-- Nuove chiavi:
-  - `linkedin_auto_sync_enabled = true`
-  - `linkedin_read_times_per_day = 3`
-  - `linkedin_read_start_hour = 9`
-  - `linkedin_read_end_hour = 19`
+## A. Estendere `CompanyFiltersState`
 
-### Fase A — DAL + cursor
-- `src/data/channelMessages.ts`: aggiunto `getLastInboundOrOutboundForContact()`.
-- `src/hooks/useLinkedInBackfill.ts`: rimosse 2 violazioni DAL (`supabase.from("channel_messages")` diretto) → ora passa per `upsertChannelMessageDedup` + `getLastInboundOrOutboundForContact`.
-- `src/hooks/useLinkedInSync.ts`: refactor con cursor per-contatto via `getChannelContactCursors`. Filtri ghost-body (foto/video/audio) ed etichette UI ("Da leggere", "Tutti", ...) applicati. Nuovo argomento `silent` per le letture automatiche. Emette `li-sync-completed`.
+In `src/v2/ui/molecules/CompanyCardList/filters.ts` (o equivalente):
+- Aggiungere campi opzionali `country?: string | null` e `city?: string | null` (lowercase normalizzato).
+- Estendere `applyCompanyFilters()` con confronto case-insensitive su `company.country_code` / `company.city`.
+- Aggiungere chip rimovibili in `ActiveFiltersBar`.
 
-### Fase B — Auto-sync LENTO governato da DB
-- `src/hooks/useLinkedInAutoSync.ts` (nuovo): pianifica N letture/giorno (default 3) in slot pseudo-random distribuiti uniformemente nella finestra `9-19`, con jitter ±20 min. Persistenza `localStorage`. Guard: paused, isAvailable, tab visibile, single-flight, no-op se ultima sync < 30 min fa. Trigger manuale via evento `li-sync-trigger`.
-- `src/v2/ui/templates/BackgroundServices.tsx`: monta `useLinkedInAutoSync({ paused: nightPause })` accanto a quello WhatsApp.
+Nessuna rimozione di filtri esistenti. Tutto retro-compatibile.
 
-## Cosa NON è stato fatto (rimandato)
+## B. Atom `EntityRow` — callback opzionali
 
-- Fase C (Chat Mode): **scartato** per scelta utente — su LinkedIn non si chatta in real-time.
-- Fase D (header button + indicator): non urgente, fattibile dopo verifica.
-- Fase E hardening: pausa notturna su backfill, audit Optimus.
+In `src/v2/ui/atoms/EntityRow.tsx`:
+- Nuovi prop opzionali: `onCountryClick?: (code: string) => void`, `onCityClick?: (city: string) => void`.
+- Quando presenti: bandiera (col 2) e città (col 4) diventano `<button>` con `stopPropagation`, hover sottile, `aria-label`.
+- Quando assenti: comportamento attuale invariato.
 
-## Come modificare la cadenza
+## C. Propagazione in WCA Network e CRM Contacts
 
-UI Settings → cerca chiavi `linkedin_read_times_per_day` (1-6), `linkedin_read_start_hour`, `linkedin_read_end_hour`, oppure `linkedin_auto_sync_enabled = false` per spegnere tutto.
+In `EntityListWithDetail` (usato da `NetworkPage` e `ContactsPage`):
+- Wire dei callback verso `CompanyCardList` → `CompanyCard` → `EntityRow`.
+- I callback aggiornano `filters.country` / `filters.city` (toggle: re-click rimuove).
+- Sync con `GlobalFiltersContext.networkSelectedCountries` / `crmSelectedCountries` quando si clicca la bandiera (così resta coerente con `CountryGridV2`).
+
+## D. BCA — click bandiera nelle card
+
+In `BcaCompactCard`, `BcaGridCard`, `BcaExpandedCard`:
+- Aggiungere `onClick` esplicito sull'elemento bandiera che chiama `g.setSelectedCountry(code)` (con toggle: se già selezionato → `null`).
+- `stopPropagation` per non innescare apertura modale.
+
+Nessuna modifica a `useBcaGrouping` o alla sidebar.
+
+## Vincoli
+
+- UI-only: nessuna modifica a hook dati, DAL, edge functions, RLS.
+- Nessun refactor opportunistico. Prop nuove tutte opzionali.
+- Niente nuovi colori hardcoded: usare token semantici esistenti.
+- Nessuna modifica a nodi critici (submit, AI, batch, dedup, invio messaggi).
+
+## Dettagli tecnici
+
+File toccati (stimati 5–7):
+- `src/v2/ui/molecules/CompanyCardList/filters.ts` (+ `applyCompanyFilters`)
+- `src/v2/ui/molecules/CompanyCardList/ActiveFiltersBar.tsx`
+- `src/v2/ui/atoms/EntityRow.tsx`
+- `src/v2/ui/molecules/CompanyCardList/CompanyCard.tsx`
+- `src/v2/ui/organisms/EntityListWithDetail.tsx`
+- `src/v2/ui/molecules/bca/BcaCompactCard.tsx`, `BcaGridCard.tsx`, `BcaExpandedCard.tsx`
+
+## QA
+
+- Click bandiera in WCA Network → filtra paese; chip visibile; re-click rimuove.
+- Click città in CRM → filtra città; chip visibile.
+- Click bandiera in BCA → sidebar si aggiorna sul paese.
+- Card senza callback (es. usi legacy di `EntityRow`) → invariate.
