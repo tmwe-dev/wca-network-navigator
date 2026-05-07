@@ -131,6 +131,11 @@ export function FunnemailMailCard({
   const cleanSubject = stripReplyPrefixes(message.subject) || "(nessun oggetto)";
   const isUnread = !message.read_at;
   const displayDate = message.email_date || message.created_at;
+  const bodyPreview = (() => {
+    const t = (message as ChannelMessage & { body_text?: string | null }).body_text || "";
+    if (!t) return null;
+    return t.replace(/\s+/g, " ").trim().slice(0, 220) || null;
+  })();
   const markRead = useMarkAsRead();
   const secondaryLine = senderName || message.from_address || "(mittente sconosciuto)";
   const countryCode = partner?.country_code ?? null;
@@ -347,6 +352,7 @@ export function FunnemailMailCard({
         countryName={partner?.country_name ?? null}
         logoUrl={partner?.logo_url ?? null}
         size="md"
+        previewText={bodyPreview}
         chips={chips}
         trailing={trailing}
         actions={actions}
