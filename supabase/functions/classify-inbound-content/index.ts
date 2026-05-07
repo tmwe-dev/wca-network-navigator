@@ -329,6 +329,23 @@ Deno.serve(async (req) => {
                         required: ["type"],
                       },
                     },
+                    next_step: {
+                      type: ["object", "null"],
+                      description: "Obbligatorio se la mail richiede azione; altrimenti null e popolare closure_reason.",
+                      properties: {
+                        action_type: { type: "string" },
+                        owner_role: { type: "string", description: "commercial|operations|admin|legal|operator" },
+                        urgency: { type: "string", description: "low|medium|high|critical" },
+                        due_in_hours: { type: "number" },
+                        reason: { type: "string" },
+                        status: { type: "string", description: "open|in_progress|blocked" },
+                      },
+                      required: ["action_type", "owner_role", "urgency", "due_in_hours", "reason", "status"],
+                    },
+                    closure_reason: {
+                      type: ["string", "null"],
+                      description: "Obbligatorio se non serve next_step (es. newsletter, spam, noise, out_of_scope).",
+                    },
                   },
                   required: ["content_label", "urgency", "target_role", "confidence", "suggested_actions"],
                   additionalProperties: false,
