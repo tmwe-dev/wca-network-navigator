@@ -2860,6 +2860,7 @@ export type Database = {
           id: string
           journalist_role: string | null
           message_excerpt: string | null
+          outreach_message_id: string | null
           partner_id: string | null
           signals: Json
           user_id: string | null
@@ -2872,6 +2873,7 @@ export type Database = {
           id?: string
           journalist_role?: string | null
           message_excerpt?: string | null
+          outreach_message_id?: string | null
           partner_id?: string | null
           signals?: Json
           user_id?: string | null
@@ -2884,6 +2886,7 @@ export type Database = {
           id?: string
           journalist_role?: string | null
           message_excerpt?: string | null
+          outreach_message_id?: string | null
           partner_id?: string | null
           signals?: Json
           user_id?: string | null
@@ -7734,6 +7737,7 @@ export type Database = {
           operator_id: string | null
           priority: number
           procedure: string
+          superseded_by: string | null
           tags: string[]
           updated_at: string
           user_id: string
@@ -7752,6 +7756,7 @@ export type Database = {
           operator_id?: string | null
           priority?: number
           procedure?: string
+          superseded_by?: string | null
           tags?: string[]
           updated_at?: string
           user_id: string
@@ -7770,6 +7775,7 @@ export type Database = {
           operator_id?: string | null
           priority?: number
           procedure?: string
+          superseded_by?: string | null
           tags?: string[]
           updated_at?: string
           user_id?: string
@@ -7780,6 +7786,13 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operative_prompts_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "operative_prompts"
             referencedColumns: ["id"]
           },
         ]
@@ -11461,6 +11474,18 @@ export type Database = {
           tmwe_vat_number?: string | null
           token_valid?: never
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_brand_voice_outcomes: {
+        Row: {
+          audits: number | null
+          avg_score: number | null
+          channel: string | null
+          day: string | null
+          high_score_count: number | null
+          journalist_role: string | null
+          low_score_count: number | null
         }
         Relationships: []
       }

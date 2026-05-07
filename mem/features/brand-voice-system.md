@@ -33,3 +33,10 @@ Colonne: channel, journalist_role, brand_voice_score, deviations, signals, messa
 - `supabase/functions/_shared/journalistReviewLayer.ts` (esteso step 5)
 - `supabase/functions/_shared/journalistTypes.ts` (campi opzionali brand_voice_*)
 - migration: `brand_voice_audits` + RLS
+
+## Rinforzi Fase 2 (2026-05-07)
+- KB aggiunte: `brand-voice/context` (frequenza per fase del funnel × canale) e `brand-voice/journalists/goals` (obiettivo + KPI per ogni ruolo editoriale).
+- `app_settings`: `journalist_<role>_goal` per ognuno dei 4 ruoli; `brand_voice_secondary_language` e `brand_voice_regional_preferences` come default operatore.
+- `operative_prompts.superseded_by` (FK self) → versioning esplicito per rollback/audit.
+- `brand_voice_audits.outreach_message_id` → correlazione con outcome commerciali.
+- `v_brand_voice_outcomes` (security_invoker) → KPI dashboard 30gg per canale × ruolo.
