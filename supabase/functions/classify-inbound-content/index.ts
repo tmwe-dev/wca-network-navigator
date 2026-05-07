@@ -49,6 +49,15 @@ const SuggestedActionSchema = z.object({
   template_hint: z.string().max(80).optional(),
 }).passthrough();
 
+const NextStepSchema = z.object({
+  action_type: z.string().min(1).max(40),
+  owner_role: z.string().max(40).default("operator"),
+  urgency: z.string().max(20).default("medium"),
+  due_in_hours: z.number().min(0).max(720).default(24),
+  reason: z.string().max(400).default(""),
+  status: z.string().max(20).default("open"),
+}).passthrough();
+
 const ResultSchema = z.object({
   content_label: z.string().min(1).max(160),
   intent_summary: z.string().max(400).default(""),
@@ -62,6 +71,8 @@ const ResultSchema = z.object({
   reasoning: z.string().max(600).default(""),
   confidence: z.number().min(0).max(1).default(0),
   suggested_actions: z.array(SuggestedActionSchema).max(8).default([]),
+  next_step: NextStepSchema.optional().nullable(),
+  closure_reason: z.string().max(80).optional().nullable(),
 });
 
 type Result = z.infer<typeof ResultSchema>;
