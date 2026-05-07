@@ -13,9 +13,9 @@
  */
 import * as React from "react";
 import { Plane } from "lucide-react";
-import { CompanyLogo, CompanyLogoInline, CountryFlag } from "@/components/ui/CompanyLogo";
-import { getCountryFlag } from "@/lib/countries";
+import { CompanyLogoInline } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/utils";
+import { EntityRowFlag } from "@/v2/ui/atoms/EntityRowFlag";
 
 export interface MailRowChromeProps {
   fromAddress: string | null | undefined;
@@ -30,6 +30,8 @@ export interface MailRowChromeProps {
   countryName?: string | null;
   logoUrl?: string | null;
   size?: "sm" | "md";
+  /** Anteprima testo del corpo (2 righe). */
+  previewText?: string | null;
   /** Chip riga (gruppo, AI, decisione, status…) */
   chips?: React.ReactNode;
   /** Trailing icone/bottoni (claim, mark-read…) */
@@ -62,59 +64,56 @@ export function MailRowChrome({
   countryName,
   logoUrl,
   size = "md",
+  previewText,
   chips,
   trailing,
   actions,
   onClick,
 }: MailRowChromeProps): React.ReactElement {
-  const logoSize = size === "sm" ? 36 : 40;
   const brandText = size === "sm" ? "text-sm" : "text-base";
   return (
     <div
       className={cn(
-        "group relative w-full border-b border-border p-3 text-left transition-colors",
+        "group relative w-full border-b border-border px-3 py-2.5 text-left transition-colors",
         isSelected && "bg-muted",
         !isSelected && isUnread && "bg-primary/5",
         !isSelected && !isUnread && "hover:bg-muted/50",
-        inHolding && "border-l-2 border-l-warning",
+        inHolding && "border-l-2 border-l-primary",
       )}
     >
       <div className="flex w-full items-start gap-2.5">
         <button type="button" onClick={onClick} className="flex min-w-0 flex-1 items-start gap-3 text-left">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={brand}
-              className={cn("mt-0.5 flex-shrink-0 rounded-md object-contain", size === "sm" ? "h-9 w-9" : "h-10 w-10")}
-              loading="lazy"
-            />
-          ) : (
-            <CompanyLogo email={fromAddress} name={brand} size={logoSize} className="mt-0.5 flex-shrink-0" showFlag />
-          )}
+          {/* Col 1: bandiera grande + ISO sotto (template canonico app) */}
+          <div className="mt-0.5 flex-shrink-0 w-[44px] flex items-start justify-center">
+            <EntityRowFlag countryCode={countryCode ?? null} size={size === "sm" ? "md" : "lg"} />
+          </div>
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-1.5">
+                  {logoUrl && (
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-4 w-4 rounded-sm object-contain bg-background border border-border/40 flex-shrink-0"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  )}
                   <span
                     className={cn(
-                      "truncate font-semibold",
+                      "truncate font-semibold uppercase tracking-wide",
                       brandText,
                       isUnread ? "text-primary" : "text-foreground",
                     )}
+                    title={countryName ?? undefined}
                   >
                     {brand}
                   </span>
                   <CompanyLogoInline email={fromAddress} size={size === "sm" ? 16 : 18} />
-                  {countryCode ? (
-                    <span className="text-base leading-none" title={countryName ?? countryCode}>
-                      {getCountryFlag(countryCode)}
-                    </span>
-                  ) : (
-                    <CountryFlag email={fromAddress} size={size === "sm" ? 16 : 18} />
-                  )}
-                  {inHolding && <Plane className="h-4 w-4 animate-pulse text-warning" />}
+                  {inHolding && <Plane className="h-3.5 w-3.5 animate-pulse text-primary" />}
                 </div>
-                <p className="truncate text-sm text-foreground">{secondaryLine}</p>
+                <p className="truncate text-xs text-muted-foreground">{secondaryLine}</p>
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">{formatMailListDate(date)}</span>
             </div>
@@ -127,6 +126,12 @@ export function MailRowChrome({
             >
               {subject}
             </p>
+
+            {previewText && (
+              <p className="line-clamp-2 text-xs leading-snug text-muted-foreground/85">
+                {previewText}
+              </p>
+            )}
 
             {chips && <div className="flex flex-wrap items-center gap-1.5">{chips}</div>}
           </div>
