@@ -24,13 +24,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, RefreshCw, Trash2, Save } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Save, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinderApiCatalogTab from "./FinderApiCatalogTab";
 import { CommandPageBackButton } from "../command/components/CommandPageBackButton";
 import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
-import { Database } from "lucide-react";
 import {
   listFinderApiSchemaMap,
   upsertFinderApiSchemaField,
