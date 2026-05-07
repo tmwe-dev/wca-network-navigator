@@ -324,6 +324,7 @@ serve(async (req) => {
       }
     }
   } catch (e) {
+    swallowedError("voice_brain_bridge.session_resolve_failed", e);
   }
 
   // Build prompt
@@ -455,6 +456,7 @@ serve(async (req) => {
       });
     }
   } catch (e) {
+    swallowedError("voice_brain_bridge.memory_save_failed", e);
   }
 
   const totalLatency = Date.now() - t0;
