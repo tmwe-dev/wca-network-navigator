@@ -1,139 +1,113 @@
 ## Obiettivo
 
-Riorganizzare in modo definitivo i contenuti della Knowledge Base (`kb_entries`) per eliminare ridondanze, contraddizioni numeriche, paragrafi monolitici e mancanza di indicizzazione. Il piano produce: (1) tassonomia canonica, (2) "Fatti Canonici" come Single Source of Truth, (3) procedura "Funny Mail" atomizzata in step, (4) tooling automatico per harmonize + drift check, (5) UI di governance.
+Dare a TMWE una **voce unica e misurabile** in tutti i contenuti generati (email, WhatsApp, LinkedIn, voce), eliminando duplicazioni nei prompt e introducendo metriche di aderenza allo stile.
 
-Ambito: solo dati e governance KB. Nessuna modifica a flussi AI runtime, edge function di invio, auth o pipeline email.
+## Strategia
 
----
-
-## Stato attuale (rilevato)
-
-- **221 entry attive**, 27 categorie eterogenee (`doctrine` 120, `agent_doctrine` 24, micro-categorie tipo `arsenale`, `chiusura`, `errori`, `filosofia` con 1-3 entry).
-- ~41 entry su tema TMWE/Funny/network duplicate o sovrapposte (esempi rilevati: `7. Conversazione con il Responsabile Spedizioni — Metodo del Conquistatore` vs `7. Conversazione con il Responsabile Spedizioni (Il Conquistatore)`; `Frasi efficaci TMWE` vs `#FrasiEfficaciTMWE`; `LIBRERIA TMWE / FindAir` vs `KB Canonica TMWE` vs `Fatti Canonici TMWE`).
-- Molte entry con `chapter=''` o `chapter='general'` e **0 tag**, quindi non recuperabili per intent.
-- Paragrafi lunghi (>1.400 char) che mescolano marketing, procedura e numeri.
-- Esiste già una "Single Source of Truth" parziale (`Fatti Canonici TMWE`) ma sotto-utilizzata: nessuna entry punta lì come riferimento canonico.
-
----
-
-## Modello target
-
-### 1. Tassonomia canonica (6 famiglie)
-
-Allineata al doc `docs/governance/kb-index-map.md` e al COBRA charter:
+Quattro layer cooperanti, già presenti come scheletro nel sistema:
 
 ```text
-doctrine        → identità, valori, fatti canonici, guardrail (NON procedure)
-procedures      → workflow operativi step-by-step (Funny Mail, outreach, escalation)
-personas        → profili agenti (Aurora, Robin, Ambrogio, Luca…)
-playbooks       → tecniche vendita/comunicazione (Voss, hook, chiusura, obiezioni)
-glossary        → termini, sigle, dizionario pronuncia, KPI
-data-schema     → mappa dati disponibili (WCA, partner fields, tool I/O)
+KB (doctrine/brand-voice)  ← fonte unica della "voce TMWE"
+        │
+        ├─► agent_personas (45 agenti + 4 ruoli editoriali)
+        │
+        ├─► operative_prompts ("Stile TMWE" master + varianti canale)
+        │
+        └─► journalistReviewLayer (score aderenza + telemetria)
 ```
 
-Le 27 categorie attuali vengono mappate su queste 6 (es. `chris_voss`, `chiusura`, `obiezioni`, `hook`, `negoziazione`, `cold_outreach`, `persuasione`, `frasi_modello`, `tono`, `chiusura`, `arsenale`, `filosofia` → `playbooks`; `dati_partner`, `command_tools` → `data-schema`; `agent_doctrine` voci agente → `personas`, voci sistema → `doctrine`).
-
-### 2. Single Source of Truth dei fatti
-
-Un'unica entry `doctrine/canonical-facts/Fatti Canonici TMWE` contiene **tutti** i numeri (spedizioni/anno, partner, paesi, certificazioni). Le altre entry **non duplicano i numeri**: rimandano via `[[Vedi: Fatti Canonici TMWE]]`. L'harmonizer rileverà numeri "liberi" fuori da quell'entry e proporrà rimozione.
-
-### 3. Procedura Funny Mail atomizzata
-
-La descrizione monolitica diventa 6 entry brevi sotto `procedures/funnymail/`:
-
-```text
-01-deep-search.md        → cosa cercare sul mittente, cosa NON ripetere
-02-classification.md     → tipo, urgenza, owner_role
-03-summary.md            → contratto sintesi (campi obbligatori)
-04-job-creation.md       → quando aprire job, owner, due_in_hours
-05-assignment.md         → routing target_role + business_value
-06-next-step.md          → R1/R2/R3 (mandatory/agenda/anticipation) — già coperti, qui solo riferimento
-```
-
-Ogni file: front-matter standard + ≤ 400 char + tag espliciti (`funnymail, inbound, classify, ...`).
-
-### 4. Schema entry standard
-
-Front-matter obbligatorio in ogni `kb_entries.content`:
-
-```yaml
----
-canonical_id: funnymail/01-deep-search
-family: procedures
-intent_tags: [funnymail, inbound, deep_search]
-related: [doctrine/canonical-facts]
-last_reviewed: 2026-05-07
----
-```
-
-`tags` DB = `intent_tags` + `family`. `chapter` = path canonico (es. `funnymail`).
-
-### 5. Tabelle/colonne DB
-
-- Aggiungere colonna `canonical_id text UNIQUE` a `kb_entries` (idempotency per re-import).
-- Aggiungere colonna `superseded_by uuid REFERENCES kb_entries(id)` per archiviare duplicati senza perderli (soft-link, niente delete fisica — rispetta memoria `no-physical-delete`).
-- Vista `v_kb_active_canonical` che esclude `superseded_by IS NOT NULL`.
+Tutto editabile da DB → nessun redeploy per cambiare tono.
 
 ---
 
-## Esecuzione (5 step)
+## Fase 1 — Brand Voice canonico in KB
 
-### Step 1 — Snapshot + audit automatico
-- Edge function `kb-doctrine-audit` (estende quello già fatto 2026-05-02): produce report markdown in `/mnt/documents/kb-audit-2026-05-07.md` con:
-  - duplicati esatti (hash content normalizzato)
-  - duplicati semantici (cosine similarity ≥ 0.92 su `embedding`)
-  - numeri/cifre fuori da `canonical-facts`
-  - entry senza `tags` o senza `chapter`
-  - mapping proposto categoria → famiglia canonica.
+Creare 8 schede `kb_entries` nella `family = "doctrine"`, capitolo `brand-voice`, tutte con `canonical_id` univoco e tag standardizzati:
 
-### Step 2 — Migration schema (`canonical_id`, `superseded_by`, view)
-- Una migration singola, RLS invariata, indici aggiuntivi.
-- Trigger che vieta scrittura libera di numeri canonici (warning, non block) tramite funzione `kb_validate_canonical_facts()`.
+1. `brand-voice/identity` — chi siamo, valori, posizionamento
+2. `brand-voice/tone-base` — tono madre (professionale-caldo, diretto, mai servile)
+3. `brand-voice/lexicon-do` — parole/frasi da preferire (per IT, EN, ES, FR, DE)
+4. `brand-voice/lexicon-dont` — parole/frasi vietate + motivazione
+5. `brand-voice/punctuation-emoji` — regole su `!`, `…`, emoji per canale
+6. `brand-voice/signatures` — signature standard per canale e per ruolo
+7. `brand-voice/length-rules` — lunghezze consigliate (email 80-150 parole, WA ≤ 60, LI ≤ 300 char, voce ≤ 25s)
+8. `brand-voice/channel-deltas` — differenze formalità/saluti/frequenza per email vs WA vs LI vs voce
 
-### Step 3 — Riorganizzazione contenuti
-Tutto come **proposte** in `kb_entry_proposals` (rispetta memoria `prompt-copilot-and-kb-index`), zero scritture dirette:
-1. Creare/aggiornare `Fatti Canonici TMWE` con numeri unici e tag `[canonical_facts, numbers]`.
-2. Creare 6 entry `procedures/funnymail/*` partendo dal monolite esistente.
-3. Per ogni gruppo di duplicati: scegliere "winner", marcare gli altri `superseded_by=winner_id`.
-4. Riassegnare `category` alle 6 famiglie canoniche per tutte le 221 entry (mapping deterministico in `_shared/kbCategoryMapper.ts`).
-5. Popolare `tags` mancanti via prompt operativo `KB Tagger` (in `operative_prompts`, context=`harmonize`).
+Inserite via `kb_entry_proposals` (1-click approval in KB Supervisor, coerente con governance esistente).
 
-### Step 4 — UI governance (KB Supervisor)
-Estendere `/v2/kb-supervisor` (già esistente) con:
-- Tab **Famiglie**: vista per famiglia canonica, conteggi, duplicati pendenti.
-- Tab **Audit**: ultimo report `kb-doctrine-audit` con bottoni "Approva proposta" che applicano `superseded_by` o aggiornano `canonical_id`.
-- Tab **Drift**: confronto con `public/kb-source/libreria-tmwe.md` (sorgente desiderata già prevista).
+## Fase 2 — Popolare `agent_personas`
 
-### Step 5 — Drift guard continuo
-- Cron `pg_cron` settimanale che esegue `kb-doctrine-audit` e apre proposta se trova: numero in entry non-canonical, entry con tag vuoti, similarità ≥ 0.92.
-- Memoria `mem://features/kb-canonical-governance.md` documenta il protocollo.
+**4 ruoli editoriali** (Rompighiaccio, Risvegliatore, Chiusore, Accompagnatore) → 4 righe in `agent_personas` con `agent_id` dedicato:
+
+- `tone`, `custom_tone_prompt`
+- `vocabulary_do[]`, `vocabulary_dont[]`
+- `style_rules[]` (max 5)
+- `example_messages` (JSONB: 3 esempi corretti + 3 vietati per IT/EN)
+- `signature_template`
+
+**45 agenti applicativi**: persona di default minimale (eredita brand voice + tono base), override solo per agenti che lo richiedono (es. LUCA, Sherlock).
+
+Seed via `kb_entry_proposals` parallelo: una proposta per ruolo, una bulk per gli agenti.
+
+## Fase 3 — Consolidamento prompt
+
+In `operative_prompts`:
+
+- **NUOVO** `stile-tmwe-master` (context `general`, tag `[brand-voice, master]`, priority 100): unico prompt che riferisce la KB `doctrine/brand-voice/*` e applica la persona dell'agente chiamante.
+- **4 varianti canale** snelle (`stile-email`, `stile-whatsapp`, `stile-linkedin`, `stile-voce`) che ereditano dal master e aggiungono solo i delta canale.
+- **Deprecare** (soft, `is_active=false`) i 6 prompt outreach duplicati + i frammenti di tono ripetuti negli scope email/whatsapp/multi-channel. Lista esatta in fase di esecuzione dopo audit `findOperativePromptsFull`.
+- Anti-ripetizione, zero-allucinazioni, plan→approve→execute, holding-pattern restano **moduli separati e intoccati**.
+
+`_shared/operativePromptsLoader.ts` carica già per context+tag → nessuna modifica al loader.
+
+## Fase 4 — Brand Voice Score nel Journalist Review
+
+Estendere `_shared/journalistReviewLayer.ts` (intoccabile per logica di gating, ma estendibile per metriche):
+
+- Aggiungere campo `brand_voice_score` (0-100) all'output, calcolato con rubrica deterministica (presenza signature, lunghezza nei range, lessico do/don't, emoji policy) + fallback LLM-judge solo se mancano segnali.
+- Soglie: <60 = warning in `JournalistReviewOutput.warnings`, <40 = `pass_with_edits` forzato.
+- Telemetria in nuova tabella `brand_voice_audits` (message_id, channel, agent_id, score, deviations[], created_at).
+
+Nessun gate bloccante nuovo → niente regressioni sul flusso di invio.
+
+## Fase 5 — Esempi e template
+
+- Arricchire `funnemail_autoresponder_templates` e `email_templates` con `voice_example_for` pointer al `canonical_id` brand-voice.
+- Per ogni `agent_personas.example_messages`: 3 corretti + 3 vietati per lingua principale dell'agente.
+
+## Fase 6 — KPI dashboard
+
+Nuova vista `/v2/settings/brand-voice` (UI sola, hook esistenti):
+- Distribuzione `brand_voice_score` per canale e per ruolo (ultimi 30gg)
+- Top 10 deviazioni ricorrenti
+- Tasso risposta correlato allo score (join con `outreach_messages` esistente)
+
+Nessuna nuova business logic: solo lettura da `brand_voice_audits` + DAL esistenti.
 
 ---
 
-## Cosa NON viene toccato
+## Sequenza esecuzione consigliata
 
-- Loader prompt operativi e logica AI (`assemblePrompt`, `loadKbContext`).
-- Pipeline Funny Mail runtime (`classify-inbound-content`, `funnemail-auto-route`).
-- Auth, RLS esistenti, soft-delete trigger.
-- Edge function di invio email/WA/LI.
+1. Fase 1 (KB brand-voice) → proposte pending, utente approva 1-click
+2. Fase 2 (personas 4 ruoli) → idem
+3. Fase 3 (prompt master + varianti) → audit + soft-deprecate duplicati
+4. Fase 4 (score nel review) → migrazione tabella + estensione layer
+5. Fase 5 (esempi/template) → seed
+6. Fase 6 (dashboard KPI) → UI
 
----
+Ogni fase è reversibile (soft-delete + soft-deprecate, no DROP, no breaking change al journalist gate).
 
-## Acceptance criteria
+## Note tecniche
 
-- 0 entry con numeri canonici fuori da `Fatti Canonici TMWE` (verificato dall'audit).
-- 100% entry attive con `category ∈ {doctrine, procedures, personas, playbooks, glossary, data-schema}`.
-- 100% entry attive con almeno 2 `tags`.
-- Procedura Funny Mail recuperabile via 6 entry distinte ognuna ≤ 600 char.
-- Duplicati semantici ≥ 0.92 ridotti a 0 (winner + `superseded_by`).
-- KB Supervisor mostra report drift e permette approvazione 1-click.
-- `kb-doctrine-audit` schedulato e funzionante.
+- **Niente modifiche** a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `loadOptimusSettings` (kill-switch resta `enabled:true`).
+- Nuova tabella `brand_voice_audits` con RLS (operatore vede tutto, in coerenza con visibilità globale agenti).
+- `canonical_id` su tutte le 8 schede KB per evitare duplicati futuri.
+- Test di regressione: estendere `src/test/journalist-pipeline-coverage.test.ts` con 3 nuovi test (score calcolato, warning sotto soglia, no gate bloccante).
+- Memoria nuova: `mem://features/brand-voice-system` con mappa dei 4 layer.
 
----
+## Domande aperte (rispondibili in implementazione)
 
-## Domanda di chiusura
+- Vuoi che il Brand Voice Score sia **visibile in UI** durante la composizione (badge live) o solo in audit retroattivo?
+- I 4 ruoli editoriali devono avere **personalità nominali** (es. "Marco il Rompighiaccio") o restare ruoli astratti?
 
-Prima di partire serve confermare due scelte:
-
-1. **Politica duplicati**: archivio via `superseded_by` (preferibile, niente delete) **oppure** soft-delete tramite trigger esistente.
-2. **Esecuzione contenuti**: tutte le riassegnazioni passano da `kb_entry_proposals` con tua approvazione 1-click in KB Supervisor (sicuro), **oppure** auto-apply per le modifiche meccaniche (rename categoria, tag) e proposta solo per merge/superseded.
+Le risposte non bloccano la Fase 1-3, solo le rifiniture di UI.
