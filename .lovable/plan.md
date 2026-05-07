@@ -1,79 +1,92 @@
-# UI Structural Alignment — adattato a codex
+# Mailbox aziendali condivise + accessi multipli per operatore
 
-Il piano caricato è solido nella visione ma viola atomicità (refactor di massa) e duplica codice esistente. Lo splitto in 5 PR sequenziali, ognuno con rollback indipendente. Procedo solo con OK esplicito su ciascun step.
+## Obiettivo
+Trasformare la posta da "1 operatore = 1 casella" a "1 operatore = casella personale + N caselle aziendali condivise (booking, amministrativo, …)". L'admin governa chi accede a cosa; tutti gli operatori vedono e usano sia la propria mail sia le caselle a cui sono autorizzati.
 
-## Modifiche al piano originale
+## Modello concettuale
 
-1. **Non creare** `EmptyState.tsx` — esiste già in `src/v2/ui/atoms/`. Verifico la sua API e adatto le 3 props (icon/title/description/action).
-2. **`tokens.ts`** invece di stringhe raw → factory `cn()`-ready con commenti che richiamano i token semantic HSL.
-3. **Step 4.3 (EmailIntelligence routing)** → spostato in PR separato perché tocca routing (CRITICAL), non solo UI.
-4. **Step 4-8 (refactor di massa)** → diventano migrazione **opt-in pagina-per-pagina** dietro audit ESLint, non search-replace globale.
-5. Aggiungo verifica visiva (preview screenshot) per ogni PR, non solo `tsc`.
+```text
+operators (personale, già esistente)
+   └── credenziali IMAP/SMTP proprie  → Mailbox "Personale"
 
-## PR 1 — Primitivi condivisi [STANDARD]
+shared_mailboxes (NUOVA)
+   ├── booking@tmwe.it           (department: 'booking')
+   └── amministrazione@tmwe.it   (department: 'admin')
+        └── credenziali IMAP/SMTP cifrate (gestite dall'admin in Settings)
 
-**Obiettivo**: creare le fondamenta, zero migrazione.
+operator_mailbox_access (NUOVA, ponte M:N)
+   (operator_id, shared_mailbox_id, granted_by, granted_at)
+   └── flag booleano implicito: se la riga esiste → accesso attivo
+```
 
-- `src/v2/ui/tokens.ts` — costanti `UI_TOKENS` (toolbar, card, page wrapper). Solo classi semantic (`bg-card`, `border-border`).
-- `src/v2/ui/atoms/FilterToolbar.tsx` — wrapper props `{children, compact?, className?}`.
-- `src/v2/ui/atoms/SurfaceCard.tsx` — props `{variant?: "surface"|"subtle"|"interactive", children, className?}`.
-- **Verifica EmptyState esistente** prima di toccarlo: se API diversa da quella del piano, aggiungo overload retro-compatibile invece di breaking change.
-- `src/v2/ui/templates/SectionTabs.tsx` → aggiungere prop `variant?: "underline"|"pill"`, default `"underline"` (zero impatto su uso esistente).
+Regole d'accesso:
+- Ogni operatore ha sempre la propria casella Personale.
+- `booking` viene auto-concesso a ogni nuovo operatore al primo login OAuth (trigger DB).
+- `amministrativo` solo se l'admin lo abilita manualmente.
+- Admin (`is_operator_admin()`) vede tutte le caselle anche senza riga in `operator_mailbox_access`.
 
-**Rollback**: rimozione 3 file nuovi + revert prop `variant` in SectionTabs.
-**Verifica**: build + render `/v2/settings` (usa già SectionTabs underline) per confermare default invariato.
+## Cosa cambia in ogni layer
 
-## PR 2 — Fix bug visivi puntuali (3 pagine) [STANDARD]
+### 1. Database (migration)
+- **`shared_mailboxes`**: id, slug (`booking`, `admin`), label, email, department, imap_host/user/password_encrypted, smtp_host/user/password_encrypted/port, reply_to, is_active, auto_grant (bool), created_at/updated_at. RLS: SELECT per tutti gli operatori autenticati (servono i metadati per il selettore); INSERT/UPDATE/DELETE solo admin. Le password cifrate non vengono mai mandate al client (colonne escluse via view o policy column-level).
+- **`operator_mailbox_access`**: id, operator_id, shared_mailbox_id, granted_by, granted_at. UNIQUE (operator_id, shared_mailbox_id). RLS: SELECT operatore vede le proprie righe + admin vede tutte; INSERT/DELETE solo admin.
+- Funzione `get_accessible_mailboxes(p_operator_id uuid)` → ritorna lista `{kind: 'personal'|'shared', id, email, label}` includendo Personale + condivise abilitate (admin: tutte le condivise attive).
+- Trigger `on_operator_created_grant_booking`: dopo INSERT su `operators`, inserisce riga in `operator_mailbox_access` per ogni `shared_mailboxes` con `auto_grant = true`.
+- Seed: due righe in `shared_mailboxes` per `booking@tmwe.it` (auto_grant=true) e `amministrazione@tmwe.it` (auto_grant=false). Credenziali lasciate NULL: l'admin le inserirà dal pannello Settings (l'edge dirà "credenziali mancanti" finché non sono valorizzate).
+- Backfill: inserisce `operator_mailbox_access` per `booking` per tutti gli operatori già esistenti.
 
-- `FinderApiSchemaMapPage`: rimuovere `container mx-auto p-6 pt-20`, usare `PageTitleHeader` + `h-full flex flex-col`.
-- `FunnemailInboxPage`: `h-[calc(100vh-3.5rem)]` → `h-full` (riga 47).
-- 5 fix CTA gerarchia: CestinonePage, OutreachPage, EmailComposerPage, AgendaPage, NetworkPage. Solo cambio `variant=` su Button esistenti.
+### 2. Edge functions (mail)
+File toccati: `email-imap-proxy`, `check-inbox`, `mark-imap-seen`, `send-transactional-email`/SMTP sender (solo per leggere le credenziali — la logica di IMAP/SMTP NON cambia, vincolo memoria).
+- Aggiungere parametro opzionale `mailbox_id` (uuid di `shared_mailboxes`) o `mailbox_kind: 'personal'|'shared'`. Se assente → comportamento attuale (personale).
+- Helper `_shared/resolveMailbox.ts`: dato `(operator_id, mailbox_id?)` verifica accesso (riga in `operator_mailbox_access` o admin) e ritorna le credenziali corrette (decifrate). Blocca con 403 se non autorizzato.
+- `email_sync_state` ottiene una colonna nullable `shared_mailbox_id`: la sync per booking è univoca per casella (non per operatore), così l'UID IMAP non si duplica.
 
-**Rollback**: revert per file. Ogni fix è 1-3 righe.
-**Verifica**: screenshot pre/post di ognuna delle 3 pagine principali.
+### 3. DAL (`src/data/`)
+- `src/data/mailboxes.ts` (nuovo): `listAccessibleMailboxes()`, `listSharedMailboxes()` (admin), `upsertSharedMailbox()`, `grantMailboxAccess()`, `revokeMailboxAccess()`, `setOperatorMailboxAccess(operatorId, mailboxIds[])`.
+- `src/data/funnemailInbox.ts`, `src/data/funnemail.ts`, eventuali sender: aggiungere parametro `mailboxId?: string` alle query e passarlo alle edge.
 
-## PR 3 — Migrazione FilterToolbar (opt-in, 6 pagine pilota) [STANDARD]
+### 4. Stato globale: ActiveMailboxContext
+- Nuovo `src/contexts/ActiveMailboxContext.tsx` montato in App.tsx accanto a `ActiveOperatorContext`. Memorizza `activeMailboxId` (default: `'personal'`) in `localStorage` per operatore. Espone `mailboxes`, `activeMailbox`, `setActiveMailbox`.
+- Hook `useActiveMailbox()` consumato da Funnemail Inbox, Leggi, Scrivi, Cockpit per filtrare/inviare con la casella selezionata.
 
-Solo le 6 pagine elencate nel piano (non "tutte"):
-CestinonePage, OutreachPage/CockpitContent, InreachPage/InArrivoTab, AgendaPage, NetworkPage, SettingsPage nav.
+### 5. Selettore in alto a destra (la voce richiesta)
+- Nel dropdown già presente in alto a destra (`LayoutHeader.tsx` → area utente accanto a `OperatorSelector` / Tools / AI), aggiungere una sezione **"Casella di posta"**:
+  - Item "📧 Personale (jose@tmwe.it)" — sempre presente.
+  - Per ogni mailbox accessibile: "🏢 Booking (booking@tmwe.it)", "💼 Amministrazione".
+  - Click → `setActiveMailbox(...)`; check ✓ accanto alla casella attiva.
+  - Badge piccolo nel trigger del menu mostra l'iniziale/icona della casella attiva.
+- Nessun nuovo selettore separato: tutto dentro lo stesso dropdown utente esistente.
 
-Non tocco le altre finché non valuto regressioni di queste 6. Niente search-replace globale.
+### 6. Settings → Operatori
+- In `OperatorsSettingsPanel.tsx`, per ogni riga operatore aggiungere sezione "Accesso mailbox aziendali" con checkbox per ciascuna `shared_mailboxes` attiva. Solo admin può cambiare. La checkbox di booking è marcata per default e — visivamente — "concessa automaticamente" ma rimovibile.
+- Nuovo pannello "Mailbox aziendali" (Settings tab): l'admin vede l'elenco di `shared_mailboxes`, può creare/modificare/disattivare, inserire credenziali IMAP/SMTP (form con eye-toggle password, cifratura lato edge prima del salvataggio).
 
-**Rollback**: revert per pagina.
-**Verifica**: screenshot ciascuna delle 6 pagine.
+### 7. Onboarding
+- Quando l'`OnboardingWizard` completa, oltre a marcare `onboarding_completed=true`, il trigger DB già garantisce l'accesso a `booking`. Aggiungo nel banner una riga: "Accesso automatico a booking@tmwe.it abilitato. L'admin può aggiungere altre caselle (amministrazione, ecc.) dal pannello Operatori."
 
-## PR 4 — EmailIntelligence: tabs route-based [CRITICAL]
+## File principali toccati
+```text
+supabase/migrations/<ts>_shared_mailboxes.sql           (nuovo)
+supabase/functions/_shared/resolveMailbox.ts            (nuovo)
+supabase/functions/email-imap-proxy/index.ts            (param mailbox_id)
+supabase/functions/check-inbox/index.ts                 (param mailbox_id)
+supabase/functions/mark-imap-seen/index.ts              (param mailbox_id)
+src/data/mailboxes.ts                                   (nuovo DAL)
+src/data/funnemailInbox.ts, funnemail.ts                (param mailboxId)
+src/contexts/ActiveMailboxContext.tsx                   (nuovo)
+src/v2/ui/templates/LayoutHeader.tsx                    (sezione mailbox in dropdown)
+src/components/settings/OperatorsSettingsPanel.tsx      (checkbox accessi)
+src/components/settings/SharedMailboxesPanel.tsx        (nuovo pannello admin)
+src/lib/queryKeys.ts                                    (chiavi mailboxes)
+```
 
-Tocca routing → CRITICAL.
-- `EmailIntelligencePage` da `Tabs` shadcn → `SectionTabs variant="underline"` con sotto-route lazy.
-- Aggiungere route figlie sotto `/v2/email-intelligence/:tab`.
-- Mantenere redirect dal path attuale per non rompere bookmark esistenti.
+## Sicurezza & vincoli rispettati
+- Soft-delete: `shared_mailboxes` e `operator_mailbox_access` rientrano nel trigger globale di soft-delete.
+- RLS RESTRICTIVE su credenziali: colonne `*_password_encrypted` mai esposte al client; cifrate via Vault/edge.
+- Niente modifiche alla logica IMAP/SMTP nei file `check-inbox`/`email-imap-proxy`/`mark-imap-seen`: si aggiunge solo il **routing** della credenziale, il flusso di download/parse resta intatto (vincolo memoria "Email Code Integrity").
+- Admin sempre privilegiato via `is_operator_admin()`.
+- Default booking auto-grant via trigger, non hardcodato nel codice client.
 
-**Mappa impatto**: link interni dal Dashboard, dal menu, dalle notifiche. Devo cercare tutti i link a quella pagina.
-**Rollback**: revert + rimozione route figlie.
-**Verifica**: navigazione manuale tra tab, deep-link diretto a ciascun tab, ritorno al path originale.
-
-## PR 5 — Cleanup tipografia/radius [STANDARD, scaglionato]
-
-NON faccio search-replace globale. Approccio:
-- Aggiungere **regola ESLint custom** che vieta `text-[9px]`, `text-[11px]`, `text-[13px]`, `text-[15px]`, `rounded-2xl` come **warning** (non error) → CI mostra il debito ma non blocca.
-- Migrazione manuale solo nelle pagine già toccate dai PR 2-4 (per coerenza locale).
-- Le restanti istanze restano debito tracciato in `docs/debt/ui-typography-radius.md` con count baseline e target di azzeramento progressivo.
-
-**Rollback**: rimozione regola ESLint + doc.
-**Verifica**: `npm run lint` mostra le occorrenze conteggiate; nessun file di logica toccato.
-
-## Step esclusi dal piano (NON eseguo)
-
-- **STEP 5 originale "Empty state migration 114 istanze"** → da fare solo dopo PR 1 e con audit per pagina, non in massa. Sposto in **debito tracciato**.
-- **STEP 7 originale "Card → SurfaceCard 20+ pattern"** → idem, opt-in.
-- **STEP 8 originale "Border radius 60+32 istanze"** → solo via ESLint warn (PR 5).
-
-## File NON tocco (rispetto vincolo del piano)
-
-`src/integrations/supabase/*`, `_shared/aiInvocationGuard.ts`, `_shared/costGuardrail.ts`, `supabase/config.toml`, `AuthenticatedLayout.tsx`, `LayoutHeader.tsx`, `PageTitleHeader.tsx`.
-
-## Decisione richiesta
-
-Procedo con **PR 1** (primitivi condivisi, zero migrazione, zero rischio)?
-Oppure preferisci che parta da **PR 2** (fix bug visivi puntuali, più alto valore percepito immediato)?
+## Out of scope (ora)
+- Audit log degli accessi a mailbox condivise (è già coperto in parte da supervisor_audit_log; lo aggiungiamo dopo se serve).
+- Pannello permessi granulari per cartella (oggi: accesso = vede tutta la casella).

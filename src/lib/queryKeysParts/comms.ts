@@ -27,6 +27,9 @@ export const commsKeys = {
   },
   email: {
     count: ["email-count"] as const,
+    mailboxes: ["email-mailboxes"] as const,
+    mailboxesAll: ["email-mailboxes", "all"] as const,
+    operatorAccess: (operatorId: string) => ["email-mailboxes", "access", operatorId] as const,
     syncJob: ["email-sync-job"] as const,
     syncJobCompleted: ["email-sync-job-completed"] as const,
     drafts: (filters?: unknown) => ["email-drafts", filters] as const,

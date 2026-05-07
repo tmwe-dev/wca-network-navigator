@@ -15,6 +15,7 @@ import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { VerticalTabNav, type VerticalTab } from "@/components/ui/VerticalTabNav";
 import OperatorsSettings from "@/components/settings/OperatorsSettingsPanel";
+import SharedMailboxesPanel from "@/components/settings/SharedMailboxesPanel";
 import EmailDownloadPage from "@/components/settings/EmailDownloadPanel";
 import EnrichmentSettings from "@/components/settings/EnrichmentSettings";
 import OperativeJobsBoard from "@/components/settings/OperativeJobsBoard";
@@ -121,6 +122,7 @@ export function SettingsPage() {
     { value: "memoria-ai", label: "Memoria AI", icon: Database },
     { value: "notifiche", label: "Notifiche", icon: Bell },
     { value: "operatori", label: "Operatori", icon: Users },
+    { value: "caselle-aziendali", label: "Caselle Aziendali", icon: Mail },
     { value: "processi-automatici", label: "Processi Automatici", icon: Power },
     { value: "provider-ai", label: "Provider AI", icon: Cpu },
     { value: "reportaziende", label: "Report Aziende", icon: FileText },
@@ -192,6 +194,7 @@ export function SettingsPage() {
               </div>
             )}
             {tab === "operatori" && <OperatorsSettings />}
+            {tab === "caselle-aziendali" && <SharedMailboxesPanel />}
             <PermissionGate permission="settings.manage_users" fallback={<div className="float-panel p-5"><p className="text-sm text-muted-foreground">Non hai il permesso per accedere a questa sezione.</p></div>}>
               {tab === "utenti" && <AdminUsers />}
             </PermissionGate>
