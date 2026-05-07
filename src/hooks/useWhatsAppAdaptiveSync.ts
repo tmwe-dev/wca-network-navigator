@@ -292,12 +292,18 @@ export function useWhatsAppAdaptiveSync() {
       } else {
         toast.info(`WhatsApp: ${queue.length} chat verificate, nessun nuovo messaggio`);
       }
+      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+        detail: { newMessages: totalNew, threads: queue.length, errors: 0 },
+      }));
     } catch (err: unknown) {
       log.warn("sync.failed", { error: err instanceof Error ? err.message : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }
       toast.error(`WhatsApp sync: ${err instanceof Error ? err.message : String(err)}`);
+      window.dispatchEvent(new CustomEvent("wa-sync-completed", {
+        detail: { newMessages: 0, threads: 0, errors: 1 },
+      }));
     } finally {
       if (mountedRef.current) {
         setIsReading(false);
