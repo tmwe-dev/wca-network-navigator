@@ -9,6 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
+import {
+  upsertChannelMessageDedup,
+  getLastInboundOrOutboundForContact,
+} from "@/data/channelMessages";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillPhase = "idle" | "discovery" | "deep";
@@ -83,15 +87,9 @@ export function useLinkedInBackfill() {
         if (threadsWithGap.length >= MAX_THREADS_PER_SESSION) break;
         if (!thread.name || !thread.threadUrl) continue;
 
-        const { data: lastMsg } = await supabase
-          .from("channel_messages")
-          .select("body_text, created_at")
-          .eq("user_id", user.id)
-          .eq("channel", "linkedin")
-          .or(`from_address.ilike.%${thread.name}%,to_address.ilike.%${thread.name}%`)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const lastMsg = await getLastInboundOrOutboundForContact(
+          user.id, "linkedin", thread.name,
+        );
 
         const sidebarText = (thread.lastMessage || "").trim().toLowerCase();
         const dbText = (lastMsg?.body_text || "").trim().toLowerCase();
@@ -184,19 +182,17 @@ export function useLinkedInBackfill() {
           const direction = String(msg.direction || "inbound");
           const extId = buildDeterministicId("li", thread.name, text, timestamp);
 
-          const { error, status } = await supabase
-            .from("channel_messages")
-            .upsert({
-              user_id: user.id,
-              channel: "linkedin" as never,
-              direction: (direction === "outbound" ? "outbound" : "inbound") as never,
-              from_address: direction === "outbound" ? undefined : thread.name,
-              to_address: direction === "outbound" ? thread.name : undefined,
-              body_text: text,
-              message_id_external: extId,
-            } as never, { onConflict: "message_id_external", ignoreDuplicates: true });
-
-          if (!error && status === 201) chatRecovered++;
+          const dir: "inbound" | "outbound" = direction === "outbound" ? "outbound" : "inbound";
+          const res = await upsertChannelMessageDedup({
+            user_id: user.id,
+            channel: "linkedin" as never,
+            direction: dir as never,
+            from_address: dir === "outbound" ? undefined : thread.name,
+            to_address: dir === "outbound" ? thread.name : undefined,
+            body_text: text,
+            message_id_external: extId,
+          });
+          if (res.inserted) chatRecovered++;
           // log used to silence unused var warning
           void sender;
         }

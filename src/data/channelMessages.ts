@@ -108,6 +108,29 @@ export async function countChannelMessages(channel?: string) {
 }
 
 /**
+ * Ultimo messaggio (inbound o outbound) tra l'utente e un contatto su un canale.
+ * Usato dai backfill per detectare gap (anchor) tra UI sidebar e DB.
+ */
+export async function getLastInboundOrOutboundForContact(
+  userId: string,
+  channel: string,
+  contactName: string,
+): Promise<{ body_text: string | null; created_at: string } | null> {
+  const safe = contactName.replace(/[%_]/g, "");
+  const { data, error } = await supabase
+    .from("channel_messages")
+    .select("body_text, created_at")
+    .eq("user_id", userId)
+    .eq("channel", channel)
+    .or(`from_address.ilike.%${safe}%,to_address.ilike.%${safe}%`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data ?? null;
+}
+
+/**
  * findInboundPreview — recupera l'anteprima testuale dell'email inbound più
  * pertinente per un'activity dell'Agenda. Cerca per partner_id (se presente)
  * o per indirizzo mittente, oppure per subject. Restituisce body_text se

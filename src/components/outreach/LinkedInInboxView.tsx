@@ -173,7 +173,7 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                 <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={readNow} disabled={isReading} className="gap-1 h-7 text-[11px] px-2">
+                <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading} className="gap-1 h-7 text-[11px] px-2">
                   {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                   Leggi
                 </Button>
