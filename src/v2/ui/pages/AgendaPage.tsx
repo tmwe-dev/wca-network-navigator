@@ -100,7 +100,7 @@ export function AgendaPage() {
     <div data-testid="page-agenda" className="flex flex-col h-full">
       <PageTitleHeader icon={CalendarDays} title="Agenda" subtitle="Azioni del giorno" />
       {/* ── Barra superiore: tabs giorni + filtri attivi ─────────────────── */}
-      <div className="shrink-0 border-b border-border/30 bg-card/20">
+      <div className="shrink-0 border-b border-border/40 bg-card/40">
         <div className="flex items-center gap-2 px-3 py-2">
           <Button
             variant="ghost" size="icon" className="h-7 w-7 shrink-0"

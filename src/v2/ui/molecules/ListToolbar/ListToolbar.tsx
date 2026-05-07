@@ -108,7 +108,7 @@ export function ListToolbar<K extends string = string>({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5 px-3 py-2 border-b border-border/40 bg-muted/10",
+        "flex flex-col gap-1.5 px-3 py-2 border-b border-border/40 bg-card/40",
         className
       )}
     >
