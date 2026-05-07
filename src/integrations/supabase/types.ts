@@ -5854,6 +5854,107 @@ export type Database = {
           },
         ]
       }
+      funnemail_autoresponder_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          rendered_body: string | null
+          rendered_subject: string | null
+          send_email_response: Json | null
+          source_message_id: string | null
+          status: string
+          template_id: string | null
+          template_name: string | null
+          triggered_by: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          send_email_response?: Json | null
+          source_message_id?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          triggered_by?: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          send_email_response?: Json | null
+          source_message_id?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          triggered_by?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_autoresponder_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "funnemail_autoresponder_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnemail_autoresponder_templates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          body_template: string
+          created_at: string
+          enabled: boolean
+          id: string
+          language: string
+          name: string
+          notes: string | null
+          subject_template: string
+          trigger_rule: Json
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body_template: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          language?: string
+          name: string
+          notes?: string | null
+          subject_template: string
+          trigger_rule?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body_template?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          language?: string
+          name?: string
+          notes?: string | null
+          subject_template?: string
+          trigger_rule?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funnemail_decisions: {
         Row: {
           commercial_handoff: boolean
