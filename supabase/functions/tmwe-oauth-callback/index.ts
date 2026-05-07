@@ -293,6 +293,16 @@ Deno.serve(async (req) => {
       .upsert(upsert, { onConflict: "user_id" });
     if (upErr) return back("error", "persist_failed", intent);
 
+    // ─── Reconcile operators: bind operator row (matched by email) to this
+    // auth user_id so admins keep their is_admin flag across re-logins.
+    try {
+      await svc
+        .from("operators")
+        .update({ user_id: userId, updated_at: new Date().toISOString() })
+        .ilike("email", authEmail)
+        .neq("user_id", userId);
+    } catch (_e) { /* best effort */ }
+
     // ─── LOGIN: generate magic link and redirect there ──────────────────
     if (intent === "login" && authEmail) {
       const admin = createClient(
