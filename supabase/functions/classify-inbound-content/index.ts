@@ -373,6 +373,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Next-step enforcement (audit Funnemail Gap 2):
+    // ogni email rilevante deve avere next_step OPPURE closure_reason esplicita.
+    const isRelevant = result.confidence >= 0.5 && result.business_value !== "none";
+    const hasNextStep = !!result.next_step && !!result.next_step.action_type;
+    const hasClosure = typeof result.closure_reason === "string" && result.closure_reason.length > 0;
+    let requires_human_review = false;
+    if (isRelevant && !hasNextStep && !hasClosure) {
+      requires_human_review = true;
+      // fallback safe: una badge esplicita per supervisore
+      result.suggested_actions = [
+        { type: "badge", label: "Next-step mancante - rivedere", color: "amber" },
+        ...result.suggested_actions,
+      ].slice(0, 8);
+    }
+
     // Persist
     const row = {
       message_id: body.message_id,
@@ -389,7 +404,12 @@ Deno.serve(async (req) => {
       confidence: result.confidence,
       suggested_actions: result.suggested_actions,
       model,
-      context_summary: { keys: Object.keys(context) },
+      context_summary: {
+        keys: Object.keys(context),
+        next_step: result.next_step ?? null,
+        closure_reason: result.closure_reason ?? null,
+        requires_human_review,
+      },
       pending_action_ids: [] as string[],
     };
 
