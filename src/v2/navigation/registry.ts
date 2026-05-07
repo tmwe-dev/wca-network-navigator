@@ -75,7 +75,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
   {
     title: "Calendario & Campagne",
     items: [
-      { label: "Calendar",             path: "/v2/calendar" },
+      { label: "Calendar (deep-link)", path: "/v2/calendar" },
       { label: "Campaign Jobs",        path: "/v2/campaigns/jobs" },
     ],
   },
