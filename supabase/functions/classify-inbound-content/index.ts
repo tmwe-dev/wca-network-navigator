@@ -56,6 +56,9 @@ const NextStepSchema = z.object({
   due_in_hours: z.number().min(0).max(720).default(24),
   reason: z.string().max(400).default(""),
   status: z.string().max(20).default("open"),
+  // R3 (audit Funnemail): true se questo step deve sostituire un job già pianificato
+  // per il contatto (es. quando arriva una risposta in anticipo).
+  replaces_existing: z.boolean().optional().default(false),
 }).passthrough();
 
 const ResultSchema = z.object({
