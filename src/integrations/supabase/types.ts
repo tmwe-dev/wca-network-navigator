@@ -5925,6 +5925,45 @@ export type Database = {
           },
         ]
       }
+      funnemail_escalation_events: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          dispatched_at: string
+          id: string
+          level: string
+          message_id: string
+          payload: Json
+          reason: string | null
+          target_user_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          dispatched_at?: string
+          id?: string
+          level: string
+          message_id: string
+          payload?: Json
+          reason?: string | null
+          target_user_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          dispatched_at?: string
+          id?: string
+          level?: string
+          message_id?: string
+          payload?: Json
+          reason?: string | null
+          target_user_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       funnemail_folders: {
         Row: {
           accept_into_agenda: boolean
@@ -6055,6 +6094,7 @@ export type Database = {
           message_id: string
           status: string
           status_reason: string | null
+          sub_status: string | null
           updated_at: string
           user_id: string
         }
@@ -6067,6 +6107,7 @@ export type Database = {
           message_id: string
           status?: string
           status_reason?: string | null
+          sub_status?: string | null
           updated_at?: string
           user_id: string
         }
@@ -6079,6 +6120,7 @@ export type Database = {
           message_id?: string
           status?: string
           status_reason?: string | null
+          sub_status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -6114,6 +6156,42 @@ export type Database = {
           message_id?: string
           reason?: string | null
           to_status?: string
+        }
+        Relationships: []
+      }
+      funnemail_routing_config: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          escalation_l2_minutes: number
+          escalation_l3_minutes: number
+          generic_domain_min_confidence: number
+          generic_domains: string[]
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          escalation_l2_minutes?: number
+          escalation_l3_minutes?: number
+          generic_domain_min_confidence?: number
+          generic_domains?: string[]
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          escalation_l2_minutes?: number
+          escalation_l3_minutes?: number
+          generic_domain_min_confidence?: number
+          generic_domains?: string[]
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -11074,6 +11152,41 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      funnemail_jobs_v: {
+        Row: {
+          ai_commercial_handoff: boolean | null
+          ai_confidence: number | null
+          ai_folder_slug: string | null
+          ai_goes_to_agenda: boolean | null
+          ai_suggested_action: string | null
+          ai_urgency: string | null
+          claim_at: string | null
+          claim_owner: string | null
+          claim_released_at: string | null
+          group_id: string | null
+          has_active_claim: boolean | null
+          last_escalation_at: string | null
+          last_escalation_level: string | null
+          message_id: string | null
+          next_remind_at: string | null
+          open_reminders_count: number | null
+          status: string | null
+          status_changed_at: string | null
+          status_changed_by: string | null
+          status_reason: string | null
+          sub_status: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_decisions_folder_slug_fkey"
+            columns: ["ai_folder_slug"]
+            isOneToOne: false
+            referencedRelation: "funnemail_folders"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       funnemail_sorting_queue: {
         Row: {
