@@ -8,3 +8,4 @@
 - [Email Pipeline Repair 2026-05-05](mem://reference/email-pipeline-repair-2026-05-05) — Dedup 20 prompt classification/content-intelligence, trigger on_inbound_message ora invoca classify-inbound-message via pg_net fail-safe, reply-classifier rimosso
 - [Audit Debug & Riparazione 2026-05-06](mem://reference/audit-debug-riparazione-2026-05-06) — Sintesi documento utente: 14 voci menu, TOP 10 sovrapposizioni (SettingsPage/ConfigSection, Leggi/Funnemail Inbox, Scrivi/Email Forge, Cockpit/Campagne, Agenda/Calendar, Agenti/AI Staff, ecc.), canonical routes proposti, confini semantici email/tempo/AI
 - [Brand Voice System](mem://features/brand-voice-system) — Voce TMWE su 4 layer + score deterministico nel journalistReview, telemetria brand_voice_audits
+- [LinkedIn Slow Auto-Sync](mem://features/linkedin-slow-auto-sync) — Auto-sync LI 2-3/giorno via app_settings, cursor per-contatto, no Chat Mode
