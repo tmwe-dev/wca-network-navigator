@@ -95,6 +95,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     items: [
       { label: "Agent Atlas",          path: "/v2/prompt-lab/atlas" },
       { label: "Prompt Catalog",       path: "/v2/prompt-lab/catalog" },
+      { label: "Prompt Reader",        path: "/v2/settings/prompt-reader" },
       { label: "Proposals Review",     path: "/v2/prompt-lab/proposals" },
       { label: "Registro Interazioni AI", path: "/v2/ai-interactions-log" },
       { label: "Suggestions Review",   path: "/v2/prompt-lab/suggestions" },
