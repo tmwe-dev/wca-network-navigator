@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
-import { Building2, User, MailOpen, Sparkles } from "lucide-react";
+import { Building2, User, MailOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { extractSenderBrand } from "./email/emailUtils";
 import type { ChannelMessage } from "@/hooks/useChannelMessages";
