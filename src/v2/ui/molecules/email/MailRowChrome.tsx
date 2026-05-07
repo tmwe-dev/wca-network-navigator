@@ -32,6 +32,8 @@ export interface MailRowChromeProps {
   size?: "sm" | "md";
   /** Anteprima testo del corpo (2 righe). */
   previewText?: string | null;
+  /** Badge gruppo (assegnato o suggerito) mostrato sopra l'orario, in alto a destra. */
+  groupBadge?: React.ReactNode;
   /** Chip riga (gruppo, AI, decisione, status…) */
   chips?: React.ReactNode;
   /** Trailing icone/bottoni (claim, mark-read…) */
@@ -65,6 +67,7 @@ export function MailRowChrome({
   logoUrl,
   size = "md",
   previewText,
+  groupBadge,
   chips,
   trailing,
   actions,
@@ -115,7 +118,10 @@ export function MailRowChrome({
                 </div>
                 <p className="truncate text-xs text-muted-foreground">{secondaryLine}</p>
               </div>
-              <span className="shrink-0 text-xs text-muted-foreground">{formatMailListDate(date)}</span>
+              <div className="flex shrink-0 flex-col items-end gap-0.5">
+                {groupBadge}
+                <span className="text-xs font-medium text-foreground">{formatMailListDate(date)}</span>
+              </div>
             </div>
 
             <p
