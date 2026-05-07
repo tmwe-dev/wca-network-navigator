@@ -185,17 +185,10 @@ Deno.serve(async (req) => {
       // `authorized_users` (is_active=true). Se no, blocco SENZA creare
       // l'utente Lovable né salvare token.
       const normalizedEmail = authEmail.trim().toLowerCase();
-      // Reject TMWE local aliases — non possono mai essere whitelisted.
-      if (normalizedEmail.endsWith("@tmwe.local")) {
-        console.error(JSON.stringify({
-          type: "tmwe_oauth_callback_blocked",
-          reason: "tmwe_local_alias",
-          authEmail,
-          tmweUsername,
-          hint: "TMWE get_my_profile non ha restituito un campo 'email' — il sistema ha sintetizzato un alias @tmwe.local che non può passare la whitelist.",
-        }));
-        return back("error", "not_whitelisted", "login");
-      }
+      // NOTA: TMWE può restituire email="" per account vecchi. In quel caso
+      // ricadiamo su alias `<username>@tmwe.local` e lasciamo che sia la
+      // whitelist `authorized_users` a decidere (l'admin può autorizzare
+      // l'alias per username quando l'utente non ha email su TMWE).
       const { data: isAuthorized, error: wlErr } = await svc.rpc(
         "is_email_authorized",
         { p_email: normalizedEmail },
