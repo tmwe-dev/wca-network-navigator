@@ -183,7 +183,36 @@ export function WhatsAppChatThread({ thread, focusedChat, syncEnabled, sendWhats
             </div>
           </div>
         </div>
-        <span className="text-[10px] text-muted-foreground">{thread.messages.length} messaggi</span>
+        <div className="flex items-center gap-2">
+          {chatMode?.active && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "h-5 px-1.5 gap-1 text-[10px] border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+                "animate-pulse",
+              )}
+              title={chatMode.source === "auto"
+                ? "Chat Mode attivato automaticamente (refresh entro 30s da invio)"
+                : "Chat Mode attivo — verifica ogni 5s"}
+            >
+              <Zap className="w-3 h-3" />
+              Chat Mode {chatMode.source === "auto" ? "· auto" : ""}
+            </Badge>
+          )}
+          {chatMode && (
+            <Button
+              size="sm"
+              variant={chatMode.active ? "default" : "outline"}
+              onClick={chatMode.toggle}
+              className={cn("h-6 px-2 text-[10px] gap-1", chatMode.active && "bg-emerald-600 hover:bg-emerald-700 text-white")}
+              title={chatMode.active ? "Disattiva Chat Mode" : "Attiva Chat Mode (verifica ogni 5s solo questa chat)"}
+            >
+              <Zap className="w-3 h-3" />
+              {chatMode.active ? "Live" : "Live off"}
+            </Button>
+          )}
+          <span className="text-[10px] text-muted-foreground">{thread.messages.length} messaggi</span>
+        </div>
       </div>
 
       {/* Messages */}
