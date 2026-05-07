@@ -736,6 +736,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_knowledge_links_kb_entry_id_fkey"
+            columns: ["kb_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_kb_active_canonical"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_knowledge_links_operator_id_fkey"
             columns: ["operator_id"]
             isOneToOne: false
@@ -7042,9 +7049,61 @@ export type Database = {
           },
         ]
       }
+      kb_audit_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          details: Json
+          entries_without_family: number
+          entries_without_tags: number
+          exact_duplicates: number
+          family_distribution: Json
+          id: string
+          numbers_outside_canonical: number
+          proposed_changes: number
+          report_markdown: string | null
+          semantic_duplicates: number
+          total_entries: number
+          triggered_by: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          entries_without_family?: number
+          entries_without_tags?: number
+          exact_duplicates?: number
+          family_distribution?: Json
+          id?: string
+          numbers_outside_canonical?: number
+          proposed_changes?: number
+          report_markdown?: string | null
+          semantic_duplicates?: number
+          total_entries?: number
+          triggered_by?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          entries_without_family?: number
+          entries_without_tags?: number
+          exact_duplicates?: number
+          family_distribution?: Json
+          id?: string
+          numbers_outside_canonical?: number
+          proposed_changes?: number
+          report_markdown?: string | null
+          semantic_duplicates?: number
+          total_entries?: number
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       kb_entries: {
         Row: {
           access_count: number | null
+          canonical_id: string | null
           category: string
           chapter: string
           communication_context: Json | null
@@ -7055,9 +7114,11 @@ export type Database = {
           embedding: string | null
           embedding_model: string | null
           embedding_updated_at: string | null
+          family: string | null
           id: string
           is_active: boolean
           last_accessed_at: string | null
+          last_reviewed_at: string | null
           operator_id: string | null
           priority: number
           sort_order: number
@@ -7069,6 +7130,7 @@ export type Database = {
         }
         Insert: {
           access_count?: number | null
+          canonical_id?: string | null
           category?: string
           chapter?: string
           communication_context?: Json | null
@@ -7079,9 +7141,11 @@ export type Database = {
           embedding?: string | null
           embedding_model?: string | null
           embedding_updated_at?: string | null
+          family?: string | null
           id?: string
           is_active?: boolean
           last_accessed_at?: string | null
+          last_reviewed_at?: string | null
           operator_id?: string | null
           priority?: number
           sort_order?: number
@@ -7093,6 +7157,7 @@ export type Database = {
         }
         Update: {
           access_count?: number | null
+          canonical_id?: string | null
           category?: string
           chapter?: string
           communication_context?: Json | null
@@ -7103,9 +7168,11 @@ export type Database = {
           embedding?: string | null
           embedding_model?: string | null
           embedding_updated_at?: string | null
+          family?: string | null
           id?: string
           is_active?: boolean
           last_accessed_at?: string | null
+          last_reviewed_at?: string | null
           operator_id?: string | null
           priority?: number
           sort_order?: number
@@ -11355,6 +11422,48 @@ export type Database = {
           tmwe_vat_number?: string | null
           token_valid?: never
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_kb_active_canonical: {
+        Row: {
+          canonical_id: string | null
+          category: string | null
+          chapter: string | null
+          content: string | null
+          family: string | null
+          id: string | null
+          last_reviewed_at: string | null
+          priority: number | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          canonical_id?: string | null
+          category?: string | null
+          chapter?: string | null
+          content?: string | null
+          family?: string | null
+          id?: string | null
+          last_reviewed_at?: string | null
+          priority?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          canonical_id?: string | null
+          category?: string | null
+          chapter?: string | null
+          content?: string | null
+          family?: string | null
+          id?: string | null
+          last_reviewed_at?: string | null
+          priority?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
