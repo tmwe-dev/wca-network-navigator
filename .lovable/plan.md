@@ -1,164 +1,111 @@
+# Audit Sistema Funnemail — Piano Operativo
 
-# Piano operativo — Audit, canonical routes e cleanup sovrapposizioni
+Applico il protocollo **Codex Cobra** (`codex_quick_access.md`) come guida operativa e le **istruzioni Funnemail** (docx caricato) come spec funzionale di riferimento. L'audit è **read-only**: nessuna modifica al codice, solo report finali.
 
-Sorgente: `mem://reference/audit-debug-riparazione-2026-05-06`.
-Approccio: **redirect + rimozione fisica**, ma SOLO dopo backup completo e creazione versione "old" navigabile.
-Verifica tra fasi: `tsc --noEmit` + report scritto. Procedo automaticamente, ti fermo solo se tsc rompe o se trovo ambiguità di scope.
-
----
-
-## Fase 0 — Backup & versione "old" (prerequisito intoccabile)
-
-Obiettivo: avere una via di ritorno completa **prima** di toccare una sola route.
-
-1. Snapshot del repo in `archive/pre-cleanup-2026-05-06/` (copia ricorsiva di `src/v2/ui/pages`, `src/components`, `src/v2/routes.tsx`, `src/v2/ui/templates/sidebar/*`, `src/components/SettingsPage*`, `src/components/ConfigSection*`, `OrphanPagesNav`, `NavMenuPopover`).
-2. Esportazione dump dei prompt/route-related: query a `operative_prompts`, `ai_scope_registry`, `system_doctrine` salvata in `/mnt/documents/audit/db-dump-2026-05-06.json`.
-3. Versione "old" navigabile: nuovo gruppo di route `/v2-legacy/*` che monta i componenti destinati alla rimozione (ConfigSection, PipelineSection, EmailForge legacy, Calendar legacy, Inbox legacy duplicata) prima di toglierli dal menu/route principali. Accesso solo via deep-link, **non in menu**, banner "Legacy — sarà rimosso".
-4. Tag git tramite messaggio Lovable "snapshot pre-cleanup" (l'utente avrà il rollback via History).
-
-Output: `/mnt/documents/audit/00-backup-manifest.md` con elenco file copiati e mapping `legacy → canonical`.
-
-Verifica: `tsc --noEmit`.
+**Classe intervento:** `STANDARD/READ-ONLY` — è un audit, non una modifica. Output = report con findings classificati per severità + raccomandazioni.
 
 ---
 
-## Fase 1 — Inventario reale (read-only, niente modifiche)
+## §1 — Perimetro
 
-Obiettivo: matrice oggettiva menu × routes × redirect × orfane.
+**Edge functions Funnemail (9):**
+`check-inbox`, `classify-email-response`, `classify-emails-batch`, `classify-inbound-content`, `classify-inbound-message`, `funnemail-auto-route`, `funnemail-classify`, `funnemail-reminders-tick`, `funnemail-scout-sender` + helper `_shared/funnemailDispatcher.ts`, `_shared/operativePromptsLoader.ts`, `_shared/edgeFnPromptRegistry.ts`.
 
-1. Parsing di `src/v2/routes.tsx` → estrai `path`, `element`, `redirect`.
-2. Parsing di `navItemsDef`, `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS`, `Sidebar` mobile.
-3. Cross-check: ogni voce menu → route esiste? ogni route → ha menu? quali sono solo deep-link?
-4. Cataloga redirect legacy (`/v1/*`, `/pipeline/*`, `/agent-tasks`, `/agent-chat`, ecc.).
-5. Output: `/mnt/documents/audit/01-route-map.md` (tabella) + `/mnt/documents/audit/01-orphans.md` (elenco pagine senza menu) + `/mnt/documents/audit/01-conflicts.md` (route presenti in più liste con label diverse).
+**UI / hooks:** `src/v2/ui/pages/funnemail-inbox/*`, `FunnemailInboxPage`, `EmailIntelligencePage`, `DepartmentKanbanView`, `useFunnemailStatuses`, `useFunnemailInboxSidebarData`, `MessageClaimBanner`.
 
-Verifica: nessuna, è read-only.
+**DB:** tabelle `funnemail_*` (statuses, message_claims, reminders), `operative_prompts`, `prompt_versions`, `agent_capabilities`, `agent_personas`, `ai_interaction_log`.
 
----
-
-## Fase 2 — Consolidamento NAVIGAZIONE (P0 del documento)
-
-Sovrapposizione più pericolosa secondo l'utente: 5 fonti diverse di navigazione (`SettingsPage`, `ConfigSection`, `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS`).
-
-1. Definisci **fonte unica** `src/v2/navigation/registry.ts`:
-   - `MAIN_NAV` (le 14 voci canoniche)
-   - `SECONDARY_NAV` (sotto-route Settings)
-   - `DEV_NAV` (orfane / dev-only, mostrate solo in build dev o dietro flag)
-   - `LEGACY_REDIRECTS` (path vecchio → canonical)
-2. Refactor di `OrphanPagesNav`, `NavMenuPopover`, `SettingsPage.DEV_PAGE_GROUPS` → leggono dal registry, niente più liste hard-coded.
-3. `ConfigSection` (sembra fantasma) → spostato in `archive/` se non montato; se montato in qualche route, marcato `@deprecated` e ricondotto a `SettingsPage`.
-4. Rimozione fisica dei componenti duplicati che non sono più referenziati dopo lo step 2.
-
-Verifica: `tsc --noEmit` + grep che nessuno importi i file rimossi + apertura visiva `/v2/settings` dal preview (no crash).
+**Spec funzionale:** docx 26 pagine (next-step obbligatorio, lampadina su risposta, classificazione 11 categorie risposta, 5 reparti agenda, alert WhatsApp, "Lo prendo io", deep search iniziale, presa in carico, escalation).
 
 ---
 
-## Fase 3 — Canonical EMAIL (Leggi / Funnemail Inbox / Email Intelligence / Scrivi / Email Forge / Cestinone)
+## §2 — Fasi dell'audit
 
-Confini target (dal documento):
-- `Leggi /v2/inbox` = posta ricevuta grezza
-- `Funnemail Inbox /v2/funnemail-inbox` = posta lavorata da AI
-- `Funnemail /v2/email-intelligence` = regole/classificazione
-- `Scrivi /v2/email` = composer operativo
-- `Email Forge` = laboratorio AI (sotto `/v2/email/forge` o legacy)
-- `Cestinone /v2/cestinone` = approvazioni
+### Fase A — Mappa strutturale (SC:CLASSIFY + PILLAR.I.3)
+1. Catalogare ogni edge function: input, output, prompt usato, modello AI, scope `invokeAi`, dove viene chiamata.
+2. Catalogare ogni pagina/hook UI: cosa legge, cosa scrive, quale edge function chiama (via DAL).
+3. Verificare assenza chiamate dirette `supabase.functions.invoke` su edge AI (Charter).
+4. Verificare RLS + soft-delete su tabelle `funnemail_*`.
+5. **Output:** `audit/funnemail/01-structure-map.md` con grafo `Email arriva → check-inbox → classify-* → auto-route → reparto → reminders → UI`.
 
-Lavoro:
-1. Verifica con `MailRowChrome` (già adottato) che non ci siano divergenze visive.
-2. `Email Forge` standalone → diventa tab dentro `/v2/email`, route legacy → redirect.
-3. `Funnemail` vs `Funnemail Inbox`: copia label e descrizioni in alto-pagina per chiarire ruolo, sposta sezione "regole" da Inbox a Intelligence se duplicata.
-4. Catalogo legacy redirect aggiornato in `LEGACY_REDIRECTS`.
-5. Rimozione fisica componenti duplicati composer/inbox dopo aver migrato gli import.
+### Fase B — Audit prompt (PILLAR.I.4 + standard accademici)
+6. Estrarre da DB (`operative_prompts`) ogni prompt usato dalle 9 edge function Funnemail (scope `classification`, `routing`, `reminder`, `inbound`).
+7. **Deep search online** (websearch) su standard accademici prompt engineering 2025: OpenAI Prompt Engineering Guide, Anthropic prompt patterns, Google Prompt Eng. whitepaper, paper "The Prompt Report" (Schulhoff et al.), framework CRISPE/RACE/CARE.
+8. Verificare per ciascun prompt:
+   - **Posizionamento istruzioni:** ruolo/identità in cima, vincoli prima degli esempi, formato output in fondo (regola "primacy + recency");
+   - **Struttura sezioni:** Identità, Obiettivo, Metodo, Guardrail, Output (memoria `professor-prompt-template`);
+   - **Wrapping untrusted:** contenuto email passato via `wrapUntrusted` con fence;
+   - **JSON schema:** richiesta strutturata + validazione `safeParseAiJson`;
+   - **Few-shot:** presenti dove la classificazione è multi-categoria (11 tipi);
+   - **Negative constraints:** "non rispondere mai a", "non inventare";
+   - **Persona consistency:** persona caricata da `agent_personas`.
+9. **Output:** `audit/funnemail/02-prompt-audit.md` — matrice prompt × criterio con score 0-3 e fix consigliati.
 
-Verifica: `tsc --noEmit` + apertura preview delle 6 pagine.
+### Fase C — Audit logica & matching (PILLAR.II.1 + tracciamento flusso)
+10. Tracciare per ogni categoria di risposta del docx (11 tipi: interesse reale → escalation commerciale, partner che offre lavoro, fattura, ritardo, ecc.) come viene **realmente** classificata e routata oggi.
+11. Confrontare la mappa categorie-spec con l'enum reale in `classify-inbound-message` / `funnemail-auto-route`.
+12. Verificare regole-chiave del docx:
+    - **next-step automatico** dopo invio (esiste? dove?);
+    - **lampadina su risposta** a campagna (UI evidence);
+    - **anticipo job** se cliente risponde prima della data;
+    - **assegnazione 5 agende** (commerciale, operativa, amministrativa, legale-fiscale, servizi generali);
+    - **"Lo prendo io"** (claim system — già in memoria);
+    - **alert WhatsApp** su urgenza (dispatcher);
+    - **risposta automatica di presa in carico** sulle email operative.
+13. Identificare **gap** tra spec docx e implementazione.
+14. **Output:** `audit/funnemail/03-logic-matching.md` — tabella `Spec → Implementazione → Stato (OK / Parziale / Mancante / Divergente)` con esempi codice.
 
----
+### Fase D — Test E2E e funzionali (SC:TEST)
+15. Eseguire i test Deno esistenti: `funnemail-classify/index.integration.test.ts`, `funnemail-auto-route/index.integration.test.ts`.
+16. Lanciare smoke test edge function reali (curl) con email sintetiche per ognuna delle 11 categorie del docx → verificare classificazione + routing + reparto assegnato.
+17. Verificare idempotenza `check-inbox` (memoria: NON modificare il codice, solo testare).
+18. Verificare deduplica messaggi e ordering.
+19. Smoke UI sulla rotta `/v2/agenda/reparti` e `/v2/funnemail`: render, filtri, claim, reminder.
+20. **Output:** `audit/funnemail/04-e2e-functional.md` — pass/fail per scenario + log.
 
-## Fase 4 — Canonical TEMPO/AZIONI (Agenda / Calendar / Pipeline)
+### Fase E — Test logica end-to-end di un ciclo completo
+21. Simulare workflow completo: invio campagna → risposta cliente "interesse reale" → classify → auto-route → reparto commerciale → next-step creato → claim operatore → reminder.
+22. Ripetere con altri 3 scenari: rifiuto gentile, partner che offre servizi, urgenza operativa con alert WhatsApp.
+23. **Output:** `audit/funnemail/05-cycle-tests.md`.
 
-Target:
-- `Agenda /v2/agenda` = cosa fare oggi (action-grouping già in mem)
-- `Calendar` = eventi appuntamenti veri (decidi: o vive in `/v2/agenda/calendar` o in `/v2/calendar` standalone)
-- `Pipeline /v2/agenda/pipeline` = stato contatti
+### Fase F — Confronto accademico (deep search)
+24. Web search dedicate su:
+    - "Email intent classification taxonomy 2024-2025" (per validare le 11 categorie);
+    - "LLM prompt structure best practice 2025";
+    - "AI agent routing reliability patterns";
+    - Anthropic agent skills, OpenAI Cookbook email triage, paper IEEE/ACL su email intent.
+25. Confronto: cosa lo stato dell'arte raccomanda vs cosa abbiamo.
+26. **Output:** `audit/funnemail/06-academic-benchmark.md` con citazioni.
 
-Lavoro:
-1. `PipelineSection` legacy → redirect a `/v2/agenda/pipeline`, componente vecchio archiviato e rimosso.
-2. E2E `calendar-flow.spec.ts` allineato (era marcato come potenzialmente obsoleto).
-3. Decisione su Calendar: tab dentro Agenda o pagina separata. Se separata, va in `MAIN_NAV` o `DEV_NAV`?
-
-Verifica: `tsc --noEmit` + run `e2e/agenda-flow.spec.ts` se possibile in sandbox (non bloccante).
-
----
-
-## Fase 5 — Canonical AI (Agenti / AI Staff / Missioni / Prompt Lab / Prompt Reader / AI Control)
-
-Target:
-- `Agenti /v2/intelligence` = conversazione operativa
-- `AI Staff /v2/staff-direzionale` = consulenti direzionali
-- `Missioni` = obiettivi/automazioni
-- `Prompt Lab /v2/settings/prompt-lab` = prompt/KB/governance
-- `Prompt Reader /v2/prompt-reader` → valuta merge dentro Prompt Lab (tab "Reader") e redirect
-- `AI Control /v2/settings/ai-control` = monitoraggio
-
-Lavoro:
-1. Decisione canonical per Prompt Reader (merge consigliato).
-2. Aggiornamento `MAIN_NAV` di conseguenza (slot 13 si libera o ospita altro).
-3. Redirect + rimozione del componente standalone se merge approvato.
-
-Verifica: `tsc --noEmit`.
-
----
-
-## Fase 6 — Canonical CAMPAGNE / OUTREACH (Cockpit / Campagne / Campaign Jobs / Cestinone)
-
-Target chiarezza:
-- `Cockpit /v2/cockpit` = dashboard outreach in corso
-- `Campaigns /v2/explore/campaigns` = generazione campagne
-- `Campaign Jobs` = monitoraggio esecuzione job (sotto Cockpit o standalone?)
-- `Cestinone /v2/cestinone` = solo coda approvazione pre-invio
-
-Lavoro:
-1. Sposta job monitor sotto Cockpit (tab) se duplicato.
-2. Verifica che il flusso `Scrivi → Cestinone` e `Campaigns → Jobs → Cestinone` non passino da componenti duplicati di approvazione.
-3. Redirect path legacy.
-
-Verifica: `tsc --noEmit`.
+### Fase G — Report finale (SC:CHANGELOG style)
+27. **Output:** `audit/funnemail/00-EXECUTIVE-SUMMARY.md`:
+    - Score globale (0-100) per dimensione: Struttura, Prompt, Logica, Matching, E2E, Conformità accademica.
+    - Top 5 finding **CRITICAL** (con riferimento Codex Cobra: PILLAR/ANTI/COMM).
+    - Top 10 **STANDARD**.
+    - Roadmap fix prioritizzata (Trim/Standard/Critical) — solo proposta, nessuna esecuzione.
+    - Sezione `[VERIFICATO] / [ATTESO] / [ASSUNTO]` per ogni claim.
 
 ---
 
-## Fase 7 — Hardening: smoke route + osservabilità
+## §3 — Vincoli operativi
 
-1. Test `e2e/app-routing-access.spec.ts` esteso: apre tutte le entry di `MAIN_NAV` + tutte le `LEGACY_REDIRECTS` e verifica che la destinazione canonical risponda.
-2. Aggiorna `mem://architecture/v1-deprecation-redirect` con la nuova mappa unificata.
-3. Aggiorna `docs/v2/MIGRATION_STATUS.md`.
-4. Report finale `/mnt/documents/audit/07-final.md` con: cosa è stato canonicalizzato, cosa redirezionato, cosa rimosso fisicamente, cosa archiviato in `/v2-legacy/*`.
+- **Read-only assoluto:** nessuna modifica a codice, prompt DB, edge function, schema. Se trovo bug critico → finding nel report, non fix.
+- **Nodi intoccabili rispettati:** `check-inbox`, `email-imap-proxy`, `mark-imap-seen` (memoria) — solo lettura/test funzionale via curl, nessuna modifica.
+- **Editorial review** rispettato: l'audit non bypassa journalistReview.
+- **AI Invocation Charter** verificato come criterio, non violato dall'audit stesso.
+- **Output `/mnt/documents/audit/funnemail/`** con 7 file markdown.
 
-Verifica: `tsc --noEmit` + smoke route test.
+## §4 — Cosa NON faccio
 
----
+- Non scrivo codice né migrazioni.
+- Non modifico prompt in DB.
+- Non eseguo invii email reali (solo classify/route in dry-run).
+- Non tocco produzione: tutti i test su edge function già deployate, lette in sola lettura.
 
-## Vincoli rispettati lungo tutte le fasi
+## §5 — Tempo stimato
 
-- **No DAL bypass**: nessuna nuova `supabase.from()` fuori da `src/data/`.
-- **AI Charter**: nessuna invocazione AI diretta, solo `invokeAi()`.
-- **Editorial Review**: non tocco i flussi che lo invocano, solo route/menu.
-- **No physical delete su tabelle business**: solo file frontend rimossi.
-- **Code lifecycle governance**: i componenti `src/components/` non utilizzati ma in sviluppo NON vengono rimossi a meno che siano nella matrice esplicita di Fase 2/3/4/5/6.
-- **invokeAi/MailRowChrome**: già canonicizzati, non si tocca la business logic.
+5–7 step lunghi (deep search + analisi prompt richiede letture estese). Ti aggiorno alla fine di ogni Fase.
 
-## Cosa NON è in questo piano
+## §6 — Conferma richiesta
 
-- Nessuna modifica a check-inbox / email-imap-proxy / mark-imap-seen.
-- Nessuna modifica RLS o schema DB.
-- Nessuna modifica ai prompt operativi (gestiti da Prompt Lab a runtime).
-- Nessun refactor opportunistico di hooks o DAL non legato alle route.
-
-## Stima
-
-- Fase 0: 1 step (backup + versione old).
-- Fasi 1-7: ~2-3 step ciascuna.
-- Tempo: lungo, ma incrementale e rollbackabile fase per fase.
-
-## Punto di stop esplicito
-
-Tra Fase 6 e Fase 7 ti chiederò conferma esplicita prima di rimuovere fisicamente i componenti delle fasi 3-6 (ultima finestra di reversibilità prima del cleanup definitivo).
+Confermi questo perimetro e l'output a 7 file in `/mnt/documents/audit/funnemail/`? Vuoi che includa anche un **diff visivo prompt vs template-professore** (memoria `professor-prompt-template`) come allegato extra?
