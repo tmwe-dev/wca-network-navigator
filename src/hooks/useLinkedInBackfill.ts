@@ -9,8 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { toast } from "sonner";
-import { upsertChannelMessageDedup } from "@/data/channelMessages";
-import { getLastInboundOrOutboundForContact } from "@/data/channelMessages";
+import {
+  upsertChannelMessageDedup,
+  getLastInboundOrOutboundForContact,
+} from "@/data/channelMessages";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillPhase = "idle" | "discovery" | "deep";
