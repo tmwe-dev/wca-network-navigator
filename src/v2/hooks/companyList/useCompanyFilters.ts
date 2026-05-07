@@ -23,6 +23,10 @@ export interface CompanyFiltersState {
   holding?: "any" | "in" | "out";
   /** Tipo ufficio (HQ / Branch). */
   officeType?: string | null;
+  /** Filtro paese (ISO code uppercase) applicato dal click bandiera nelle card. */
+  country?: string | null;
+  /** Filtro città (case-insensitive) applicato dal click città nelle card. */
+  city?: string | null;
   /** Filtra per uno o più lead_status. */
   leadStatus?: string[];
   /** Filtra per uno o più network di affiliazione. */
@@ -65,6 +69,8 @@ function inRange(value: number | null | undefined, min?: number | null, max?: nu
 
 export function applyCompanyFilters(companies: CompanyEntity[], f: CompanyFiltersState): CompanyEntity[] {
   if (!f) return companies;
+  const wantedCountry = f.country ? f.country.toUpperCase() : null;
+  const wantedCity = f.city ? f.city.trim().toLowerCase() : null;
   return companies.filter((c) => {
     if (f.hasEmail && !c.channels?.email) return false;
     if (f.hasPhone && !c.channels?.phone) return false;
@@ -78,6 +84,15 @@ export function applyCompanyFilters(companies: CompanyEntity[], f: CompanyFilter
     if (f.holding === "out" && c.meta?.holding) return false;
 
     if (f.officeType && (c.officeType ?? "") !== f.officeType) return false;
+
+    if (wantedCountry) {
+      const cc = (c.countryCode ?? "").toUpperCase();
+      if (cc !== wantedCountry) return false;
+    }
+    if (wantedCity) {
+      const cc = (c.city ?? "").trim().toLowerCase();
+      if (cc !== wantedCity) return false;
+    }
 
     if (f.leadStatus && f.leadStatus.length > 0) {
       if (!c.leadStatus || !f.leadStatus.includes(c.leadStatus)) return false;
@@ -123,6 +138,8 @@ export function countActiveFilters(f: CompanyFiltersState): number {
   if (f.favoritesOnly) n++;
   if (f.holding && f.holding !== "any") n++;
   if (f.officeType) n++;
+  if (f.country) n++;
+  if (f.city) n++;
   if (f.leadStatus && f.leadStatus.length > 0) n++;
   if (f.networks && f.networks.length > 0) n++;
   if (f.services && f.services.length > 0) n++;
