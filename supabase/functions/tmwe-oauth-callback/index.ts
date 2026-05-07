@@ -156,7 +156,12 @@ Deno.serve(async (req) => {
       : stableNumericId(`tmwe:${tmweUserIdentifier.toLowerCase()}`);
     const tmweEmail = firstString(profile.email, nestedUser.email, nestedData.email);
     const tmweUsername = firstString(profile.username, nestedUser.username, nestedData.username);
-    const authEmail = tmweEmail ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@tmwe.local` : null);
+    // Fallback domain MUST be @tmwe.it (the real operator domain that the
+    // whitelist contains). Using @tmwe.local would block every operator whose
+    // TMWE profile has email="" because the whitelist only has @tmwe.it.
+    const TMWE_FALLBACK_DOMAIN = "tmwe.it";
+    const authEmail = tmweEmail
+      ?? (tmweUsername ? `${tmweUsername.toLowerCase()}@${TMWE_FALLBACK_DOMAIN}` : null);
     console.log(JSON.stringify({
       type: "tmwe_oauth_callback_email_resolution",
       tmweEmail,
