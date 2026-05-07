@@ -5604,6 +5604,7 @@ export type Database = {
           last_sync_at: string | null
           last_uid: number
           operator_id: string | null
+          shared_mailbox_id: string | null
           stored_uidvalidity: number | null
           updated_at: string
           user_id: string
@@ -5616,6 +5617,7 @@ export type Database = {
           last_sync_at?: string | null
           last_uid?: number
           operator_id?: string | null
+          shared_mailbox_id?: string | null
           stored_uidvalidity?: number | null
           updated_at?: string
           user_id: string
@@ -5628,6 +5630,7 @@ export type Database = {
           last_sync_at?: string | null
           last_uid?: number
           operator_id?: string | null
+          shared_mailbox_id?: string | null
           stored_uidvalidity?: number | null
           updated_at?: string
           user_id?: string
@@ -5638,6 +5641,13 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sync_state_shared_mailbox_id_fkey"
+            columns: ["shared_mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
             referencedColumns: ["id"]
           },
         ]
@@ -7799,6 +7809,55 @@ export type Database = {
             columns: ["superseded_by"]
             isOneToOne: false
             referencedRelation: "operative_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operator_mailbox_access: {
+        Row: {
+          created_at: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          operator_id: string
+          shared_mailbox_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          operator_id: string
+          shared_mailbox_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          operator_id?: string
+          shared_mailbox_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_mailbox_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_mailbox_access_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_mailbox_access_shared_mailbox_id_fkey"
+            columns: ["shared_mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
             referencedColumns: ["id"]
           },
         ]
@@ -10230,6 +10289,75 @@ export type Database = {
           },
         ]
       }
+      shared_mailboxes: {
+        Row: {
+          auto_grant: boolean
+          created_at: string
+          deleted_at: string | null
+          department: string
+          description: string | null
+          email: string
+          id: string
+          imap_host: string | null
+          imap_password_encrypted: string | null
+          imap_port: number | null
+          imap_user: string | null
+          is_active: boolean
+          label: string
+          reply_to: string | null
+          slug: string
+          smtp_host: string | null
+          smtp_password_encrypted: string | null
+          smtp_port: number | null
+          smtp_user: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_grant?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          department: string
+          description?: string | null
+          email: string
+          id?: string
+          imap_host?: string | null
+          imap_password_encrypted?: string | null
+          imap_port?: number | null
+          imap_user?: string | null
+          is_active?: boolean
+          label: string
+          reply_to?: string | null
+          slug: string
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_grant?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          department?: string
+          description?: string | null
+          email?: string
+          id?: string
+          imap_host?: string | null
+          imap_password_encrypted?: string | null
+          imap_port?: number | null
+          imap_user?: string | null
+          is_active?: boolean
+          label?: string
+          reply_to?: string | null
+          slug?: string
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sherlock_investigations: {
         Row: {
           completed_at: string | null
@@ -11693,6 +11821,17 @@ export type Database = {
       force_claim_message: {
         Args: { p_group_id: string; p_message_id: string }
         Returns: undefined
+      }
+      get_accessible_mailboxes: {
+        Args: { p_operator_id?: string }
+        Returns: {
+          department: string
+          email: string
+          is_default: boolean
+          kind: string
+          label: string
+          mailbox_id: string
+        }[]
       }
       get_active_operator_id: { Args: never; Returns: string }
       get_contact_filter_options: {
