@@ -169,6 +169,59 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               )}
             </div>
 
+            {/* Riga classificazione Funnemail (cartella + suggerita + urgency + agenda + riclassifica) */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {folderLabel ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-[10px]"
+                  title={decision?.reasoning ?? "Cartella Funnemail attuale"}
+                >
+                  <Tag className="h-3 w-3" />
+                  {folderIcon && <span>{folderIcon}</span>}
+                  {folderLabel}
+                </Badge>
+              ) : aiSuggestion ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1 border-dashed text-[10px] text-muted-foreground"
+                  title="Categoria suggerita dall'AI (non confermata)"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Suggerita: {aiSuggestion}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground">
+                  <Sparkles className="h-3 w-3" />
+                  Non classificata
+                </Badge>
+              )}
+              {urgency !== "normal" && urgency !== "low" && (
+                <Badge variant="outline" className={cn("gap-1 text-[10px]", urgencyClass)}>
+                  {urgency === "critical" ? "🔴 Critica" : "🟠 Alta priorità"}
+                </Badge>
+              )}
+              {decision?.goes_to_agenda && (
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <Calendar className="h-3 w-3" />
+                  In agenda
+                </Badge>
+              )}
+              {onReclassify && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 gap-1 px-1.5 text-[10px]"
+                  disabled={!!reclassifying}
+                  onClick={() => onReclassify(message)}
+                  title="Riclassifica con l'AI"
+                >
+                  <RefreshCw className={cn("h-3 w-3", reclassifying && "animate-spin")} />
+                  Riclassifica
+                </Button>
+              )}
+            </div>
+
             {message.cc_addresses && (
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Users className="h-3 w-3" />
