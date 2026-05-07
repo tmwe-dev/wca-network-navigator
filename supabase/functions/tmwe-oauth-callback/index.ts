@@ -228,18 +228,32 @@ Deno.serve(async (req) => {
       if (existingConn?.user_id) {
         userId = existingConn.user_id as string;
       } else {
-        // Look up auth user by email via listUsers (filter)
+        // Look up auth user by email — try authoritative email + legacy aliases
+        // (@tmwe.it / @tmwe.local) so we don't create duplicates for accounts
+        // historically registered with an alternative domain.
+        const candidateEmails = new Set<string>();
+        candidateEmails.add(authEmail.toLowerCase());
+        if (tmweUsername) {
+          const u = tmweUsername.toLowerCase();
+          candidateEmails.add(`${u}@tmwe.it`);
+          candidateEmails.add(`${u}@tmwe.local`);
+        }
+
         let foundUserId: string | null = null;
-        const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-        const match = list?.users?.find(
-          (u) => (u.email ?? "").toLowerCase() === authEmail.toLowerCase(),
-        );
-        if (match) foundUserId = match.id;
+        for (let page = 1; page <= 5 && !foundUserId; page += 1) {
+          const { data: list } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+          if (!list?.users || list.users.length === 0) break;
+          const match = list.users.find((u) =>
+            candidateEmails.has((u.email ?? "").toLowerCase()),
+          );
+          if (match) foundUserId = match.id;
+          if (list.users.length < 200) break;
+        }
 
         if (foundUserId) {
           userId = foundUserId;
         } else {
-          // Auto-create
+          // Auto-create — onboarding wizard will fire on first login
           const randomPwd = crypto.randomUUID() + crypto.randomUUID();
           const { data: created, error: createErr } = await admin.auth.admin.createUser({
             email: authEmail,
@@ -254,10 +268,10 @@ Deno.serve(async (req) => {
             return back("error", "user_create_failed", "login");
           }
           userId = created.user.id;
-          // Mark profile flag (best effort)
+          // Mark profile flag + force onboarding (best effort)
           await svc.from("profiles")
-            .update({ created_via_tmwe: true })
-            .eq("id", userId);
+            .update({ created_via_tmwe: true, onboarding_completed: false })
+            .eq("user_id", userId);
         }
       }
     }
@@ -293,15 +307,47 @@ Deno.serve(async (req) => {
       .upsert(upsert, { onConflict: "user_id" });
     if (upErr) return back("error", "persist_failed", intent);
 
-    // ─── Reconcile operators: bind operator row (matched by email) to this
-    // auth user_id so admins keep their is_admin flag across re-logins.
-    try {
-      await svc
-        .from("operators")
-        .update({ user_id: userId, updated_at: new Date().toISOString() })
-        .ilike("email", authEmail)
-        .neq("user_id", userId);
-    } catch (_e) { /* best effort */ }
+    // ─── Reconcile operators: ensure a row exists for this user. Bind any
+    // orphan row matching email, otherwise upsert by user_id. is_admin is
+    // never touched here — only Settings → Operatori controls it.
+    if (authEmail) {
+      try {
+        const normalizedEmail = authEmail.toLowerCase();
+        // 1) Adopt orphan row with matching email
+        await svc
+          .from("operators")
+          .update({ user_id: userId, updated_at: new Date().toISOString() })
+          .ilike("email", normalizedEmail)
+          .is("user_id", null);
+
+        // 2) Check if this user has an operator row now
+        const { data: existingOp } = await svc
+          .from("operators")
+          .select("id, email")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!existingOp) {
+          // Insert only if email is free (avoid unique violation)
+          const { data: emailTaken } = await svc
+            .from("operators")
+            .select("id")
+            .ilike("email", normalizedEmail)
+            .maybeSingle();
+          if (!emailTaken) {
+            await svc.from("operators").insert({
+              user_id: userId,
+              email: normalizedEmail,
+              name: firstString(tmweCompany, tmweUsername, normalizedEmail.split("@")[0]) ?? normalizedEmail,
+              is_admin: false,
+              is_active: true,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[tmwe-oauth-callback] operator reconcile non-blocking:", e instanceof Error ? e.message : String(e));
+      }
+    }
 
     // ─── LOGIN: generate magic link and redirect there ──────────────────
     if (intent === "login" && authEmail) {

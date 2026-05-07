@@ -1,9 +1,8 @@
 /**
  * useAuthV2 — Auth hook completo
  *
- * Login email/password, profilo, ruoli, whitelist.
- * Session state sourced from centralized AuthProvider.
- * Google OAuth RIMOSSO — solo email+password+whitelist.
+ * Profilo, ruoli, signOut. Session state sourced from centralized AuthProvider.
+ * Auth passa esclusivamente da TMWE OAuth + whitelist.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -34,23 +33,13 @@ export interface AuthState {
   readonly isLoading: boolean;
   readonly isAuthenticated: boolean;
   readonly isAdmin: boolean;
-  readonly error: string | null;
 }
 
 interface AuthActions {
-  readonly signInWithEmail: (email: string, password: string) => Promise<void>;
-  readonly signUp: (email: string, password: string, displayName: string) => Promise<void>;
   readonly signOut: () => Promise<void>;
-  readonly resetPassword: (email: string) => Promise<void>;
-  readonly updatePassword: (newPassword: string) => Promise<void>;
-  readonly clearError: () => void;
 }
 
 export type UseAuthV2Return = AuthState & AuthActions;
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
 
 // ── Helper: load profile ─────────────────────────────────────────────
 
@@ -87,7 +76,7 @@ async function loadRoles(userId: string): Promise<AppRole[]> {
 
 async function recordLogin(email: string): Promise<void> {
   try {
-    await rpcRecordUserLogin(normalizeEmail(email));
+    await rpcRecordUserLogin(email.trim().toLowerCase());
   } catch {
     // non-critical
   }
@@ -101,7 +90,6 @@ export function useAuthV2(): UseAuthV2Return {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<readonly AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const isAuthenticated = user !== null && session !== null;
   const isAdmin = roles.includes("admin");
@@ -112,12 +100,12 @@ export function useAuthV2(): UseAuthV2Return {
     try {
       const email = authUser.email;
       if (!email) {
-        setError("Account senza email associata.");
+        log.warn("[useAuthV2] user without email", { userId: authUser.id });
         return;
       }
 
       // Do NOT re-check whitelist on session restore — user already passed it at login.
-      // Whitelist is only checked in signInWithEmail() and signUp().
+      // Whitelist is only checked at TMWE OAuth callback.
       // This prevents sign-outs when the DB returns 503.
 
       const [userProfile, userRoles] = await Promise.allSettled([
@@ -162,21 +150,7 @@ export function useAuthV2(): UseAuthV2Return {
 
   // ── Actions ──────────────────────────────────────────────────────
 
-  // ── LEGACY DISABLED — auth passa esclusivamente da TMWE OAuth + whitelist ──
-  // Le firme restano stabili per non rompere chiamanti residui, ma queste
-  // azioni non creano più sessioni: l'unico ingresso è "Entra con TMWE".
-  const LEGACY_DISABLED_MSG = "Login email/password disabilitato. Usa \"Entra con TMWE\".";
-
-  const signInWithEmail = useCallback(async (_email: string, _password: string) => {
-    setError(LEGACY_DISABLED_MSG);
-  }, []);
-
-  const signUp = useCallback(async (_email: string, _password: string, _displayName: string) => {
-    setError(LEGACY_DISABLED_MSG);
-  }, []);
-
   const signOut = useCallback(async () => {
-    setError(null);
     try {
       await supabase.auth.signOut({ scope: "local" });
     } catch {
@@ -192,20 +166,9 @@ export function useAuthV2(): UseAuthV2Return {
     window.location.href = "/auth";
   }, []);
 
-  const resetPassword = useCallback(async (_email: string) => {
-    setError(LEGACY_DISABLED_MSG);
-  }, []);
-
-  const updatePassword = useCallback(async (_newPassword: string) => {
-    setError(LEGACY_DISABLED_MSG);
-  }, []);
-
-  const clearError = useCallback(() => setError(null), []);
-
   return {
     user, session, profile, roles,
-    isLoading, isAuthenticated, isAdmin, error,
-    signInWithEmail, signUp,
-    signOut, resetPassword, updatePassword, clearError,
+    isLoading, isAuthenticated, isAdmin,
+    signOut,
   };
 }

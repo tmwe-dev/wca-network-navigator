@@ -76,6 +76,30 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         .eq("user_id", user.id);
       if (error) throw error;
 
+      // Ensure operator row exists and is in sync. Never touches is_admin —
+      // that is governed exclusively from Settings → Operatori.
+      const operatorEmail = (user.email ?? "").toLowerCase();
+      if (operatorEmail) {
+        const { error: opErr } = await supabase
+          .from("operators")
+          .upsert(
+            {
+              user_id: user.id,
+              name: values.displayName.trim() || operatorEmail.split("@")[0],
+              email: operatorEmail,
+              whatsapp_phone: values.whatsapp.trim() || null,
+              linkedin_profile_url: values.linkedinUrl.trim() || null,
+              is_active: true,
+            },
+            { onConflict: "user_id" },
+          );
+        if (opErr) {
+          // Non bloccare l'onboarding se l'operator row esiste già con email
+          // diversa: l'admin la riconcilia da Settings.
+          console.warn("[onboarding] operator upsert non-blocking:", opErr.message);
+        }
+      }
+
       toast.success("Profilo configurato. Benvenuto!");
       onComplete();
     } catch (err) {
