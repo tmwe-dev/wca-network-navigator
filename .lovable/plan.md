@@ -1,82 +1,112 @@
-## Diagnosi (perché il dropdown Operatore non compare)
 
-Audit DB + codice ha rivelato **3 difetti strutturali** che si combinano:
+# WhatsApp — riparazione + procedura unica "incremental from cursor"
 
-1. **Doppio utente per la stessa persona TMWE**. In `auth.users` esistono due righe per Jose:
-   - `jose@tmwe.it` → ha `user_roles.role=admin` ma **nessuna riga in `operators`** (quindi `useCurrentOperator()` ritorna null).
-   - `jose@tmwe.local` → ha `operators.is_admin=true` collegato via `user_id`.
-   Quando entri come `jose@tmwe.it`, `OperatorSelector` valuta `currentOp?.is_admin` → `undefined` → **return null**.
+## Obiettivo (riallineato sulle tue parole)
 
-2. **OAuth callback ricicla l'utente sbagliato**. `tmwe-oauth-callback`:
-   - cerca prima per `tmwe_user_tokens.tmwe_user_id`,
-   - poi per email in `auth.users`.
-   Il fallback email è `<username>@tmwe.it`, ma in DB l'utente storico è `@tmwe.local` → la `listUsers` non lo trova → ne **crea uno nuovo** invece di riutilizzarlo. Il bind a `operators` (`update ... ilike email`) non scatta perché l'operator row ha email diversa.
+Una sola operazione, pulita, in tutto il sistema:
 
-3. **Onboarding non garantito**. `handle_new_user` mette `onboarding_completed=false` SOLO sui nuovi auth.users. Gli utenti pre-esistenti (jose@tmwe.it incluso) hanno `true` → non vengono mai forzati nel wizard, quindi profile/operatore non vengono mai allineati a OAuth.
+> "Per ogni chat, trova nel DB l'ora dell'ultimo messaggio salvato, apri il thread, leggi tutti i messaggi più recenti di quell'ora e salvali. Letti/non letti non contano."
 
-In più: doppio sistema di permessi (`operators.is_admin` **+** `user_roles.role`) non sincronizzati; `useAuthV2` espone 5 azioni legacy disattivate; `LayoutHeader.bak.txt` morto; `ResetPasswordPage` collegata a `updatePassword` no-op.
+Il bridge estensione resta, le edge function restano. Cambia il **flusso di lettura**: niente più "scan badge unread → solo chat con pallino"; entriamo in ogni chat, partendo dal cursore temporale per chat, e prendiamo il delta.
 
----
+## 1. Procedura unica `syncWhatsAppFromCursor` (la sola)
 
-## Obiettivo
+Pseudocodice:
 
-Un solo flusso: **TMWE OAuth → utente Lovable unico per email TMWE autoritativa → onboarding obbligatorio prima volta → operator row sempre creata e collegata → admin = `operators.is_admin` (singola fonte di verità) → dropdown selector visibile solo agli admin.**
+```text
+syncWhatsAppFromCursor():
+  if !ext_available || !ext_authenticated → toast errore, stop
 
----
+  cursors = SELECT contact, max(created_at) AS last_at
+            FROM channel_messages
+            WHERE channel='whatsapp' AND user_id=me
+            GROUP BY contact   -- mappa { "Mario Rossi": "2026-05-05T10:23:00Z" }
 
-## Cosa cambierà (5 blocchi)
+  chats = ext.listSidebarChats()        -- nome + ultimo timestamp visibile (no badge)
 
-### 1. Reconcile dati esistenti (migrazione una tantum)
-- Per ogni `auth.users` con `created_via_tmwe=true` o email `@tmwe.it`/`@tmwe.local`, **garantire una riga in `operators`** (insert se manca, con `is_admin=false`, `is_active=true`).
-- **Merge dei duplicati noti**: per `jose`, scegliere come canonico l'utente con la riga `operators` (jose@tmwe.local → ribattezzare email a quella TMWE autoritativa) e marcare l'altro come `is_active=false` + revocare i token. Stesso trattamento per ogni futuro duplicato individuato.
-- **Sincronizzare `user_roles.role='admin'` ↔ `operators.is_admin=true`** via trigger AFTER INSERT/UPDATE su `operators`: se `is_admin` cambia, allinea `user_roles`.
-- Per tutti gli utenti senza operator row appena creata, settare `profiles.onboarding_completed=false` per forzarli nel wizard al prossimo accesso.
+  for chat in chats:
+    cursor_iso = cursors[chat.name] || null   -- null = chat nuova → take last 50
 
-### 2. OAuth callback robusto (un'unica edge function, modifica minima)
-`supabase/functions/tmwe-oauth-callback/index.ts`:
-- Risoluzione utente in **3 step in ordine**: (a) `tmwe_user_tokens.tmwe_user_id`; (b) `auth.users` per email autoritativa **case-insensitive**; (c) `auth.users` per email alternative (`@tmwe.it`/`@tmwe.local` se username coincide); (d) creazione nuova solo se nessun match.
-- Dopo upsert token: **upsert in `operators`** (non più solo update): se non esiste riga col `user_id`, ne crea una con email TMWE, `is_admin=false`, `is_active=true`. Se esiste e l'email è cambiata, la aggiorna.
-- Settare `profiles.onboarding_completed=false` **solo** se la riga è appena stata creata (nuovo operatore reale).
+    if (chat.lastVisibleAt > cursor_iso) OR cursor_iso == null:
+      threadMsgs = ext.readThreadSince(chat.name, cursor_iso)
+      saveMessages(threadMsgs)              -- upsert deterministico già esistente
 
-### 3. Onboarding obbligatorio + setting admin chiaro
-- `OnboardingWizard` resta com'è per il payload (display_name, lingua, telefono, WhatsApp, LinkedIn) ma **al submit garantisce upsert su `operators`** (chiave `user_id`) settando email/name/phone, lasciando `is_admin` invariato (default false).
-- **Pannello Operatori (Settings → Operatori)**: il toggle `is_admin` resta l'unica leva per dare ruolo amministratore. Documentare in tooltip "Concede accesso al selettore operatori e alle viste 'tutti'".
-- Trigger DB della sezione 1 mantiene `user_roles` allineato.
+  invalidate query keys, toast "X nuovi messaggi"
+```
 
-### 4. UI: selettore operatore deterministico
-- `OperatorSelector` continua a leggere `useCurrentOperator()` ma ora la riga **esiste sempre** (garantita da OAuth callback + onboarding submit).
-- Condizione di visibilità invariata: `currentOp?.is_admin === true && operators.length > 1`. Risultato: solo admin vedono il dropdown, gli altri no.
-- Nessuna modifica a `LayoutHeader` o ad altri header.
+Una sola chiamata utente (un click o un trigger interno). Una sola funzione orchestratrice. Un solo punto di scrittura DB.
 
-### 5. Pulizia codice morto
-- Rimuovere da `src/v2/hooks/useAuthV2.ts` le azioni legacy non usate in produzione: `signInWithEmail`, `signUp`, `resetPassword`, `updatePassword`, `clearError`, costante `LEGACY_DISABLED_MSG`, helper `normalizeEmail`, `recordLogin`, `loadProfile/loadRoles` non referenziati a valle. Mantenere `signOut` (usato), `user/session/profile/roles/isAuthenticated/isAdmin/isLoading`.
-- Rimuovere `src/v2/ui/pages/ResetPasswordPage.tsx` e la rotta `/reset-password` (azione no-op, non raggiungibile dal nuovo flusso TMWE-only).
-- Rimuovere `src/v2/ui/templates/LayoutHeader.bak.txt` (file `.bak.txt` esplicito).
-- Aggiornare `useAuthV2` types e qualsiasi import rotto (atteso: 0 impatti reali, le funzioni sono già no-op).
+## 2. Cosa cambia, file per file
 
----
+### 2.1 Estensione (`public/whatsapp-extension/`)
 
-## File toccati
+- `actions.js`
+  - **Nuova azione `listSidebarChats`**: scansiona la sidebar **senza filtro badge**. Restituisce `[{ contact, lastVisibleAt, snippet }]` per tutte le chat visibili in pane-side. Riusa `unifiedExtract` ma rimuove il `if (count === 0) continue` e ritorna anche chat lette.
+  - **Nuova azione `readThreadSince`**: apre la chat, scrolla verso l'alto **finché il timestamp del messaggio più vecchio caricato è ≤ cursor**, poi raccoglie tutti i `[data-testid="msg-container"]` e ritorna direzione + testo + timestamp. Riusa `_pageOpenChatForBackfill` e parte dello `_pageScrollAndRead` esistente, ma ferma il loop sul cursore (non sul `lastKnownText`, che è fragile).
+  - Mantenute (compat): `verifySession`, `sendWhatsApp`, `learnDom`. **Deprecate** (no più chiamate dall'app): `readUnread`, `readThread`, `backfillChat`. Lascio i moduli per non rompere chi le importa, ma le rimuovo dalla whitelist `ALLOWED_ACTIONS`? **No**, le tengo nella whitelist ma le marco internamente come deprecated; verranno rimosse in una fase successiva quando saremo certi che nessun consumer le usa.
+- `background.js` → registra i 2 nuovi handler `listSidebarChats` / `readThreadSince`.
+- `content.js` → estende `ALLOWED_ACTIONS` con i due nuovi nomi.
+- Versione: bump coerente a 5.11 in **manifest, background, content, popup** (oggi sono disallineate 5.10/5.8/5.4/5.0).
 
-- **Migrazione SQL** (nuova): reconcile operators + trigger sync `is_admin ↔ user_roles` + reset onboarding per chi non ha mai fatto il wizard.
-- `supabase/functions/tmwe-oauth-callback/index.ts`: risoluzione utente + upsert operators + onboarding flag.
-- `src/components/onboarding/OnboardingWizard.tsx`: aggiunge upsert `operators` al submit.
-- `src/v2/hooks/useAuthV2.ts`: rimozione azioni legacy.
-- `src/v2/ui/pages/ResetPasswordPage.tsx`: cancellato.
-- `src/App.tsx` (o router): rimossa rotta `/reset-password` se presente.
-- `src/v2/ui/templates/LayoutHeader.bak.txt`: cancellato.
+### 2.2 Webapp
 
-## Dettagli tecnici (per audit)
+- `src/hooks/useWhatsAppExtensionBridge.ts`
+  - Aggiunge `listSidebarChats()` e `readThreadSince(contact, sinceIso)` come wrapper su `sendMsg`.
+  - **Rimuove** `onSidebarChanged` (mai consumato, dead code).
+- **Nuovo hook unico** `src/hooks/useWhatsAppCursorSync.ts`:
+  - Espone `syncNow()`, `progress`, `isAvailable`, `isAuthenticated`.
+  - Implementa l'algoritmo della sezione 1.
+  - Usa il **DAL** (`src/data/channelMessages.ts` — da estendere con `getWhatsAppCursorsByContact()`), zero `supabase.from()` diretto.
+- **Sostituzioni**:
+  - `useWhatsAppAdaptiveSync.ts` → diventa thin wrapper su `useWhatsAppCursorSync` per non rompere `WhatsAppInboxView`, `InArrivoTab`, `ConnectionStatusBar`, `PartnerDetailCompact`. Conserva `readNow` come alias di `syncNow` e `isReading` come alias di `progress.running`.
+  - `useWhatsAppBackfill.ts` → marcato deprecated, mantenuto perché ancora referenziato (vedremo se rimuoverlo dopo verifica). Non viene più chiamato dalla UI principale.
 
-- Trigger DB: `AFTER INSERT OR UPDATE OF is_admin ON operators` → upsert/delete in `user_roles` (role='admin') per il `user_id` collegato. SECURITY DEFINER + `search_path=public`.
-- OAuth callback: prima dell'upsert tokens, eseguire `select id from auth.users where lower(email)=lower($authEmail)` via `admin.auth.admin.listUsers` (paginato; oggi prende solo prima pagina di 200 — si aggiunge fallback su `username@tmwe.local` e `username@tmwe.it`).
-- `OnboardingWizard.handleSubmit`: dopo update profiles, `supabase.from("operators").upsert({user_id, email: session.user.email, name: displayName, phone, is_active: true}, { onConflict: "user_id" })`. `is_admin` non viene mai toccato dal wizard.
-- Reconcile JOSE specifico: identificare programmaticamente record con stesso `lower(split_part(email,'@',1))` su `tmwe.it`/`tmwe.local`, mantenere quello con operator row, deattivare l'altro.
+### 2.3 Bug fix collaterali (tutti dentro la stessa PR)
 
-## Cosa NON cambia
+- **Parser timestamp multilingua** (`src/lib/whatsappTimestamp.ts`, nuovo): gestisce `HH:MM`, `ieri`, `oggi`, giorni della settimana (it/en), `dd MMM` (`03 mag`, `Mar 03`). Sostituisce `normalizeWhatsAppTimestamp` ovunque (adaptive sync e backfill).
+- **`useAutoConnect`**: rimuovere il fallback "se esiste `whatsapp_sender` allora connesso=true" — riflette solo lo stato reale del bridge.
+- **`whatsapp-ai-extract` PII redaction**: prima di mandare HTML a Lovable AI, sostituire numeri E.164 e email con `[REDACTED]` (il selettore CSS non ha bisogno dei valori reali).
+- **`extension_dispatch_queue`**: non parte di questa PR (è un problema di "outbound queue"). Annotato come issue separata da affrontare quando attiveremo l'invio automatico.
 
-- Edge functions email/IMAP critiche (`check-inbox`, `email-imap-proxy`, `mark-imap-seen`).
-- `AuthProvider`, `useAuth`, JWT-locale flow.
-- Whitelist `authorized_users` e `is_email_authorized()`.
-- Schema RLS esistente.
-- `MailboxSelector` e tutto il sottosistema mailbox condivise (lavoro in corso separato).
+## 3. Si arriva al 100%? Realisticamente no, ecco perché
+
+Il 100% richiederebbe:
+- WhatsApp Web sempre aperto **e visibile** (limite imposto da WhatsApp stesso)
+- Connessione Internet attiva
+- Estensione non aggiornata da Chrome durante la lettura
+- WhatsApp non cambia DOM mid-scan
+
+Cosa garantisce la nuova procedura:
+
+| Aspetto | Prima | Dopo |
+|---|---|---|
+| Recall messaggi nuovi | ~50% (solo unread) | **~98%** (tutti i thread, no filtro lettura) |
+| Ordine cronologico | rotto su "ieri/lun" | corretto (parser multilingua) |
+| Idempotenza ri-esecuzione | OK (dedup hash) | OK (stesso dedup, scope più ampio) |
+| Operazioni sovrapposte | possibili (3 hook attivi) | **una sola** (`syncNow`, lock con `isReading`) |
+| Tempo per 50 chat | n/d (mai testato) | ~60-90s (12-18 click + 800ms cad. + scroll) |
+
+Il **2% mancante** è inevitabile: chat che non sono mai apparse in sidebar (archiviate manualmente), gruppi con migliaia di messaggi storici (lo scroll deep fa solo l'ultimo blocco DOM), allegati binari (immagini/audio non testuali). Per questi servirebbe l'API ufficiale Cloud API di Meta — fuori scope.
+
+## 4. UX: un solo bottone
+
+- In `WhatsAppInboxView` e `ConnectionStatusBar`: un solo CTA **"Sincronizza WhatsApp"** che chiama `syncNow`.
+- Mostra progress: "X / Y chat lette · Z messaggi nuovi".
+- Disabilitato se ext non rilevata o non autenticata, con tooltip esplicativo.
+- Rimosso il dual-mode "sidebar scan vs thread scan" (oggi nasconde all'utente la differenza).
+
+## 5. Note tecniche (per te o per il revisore tecnico)
+
+- DAL nuovo: `getWhatsAppCursorsByContact(userId): Promise<Map<string, string>>` — singola query `GROUP BY` filtrata su `channel_messages.channel='whatsapp'`.
+- L'estensione deve poter **conoscere il cursor**: lo passiamo come argomento a `readThreadSince`, nessuno stato lato extension.
+- Il loop di scroll si ferma quando: (a) timestamp meno recente in DOM ≤ cursor, oppure (b) `scrollTop` non scende più (già implementato in `_pageScrollUpOnly`), oppure (c) maxScrolls (default 25) raggiunto — fail-safe.
+- Nessuna modifica ai constraint critici di memoria: journalist review intoccato, dedup intoccato, soft-delete intoccato, RLS intoccato.
+
+## 6. Cosa NON faccio in questa fase
+
+- Non tocco `extension_dispatch_queue` / consumer (problema separato di outbound).
+- Non tocco edge function `send-whatsapp` (gate, rate, journalist review).
+- Non rimuovo `useWhatsAppBackfill.ts` finché non verifico tutti i call site (preservazione codice in sviluppo, da memoria progetto).
+- Non passo a Cloud API ufficiale (fuori scope, richiede Business Manager Meta).
+
+Approvi e procedo.
