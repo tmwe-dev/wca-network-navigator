@@ -1,6 +1,10 @@
 /**
- * WhatsApp Deep Backfill — Cursor-based, resumable.
- * Each click processes one page backward per chat, persisting progress.
+ * @deprecated Sostituito da `useWhatsAppAdaptiveSync` (cursor per-chat + dedup
+ * via `message_id_external`) e dall'auto-sync `useWhatsAppAutoSync`.
+ *
+ * Non importare in nuovo codice. Conservato come riferimento storico del
+ * deep-backfill manuale basato su `bridge.backfillChat` + scroll.
+ * Audit 2026-05-07: zero consumer attivi nell'app.
  */
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +71,7 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
   return { direction: "inbound", cleanText: text };
 }
 
+/** @deprecated Use `useWhatsAppAdaptiveSync` instead. */
 export function useWhatsAppBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL_PROGRESS);
   const abortRef = useRef(false);
