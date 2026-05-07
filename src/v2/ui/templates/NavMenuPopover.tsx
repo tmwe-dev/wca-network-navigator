@@ -19,6 +19,7 @@ import { navItemsDef } from "./navConfig";
 import { useAuthV2 } from "@/v2/hooks/useAuthV2";
 import { ThemePicker } from "@/v2/ui/theme/ThemePicker";
 import { SECONDARY_NAV, findSecondaryNavGroup } from "@/v2/navigation/registry";
+import { useNavBadgeCountsV2, badgeForPath } from "@/v2/hooks/useNavBadgeCountsV2";
 
 const DEV_PAGE_GROUPS = SECONDARY_NAV;
 
@@ -48,6 +49,7 @@ export function NavMenuPopover({
   const [open, setOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const { signOut } = useAuthV2();
+  const { data: badgeCounts } = useNavBadgeCountsV2();
 
   const handleSelect = (path: string) => {
     setOpen(false);
@@ -84,6 +86,7 @@ export function NavMenuPopover({
                 translated === item.labelKey
                   ? item.labelKey.replace(/^nav\./, "").replace(/_/g, " ")
                   : translated;
+              const count = badgeForPath(badgeCounts, item.path);
               return (
                 <button
                   key={item.path}
@@ -98,7 +101,16 @@ export function NavMenuPopover({
                   }
                 >
                   <span className="text-muted-foreground">{item.icon}</span>
-                  <span>{label}</span>
+                  <span className="flex-1">{label}</span>
+                  {count > 0 && (
+                    <span
+                      className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-primary/20 text-primary border border-primary/30"
+                      title={`${count} da gestire`}
+                      aria-label={`${count} elementi da gestire`}
+                    >
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  )}
                 </button>
               );
             })}
