@@ -21,6 +21,9 @@ import { FunnemailBulkBar } from "./FunnemailBulkBar";
 import { useFunnemailClaims } from "@/v2/hooks/useFunnemailClaims";
 import { useFunnemailStatuses } from "@/v2/hooks/useFunnemailStatuses";
 import { useFunnemailReminders } from "@/v2/hooks/useFunnemailReminders";
+import { useGlobalFilters } from "@/contexts/GlobalFiltersContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 const ESTIMATED_ROW_HEIGHT = 168;
 const STORAGE_KEY = "funnemail_list_view_v4";
@@ -108,6 +111,11 @@ export function FunnemailMailList({
 }: Props): JSX.Element {
   const [{ sort, group }, setPrefs] = useState<StoredPrefs>(() => loadPrefs());
   useEffect(() => { savePrefs({ sort, group }); }, [sort, group]);
+  const gFilters = useGlobalFilters();
+  const qc = useQueryClient();
+  const hideRead = gFilters.filters.funnemailView === "unread";
+  const toggleHideRead = () => gFilters.setFilter("funnemailView", hideRead ? "all" : "unread");
+  const handleRefresh = () => qc.invalidateQueries({ queryKey: queryKeys.funnemailInbox.root });
 
   const { getGroup } = useEmailAddressGroups();
 
@@ -207,6 +215,9 @@ export function FunnemailMailList({
       checkedCount={checkedIds.size}
       onSelectAll={() => setCheckedIds(new Set(messages.map((m) => m.id)))}
       onClearSelection={clearChecked}
+      hideRead={hideRead}
+      onToggleHideRead={toggleHideRead}
+      onRefresh={handleRefresh}
     />
   );
 

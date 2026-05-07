@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertCircle, Building2, Calendar, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, RefreshCw, Shield, Sparkles, Tag, User, Users } from "lucide-react";
+import { AlertCircle, Building2, Calendar, Check, Eye, Image, ImageOff, Loader2, Paperclip, Reply, ReplyAll, Forward, RefreshCw, Shield, Sparkles, Star, Tag, User, Users } from "lucide-react";
 import { useAppNavigate } from "@/hooks/useAppNavigate";
 import DOMPurify from "dompurify";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,6 +73,7 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
   const folderLabel = message.funnemail_folder_label ?? effectiveSlug;
   const folderIcon = message.funnemail_folder_icon ?? null;
   const aiSuggestion = (message.ai_classification_suggestion ?? "").trim();
+  const hasDeepSearch = !!message.partner_id; // partner agganciato → enrichment già avvenuto
   const urgency = decision?.urgency ?? "normal";
   const urgencyClass =
     urgency === "critical" ? "bg-destructive/15 text-destructive border-destructive/30"
@@ -250,8 +251,8 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-xs"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs border border-border/40"
                 onClick={() => {
                   if (!message.read_at) markAsRead.mutate(message.id);
                   onClose();
@@ -262,8 +263,8 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               </Button>
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-xs"
+                variant="ghost"
+                className="h-7 gap-1.5 text-xs border border-border/40"
                 onClick={() => {
                   const replySubject = decodedSubject.startsWith("Re:") ? decodedSubject : `Re: ${decodedSubject}`;
                   navigate("/v2/email-composer", {
@@ -331,6 +332,14 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 variant="ghost"
                 className="h-7 gap-1 px-2 text-xs"
               />
+              {hasDeepSearch && (
+                <span
+                  className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-amber-500"
+                  title="Deep Search già eseguito su questo mittente"
+                >
+                  <Star className="h-3.5 w-3.5 fill-amber-500" />
+                </span>
+              )}
             </div>
             <div className="flex max-w-full flex-wrap items-center justify-start gap-0.5 xl:justify-end">
               <Button

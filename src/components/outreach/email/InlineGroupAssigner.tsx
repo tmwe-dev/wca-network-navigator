@@ -45,13 +45,12 @@ export function InlineGroupAssigner({
   const addr = useMemo(() => extractEmail(fromAddress), [fromAddress]);
 
   const { data: groups = [] } = useQuery({
-    queryKey: ["email-address-groups", "list", user?.id ?? "anon"],
-    enabled: open && !!user?.id,
+    queryKey: ["email-address-groups", "list-global"],
+    enabled: open,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const { data } = await untypedFrom("email_sender_groups")
         .select("nome_gruppo, colore, icon")
-        .eq("user_id", user!.id)
         .order("sort_order", { ascending: true });
       return (data ?? []) as GroupRow[];
     },

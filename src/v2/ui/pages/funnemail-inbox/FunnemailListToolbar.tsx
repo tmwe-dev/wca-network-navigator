@@ -3,7 +3,7 @@
  *
  * Logic-less. La selezione è gestita dal parent e persistita in localStorage.
  */
-import { ArrowDownAZ, ArrowDownWideNarrow, CheckSquare, Square, FolderTree } from "lucide-react";
+import { ArrowDownWideNarrow, CheckSquare, Square, FolderTree, RefreshCw, EyeOff, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -21,6 +21,10 @@ interface Props {
   checkedCount?: number;
   onSelectAll?: () => void;
   onClearSelection?: () => void;
+  hideRead?: boolean;
+  onToggleHideRead?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 const SORT_LABELS: Record<SortMode, string> = {
@@ -39,10 +43,37 @@ const GROUP_LABELS: Record<GroupMode, string> = {
 export function FunnemailListToolbar({
   sort, group, onSortChange, onGroupChange,
   totalCount = 0, checkedCount = 0, onSelectAll, onClearSelection,
+  hideRead, onToggleHideRead, onRefresh, refreshing,
 }: Props) {
   const allSelected = totalCount > 0 && checkedCount >= totalCount;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2 text-sm sm:flex-nowrap sm:overflow-x-auto">
+      {onRefresh && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 gap-1.5 px-2 text-xs shrink-0"
+          onClick={onRefresh}
+          disabled={refreshing}
+          title="Aggiorna lista"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+        </Button>
+      )}
+      {onToggleHideRead && (
+        <Button
+          type="button"
+          size="sm"
+          variant={hideRead ? "default" : "ghost"}
+          className="h-8 gap-1.5 px-2 text-xs shrink-0"
+          onClick={onToggleHideRead}
+          title={hideRead ? "Mostra anche le lette" : "Nascondi le lette"}
+        >
+          {hideRead ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          <span>{hideRead ? "Solo non lette" : "Tutte"}</span>
+        </Button>
+      )}
       {(onSelectAll || onClearSelection) && (
         <Button
           type="button"
