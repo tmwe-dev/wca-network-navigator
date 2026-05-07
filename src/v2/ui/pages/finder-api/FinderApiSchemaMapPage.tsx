@@ -24,11 +24,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, RefreshCw, Trash2, Save } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Save, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinderApiCatalogTab from "./FinderApiCatalogTab";
 import { CommandPageBackButton } from "../command/components/CommandPageBackButton";
+import { PageTitleHeader } from "@/v2/ui/templates/PageTitleHeader";
 import {
   listFinderApiSchemaMap,
   upsertFinderApiSchemaField,
@@ -108,13 +109,15 @@ const FinderApiSchemaMapPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 pt-20 space-y-6">
+    <div className="h-full flex flex-col overflow-hidden">
+      <PageTitleHeader
+        icon={Database}
+        title="Finder API"
+        subtitle="Schema 443 endpoint"
+      />
       <CommandPageBackButton currentPath="/v2/finder-api/schema" />
-      <div className="fixed top-6 left-[120px] z-50 flex items-center px-3 py-2 rounded-xl text-[11px] font-medium text-foreground/90 bg-white/5 backdrop-blur-md border border-white/[0.06]">
-        Finder API · Catalog
-      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Finder API · Schema Map</h1>
         <p className="text-sm text-muted-foreground">
           Catalogo dei 443 endpoint TMWE Findair + mappa campi→ruolo per le op più usate.
           Tutto è iniettato nel prompt dell'agente Finder API per evitare ricerche cieche.
@@ -169,6 +172,7 @@ const FinderApiSchemaMapPage = () => {
       )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 

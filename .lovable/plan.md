@@ -1,113 +1,79 @@
-## Obiettivo
+# UI Structural Alignment — adattato a codex
 
-Dare a TMWE una **voce unica e misurabile** in tutti i contenuti generati (email, WhatsApp, LinkedIn, voce), eliminando duplicazioni nei prompt e introducendo metriche di aderenza allo stile.
+Il piano caricato è solido nella visione ma viola atomicità (refactor di massa) e duplica codice esistente. Lo splitto in 5 PR sequenziali, ognuno con rollback indipendente. Procedo solo con OK esplicito su ciascun step.
 
-## Strategia
+## Modifiche al piano originale
 
-Quattro layer cooperanti, già presenti come scheletro nel sistema:
+1. **Non creare** `EmptyState.tsx` — esiste già in `src/v2/ui/atoms/`. Verifico la sua API e adatto le 3 props (icon/title/description/action).
+2. **`tokens.ts`** invece di stringhe raw → factory `cn()`-ready con commenti che richiamano i token semantic HSL.
+3. **Step 4.3 (EmailIntelligence routing)** → spostato in PR separato perché tocca routing (CRITICAL), non solo UI.
+4. **Step 4-8 (refactor di massa)** → diventano migrazione **opt-in pagina-per-pagina** dietro audit ESLint, non search-replace globale.
+5. Aggiungo verifica visiva (preview screenshot) per ogni PR, non solo `tsc`.
 
-```text
-KB (doctrine/brand-voice)  ← fonte unica della "voce TMWE"
-        │
-        ├─► agent_personas (45 agenti + 4 ruoli editoriali)
-        │
-        ├─► operative_prompts ("Stile TMWE" master + varianti canale)
-        │
-        └─► journalistReviewLayer (score aderenza + telemetria)
-```
+## PR 1 — Primitivi condivisi [STANDARD]
 
-Tutto editabile da DB → nessun redeploy per cambiare tono.
+**Obiettivo**: creare le fondamenta, zero migrazione.
 
----
+- `src/v2/ui/tokens.ts` — costanti `UI_TOKENS` (toolbar, card, page wrapper). Solo classi semantic (`bg-card`, `border-border`).
+- `src/v2/ui/atoms/FilterToolbar.tsx` — wrapper props `{children, compact?, className?}`.
+- `src/v2/ui/atoms/SurfaceCard.tsx` — props `{variant?: "surface"|"subtle"|"interactive", children, className?}`.
+- **Verifica EmptyState esistente** prima di toccarlo: se API diversa da quella del piano, aggiungo overload retro-compatibile invece di breaking change.
+- `src/v2/ui/templates/SectionTabs.tsx` → aggiungere prop `variant?: "underline"|"pill"`, default `"underline"` (zero impatto su uso esistente).
 
-## Fase 1 — Brand Voice canonico in KB
+**Rollback**: rimozione 3 file nuovi + revert prop `variant` in SectionTabs.
+**Verifica**: build + render `/v2/settings` (usa già SectionTabs underline) per confermare default invariato.
 
-Creare 8 schede `kb_entries` nella `family = "doctrine"`, capitolo `brand-voice`, tutte con `canonical_id` univoco e tag standardizzati:
+## PR 2 — Fix bug visivi puntuali (3 pagine) [STANDARD]
 
-1. `brand-voice/identity` — chi siamo, valori, posizionamento
-2. `brand-voice/tone-base` — tono madre (professionale-caldo, diretto, mai servile)
-3. `brand-voice/lexicon-do` — parole/frasi da preferire (per IT, EN, ES, FR, DE)
-4. `brand-voice/lexicon-dont` — parole/frasi vietate + motivazione
-5. `brand-voice/punctuation-emoji` — regole su `!`, `…`, emoji per canale
-6. `brand-voice/signatures` — signature standard per canale e per ruolo
-7. `brand-voice/length-rules` — lunghezze consigliate (email 80-150 parole, WA ≤ 60, LI ≤ 300 char, voce ≤ 25s)
-8. `brand-voice/channel-deltas` — differenze formalità/saluti/frequenza per email vs WA vs LI vs voce
+- `FinderApiSchemaMapPage`: rimuovere `container mx-auto p-6 pt-20`, usare `PageTitleHeader` + `h-full flex flex-col`.
+- `FunnemailInboxPage`: `h-[calc(100vh-3.5rem)]` → `h-full` (riga 47).
+- 5 fix CTA gerarchia: CestinonePage, OutreachPage, EmailComposerPage, AgendaPage, NetworkPage. Solo cambio `variant=` su Button esistenti.
 
-Inserite via `kb_entry_proposals` (1-click approval in KB Supervisor, coerente con governance esistente).
+**Rollback**: revert per file. Ogni fix è 1-3 righe.
+**Verifica**: screenshot pre/post di ognuna delle 3 pagine principali.
 
-## Fase 2 — Popolare `agent_personas`
+## PR 3 — Migrazione FilterToolbar (opt-in, 6 pagine pilota) [STANDARD]
 
-**4 ruoli editoriali** (Rompighiaccio, Risvegliatore, Chiusore, Accompagnatore) → 4 righe in `agent_personas` con `agent_id` dedicato:
+Solo le 6 pagine elencate nel piano (non "tutte"):
+CestinonePage, OutreachPage/CockpitContent, InreachPage/InArrivoTab, AgendaPage, NetworkPage, SettingsPage nav.
 
-- `tone`, `custom_tone_prompt`
-- `vocabulary_do[]`, `vocabulary_dont[]`
-- `style_rules[]` (max 5)
-- `example_messages` (JSONB: 3 esempi corretti + 3 vietati per IT/EN)
-- `signature_template`
+Non tocco le altre finché non valuto regressioni di queste 6. Niente search-replace globale.
 
-**45 agenti applicativi**: persona di default minimale (eredita brand voice + tono base), override solo per agenti che lo richiedono (es. LUCA, Sherlock).
+**Rollback**: revert per pagina.
+**Verifica**: screenshot ciascuna delle 6 pagine.
 
-Seed via `kb_entry_proposals` parallelo: una proposta per ruolo, una bulk per gli agenti.
+## PR 4 — EmailIntelligence: tabs route-based [CRITICAL]
 
-## Fase 3 — Consolidamento prompt
+Tocca routing → CRITICAL.
+- `EmailIntelligencePage` da `Tabs` shadcn → `SectionTabs variant="underline"` con sotto-route lazy.
+- Aggiungere route figlie sotto `/v2/email-intelligence/:tab`.
+- Mantenere redirect dal path attuale per non rompere bookmark esistenti.
 
-In `operative_prompts`:
+**Mappa impatto**: link interni dal Dashboard, dal menu, dalle notifiche. Devo cercare tutti i link a quella pagina.
+**Rollback**: revert + rimozione route figlie.
+**Verifica**: navigazione manuale tra tab, deep-link diretto a ciascun tab, ritorno al path originale.
 
-- **NUOVO** `stile-tmwe-master` (context `general`, tag `[brand-voice, master]`, priority 100): unico prompt che riferisce la KB `doctrine/brand-voice/*` e applica la persona dell'agente chiamante.
-- **4 varianti canale** snelle (`stile-email`, `stile-whatsapp`, `stile-linkedin`, `stile-voce`) che ereditano dal master e aggiungono solo i delta canale.
-- **Deprecare** (soft, `is_active=false`) i 6 prompt outreach duplicati + i frammenti di tono ripetuti negli scope email/whatsapp/multi-channel. Lista esatta in fase di esecuzione dopo audit `findOperativePromptsFull`.
-- Anti-ripetizione, zero-allucinazioni, plan→approve→execute, holding-pattern restano **moduli separati e intoccati**.
+## PR 5 — Cleanup tipografia/radius [STANDARD, scaglionato]
 
-`_shared/operativePromptsLoader.ts` carica già per context+tag → nessuna modifica al loader.
+NON faccio search-replace globale. Approccio:
+- Aggiungere **regola ESLint custom** che vieta `text-[9px]`, `text-[11px]`, `text-[13px]`, `text-[15px]`, `rounded-2xl` come **warning** (non error) → CI mostra il debito ma non blocca.
+- Migrazione manuale solo nelle pagine già toccate dai PR 2-4 (per coerenza locale).
+- Le restanti istanze restano debito tracciato in `docs/debt/ui-typography-radius.md` con count baseline e target di azzeramento progressivo.
 
-## Fase 4 — Brand Voice Score nel Journalist Review
+**Rollback**: rimozione regola ESLint + doc.
+**Verifica**: `npm run lint` mostra le occorrenze conteggiate; nessun file di logica toccato.
 
-Estendere `_shared/journalistReviewLayer.ts` (intoccabile per logica di gating, ma estendibile per metriche):
+## Step esclusi dal piano (NON eseguo)
 
-- Aggiungere campo `brand_voice_score` (0-100) all'output, calcolato con rubrica deterministica (presenza signature, lunghezza nei range, lessico do/don't, emoji policy) + fallback LLM-judge solo se mancano segnali.
-- Soglie: <60 = warning in `JournalistReviewOutput.warnings`, <40 = `pass_with_edits` forzato.
-- Telemetria in nuova tabella `brand_voice_audits` (message_id, channel, agent_id, score, deviations[], created_at).
+- **STEP 5 originale "Empty state migration 114 istanze"** → da fare solo dopo PR 1 e con audit per pagina, non in massa. Sposto in **debito tracciato**.
+- **STEP 7 originale "Card → SurfaceCard 20+ pattern"** → idem, opt-in.
+- **STEP 8 originale "Border radius 60+32 istanze"** → solo via ESLint warn (PR 5).
 
-Nessun gate bloccante nuovo → niente regressioni sul flusso di invio.
+## File NON tocco (rispetto vincolo del piano)
 
-## Fase 5 — Esempi e template
+`src/integrations/supabase/*`, `_shared/aiInvocationGuard.ts`, `_shared/costGuardrail.ts`, `supabase/config.toml`, `AuthenticatedLayout.tsx`, `LayoutHeader.tsx`, `PageTitleHeader.tsx`.
 
-- Arricchire `funnemail_autoresponder_templates` e `email_templates` con `voice_example_for` pointer al `canonical_id` brand-voice.
-- Per ogni `agent_personas.example_messages`: 3 corretti + 3 vietati per lingua principale dell'agente.
+## Decisione richiesta
 
-## Fase 6 — KPI dashboard
-
-Nuova vista `/v2/settings/brand-voice` (UI sola, hook esistenti):
-- Distribuzione `brand_voice_score` per canale e per ruolo (ultimi 30gg)
-- Top 10 deviazioni ricorrenti
-- Tasso risposta correlato allo score (join con `outreach_messages` esistente)
-
-Nessuna nuova business logic: solo lettura da `brand_voice_audits` + DAL esistenti.
-
----
-
-## Sequenza esecuzione consigliata
-
-1. Fase 1 (KB brand-voice) → proposte pending, utente approva 1-click
-2. Fase 2 (personas 4 ruoli) → idem
-3. Fase 3 (prompt master + varianti) → audit + soft-deprecate duplicati
-4. Fase 4 (score nel review) → migrazione tabella + estensione layer
-5. Fase 5 (esempi/template) → seed
-6. Fase 6 (dashboard KPI) → UI
-
-Ogni fase è reversibile (soft-delete + soft-deprecate, no DROP, no breaking change al journalist gate).
-
-## Note tecniche
-
-- **Niente modifiche** a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`, `loadOptimusSettings` (kill-switch resta `enabled:true`).
-- Nuova tabella `brand_voice_audits` con RLS (operatore vede tutto, in coerenza con visibilità globale agenti).
-- `canonical_id` su tutte le 8 schede KB per evitare duplicati futuri.
-- Test di regressione: estendere `src/test/journalist-pipeline-coverage.test.ts` con 3 nuovi test (score calcolato, warning sotto soglia, no gate bloccante).
-- Memoria nuova: `mem://features/brand-voice-system` con mappa dei 4 layer.
-
-## Domande aperte (rispondibili in implementazione)
-
-- Vuoi che il Brand Voice Score sia **visibile in UI** durante la composizione (badge live) o solo in audit retroattivo?
-- I 4 ruoli editoriali devono avere **personalità nominali** (es. "Marco il Rompighiaccio") o restare ruoli astratti?
-
-Le risposte non bloccano la Fase 1-3, solo le rifiniture di UI.
+Procedo con **PR 1** (primitivi condivisi, zero migrazione, zero rischio)?
+Oppure preferisci che parta da **PR 2** (fix bug visivi puntuali, più alto valore percepito immediato)?
