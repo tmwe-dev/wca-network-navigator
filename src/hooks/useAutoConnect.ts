@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useUpdateSetting } from "@/hooks/useAppSettings";
-import { supabase } from "@/integrations/supabase/client";
 import { createLogger } from "@/lib/log";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -38,24 +37,15 @@ export function useAutoConnect() {
       }
       // No fallback to DB credentials — they don't mean you're logged in locally
 
-      // ── WhatsApp: extension OR API sender ──
+      // ── WhatsApp: extension session must be authenticated ──
       let waOk = false;
       if (wa.isAvailable) {
         try {
           const r = await wa.verifySession();
-          waOk = r.success === true;
+          waOk = r.success === true && r.authenticated === true;
         } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
       }
-      if (!waOk) {
-        try {
-          const { data } = await supabase
-            .from("app_settings")
-            .select("value")
-            .eq("key", "whatsapp_sender")
-            .maybeSingle();
-          if (data?.value) waOk = true;
-        } catch (e) { log.debug("best-effort operation failed", { error: e instanceof Error ? e.message : String(e) }); /* intentionally ignored: best-effort cleanup */ }
-      }
+      // No DB-sender fallback: it doesn't mean the bridge is actually live
 
       // Persist real state
       try {

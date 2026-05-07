@@ -11,7 +11,6 @@ function LinkedInOptimusBadge() {
   return <OptimusBadge channel="linkedin" pageType="messaging" />;
 }
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
-import { useWhatsAppBackfill } from "@/hooks/useWhatsAppBackfill";
 import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
 import { useEmailAutoSync } from "@/hooks/useEmailAutoSync";
@@ -65,9 +64,8 @@ export function InArrivoTab() {
   const { activeOperator, viewingAll } = useActiveOperator();
   const operatorUserId = viewingAll ? undefined : (activeOperator?.user_id || undefined);
 
-  // WhatsApp — manual only
+  // WhatsApp — single unified sync (cursor-based, no unread filter)
   const waSync = useWhatsAppAdaptiveSync();
-  const waBackfill = useWhatsAppBackfill();
 
   // Email hooks
   const checkInbox = useCheckInbox();
@@ -131,9 +129,7 @@ export function InArrivoTab() {
               isAvailable={waSync.isAvailable}
               isAuthenticated={waSync.isAuthenticated}
               readNow={waSync.readNow}
-              bfProgress={waBackfill.progress}
-              startBackfill={waBackfill.startBackfill}
-              stopBackfill={waBackfill.stopBackfill}
+              syncProgress={waSync.progress}
             />
           )}
           {channel === "linkedin" && (
