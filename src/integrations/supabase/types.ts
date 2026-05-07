@@ -5655,6 +5655,7 @@ export type Database = {
           operator_id: string | null
           updated_at: string
           user_id: string | null
+          voice_example_for: string[] | null
         }
         Insert: {
           category?: string | null
@@ -5668,6 +5669,7 @@ export type Database = {
           operator_id?: string | null
           updated_at?: string
           user_id?: string | null
+          voice_example_for?: string[] | null
         }
         Update: {
           category?: string | null
@@ -5681,6 +5683,7 @@ export type Database = {
           operator_id?: string | null
           updated_at?: string
           user_id?: string | null
+          voice_example_for?: string[] | null
         }
         Relationships: [
           {
@@ -5973,6 +5976,7 @@ export type Database = {
           subject_template: string
           trigger_rule: Json
           updated_at: string
+          voice_example_for: string[] | null
         }
         Insert: {
           approved_at?: string | null
@@ -5987,6 +5991,7 @@ export type Database = {
           subject_template: string
           trigger_rule?: Json
           updated_at?: string
+          voice_example_for?: string[] | null
         }
         Update: {
           approved_at?: string | null
@@ -6001,6 +6006,7 @@ export type Database = {
           subject_template?: string
           trigger_rule?: Json
           updated_at?: string
+          voice_example_for?: string[] | null
         }
         Relationships: []
       }
