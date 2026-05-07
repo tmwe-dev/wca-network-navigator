@@ -36,15 +36,16 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "missing_auth" }, corsHeaders, 401);
     }
 
-    // Validate JWT and resolve user
+    // Validate JWT locally via getClaims (no network call to /auth/v1/user)
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
       return jsonResponse({ error: "invalid_token" }, corsHeaders, 401);
     }
-    const userId = userData.user.id;
+    const userId = claimsData.claims.sub as string;
 
     // Use service role for aggregations
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
