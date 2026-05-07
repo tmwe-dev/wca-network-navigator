@@ -49,7 +49,7 @@ export function useSmartSuggestions() {
           icon: "📨",
           label: `${unread} email da leggere`,
           description: "Analizza e classifica le email in arrivo",
-          route: "/v2/outreach",
+          route: "/v2/cockpit",
           count: unread,
           priority: 100,
         });
@@ -75,7 +75,7 @@ export function useSmartSuggestions() {
           icon: "✅",
           label: `${approval} azioni da autorizzare`,
           description: "Approva le azioni programmate dalle missioni",
-          route: "/v2/outreach",
+          route: "/v2/cockpit",
           count: approval,
           priority: 90,
         });
@@ -88,7 +88,7 @@ export function useSmartSuggestions() {
           icon: "✏️",
           label: `${drafts} bozze email da rivedere`,
           description: "Rivedi e invia le email in bozza",
-          route: "/v2/outreach",
+          route: "/v2/cockpit",
           count: drafts,
           priority: 85,
         });
@@ -101,7 +101,7 @@ export function useSmartSuggestions() {
           icon: "📤",
           label: `${pending} outreach programmati`,
           description: "Verifica le comunicazioni in coda",
-          route: "/v2/outreach",
+          route: "/v2/cockpit",
           count: pending,
           priority: 80,
         });

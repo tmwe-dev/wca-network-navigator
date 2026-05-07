@@ -114,13 +114,13 @@ async function fetchDashboardData(): Promise<DashboardData> {
     suggestions.push({ id: "proposed-tasks", icon: "🤖", label: `${data.proposed_tasks} task agente da confermare`, description: "Approva o modifica i task proposti dagli agenti", route: "/v2/agents/tasks", count: data.proposed_tasks, priority: 95 });
   }
   if (data.actions_proposed > 0) {
-    suggestions.push({ id: "pending-approval", icon: "✅", label: `${data.actions_proposed} azioni da autorizzare`, description: "Approva le azioni programmate dalle missioni", route: "/v2/outreach", count: data.actions_proposed, priority: 90 });
+    suggestions.push({ id: "pending-approval", icon: "✅", label: `${data.actions_proposed} azioni da autorizzare`, description: "Approva le azioni programmate dalle missioni", route: "/v2/cockpit", count: data.actions_proposed, priority: 90 });
   }
   if (data.draft_emails > 0) {
-    suggestions.push({ id: "draft-emails", icon: "✏️", label: `${data.draft_emails} bozze email da rivedere`, description: "Rivedi e invia le email in bozza", route: "/v2/outreach", count: data.draft_emails, priority: 85 });
+    suggestions.push({ id: "draft-emails", icon: "✏️", label: `${data.draft_emails} bozze email da rivedere`, description: "Rivedi e invia le email in bozza", route: "/v2/cockpit", count: data.draft_emails, priority: 85 });
   }
   if (data.pending_outreach > 0) {
-    suggestions.push({ id: "pending-outreach", icon: "📤", label: `${data.pending_outreach} outreach programmati`, description: "Verifica le comunicazioni in coda", route: "/v2/outreach", count: data.pending_outreach, priority: 80 });
+    suggestions.push({ id: "pending-outreach", icon: "📤", label: `${data.pending_outreach} outreach programmati`, description: "Verifica le comunicazioni in coda", route: "/v2/cockpit", count: data.pending_outreach, priority: 80 });
   }
   if (data.active_jobs > 0) {
     suggestions.push({ id: "active-jobs", icon: "⚙️", label: `${data.active_jobs} job attivi`, description: "Monitora i download e le operazioni in corso", route: "/v2/network", count: data.active_jobs, priority: 70 });
