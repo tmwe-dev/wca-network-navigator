@@ -247,7 +247,24 @@ export default function BCAUnifiedHub() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          {group.countryCode && <span className="text-lg leading-none flex-shrink-0">{countryCodeToFlag(group.countryCode)}</span>}
+                          {group.countryCode && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const cc = group.countryCode!;
+                                g.setSelectedCountry(g.selectedCountry === cc ? null : cc);
+                              }}
+                              className={cn(
+                                "text-lg leading-none flex-shrink-0 rounded hover:ring-1 hover:ring-primary/40 transition-all",
+                                g.selectedCountry === group.countryCode && "ring-1 ring-primary/60"
+                              )}
+                              aria-label={`Filtra per paese ${group.countryCode}`}
+                              title={`Filtra per paese ${group.countryCode}`}
+                            >
+                              {countryCodeToFlag(group.countryCode)}
+                            </button>
+                          )}
                           <span className="text-sm font-semibold text-foreground truncate">{group.companyName}</span>
                           {group.isMatched && <Badge variant="outline" className="text-[9px] bg-primary/15 text-primary border-primary/30 flex-shrink-0">WCA</Badge>}
                           {group.hasDeepSearch && <Brain className="w-3.5 h-3.5 text-primary flex-shrink-0" />}

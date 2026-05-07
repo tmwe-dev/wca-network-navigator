@@ -23,6 +23,10 @@ export interface CompanyCardListProps extends CompanyCardListCallbacks {
   selectedIds?: Set<string>;
   /** Callback toggle selezione. Se assente, niente checkbox. */
   onToggleSelect?: (id: string) => void;
+  /** Click bandiera nella card → filtra per paese. */
+  onCountryClick?: (code: string) => void;
+  /** Click città nella card → filtra per città. */
+  onCityClick?: (city: string) => void;
 }
 
 const ROW_HEIGHT = 60;        // header card (px)
@@ -36,6 +40,8 @@ export function CompanyCardList({
   onOpenCompany,
   selectedIds,
   onToggleSelect,
+  onCountryClick,
+  onCityClick,
 }: CompanyCardListProps): React.ReactElement {
   const parentRef = useRef<HTMLDivElement>(null);
   // Carica i livelli Sherlock per le aziende visibili in lista (id = partner.id per WCA).
@@ -135,6 +141,8 @@ export function CompanyCardList({
                   compact={compact}
                   sherlockLevel={sherlockLevels[company.id]?.level ?? null}
                   sherlockCompletedAt={sherlockLevels[company.id]?.completed_at ?? null}
+                  onCountryClick={onCountryClick}
+                  onCityClick={onCityClick}
                 />
               </div>
             );

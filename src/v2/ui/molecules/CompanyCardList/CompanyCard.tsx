@@ -40,6 +40,10 @@ export interface CompanyCardProps extends CompanyCardListCallbacks {
   sherlockLevel?: 1 | 2 | 3 | null;
   /** ISO date dell'ultima indagine completata. */
   sherlockCompletedAt?: string | null;
+  /** Click sulla bandiera (paese). */
+  onCountryClick?: (code: string) => void;
+  /** Click sulla città. */
+  onCityClick?: (city: string) => void;
 }
 
 export function CompanyCard({
@@ -50,6 +54,8 @@ export function CompanyCard({
   compact = false,
   sherlockLevel = null,
   sherlockCompletedAt = null,
+  onCountryClick,
+  onCityClick,
 }: CompanyCardProps): React.ReactElement {
   const { name, city, countryCode, badge, contactsCount, meta, source, score, primaryContact, channels, hasBca, leadStatus, isFavorite, lastInteractionAt, bcaCount, origin, enrichedAt, logoUrl, primaryEmail, primaryPhone } = company;
   const tone = sourceTone(source);
@@ -282,6 +288,8 @@ export function CompanyCard({
         countryCode={countryCode}
         selected={selected}
         compact={compact}
+        onCountryClick={onCountryClick}
+        onCityClick={onCityClick}
         checkboxSlot={
           onToggleSelect ? (
             <Checkbox
