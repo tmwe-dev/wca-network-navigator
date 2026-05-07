@@ -40,3 +40,15 @@ Colonne: channel, journalist_role, brand_voice_score, deviations, signals, messa
 - `operative_prompts.superseded_by` (FK self) → versioning esplicito per rollback/audit.
 - `brand_voice_audits.outreach_message_id` → correlazione con outcome commerciali.
 - `v_brand_voice_outcomes` (security_invoker) → KPI dashboard 30gg per canale × ruolo.
+
+## Fasi 5-6 (2026-05-07)
+**Fase 5 — Template enrichment**
+- `email_templates.voice_example_for text[]` (nullable, default '{}') + indice GIN.
+- `funnemail_autoresponder_templates.voice_example_for text[]` + indice GIN.
+- Permette di marcare un template come esempio canonico di una regola brand-voice (es. `brand-voice/channel-deltas/email`). Reversibile via DROP COLUMN.
+
+**Fase 6 — KPI dashboard `/v2/settings/brand-voice` (admin-only)**
+- `src/data/brandVoice.ts` (DAL): `fetchBrandVoiceOutcomes`, `fetchRecentBrandVoiceAudits`, `topDeviations`.
+- `src/v2/ui/pages/BrandVoicePage.tsx`: KPI summary (audit totali, score medio, deviazioni distinte) + tabella canale × ruolo + top 10 deviazioni ricorrenti. Sola lettura.
+- Query keys centralizzati in `aiAndAnalyticsKeys.brandVoice.*`.
+- Route lazy in `src/v2/routes.tsx`. Nessuna modifica a journalistReview, scorer, edge AI.

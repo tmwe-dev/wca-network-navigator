@@ -86,6 +86,7 @@ const FinderApiSchemaMapPage = lazy(() => import("./ui/pages/finder-api/FinderAp
 const EmailForgePage = lazy(() => import("./ui/pages/EmailForgePage").then((m) => ({ default: m.EmailForgePage })));
 const ObservabilityPage = lazy(() => import("./ui/pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
 const E2EStatusPage = lazy(() => import("./ui/pages/E2EStatusPage").then((m) => ({ default: m.E2EStatusPage })));
+const BrandVoicePage = lazy(() => import("./ui/pages/BrandVoicePage").then((m) => ({ default: m.BrandVoicePage })));
 const MissionsAutopilotPage = lazy(() => import("./ui/pages/MissionsAutopilotPage").then((m) => ({ default: m.MissionsPage })));
 const LandingPage = lazy(() => import("./ui/pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const DocsPage = lazy(() => import("./ui/pages/DocsPage").then((m) => ({ default: m.DocsPage })));
@@ -350,6 +351,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="settings/health" element={guardedPage(SystemHealthPage, "SystemHealth")} />
           <Route path="settings/e2e-status" element={guardedPage(E2EStatusPage, "E2EStatus")} />
           <Route path="settings/alert-routing" element={guardedPage(AlertRoutingPage, "AlertRouting")} />
+          <Route path="settings/brand-voice" element={guardedPage(BrandVoicePage, "BrandVoice")} />
           <Route path="admin-users" element={<Navigate to="/v2/settings/admin-users" replace />} />
           <Route path="email-download" element={<Navigate to="/v2/settings/email-download" replace />} />
           <Route path="diagnostics" element={<Navigate to="/v2/settings/diagnostics" replace />} />

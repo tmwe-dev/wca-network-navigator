@@ -100,5 +100,9 @@ export const aiAndAnalyticsKeys = {
   responseRateCard: ["response-rate-card"] as const,
   activeSchedules: ["active-schedules"] as const,
   atecoGroups: ["ateco-groups"] as const,
+  brandVoice: {
+    outcomes: ["brand-voice-outcomes"] as const,
+    recentAudits: (limit: number) => ["brand-voice-recent-audits", limit] as const,
+  },
   noop: ["noop"] as const,
 } as const;
