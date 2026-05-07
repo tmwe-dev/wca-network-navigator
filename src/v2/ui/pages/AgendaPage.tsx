@@ -192,8 +192,8 @@ export function AgendaPage() {
       </div>
 
       {/* ── Body: lista (1/3) + pannello azione (2/3) ─────────────────── */}
-      <div className="flex-1 flex min-h-0">
-        <div className="w-1/3 min-w-[320px] max-w-[480px] shrink-0 border-r border-border/30 bg-card/10">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0">
+        <div className="w-full md:w-1/3 md:min-w-[320px] md:max-w-[480px] h-1/2 md:h-auto shrink-0 border-b md:border-b-0 md:border-r border-border/30 bg-card/10 overflow-hidden">
           <AgendaDayDetail
             selectedDay={activeDay}
             filters={filters}
@@ -203,7 +203,7 @@ export function AgendaPage() {
           />
         </div>
 
-        <div className="flex-1 min-w-0 bg-background">
+        <div className="flex-1 min-w-0 min-h-0 bg-background">
           <AgendaActionPanel
             activity={selectedActivity}
             primaryVerb={primaryVerb}
