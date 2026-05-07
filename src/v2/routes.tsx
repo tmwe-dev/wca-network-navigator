@@ -237,22 +237,22 @@ export function V2Routes(): React.ReactElement {
           <Route path="network" element={guardedPage(NetworkPage, "Network")} />
           <Route path="partner-hub" element={<PartnerHubAlias />} />
 
-          {/* CRM + figli */}
-          <Route path="crm" element={<Navigate to="/v2/pipeline/kanban" replace />} />
-          <Route path="crm/contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
-          <Route path="crm/biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="crm/business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="crm/kanban" element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          {/* CRM + figli — canonical diretti (no double-hop, Fase 7) */}
+          <Route path="crm" element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="crm/contacts" element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="crm/biglietti" element={<Navigate to="/v2/explore/biglietti" replace />} />
+          <Route path="crm/business-cards" element={<Navigate to="/v2/explore/biglietti" replace />} />
+          <Route path="crm/kanban" element={<Navigate to="/v2/agenda/pipeline" replace />} />
           <Route path="crm/prospects" element={guardedPage(ProspectPage, "Prospects")} />
           <Route path="crm/acquisition" element={guardedPage(AcquisizionePartnerPage, "Acquisition")} />
-          <Route path="contacts" element={<Navigate to="/v2/pipeline/contacts" replace />} />
-          <Route path="business-cards" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
-          <Route path="biglietti" element={<Navigate to="/v2/pipeline/biglietti" replace />} />
+          <Route path="contacts" element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="business-cards" element={<Navigate to="/v2/explore/biglietti" replace />} />
+          <Route path="biglietti" element={<Navigate to="/v2/explore/biglietti" replace />} />
           <Route path="prospects" element={<Navigate to="/v2/crm/prospects" replace />} />
           <Route path="acquisition" element={<Navigate to="/v2/crm/acquisition" replace />} />
 
           {/* Deals — feature rimossa: redirect verso Kanban (pipeline contatti) */}
-          <Route path="deals" element={<Navigate to="/v2/pipeline/kanban" replace />} />
+          <Route path="deals" element={<Navigate to="/v2/agenda/pipeline" replace />} />
 
           {/* Calendar */}
           <Route path="calendar" element={guardedPage(CalendarPage, "Calendar")} />
