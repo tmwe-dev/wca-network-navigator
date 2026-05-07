@@ -17,6 +17,7 @@ import { OperatorSelector } from "@/components/header/OperatorSelector";
 import { MailboxSelector } from "@/components/header/MailboxSelector";
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
+import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
 import { AutoPageTitle } from "./header/AutoPageTitle";
@@ -108,6 +109,7 @@ export function LayoutHeader({
       <div className="flex items-center gap-0.5 shrink-0">
         <NotificationCenter />
         <ThemePicker variant="icon" />
+        <WhatsAppSyncButton />
         <OperatorSelector />
         <MailboxSelector />
         <HeaderToolsMenu
