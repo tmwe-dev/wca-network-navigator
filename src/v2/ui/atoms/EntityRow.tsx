@@ -62,6 +62,10 @@ export interface EntityRowProps {
 
   /** Click sull'intera riga (es. apre drawer). */
   onClick?: () => void;
+  /** Click sulla bandiera (col 2) → filtra per paese. Quando undefined, niente click. */
+  onCountryClick?: (code: string) => void;
+  /** Click sulla città (col 4) → filtra per città. Quando undefined, niente click. */
+  onCityClick?: (city: string) => void;
   selected?: boolean;
   className?: string;
   /**
@@ -84,10 +88,17 @@ export function EntityRow({
   recencySlot,
   actionsSlot,
   onClick,
+  onCountryClick,
+  onCityClick,
   selected,
   className,
   compact = false,
 }: EntityRowProps): React.ReactElement {
+  const flagNode = (
+    <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />
+  );
+  const flagInteractive = onCountryClick && countryCode;
+  const cityInteractive = onCityClick && city;
   return (
     <div
       onClick={onClick}
@@ -121,7 +132,22 @@ export function EntityRow({
 
       {/* Col 2: bandiera */}
       <div className="flex items-center justify-center">
-        <EntityRowFlag countryCode={countryCode} size={compact ? "md" : "lg"} />
+        {flagInteractive ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCountryClick!(countryCode!);
+            }}
+            className="rounded hover:ring-1 hover:ring-primary/40 transition-all"
+            aria-label={`Filtra per paese ${countryCode}`}
+            title={`Filtra per paese ${countryCode}`}
+          >
+            {flagNode}
+          </button>
+        ) : (
+          flagNode
+        )}
       </div>
 
       {/* Col 3: title + sub-title */}
@@ -140,9 +166,24 @@ export function EntityRow({
               <span className="flex items-center">{recencySlot}</span>
             )}
             {city && (
-              <span className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%]">
-                {city}
-              </span>
+              cityInteractive ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCityClick!(city);
+                  }}
+                  className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%] hover:text-primary hover:underline transition-colors"
+                  aria-label={`Filtra per città ${city}`}
+                  title={`Filtra per città ${city}`}
+                >
+                  {city}
+                </button>
+              ) : (
+                <span className="text-[11px] text-foreground/70 truncate font-medium max-w-[40%]">
+                  {city}
+                </span>
+              )
             )}
             {channels && (
               <ChannelIcons
@@ -168,7 +209,26 @@ export function EntityRow({
             </div>
           )}
           <div className="text-[12px] text-foreground/90 truncate font-medium">
-            {city || <span className="text-muted-foreground/50 italic">—</span>}
+            {city ? (
+              cityInteractive ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCityClick!(city);
+                  }}
+                  className="truncate hover:text-primary hover:underline transition-colors text-left max-w-full"
+                  aria-label={`Filtra per città ${city}`}
+                  title={`Filtra per città ${city}`}
+                >
+                  {city}
+                </button>
+              ) : (
+                city
+              )
+            ) : (
+              <span className="text-muted-foreground/50 italic">—</span>
+            )}
           </div>
           <div className="flex items-center gap-2 min-w-0">
             {channels && (
