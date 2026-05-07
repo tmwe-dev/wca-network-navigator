@@ -35,19 +35,19 @@ export function useNavBadgeCountsV2() {
   return useQuery({
     queryKey: ["v2", "nav-badge-counts"],
     queryFn: async (): Promise<NavBadgeCounts> => {
-      const PENDING = ["pending", "queued", "scheduled"] as const;
-      const COCKPIT = ["pending", "queued"] as const;
+      const PENDING = ["pending", "queued", "scheduled"];
+      const COCKPIT = ["pending", "queued"];
 
       const [cestRes, cockpitRes, inboxRes, funnemailRes, agendaRes] =
         await Promise.all([
           supabase
             .from("email_campaign_queue")
             .select("id", { count: "exact", head: true })
-            .in("status", PENDING as unknown as string[]),
+            .in("status", PENDING as never),
           supabase
             .from("campaign_jobs")
             .select("id", { count: "exact", head: true })
-            .in("status", COCKPIT as unknown as string[]),
+            .in("status", COCKPIT as never),
           supabase
             .from("channel_messages")
             .select("id", { count: "exact", head: true })
