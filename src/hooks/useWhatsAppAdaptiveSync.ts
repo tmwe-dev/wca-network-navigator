@@ -22,6 +22,11 @@ import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { markSessionExpired } from "@/lib/inbox/sessionTracker";
 import { queryKeys } from "@/lib/queryKeys";
+import {
+  getChannelContactCursor,
+  getChannelContactCursors,
+  upsertChannelMessageDedup,
+} from "@/data/channelMessages";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
@@ -99,34 +104,7 @@ export function useWhatsAppAdaptiveSync() {
 
   // ── Load per-contact cursors (latest created_at per contact) ──
   const loadCursors = useCallback(async (userId: string): Promise<Map<string, number>> => {
-    const cursors = new Map<string, number>();
-    const PAGE = 1000;
-    let from = 0;
-    // Pull recent WA messages and aggregate client-side. For typical volumes
-    // (< 50k messages/operator) this is trivial; if it grows we'll move to a
-    // server RPC.
-    for (;;) {
-      const { data, error } = await supabase
-        .from("channel_messages")
-        .select("from_address,to_address,direction,created_at")
-        .eq("user_id", userId)
-        .eq("channel", "whatsapp")
-        .order("created_at", { ascending: false })
-        .range(from, from + PAGE - 1);
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-      for (const row of data as Array<{ from_address: string | null; to_address: string | null; direction: string; created_at: string }>) {
-        const contact = (row.direction === "outbound" ? row.to_address : row.from_address)?.toLowerCase().trim();
-        if (!contact) continue;
-        const t = new Date(row.created_at).getTime();
-        const prev = cursors.get(contact);
-        if (prev === undefined || t > prev) cursors.set(contact, t);
-      }
-      if (data.length < PAGE) break;
-      from += PAGE;
-      if (from > 20000) break; // safety cap
-    }
-    return cursors;
+    return getChannelContactCursors(userId, "whatsapp");
   }, []);
 
   // ── Save thread messages above cursor ──
@@ -170,10 +148,12 @@ export function useWhatsAppAdaptiveSync() {
         raw_payload: msg as never,
         created_at: timestamp,
       };
-      const { error, status } = await supabase
-        .from("channel_messages")
-        .upsert([row] as never, { onConflict: "message_id_external", ignoreDuplicates: true });
-      if (!error && status === 201) newCount++;
+      try {
+        const { inserted } = await upsertChannelMessageDedup(row as never);
+        if (inserted) newCount++;
+      } catch (err) {
+        log.warn("upsert.failed", { contact, error: err instanceof Error ? err.message : String(err) });
+      }
     }
     return newCount;
   }, []);
@@ -330,15 +310,7 @@ export function useWhatsAppAdaptiveSync() {
 
       // Cursor del solo contatto: prendi il created_at più recente in DB.
       const lower = contact.toLowerCase().trim();
-      const { data: lastRows } = await supabase
-        .from("channel_messages")
-        .select("created_at,direction,from_address,to_address")
-        .eq("user_id", userId)
-        .eq("channel", "whatsapp")
-        .or(`from_address.ilike.${lower},to_address.ilike.${lower}`)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const cursorMs = lastRows && lastRows.length > 0 ? new Date(lastRows[0].created_at).getTime() : 0;
+      const cursorMs = await getChannelContactCursor(userId, "whatsapp", lower);
 
       const threadRes = await readThread(contact, 60);
       if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
