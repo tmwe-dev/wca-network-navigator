@@ -396,7 +396,10 @@ export async function listFunnemailGroupedInbox(
       color: null,
       section: f.section,
       sort_order: f.sort_order ?? 0,
-      auto_mark_read: false,
+      // Cartelle d'archivio (newsletter, no_reply, ads, spam, archive_other)
+      // sono auto-mark-read: l'utente non le legge attivamente.
+      // Le cartelle "operative" e "sorting" restano da leggere manualmente.
+      auto_mark_read: f.section === "archive",
     }));
 
   // Helper: mappa categoria/gruppo mittente -> slug Funnemail (fallback senza decision).
