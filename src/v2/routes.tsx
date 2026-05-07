@@ -107,7 +107,6 @@ const TokenCockpitPage = lazy(() => import("./ui/pages/TokenCockpitPage").then((
 const NotFoundPage = lazy(() => import("@/components/shared/NotFound"));
 
 // ── New Section pages (UX Redesign Phase 1) ──────────────────────────
-const PipelineSection     = lazy(() => import("./ui/pages/sections/PipelineSection"));
 const IntelligenceSection = lazy(() => import("./ui/pages/sections/IntelligenceSection"));
 const ExploreSection      = lazy(() => import("./ui/pages/sections/ExploreSection"));
 const AgendaSection       = lazy(() => import("./ui/pages/sections/AgendaSection"));
@@ -216,10 +215,15 @@ export function V2Routes(): React.ReactElement {
 
           {/* ── UX Redesign Phase 1: 6-destination sections ── */}
           {/* Pipeline rimossa dal menu — redirect verso Agenda dove ora vive il Kanban */}
-          <Route path="pipeline"            element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/kanban"     element={<Navigate to="/v2/agenda/pipeline" replace />} />
-          <Route path="pipeline/duplicati"  element={<Navigate to="/v2/agenda/duplicati" replace />} />
-          <Route path="pipeline/*"          element={guardedPage(PipelineSection, "Pipeline")} />
+          {/* Pipeline → Agenda (canonical Fase 4): tutte le sotto-rotte legacy reindirizzano */}
+          <Route path="pipeline"             element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/kanban"      element={<Navigate to="/v2/agenda/pipeline" replace />} />
+          <Route path="pipeline/duplicati"   element={<Navigate to="/v2/agenda/duplicati" replace />} />
+          <Route path="pipeline/contacts"    element={<Navigate to="/v2/explore/contacts" replace />} />
+          <Route path="pipeline/biglietti"   element={<Navigate to="/v2/explore/biglietti" replace />} />
+          <Route path="pipeline/campaigns"   element={<Navigate to="/v2/explore/campaigns" replace />} />
+          <Route path="pipeline/agenda"      element={<Navigate to="/v2/agenda" replace />} />
+          <Route path="pipeline/*"           element={<Navigate to="/v2/agenda/pipeline" replace />} />
           <Route path="intelligence/*" element={guardedPage(IntelligenceSection, "Intelligence")} />
           <Route path="explore/*"      element={guardedPage(ExploreSection,      "Explore")} />
 
