@@ -173,6 +173,7 @@ export async function persistBrandVoiceAudit(
     journalist_role?: string | null;
     result: BrandVoiceScoreResult;
     message_excerpt?: string;
+    outreach_message_id?: string | null;
   },
 ): Promise<void> {
   try {
@@ -185,6 +186,7 @@ export async function persistBrandVoiceAudit(
       deviations: params.result.deviations,
       signals: params.result.signals,
       message_excerpt: (params.message_excerpt || "").slice(0, 280),
+      outreach_message_id: params.outreach_message_id ?? null,
     });
   } catch (err) {
     console.error("[brandVoiceScorer] persist error:", err);
