@@ -6,6 +6,8 @@ import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChannelMessages, useMarkAsRead } from "@/hooks/useChannelMessages";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
+import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
+import { useWhatsAppChatMode } from "@/hooks/useWhatsAppChatMode";
 import { WhatsAppChatList } from "./WhatsAppChatList";
 import { WhatsAppChatThread } from "./WhatsAppChatThread";
 import { isSidebarGhostMessage } from "./whatsappTypes";
@@ -26,6 +28,8 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
   const { data: messages = [], isLoading } = useChannelMessages("whatsapp", undefined, 0, operatorUserId);
   const markAsRead = useMarkAsRead();
   const { sendWhatsApp } = useWhatsAppExtensionBridge();
+  const { syncSingleThread } = useWhatsAppAdaptiveSync();
+  const chatMode = useWhatsAppChatMode({ contact: activeTab, syncSingleThread });
 
   const focusedChat = syncState?.focusedChat ?? null;
   const focusOn = syncState?.focusOn ?? (() => {});
@@ -128,6 +132,7 @@ export function WhatsAppInboxView({ syncState, operatorUserId }: WhatsAppInboxVi
             focusedChat={focusedChat}
             syncEnabled={false}
             sendWhatsApp={sendWhatsApp}
+            chatMode={{ active: chatMode.active, source: chatMode.source, toggle: chatMode.toggle }}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
