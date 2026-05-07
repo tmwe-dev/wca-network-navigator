@@ -338,14 +338,6 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 variant="ghost"
                 className="h-7 gap-1 px-2 text-xs"
               />
-              {hasDeepSearch && (
-                <span
-                  className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-amber-500"
-                  title="Deep Search già eseguito su questo mittente"
-                >
-                  <Star className="h-3.5 w-3.5 fill-amber-500" />
-                </span>
-              )}
             </div>
             <div className="flex max-w-full flex-wrap items-center justify-start gap-0.5 xl:justify-end">
               <Button
