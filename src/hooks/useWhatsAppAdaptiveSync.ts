@@ -1,6 +1,15 @@
 /**
- * useWhatsAppAdaptiveSync — Manual-only WhatsApp sync.
- * No polling, no timers, no auto-sync. Download happens only on user click.
+ * useWhatsAppAdaptiveSync — Unified WhatsApp sync from per-chat cursor.
+ *
+ * Single procedure:
+ *   1. Per ogni chat in sidebar (letta o non), trova in DB l'ora dell'ultimo
+ *      messaggio salvato per quel contact (cursor).
+ *   2. Se sidebar.lastVisibleAt > cursor (o cursor null), apre il thread,
+ *      legge i messaggi e salva quelli con timestamp > cursor.
+ *   3. Letti/non letti non rilevano: il filtro è puramente temporale.
+ *
+ * API preservata per compat: readNow, isReading, isAvailable, isAuthenticated,
+ * focusedChat, focusOn, domIsStale, lastLearnedAt, forceRelearn.
  */
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtensionBridge } from "@/hooks/useWhatsAppExtensionBridge";
 import { useWhatsAppDomLearning } from "@/hooks/useWhatsAppDomLearning";
 import { buildDeterministicId } from "@/lib/messageDedup";
+import { parseWhatsAppTimestamp } from "@/lib/whatsappTimestamp";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
 import { markSessionExpired } from "@/lib/inbox/sessionTracker";
@@ -15,15 +25,26 @@ import { queryKeys } from "@/lib/queryKeys";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
-// Keep type export for backward compat but it's unused now
 export type AttentionLevel = 0 | 3 | 6;
+
+const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: ", "io: "];
+const WA_UI_LABELS = new Set([
+  "gruppi", "da leggere", "ferie permessi malattie", "name", "group 1",
+  "non letti", "preferiti", "archiviate", "tutti", "chat con lucchetto",
+]);
+const WA_GHOST_BODIES = new Set([
+  "foto", "video", "audio", "sticker", "gif", "documento",
+  "posizione", "contatto", "messaggio", "messaggio eliminato",
+]);
+const MAX_MESSAGES_PER_THREAD = 200;
+// Stagger thread reads to reduce burst risk
+const PAUSE_BETWEEN_THREADS_MS = 800;
+const MAX_THREADS_PER_RUN = 40;
 
 function isAuthError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return /auth|session|login|expired|unauthorized|qr|logout/i.test(msg);
 }
-
-const OUTBOUND_PREFIXES = ["tu: ", "you: ", "tú: ", "du: ", "vous: ", "вы: ", "あなた: "];
 
 function detectDirection(text: string): { direction: "inbound" | "outbound"; cleanText: string } {
   const lower = text.toLowerCase();
@@ -35,53 +56,37 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
   return { direction: "inbound", cleanText: text };
 }
 
-function normalizeWhatsAppTimestamp(rawValue: string): string | null {
-  const value = rawValue.trim();
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
-  const hhmmMatch = value.match(/^(\d{1,2}):(\d{2})$/);
-  if (hhmmMatch) {
-    const date = new Date();
-    date.setHours(Number(hhmmMatch[1]), Number(hhmmMatch[2]), 0, 0);
-    return date.toISOString();
-  }
-  return null;
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-interface WhatsAppSidebarMessage {
-  contact?: string;
-  from?: string;
-  time?: string;
-  timestamp?: string;
+interface SidebarChat {
+  contact: string;
   lastMessage?: string;
-  text?: string;
+  time?: string;
   unreadCount?: number;
   isVerify?: boolean;
-  direction?: "inbound" | "outbound";
 }
 
-function isSidebarPreviewMessage(msg: WhatsAppSidebarMessage) {
-  return Object.prototype.hasOwnProperty.call(msg, "lastMessage") ||
-    Object.prototype.hasOwnProperty.call(msg, "unreadCount");
-}
-
-function shouldSkipSidebarMessage(msg: WhatsAppSidebarMessage, text: string, rawTime: string) {
-  if (msg.isVerify === true) return true;
-  if (!isSidebarPreviewMessage(msg)) return false;
-  if (!text.trim()) return true;
-  return rawTime.trim().length === 0;
+interface ThreadMessage {
+  contact?: string;
+  from?: string;
+  text?: string;
+  lastMessage?: string;
+  timestamp?: string;
+  time?: string;
+  direction?: string;
 }
 
 export function useWhatsAppAdaptiveSync() {
   const [isReading, setIsReading] = useState(false);
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ current: number; total: number; newMessages: number } | null>(null);
 
-  const { isAvailable, isAuthenticated, readUnread, readThread, onSidebarChanged: _onSidebarChanged } = useWhatsAppExtensionBridge();
+  const { isAvailable, isAuthenticated, listSidebarChats, readThread } = useWhatsAppExtensionBridge();
   const { forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
-  const focusedChatRef = useRef<string | null>(null);
   const readingRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -90,38 +95,71 @@ export function useWhatsAppAdaptiveSync() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  useEffect(() => { focusedChatRef.current = focusedChat; }, [focusedChat]);
   useEffect(() => { readingRef.current = isReading; }, [isReading]);
 
-  // ── Save messages to DB ──
-  const saveMessages = useCallback(async (messages: WhatsAppSidebarMessage[], sessionUserId: string) => {
-    // Resolve operator_id for this user
-    const { data: opRow } = await supabase
-      .from("operators")
-      .select("id")
-      .eq("user_id", sessionUserId)
-      .maybeSingle();
-    const operatorId = opRow?.id ?? null;
-    if (!operatorId) {
-      // No operator found for user, skipping save
-      return { newCount: 0 };
+  // ── Load per-contact cursors (latest created_at per contact) ──
+  const loadCursors = useCallback(async (userId: string): Promise<Map<string, number>> => {
+    const cursors = new Map<string, number>();
+    const PAGE = 1000;
+    let from = 0;
+    // Pull recent WA messages and aggregate client-side. For typical volumes
+    // (< 50k messages/operator) this is trivial; if it grows we'll move to a
+    // server RPC.
+    for (;;) {
+      const { data, error } = await supabase
+        .from("channel_messages")
+        .select("from_address,to_address,direction,created_at")
+        .eq("user_id", userId)
+        .eq("channel", "whatsapp")
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      for (const row of data as Array<{ from_address: string | null; to_address: string | null; direction: string; created_at: string }>) {
+        const contact = (row.direction === "outbound" ? row.to_address : row.from_address)?.toLowerCase().trim();
+        if (!contact) continue;
+        const t = new Date(row.created_at).getTime();
+        const prev = cursors.get(contact);
+        if (prev === undefined || t > prev) cursors.set(contact, t);
+      }
+      if (data.length < PAGE) break;
+      from += PAGE;
+      if (from > 20000) break; // safety cap
     }
+    return cursors;
+  }, []);
 
+  // ── Save thread messages above cursor ──
+  const saveThreadMessages = useCallback(async (
+    contact: string,
+    messages: ThreadMessage[],
+    cursorMs: number,
+    userId: string,
+    operatorId: string,
+  ): Promise<number> => {
     let newCount = 0;
     for (const msg of messages) {
-      const contact = String(msg.contact || msg.from || "").trim();
-      if (!contact) continue;
-      const rawTime = String(msg.time || msg.timestamp || "");
-      const rawText = String(msg.lastMessage || msg.text || "");
-      if (shouldSkipSidebarMessage(msg, rawText, rawTime)) continue;
+      const rawText = String(msg.text || msg.lastMessage || "").trim();
+      if (!rawText) continue;
+
       const { direction: detectedDir, cleanText } = detectDirection(rawText);
-      const finalDirection = msg.direction || detectedDir;
+      const finalDirection = (msg.direction as "inbound" | "outbound") || detectedDir;
       const text = cleanText.trim();
-      if (!text) continue;
-      const timestamp = normalizeWhatsAppTimestamp(rawTime) || new Date().toISOString();
+      if (!text || text.length < 2) continue;
+      const lowerText = text.toLowerCase();
+      if (WA_GHOST_BODIES.has(lowerText)) continue;
+      if (WA_UI_LABELS.has(contact.toLowerCase())) continue;
+
+      const rawTime = String(msg.timestamp || msg.time || "");
+      const parsedIso = parseWhatsAppTimestamp(rawTime);
+      const timestamp = parsedIso || new Date().toISOString();
+      const ts = new Date(timestamp).getTime();
+      // Skip if already on/before cursor (delta semantics)
+      if (cursorMs > 0 && ts <= cursorMs) continue;
+
       const extId = buildDeterministicId("wa", contact, text, rawTime || timestamp);
       const row = {
-        user_id: sessionUserId,
+        user_id: userId,
         operator_id: operatorId,
         channel: "whatsapp",
         direction: finalDirection,
@@ -129,93 +167,160 @@ export function useWhatsAppAdaptiveSync() {
         to_address: finalDirection === "outbound" ? contact : undefined,
         body_text: text,
         message_id_external: extId,
-        raw_payload: JSON.parse(JSON.stringify(msg)) as Record<string, string>,
+        raw_payload: msg as never,
         created_at: timestamp,
       };
       const { error, status } = await supabase
         .from("channel_messages")
-        .upsert([row], { onConflict: "message_id_external", ignoreDuplicates: true });
+        .upsert([row] as never, { onConflict: "message_id_external", ignoreDuplicates: true });
       if (!error && status === 201) newCount++;
     }
-    return { newCount };
+    return newCount;
   }, []);
 
-  // ── Sidebar scan ──
-  const sidebarScan = useCallback(async () => {
+  // ── The single, unified sync procedure ──
+  const syncFromCursor = useCallback(async () => {
     if (readingRef.current) return;
     if (!mountedRef.current) return;
+
     setIsReading(true);
+    setProgress(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const result = await readUnread();
-      if (!result.success) return;
-      const messages = ((result as Record<string, unknown>).messages || []) as WhatsAppSidebarMessage[];
-      if (!messages.length) return;
-      const { newCount } = await saveMessages(messages, session.user.id);
-      if (newCount > 0) {
+      const userId = session.user.id;
+
+      const { data: opRow } = await supabase
+        .from("operators")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const operatorId = opRow?.id;
+      if (!operatorId) {
+        toast.error("Nessun operatore associato");
+        return;
+      }
+
+      // 1. Snapshot sidebar (all chats, no unread filter)
+      const sidebarRes = await listSidebarChats();
+      if (!sidebarRes.success) {
+        toast.error(`WhatsApp: ${sidebarRes.error || "errore lettura sidebar"}`);
+        return;
+      }
+      const rawChats = ((sidebarRes as Record<string, unknown>).messages || []) as SidebarChat[];
+      const seenLower = new Set<string>();
+      const chats: SidebarChat[] = [];
+      for (const c of rawChats) {
+        const name = String(c.contact || "").trim();
+        if (!name) continue;
+        if (c.isVerify) continue;
+        const lower = name.toLowerCase();
+        if (WA_UI_LABELS.has(lower)) continue;
+        if (seenLower.has(lower)) continue;
+        seenLower.add(lower);
+        chats.push({ ...c, contact: name });
+      }
+      if (chats.length === 0) {
+        toast.info("Nessuna chat rilevata in WhatsApp Web");
+        return;
+      }
+
+      // 2. Load cursors
+      const cursors = await loadCursors(userId);
+
+      // 3. Decide which chats need a thread read
+      const nowMs = Date.now();
+      const toRead: Array<{ name: string; cursorMs: number }> = [];
+      for (const c of chats) {
+        const lower = c.contact.toLowerCase();
+        const cursorMs = cursors.get(lower) ?? 0;
+        const sidebarTs = c.time ? parseWhatsAppTimestamp(c.time) : null;
+        const sidebarMs = sidebarTs ? new Date(sidebarTs).getTime() : nowMs;
+        // If we never saw this chat, OR sidebar shows newer activity → read.
+        if (cursorMs === 0 || sidebarMs > cursorMs + 60_000) {
+          toRead.push({ name: c.contact, cursorMs });
+        }
+      }
+
+      const focused = focusedChat;
+      if (focused && !toRead.some((c) => c.name.toLowerCase() === focused.toLowerCase())) {
+        const lower = focused.toLowerCase();
+        toRead.unshift({ name: focused, cursorMs: cursors.get(lower) ?? 0 });
+      }
+
+      const queue = toRead.slice(0, MAX_THREADS_PER_RUN);
+      if (queue.length === 0) {
+        toast.success("WhatsApp: già aggiornato");
+        return;
+      }
+
+      setProgress({ current: 0, total: queue.length, newMessages: 0 });
+
+      // 4. Walk threads sequentially
+      let totalNew = 0;
+      for (let i = 0; i < queue.length; i++) {
+        if (!mountedRef.current) break;
+        const { name, cursorMs } = queue[i];
+        try {
+          const threadRes = await readThread(name, MAX_MESSAGES_PER_THREAD);
+          if (threadRes.success && Array.isArray(threadRes.messages)) {
+            const newCount = await saveThreadMessages(
+              name,
+              threadRes.messages as ThreadMessage[],
+              cursorMs,
+              userId,
+              operatorId,
+            );
+            totalNew += newCount;
+          }
+        } catch (err) {
+          log.warn("thread_read.failed", { contact: name, error: err instanceof Error ? err.message : String(err) });
+          if (isAuthError(err)) {
+            await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
+            break;
+          }
+        }
+        setProgress({ current: i + 1, total: queue.length, newMessages: totalNew });
+        if (i < queue.length - 1) await sleep(PAUSE_BETWEEN_THREADS_MS);
+      }
+
+      if (totalNew > 0) {
         queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
         queryClient.invalidateQueries({ queryKey: ["channel-messages-unread"] });
-        toast.success(`📱 ${newCount} nuovi messaggi WhatsApp`, { duration: 2000 });
+        toast.success(`📱 ${totalNew} nuovi messaggi WhatsApp da ${queue.length} chat`);
         window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "whatsapp" } }));
+      } else {
+        toast.info(`WhatsApp: ${queue.length} chat verificate, nessun nuovo messaggio`);
       }
     } catch (err: unknown) {
-      log.warn("sidebar_scan.failed", { error: err instanceof Error ? err.message : String(err) });
+      log.warn("sync.failed", { error: err instanceof Error ? err.message : String(err) });
       if (isAuthError(err)) {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }
+      toast.error(`WhatsApp sync: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
-      if (mountedRef.current) setIsReading(false);
-    }
-  }, [readUnread, saveMessages, queryClient]);
-
-  // ── Thread scan (when focused on a chat) ──
-  const threadScan = useCallback(async () => {
-    if (readingRef.current || !focusedChatRef.current) return;
-    if (!mountedRef.current) return;
-    setIsReading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const result = await readThread(focusedChatRef.current, 20);
-      if (!result.success) return;
-      const messages = ((result as Record<string, unknown>).messages || []) as WhatsAppSidebarMessage[];
-      if (!messages.length) return;
-      const { newCount } = await saveMessages(messages, session.user.id);
-      if (newCount > 0) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.root });
+      if (mountedRef.current) {
+        setIsReading(false);
+        setProgress(null);
       }
-    } catch (err: unknown) {
-      log.warn("thread_scan.failed", { error: err instanceof Error ? err.message : String(err) });
-      if (isAuthError(err)) {
-        await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
-      }
-    } finally {
-      if (mountedRef.current) setIsReading(false);
     }
-  }, [readThread, saveMessages, queryClient]);
+  }, [listSidebarChats, readThread, loadCursors, saveThreadMessages, queryClient, focusedChat]);
 
-  // ── Manual focus on a chat ──
-  const focusOn = useCallback((contact: string) => {
+  const focusOn = useCallback((contact: string | null) => {
     setFocusedChat(contact);
   }, []);
 
-  // ── Manual read now — the ONLY way to trigger sync ──
   const readNow = useCallback(async () => {
     if (!isAvailable) {
-      toast.error("Estensione WhatsApp non rilevata. Verifica che sia installata e la pagina ricaricata.");
+      toast.error("Estensione WhatsApp non rilevata. Verifica che sia installata e ricarica la pagina.");
       return;
     }
     if (!isAuthenticated) {
       toast.error("WhatsApp Web non autenticato. Apri web.whatsapp.com e scansiona il QR code.");
       return;
     }
-    if (focusedChatRef.current) {
-      await threadScan();
-    } else {
-      await sidebarScan();
-    }
-  }, [sidebarScan, threadScan, isAvailable, isAuthenticated]);
+    await syncFromCursor();
+  }, [syncFromCursor, isAvailable, isAuthenticated]);
 
   return {
     isReading,
@@ -224,6 +329,7 @@ export function useWhatsAppAdaptiveSync() {
     focusedChat,
     focusOn,
     readNow,
+    progress,
     domIsStale,
     lastLearnedAt,
     forceRelearn,
