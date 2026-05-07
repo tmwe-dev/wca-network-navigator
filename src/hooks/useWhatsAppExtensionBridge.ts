@@ -23,7 +23,7 @@ export function useWhatsAppExtensionBridge() {
   const authCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const configSentRef = useRef(false);
-  const sidebarChangedCbRef = useRef<(() => void) | null>(null);
+  // (sidebarChanged push event removed: never consumed by app)
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
@@ -35,12 +35,6 @@ export function useWhatsAppExtensionBridge() {
       if (data.action === "extensionDead") { configSentRef.current = false; setIsAvailable(false); return; }
       if (data.action === "ping" && data.response?.success) { setIsAvailable(true); return; }
       if (data.action === "ping" && data.response?.error) { configSentRef.current = false; setIsAvailable(false); return; }
-
-      // Push event from MutationObserver
-      if (data.action === "sidebarChanged") {
-        sidebarChangedCbRef.current?.();
-        return;
-      }
 
       if (data.requestId && pendingRef.current.has(data.requestId)) {
         const resolve = pendingRef.current.get(data.requestId)!;
@@ -214,9 +208,22 @@ export function useWhatsAppExtensionBridge() {
     [sendMsg]
   );
 
-  const onSidebarChanged = useCallback((cb: () => void) => {
-    sidebarChangedCbRef.current = cb;
-  }, []);
+  // Read all sidebar chats (no unread filter). Reuses readUnread which now
+  // returns the full visible list with confidence scores; consumers filter.
+  const listSidebarChats = useCallback(
+    () => sendMsg("readUnread", {}, 60000),
+    [sendMsg]
+  );
 
-  return { isAvailable, isAuthenticated, verifySession, sendWhatsApp, readUnread, readThread, learnDom, backfillChat, onSidebarChanged };
+  return {
+    isAvailable,
+    isAuthenticated,
+    verifySession,
+    sendWhatsApp,
+    readUnread,
+    readThread,
+    learnDom,
+    backfillChat,
+    listSidebarChats,
+  };
 }
