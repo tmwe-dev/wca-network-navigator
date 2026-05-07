@@ -37,6 +37,12 @@ const ResultSchema = z.object({
 
 const AUTO_APPLY_THRESHOLD = 0.85;
 const SUGGEST_THRESHOLD = 0.60;
+const FALLBACK_GENERIC_DOMAINS = new Set<string>([
+  "gmail.com","googlemail.com","outlook.com","hotmail.com","live.com",
+  "libero.it","virgilio.it","tiscali.it","alice.it","tin.it",
+  "yahoo.com","yahoo.it","aol.com","icloud.com","me.com",
+  "proton.me","protonmail.com","gmx.com","gmx.de","mail.com","pec.it",
+]);
 
 function lc(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase();
@@ -68,6 +74,24 @@ Deno.serve(async (req) => {
 
     const addr = lc(body.from_address);
     const dom = domainOf(addr);
+
+    // S6 — domain guard: carica config (fallback su set built-in se assente).
+    let genericDomains: Set<string> = FALLBACK_GENERIC_DOMAINS;
+    let genericMinConfidence = 0.95;
+    try {
+      const { data: cfg } = await supabase
+        .from("funnemail_routing_config")
+        .select("generic_domains, generic_domain_min_confidence")
+        .eq("user_id", body.user_id)
+        .maybeSingle();
+      if (cfg?.generic_domains?.length) {
+        genericDomains = new Set<string>((cfg.generic_domains as string[]).map(lc));
+      }
+      if (typeof cfg?.generic_domain_min_confidence === "number") {
+        genericMinConfidence = Number(cfg.generic_domain_min_confidence);
+      }
+    } catch (_) { /* fail-safe: usa default */ }
+    const isGenericDomain = genericDomains.has(dom);
 
     // 1) Già instradato? skip.
     const { data: existingByAddr } = await supabase
@@ -196,7 +220,11 @@ Deno.serve(async (req) => {
     }
 
     // 5) Auto-apply o solo suggest in base alla soglia
-    if (chosen.confidence >= AUTO_APPLY_THRESHOLD) {
+    const effectiveAutoApplyThreshold = isGenericDomain
+      ? Math.max(AUTO_APPLY_THRESHOLD, genericMinConfidence)
+      : AUTO_APPLY_THRESHOLD;
+
+    if (chosen.confidence >= effectiveAutoApplyThreshold) {
       await applyRule(supabase, body.user_id, addr, dom, {
         group_id: matchedGroup.id as string,
         group_name: matchedGroup.nome_gruppo as string,
@@ -204,7 +232,7 @@ Deno.serve(async (req) => {
         group_icon: (matchedGroup.icon as string) ?? null,
       }, "ai_auto");
       endMetrics(metrics, true, 200);
-      return new Response(JSON.stringify({ ok: true, applied: true, source: "ai_auto", group: chosen.group_name, confidence: chosen.confidence }), { status: 200, headers });
+      return new Response(JSON.stringify({ ok: true, applied: true, source: "ai_auto", group: chosen.group_name, confidence: chosen.confidence, generic_domain: isGenericDomain }), { status: 200, headers });
     }
 
     if (chosen.confidence >= SUGGEST_THRESHOLD) {
@@ -217,6 +245,8 @@ Deno.serve(async (req) => {
             confidence: chosen.confidence,
             reason: chosen.reasoning,
             source: "funnemail-auto-route",
+            generic_domain: isGenericDomain,
+            min_threshold_used: effectiveAutoApplyThreshold,
             at: new Date().toISOString(),
           },
         })
