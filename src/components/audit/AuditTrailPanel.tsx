@@ -56,15 +56,15 @@ export function AuditTrailPanel() {
     limit: BATCH_SIZE,
   });
   const [searchText, setSearchText] = useState("");
-  const [actionCategory, setActionCategory] = useState("");
-  const [actorType, setActorType] = useState("");
+  const [actionCategory, setActionCategory] = useState("__all__");
+  const [actorType, setActorType] = useState("__all__");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   const { data: auditEntries, isLoading } = useAuditTrail({
     ...filters,
-    actionCategory: actionCategory || undefined,
-    actorType: actorType || undefined,
+    actionCategory: actionCategory && actionCategory !== "__all__" ? actionCategory : undefined,
+    actorType: actorType && actorType !== "__all__" ? actorType : undefined,
     searchText: searchText || undefined,
     dateRange:
       dateFrom || dateTo
@@ -116,7 +116,7 @@ export function AuditTrailPanel() {
                 <SelectValue placeholder="Tutte" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tutte</SelectItem>
+                <SelectItem value="__all__">Tutte</SelectItem>
                 {ACTION_CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}
@@ -133,7 +133,7 @@ export function AuditTrailPanel() {
                 <SelectValue placeholder="Tutti" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tutti</SelectItem>
+                <SelectItem value="__all__">Tutti</SelectItem>
                 {ACTOR_TYPES.map((actor) => (
                   <SelectItem key={actor.value} value={actor.value}>
                     {actor.label}
