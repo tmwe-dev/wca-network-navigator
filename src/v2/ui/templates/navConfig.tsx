@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import {
-  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, Plug, Database,
+  Command, Search, Mail, Brain, Settings, Inbox, Trash2, CalendarDays, Rocket, Sparkles, Plug, Database, MessageCircle, Linkedin,
 } from "lucide-react";
 
 export interface NavItemDef {
@@ -42,6 +42,8 @@ export const navItemsDef: readonly NavItemDef[] = [
   { labelKey: "nav.agenda",             path: "/v2/agenda",             icon: <CalendarDays className="h-4 w-4" />, pinned: true, pinOrder: 6 },
   { labelKey: "nav.email_intelligence", path: "/v2/email-intelligence", icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 7 },
   { labelKey: "nav.funnemail_inbox",    path: "/v2/funnemail-inbox",    icon: <Sparkles className="h-4 w-4" />, pinned: true, pinOrder: 7.5, badge: "NEW" },
+  { labelKey: "nav.rubrica_whatsapp",   path: "/v2/rubrica/whatsapp",   icon: <MessageCircle className="h-4 w-4" />, pinned: true, pinOrder: 7.7, badge: "NEW" },
+  { labelKey: "nav.rubrica_linkedin",   path: "/v2/rubrica/linkedin",   icon: <Linkedin className="h-4 w-4" />, pinned: true, pinOrder: 7.8, badge: "NEW" },
   { labelKey: "nav.intelligence",       path: "/v2/intelligence",       icon: <Brain className="h-4 w-4" />,    pinned: true, pinOrder: 8 },
   { labelKey: "nav.config",             path: "/v2/settings",           icon: <Settings className="h-4 w-4" />, pinned: true, pinOrder: 9 },
 ] as const;
