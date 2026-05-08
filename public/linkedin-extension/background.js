@@ -25,7 +25,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "3.9.2" });
+    sendResponse({ success: true, version: "3.9.3" });
     return false; // sync
   },
 
@@ -142,6 +142,23 @@ const ACTION_HANDLERS = {
     });
     return true;
   },
+
+  remapSendDom: function (msg, sendResponse) {
+    TabManager.enqueueAction(async function () {
+      try { sendResponse(await Actions.remapSendDom()); }
+      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, err.message)); }
+    });
+    return true;
+  },
+
+  getSendPlan: function (msg, sendResponse) {
+    chrome.storage.local.get("li_dom_schema_messaging").then(function (r) {
+      sendResponse({ success: true, plan: r.li_dom_schema_messaging || null });
+    }).catch(function (err) {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  },
 };
 
 // ── Single message listener ──
@@ -160,7 +177,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[LinkedIn Extension v3.0] Installed — Modular Architecture");
+  console.log("[LinkedIn Extension v3.9.3] Installed — Modular Architecture");
   await Config.load();
   Auth.syncCookieToServer().catch(function (err) {
     console.warn("[LI] Cookie sync failed on startup:", (err && err.message) || err);
