@@ -99,9 +99,7 @@ export function useLinkedInSync() {
         return;
       }
 
-      // Cursor per-contatto: ts (ms) ultimo messaggio in DB per evitare duplicati
-      // e (più importante) salvare solo nuovi messaggi.
-      const cursors = await getChannelContactCursors(user.id, "linkedin");
+      // Dedup garantito da extId stabile (hash testo) — no cursori temporali.
 
       let newMsgs = 0;
       for (const thread of result.threads) {
