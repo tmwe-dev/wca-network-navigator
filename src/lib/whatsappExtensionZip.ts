@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.4";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.8";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.9";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -74,13 +74,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.8",
+    latestVersion: "3.9.9",
     items: [
+      {
+        version: "3.9.9",
+        filename: "linkedin-extension-3.9.9.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.9.zip",
+        current: true,
+        note: "Fallback profile URL nelle inbox cards senza thread anchor (contatti con URL valido)",
+      },
       {
         version: "3.9.8",
         filename: "linkedin-extension-3.9.8.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.8.zip",
-        current: true,
+        current: false,
         note: "Tab inattive senza finestra bianca, riusa tab esistenti linkedin.com",
       },
       {

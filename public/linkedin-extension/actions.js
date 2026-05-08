@@ -309,9 +309,16 @@ var Actions = globalThis.Actions || (function () {
 
   function mapOptimusInboxItems(items) {
     return items.map(function (it) {
+      var threadUrl = it.thread_url || it.url || "";
+      var profileUrl = it.profile_url || it.profileUrl || "";
+      // If LinkedIn doesn't expose a /messaging/thread/ anchor on the card,
+      // fall back to the participant profile URL: sendMessage() accepts both
+      // a thread URL and a profile URL.
+      if (!threadUrl && profileUrl) threadUrl = profileUrl;
       return {
         name: it.participant_name || it.thread_name || it.name || "",
-        threadUrl: it.thread_url || it.url || "",
+        threadUrl: threadUrl,
+        profileUrl: profileUrl,
         unread: !!(it.unread_indicator && String(it.unread_indicator).trim()),
         lastMessage: it.last_message_preview || it.last_message || it.preview || "",
         lastActivity: it.last_activity_time || it.timestamp || "",
@@ -418,7 +425,14 @@ var Actions = globalThis.Actions || (function () {
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
           modernCards.forEach(function (card) {
             const link = card.querySelector("a[href*='/messaging/']") || card.closest("a[href*='/messaging/']");
-            const threadUrl = link ? (link.href || "") : "";
+            let threadUrl = link ? (link.href || "") : "";
+            // Fallback: many cards no longer expose a messaging anchor;
+            // use the participant profile URL instead so the contact has
+            // a usable target in the UI.
+            if (!threadUrl) {
+              const pLink = card.querySelector("a[href*='/in/']");
+              if (pLink && pLink.href) threadUrl = pLink.href;
+            }
             let name = "";
             const h3 = card.querySelector("h3");
             if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
