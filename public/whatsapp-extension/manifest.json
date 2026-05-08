@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.12",
-  "description": "Single-tab fix: no automation windows, reuse existing WhatsApp tab, guard concurrent tab creation.",
+  "version": "5.10.13",
+  "description": "Dedup fix: trust execCommand insertText, no fallback paste when insert succeeded (no more duplicated messages).",
   "permissions": [
     "tabs",
     "activeTab",

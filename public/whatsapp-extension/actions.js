@@ -113,12 +113,15 @@ var Actions = globalThis.Actions || (function () {
               s2.addRange(r);
               document.execCommand("delete", false);
             } catch (e) { /* ignore */ }
-            // Use execCommand('insertText') so WA's Lexical editor registers it and enables Send
+            // Use execCommand('insertText') so WA's Lexical editor registers it and enables Send.
+            // IMPORTANT: Lexical aggiorna textContent in modo asincrono. Se execCommand torna true,
+            // NON eseguire il fallback paste — altrimenti Lexical processa entrambi gli insert
+            // e il messaggio viene duplicato.
             let inserted = false;
             try {
               inserted = document.execCommand("insertText", false, text);
             } catch (e) { inserted = false; }
-            if (!inserted || !(input.textContent || "").includes(text)) {
+            if (!inserted) {
               // Fallback: dispatch InputEvent with DataTransfer (paste-like)
               try {
                 const dt = new DataTransfer();
