@@ -54,6 +54,32 @@ function domainOf(addr: string): string {
   return i >= 0 ? a.slice(i + 1) : "";
 }
 
+/** Sprint 4: valuta una condizione singola contro il payload inbound. */
+interface RuleCondition {
+  field: "from_address" | "domain" | "subject" | "body" | string;
+  op: "equals" | "contains" | "regex" | "in" | "starts_with" | "ends_with" | string;
+  value: unknown;
+}
+function evalCondition(cond: RuleCondition, ctx: Record<string, string>): boolean {
+  const haystack = lc(ctx[cond.field] ?? "");
+  const needle = cond.value;
+  switch (cond.op) {
+    case "equals":   return haystack === lc(String(needle ?? ""));
+    case "contains": return haystack.includes(lc(String(needle ?? "")));
+    case "starts_with": return haystack.startsWith(lc(String(needle ?? "")));
+    case "ends_with":   return haystack.endsWith(lc(String(needle ?? "")));
+    case "in":       return Array.isArray(needle) && needle.map((v) => lc(String(v))).includes(haystack);
+    case "regex": {
+      try { return new RegExp(String(needle), "i").test(haystack); } catch { return false; }
+    }
+    default: return false;
+  }
+}
+function evalRule(conditions: unknown, ctx: Record<string, string>): boolean {
+  if (!Array.isArray(conditions) || conditions.length === 0) return false;
+  return (conditions as RuleCondition[]).every((c) => evalCondition(c, ctx));
+}
+
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
@@ -137,6 +163,44 @@ Deno.serve(async (req) => {
         }, "domain_match");
         endMetrics(metrics, true, 200);
         return new Response(JSON.stringify({ ok: true, applied: true, source: "domain_match", group: domRule.group_name }), { status: 200, headers });
+      }
+    }
+
+    // 2b) Sprint 4 — Routing rules composite (AND su sender + content)
+    {
+      const ctx: Record<string, string> = {
+        from_address: addr,
+        domain: dom,
+        subject: lc(body.subject ?? ""),
+        body: lc(body.body_text ?? ""),
+      };
+      const { data: compositeRules } = await supabase
+        .from("funnemail_routing_rules")
+        .select("id, name, conditions, target_group_id, target_group_name, confidence_threshold, priority")
+        .eq("user_id", body.user_id)
+        .eq("enabled", true)
+        .order("priority", { ascending: true });
+      for (const rule of (compositeRules ?? [])) {
+        if (!rule.target_group_id) continue;
+        if (!evalRule(rule.conditions, ctx)) continue;
+        const { data: grp } = await supabase
+          .from("email_sender_groups")
+          .select("id, nome_gruppo, colore, icon")
+          .eq("id", rule.target_group_id)
+          .maybeSingle();
+        if (!grp?.id) continue;
+        await applyRule(supabase, body.user_id, addr, dom, {
+          group_id: grp.id as string,
+          group_name: grp.nome_gruppo as string,
+          group_color: (grp.colore as string) ?? null,
+          group_icon: (grp.icon as string) ?? null,
+        }, `rule:${rule.name}`);
+        await supabase
+          .from("funnemail_routing_rules")
+          .update({ match_count: ((rule as { match_count?: number }).match_count ?? 0) + 1, last_matched_at: new Date().toISOString() })
+          .eq("id", rule.id);
+        endMetrics(metrics, true, 200);
+        return new Response(JSON.stringify({ ok: true, applied: true, source: "composite_rule", rule_id: rule.id, group: grp.nome_gruppo }), { status: 200, headers });
       }
     }
 
