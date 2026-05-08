@@ -10,6 +10,7 @@ import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import { searchWaRecipients, type WaTestRecipient } from "@/data/whatsappTestLookup";
 
 interface FoundContact {
   contact: string;
@@ -24,6 +25,10 @@ export function WhatsAppTest() {
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
   const [lastSentTo, setLastSentTo] = useState<string | null>(null);
+  const [dbQuery, setDbQuery] = useState("");
+  const [dbResults, setDbResults] = useState<WaTestRecipient[]>([]);
+  const [dbSearching, setDbSearching] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<WaTestRecipient | null>(null);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -148,17 +153,19 @@ export function WhatsAppTest() {
     const phoneRaw = sendPhone.trim();
     const cleanedPhone = phoneRaw.replace(/[^0-9+]/g, "");
     const hasPhone = cleanedPhone.replace(/^\+/, "").length >= 7;
-    if (!hasPhone && !sendContact.trim()) {
-      log("⚠️ Inserisci un numero E.164 (es. +393331234567) oppure il nome del contatto", "warn");
+    if (!hasPhone) {
+      log("⛔ Serve un numero E.164 (es. +393331234567). Cerca il destinatario nel database qui sotto: il numero verrà compilato automaticamente. L'invio per nome chat non è affidabile e può finire alla persona sbagliata.", "error");
       return;
     }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
-    const target = hasPhone ? cleanedPhone : sendContact.trim();
-    const path = hasPhone ? "URL diretto /send?phone=" : "Search per nome";
-    log(`📤 Invio WhatsApp a "${target}" via ${path}: "${sendText.slice(0, 60)}..."`);
+    const target = cleanedPhone;
+    if (selectedRecipient) {
+      log(`🎯 Destinatario CRM: ${selectedRecipient.name}${selectedRecipient.company ? " — " + selectedRecipient.company : ""} [${selectedRecipient.source}] → ${target}`, "info");
+    }
+    log(`📤 Invio WhatsApp a "${target}" via URL diretto /send?phone=: "${sendText.slice(0, 60)}..."`);
     // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
     // all'estensione di chiudere la chat aperta — così non riusa la conversazione
     // precedente per errore.
@@ -184,7 +191,40 @@ export function WhatsAppTest() {
     setSendContact("");
     setFoundContacts([]);
     setLastSentTo(null);
+    setSelectedRecipient(null);
+    setDbQuery("");
+    setDbResults([]);
     log("🔄 Reset destinatario: numero, nome, dropdown contatti e memoria ultimo invio azzerati.", "info");
+  };
+
+  const runDbSearch = async () => {
+    const q = dbQuery.trim();
+    if (q.length < 2) {
+      log("⚠️ Scrivi almeno 2 caratteri (nome, azienda, email o telefono)", "warn");
+      return;
+    }
+    setDbSearching(true);
+    try {
+      const results = await searchWaRecipients(q, 25);
+      setDbResults(results);
+      const withPhone = results.filter(r => r.bestPhone).length;
+      log(`🔎 Trovati ${results.length} record nel database (${withPhone} con telefono inviabile)`, results.length > 0 ? "ok" : "warn");
+    } catch (e) {
+      log(`❌ Ricerca database fallita: ${e instanceof Error ? e.message : String(e)}`, "error");
+    } finally {
+      setDbSearching(false);
+    }
+  };
+
+  const pickRecipient = (r: WaTestRecipient) => {
+    setSelectedRecipient(r);
+    if (r.bestPhone) {
+      setSendPhone(r.bestPhone);
+      log(`✅ Destinatario selezionato: ${r.name}${r.company ? " — " + r.company : ""} → ${r.bestPhone}`, "ok");
+    } else {
+      setSendPhone("");
+      log(`⛔ ${r.name} non ha telefono nel database (${r.source}). Aggiorna il record o scegli un altro destinatario.`, "error");
+    }
   };
 
   const testRawDom = async () => {
