@@ -8,6 +8,8 @@ import { Terminal, type LogEntry, ts } from "./Terminal";
 import { waMsg, sendToExtension } from "./extensionBridge";
 import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
+import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 interface FoundContact {
   contact: string;
@@ -154,6 +156,66 @@ export function WhatsAppTest() {
     setRunning(false);
   };
 
+  const testGuardSequence = async () => {
+    setRunning(true);
+    log("🛡️ Avvio verifica Controllo Tempi (mutex + cooldown reali)...");
+    let guard;
+    try {
+      guard = tryAcquire("whatsapp", "Test Controllo Tempi");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+        log(`⛔ Mutex già occupato: ${e.message}`, "error");
+        setRunning(false);
+        return;
+      }
+      throw e;
+    }
+    try {
+      log("→ throttle('ping')", "info");
+      await throttle("whatsapp", "ping", "Demo: ping");
+      log("→ throttle('open')", "info");
+      await throttle("whatsapp", "open", "Demo: apri chat");
+      log("→ throttle('read')", "info");
+      await throttle("whatsapp", "read", "Demo: leggi");
+      log("→ throttle('betweenThreads')", "info");
+      await throttle("whatsapp", "betweenThreads", "Demo: pausa thread");
+      log("✅ Sequenza completata. Tutto serializzato.", "ok");
+    } finally {
+      guard.release();
+      setRunning(false);
+    }
+  };
+
+  const testGuardConcurrent = async () => {
+    setRunning(true);
+    log("🚦 Verifica blocco concorrenza WA...", "info");
+    let g1;
+    try {
+      g1 = tryAcquire("whatsapp", "Concorrenza A");
+    } catch (e) {
+      log(`❌ Già occupato: ${(e as Error).message}`, "error");
+      setRunning(false);
+      return;
+    }
+    try {
+      try {
+        tryAcquire("whatsapp", "Concorrenza B");
+        log("❌ ERRORE: secondo acquire passato (mutex rotto!)", "error");
+      } catch (e) {
+        if (e instanceof SyncGuardBusyError) {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+          log(`✅ Bloccato come previsto: ${e.message}`, "ok");
+        }
+      }
+      await throttle("whatsapp", "read", "Concorrenza: rilascio");
+    } finally {
+      g1.release();
+      log("🔓 Mutex rilasciato.", "ok");
+      setRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -177,7 +239,10 @@ export function WhatsAppTest() {
             setRunning(false);
           }}
         >🧠 AI Extract</Button>
+        <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">🛡️ Verifica Controllo</Button>
+        <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">🚦 Test Concorrenza</Button>
         <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
+        <div className="ml-auto flex items-center"><SyncGuardIndicator channel="whatsapp" /></div>
       </div>
       <div className="flex gap-2">
         {foundContacts.length > 0 ? (
