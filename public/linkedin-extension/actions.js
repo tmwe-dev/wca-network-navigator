@@ -365,6 +365,22 @@ var Actions = globalThis.Actions || (function () {
 
     if (optimus.success) {
       const threads = mapOptimusInboxItems(optimus.items);
+      // Post-process: harvest URL dalla pagina e fai match per nome.
+      // Optimus spesso non include thread_url/profile_url se il piano cached
+      // non aveva quei selettori — qui li recuperiamo direttamente dal DOM.
+      try {
+        const urlMap = await harvestInboxUrls(tab.id);
+        if (urlMap && urlMap.length) {
+          for (let i = 0; i < threads.length; i++) {
+            if (threads[i].threadUrl && /\/(messaging|in)\//.test(threads[i].threadUrl)) continue;
+            const match = findUrlForName(urlMap, threads[i].name);
+            if (match) {
+              if (!threads[i].threadUrl) threads[i].threadUrl = match.threadUrl || match.profileUrl || "";
+              if (!threads[i].profileUrl) threads[i].profileUrl = match.profileUrl || "";
+            }
+          }
+        }
+      } catch (e) { console.warn("[LI Inbox] URL harvest failed:", e?.message); }
       return {
         success: true,
         threads: threads,
