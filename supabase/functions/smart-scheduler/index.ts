@@ -5,12 +5,39 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 Deno.serve(async (req) => {
   const dynCors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: dynCors });
 
   try {
+    // ── Auth: cron secret OR admin JWT (P0 hardening) ──
+    const cronSecret = Deno.env.get("SCHEDULER_CRON_SECRET");
+    const headerSecret = req.headers.get("x-cron-secret");
+    const cronAuthorized = !!cronSecret && headerSecret === cronSecret;
+
+    if (!cronAuthorized) {
+      const auth = await requireAuth(req, dynCors);
+      if (isAuthError(auth)) return auth;
+      // Verifica ruolo admin via has_role()
+      const adminCheck = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      );
+      const { data: isAdmin } = await adminCheck.rpc("has_role", {
+        _user_id: auth.userId,
+        _role: "admin",
+      });
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "FORBIDDEN", message: "Admin role required" }),
+          { status: 403, headers: { ...dynCors, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
