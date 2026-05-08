@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.26",
-  "description": "P15.1 — Fix bridge: il content script ora inoltra `method` al background, sbloccando i 3 test diagnostici di click invio.",
+  "version": "3.9.27",
+  "description": "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer.",
   "permissions": [
     "cookies",
     "tabs",

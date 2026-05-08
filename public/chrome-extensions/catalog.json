@@ -105,13 +105,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.26",
+    "latestVersion": "3.9.27",
     "items": [
+      {
+        "version": "3.9.27",
+        "filename": "linkedin-extension-3.9.27.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.27.zip",
+        "current": true,
+        "note": "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer."
+      },
       {
         "version": "3.9.26",
         "filename": "linkedin-extension-3.9.26.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.26.zip",
-        "current": true,
+        "current": false,
         "note": "P15.1 — Fix bridge: il content script ora inoltra `method` al background, sbloccando i 3 test diagnostici di click invio."
       },
       {

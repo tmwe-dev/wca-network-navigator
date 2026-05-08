@@ -92,6 +92,8 @@ var Actions = globalThis.Actions || (function () {
     if (!method) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "method mancante");
     const target = profileUrl.replace(/\/$/, "");
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
+    const targetClean = target.split("?")[0].replace(/\/$/, "");
+    const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
     const tab = await TabManager.getLinkedInTab(target, true);
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     let composerAlreadyOpen = false;
@@ -113,6 +115,25 @@ var Actions = globalThis.Actions || (function () {
       });
       composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
     } catch (e) { composerAlreadyOpen = false; }
+
+    let currentUrl = "";
+    try {
+      const tabInfo = await chrome.tabs.get(tab.id);
+      currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+    } catch (e) { currentUrl = ""; }
+
+    const currentClean = currentUrl.split("?")[0].replace(/\/$/, "");
+    const onRequestedThread = isThreadUrl && currentClean === targetClean;
+    const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
+    const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
+
+    if ((isThreadUrl && !onRequestedThread) || (!isThreadUrl && !onTarget && !onThread && !composerAlreadyOpen)) {
+      try { await chrome.tabs.update(tab.id, { url: target }); } catch (e) { /* ignore */ }
+      await TabManager.waitForLoad(tab.id, 20000);
+      await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      composerAlreadyOpen = false;
+    }
+
     if (!isThreadUrl && !composerAlreadyOpen) {
       const clickResult = await HybridOps.clickMessage(tab.id);
       if (!clickResult || !clickResult.success) {
