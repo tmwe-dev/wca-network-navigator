@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.10";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.10";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.11";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -81,13 +81,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.10",
+    latestVersion: "3.9.11",
     items: [
+      {
+        version: "3.9.11",
+        filename: "linkedin-extension-3.9.11.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.11.zip",
+        current: true,
+        note: "Deep inbox harvest: più thread, ID e URL profilo contatto-specifici",
+      },
       {
         version: "3.9.10",
         filename: "linkedin-extension-3.9.10.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.10.zip",
-        current: true,
+        current: false,
         note: "Harvest URL inbox post-Optimus: recupera thread/profile URL anche da plan cached",
       },
       {

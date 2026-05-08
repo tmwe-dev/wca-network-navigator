@@ -311,6 +311,7 @@ var Actions = globalThis.Actions || (function () {
     return items.map(function (it) {
       var threadUrl = it.thread_url || it.url || "";
       var profileUrl = it.profile_url || it.profileUrl || "";
+      var ids = extractLinkedInIds(threadUrl, profileUrl);
       // If LinkedIn doesn't expose a /messaging/thread/ anchor on the card,
       // fall back to the participant profile URL: sendMessage() accepts both
       // a thread URL and a profile URL.
@@ -319,6 +320,9 @@ var Actions = globalThis.Actions || (function () {
         name: it.participant_name || it.thread_name || it.name || "",
         threadUrl: threadUrl,
         profileUrl: profileUrl,
+        linkedinId: ids.linkedinId,
+        profileId: ids.profileId,
+        threadId: ids.threadId,
         unread: !!(it.unread_indicator && String(it.unread_indicator).trim()),
         lastMessage: it.last_message_preview || it.last_message || it.preview || "",
         lastActivity: it.last_activity_time || it.timestamp || "",
@@ -326,43 +330,79 @@ var Actions = globalThis.Actions || (function () {
     }).filter(function (t) { return !!t.name; });
   }
 
-  async function harvestInboxUrls(tabId) {
+  function extractLinkedInIds(threadUrl, profileUrl) {
+    var profileMatch = String(profileUrl || threadUrl || "").match(/\/in\/([^/?#]+)/i);
+    var threadMatch = String(threadUrl || "").match(/\/messaging\/thread\/([^/?#]+)/i);
+    return {
+      profileId: profileMatch ? decodeURIComponent(profileMatch[1]) : "",
+      threadId: threadMatch ? decodeURIComponent(threadMatch[1]) : "",
+      linkedinId: profileMatch ? decodeURIComponent(profileMatch[1]) : (threadMatch ? decodeURIComponent(threadMatch[1]) : ""),
+    };
+  }
+
+  async function harvestInboxUrls(tabId, scrollPasses) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
-      func: function () {
+      func: async function (maxScrollPasses) {
         function cleanText(v) { return String(v || "").replace(/\s+/g, " ").trim(); }
         function cleanUrl(v) {
           if (!v) return "";
           try { return new URL(String(v), location.origin).href.split("?")[0].replace(/\/$/, ""); }
           catch (e) { return String(v).split("?")[0].replace(/\/$/, ""); }
         }
+        function ids(threadUrl, profileUrl) {
+          var p = String(profileUrl || threadUrl || "").match(/\/in\/([^/?#]+)/i);
+          var t = String(threadUrl || "").match(/\/messaging\/thread\/([^/?#]+)/i);
+          return { profileId: p ? decodeURIComponent(p[1]) : "", threadId: t ? decodeURIComponent(t[1]) : "", linkedinId: p ? decodeURIComponent(p[1]) : (t ? decodeURIComponent(t[1]) : "") };
+        }
         var out = [];
-        var cards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"], li');
-        cards.forEach(function (card) {
-          var text = cleanText(card.textContent).slice(0, 240);
-          if (!text || text.length < 2) return;
-          var name = "";
-          var h = card.querySelector('h3, h4, [class*="msg-conversation-card__participant-names"], [class*="participant"]');
-          if (h) name = cleanText(h.textContent);
-          if (!name) {
-            var img = card.querySelector('img[alt]');
-            if (img) name = cleanText(img.getAttribute('alt')).replace(/'s profile photo|foto del profilo|profile photo/ig, "").trim();
-          }
-          if (!name) {
-            var spans = card.querySelectorAll('span[aria-hidden="true"], span');
-            for (var i = 0; i < Math.min(spans.length, 8); i++) {
-              var s = cleanText(spans[i].textContent);
-              if (s.length > 1 && s.length < 80 && !/^\d{1,2}[:/.]/.test(s)) { name = s; break; }
+        var seen = {};
+        function collect() {
+          var cards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"], li');
+          cards.forEach(function (card) {
+            var text = cleanText(card.textContent).slice(0, 240);
+            if (!text || text.length < 2) return;
+            var name = "";
+            var h = card.querySelector('h3, h4, [class*="msg-conversation-card__participant-names"], [class*="participant"]');
+            if (h) name = cleanText(h.textContent);
+            if (!name) {
+              var img = card.querySelector('img[alt]');
+              if (img) name = cleanText(img.getAttribute('alt')).replace(/'s profile photo|foto del profilo|profile photo/ig, "").trim();
             }
-          }
-          var threadA = card.querySelector('a[href*="/messaging/thread/"], a[href*="/messaging/"]');
-          var profileA = card.querySelector('a[href*="/in/"]');
-          var threadUrl = cleanUrl(threadA && threadA.getAttribute('href'));
-          var profileUrl = cleanUrl(profileA && profileA.getAttribute('href'));
-          if ((threadUrl || profileUrl) && (name || text)) out.push({ name: name, text: text, threadUrl: threadUrl, profileUrl: profileUrl });
-        });
+            if (!name) {
+              var spans = card.querySelectorAll('span[aria-hidden="true"], span');
+              for (var i = 0; i < Math.min(spans.length, 8); i++) {
+                var s = cleanText(spans[i].textContent);
+                if (s.length > 1 && s.length < 80 && !/^\d{1,2}[:/.]/.test(s)) { name = s; break; }
+              }
+            }
+            var threadA = card.querySelector('a[href*="/messaging/thread/"], a[href*="/messaging/"]');
+            var profileA = card.querySelector('a[href*="/in/"]');
+            var threadUrl = cleanUrl(threadA && threadA.getAttribute('href'));
+            var profileUrl = cleanUrl(profileA && profileA.getAttribute('href'));
+            var msgEl = card.querySelector('p, [class*="snippet"], [class*="preview"], [class*="message"]');
+            var lastMessage = msgEl ? cleanText(msgEl.textContent).slice(0, 240) : "";
+            var key = threadUrl || profileUrl || name;
+            if (!key || seen[key]) return;
+            seen[key] = true;
+            var idObj = ids(threadUrl, profileUrl);
+            if ((threadUrl || profileUrl) && (name || text)) out.push({ name: name, text: text, lastMessage: lastMessage, threadUrl: threadUrl, profileUrl: profileUrl, linkedinId: idObj.linkedinId, profileId: idObj.profileId, threadId: idObj.threadId });
+          });
+        }
+        collect();
+        var scroller = document.querySelector('[class*="msg-conversations-container"]') || document.querySelector('[class*="msg-conversations-container__conversations-list"]') || document.querySelector('main');
+        var originalTop = scroller ? scroller.scrollTop : 0;
+        for (var pass = 0; scroller && pass < (maxScrollPasses || 0); pass++) {
+          var before = scroller.scrollTop;
+          scroller.scrollTop = before + Math.max(320, Math.floor((scroller.clientHeight || 600) * 0.85));
+          await new Promise(function (resolve) { setTimeout(resolve, 650); });
+          collect();
+          if (scroller.scrollTop === before) break;
+        }
+        if (scroller) scroller.scrollTop = originalTop;
         return out;
       },
+      args: [scrollPasses || 0],
     });
     return (results[0] && results[0].result) || [];
   }
@@ -421,16 +461,37 @@ var Actions = globalThis.Actions || (function () {
       // Optimus spesso non include thread_url/profile_url se il piano cached
       // non aveva quei selettori — qui li recuperiamo direttamente dal DOM.
       try {
-        const urlMap = await harvestInboxUrls(tab.id);
+        const urlMap = await harvestInboxUrls(tab.id, 8);
         if (urlMap && urlMap.length) {
           for (let i = 0; i < threads.length; i++) {
-            if (threads[i].threadUrl && /\/(messaging|in)\//.test(threads[i].threadUrl)) continue;
             const match = findUrlForName(urlMap, threads[i].name);
             if (match) {
               if (!threads[i].threadUrl) threads[i].threadUrl = match.threadUrl || match.profileUrl || "";
               if (!threads[i].profileUrl) threads[i].profileUrl = match.profileUrl || "";
+              if (!threads[i].lastMessage && match.lastMessage) threads[i].lastMessage = match.lastMessage;
+              if (!threads[i].linkedinId) threads[i].linkedinId = match.linkedinId || "";
+              if (!threads[i].profileId) threads[i].profileId = match.profileId || "";
+              if (!threads[i].threadId) threads[i].threadId = match.threadId || "";
             }
           }
+          const seenNames = {};
+          threads.forEach(function (t) { seenNames[String(t.name || "").toLowerCase().replace(/\s+/g, " ").trim()] = true; });
+          urlMap.forEach(function (item) {
+            const nameKey = String(item.name || "").toLowerCase().replace(/\s+/g, " ").trim();
+            if (!nameKey || seenNames[nameKey]) return;
+            seenNames[nameKey] = true;
+            threads.push({
+              name: item.name,
+              threadUrl: item.threadUrl || item.profileUrl || "",
+              profileUrl: item.profileUrl || "",
+              linkedinId: item.linkedinId || "",
+              profileId: item.profileId || "",
+              threadId: item.threadId || "",
+              unread: false,
+              lastMessage: item.lastMessage || "",
+              lastActivity: "",
+            });
+          });
         }
       } catch (e) { console.warn("[LI Inbox] URL harvest failed:", e?.message); }
       return {
@@ -475,7 +536,13 @@ var Actions = globalThis.Actions || (function () {
           // M2: pattern per notification badge da filtrare
           var notifPattern = /^\d+\s+\d*\s*(nuov[aoe]|new)\s*(notifich?[ae]?|message|notification)/i;
 
-          function addThread(name, threadUrl, unread, lastMsg) {
+          function getIds(threadUrl, profileUrl) {
+            var p = String(profileUrl || threadUrl || "").match(/\/in\/([^/?#]+)/i);
+            var t = String(threadUrl || "").match(/\/messaging\/thread\/([^/?#]+)/i);
+            return { profileId: p ? decodeURIComponent(p[1]) : "", threadId: t ? decodeURIComponent(t[1]) : "", linkedinId: p ? decodeURIComponent(p[1]) : (t ? decodeURIComponent(t[1]) : "") };
+          }
+
+          function addThread(name, threadUrl, unread, lastMsg, profileUrl) {
             // M2: filtra notification badge estratte come thread
             if (notifPattern.test(name)) return;
             // M2: filtra "Sponsorizzata" come nome contatto standalone
@@ -487,7 +554,8 @@ var Actions = globalThis.Actions || (function () {
             var nameKey = name.toLowerCase().replace(/\s+/g, " ").trim();
             if (seenNames[nameKey]) return;
             seenNames[nameKey] = true;
-            threads.push({ name: name, threadUrl: threadUrl, unread: unread, lastMessage: lastMsg });
+            var ids = getIds(threadUrl, profileUrl);
+            threads.push({ name: name, threadUrl: threadUrl, profileUrl: profileUrl || "", linkedinId: ids.linkedinId, profileId: ids.profileId, threadId: ids.threadId, unread: unread, lastMessage: lastMsg });
           }
 
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
@@ -501,6 +569,8 @@ var Actions = globalThis.Actions || (function () {
               const pLink = card.querySelector("a[href*='/in/']");
               if (pLink && pLink.href) threadUrl = pLink.href;
             }
+            const profileLink = card.querySelector("a[href*='/in/']");
+            const profileUrl = profileLink && profileLink.href ? profileLink.href : (/\/in\//.test(threadUrl) ? threadUrl : "");
             let name = "";
             const h3 = card.querySelector("h3");
             if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
@@ -510,7 +580,7 @@ var Actions = globalThis.Actions || (function () {
             const msgEl = card.querySelector("p, [class*='snippet'], [class*='preview']");
             if (msgEl) lastMsg = msgEl.textContent.replace(/\s+/g, " ").trim().substring(0, 120);
             const unread = !!card.querySelector("[class*='unread'], [class*='badge'], [class*='dot']");
-            addThread(name, threadUrl, unread, lastMsg);
+            addThread(name, threadUrl, unread, lastMsg, profileUrl);
           });
           if (threads.length === 0) {
             const threadLinks = document.querySelectorAll("a[href*='/messaging/thread/']");

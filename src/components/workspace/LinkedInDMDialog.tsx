@@ -52,7 +52,12 @@ export default function LinkedInDMDialog({
   const persistUrl = async (newUrl: string) => {
     if (!newUrl || lastSavedUrlRef.current === newUrl) return;
     try {
-      if (partnerId) {
+      if (partnerId && contactId) {
+        const existing = await findSocialLinksByPartnerIds([partnerId], "linkedin");
+        if (!existing.some(l => l.contact_id === contactId && l.url === newUrl)) {
+          await insertPartnerSocialLink({ partner_id: partnerId, contact_id: contactId, platform: "linkedin", url: newUrl });
+        }
+      } else if (partnerId) {
         const existing = await findSocialLinksByPartnerIds([partnerId], "linkedin");
         if (!existing.some(l => l.url === newUrl)) {
           await insertPartnerSocialLink({ partner_id: partnerId, contact_id: null, platform: "linkedin", url: newUrl });
