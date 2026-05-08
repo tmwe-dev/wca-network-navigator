@@ -11,6 +11,7 @@ var TabManager = globalThis.TabManager || (function () {
   // ── Automation window/tab ownership (persisted in chrome.storage.session) ──
   let _automationWindowId = null;
   let _ownedWaTabIds = new Set();
+  let _creatingWaTabPromise = null;
 
   function enqueueSession(fn) {
     _sessionQueue = _sessionQueue.then(fn).catch(function (e) {
@@ -55,51 +56,16 @@ var TabManager = globalThis.TabManager || (function () {
     return _ownedWaTabIds.has(tabId);
   }
 
-  // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
-  // This window lives off-screen / minimized and never steals focus.
+  // ── Legacy automation window shim ──
+  // Disabled: creating a minimized automation window caused repeated hidden
+  // Chrome windows when multiple WA actions started while the MV3 worker was
+  // cold/restarted. We now reuse an existing WhatsApp tab or create one single
+  // inactive tab in the current browser window.
   async function getOrCreateAutomationWindow() {
     await loadOwnership();
-    // Validate cached window
-    if (_automationWindowId !== null) {
-      try {
-        const win = await chrome.windows.get(_automationWindowId);
-        if (win) return _automationWindowId;
-      } catch (e) {
-        _automationWindowId = null;
-      }
-    }
-    // Create a NEW minimized window for automation
-    try {
-      const win = await chrome.windows.create({
-        url: "about:blank",
-        focused: false,
-        state: "minimized",
-        type: "normal",
-      });
-      _automationWindowId = win.id;
-      // Some platforms ignore focused:false on create — force unfocus by
-      // re-focusing the previously focused window if we know it.
-      try {
-        const allWins = await chrome.windows.getAll();
-        const userWin = allWins.find(function (w) { return w.id !== win.id && w.type === "normal"; });
-        if (userWin) {
-          await chrome.windows.update(userWin.id, { focused: true });
-        }
-      } catch (e) { /* ignore */ }
-      // Remove the placeholder about:blank tab once the window exists
-      try {
-        if (win.tabs && win.tabs[0]) {
-          // Keep it as a placeholder — we'll close it after we have a real WA tab
-          markOwned(win.tabs[0].id);
-        }
-      } catch (e) { /* ignore */ }
-      await saveOwnership();
-      return _automationWindowId;
-    } catch (e) {
-      console.warn("[WA TabMgr] Failed to create automation window:", e?.message);
-      _automationWindowId = null;
-      return null;
-    }
+    _automationWindowId = null;
+    await saveOwnership();
+    return null;
   }
 
   // ── Safe tab operations with retry ──
