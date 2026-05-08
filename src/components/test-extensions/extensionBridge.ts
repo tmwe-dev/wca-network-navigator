@@ -52,7 +52,7 @@ function ensureLiConfig() {
   }, window.location.origin);
 }
 
-export const liMsg = (action: string, payload: Record<string, unknown> = {}, timeout = action === "sendMessage" ? 90000 : 30000) => {
+export const liMsg = (action: string, payload: Record<string, unknown> = {}, timeout = action === "sendMessage" ? 120000 : 30000) => {
   ensureLiConfig();
   return sendToExtension("from-webapp-li", "from-extension-li", action, payload, timeout);
 };
