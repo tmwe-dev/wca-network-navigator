@@ -113,34 +113,42 @@ var Actions = globalThis.Actions || (function () {
               s2.addRange(r);
               document.execCommand("delete", false);
             } catch (e) { /* ignore */ }
-            // Use execCommand('insertText') so WA's Lexical editor registers it and enables Send.
-            // IMPORTANT: Lexical aggiorna textContent in modo asincrono. Se execCommand torna true,
-            // NON eseguire il fallback paste — altrimenti Lexical processa entrambi gli insert
-            // e il messaggio viene duplicato.
-            let inserted = false;
-            try {
-              inserted = document.execCommand("insertText", false, text);
-            } catch (e) { inserted = false; }
-            if (!inserted) {
-              // Fallback: dispatch InputEvent with DataTransfer (paste-like)
+            // Cascata con VERIFICA REALE: dopo ogni step controlliamo il DOM.
+            // Se il testo è già presente non eseguiamo lo step successivo
+            // → no duplicazione. Se non è presente proviamo il prossimo
+            // → no invio fallito.
+            const hasText = function () {
+              const tc = (input.textContent || "");
+              // tolleranza: confrontiamo trim per gestire eventuali trailing space
+              return tc.indexOf(text) !== -1 || tc.trim() === text.trim();
+            };
+
+            // STEP 1 — ClipboardEvent paste (modo nativo gestito da Lexical)
+            if (!hasText()) {
               try {
                 const dt = new DataTransfer();
                 dt.setData("text/plain", text);
-                input.dispatchEvent(new InputEvent("beforeinput", {
-                  inputType: "insertFromPaste", data: text, dataTransfer: dt,
-                  bubbles: true, cancelable: true, composed: true
-                }));
-                input.dispatchEvent(new InputEvent("input", {
-                  inputType: "insertFromPaste", data: text, dataTransfer: dt,
-                  bubbles: true, composed: true
-                }));
+                const evt = new ClipboardEvent("paste", {
+                  clipboardData: dt, bubbles: true, cancelable: true,
+                });
+                input.dispatchEvent(evt);
               } catch (e) { /* ignore */ }
-              if (!(input.textContent || "").includes(text)) {
+            }
+
+            // STEP 2 — execCommand('insertText') se paste non ha funzionato
+            if (!hasText()) {
+              try { document.execCommand("insertText", false, text); }
+              catch (e) { /* ignore */ }
+            }
+
+            // STEP 3 — Fallback duro: scrittura diretta + InputEvent
+            if (!hasText()) {
+              try {
                 input.textContent = text;
                 input.dispatchEvent(new InputEvent("input", {
-                  inputType: "insertText", data: text, bubbles: true, composed: true
+                  inputType: "insertText", data: text, bubbles: true, composed: true,
                 }));
-              }
+              } catch (e) { /* ignore */ }
             }
           } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
             const nativeSetter = Object.getOwnPropertyDescriptor(
