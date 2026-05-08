@@ -355,11 +355,59 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
-          const btn = Array.from(document.querySelectorAll("button, a")).find(function (el) {
-            return /^messag|^scrivi/i.test(el.textContent.trim()) && el.offsetParent !== null;
-          });
-          if (btn) { btn.click(); return { success: true, method: "structural_fallback" }; }
-          return { success: false, error: "Message button not found" };
+          // Scope al <main>: esclude la top-nav globale ("Messaggi"/"Messaging"
+          // inbox link) che altrimenti vince per ordine DOM e fa navigare la tab
+          // su /messaging/, finendo per scrivere nella conversazione sbagliata.
+          var root = document.querySelector("main") || document.body;
+          function isInGlobalNav(el) {
+            return !!(el.closest("nav") ||
+                      el.closest("header[role='banner']") ||
+                      el.closest("[data-test-global-nav]") ||
+                      el.closest(".global-nav"));
+          }
+          function isVisible(el) {
+            return el.offsetParent !== null || el.getClientRects().length > 0;
+          }
+          function findProfileMessageBtn(scope) {
+            var nodes = Array.from(scope.querySelectorAll("button, a, [role='button'], [role='menuitem']"));
+            return nodes.find(function (el) {
+              if (!isVisible(el) || isInGlobalNav(el)) return false;
+              var t = (el.textContent || "").replace(/\s+/g, " ").trim();
+              var al = (el.getAttribute("aria-label") || "").trim();
+              return /^(messaggia|message)$/i.test(t)
+                  || /^(messaggia|message)$/i.test(al)
+                  || /^(invia messaggio|send message)$/i.test(t)
+                  || /^(invia messaggio|send message)$/i.test(al);
+            });
+          }
+          function findMoreBtn(scope) {
+            return Array.from(scope.querySelectorAll("button, [role='button']")).find(function (b) {
+              if (!isVisible(b) || isInGlobalNav(b)) return false;
+              var t = (b.textContent || "").trim();
+              var al = (b.getAttribute("aria-label") || "").trim();
+              return /^(more|altro|più|piu)$/i.test(t) || /^(more actions|altro|più azioni|piu azioni)/i.test(al);
+            });
+          }
+          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          return (async function () {
+            var btn = findProfileMessageBtn(root);
+            if (btn) { btn.click(); return { success: true, method: "structural_fallback_main" }; }
+            // Tenta "Altro/More" → voce "Messaggia"
+            var more = findMoreBtn(root);
+            if (more) {
+              more.click();
+              await sleep(800);
+              // Le voci di menu possono finire fuori da main
+              btn = findProfileMessageBtn(document) ||
+                    Array.from(document.querySelectorAll("[role='menuitem'], li, [role='option']")).find(function (el) {
+                      if (!isVisible(el) || isInGlobalNav(el)) return false;
+                      var t = (el.textContent || "").replace(/\s+/g, " ").trim();
+                      return /^(messaggia|message|invia messaggio|send message)$/i.test(t);
+                    });
+              if (btn) { btn.click(); return { success: true, method: "structural_more_dropdown" }; }
+            }
+            return { success: false, error: "Profile-scoped message button not found" };
+          })();
         },
       });
       return (fbRes[0] && fbRes[0].result) || { success: false, error: "Message button not found" };
