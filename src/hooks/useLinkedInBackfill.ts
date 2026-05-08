@@ -13,6 +13,7 @@ import {
   upsertChannelMessageDedup,
   getLastInboundOrOutboundForContact,
 } from "@/data/channelMessages";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 type BackfillStatus = "idle" | "running" | "paused" | "done" | "error";
 type BackfillPhase = "idle" | "discovery" | "deep";
@@ -62,6 +63,20 @@ export function useLinkedInBackfill() {
 
   const startBackfill = useCallback(async () => {
     if (runningRef.current) return;
+    // Single-op guard
+    let guard;
+    try {
+      guard = tryAcquire("linkedin", "Backfill");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
+        }
+        toast.warning("LinkedIn: un'operazione è già in corso, attendi.");
+        return;
+      }
+      throw e;
+    }
     runningRef.current = true;
     abortRef.current = false;
     setProgress({ ...INITIAL, status: "running", phase: "discovery" });
@@ -71,6 +86,7 @@ export function useLinkedInBackfill() {
       if (!user) { toast.error("Non autenticato"); return; }
 
       // ── PHASE 1: Discovery ──
+      await throttle("linkedin", "ping", "Ping estensione");
       const inboxResult = await readInbox();
       if (!inboxResult.success || !inboxResult.threads?.length) {
         setProgress(p => ({ ...p, status: "done", phase: "idle" }));
@@ -169,8 +185,10 @@ export function useLinkedInBackfill() {
         let messages: Array<Record<string, unknown>> = [];
 
         // Step 1: Read visible messages
+        await throttle("linkedin", "open", `Apri thread: ${thread.name}`);
         const threadResult = await readThread(thread.threadUrl);
         if (threadResult.success && threadResult.messages?.length) {
+          await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
           messages = threadResult.messages as Record<string, unknown>[];
         }
 
@@ -183,6 +201,7 @@ export function useLinkedInBackfill() {
 
           // If anchor NOT found → scroll-back with backfillThread
           if (!foundAnchor) {
+            await throttle("linkedin", "scroll", `Scroll back: ${thread.name}`);
             const backfillResult = await backfillThread(thread.threadUrl, thread.lastDbText, MAX_SCROLLS_PER_THREAD);
             if (backfillResult.success && backfillResult.messages?.length) {
               messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
@@ -190,6 +209,7 @@ export function useLinkedInBackfill() {
           }
         } else if (!thread.lastDbText) {
           // No messages in DB at all → do full backfill
+          await throttle("linkedin", "scroll", `Scroll back: ${thread.name}`);
           const backfillResult = await backfillThread(thread.threadUrl, "", MAX_SCROLLS_PER_THREAD);
           if (backfillResult.success && backfillResult.messages?.length) {
             messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
@@ -236,8 +256,8 @@ export function useLinkedInBackfill() {
 
         // Pause between threads (human-like)
         if (i < threadsWithGap.length - 1) {
-          const aborted = await sleepAbortable(jitteredPause(PAUSE_BETWEEN_THREADS_MS), abortRef);
-          if (aborted) {
+          await throttle("linkedin", "betweenThreads", "Pausa tra thread");
+          if (abortRef.current) {
             setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" }));
             toast.info("Recupero interrotto");
             return;
@@ -252,6 +272,7 @@ export function useLinkedInBackfill() {
       toast.error(`Errore: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       runningRef.current = false;
+      guard.release();
     }
   }, [readInbox, readThread, backfillThread]);
 
