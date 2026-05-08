@@ -1,65 +1,111 @@
-# Sprint Hardening Sicurezza + Affidabilità
 
-Baseline: piano Claude (audit indipendente 76.400/100k). Innesto due interventi zero-rischio dal piano precedente (holding SSOT, CSP). Escludo riattivazione rate limiter (policy interna conferma OFF) e T5 unified tool loop (troppo invasivo, rinviato a sprint dedicato).
+# Due Rubriche Separate — WhatsApp · LinkedIn
 
-## Obiettivi
-- Chiudere le 3 vulnerabilità P0 confermate da entrambi gli audit.
-- Rendere la CI un gate vero, non informativo.
-- Eliminare due fonti di drift note (costanti holding sparse, CSP assente).
+## Principio
 
-## Interventi (in ordine di esecuzione)
+Email ha già la sua infrastruttura (indirizzi, gruppi, regole, prompt per sender) e **non viene toccata**.
 
-### 1. Auth `mission-executor` (P0)
-Aggiungere validazione JWT via `getClaims()`. Estrarre `user_id` dal token, mai dal body. Rifiutare 401 se header Authorization mancante o invalido. Mantenere service-role client solo per le operazioni interne dopo validazione utente.
+Servono **due nuove rubriche distinte e separate**, una per WhatsApp e una per LinkedIn. Non vanno fuse fra loro né con il CRM. Se un'entry è collegata a un partner o cliente CRM lo mostriamo come **badge informativo**, ma i due elenchi restano fisicamente e visivamente separati.
 
-### 2. Cron secret `smart-scheduler` (P0)
-Endpoint chiamabile solo da pg_cron o admin autenticato. Aggiungere secret `SCHEDULER_CRON_SECRET` da verificare via header `x-cron-secret`. In alternativa accettare anche JWT admin (`has_role(uid,'admin')`). Aggiornare la chiamata pg_cron per passare il secret.
+I CRM ufficiali (`partner_contacts`, `partners`, business cards / WCA) **non vengono toccati**.
 
-### 3. Idempotency atomica `send-email` (P0)
-Migrazione: aggiungere `UNIQUE (idempotency_key, recipient_email)` su `email_campaign_queue`. Sostituire pattern `SELECT maybeSingle + INSERT` con `INSERT ... ON CONFLICT DO NOTHING RETURNING id`. Se conflitto, rispondere `{ cached: true, queue_id: existing }`. Test concorrenza: 5 invii paralleli stessa key → 1 sola riga, 4 cached.
+---
 
-### 4. Holding pattern SSOT (zero rischio)
-Audit dei file di test e helper che ripetono i literal `"first_touch_sent"`, `"holding"`, `"engaged"`, `"qualified"`. Sostituire tutto con import da `@/constants/holdingPattern`. Aggiungere test di consistenza che fallisce se compaiono literal hard-coded fuori dal file SSOT.
+## 1. Due tabelle DB indipendenti
 
-### 5. CSP headers (hardening basso costo)
-Estendere `_shared/securityHeaders.ts` con `Content-Security-Policy-Report-Only` (default-src 'self', script-src 'self' 'unsafe-inline' supabase, connect-src supabase + lovable AI gateway, img-src 'self' data: blob:, frame-ancestors 'none') e `Permissions-Policy` restrittiva. Deploy in Report-Only per 48h, poi promozione a enforce in sprint successivo (fuori scope).
+### `whatsapp_addresses`
+- `id`, `user_id`, `operator_id`
+- `handle` (numero E.164 normalizzato quando disponibile, altrimenti slug del thread)
+- `phone_e164` nullable
+- `display_name` (es. "Papa Ernesto", "Imane")
+- `chat_thread_id` (id del thread WA quando esposto dal bridge)
+- `first_seen_at`, `last_seen_at`, `messages_in_count`, `messages_out_count`, `last_message_at`, `last_direction`
+- `linked_partner_id`, `linked_partner_contact_id` nullable → solo badge
+- `source` (`auto_inbound` | `auto_outbound` | `manual` | `import`)
+- `notes`, `deleted_at`, `deleted_by`
+- UNIQUE `(user_id, handle)`
 
-### 6. CI hardening (P0)
-In `.github/workflows/ci.yml`:
-- Rimuovere `|| true` da `npm audit`, lint pubblico, typecheck pubblico, E2E.
-- Promuovere security audit a bloccante con `--audit-level=high`.
-- Mantenere E2E `continue-on-error` solo per la PRIMA PR di adozione, poi bloccante.
+### `linkedin_addresses`
+- `id`, `user_id`, `operator_id`
+- `profile_url` (canonical, es. `https://www.linkedin.com/in/<slug>`)
+- `profile_slug`
+- `display_name`
+- `headline` (titolo profilo se visibile)
+- `first_seen_at`, `last_seen_at`, `messages_in_count`, `messages_out_count`, `last_message_at`, `last_direction`
+- `linked_partner_id`, `linked_partner_contact_id` nullable → solo badge
+- `source`, `notes`, `deleted_at`, `deleted_by`
+- UNIQUE `(user_id, profile_slug)`
 
-## Esclusioni esplicite
-- **Rate limiter**: resta OFF per uso interno (policy `cost-control-guardrails`). Nessuna modifica.
-- **T5 Unified tool loop**: nodo critico (orchestratori AI), richiede sprint dedicato con mappa impatto.
-- **Voice-bridge fallback (T7)**: rinviato, nessun incidente noto.
-- **Riduzione `as any` (T11)** e **coverage 40% (T12)**: backlog, non bloccanti per questo sprint.
-- **check-inbox**: confermato escluso come da tua indicazione.
+Per entrambe:
+- soft-delete via trigger globale già esistente,
+- RLS coerente con `partner_contacts` (visibilità condivisa autenticati, write protetti),
+- index trigram su `display_name` e sull'identificatore.
 
-## Ordine e dipendenze
-```
-[1 Auth mission-executor]  ─┐
-[2 Cron secret smart-sched]─┼─► [6 CI hardening] ─► merge fase 1
-[3 Idempotency send-email] ─┘                          │
-                                                       ▼
-                                  [4 Holding SSOT] + [5 CSP Report-Only]
-```
-1, 2, 3 in parallelo. 6 dopo per non bloccare i fix con CI già stretta. 4 e 5 in parallelo come chiusura.
+## 2. Popolamento automatico (lazy)
 
-## Verifiche per dichiarare "fatto"
-- `mission-executor`: chiamata senza JWT → 401; con JWT valido → 200, user_id dal token.
-- `smart-scheduler`: chiamata senza secret/JWT admin → 401; cron pg passa secret → 200.
-- `send-email`: 5 invii concorrenti stessa idempotency_key → 1 inserito, 4 `cached:true`, RPC `increment_partner_interaction` invocata 1 sola volta.
-- Test holding: nessun literal fuori da `constants/holdingPattern.ts` (regex test).
-- CSP: header presente in response edge functions, pagina app non genera violazioni in console (Report-Only).
-- CI: PR con `as any` aggiunto oltre baseline → fail; PR con audit high severity → fail.
+### Aggiunte minime a `channel_messages`
+- `from_name TEXT` e `to_name TEXT` (display name leggibile, separati da `from_address`/`to_address`).
+- Backfill da `raw_payload->>'contact'` per i messaggi WA storici.
 
-## Memorie da aggiornare a fine sprint
-- `mem://tech/idempotency-atomic-pattern` (nuova)
-- `mem://security/csp-policy` (nuova, Report-Only phase)
-- `mem://security/edge-function-auth-guards` (estendere con mission-executor + smart-scheduler)
-- `mem://reference/sprint-hardening-2026-05-08` (nuova, snapshot esecuzione)
+### Sorgenti di upsert
+- **WhatsApp**: `receive-channel-message` (channel=whatsapp) e `send-whatsapp` → upsert in `whatsapp_addresses` con `display_name` da `raw_payload.contact` e `phone_e164`/`handle` quando disponibili.
+- **LinkedIn**: `receive-channel-message` (channel=linkedin) e l'edge function di invio LI → upsert in `linkedin_addresses` con `profile_slug`/`profile_url`.
 
-## Stima
-~2-2.5 giorni totali. Tutti gli interventi sono locali, reversibili, senza refactor opportunistici.
+### Estensione bridge WA/LI
+Modifiche additive al payload inviato dal bridge: `from_handle` (numero o slug profilo) e `from_display_name` separati. `tab-manager.js` non viene toccato.
+
+### Backfill
+Script una-tantum che legge `channel_messages` storici e popola le due tabelle. Idempotente, basato su UNIQUE.
+
+**Niente auto-creazione di `partner_contacts`** → CRM resta pulito. La promozione a CRM è un click manuale.
+
+## 3. Due pagine UI completamente separate
+
+Due voci nella sidebar V2, in un nuovo gruppo "Rubriche" (o sotto "Acquisizione & Ricerca"):
+
+- `/v2/rubrica/whatsapp` → **Rubrica WhatsApp**
+- `/v2/rubrica/linkedin` → **Rubrica LinkedIn**
+
+Ogni pagina è un componente a sé, con tabella e colonne dedicate.
+
+### Rubrica WhatsApp
+Colonne: Nome visualizzato · Numero (E.164) · Thread · Ultimo messaggio (data + anteprima) · In/Out · Associato a (badge partner se `linked_partner_id`) · Azioni (Apri chat · Scrivi WA · Promuovi a CRM).
+
+### Rubrica LinkedIn
+Colonne: Nome visualizzato · Profilo (link) · Headline · Ultima interazione · In/Out · Associato a · Azioni (Apri profilo · Scrivi LI · Promuovi a CRM).
+
+Ricerca **locale** in ogni pagina (cerca solo nella sua tabella). Niente mescolamento fra i due canali.
+
+## 4. Associazione con CRM (solo badge)
+
+`linked_partner_id` viene popolato così:
+- WhatsApp → match per `phone_e164` su `partner_contacts.direct_phone`/`mobile` (normalizzato E.164).
+- LinkedIn → match su `partner_social_links.url` (linkedin canonical).
+
+Se trovato salviamo l'id come riferimento; se no, resta `null`. In UI mostriamo un badge cliccabile "Partner: Acme S.r.l." che apre la scheda partner. I dati restano nella rubrica del canale, il CRM resta separato.
+
+## 5. Composer (riuso, non nuovo)
+
+- Composer WhatsApp esistente → autocomplete pesca da `whatsapp_addresses`.
+- Composer LinkedIn esistente → autocomplete pesca da `linkedin_addresses`.
+
+Due picker separati, ognuno punta solo alla rubrica del proprio canale. Nessuna logica AI/orchestrator/holding pattern viene toccata.
+
+---
+
+## Cosa NON facciamo
+
+- **Non** tocchiamo l'email (indirizzi, gruppi, regole, prompt per sender restano com'è).
+- **Non** fondiamo WhatsApp e LinkedIn in una tabella unica.
+- **Non** creiamo `partner_contacts` automatici.
+- **Non** tocchiamo `check-inbox`, `email-imap-proxy`, `mark-imap-seen`.
+- **Non** modifichiamo `tab-manager.js` delle estensioni (già fixato in v3.9.4 / v5.10.4).
+- **Non** modifichiamo `journalistReview`, holding pattern, AI orchestrators, send pipeline, dispatcher.
+- **Non** rompiamo i nodi critici dei messaggi: ordinamento, dedup, realtime su `channel_messages` restano identici.
+
+---
+
+## Conferme
+
+1. Confermi i nomi pagina **"Rubrica WhatsApp"** e **"Rubrica LinkedIn"**?
+2. La **promozione manuale** a CRM (`partner_contacts`) la includiamo nello stesso step o la lasciamo per dopo?
