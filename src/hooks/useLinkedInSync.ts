@@ -85,6 +85,11 @@ export function useLinkedInSync() {
 
       const result = await readInbox();
       log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
+      // Diagnostica visibile: l'utente segnalava "tutte aggiornate ma 0 scaricati".
+      if (!silent) {
+        const n = Array.isArray(result.threads) ? result.threads.length : 0;
+        toast.info(`LinkedIn bridge: ${n} thread visibili nella sidebar`);
+      }
 
       if (!result.success) {
         if (!silent) toast.error(`Lettura LinkedIn fallita: ${result.error || "errore sconosciuto"}`);
@@ -168,7 +173,7 @@ export function useLinkedInSync() {
         queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
         if (!silent) toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
       } else if (!silent) {
-        toast.info("Nessun nuovo messaggio LinkedIn");
+        toast.info(`Nessun nuovo messaggio (${result.threads.length} thread analizzati, già in DB o filtrati)`);
       }
       window.dispatchEvent(new CustomEvent("li-sync-completed", {
         detail: { newMessages: newMsgs },
