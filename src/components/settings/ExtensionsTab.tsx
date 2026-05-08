@@ -4,6 +4,8 @@ import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
 import {
   downloadLinkedInExtensionZip,
   downloadWhatsAppExtensionZip,
+  WHATSAPP_EXTENSION_REQUIRED_VERSION,
+  LINKEDIN_EXTENSION_REQUIRED_VERSION,
 } from "@/lib/whatsappExtensionZip";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
@@ -77,7 +79,9 @@ export function ExtensionsTab() {
               </div>
               <div>
                 <p className="text-sm font-medium">WhatsApp Direct Send</p>
-                <p className="text-xs text-muted-foreground">Invio automatico messaggi WhatsApp</p>
+                <p className="text-xs text-muted-foreground">
+                  Invio automatico messaggi WhatsApp · ultima v{WHATSAPP_EXTENSION_REQUIRED_VERSION}
+                </p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={async () => {
@@ -94,7 +98,7 @@ export function ExtensionsTab() {
                 toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
               }
             }}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{WHATSAPP_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
           <ExtensionDownloadCatalog channel="whatsapp" />
@@ -110,7 +114,9 @@ export function ExtensionsTab() {
               </div>
               <div>
                 <p className="text-sm font-medium">LinkedIn Cookie Sync</p>
-                <p className="text-xs text-muted-foreground">Login automatico e invio messaggi LinkedIn</p>
+                <p className="text-xs text-muted-foreground">
+                  Login automatico e invio messaggi LinkedIn · ultima v{LINKEDIN_EXTENSION_REQUIRED_VERSION}
+                </p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={async () => {
@@ -127,7 +133,7 @@ export function ExtensionsTab() {
                 toast.error(msg.startsWith("ZIP corrotto") ? msg : "File non disponibile");
               }
             }}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{LINKEDIN_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
           <ExtensionDownloadCatalog channel="linkedin" />
