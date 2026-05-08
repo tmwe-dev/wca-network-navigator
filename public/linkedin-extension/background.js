@@ -25,7 +25,7 @@ try {
 // ── Action registry: maps action names to handler functions ──
 const ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
-    sendResponse({ success: true, version: "3.9.3" });
+    sendResponse({ success: true, version: "3.9.8" });
     return false; // sync
   },
 
@@ -177,7 +177,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[LinkedIn Extension v3.9.3] Installed — Modular Architecture");
+  console.log("[LinkedIn Extension v3.9.8] Installed — Modular Architecture");
   await Config.load();
   Auth.syncCookieToServer().catch(function (err) {
     console.warn("[LI] Cookie sync failed on startup:", (err && err.message) || err);
