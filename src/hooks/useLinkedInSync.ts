@@ -126,8 +126,11 @@ export function useLinkedInSync() {
         if (isGhostBody(thread.lastMessage)) continue;
 
         await throttle("linkedin", "read", `Preview: ${thread.name}`);
-        // 1) Salva sempre il preview della sidebar (dedup stabile via hash testo, no timestamp)
-        const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, "");
+        // 1) Salva sempre il preview della sidebar.
+        // Scope dell'ID al threadUrl per evitare collisioni tra thread diversi
+        // con lo stesso testo ("ok", "👍", auto-reply identici, ecc.).
+        const threadScope = thread.threadUrl || `name:${thread.name}`;
+        const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, threadScope);
         const tsIso = new Date().toISOString();
         try {
           const res = await upsertChannelMessageDedup({
@@ -157,11 +160,14 @@ export function useLinkedInSync() {
                 const text = String(m.text || "").trim();
                 if (!text || isGhostBody(text)) continue;
                 const direction = (m.direction === "outbound" ? "outbound" : "inbound") as "inbound" | "outbound";
+                // Scope al thread + posizione del messaggio nella conversazione,
+                // così due bolle identiche nello stesso thread restano distinte.
+                const msgScope = `${thread.threadUrl || thread.name}#${tr.messages.indexOf(m)}`;
                 const extId = buildDeterministicId(
                   direction === "outbound" ? "li_out" : "li",
                   thread.name,
                   text,
-                  "",
+                  msgScope,
                 );
                 try {
                   const r = await upsertChannelMessageDedup({
