@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.14",
-  "description": "Fix invio LinkedIn: textbox composer più robusto, supporto dialog e menu Altro/More.",
+  "version": "3.9.15",
+  "description": "Fix invio LinkedIn: bottone Messaggia ora scoped al profilo (esclude top-nav inbox), guardia URL pre-invio.",
   "permissions": [
     "cookies",
     "tabs",
