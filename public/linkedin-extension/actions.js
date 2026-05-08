@@ -309,9 +309,16 @@ var Actions = globalThis.Actions || (function () {
 
   function mapOptimusInboxItems(items) {
     return items.map(function (it) {
+      var threadUrl = it.thread_url || it.url || "";
+      var profileUrl = it.profile_url || it.profileUrl || "";
+      // If LinkedIn doesn't expose a /messaging/thread/ anchor on the card,
+      // fall back to the participant profile URL: sendMessage() accepts both
+      // a thread URL and a profile URL.
+      if (!threadUrl && profileUrl) threadUrl = profileUrl;
       return {
         name: it.participant_name || it.thread_name || it.name || "",
-        threadUrl: it.thread_url || it.url || "",
+        threadUrl: threadUrl,
+        profileUrl: profileUrl,
         unread: !!(it.unread_indicator && String(it.unread_indicator).trim()),
         lastMessage: it.last_message_preview || it.last_message || it.preview || "",
         lastActivity: it.last_activity_time || it.timestamp || "",
