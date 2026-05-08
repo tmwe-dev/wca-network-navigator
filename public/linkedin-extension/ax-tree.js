@@ -139,12 +139,47 @@ var AXTree = globalThis.AXTree || (function () {
 
       const result = { name: null, headline: null, location: null, about: null, connectionStatus: "unknown" };
 
-      // Name: first heading level 1
-      const h1 = findOne(nodes, "heading");
-      if (h1 && h1.name) result.name = h1.name.value;
+      // Filtro anti-rumore: la prima "heading" della pagina LinkedIn può essere
+      // l'icona Notifiche/Messaggistica/Search della top nav, non il nome del
+      // profilo. Scartiamo qualunque candidato che assomigli a un controllo
+      // della global navigation.
+      function isNavNoise(s) {
+        if (!s) return true;
+        const t = String(s).trim();
+        if (!t || t.length < 2) return true;
+        if (/^\d+\s*(notif|messag|conness|invit|new|nuov)/i.test(t)) return true;
+        if (/^(notif|notification|messag|search|cerca|home|rete|network|lavoro|jobs|me|tu|profilo|premium)$/i.test(t)) return true;
+        if (/notifiche|notification/i.test(t) && /^\d/.test(t)) return true;
+        return false;
+      }
 
-      // Also search for more specific data using all StaticText nodes
+      // Trova tutti gli heading e prendi il primo "pulito" (saltando la nav).
+      const headings = findByRole(nodes, "heading");
+      let nameNode = null;
+      for (let i = 0; i < headings.length; i++) {
+        const v = headings[i] && headings[i].name && headings[i].name.value;
+        if (!isNavNoise(v)) { nameNode = headings[i]; result.name = v; break; }
+      }
+
+      // Headline + location: tipicamente i due primi StaticText "puliti"
+      // immediatamente successivi al nome nella sequenza dell'AX tree.
       const textNodes = findByRole(nodes, "StaticText");
+      if (nameNode) {
+        const idx = nodes.indexOf(nameNode);
+        const picked = [];
+        for (let i = 0; i < textNodes.length && picked.length < 2; i++) {
+          const tn = textNodes[i];
+          const v = tn && tn.name && tn.name.value;
+          if (!v || isNavNoise(v)) continue;
+          if (nodes.indexOf(tn) <= idx) continue;
+          const tt = String(v).trim();
+          if (tt.length < 3 || tt.length > 200) continue;
+          if (tt === result.name) continue;
+          picked.push(tt);
+        }
+        if (picked[0]) result.headline = picked[0];
+        if (picked[1]) result.location = picked[1];
+      }
 
       // Try to find connection status buttons
       const connectBtn = findOne(nodes, "button", /connect|collegati|connetti/i);
@@ -155,6 +190,8 @@ var AXTree = globalThis.AXTree || (function () {
       else if (messageBtn && !connectBtn) result.connectionStatus = "connected";
       else if (connectBtn) result.connectionStatus = "not_connected";
 
+      // Contratto di successo: solo se abbiamo un nome valido (non nav noise).
+      if (!result.name) return null;
       return result;
     });
   }
