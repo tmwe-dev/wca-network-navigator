@@ -195,8 +195,8 @@ export function WhatsAppTest() {
     log("🔄 Reset destinatario: numero, nome, dropdown contatti e memoria ultimo invio azzerati.", "info");
   };
 
-  const runDbSearch = async () => {
-    const q = dbQuery.trim();
+  const runDbSearch = async (override?: string) => {
+    const q = (override ?? dbQuery).trim();
     if (q.length < 2) {
       log("⚠️ Scrivi almeno 2 caratteri (nome, azienda, email o telefono)", "warn");
       return;
@@ -418,7 +418,7 @@ export function WhatsAppTest() {
                 onClick={() => {
                   setDbQuery(c.contact);
                   log(`🔎 Cerco "${c.contact}" nel CRM per recuperare il numero...`, "info");
-                  setTimeout(() => { void runDbSearch(); }, 0);
+                  void runDbSearch(c.contact);
                 }}
                 className="w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors flex items-center justify-between gap-2"
                 title="Cerca questo nome nel CRM per ottenere il telefono"
