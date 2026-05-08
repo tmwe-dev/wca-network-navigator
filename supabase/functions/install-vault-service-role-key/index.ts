@@ -19,9 +19,9 @@ Deno.serve(async (req) => {
   // Auth: must be a logged-in admin
   const authHeader = req.headers.get("Authorization") ?? "";
   const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
-  const { data: claims } = await userClient.auth.getClaims();
-  const userId = claims?.claims?.sub;
-  if (!userId) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  const { data: userData, error: userErr } = await userClient.auth.getUser();
+  const userId = userData?.user?.id;
+  if (!userId || userErr) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   const admin = createClient(url, serviceKey);
   const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
