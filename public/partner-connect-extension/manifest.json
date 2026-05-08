@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Partner Connect",
-  "version": "3.4.1",
-  "description": "Scraping + Agent browser + Hydra Memory + Background Tab Singleton (Deep Search senza tab visibili).",
+  "version": "3.4.2",
+  "description": "Fix Scrape URL: handleScrape ora rispetta msg.url (background tab navigato all'URL richiesto invece di scrappare il tab attivo).",
   "permissions": [
     "activeTab",
     "scripting",
