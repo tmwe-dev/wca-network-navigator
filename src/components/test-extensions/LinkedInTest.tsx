@@ -259,6 +259,21 @@ export function LinkedInTest() {
     }
   });
 
+  const testRemapSendDom = () => runWithCooldown(async () => {
+    log("🔧 Rimappa DOM invio: l'AI sta studiando LinkedIn Messaging + Profile...");
+    const r = await liMsg("remapSendDom", {}, 90000);
+    if (r?.success) {
+      log(`✅ Mappa LinkedIn aggiornata`, "ok");
+      const mf = (r.messagingFields as string[]) || [];
+      const pf = (r.profileFields as string[]) || [];
+      log(`  • messaging fields: ${mf.length ? mf.join(", ") : "—"}`, mf.length ? "info" : "warn");
+      log(`  • profile fields: ${pf.length ? pf.join(", ") : "—"}`, pf.length ? "info" : "warn");
+      log("Riprova ora l'invio: il sistema userà i nuovi schemi appresi.", "ok");
+    } else {
+      log(`❌ Rimappatura fallita: ${r?.error || JSON.stringify(r)}`, "error");
+    }
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
@@ -270,6 +285,7 @@ export function LinkedInTest() {
           <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
           <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
           <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
+          <Button onClick={testRemapSendDom} disabled={running} size="sm" variant="outline" title="L'AI rilegge il DOM e salva schemi freschi per l'invio. Usalo se l'invio fallisce dopo un aggiornamento di LinkedIn.">🔧 Rimappa DOM invio</Button>
           <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">🛡️ Verifica Controllo</Button>
           <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">🚦 Test Concorrenza</Button>
           <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
