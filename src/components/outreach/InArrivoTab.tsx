@@ -5,11 +5,7 @@ import { useUnreadCount } from "@/hooks/useChannelMessages";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { WhatsAppToolbar } from "@/components/outreach/WhatsAppToolbar";
 import { EmailToolbar } from "@/components/outreach/EmailToolbar";
-import { OptimusBadge } from "@/components/outreach/OptimusBadge";
-
-function LinkedInOptimusBadge() {
-  return <OptimusBadge channel="linkedin" pageType="messaging" />;
-}
+import { LinkedInToolbar } from "@/components/outreach/LinkedInToolbar";
 import { useWhatsAppAdaptiveSync } from "@/hooks/useWhatsAppAdaptiveSync";
 import { useCheckInbox, useContinuousSync } from "@/hooks/useChannelMessages";
 import { useResetSync } from "@/hooks/useEmailSync";
@@ -132,11 +128,7 @@ export function InArrivoTab() {
               syncProgress={waSync.progress}
             />
           )}
-          {channel === "linkedin" && (
-            <div className="flex items-center gap-1">
-              <LinkedInOptimusBadge />
-            </div>
-          )}
+          {channel === "linkedin" && <LinkedInToolbar />}
         </div>
       </div>
 
