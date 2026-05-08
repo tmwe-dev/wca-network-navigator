@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { liMsg } from "./extensionBridge";
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
+import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const LI_COOLDOWN_MS = 5000;
 
@@ -184,6 +186,61 @@ export function LinkedInTest() {
     }
   });
 
+  // ── Verifica Controllo Tempi: dimostra il poliziotto in azione ──
+  const testGuardSequence = () => runWithCooldown(async () => {
+    log("🛡️ Avvio verifica Controllo Tempi (mutex + cooldown reali)...");
+    let guard;
+    try {
+      guard = tryAcquire("linkedin", "Test Controllo Tempi");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
+        log(`⛔ Mutex già occupato: ${e.message}`, "error");
+        return;
+      }
+      throw e;
+    }
+    try {
+      log("→ throttle('ping'): osserva il badge passare in 'Pausa Xs'", "info");
+      await throttle("linkedin", "ping", "Demo: ping");
+      log("→ throttle('open'): apertura simulata thread", "info");
+      await throttle("linkedin", "open", "Demo: apri thread");
+      log("→ throttle('read'): lettura simulata", "info");
+      await throttle("linkedin", "read", "Demo: leggi");
+      log("→ throttle('betweenThreads'): pausa lunga tra thread", "info");
+      await throttle("linkedin", "betweenThreads", "Demo: pausa thread");
+      log("✅ Sequenza completata. Tutto serializzato, nessuna sovrapposizione.", "ok");
+    } finally {
+      guard.release();
+    }
+  });
+
+  const testGuardConcurrent = () => runWithCooldown(async () => {
+    log("🚦 Verifica blocco concorrenza: tento 2 acquire in parallelo...", "info");
+    let g1;
+    try {
+      g1 = tryAcquire("linkedin", "Concorrenza A");
+    } catch (e) {
+      log(`❌ Già occupato: ${(e as Error).message}`, "error");
+      return;
+    }
+    try {
+      try {
+        tryAcquire("linkedin", "Concorrenza B");
+        log("❌ ERRORE: il secondo acquire è passato (mutex rotto!)", "error");
+      } catch (e) {
+        if (e instanceof SyncGuardBusyError) {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
+          log(`✅ Bloccato come previsto: ${e.message}`, "ok");
+        }
+      }
+      await throttle("linkedin", "read", "Concorrenza: rilascio");
+    } finally {
+      g1.release();
+      log("🔓 Mutex rilasciato.", "ok");
+    }
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
@@ -195,9 +252,12 @@ export function LinkedInTest() {
           <Button onClick={testSearchProfile} disabled={running} size="sm">🔎 Search</Button>
           <Button onClick={testReadInbox} disabled={running} size="sm">📨 Leggi Inbox</Button>
           <Button onClick={testDiagnosticDom} disabled={running} size="sm">🔬 Diagnostica DOM</Button>
+          <Button onClick={testGuardSequence} disabled={running} size="sm" variant="secondary">🛡️ Verifica Controllo</Button>
+          <Button onClick={testGuardConcurrent} disabled={running} size="sm" variant="secondary">🚦 Test Concorrenza</Button>
           <Button onClick={() => setLogs([])} size="sm" variant="ghost">🗑️ Pulisci</Button>
         </div>
         <div className="flex items-center gap-2 ml-auto">
+          <SyncGuardIndicator channel="linkedin" />
           {cooldown > 0 && <span className="text-xs font-mono text-yellow-500 animate-pulse">⏳ {cooldown}s</span>}
           <span className={`text-xs font-mono px-2 py-0.5 rounded ${actionsLastHour > 15 ? "bg-red-500/20 text-red-400" : actionsLastHour > 8 ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"}`}>
             LI: {actionsLastHour}/h
