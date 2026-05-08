@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.9",
-  "description": "Optimus V2.2 — tab inattive senza finestra bianca, rimappa DOM invio manuale e cache selettori send.",
+  "version": "5.10.4",
+  "description": "Optimus V2.2 — Rimappa DOM invio manuale: l'AI riapprende selettori send (search/composer/sendBtn) on-demand e li cacha in chrome.storage.",
   "permissions": [
     "tabs",
     "activeTab",

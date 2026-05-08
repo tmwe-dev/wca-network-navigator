@@ -34,20 +34,6 @@ var TabManager = globalThis.TabManager || (function () {
       const data = await chrome.storage.session.get(["wa_automation_window", "wa_owned_tabs"]);
       if (data.wa_automation_window) _automationWindowId = data.wa_automation_window;
       if (Array.isArray(data.wa_owned_tabs)) _ownedWaTabIds = new Set(data.wa_owned_tabs);
-      // Defensive cleanup: drop any owned tabs that are not WA tabs anymore
-      // (new-tab placeholders, closed tabs, etc.)
-      try {
-        const ids = Array.from(_ownedWaTabIds);
-        for (const tid of ids) {
-          try {
-            const t = await chrome.tabs.get(tid);
-            const u = t && (t.pendingUrl || t.url) || "";
-            if (!/^https?:\/\/(web\.whatsapp\.com|.*\.whatsapp\.com)/i.test(u)) {
-              _ownedWaTabIds.delete(tid);
-            }
-          } catch { _ownedWaTabIds.delete(tid); }
-        }
-      } catch { /* ignore */ }
     } catch (e) { /* session storage may be unavailable */ }
   }
 
@@ -69,37 +55,61 @@ var TabManager = globalThis.TabManager || (function () {
     return _ownedWaTabIds.has(tabId);
   }
 
-  // ── Legacy automation window API ──
-  // Disabled: creating a separate window can spawn a blank placeholder tab and
-  // closes extension popups. New WA tabs are inactive tabs in the current
-  // window, after reusing any existing WhatsApp Web tab.
-  async function getOrCreateAutomationWindow(initialUrl) {
+  // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
+  // This window lives off-screen / minimized and never steals focus.
+  async function getOrCreateAutomationWindow() {
     await loadOwnership();
-    try {
-      _automationWindowId = null;
-      await chrome.storage.session.remove(["wa_automation_window"]);
-      await saveOwnership();
-    } catch (e) {
-      _automationWindowId = null;
+    // Validate cached window
+    if (_automationWindowId !== null) {
+      try {
+        const win = await chrome.windows.get(_automationWindowId);
+        if (win) return _automationWindowId;
+      } catch (e) {
+        _automationWindowId = null;
+      }
     }
-    return null;
+    // Create a NEW minimized window for automation
+    try {
+      const win = await chrome.windows.create({
+        url: "about:blank",
+        focused: false,
+        state: "minimized",
+        type: "normal",
+      });
+      _automationWindowId = win.id;
+      // Some platforms ignore focused:false on create — force unfocus by
+      // re-focusing the previously focused window if we know it.
+      try {
+        const allWins = await chrome.windows.getAll();
+        const userWin = allWins.find(function (w) { return w.id !== win.id && w.type === "normal"; });
+        if (userWin) {
+          await chrome.windows.update(userWin.id, { focused: true });
+        }
+      } catch (e) { /* ignore */ }
+      // Remove the placeholder about:blank tab once the window exists
+      try {
+        if (win.tabs && win.tabs[0]) {
+          // Keep it as a placeholder — we'll close it after we have a real WA tab
+          markOwned(win.tabs[0].id);
+        }
+      } catch (e) { /* ignore */ }
+      await saveOwnership();
+      return _automationWindowId;
+    } catch (e) {
+      console.warn("[WA TabMgr] Failed to create automation window:", e?.message);
+      _automationWindowId = null;
+      return null;
+    }
   }
 
   // ── Safe tab operations with retry ──
   async function safeCreateTab(url, active) {
     for (let i = 0; i < 3; i++) {
       try {
-        await loadOwnership();
-        _automationWindowId = null;
+        // Always try to create in the automation window first
+        const winId = await getOrCreateAutomationWindow();
         const opts = { url: url, active: !!active };
-        // Reuse any existing WhatsApp Web tab before opening a new inactive tab.
-        try {
-          const existing = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-          if (existing && existing[0]) {
-            markOwned(existing[0].id);
-            return existing[0];
-          }
-        } catch (e) { /* ignore */ }
+        if (winId !== null) opts.windowId = winId;
         const tab = await chrome.tabs.create(opts);
         markOwned(tab.id);
         return tab;
@@ -141,19 +151,7 @@ var TabManager = globalThis.TabManager || (function () {
   async function getBestExistingWaTab() {
     await loadOwnership();
     try {
-      // Step 0: always prefer a user-opened WhatsApp Web tab.
-      // This prevents reusing/creating automation tabs while the user already
-      // has the right page open.
-      try {
-        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-        if (userTabs && userTabs.length) {
-          const preferred = userTabs.find(function (t) { return t.windowId !== _automationWindowId; }) || userTabs[0];
-          markOwned(preferred.id);
-          return preferred;
-        }
-      } catch (e) { /* ignore */ }
-
-      // Step 1: look among owned tabs only if no user tab exists
+      // Step 1: look ONLY among owned tabs
       const owned = Array.from(_ownedWaTabIds);
       for (const tid of owned) {
         try {
@@ -165,23 +163,29 @@ var TabManager = globalThis.TabManager || (function () {
         }
       }
       saveOwnership();
-      // Step 2: look in an already-known automation window only.
-      // Do NOT create a window just to query for existing tabs.
+      // Step 2: look in the automation window only
       if (_automationWindowId !== null) {
         try {
-          const win = await chrome.windows.get(_automationWindowId).catch(function () { return null; });
-          if (win) {
-            const tabs = await chrome.tabs.query({
-              windowId: _automationWindowId,
-              url: "https://web.whatsapp.com/*",
-            });
-            if (tabs && tabs[0]) {
-              markOwned(tabs[0].id);
-              return tabs[0];
-            }
+          const tabs = await chrome.tabs.query({
+            windowId: _automationWindowId,
+            url: "https://web.whatsapp.com/*",
+          });
+          if (tabs && tabs[0]) {
+            markOwned(tabs[0].id);
+            return tabs[0];
           }
         } catch (e) { /* window gone */ }
       }
+      // Fallback: reuse a user-opened web.whatsapp.com tab if available.
+      // Creating a fresh tab in the automation window forces a new login (QR),
+      // which breaks sends when the user is already authenticated elsewhere.
+      try {
+        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+        if (userTabs && userTabs[0]) {
+          markOwned(userTabs[0].id);
+          return userTabs[0];
+        }
+      } catch (e) { /* ignore */ }
       return null;
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
@@ -214,15 +218,16 @@ var TabManager = globalThis.TabManager || (function () {
   // in a window the user is currently working in.
   //
   // Strategy:
-  //   1. NEVER create/move tabs just to make them visible.
-  //   2. Probe DOM as-is; MV3 scripting works on background tabs with host permission.
-  //   3. Activate only if the tab is already inside a previously known automation window.
+  //   1. Ensure the tab is in our automation window (move it if not).
+  //   2. Activate it ONLY inside the automation window.
+  //   3. The automation window stays minimized/unfocused — Cockpit untouched.
   //   4. No restore() is needed because we never touched the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
-    await loadOwnership();
+    // Move tab to automation window (silent — no focus change)
+    await ensureTabInAutomationWindow(tabId);
 
-    // Activate ONLY if already within the automation window. If the tab is in
-    // a user window, do not move/activate it: probe DOM as-is.
+    // Activate ONLY within the automation window. If the move failed and the
+    // tab is still in a user window, we MUST NOT activate it. Probe DOM as-is.
     let activatedInAutomation = false;
     try {
       const tab = await chrome.tabs.get(tabId);
@@ -296,10 +301,8 @@ var TabManager = globalThis.TabManager || (function () {
       const existing = await getBestExistingWaTab();
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
-        // NB: do NOT force-move the tab into the automation window.
-        // If the user has WhatsApp Web open in their own window we reuse it
-        // in place — moving it creates the perception of "a new window
-        // appearing" and steals the user's tab.
+        // Make sure it lives in the automation window
+        await ensureTabInAutomationWindow(existing.id);
         return { tab: existing, reused: true };
       }
     } catch (err) { console.debug("[WA Tab]", err?.message); }
