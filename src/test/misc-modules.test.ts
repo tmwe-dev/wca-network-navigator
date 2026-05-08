@@ -82,6 +82,6 @@ describe("activityConstants", () => {
 
 describe("whatsappExtensionZip constants", () => {
   it("esporta versione richiesta", () => {
-    expect(WHATSAPP_EXTENSION_REQUIRED_VERSION).toBe("5.10.4");
+    expect(WHATSAPP_EXTENSION_REQUIRED_VERSION).toBe("5.10.10");
   });
 });
