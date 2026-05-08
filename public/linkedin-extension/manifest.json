@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.22",
-  "description": "P12 — Anti-double-overlay guard: clickMessage e sendMessage rifiutano di cliccare 'Messaggia' se un composer/overlay è già aperto. Niente più due finestre LinkedIn aperte contemporaneamente.",
+  "version": "3.9.23",
+  "description": "P13 — Garanzia invio: dispatch eventi per Draft.js, polling Send esteso a 8s, fallback Ctrl+Enter, verifica post-click che la textbox si sia svuotata.",
   "permissions": [
     "cookies",
     "tabs",

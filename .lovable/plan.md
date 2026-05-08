@@ -1,74 +1,40 @@
-## Verifica logica attuale
+## Obiettivo
 
-Il problema è confermato: nel test WhatsApp l’elenco “Seleziona contatto” non arriva dal database.
+Garantire che, dopo aver scritto il messaggio nel composer LinkedIn, l'estensione invii davvero il messaggio. Oggi il click esiste ma può fallire silenziosamente in due casi:
+1. Il bottone "Invia" rimane disabilitato perché Draft.js non riceve l'evento giusto.
+2. Il polling di 3 secondi scade prima che LinkedIn abiliti il bottone.
 
-Oggi succede questo:
+## Cosa cambio (solo `public/linkedin-extension/hybrid-ops.js`, funzione `sendMessage` → fallback Level 3)
 
-```text
-Leggi Messaggi → estensione legge la sidebar WhatsApp → estrae solo nome chat + ora
-Dropdown test → usa solo c.contact
-Invia WA → manda quel nome come campo phone
-Estensione → se non è un numero, cerca quel nome nella sidebar WhatsApp
-```
+1. **Forzo Draft.js a riconoscere l'input.** Subito dopo `execCommand("insertText")`, dispatch in sequenza di:
+   - `InputEvent("input", { inputType: "insertText", data: msg, bubbles: true })`
+   - `KeyboardEvent("keydown" / "keyup", { key: " ", bubbles: true })` (un finto carattere innocuo che spesso "sveglia" lo state)
+   - `Event("change", { bubbles: true })`
+   Questo è l'unico modo affidabile per far abilitare il bottone Send su Draft.js quando `execCommand` da solo non basta.
 
-Quindi l’elenco è “cieco”: non contiene telefono, id contatto, origine CRM, né collegamento al record reale. Per “Gianfranco” sta cercando una stringa dentro WhatsApp Web, non il Gianfranco del CRM.
+2. **Polling più lungo e con verifica esplicita "abilitato".** Da 30×100ms (3s) a 80×100ms (8s), e a ogni iterazione controllo `!btn.disabled && btn.getAttribute("aria-disabled") !== "true"`.
 
-Ho verificato anche i dati reali: nel database esiste il contatto corretto:
+3. **Fallback finale: invio da tastiera.** Se dopo 8s il bottone Send non è abilitato MA la textbox contiene il testo atteso, simulo `Ctrl+Enter` sulla textbox (shortcut nativo LinkedIn per inviare). È l'ultima rete di sicurezza.
 
-```text
-imported_contacts
-nome: gianfranco cristiano / transport management srl
-phone/mobile: +393341987225
-email: gianfranco@tmwe.it
-```
+4. **Verifica post-click.** Dopo il click (o il Ctrl+Enter), aspetto 1.5s e controllo che la textbox sia vuota (sign che il messaggio è partito davvero). Se è ancora piena, ritorno `{ success: false, error: "send_clicked_but_textbox_not_cleared" }` invece di un falso `success: true`. Così non diciamo più "inviato" senza esserne sicuri.
 
-Ci sono anche altri “Gianfranco”, quindi il solo nome è ambiguo e non deve essere usato per inviare.
+## Cosa NON tocco
 
-## Mappa impatto
+- `clickMessage` e il guard anti-double-overlay (3.9.22) restano invariati.
+- Niente refactor su AX Tree o AI Learn (Level 1 e 2): il fix è chirurgico sul Level 3, l'unico fallback che oggi è in uso reale.
+- Niente modifiche lato app (UI/test/DAL).
 
-Nodo critico: invio WhatsApp.
+## Versione e packaging
 
-Cosa fa oggi:
-- il test può inviare per numero diretto oppure per nome chat;
-- il path per numero usa `/send?phone=...` ed è quello più sicuro;
-- il path per nome dipende dalla sidebar WhatsApp ed è fragile/ambiguo.
+- Manifest: `3.9.22` → `3.9.23`.
+- Note catalog: "P13 — Garanzia invio: dispatch eventi per Draft.js, polling Send esteso a 8s, fallback Ctrl+Enter, verifica post-click che la textbox si sia svuotata."
+- Ricreo `linkedin-extension-3.9.23.zip` in `public/chrome-extensions/linkedin/` e aggiorno `public/linkedin-extension.zip` (latest) e `catalog.json`.
 
-Cosa non va toccato:
-- orchestratori di produzione;
-- coda outreach;
-- backfill/sync WhatsApp;
-- `check-inbox`, `email-imap-proxy`, `mark-imap-seen`;
-- logica di invio email/AI/editorial review.
+## Verifica attesa dopo l'install
 
-## Piano di intervento minimo
-
-1. Separare chiaramente due liste nel test WhatsApp:
-   - “Chat lette da WhatsApp Web” = diagnostica, solo nomi chat, non affidabile per invio;
-   - “Destinatari dal database” = lista reale con nome, azienda, telefono/mobile, sorgente.
-
-2. Aggiungere una ricerca database nel test:
-   - campo ricerca nome/azienda/email/telefono;
-   - lookup su `imported_contacts`, `partner_contacts`, `partners`, `business_cards`;
-   - mostrare solo record con telefono/mobile usabile come destinatari primari;
-   - evidenziare record senza telefono come “non inviabile”.
-
-3. Quando selezioni un destinatario dal database:
-   - compilare automaticamente il numero E.164 nel campo numero;
-   - l’invio usa sempre il path diretto `/send?phone=...`;
-   - nel terminal mostrare sorgente, nome, azienda e numero scelto.
-
-4. Bloccare il path ambiguo per nome nel test, oppure tenerlo solo come fallback diagnostico esplicito:
-   - se manca il numero, non inviare automaticamente;
-   - mostrare errore: “serve un numero, il nome chat non garantisce il destinatario”.
-
-5. Sistemare il bridge test dove serve:
-   - il content script oggi non permette alcune azioni già presenti nella UI (`remapSendDom`, `closeActiveChat`), quindi vanno allineate le action consentite;
-   - non cambiare il flusso produzione, solo la pagina Test Estensioni e il manifest/zip WhatsApp.
-
-6. Version bump WhatsApp:
-   - `5.10.17 → 5.10.18`;
-   - aggiornare catalogo e ZIP.
-
-## Risultato atteso
-
-Nel test, cercando “Gianfranco” vedrai il record reale con `+393341987225`; selezionandolo, il messaggio partirà via numero diretto e non tramite ricerca nome nella sidebar WhatsApp.
+Test su Gianfranco:
+- Apre **una sola** chat (guard 3.9.22 già attivo).
+- Scrive il testo.
+- Vedi il bottone Invia abilitarsi entro 1-3 secondi.
+- Click parte automaticamente, la textbox si svuota → ritorno `success: true, method: "structural_fallback"`.
+- Se per qualunque motivo il click non funziona, scatta il Ctrl+Enter; se nemmeno quello svuota la textbox, ricevi un errore esplicito invece di un falso "ok".
