@@ -12,6 +12,20 @@ import type { DraftState } from "@/types/cockpit";
 const log = createLogger("useSendEmail");
 
 /**
+ * Stable idempotency key per (destinatario + oggetto + corpo).
+ * Stessa bozza inviata due volte di fila → stessa key → DB blocca il duplicato
+ * via UNIQUE(idempotency_key, recipient_email) su email_send_log.
+ */
+function buildSendIdempotencyKey(to: string, subject: string, body: string): string {
+  const payload = `${to.trim().toLowerCase()}|${subject.trim()}|${body.trim()}`;
+  let hash = 5381;
+  for (let i = 0; i < payload.length; i++) {
+    hash = ((hash << 5) + hash + payload.charCodeAt(i)) >>> 0;
+  }
+  return `send_${hash.toString(36)}_${payload.length}`;
+}
+
+/**
  * Hard guard: il send singolo accetta UN SOLO destinatario.
  * Per invii multipli usare il flusso bulk → email_campaign_queue (BulkActionMenu).
  */
@@ -59,6 +73,7 @@ export function useSendEmail(draft: DraftState) {
           subject: draft.subject,
           html: sanitizedHtml,
           attachments: (draft.attachments ?? []).map(a => ({ filename: a.name, path: a.path })),
+          idempotency_key: buildSendIdempotencyKey(draft.contactEmail, draft.subject, sanitizedHtml),
         },
         context: "useSendEmail",
       });

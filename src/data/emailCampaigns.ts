@@ -110,6 +110,8 @@ export async function createCampaignDraftQueue(
     html_body: r.html,
     status: "pending",
     position: idx,
+    // Key stabile per (draft, partner): retry/dispatch ripetuti non duplicano l'invio.
+    idempotency_key: `camp_${draftId}_${r.partner_id}`,
   } as unknown as QueueInsert));
 
   await insertCampaignQueueBatch(items);
