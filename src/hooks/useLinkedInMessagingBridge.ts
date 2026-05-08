@@ -289,7 +289,7 @@ export function useLinkedInMessagingBridge() {
 
   // ── SEND MESSAGE: Always via LinkedIn extension ──
   const sendMessage = useCallback(async (profileUrl: string, text: string): Promise<BridgeResponse> => {
-    return sendToLinkedInExt("sendMessage", { url: profileUrl, message: text }, 20000);
+    return sendToLinkedInExt("sendMessage", { url: profileUrl, message: text }, 90000);
   }, []);
 
   // ── DIAGNOSTIC: via LinkedIn extension ──
