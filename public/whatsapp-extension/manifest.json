@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.1",
-  "description": "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable). Automation window isolation, stabilize+unified extract+AI relearn.",
+  "version": "5.10.2",
+  "description": "Optimus V2.1 — fix selettore search box WA (chat-list-search-container, contenteditable role=textbox). Bridge AI iframe-aware.",
   "permissions": [
     "tabs",
     "activeTab",

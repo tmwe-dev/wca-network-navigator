@@ -1095,7 +1095,14 @@ var Actions = globalThis.Actions || (function () {
   // Page-side primary path: search the contact in sidebar then send
   function _pageSendWhatsApp(target, messageText) {
     const H = window.__waH;
-    const searchBox = H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') || H.qsDeep('[data-testid="chat-list-search"]') || H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]');
+    const searchBox =
+      H.qsDeep('[data-testid="chat-list-search-container"] [contenteditable="true"]') ||
+      H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+      H.qsDeep('[data-testid="chat-list-search-container"]') ||
+      H.qsDeep('[data-testid="chat-list-search"]') ||
+      H.qsDeep('div[contenteditable="true"][data-tab="3"]') ||
+      H.qsDeep('div[contenteditable="true"][role="textbox"]') ||
+      H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]');
     if (!searchBox) return { success: false, error: "Search box not found" };
 
     H.modernClearAndType(searchBox, target);
@@ -1205,7 +1212,15 @@ var Actions = globalThis.Actions || (function () {
 
     if (currentChatMatches(target)) return { success: true };
 
-    const searchBox = H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') || H.qsDeep('[data-testid="chat-list-search"]') || H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]') || H.qsDeep('[aria-label*="search" i]') || H.qsDeep('[aria-label*="cerca" i]');
+    const searchBox =
+      H.qsDeep('[data-testid="chat-list-search-container"] [contenteditable="true"]') ||
+      H.qsDeep('[data-testid="chat-list-search"] [contenteditable="true"]') ||
+      H.qsDeep('[data-testid="chat-list-search-container"]') ||
+      H.qsDeep('[data-testid="chat-list-search"]') ||
+      H.qsDeep('div[contenteditable="true"][data-tab="3"]') ||
+      H.qsDeep('div[contenteditable="true"][role="textbox"]') ||
+      H.qsDeep('[title*="earch" i]') || H.qsDeep('[title*="erca" i]') ||
+      H.qsDeep('[aria-label*="search" i]') || H.qsDeep('[aria-label*="cerca" i]');
     if (!searchBox) return { success: false, error: "Search box not found" };
 
     H.modernClearAndType(searchBox, target);

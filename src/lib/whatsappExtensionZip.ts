@@ -5,7 +5,7 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.1";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.2";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.2";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,14 +19,21 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.1",
+    latestVersion: "5.10.2",
     items: [
+      {
+        version: "5.10.2",
+        filename: "whatsapp-extension-5.10.2.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.2.zip",
+        current: true,
+        note: "Fix selettore search box WA (chat-list-search-container)",
+      },
       {
         version: "5.10.1",
         filename: "whatsapp-extension-5.10.1.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.1.zip",
-        current: true,
-        note: "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable)",
+        current: false,
+        note: "Archivio — bridge AI iframe-aware (search box rotta su WA recente)",
       },
       {
         version: "5.10.0",
