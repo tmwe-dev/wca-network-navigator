@@ -151,7 +151,19 @@ var TabManager = globalThis.TabManager || (function () {
   async function getBestExistingWaTab() {
     await loadOwnership();
     try {
-      // Step 1: look ONLY among owned tabs
+      // Step 0: always prefer a user-opened WhatsApp Web tab.
+      // This prevents reusing/creating automation tabs while the user already
+      // has the right page open.
+      try {
+        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+        if (userTabs && userTabs.length) {
+          const preferred = userTabs.find(function (t) { return t.windowId !== _automationWindowId; }) || userTabs[0];
+          markOwned(preferred.id);
+          return preferred;
+        }
+      } catch (e) { /* ignore */ }
+
+      // Step 1: look among owned tabs only if no user tab exists
       const owned = Array.from(_ownedWaTabIds);
       for (const tid of owned) {
         try {
@@ -180,16 +192,6 @@ var TabManager = globalThis.TabManager || (function () {
           }
         } catch (e) { /* window gone */ }
       }
-      // Fallback: reuse a user-opened web.whatsapp.com tab if available.
-      // Creating a fresh tab in the automation window forces a new login (QR),
-      // which breaks sends when the user is already authenticated elsewhere.
-      try {
-        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-        if (userTabs && userTabs[0]) {
-          markOwned(userTabs[0].id);
-          return userTabs[0];
-        }
-      } catch (e) { /* ignore */ }
       return null;
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
