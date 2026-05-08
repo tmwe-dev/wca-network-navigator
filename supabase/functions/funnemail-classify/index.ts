@@ -16,6 +16,7 @@ import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts
 import { loadOperativePrompts } from "../_shared/operativePromptsLoader.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface RequestBody {
   message_id: string;
@@ -80,6 +81,21 @@ Deno.serve(async (req) => {
     if (!body.message_id || !body.from_address) {
       endMetrics(metrics, false, 400);
       return new Response(JSON.stringify({ error: "message_id+from_address required" }), { status: 400, headers });
+    }
+
+    // Auth: JWT utente OPPURE token interno server-to-server (orchestrazione)
+    const auth = await requireInternalOrUser(req, body.user_id ?? null, headers);
+    if (auth.kind === "error") {
+      endMetrics(metrics, false, 401);
+      return auth.response;
+    }
+    // Per chiamate utente, il user_id deve coincidere o essere assente
+    if (auth.kind === "user") {
+      if (body.user_id && body.user_id !== auth.userId) {
+        endMetrics(metrics, false, 403);
+        return new Response(JSON.stringify({ error: "Forbidden: user_id mismatch" }), { status: 403, headers });
+      }
+      body.user_id = auth.userId;
     }
 
     const supabase = createClient(

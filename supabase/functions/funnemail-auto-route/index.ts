@@ -20,6 +20,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface RequestBody {
   message_id: string;
@@ -64,6 +65,17 @@ Deno.serve(async (req) => {
     if (!body.message_id || !body.from_address || !body.user_id) {
       endMetrics(metrics, false, 400);
       return new Response(JSON.stringify({ error: "message_id+from_address+user_id required" }), { status: 400, headers });
+    }
+
+    // Auth: JWT utente o token interno server-to-server
+    const auth = await requireInternalOrUser(req, body.user_id, headers);
+    if (auth.kind === "error") {
+      endMetrics(metrics, false, 401);
+      return auth.response;
+    }
+    if (auth.kind === "user" && body.user_id !== auth.userId) {
+      endMetrics(metrics, false, 403);
+      return new Response(JSON.stringify({ error: "Forbidden: user_id mismatch" }), { status: 403, headers });
     }
 
     const supabase = createClient(

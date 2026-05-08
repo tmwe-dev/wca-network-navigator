@@ -5424,6 +5424,48 @@ export type Database = {
           },
         ]
       }
+      email_processing_jobs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          message_id: string
+          payload: Json
+          stage: Database["public"]["Enums"]["email_processing_stage"]
+          started_at: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          message_id: string
+          payload?: Json
+          stage?: Database["public"]["Enums"]["email_processing_stage"]
+          started_at?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          message_id?: string
+          payload?: Json
+          stage?: Database["public"]["Enums"]["email_processing_stage"]
+          started_at?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_prompts: {
         Row: {
           created_at: string
@@ -12371,6 +12413,16 @@ export type Database = {
       }
       purge_old_runtime_traces: { Args: never; Returns: undefined }
       reap_stuck_executing_actions: { Args: never; Returns: number }
+      record_email_processing_job_stage: {
+        Args: {
+          p_error?: string
+          p_message_id: string
+          p_payload?: Json
+          p_stage: Database["public"]["Enums"]["email_processing_stage"]
+          p_user_id: string
+        }
+        Returns: string
+      }
       record_user_login: { Args: { p_email: string }; Returns: undefined }
       release_mission_slot: {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
@@ -12465,6 +12517,15 @@ export type Database = {
         | "error"
         | "skipped"
       download_queue_status: "pending" | "in_progress" | "completed" | "paused"
+      email_processing_stage:
+        | "received"
+        | "scouted"
+        | "classified"
+        | "routed"
+        | "policy_applied"
+        | "completed"
+        | "failed"
+        | "dlq"
       interaction_type: "call" | "email" | "meeting" | "note"
       office_type: "head_office" | "branch"
       partner_type:
@@ -12675,6 +12736,16 @@ export const Constants = {
         "skipped",
       ],
       download_queue_status: ["pending", "in_progress", "completed", "paused"],
+      email_processing_stage: [
+        "received",
+        "scouted",
+        "classified",
+        "routed",
+        "policy_applied",
+        "completed",
+        "failed",
+        "dlq",
+      ],
       interaction_type: ["call", "email", "meeting", "note"],
       office_type: ["head_office", "branch"],
       partner_type: [

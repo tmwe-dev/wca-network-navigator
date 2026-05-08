@@ -9,3 +9,4 @@
 - [Audit Debug & Riparazione 2026-05-06](mem://reference/audit-debug-riparazione-2026-05-06) — Sintesi documento utente: 14 voci menu, TOP 10 sovrapposizioni (SettingsPage/ConfigSection, Leggi/Funnemail Inbox, Scrivi/Email Forge, Cockpit/Campagne, Agenda/Calendar, Agenti/AI Staff, ecc.), canonical routes proposti, confini semantici email/tempo/AI
 - [Brand Voice System](mem://features/brand-voice-system) — Voce TMWE su 4 layer + score deterministico nel journalistReview, telemetria brand_voice_audits
 - [LinkedIn Slow Auto-Sync](mem://features/linkedin-slow-auto-sync) — Auto-sync LI 2-3/giorno via app_settings, cursor per-contatto, no Chat Mode
+- [Funnemail Sprint 1 2026-05-08](mem://reference/funnemail-sprint1-2026-05-08) — Auth hardening 3 edge Funnemail (x-internal-token=SERVICE_ROLE), tabella email_processing_jobs + RPC record_email_processing_job_stage, trigger materialization decisions→message_status e actions→sub_status, DAL emailProcessingJobs.ts
