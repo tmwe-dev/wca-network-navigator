@@ -36,24 +36,7 @@ const INITIAL: BackfillProgress = {
 };
 
 const MAX_THREADS_PER_SESSION = 5;
-const PAUSE_BETWEEN_THREADS_MS = 18_000;
 const MAX_SCROLLS_PER_THREAD = 20;
-
-function jitteredPause(base: number): number {
-  return base * (0.85 + Math.random() * 0.30);
-}
-
-function sleepAbortable(ms: number, abortRef: React.MutableRefObject<boolean>): Promise<boolean> {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const interval = setInterval(() => {
-      if (abortRef.current || Date.now() - start >= ms) {
-        clearInterval(interval);
-        resolve(abortRef.current);
-      }
-    }, 250);
-  });
-}
 
 export function useLinkedInBackfill() {
   const [progress, setProgress] = useState<BackfillProgress>(INITIAL);
