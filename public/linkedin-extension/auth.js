@@ -62,10 +62,23 @@ var Auth = globalThis.Auth || (function () {
           const loginPage = /\/login|\/checkpoint|uas\/login/i.test(url);
           const hasSignIn = /Sign in|Accedi|Log in/i.test(title);
           const hasMainContent = !!document.querySelector("main, [role='main']");
-          const authenticated = (onLoggedPage || hasMainContent) && !loginPage && !hasSignIn;
+          const hasNav = !!document.querySelector("nav, header.global-nav, #global-nav");
+          const isCheckpoint = /\/checkpoint\//i.test(url) ||
+            !!document.querySelector("#captcha-internal, input[name='pin'], form[action*='challenge']");
+          const hasLoginForm = !!document.querySelector(
+            "#username, input[name='session_key'], form[action*='login-submit']"
+          );
+          const authenticated = (onLoggedPage || hasMainContent) && !loginPage && !hasSignIn && !isCheckpoint && !hasLoginForm;
+          let reason = "unknown_state";
+          if (authenticated) reason = "session_active";
+          else if (isCheckpoint) reason = "checkpoint";
+          else if (hasLoginForm || loginPage || hasSignIn) reason = "auth_required";
+          else if (!hasMainContent && !hasNav) reason = "loading";
           return {
             authenticated: authenticated,
-            reason: authenticated ? "session_active" : loginPage ? "login_page" : hasSignIn ? "sign_in_title" : "unknown",
+            reason: reason,
+            url: url,
+            title: title,
           };
         },
       });

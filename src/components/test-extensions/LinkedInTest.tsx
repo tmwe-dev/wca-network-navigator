@@ -74,8 +74,26 @@ export function LinkedInTest() {
 
   const testSession = () => runWithCooldown(async () => {
     log("🔑 Verifica sessione LinkedIn...");
-    const r = await liMsg("verifySession", {}, 30000);
-    log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
+    let r = await liMsg("verifySession", {}, 60000);
+    if (!r?.success && /timeout/i.test(String(r?.error || ""))) {
+      log("⏳ Timeout, attendo 3s e riprovo...", "warn");
+      await new Promise((res) => setTimeout(res, 3000));
+      r = await liMsg("verifySession", {}, 60000);
+    }
+    const reason = String((r as Record<string, unknown>)?.reason || "");
+    if (r?.authenticated) {
+      log(`✅ Sessione attiva (${reason || "ok"})`, "ok");
+    } else if (reason === "auth_required") {
+      log("🔐 Devi loggarti su linkedin.com nella tab dell'estensione, poi riprova.", "warn");
+    } else if (reason === "checkpoint") {
+      log("🛡️ LinkedIn richiede verifica/captcha — completala nella tab e riprova.", "warn");
+    } else if (reason === "loading") {
+      log("⏳ LinkedIn ancora in caricamento — riprova fra qualche secondo.", "warn");
+    } else if (reason === "no_cookie") {
+      log("🍪 Nessun cookie li_at trovato — fai login su linkedin.com.", "warn");
+    } else {
+      log(`⚠️ Sessione non confermata: ${JSON.stringify(r, null, 2)}`, "warn");
+    }
   });
 
   const testSyncCookie = () => runWithCooldown(async () => {

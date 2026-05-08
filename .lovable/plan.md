@@ -1,92 +1,57 @@
-## Ho capito. Confermo le 3 regole tassative
+## Obiettivo
 
-1. **Una sola operazione per volta** in tutto il sistema WA/LinkedIn (no parallelismi, no tentativi sovrapposti).
-2. **Tempi di attesa rispettati sempre**: cooldown tra ogni azione (ping, cookie sync, apertura tab, click thread, scroll, lettura, chiusura) leggendo i valori dal settings panel — mai hard-coded scavalcabili.
-3. **Comportamento umano**: entra → aspetta → legge → aspetta → chiude → aspetta. Mai aperture multiple né retry immediati.
+Replicare su LinkedIn la stessa serie di validazioni e robustezza appena verificate su WhatsApp, così che il pannello Test possa essere passato in verde con la stessa fluidità (ping → sessione → cookie → inbox → invio → guard sequence/concorrenza), senza toccare la logica di invio reale né il backfill.
 
----
+## Scope (cosa cambia, cosa NO)
 
-## A) Mutex globale "Single-Op Guard"
+In scope:
+- `src/components/test-extensions/LinkedInTest.tsx` — `testSession` con timeout esteso, retry singolo su timeout e messaggi leggibili (auth required, checkpoint, loading).
+- `public/linkedin-extension/auth.js` — `verifySession` ritorna `reason` strutturate (`auth_required`, `checkpoint`, `loading`, `unknown_state`) invece di restituire solo booleano/JSON grezzo.
+- Bump versione `manifest.json` LI + ri-zip estensione (`/public/linkedin-extension.zip`) come fatto per Partner Connect.
+- Allineamento del flusso `runWithCooldown`/`SyncGuardIndicator`: nessuna modifica al `syncGuard`, solo riuso.
 
-Nuovo modulo `src/lib/syncMutex.ts`:
+NON in scope:
+- Hooks reali di sync/backfill (`useLinkedInSync`, `useLinkedInBackfill`) — non vengono toccati.
+- Edge functions, DAL, persistenza messaggi.
+- Logica invio messaggi (`sendMessage`).
 
-- Coda FIFO globale per canale (`whatsapp` e `linkedin` separati, ma un solo job attivo per canale).
-- API: `acquire(channel, opName)` → restituisce un token; `release(token)`.
-- Se un secondo job tenta `acquire` mentre uno è attivo → viene **rifiutato** con toast: "Un'operazione è già in corso, attendi il completamento."
-- Tutte le entry-points si serializzano qui:
-  - bottone "Sincronizza" (manuale)
-  - auto-sync (cron client-side)
-  - test panel (diagnostica)
-  - send-message (invio outbound)
+## Modifiche puntuali
 
-Niente verrà più eseguito "in background mentre clicchi qualcos'altro". Stop.
+### 1. `auth.js` — `verifySession` strutturato
+Oggi ritorna `{ success, authenticated, ... }` con poco contesto. Aggiungiamo:
+- `reason: "auth_required"` se la pagina mostra il login form.
+- `reason: "checkpoint"` se LI mostra challenge/2FA/security check (selettori `#captcha-internal`, `input[name="pin"]`, URL contiene `/checkpoint/`).
+- `reason: "loading"` se la SPA non è ancora montata (no nav, no main).
+- `reason: "unknown_state"` come fallback.
+- Conserva i campi attuali per non rompere chi già usa la response.
 
-## B) Throttle centralizzato — letto dai settings
+### 2. `LinkedInTest.tsx` — `testSession` resiliente
+Stesso pattern adottato per WA:
+- timeout 60s invece di 30s,
+- 1 retry automatico dopo 3s solo se errore matcha `/timeout/i`,
+- log leggibile per `auth_required` ("🔐 Devi loggarti su linkedin.com"), `checkpoint` ("🛡️ LinkedIn richiede verifica/captcha — completa nella tab e riprova"), `loading` ("⏳ LinkedIn ancora in caricamento").
+- Comportamento invariato per gli altri pulsanti.
 
-Nuovo modulo `src/lib/syncThrottle.ts` che legge da `localStorage`/DB i valori:
+### 3. Versione estensione LI
+- `public/linkedin-extension/manifest.json` da `3.9.0` → `3.9.1` (patch coerente con il fix `verifySession`).
+- Ri-pacchettizzare `public/linkedin-extension.zip` con `nix run nixpkgs#zip`.
+- Nessun cambiamento al required version client se non già strettamente vincolato (verifica in `WHATSAPP_EXTENSION_REQUIRED_VERSION` equivalente per LI: se esiste `LINKEDIN_EXTENSION_REQUIRED_VERSION`, aggiornare; altrimenti lasciare).
 
-| Step | Default | Setting key |
-|---|---|---|
-| Ping estensione | 5s | `sync.cooldownPing` |
-| Cookie sync | 5s | `sync.cooldownCookie` |
-| Apertura tab/thread | 4-6s jitter | `sync.cooldownOpen` |
-| Lettura DOM | 2-3s jitter | `sync.cooldownRead` |
-| Scroll back | 2-4s jitter | `sync.cooldownScroll` |
-| Pausa tra thread | 15-20s jitter | `sync.cooldownBetweenThreads` |
-| Chiusura/idle | 3s | `sync.cooldownClose` |
+## QA
 
-Helper `await throttle('open')` obbligatorio prima di **ogni** azione bridge. Niente `await Promise.all(...)` su azioni bridge: vietato a livello di lint.
+Sequenza da eseguire dopo l'implementazione (manuale, sul pannello Test → tab LinkedIn):
+1. 🔌 Ping → versione attesa.
+2. 🔑 Sessione → su tab LinkedIn loggata: `authenticated: true`. Su tab non loggata: log "Devi loggarti".
+3. 🍪 Sync Cookie → ok.
+4. 📨 Leggi Inbox → lista thread.
+5. 🛡️ Verifica Controllo → throttle ping/open/read/betweenThreads in sequenza.
+6. 🚦 Test Concorrenza → secondo acquire bloccato come previsto.
 
-## C) Icona "Poliziotto" — Indicatore Controllo Attivo
+## Rischi
 
-Nuovo componente `src/v2/ui/atoms/SyncGuardIndicator.tsx`:
+- Cambiare la shape della response di `verifySession` rompe chi legge solo `authenticated`. Mitigazione: aggiungiamo `reason` ma manteniamo `authenticated` e `success` invariati.
+- Bump manifest richiede re-load dell'estensione in Chrome (stessa procedura già nota).
 
-- Badge animato con icona **`ShieldCheck`** di lucide-react (interpretata come "poliziotto/controllo") + label "Controllo tempi attivo".
-- 3 stati visibili:
-  - **idle** (grigio, statico): "Controllo pronto"
-  - **active** (blu pulsante): "Controllo attivo — N° step in corso"
-  - **waiting** (ambra pulsante): "In attesa Xs (cooldown)"
-- Mostra mini countdown del prossimo step.
-- Tooltip al hover: "Il sistema sta seguendo i tempi umani: nessuna sovrapposizione, una azione per volta."
+## Out of scope esplicito
 
-**Posizionamento (ovunque esista un bottone download/sync WA o LI):**
-
-- `LinkedInToolbar.tsx` — accanto al bottone Sincronizza
-- `WhatsAppToolbar.tsx` — accanto al bottone Sincronizza
-- `InArrivoTab.tsx` — header WA
-- `LinkedInInboxView.tsx` — header
-- Test panel diagnostica (entrambi i canali)
-- Auto-sync widget globale (se presente nella sidebar/header)
-
-L'indicatore è **collegato al mutex + throttle**: appena uno scatta, l'icona si accende. Se l'utente prova a cliccare un secondo Sincronizza, lampeggia rosso 1s + toast: "Aspetta, controllo in corso."
-
-## D) Doppia verifica del flusso Sincronizza
-
-Tutto il flusso descritto nel piano precedente (entra in ogni thread → confronta DB → backfill → pausa) viene **avvolto** in:
-
-```text
-mutex.acquire(channel)
-try:
-  for each step:
-    await throttle(stepKind)   # mai sovrapposizioni
-    indicator.setState('active', step)
-    await runStep()
-    indicator.setState('waiting', nextCooldown)
-finally:
-  mutex.release()
-  indicator.setState('idle')
-```
-
-Vietato:
-- chiamate bridge senza `await throttle()`
-- `Promise.all` su azioni bridge
-- retry immediato senza cooldown
-- aprire una nuova tab mentre una è ancora aperta dal flusso
-
-## E) Verifica finale
-
-- Audit script `scripts/check-sync-serialization.ts` che fa grep di `bridge.` / `extension.` calls e verifica che siano preceduti da `await throttle(` e dentro `mutex.acquire(`. CI fallisce se trova violazioni.
-
----
-
-**Riassunto**: una sola operazione per volta, sempre, su entrambi i canali. Tempi letti dai settings, mai bypassabili. Icona poliziotto visibile dovunque, accesa quando il controllo è attivo, tooltip che spiega all'utente cosa sta succedendo.
+Backfill reale dei thread LI e qualunque scrittura su DB restano invariati: si valida solo la catena ping/sessione/lettura/guard come per WA.
