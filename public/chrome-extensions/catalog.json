@@ -49,13 +49,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.3",
+    "latestVersion": "3.9.4",
     "items": [
+      {
+        "version": "3.9.4",
+        "filename": "linkedin-extension-3.9.4.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.4.zip",
+        "current": true,
+        "note": "Fix: adotta la tab LinkedIn già aperta dall'utente invece di crearne una nuova (no più checkpoint/re-auth)"
+      },
       {
         "version": "3.9.3",
         "filename": "linkedin-extension-3.9.3.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.3.zip",
-        "current": true,
+        "current": false,
         "note": "Rimappa DOM invio manuale (Optimus relearn) per messaging/profile"
       },
       {
