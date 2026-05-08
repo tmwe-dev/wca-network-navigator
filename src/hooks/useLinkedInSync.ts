@@ -15,6 +15,7 @@ const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
 import { upsertChannelMessageDedup } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const LI_UI_LABELS = new Set([
   "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
@@ -62,6 +63,20 @@ export function useLinkedInSync() {
       if (!silent) toast.error("Estensione LinkedIn non disponibile");
       return;
     }
+    // Single-op guard
+    let guard;
+    try {
+      guard = tryAcquire("linkedin", "Lettura inbox");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "linkedin" } }));
+        }
+        if (!silent) toast.warning("LinkedIn: un'operazione è già in corso, attendi.");
+        return;
+      }
+      throw e;
+    }
     setIsReading(true);
     try {
       const { data: { session: __s } } = await supabase.auth.getSession(); const user = __s?.user ?? null;
@@ -83,6 +98,7 @@ export function useLinkedInSync() {
         return;
       }
 
+      await throttle("linkedin", "ping", "Ping estensione");
       const result = await readInbox();
       log.debug("readInbox result", { preview: JSON.stringify(result).slice(0, 500) });
       // Diagnostica visibile: l'utente segnalava "tutte aggiornate ma 0 scaricati".
@@ -109,6 +125,7 @@ export function useLinkedInSync() {
         if (isUiLabel(thread.name)) continue;
         if (isGhostBody(thread.lastMessage)) continue;
 
+        await throttle("linkedin", "read", `Preview: ${thread.name}`);
         // 1) Salva sempre il preview della sidebar (dedup stabile via hash testo, no timestamp)
         const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, "");
         const tsIso = new Date().toISOString();
@@ -132,8 +149,10 @@ export function useLinkedInSync() {
         // 2) Se thread non letto E abbiamo URL, apri thread per recuperare conversazione completa
         if (thread.unread && thread.threadUrl) {
           try {
+            await throttle("linkedin", "open", `Apri thread: ${thread.name}`);
             const tr = await readThread(thread.threadUrl);
             if (tr.success && Array.isArray(tr.messages)) {
+              await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
               for (const m of tr.messages) {
                 const text = String(m.text || "").trim();
                 if (!text || isGhostBody(text)) continue;
@@ -166,6 +185,7 @@ export function useLinkedInSync() {
           } catch (e) {
             log.warn("readThread failed", { thread: thread.name, error: errMsg(e) });
           }
+          await throttle("linkedin", "betweenThreads", "Pausa tra thread");
         }
       }
 
@@ -185,6 +205,7 @@ export function useLinkedInSync() {
       if (!silent) toast.error(`Errore sync: ${errMsg(err)}`);
     } finally {
       setIsReading(false);
+      guard.release();
     }
   }, [isAvailable, readInbox, readThread, queryClient]);
 
