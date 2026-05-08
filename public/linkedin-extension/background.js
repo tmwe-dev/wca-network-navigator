@@ -80,6 +80,14 @@ const ACTION_HANDLERS = {
     return true;
   },
 
+  sendMessageWithMethod: function (msg, sendResponse) {
+    TabManager.enqueueAction(async function () {
+      try { sendResponse(await Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method)); }
+      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
+    });
+    return true;
+  },
+
   sendConnectionRequest: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
       try { sendResponse(await Actions.sendConnectionRequest(msg.url, msg.note)); }
