@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Download, Search, MessageSquare, Linkedin, Mail, FileText, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { downloadPartnerConnectExtensionZip, PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 
 type ExtId = "partner-connect" | "whatsapp" | "linkedin" | "email" | "ra";
 
@@ -24,9 +25,9 @@ const EXTENSIONS: ExtensionDef[] = [
     id: "partner-connect",
     name: "Partner Connect",
     description: "Bridge per Deep Search legacy (batch enrichment client-side, scraping Google/LinkedIn/Maps a costo zero).",
-    zipPath: "/partner-connect-extension.zip",
+    zipPath: `/chrome-extensions/partner-connect/partner-connect-extension-${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Search,
-    badge: "Deep Search legacy",
+    badge: `v${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "whatsapp",
@@ -66,6 +67,12 @@ export default function ExtensionsPanel() {
     if (downloading) return;
     setDownloading(ext.id);
     try {
+      if (ext.id === "partner-connect") {
+        await downloadPartnerConnectExtensionZip();
+        setCompleted((prev) => new Set(prev).add(ext.id));
+        toast.success(`${ext.name} scaricata`, { description: "Decomprimi lo ZIP e caricalo in chrome://extensions" });
+        return;
+      }
       const res = await fetch(ext.zipPath);
       if (!res.ok) throw new Error(`Download fallito (HTTP ${res.status})`);
       const blob = await res.blob();
