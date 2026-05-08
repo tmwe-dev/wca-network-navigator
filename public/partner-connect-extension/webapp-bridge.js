@@ -224,5 +224,5 @@
   // Announce bridges (FS + LinkedIn only; WhatsApp is handled by dedicated extension)
   post({ direction: "from-extension-fs", action: "contentScriptReady" });
   post({ direction: "from-extension", action: "contentScriptReady" });
-  console.log("[Bridge] Unified webapp bridge loaded — v3.4.2 (FS + LI)");
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.3 (FS only; LinkedIn delegated to dedicated extension)");
 })();
