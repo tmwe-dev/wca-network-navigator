@@ -139,7 +139,7 @@ export function MailRowChrome({
               </p>
             )}
 
-            {chips && <div className="flex flex-wrap items-center gap-1.5">{chips}</div>}
+            {chips && <div className="flex flex-wrap items-center gap-1.5 [&>*]:h-5 [&>*]:leading-none">{chips}</div>}
           </div>
         </button>
         {trailing}

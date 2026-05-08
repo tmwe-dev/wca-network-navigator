@@ -141,8 +141,6 @@ export function FunnemailMailCard({
   const countryCode = partner?.country_code ?? null;
   const emailAddress = message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "";
   const funnemailFolder = meta.funnemail_folder_label ?? meta.folder ?? meta.category ?? null;
-  const category = meta.category ?? null;
-  const senderIntel = meta.sender_intel ?? null;
   const claimedByMe = !!claim && !!myUserId && claim.claimed_by === myUserId;
   const claimedByOther = !!claim && !claimedByMe;
   const claimMinutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
@@ -158,54 +156,47 @@ export function FunnemailMailCard({
     return `tra ${Math.round(reminderMinutes / (60 * 24))}g`;
   })();
 
+  const chipBase = "inline-flex items-center gap-1 rounded border px-2 text-[11px] leading-none";
   const chips = (
     <>
       {funnemailFolder && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground" title="Cartella Funny Mail Inbox">
-                  <Tag className="h-3 w-3" />{meta.funnemail_folder_icon && <span>{meta.funnemail_folder_icon}</span>}<span className="max-w-[160px] truncate">{funnemailFolder}</span>
-                </span>
-              )}
-              {category && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground" title="Classificazione email">
-                  <Sparkles className="h-3 w-3" />{category}
-                </span>
-              )}
-              {partner?.lead_status && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground" title="Stato commerciale">
-                  <Gauge className="h-3 w-3" />{partner.lead_status.replace(/_/g, " ")}
-                </span>
-              )}
-              {decision && (
-                <span
-                  className="inline-flex items-center gap-1 rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
-                  title={`${decision.reasoning ?? "Decisione AI Funnemail"} · confidence ${Math.round(decision.confidence * 100)}%`}
-                >
-                  <Brain className="h-3 w-3" />
-                  {ACTION_LABELS[decision.suggested_action] ?? decision.suggested_action}
-                  {decision.urgency !== "normal" && decision.urgency !== "low" && (
-                    <> · {URGENCY_LABELS[decision.urgency] ?? decision.urgency}</>
-                  )}
-                </span>
-              )}
-              {decision?.goes_to_agenda && (
-                <span className="inline-flex items-center gap-1 rounded border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                  <CalendarClock className="h-3 w-3" />Agenda
-                </span>
-              )}
-              {senderIntel?.company_type && (
-                <span className="inline-flex items-center gap-1 rounded border border-border bg-muted px-2 py-0.5 text-xs text-foreground">
-                  {senderIntel.company_type}
-                </span>
-              )}
-              {/* Status lavorazione: mostrato solo se diverso da "nuovo" per ridurre rumore */}
-              {onSetStatus && currentStatus !== "nuovo" ? (
+        <span className={cn(chipBase, "border-border bg-secondary font-medium text-secondary-foreground")} title="Cartella Funny Mail Inbox">
+          <Tag className="h-3 w-3" />{meta.funnemail_folder_icon && <span>{meta.funnemail_folder_icon}</span>}
+          <span className="max-w-[140px] truncate">{funnemailFolder}</span>
+        </span>
+      )}
+      {decision && (
+        <span
+          className={cn(chipBase, "border-primary/30 bg-primary/10 font-medium text-primary")}
+          title={`${decision.reasoning ?? "Decisione AI Funnemail"} · confidence ${Math.round(decision.confidence * 100)}%`}
+        >
+          <Brain className="h-3 w-3" />
+          {ACTION_LABELS[decision.suggested_action] ?? decision.suggested_action}
+          {decision.urgency !== "normal" && decision.urgency !== "low" && (
+            <> · {URGENCY_LABELS[decision.urgency] ?? decision.urgency}</>
+          )}
+        </span>
+      )}
+      {decision?.goes_to_agenda && (
+        <span className={cn(chipBase, "border-warning/30 bg-warning/10 font-medium text-warning")}>
+          <CalendarClock className="h-3 w-3" />Agenda
+        </span>
+      )}
+      {partner?.lead_status && (
+        <span className={cn(chipBase, "border-border bg-muted text-foreground")} title="Stato commerciale">
+          <Gauge className="h-3 w-3" />{partner.lead_status.replace(/_/g, " ")}
+        </span>
+      )}
+      {/* Status lavorazione: mostrato solo se diverso da "nuovo" per ridurre rumore */}
+      {onSetStatus && currentStatus !== "nuovo" ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
                       onClick={(e) => e.stopPropagation()}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium",
+                        chipBase,
+                        "font-medium",
                         FUNNEMAIL_JOB_STATUS_CLASSES[currentStatus],
                       )}
                       title="Cambia stato lavorazione"
@@ -226,7 +217,7 @@ export function FunnemailMailCard({
               ) : null}
               {reminder && reminderLabel && (
                 <span
-                  className="inline-flex items-center gap-1 rounded border border-accent bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground"
+                  className={cn(chipBase, "border-accent bg-accent font-medium text-accent-foreground")}
                   title={`Reminder ${reminderLabel}${reminder.note ? ` · ${reminder.note}` : ""} · ${new Date(reminder.remind_at).toLocaleString("it-IT")}`}
                 >
                   <Bell className="h-3 w-3" />Reminder

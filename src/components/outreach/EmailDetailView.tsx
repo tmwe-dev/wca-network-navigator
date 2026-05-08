@@ -124,18 +124,23 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex-shrink-0 border-b border-border px-3 py-2 lg:px-4 lg:py-3">
-        <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-          <CompanyLogo email={message.from_address} name={brand} size={40} className="flex-shrink-0" />
+        {/* Riga 1: identità mittente (full width) */}
+        <div className="flex w-full min-w-0 items-start gap-3">
+          {/* Bandiera + ISO (template canonico app) */}
+          <div className="flex flex-shrink-0 items-start">
+            <CompanyLogo email={message.from_address} name={brand} size={40} />
+          </div>
 
-          <div className="min-w-0 flex-1 space-y-2">
-            {/* Riga 1: brand + mittente + data */}
+          <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <span className="truncate text-sm font-bold uppercase tracking-wide text-primary">{brand}</span>
               <CompanyLogoInline email={message.from_address} size={16} />
               <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
+              {hasDeepSearch && (
+                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Deep Search eseguito" />
+              )}
               <span
-                className="min-w-0 max-w-full truncate text-xs text-foreground sm:max-w-[260px]"
+                className="min-w-0 truncate text-xs text-foreground"
                 title={senderDetail || message.from_address || ""}
               >
                 {senderDetail || message.from_address}
@@ -143,117 +148,14 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
               <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
                 {formatDisplayDate(displayDate)}
               </span>
-              {hasDeepSearch && (
-                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Deep Search eseguito" />
-              )}
             </div>
-
-            {/* Riga 2: oggetto */}
-            <h3 className="break-words text-base font-semibold leading-snug text-foreground">
+            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">
               {cleanSubject}
             </h3>
-
-            {/* Griglia metadata: 2 colonne su lg+ per non incolonnare tutto */}
-            <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 lg:grid-cols-2">
-              {/* Col A: gruppo + classificazione */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {group?.groupName && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
-                      color: group.groupColor ?? "#3B82F6",
-                    }}
-                    title={`Gruppo Funny Mail: ${group.groupName}`}
-                  >
-                    {group.groupIcon && <span>{group.groupIcon}</span>}
-                    {group.groupName}
-                  </span>
-                )}
-                <InlineGroupAssigner
-                  fromAddress={message.from_address}
-                  currentGroupName={group?.groupName ?? null}
-                />
-                {folderLabel ? (
-                  <Badge variant="outline" className="gap-1 text-[10px]" title={decision?.reasoning ?? "Cartella Funnemail attuale"}>
-                    <Tag className="h-3 w-3" />
-                    {folderIcon && <span>{folderIcon}</span>}
-                    {folderLabel}
-                  </Badge>
-                ) : aiSuggestion ? (
-                  <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground" title="Categoria suggerita dall'AI">
-                    <Sparkles className="h-3 w-3" />
-                    Suggerita: {aiSuggestion}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground">
-                    <Sparkles className="h-3 w-3" /> Non classificata
-                  </Badge>
-                )}
-                {onReclassify && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 gap-1 px-1.5 text-[10px]"
-                    disabled={!!reclassifying}
-                    onClick={() => onReclassify(message)}
-                    title="Riclassifica con l'AI"
-                  >
-                    <RefreshCw className={cn("h-3 w-3", reclassifying && "animate-spin")} />
-                    Riclassifica
-                  </Button>
-                )}
-              </div>
-
-              {/* Col B: urgency + agenda + sorgente + cc */}
-              <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-                {urgency !== "normal" && urgency !== "low" && (
-                  <Badge variant="outline" className={cn("gap-1 text-[10px]", urgencyClass)}>
-                    {urgency === "critical" ? "Critica" : "Alta"}
-                  </Badge>
-                )}
-                {decision?.goes_to_agenda && (
-                  <Badge variant="outline" className="gap-1 text-[10px]">
-                    <Calendar className="h-3 w-3" /> Agenda
-                  </Badge>
-                )}
-                {message.source_type && message.source_type !== "unknown" && (
-                  <Badge variant="secondary" className="gap-1 text-[10px]" title={message.source_type.replace("_", " ")}>
-                    {message.source_type === "partner"
-                      ? <Building2 className="h-3 w-3" />
-                      : <User className="h-3 w-3" />}
-                    {message.source_type.replace("_", " ")}
-                  </Badge>
-                )}
-                {message.cc_addresses && (
-                  <span
-                    className="inline-flex max-w-[260px] items-center gap-1 truncate text-[11px] text-muted-foreground"
-                    title={message.cc_addresses}
-                  >
-                    <Users className="h-3 w-3" /> CC: {message.cc_addresses}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <EmailTechnicalHeaders message={message} />
-            </div>
-
-            {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
-              <button
-                onClick={() => setBlockRemote(false)}
-                className="flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ImageOff className="h-3 w-3" /> Immagini remote bloccate — clicca per caricare
-              </button>
-            )}
           </div>
 
-          </div>
-
-          <div className="flex min-w-0 flex-shrink-0 flex-col items-start gap-1 xl:items-end">
-            <div className="flex max-w-full flex-wrap items-center justify-start gap-1 xl:justify-end">
+          {/* Azioni primarie a destra, tre puntini sempre visibili */}
+          <div className="flex flex-shrink-0 items-center gap-1">
               {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
@@ -338,27 +240,124 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 variant="ghost"
                 className="h-7 gap-1 px-2 text-xs"
               />
-            </div>
-            <div className="flex max-w-full flex-wrap items-center justify-start gap-0.5 xl:justify-end">
               <Button
                 size="sm"
                 variant={blockRemote ? "secondary" : "ghost"}
                 onClick={() => setBlockRemote((prev) => !prev)}
-                className="h-6 px-1.5 text-xs"
+                className="h-7 px-1.5 text-xs"
                 title={blockRemote ? "Immagini remote bloccate" : "Immagini remote caricate"}
               >
                 <ImageOff className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-6 px-1.5 text-xs" title="Vista sicura (normalizzata)">
+              <Button size="sm" variant={viewMode === "safe" ? "secondary" : "ghost"} onClick={() => setViewMode("safe")} className="h-7 px-1.5 text-xs" title="Vista sicura (normalizzata)">
                 <Shield className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-6 px-1.5 text-xs" title="Vista fedele (originale)">
+              <Button size="sm" variant={viewMode === "faithful" ? "secondary" : "ghost"} onClick={() => setViewMode("faithful")} className="h-7 px-1.5 text-xs" title="Vista fedele (originale)">
                 <Eye className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant="ghost" onClick={onClose} className="h-6 px-2 text-[11px]">Chiudi</Button>
-            </div>
+              <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">Chiudi</Button>
           </div>
         </div>
+
+        {/* Riga 2: metadata a 3 colonne su tutta la larghezza (no più impilamento) */}
+        <div className="mt-2 grid w-full grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-3">
+          {/* Col 1: Gruppo Funnemail */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {group?.groupName ? (
+              <span
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  backgroundColor: `${group.groupColor ?? "#3B82F6"}22`,
+                  color: group.groupColor ?? "#3B82F6",
+                }}
+                title={`Gruppo Funny Mail: ${group.groupName}`}
+              >
+                {group.groupIcon && <span>{group.groupIcon}</span>}
+                {group.groupName}
+              </span>
+            ) : null}
+            <InlineGroupAssigner
+              fromAddress={message.from_address}
+              currentGroupName={group?.groupName ?? null}
+            />
+          </div>
+
+          {/* Col 2: Classificazione + Riclassifica */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {folderLabel ? (
+              <Badge variant="outline" className="gap-1 text-[10px]" title={decision?.reasoning ?? "Cartella Funnemail attuale"}>
+                <Tag className="h-3 w-3" />
+                {folderIcon && <span>{folderIcon}</span>}
+                {folderLabel}
+              </Badge>
+            ) : aiSuggestion ? (
+              <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground" title="Categoria suggerita dall'AI">
+                <Sparkles className="h-3 w-3" />
+                Suggerita: {aiSuggestion}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 border-dashed text-[10px] text-muted-foreground">
+                <Sparkles className="h-3 w-3" /> Non classificata
+              </Badge>
+            )}
+            {onReclassify && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 gap-1 px-1.5 text-[10px]"
+                disabled={!!reclassifying}
+                onClick={() => onReclassify(message)}
+                title="Riclassifica con l'AI"
+              >
+                <RefreshCw className={cn("h-3 w-3", reclassifying && "animate-spin")} />
+                Riclassifica
+              </Button>
+            )}
+          </div>
+
+          {/* Col 3: Stato/sorgente + CC */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 md:justify-end">
+            {urgency !== "normal" && urgency !== "low" && (
+              <Badge variant="outline" className={cn("gap-1 text-[10px]", urgencyClass)}>
+                {urgency === "critical" ? "Critica" : "Alta"}
+              </Badge>
+            )}
+            {decision?.goes_to_agenda && (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <Calendar className="h-3 w-3" /> Agenda
+              </Badge>
+            )}
+            {message.source_type && message.source_type !== "unknown" && (
+              <Badge variant="secondary" className="gap-1 text-[10px]" title={message.source_type.replace("_", " ")}>
+                {message.source_type === "partner"
+                  ? <Building2 className="h-3 w-3" />
+                  : <User className="h-3 w-3" />}
+                {message.source_type.replace("_", " ")}
+              </Badge>
+            )}
+            {message.cc_addresses && (
+              <span
+                className="inline-flex max-w-[260px] items-center gap-1 truncate text-[11px] text-muted-foreground"
+                title={message.cc_addresses}
+              >
+                <Users className="h-3 w-3" /> CC: {message.cc_addresses}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <EmailTechnicalHeaders message={message} />
+        </div>
+
+        {blockRemote && sanitizedHtml && normalizedContent.bodyHtml?.match(/https?:\/\//i) && (
+          <button
+            onClick={() => setBlockRemote(false)}
+            className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ImageOff className="h-3 w-3" /> Immagini remote bloccate — clicca per caricare
+          </button>
+        )}
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
