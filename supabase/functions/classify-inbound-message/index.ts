@@ -429,6 +429,7 @@ ${bodyBlock}`;
         let senderIntel: unknown = null;
         try {
           const { data: scoutData } = await supabase.functions.invoke("funnemail-scout-sender", {
+            headers: { "x-internal-token": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "" },
             body: {
               from_address,
               message_id,
@@ -452,6 +453,7 @@ ${bodyBlock}`;
         }
 
         await supabase.functions.invoke("funnemail-classify", {
+          headers: { "x-internal-token": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "" },
           body: {
             message_id,
             from_address,
@@ -476,6 +478,7 @@ ${bodyBlock}`;
     if (channel === "email" && body.user_id) {
       try {
         await supabase.functions.invoke("funnemail-auto-route", {
+          headers: { "x-internal-token": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "" },
           body: {
             message_id,
             from_address,
