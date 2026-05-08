@@ -5,7 +5,7 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.16";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.21";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.2";
 
@@ -23,13 +23,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.16",
+    latestVersion: "5.10.17",
     items: [
+      {
+        version: "5.10.17",
+        filename: "whatsapp-extension-5.10.17.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
+        current: true,
+        note: "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.",
+      },
       {
         version: "5.10.16",
         filename: "whatsapp-extension-5.10.16.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.16.zip",
-        current: true,
+        current: false,
         note: "Verifica header chat dopo click search: blocca invio se non corrisponde al destinatario; match esatto preferito.",
       },
       {

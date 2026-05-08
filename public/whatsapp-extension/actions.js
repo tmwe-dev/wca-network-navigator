@@ -1153,12 +1153,20 @@ var Actions = globalThis.Actions || (function () {
   }
 
   // Page-side fallback: after navigating to wa.me?phone=..., focus composer and click send
-  function _pageSendUrlFallback() {
+  function _pageSendUrlFallback(messageText) {
     const H = window.__waH;
-    const composer = H.qsDeep('footer [contenteditable="true"]') || H.qsDeep('[data-testid="conversation-compose-box-input"]') || H.qsDeep('[data-testid="compose-box-input"]');
-    if (!composer) return { success: false, error: "Composer not found after URL nav" };
-    // Text is already pre-filled by ?text= param in WA Web — just focus & send
-    composer.focus();
+    function findComposer() {
+      return H.qsDeep('footer [contenteditable="true"][data-tab]')
+        || H.qsDeep('footer [contenteditable="true"]')
+        || H.qsDeep('[data-testid="conversation-compose-box-input"]')
+        || H.qsDeep('[data-testid="compose-box-input"]');
+    }
+    function dismissPopups() {
+      // "Use here" / "Continue" / "Use WhatsApp Web here" / phone-not-on-WA dialogs
+      const okBtn = H.qsDeep('[data-testid="popup-controls-ok"]')
+        || H.qsDeep('div[role="button"][tabindex="0"][data-testid*="ok"]');
+      if (okBtn) { try { okBtn.click(); } catch (e) {} }
+    }
     const findSendBtn = function () {
       return H.qsDeep('[data-testid="send"]') ||
         H.qsDeep('button[aria-label*="send" i]') ||
@@ -1166,10 +1174,35 @@ var Actions = globalThis.Actions || (function () {
         (H.qsDeep('span[data-icon="send"]') && H.qsDeep('span[data-icon="send"]').closest('button'));
     };
     return new Promise(function (resolve) {
+      // Phase 1: wait up to ~12s for composer to appear (heavy WA loads, cold tab)
+      let waitForComposer = 0;
+      const maxWaitForComposer = 120; // 12s
+      const composerTick = function () {
+        waitForComposer++;
+        dismissPopups();
+        const composer = findComposer();
+        if (composer) {
+          composer.focus();
+          // If composer is empty (text not pre-filled by ?text=), type it ourselves.
+          const current = (composer.textContent || "").trim();
+          if (!current && messageText) {
+            try { H.modernClearAndType(composer, messageText); } catch (e) {}
+          }
+          startSendLoop(composer);
+          return;
+        }
+        if (waitForComposer >= maxWaitForComposer) {
+          resolve({ success: false, error: "Composer not found after URL nav (timeout 12s)" });
+          return;
+        }
+        setTimeout(composerTick, 100);
+      };
+      function startSendLoop(composer) {
       let attempts = 0;
-      const maxAttempts = 30; // ~3s
+      const maxAttempts = 50; // ~5s
       const tick = function () {
         attempts++;
+        dismissPopups();
         const btn = findSendBtn();
         const enabled = btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
         if (enabled) {
@@ -1190,6 +1223,8 @@ var Actions = globalThis.Actions || (function () {
         setTimeout(tick, 100);
       };
       tick();
+      }
+      composerTick();
     });
   }
 
@@ -1364,6 +1399,7 @@ var Actions = globalThis.Actions || (function () {
           await ensurePageHelpers(tabId);
           var urlResultsFirst = await chrome.scripting.executeScript({
             target: { tabId: tabId },
+            args: [text],
             func: _pageSendUrlFallback,
           });
           return urlResultsFirst && urlResultsFirst[0] ? urlResultsFirst[0].result : { success: false, error: "URL send failed" };
@@ -1397,6 +1433,7 @@ var Actions = globalThis.Actions || (function () {
         await ensurePageHelpers(tab.id);
         var results2 = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
+          args: [text],
           func: _pageSendUrlFallback,
         });
         return results2 && results2[0] ? results2[0].result : { success: false, error: "Nessun risultato" };
