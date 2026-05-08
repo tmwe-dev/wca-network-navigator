@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.15",
-  "description": "Hard guard destinatario: numero telefono = sempre URL /send?phone=, mai riuso chat aperta. Search-based solo per nomi non numerici.",
+  "version": "5.10.16",
+  "description": "Verifica header chat dopo click search: se non corrisponde al destinatario, blocca l'invio (no scrittura nella chat sbagliata). Match esatto preferito su substring.",
   "permissions": [
     "tabs",
     "activeTab",

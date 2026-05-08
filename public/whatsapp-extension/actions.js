@@ -1230,20 +1230,63 @@ var Actions = globalThis.Actions || (function () {
         if (chats.length === 0) {
           chats = H.qsaDeep('[data-testid="cell-frame-container"],[data-testid="chat-cell-wrapper"],[role="listitem"],[role="row"]');
         }
-        let clicked = false;
+        // Match selector: exact (case-insensitive) wins over substring; ambiguous substring => abort
+        const targetLower = String(target || "").trim().toLowerCase();
+        const candidates = [];
         for (const c of chats) {
           const titleEl = c.querySelector('span[title]');
-          const title = titleEl ? (titleEl.getAttribute("title") || "") : "";
-          if (title.toLowerCase().includes(target.toLowerCase())) {
-            (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
-            clicked = true; break;
-          }
+          const title = titleEl ? ((titleEl.getAttribute("title") || titleEl.textContent || "").trim()) : "";
+          if (!title) continue;
+          const tl = title.toLowerCase();
+          if (tl === targetLower) candidates.push({ el: c, title: title, exact: true });
+          else if (tl.includes(targetLower)) candidates.push({ el: c, title: title, exact: false });
         }
+        const exacts = candidates.filter(function (x) { return x.exact; });
+        let chosen = null;
+        if (exacts.length === 1) chosen = exacts[0];
+        else if (exacts.length === 0 && candidates.length === 1) chosen = candidates[0];
         const clearBtn = H.qsDeep('[data-testid="search-input-clear"]') || H.qsDeep('[data-testid="x-alt"]') || H.qsDeep('[data-testid="search-close"]');
+        if (!chosen) {
+          if (clearBtn) clearBtn.click();
+          if (candidates.length === 0) { resolve({ success: false, error: "Chat non trovata nella sidebar: " + target }); return; }
+          resolve({ success: false, error: "Match ambiguo per \"" + target + "\" (" + candidates.length + " contatti corrispondenti). Inserisci il numero E.164 per invio diretto." });
+          return;
+        }
+        const c = chosen.el;
+        (c.closest('[data-testid="cell-frame-container"]') || c.closest('[data-testid="chat-cell-wrapper"]') || c).click();
         if (clearBtn) clearBtn.click();
-        if (!clicked) { resolve({ success: false, error: "Chat not found in sidebar: " + target }); return; }
+        const chosenTitleLower = chosen.title.toLowerCase();
 
         setTimeout(function () {
+          // Verify the open chat header matches the chosen contact before composing.
+          const headerStart = Date.now();
+          const headerDeadline = headerStart + 2500;
+          function readHeader() {
+            const h = H.qsDeep('#main header span[title]')
+              || H.qsDeep('[data-testid="conversation-header"] span[title]')
+              || H.qsDeep('#main header [dir="auto"]');
+            if (!h) return "";
+            return ((h.getAttribute && h.getAttribute("title")) || h.textContent || "").trim();
+          }
+          function headerMatches() {
+            const label = readHeader().toLowerCase();
+            if (!label) return false;
+            return label === chosenTitleLower || label.includes(targetLower) || chosenTitleLower.includes(label);
+          }
+          function awaitHeader(cb) {
+            if (headerMatches()) { cb(true); return; }
+            if (Date.now() >= headerDeadline) { cb(false); return; }
+            setTimeout(function () { awaitHeader(cb); }, 150);
+          }
+          awaitHeader(function (ok) {
+            if (!ok) {
+              resolve({ success: false, error: "Header chat non corrisponde al destinatario \"" + target + "\" (header=\"" + readHeader() + "\"). Invio bloccato." });
+              return;
+            }
+            proceedCompose();
+          });
+
+          function proceedCompose() {
           const composer = tryPlan("composer") ||
             H.qsDeep('footer [contenteditable="true"]') ||
             H.qsDeep('[data-testid="conversation-compose-box-input"]') ||
@@ -1288,6 +1331,7 @@ var Actions = globalThis.Actions || (function () {
             setTimeout(tick, 100);
           };
           tick();
+          }
         }, 1500);
       }, 1500);
     });
