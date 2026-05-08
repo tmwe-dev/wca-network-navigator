@@ -74,6 +74,7 @@ const OnboardingPage = lazy(() => import("./ui/pages/OnboardingPage").then((m) =
 const GuidaPage = lazy(() => import("./ui/pages/GuidaPage"));
 const AIControlCenterPage = lazy(() => import("./ui/pages/AIControlCenterPage").then((m) => ({ default: m.AIControlCenterPage })));
 const EmailIntelligencePage = lazy(() => import("./ui/pages/EmailIntelligencePage").then((m) => ({ default: m.EmailIntelligencePage })));
+const EmailIntelligenceOperationsPage = lazy(() => import("./ui/pages/EmailIntelligenceOperationsPage"));
 const AlertRoutingPage = lazy(() => import("./ui/pages/AlertRoutingPage").then((m) => ({ default: m.AlertRoutingPage })));
 const FunnemailInboxPage = lazy(() => import("./ui/pages/FunnemailInboxPage").then((m) => ({ default: m.FunnemailInboxPage })));
 const FunnemailSortingQueuePage = lazy(() => import("./ui/pages/funnemail-inbox/SortingQueuePage").then((m) => ({ default: m.SortingQueuePage })));
@@ -372,6 +373,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="guida" element={guardedPage(GuidaPage, "Guida")} />
           <Route path="ai-control" element={<Navigate to="/v2/intelligence/control" replace />} />
           <Route path="email-intelligence" element={guardedPage(EmailIntelligencePage, "EmailIntelligence")} />
+          <Route path="email-intelligence/operations" element={guardedPage(EmailIntelligenceOperationsPage, "EmailIntelligenceOperations")} />
           <Route path="funnemail-inbox" element={guardedPage(FunnemailInboxPage, "FunnemailInbox")} />
           <Route path="funnemail-inbox/sorting" element={guardedPage(FunnemailSortingQueuePage, "FunnemailSortingQueue")} />
           <Route path="ai-arena" element={guardedPage(AIArenaPage, "AIArena")} />
