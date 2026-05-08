@@ -678,7 +678,7 @@ var Actions = globalThis.Actions || (function () {
         func: function () {
           const threads = [];
           const seen = {};
-          const seenNames = {}; // M2: dedup anche per nome
+          const seenKeys = {}; // P0.1 — dedup composite key (threadUrl|profileUrl|linkedinId|profileId|name+lastMsg)
           // M2: pattern per notification badge da filtrare
           var notifPattern = /^\d+\s+\d*\s*(nuov[aoe]|new)\s*(notifich?[ae]?|message|notification)/i;
 
@@ -696,12 +696,24 @@ var Actions = globalThis.Actions || (function () {
             // M2: dedup per threadUrl
             if (threadUrl && seen[threadUrl]) return;
             if (threadUrl) seen[threadUrl] = true;
-            // M2: dedup per nome (se non c'è threadUrl, o se threadUrl diverso ma stesso nome)
-            var nameKey = name.toLowerCase().replace(/\s+/g, " ").trim();
-            if (seenNames[nameKey]) return;
-            seenNames[nameKey] = true;
             var ids = getIds(threadUrl, profileUrl);
-            threads.push({ name: name, threadUrl: threadUrl, profileUrl: profileUrl || "", linkedinId: ids.linkedinId, profileId: ids.profileId, threadId: ids.threadId, unread: unread, lastMessage: lastMsg });
+            // P0.1 — dedup chiave composita (mai solo nome).
+            var dedupKey = threadUrl || profileUrl || ids.linkedinId || ids.profileId || (name.toLowerCase().trim() + "|" + (lastMsg || "").toLowerCase().trim());
+            if (!dedupKey || seenKeys[dedupKey]) return;
+            seenKeys[dedupKey] = true;
+            threads.push({
+              name: name,
+              threadUrl: threadUrl,
+              profileUrl: profileUrl || "",
+              linkedinId: ids.linkedinId,
+              profileId: ids.profileId,
+              threadId: ids.threadId,
+              unread: unread,
+              lastMessage: lastMsg,
+              lastActivity: "",
+              method: "structural",
+              confidence: 0.65,
+            });
           }
 
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
