@@ -23,6 +23,7 @@ import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { callCheckInbox } from "@/lib/checkInbox";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/log";
+import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 
 const log = createLogger("GlobalSyncButton");
 
@@ -87,32 +88,36 @@ export function GlobalSyncButton(): React.ReactElement {
   }, [clear, waConnected, liConnected]);
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleClick}
-      disabled={syncing}
-      aria-label={title}
-      title={title}
-      className={cn("relative h-7 w-7 transition-colors", colorClass)}
-    >
-      {syncing ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <RefreshCw className={cn("h-4 w-4", hasNew && pulse && "animate-pulse")} />
-      )}
-      {hasNew && (
-        <span
-          className={cn(
-            "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full",
-            "bg-emerald-500 text-[9px] leading-[14px] text-white font-semibold text-center",
-            pulse && "animate-pulse",
-          )}
-        >
-          {count > 99 ? "99+" : count}
-        </span>
-      )}
-    </Button>
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleClick}
+        disabled={syncing}
+        aria-label={title}
+        title={title}
+        className={cn("relative h-7 w-7 transition-colors", colorClass)}
+      >
+        {syncing ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <RefreshCw className={cn("h-4 w-4", hasNew && pulse && "animate-pulse")} />
+        )}
+        {hasNew && (
+          <span
+            className={cn(
+              "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full",
+              "bg-emerald-500 text-[9px] leading-[14px] text-white font-semibold text-center",
+              pulse && "animate-pulse",
+            )}
+          >
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </Button>
+      {waConnected && <SyncGuardIndicator channel="whatsapp" />}
+      {liConnected && <SyncGuardIndicator channel="linkedin" />}
+    </div>
   );
 }
 
