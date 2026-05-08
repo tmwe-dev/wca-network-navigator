@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.20",
-  "description": "Fix invio: thread URL bypass clickMessage, AX disabilitata su clickMessage, textbox+sendBtn scoped al composer, scrittura via execCommand, timeout 120s.",
+  "version": "3.9.21",
+  "description": "Anti-mis-recipient: chiude overlay chat fluttuanti e verifica URL profilo prima di clickMessage/sendMessage. Mai più invio alla pagina sbagliata.",
   "permissions": [
     "cookies",
     "tabs",

@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.13";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.19";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.15";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.21";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.2";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -23,13 +23,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.13",
+    latestVersion: "5.10.15",
     items: [
+      {
+        version: "5.10.15",
+        filename: "whatsapp-extension-5.10.15.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.15.zip",
+        current: true,
+        note: "Hard guard destinatario: numero = sempre URL /send?phone=, mai riuso chat aperta",
+      },
       {
         version: "5.10.13",
         filename: "whatsapp-extension-5.10.13.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.13.zip",
-        current: true,
+        current: false,
         note: "Fix duplicazione messaggio: trust execCommand insertText, niente fallback paste se l'insert è andato a buon fine",
       },
       {
@@ -106,13 +113,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.19",
+    latestVersion: "3.9.21",
     items: [
+      {
+        version: "3.9.21",
+        filename: "linkedin-extension-3.9.21.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.21.zip",
+        current: true,
+        note: "Anti-mis-recipient: chiude overlay chat fluttuanti e verifica URL profilo prima di clickMessage/sendMessage",
+      },
       {
         version: "3.9.19",
         filename: "linkedin-extension-3.9.19.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.19.zip",
-        current: true,
+        current: false,
         note: "Fix invio: timeout AX/AI controllati, bridge test a 90s, rimappa DOM su thread reale.",
       },
       {

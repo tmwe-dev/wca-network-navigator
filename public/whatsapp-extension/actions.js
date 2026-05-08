@@ -1307,6 +1307,24 @@ var Actions = globalThis.Actions || (function () {
         await TabManager.ensureTabVisibleAndWait(tabId, 1200);
         await ensurePageHelpers(tabId);
 
+        // ── HARD GUARD: se è un numero, navighiamo SEMPRE all'URL /send?phone=
+        // dell'estensione richiesto. Mai riusare la chat aperta in WA — il
+        // search-based send finirebbe per scrivere nella conversazione attiva
+        // se la sidebar non aggiorna in tempo.
+        if (isPhoneNumber) {
+          var numericPhoneFirst = cleanPhone.replace(/^\+/, "");
+          var sendUrlFirst = Config.WA_BASE + "/send?phone=" + numericPhoneFirst + "&text=" + encodeURIComponent(text);
+          await chrome.tabs.update(tabId, { url: sendUrlFirst });
+          await TabManager.waitForLoad(tabId, 15000);
+          await TabManager.sleep(3000);
+          await ensurePageHelpers(tabId);
+          var urlResultsFirst = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: _pageSendUrlFallback,
+          });
+          return urlResultsFirst && urlResultsFirst[0] ? urlResultsFirst[0].result : { success: false, error: "URL send failed" };
+        }
+
         // Load cached AI plan (if any) — robust against WA DOM changes
         var cachedPlan = null;
         try {
@@ -1314,29 +1332,13 @@ var Actions = globalThis.Actions || (function () {
           if (st && st.wa_send_plan && st.wa_send_plan.plan) cachedPlan = st.wa_send_plan.plan;
         } catch (e) { /* ignore */ }
 
-        // Try search-based send first (works for existing contacts)
+        // Non è un numero: cerchiamo il contatto per nome nella sidebar.
         var results = await chrome.scripting.executeScript({
           target: { tabId: tabId },
           args: [phone, text, cachedPlan],
           func: _pageSendWhatsApp,
         });
         var result = results && results[0] ? results[0].result : null;
-
-        // If search failed and we have a phone number, try URL-based approach
-        if (result && !result.success && isPhoneNumber) {
-          var numericPhone = cleanPhone.replace(/^\+/, "");
-          var sendUrl = Config.WA_BASE + "/send?phone=" + numericPhone + "&text=" + encodeURIComponent(text);
-          await chrome.tabs.update(tabId, { url: sendUrl });
-          await TabManager.waitForLoad(tabId, 15000);
-          await TabManager.sleep(3000);
-          await ensurePageHelpers(tabId);
-          var urlResults = await chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: _pageSendUrlFallback,
-          });
-          return urlResults && urlResults[0] ? urlResults[0].result : { success: false, error: "URL send failed" };
-        }
-
         return result || { success: false, error: "Nessun risultato" };
       }
 
