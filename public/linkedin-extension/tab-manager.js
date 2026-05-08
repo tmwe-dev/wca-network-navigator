@@ -162,8 +162,10 @@ var TabManager = globalThis.TabManager || (function () {
       try {
         const existing = await chrome.tabs.get(_liTabId);
         if (existing) {
-          // Make sure it's still in our automation window
-          await ensureTabInAutomationWindow(_liTabId);
+          // NB: do NOT force-move the tab to the automation window.
+          // If the user has LinkedIn open in their own window we want to reuse
+          // it in place — moving it creates the perception of a "new tab"
+          // appearing somewhere else and steals the user's tab.
           if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url) && urlMatchesTarget(existing.url, url)) {
             if (existing.status !== "complete") await waitForLoad(_liTabId, 15000);
             return { id: _liTabId, reused: true };
