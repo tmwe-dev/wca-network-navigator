@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.2",
+    "latestVersion": "5.10.3",
     "items": [
+      {
+        "version": "5.10.3",
+        "filename": "whatsapp-extension-5.10.3.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.3.zip",
+        "current": true,
+        "note": "Rimappa DOM invio manuale (Optimus send_form) + cachedPlan overlay"
+      },
       {
         "version": "5.10.2",
         "filename": "whatsapp-extension-5.10.2.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.2.zip",
-        "current": true,
+        "current": false,
         "note": "Fix selettore search box WA (chat-list-search-container) — invio messaggio ripristinato"
       },
       {
@@ -35,13 +42,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.2",
+    "latestVersion": "3.9.3",
     "items": [
+      {
+        "version": "3.9.3",
+        "filename": "linkedin-extension-3.9.3.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.3.zip",
+        "current": true,
+        "note": "Rimappa DOM invio manuale (Optimus relearn) per messaging/profile"
+      },
       {
         "version": "3.9.2",
         "filename": "linkedin-extension-3.9.2.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.2.zip",
-        "current": true,
+        "current": false,
         "note": "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable). webNavigation permission."
       },
       {
