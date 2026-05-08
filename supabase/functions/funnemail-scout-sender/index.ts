@@ -267,22 +267,33 @@ Deno.serve(async (req) => {
     // 4b) Cache per-utente (Sprint 4) — non bloccante
     if (body.user_id) {
       try {
-        await sb
+        const cachePayload = {
+          user_id: body.user_id,
+          email_domain: domain,
+          email_address: null,
+          is_known_partner: intel.is_known_partner,
+          partner_id: intel.partner_id,
+          company_type: intel.company_type,
+          country: intel.country,
+          website: intel.website,
+          role_guess: intel.role_guess,
+          evidence: intel.evidence,
+          scout_source: intel.scout_source,
+          expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
+          cached_at: new Date().toISOString(),
+        };
+        const { data: existing } = await sb
           .from("funnemail_scout_cache")
-          .upsert({
-            user_id: body.user_id,
-            email_domain: domain,
-            email_address: null,
-            is_known_partner: intel.is_known_partner,
-            partner_id: intel.partner_id,
-            company_type: intel.company_type,
-            country: intel.country,
-            website: intel.website,
-            role_guess: intel.role_guess,
-            evidence: intel.evidence,
-            scout_source: intel.scout_source,
-            expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
-          }, { onConflict: "user_id,email_domain,email_address" });
+          .select("id")
+          .eq("user_id", body.user_id)
+          .eq("email_domain", domain)
+          .is("email_address", null)
+          .maybeSingle();
+        if (existing?.id) {
+          await sb.from("funnemail_scout_cache").update(cachePayload).eq("id", existing.id);
+        } else {
+          await sb.from("funnemail_scout_cache").insert(cachePayload);
+        }
       } catch (_) { /* fail-safe */ }
     }
 
