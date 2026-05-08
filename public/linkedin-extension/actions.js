@@ -15,12 +15,28 @@ var Actions = globalThis.Actions || (function () {
   async function sendLinkedInMessage(profileUrl, message) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
-    const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
-    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-    const clickResult = await HybridOps.clickMessage(tab.id);
-    if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
-    await TabManager.sleep(3000);
-    return await HybridOps.sendMessage(tab.id, message);
+    const target = profileUrl.replace(/\/$/, "");
+    async function attempt() {
+      const tab = await TabManager.getLinkedInTab(target);
+      await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      const clickResult = await HybridOps.clickMessage(tab.id);
+      if (!clickResult || !clickResult.success) {
+        return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
+      }
+      await TabManager.sleep(3000);
+      const sendResult = await HybridOps.sendMessage(tab.id, message);
+      return { tabId: tab.id, result: sendResult };
+    }
+    let { tabId, result } = await attempt();
+    // Se la guardia URL ha intercettato un drift (es. click finito sulla nav inbox),
+    // forziamo la ri-navigazione al profilo e ritentiamo UNA sola volta.
+    if (result && !result.success && /navigation_drifted/i.test(result.error || "")) {
+      try { await chrome.tabs.update(tabId, { url: target }); } catch (e) { /* ignore */ }
+      await TabManager.sleep(2500);
+      const retry = await attempt();
+      result = retry.result;
+    }
+    return result;
   }
 
   async function sendConnectionRequest(profileUrl, note) {
