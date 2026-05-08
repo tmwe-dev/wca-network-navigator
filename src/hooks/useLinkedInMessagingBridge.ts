@@ -17,14 +17,15 @@ type BridgeResponse = {
   [key: string]: unknown;
 };
 
-// ── Ensure LinkedIn extension has Supabase config ──
-let liMsgConfigSent = false;
-function ensureLiMsgConfig() {
-  if (liMsgConfigSent) return;
+// ── Ensure LinkedIn extension has Supabase config (re-sendable) ──
+let liMsgConfigSentAt = 0;
+function ensureLiMsgConfig(force = false) {
+  // Re-send config every 5 minutes or when forced (e.g. after re-mount)
+  if (!force && liMsgConfigSentAt && Date.now() - liMsgConfigSentAt < 5 * 60_000) return;
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return;
-  liMsgConfigSent = true;
+  liMsgConfigSentAt = Date.now();
   log.debug("→ sending setConfig to LinkedIn extension");
   window.postMessage({
     direction: "from-webapp-li",

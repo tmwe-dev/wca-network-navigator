@@ -88,7 +88,7 @@ export function useWhatsAppAdaptiveSync() {
   const [focusedChat, setFocusedChat] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number; newMessages: number } | null>(null);
 
-  const { isAvailable, isAuthenticated, listSidebarChats, readThread } = useWhatsAppExtensionBridge();
+  const { isAvailable, isAuthenticated, listSidebarChats, readThread, verifySession } = useWhatsAppExtensionBridge();
   const { forceRelearn, isStale: domIsStale, lastLearnedAt } = useWhatsAppDomLearning();
   const queryClient = useQueryClient();
 
@@ -348,11 +348,17 @@ export function useWhatsAppAdaptiveSync() {
       return;
     }
     if (!isAuthenticated) {
-      toast.error("WhatsApp Web non autenticato. Apri web.whatsapp.com e scansiona il QR code.");
-      return;
+      // Try a fresh verifySession before giving up — l'auth heartbeat può essere stantio.
+      const v = await verifySession();
+      const ok = v.success === true && (v as { authenticated?: boolean }).authenticated === true;
+      if (!ok) {
+        toast.error("WhatsApp Web non autenticato. Apri web.whatsapp.com e scansiona il QR code.");
+        return;
+      }
+      log.info("verifySession refreshed before sync");
     }
     await syncFromCursor();
-  }, [syncFromCursor, isAvailable, isAuthenticated]);
+  }, [syncFromCursor, isAvailable, isAuthenticated, verifySession]);
 
   return {
     isReading,
