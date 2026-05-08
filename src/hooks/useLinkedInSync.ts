@@ -44,8 +44,21 @@ export function useLinkedInSync() {
   const [isReading, setIsReading] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
 
-  const { isAvailable, readInbox } = useLinkedInMessagingBridge();
+  const { isAvailable, readInbox, readThread } = useLinkedInMessagingBridge();
   const queryClient = useQueryClient();
+
+  const errMsg = (e: unknown): string => {
+    if (!e) return "errore sconosciuto";
+    if (typeof e === "string") return e;
+    if (e instanceof Error) return e.message;
+    if (typeof e === "object") {
+      const r = e as Record<string, unknown>;
+      if (typeof r.error === "string") return r.error;
+      if (typeof r.message === "string") return r.message;
+      try { return JSON.stringify(r).slice(0, 200); } catch { return "errore"; }
+    }
+    return String(e);
+  };
 
   const readNow = useCallback(async (silent = false) => {
     if (!isAvailable) {
@@ -89,7 +102,6 @@ export function useLinkedInSync() {
       // Cursor per-contatto: ts (ms) ultimo messaggio in DB per evitare duplicati
       // e (più importante) salvare solo nuovi messaggi.
       const cursors = await getChannelContactCursors(user.id, "linkedin");
-      const nowMs = Date.now();
 
       let newMsgs = 0;
       for (const thread of result.threads) {
@@ -97,28 +109,64 @@ export function useLinkedInSync() {
         if (isUiLabel(thread.name)) continue;
         if (isGhostBody(thread.lastMessage)) continue;
 
-        const contactKey = thread.name.toLowerCase().trim();
-        const cursor = cursors.get(contactKey) ?? 0;
-        // Sidebar non dà timestamp preciso → usiamo "ora" come ts del messaggio
-        // ricevuto, ma confrontiamo body_text col messaggio noto per de-dup.
-        // Skip se già abbiamo un messaggio recentissimo con lo stesso testo.
-        if (cursor > 0 && nowMs - cursor < 60_000) {
-          // protezione anti-doppio-click
-          continue;
+        // 1) Salva sempre il preview della sidebar (dedup stabile via hash testo, no timestamp)
+        const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, "");
+        const tsIso = new Date().toISOString();
+        try {
+          const res = await upsertChannelMessageDedup({
+            user_id: user.id,
+            operator_id: operatorId,
+            channel: "linkedin" as never,
+            direction: "inbound" as never,
+            from_address: thread.name,
+            body_text: thread.lastMessage,
+            message_id_external: extIdPreview,
+            thread_id: thread.threadUrl || null,
+            created_at: tsIso,
+          } as never);
+          if (res.inserted) newMsgs++;
+        } catch (e) {
+          log.warn("preview upsert failed", { error: errMsg(e) });
         }
-        const ts = new Date(nowMs).toISOString();
-        const extId = buildDeterministicId("li", thread.name, thread.lastMessage, ts);
-        const res = await upsertChannelMessageDedup({
-          user_id: user.id,
-          operator_id: operatorId,
-          channel: "linkedin" as never,
-          direction: "inbound" as never,
-          from_address: thread.name,
-          body_text: thread.lastMessage,
-          message_id_external: extId,
-          thread_id: thread.threadUrl || null,
-        });
-        if (res.inserted) newMsgs++;
+
+        // 2) Se thread non letto E abbiamo URL, apri thread per recuperare conversazione completa
+        if (thread.unread && thread.threadUrl) {
+          try {
+            const tr = await readThread(thread.threadUrl);
+            if (tr.success && Array.isArray(tr.messages)) {
+              for (const m of tr.messages) {
+                const text = String(m.text || "").trim();
+                if (!text || isGhostBody(text)) continue;
+                const direction = (m.direction === "outbound" ? "outbound" : "inbound") as "inbound" | "outbound";
+                const extId = buildDeterministicId(
+                  direction === "outbound" ? "li_out" : "li",
+                  thread.name,
+                  text,
+                  "",
+                );
+                try {
+                  const r = await upsertChannelMessageDedup({
+                    user_id: user.id,
+                    operator_id: operatorId,
+                    channel: "linkedin" as never,
+                    direction: direction as never,
+                    from_address: direction === "inbound" ? thread.name : undefined,
+                    to_address: direction === "outbound" ? thread.name : undefined,
+                    body_text: text,
+                    message_id_external: extId,
+                    thread_id: thread.threadUrl,
+                    created_at: new Date().toISOString(),
+                  } as never);
+                  if (r.inserted) newMsgs++;
+                } catch (e) {
+                  log.warn("thread msg upsert failed", { error: errMsg(e) });
+                }
+              }
+            }
+          } catch (e) {
+            log.warn("readThread failed", { thread: thread.name, error: errMsg(e) });
+          }
+        }
       }
 
       if (newMsgs > 0) {
@@ -133,12 +181,12 @@ export function useLinkedInSync() {
       window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
       setLastSyncAt(Date.now());
     } catch (err: unknown) {
-      log.warn("sync error", { message: err instanceof Error ? err.message : String(err) });
-      if (!silent) toast.error(`Errore sync: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn("sync error", { message: errMsg(err) });
+      if (!silent) toast.error(`Errore sync: ${errMsg(err)}`);
     } finally {
       setIsReading(false);
     }
-  }, [isAvailable, readInbox, queryClient]);
+  }, [isAvailable, readInbox, readThread, queryClient]);
 
   return { isReading, isAvailable, readNow, lastSyncAt };
 }
