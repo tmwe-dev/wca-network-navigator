@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.13";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.13";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.14";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -102,13 +102,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.13",
+    latestVersion: "3.9.14",
     items: [
+      {
+        version: "3.9.14",
+        filename: "linkedin-extension-3.9.14.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.14.zip",
+        current: true,
+        note: "Fix invio: textbox composer più robusto, supporto dialog e menu Altro/More",
+      },
       {
         version: "3.9.13",
         filename: "linkedin-extension-3.9.13.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.13.zip",
-        current: true,
+        current: false,
         note: "Fix extractProfile: scoped a <main>, blacklist nav (no più 'Nome: 0 notifiche'), headline+location anche da AX tree",
       },
       {
