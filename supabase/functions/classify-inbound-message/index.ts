@@ -28,6 +28,11 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("classify-inbound-message");
 
   try {
+    // TEMP DEBUG (smoke test): log token shape (no value)
+    const _dbgAuth = req.headers.get("Authorization") ?? "";
+    const _dbgPrefix = _dbgAuth.startsWith("Bearer ") ? _dbgAuth.slice(7, 17) : _dbgAuth.slice(0, 10);
+    console.log(JSON.stringify({ debug: "auth_token_inspect", len: _dbgAuth.length, prefix: _dbgPrefix }));
+
     // ── Auth + ownership ──
     // Accepts: user JWT (UI) OR service-role (trigger pg_net). Anon-key rejected.
     const corsHeadersOnly = corsH;
@@ -162,3 +167,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });
+// redeploy bump 1778267314

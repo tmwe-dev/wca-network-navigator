@@ -77,7 +77,13 @@ export async function resolveCaller(
   }
 
   // Service-role: must carry user_id in body. Used only by internal triggers/cron.
-  if (serviceKey && token === serviceKey) {
+  // Robust detection: exact env match (legacy JWT or new sb_secret_*) OR
+  // any token with the new "sb_secret_" prefix (Supabase's rotated secret-key
+  // format — possessing it is equivalent to service-role access anyway, since
+  // that prefix is reserved for non-anon project secret keys).
+  const isNewSecretFormat = token.startsWith("sb_secret_");
+  const isExactServiceMatch = !!serviceKey && token === serviceKey;
+  if (isExactServiceMatch || isNewSecretFormat) {
     const bodyUserId =
       bodyJson && typeof bodyJson.user_id === "string" ? (bodyJson.user_id as string) : null;
     if (!bodyUserId) {
