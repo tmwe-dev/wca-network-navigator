@@ -35,7 +35,7 @@ var TabManager = globalThis.TabManager || (function () {
       if (data.wa_automation_window) _automationWindowId = data.wa_automation_window;
       if (Array.isArray(data.wa_owned_tabs)) _ownedWaTabIds = new Set(data.wa_owned_tabs);
       // Defensive cleanup: drop any owned tabs that are not WA tabs anymore
-      // (about:blank, chrome://newtab, closed tabs, etc.)
+      // (new-tab placeholders, closed tabs, etc.)
       try {
         const ids = Array.from(_ownedWaTabIds);
         for (const tid of ids) {
