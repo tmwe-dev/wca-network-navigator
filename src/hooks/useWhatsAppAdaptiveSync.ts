@@ -158,7 +158,7 @@ export function useWhatsAppAdaptiveSync() {
     if (readingRef.current) return;
     if (!mountedRef.current) return;
 
-    let guard;
+    let guard: import("@/lib/syncGuard").GuardToken;
     try {
       guard = tryAcquire("whatsapp", "Sincronizza");
     } catch (e) {
@@ -310,7 +310,7 @@ export function useWhatsAppAdaptiveSync() {
   const syncSingleThread = useCallback(async (contact: string): Promise<number> => {
     if (!isAvailable || !isAuthenticated) return 0;
     if (readingRef.current) return 0;
-    let guard;
+    let guard: import("@/lib/syncGuard").GuardToken;
     try {
       guard = tryAcquire("whatsapp", `Chat: ${contact}`);
     } catch (e) {
