@@ -34,7 +34,7 @@ export default function LinkedInDMDialog({
   const [url, setUrl] = useState(profileUrl || "");
   const [sending, setSending] = useState(false);
   const lastSavedUrlRef = useRef<string | null>(null);
-  const { isAvailable, sendDirectMessage } = useLinkedInExtensionBridge();
+  const { isAvailable, sendDirectMessage, ensureAuthenticated } = useLinkedInExtensionBridge();
   const lookup = useLinkedInLookup();
   const logAction = useLogAction();
 
@@ -101,6 +101,17 @@ export default function LinkedInDMDialog({
     if (!message.trim()) return;
     if (!urlValid) {
       toast({ title: "URL profilo LinkedIn non valido", description: "Formato richiesto: linkedin.com/in/...", variant: "destructive" });
+      return;
+    }
+    // P6 — Auth check obbligatorio: se l'utente non è loggato su LinkedIn,
+    // l'invio fallirebbe in modo silenzioso. Tagliamo qui prima di tentare.
+    const auth = await ensureAuthenticated(0);
+    if (!auth.ok) {
+      toast({
+        title: "LinkedIn non autenticato",
+        description: "Apri linkedin.com nel browser ed effettua il login, poi riprova.",
+        variant: "destructive",
+      });
       return;
     }
     // Salva URL se modificato manualmente prima dell'invio
