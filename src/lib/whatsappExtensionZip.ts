@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.24";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.25";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.2";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -127,13 +127,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.24",
+    latestVersion: "3.9.25",
     items: [
+      {
+        version: "3.9.25",
+        filename: "linkedin-extension-3.9.25.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.25.zip",
+        current: true,
+        note: "P15 — Diagnostico: 3 pulsanti di test isolati per i metodi di click invio (physical_click / form_submit / keyboard_shortcut). Cascata produzione invariata.",
+      },
       {
         version: "3.9.24",
         filename: "linkedin-extension-3.9.24.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.24.zip",
-        current: true,
+        current: false,
         note: "P14 — Riusa il composer LinkedIn già aperto: non naviga fuori pagina, non apre una seconda chat, non forza focus; conserva invio P13.",
       },
       {
