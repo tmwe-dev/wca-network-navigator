@@ -64,6 +64,8 @@ export interface ListToolbarProps<K extends string = string> {
 
   /** Chips filtri attivi (opzionale). */
   chips?: ActiveFilterChip[];
+  /** Se passato, ogni chip mostra X per rimozione. */
+  onRemoveChip?: (chipKey: string) => void;
 
   /** Slot a destra per azioni custom (es. "Sincronizza", "Esporta"). */
   rightSlot?: React.ReactNode;
@@ -87,6 +89,7 @@ export function ListToolbar<K extends string = string>({
   onSearchChange,
   searchPlaceholder = "Cerca…",
   chips,
+  onRemoveChip,
   rightSlot,
   holdingFilter,
   onHoldingFilterChange,
@@ -230,7 +233,7 @@ export function ListToolbar<K extends string = string>({
 
       {/* Riga 2: chips filtri attivi */}
       {chips && chips.length > 0 && (
-        <ActiveFiltersBar chips={chips} className="px-0 -mx-1 border-b-0 bg-transparent" />
+        <ActiveFiltersBar chips={chips} onRemove={onRemoveChip} className="px-0 -mx-1 border-b-0 bg-transparent" />
       )}
     </div>
   );

@@ -153,6 +153,58 @@ export function EntityListWithDetail({
     }));
   }, []);
 
+  // Rimozione di un singolo chip filtro dalla ActiveFiltersBar.
+  const handleRemoveChip = React.useCallback((key: string) => {
+    const [kind, ...rest] = key.split(":");
+    const value = rest.join(":");
+    switch (kind) {
+      case "country": {
+        const upper = value.toUpperCase();
+        if (source === "wca") {
+          const cur = new Set(globalFilters.networkSelectedCountries ?? new Set<string>());
+          cur.delete(upper);
+          batchUpdate({ networkSelectedCountries: cur });
+        } else if (source === "crm") {
+          const cur = new Set(globalFilters.crmSelectedCountries ?? new Set<string>());
+          cur.delete(upper);
+          batchUpdate({ crmSelectedCountries: cur });
+        }
+        return;
+      }
+      case "local-country":
+        setFilters((f) => ({ ...f, country: null }));
+        return;
+      case "local-city":
+        setFilters((f) => ({ ...f, city: null }));
+        return;
+      case "search": {
+        if (source === "wca") batchUpdate({ networkSearch: "" });
+        else if (source === "crm") batchUpdate({ search: "" });
+        return;
+      }
+      case "holding":
+        batchUpdate({ holdingPattern: "out" });
+        return;
+      case "origin": {
+        const cur = new Set(globalFilters.crmOrigin ?? new Set<string>());
+        cur.delete(value);
+        batchUpdate({ crmOrigin: cur });
+        return;
+      }
+      case "quality":
+        batchUpdate({ crmQuality: "all" });
+        return;
+      case "channel":
+        batchUpdate({ crmChannel: "all" });
+        return;
+      case "wca":
+        batchUpdate({ crmWcaMatch: "all" });
+        return;
+      default:
+        return;
+    }
+  }, [source, globalFilters, batchUpdate]);
+
   // Default: escludi holding pattern. Persistito per source.
   const holdingStorageKey = `list:${source}:holding`;
   const [holdingFilter, setHoldingFilter] = useState<HoldingFilterMode>(() => {
@@ -289,6 +341,7 @@ export function EntityListWithDetail({
         onSearchChange={setSearch}
         searchPlaceholder={searchPlaceholder ?? "Cerca…"}
         chips={mergedChips}
+        onRemoveChip={handleRemoveChip}
         holdingFilter={holdingFilter}
         onHoldingFilterChange={updateHoldingFilter}
         rightSlot={

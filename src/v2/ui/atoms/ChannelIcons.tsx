@@ -47,7 +47,7 @@ export function ChannelIcons({
 
   if (items.length === 0) return null;
   return (
-    <div className={cn("flex items-center gap-1", className)}>{items}</div>
+    <div className={cn("flex items-center justify-start flex-wrap gap-1", className)}>{items}</div>
   );
 }
 

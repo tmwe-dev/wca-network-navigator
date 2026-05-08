@@ -184,6 +184,19 @@ export function EntityRow({
             {extraRowsSlot}
           </div>
         )}
+        {/* Riga canali — sempre allineata a sinistra, con wrap (richiesta utente). */}
+        {!compact && channels && (
+          <div className="flex items-center justify-start flex-wrap gap-1.5 min-w-0 mt-1">
+            <ChannelIcons
+              email={channels.email}
+              whatsapp={channels.whatsapp}
+              linkedin={channels.linkedin}
+              phone={channels.phone}
+              website={channels.website}
+              size="sm"
+            />
+          </div>
+        )}
         {compact && (city || channels || score != null) && (
           <div className="flex items-center gap-2 min-w-0 mt-0.5 flex-wrap">
             {recencySlot && (
@@ -255,16 +268,6 @@ export function EntityRow({
             )}
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            {channels && (
-              <ChannelIcons
-                email={channels.email}
-                whatsapp={channels.whatsapp}
-                linkedin={channels.linkedin}
-                phone={channels.phone}
-                website={channels.website}
-                size="sm"
-              />
-            )}
             <ScorePill value={score ?? null} />
           </div>
         </div>
