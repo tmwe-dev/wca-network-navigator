@@ -597,12 +597,33 @@ var Actions = globalThis.Actions || (function () {
               if (!threads[i].threadId) threads[i].threadId = match.threadId || "";
             }
           }
-          const seenNames = {};
-          threads.forEach(function (t) { seenNames[String(t.name || "").toLowerCase().replace(/\s+/g, " ").trim()] = true; });
+          // P0.1 — Dedup key: mai per nome solo. Usa cascata stabile.
+          // Due "Marco Rossi" diversi devono entrambi sopravvivere.
+          function _dedupKey(t) {
+            return (
+              t.threadUrl ||
+              t.profileUrl ||
+              t.linkedinId ||
+              t.profileId ||
+              ((t.name || "") + "|" + (t.lastMessage || "") + "|" + (t.lastActivity || ""))
+            );
+          }
+          const seenKeys = {};
+          threads.forEach(function (t) { seenKeys[_dedupKey(t)] = true; });
           urlMap.forEach(function (item) {
-            const nameKey = String(item.name || "").toLowerCase().replace(/\s+/g, " ").trim();
-            if (!nameKey || seenNames[nameKey]) return;
-            seenNames[nameKey] = true;
+            var candidate = {
+              name: item.name,
+              threadUrl: item.threadUrl || item.profileUrl || "",
+              profileUrl: item.profileUrl || "",
+              linkedinId: item.linkedinId || "",
+              profileId: item.profileId || "",
+              threadId: item.threadId || "",
+              lastMessage: item.lastMessage || "",
+              lastActivity: "",
+            };
+            var key = _dedupKey(candidate);
+            if (!key || seenKeys[key]) return;
+            seenKeys[key] = true;
             threads.push({
               name: item.name,
               threadUrl: item.threadUrl || item.profileUrl || "",
@@ -613,6 +634,8 @@ var Actions = globalThis.Actions || (function () {
               unread: false,
               lastMessage: item.lastMessage || "",
               lastActivity: "",
+              method: "structural",
+              confidence: 0.7,
             });
           });
         }
