@@ -220,21 +220,24 @@ var HybridOps = globalThis.HybridOps || (function () {
             return out;
           }
           function findBox() {
-            const boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-            return boxes.find(function (el) {
-              const visible = el.offsetParent !== null || el.getClientRects().length > 0;
-              if (!visible) return false;
-              const text = [
-                el.getAttribute("aria-label") || "",
-                el.getAttribute("aria-placeholder") || "",
-                el.getAttribute("data-placeholder") || "",
-                el.getAttribute("placeholder") || "",
-                el.className || "",
-                el.closest("[class*='msg-form'], .msg-form, [role='dialog']") ? " msg-form" : "",
-              ].join(" ");
-              return el.getAttribute("role") === "textbox"
-                || /message|messag|messaggio|scrivi|invia|write|msg-form/i.test(text);
-            }) || null;
+            // P3 — Textbox scoped: cerchiamo SOLO dentro composer LinkedIn
+            // (msg-form / dialog / overlay-conversation-bubble), mai globale.
+            // Senza questo scope vince la search-bar o un campo filtri.
+            var composerScopes = deepQueryAll(
+              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+            );
+            for (var s = 0; s < composerScopes.length; s++) {
+              var scope = composerScopes[s];
+              var boxes = scope.querySelectorAll(
+                "[contenteditable='true'], div[role='textbox'], [role='textbox']"
+              );
+              for (var i = 0; i < boxes.length; i++) {
+                var el = boxes[i];
+                var visible = el.offsetParent !== null || el.getClientRects().length > 0;
+                if (visible) return el;
+              }
+            }
+            return null;
           }
           function findMessageBtn() {
             const root = document.querySelector("main") || document.body;
@@ -310,22 +313,52 @@ var HybridOps = globalThis.HybridOps || (function () {
               };
               return { success: false, error: "Fallback: no textbox found __probe__=" + JSON.stringify(probe) };
             }
-          msgBox.focus();
-          // Use Selection API + InputEvent for text insertion
-          let sel = window.getSelection();
-          if (sel) { sel.selectAllChildren(msgBox); sel.deleteFromDocument(); }
-          const textNode = document.createTextNode(msg);
-          msgBox.appendChild(textNode);
-          sel = window.getSelection();
-          if (sel) { const r = document.createRange(); r.selectNodeContents(msgBox); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
-          msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
+            // P5 — Scrittura affidabile: il composer LinkedIn (Draft.js) NON
+            // rileva appendChild manuale, lo state interno non aggiorna e il
+            // bottone Send resta disabilitato. document.execCommand è
+            // deprecato ma è l'unico metodo che aggiorna lo state React/Draft.
+            msgBox.focus();
+            try {
+              var sel0 = window.getSelection();
+              if (sel0) { sel0.selectAllChildren(msgBox); }
+              document.execCommand("selectAll", false, null);
+              document.execCommand("delete", false, null);
+              document.execCommand("insertText", false, msg);
+            } catch (e) {
+              // Fallback estremo
+              msgBox.textContent = msg;
+              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
+            }
             // Wait for the send button to become enabled (LinkedIn validates async).
+            // P4 — Send button robusto: match per classe msg-form__send-button,
+            // aria-label Send/Invia, type=submit dentro composer. Esclude
+            // disabled e aria-disabled. Solo dentro composer.
+            function findSendBtn() {
+              var scopes = document.querySelectorAll(
+                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble"
+              );
+              for (var s = 0; s < scopes.length; s++) {
+                var scope = scopes[s];
+                var btns = scope.querySelectorAll("button, [role='button']");
+                for (var i = 0; i < btns.length; i++) {
+                  var b = btns[i];
+                  if (!(b.offsetParent !== null || b.getClientRects().length > 0)) continue;
+                  if (b.disabled || b.getAttribute("aria-disabled") === "true") continue;
+                  var cls = (b.className && typeof b.className === "string") ? b.className : "";
+                  var al = (b.getAttribute("aria-label") || "").trim();
+                  var t = (b.textContent || "").trim();
+                  var typ = (b.getAttribute("type") || "").toLowerCase();
+                  if (/msg-form__send-button|msg-form__send|send-button/i.test(cls)) return b;
+                  if (/^(send|invia|invia messaggio|send message)$/i.test(al)) return b;
+                  if (/^(send|invia)$/i.test(t)) return b;
+                  if (typ === "submit" && /msg-form/i.test(scope.className || "")) return b;
+                }
+              }
+              return null;
+            }
             let sendBtn = null;
             for (let i = 0; i < 30; i++) {
-              sendBtn = Array.from(document.querySelectorAll("button")).find(function (b) {
-                return /^(send|invia)$/i.test((b.textContent || "").trim())
-                  && b.offsetParent !== null && !b.disabled;
-              });
+              sendBtn = findSendBtn();
               if (sendBtn) break;
               await sleep(100);
             }
