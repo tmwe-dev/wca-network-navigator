@@ -54,6 +54,32 @@ function domainOf(addr: string): string {
   return i >= 0 ? a.slice(i + 1) : "";
 }
 
+/** Sprint 4: valuta una condizione singola contro il payload inbound. */
+interface RuleCondition {
+  field: "from_address" | "domain" | "subject" | "body" | string;
+  op: "equals" | "contains" | "regex" | "in" | "starts_with" | "ends_with" | string;
+  value: unknown;
+}
+function evalCondition(cond: RuleCondition, ctx: Record<string, string>): boolean {
+  const haystack = lc(ctx[cond.field] ?? "");
+  const needle = cond.value;
+  switch (cond.op) {
+    case "equals":   return haystack === lc(String(needle ?? ""));
+    case "contains": return haystack.includes(lc(String(needle ?? "")));
+    case "starts_with": return haystack.startsWith(lc(String(needle ?? "")));
+    case "ends_with":   return haystack.endsWith(lc(String(needle ?? "")));
+    case "in":       return Array.isArray(needle) && needle.map((v) => lc(String(v))).includes(haystack);
+    case "regex": {
+      try { return new RegExp(String(needle), "i").test(haystack); } catch { return false; }
+    }
+    default: return false;
+  }
+}
+function evalRule(conditions: unknown, ctx: Record<string, string>): boolean {
+  if (!Array.isArray(conditions) || conditions.length === 0) return false;
+  return (conditions as RuleCondition[]).every((c) => evalCondition(c, ctx));
+}
+
 Deno.serve(async (req) => {
   const pre = corsPreflight(req);
   if (pre) return pre;
