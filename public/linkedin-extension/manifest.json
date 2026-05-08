@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.27",
-  "description": "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer.",
+  "version": "3.9.28",
+  "description": "P0 — Dedup chiave composita (mai solo nome), AX Tree honest (direction unknown + low confidence), method/confidence su ogni thread/messaggio.",
   "permissions": [
     "cookies",
     "tabs",
