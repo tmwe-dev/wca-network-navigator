@@ -1,42 +1,37 @@
-Obiettivo: impedire che LinkedIn/WhatsApp usino la tab o chat già attiva come destinatario, e far rispettare sempre il campo compilato nella maschera Test Estensioni.
+## Problema
 
-Piano di intervento minimo:
+Nel test estensioni → WhatsApp, il messaggio finisce nella **prima chat trovata** invece che al destinatario indicato. Cause concomitanti:
 
-1. LinkedIn: isolamento tab per destinatario
-- In `public/linkedin-extension/tab-manager.js`, modificare la logica di riuso tab: se arriva un URL profilo preciso come `https://www.linkedin.com/in/gianfranco-cristiano-12513434/`, non deve “adottare” una tab LinkedIn già aperta e restare sulla pagina attiva.
-- Deve riusare solo una tab già allineata allo stesso profilo, oppure navigare esplicitamente al target ricevuto.
-- Dopo la navigazione, verificare che l’URL corrente corrisponda al profilo richiesto prima di cliccare “Messaggia”. Se non corrisponde, bloccare l’invio con errore chiaro.
+1. **Il form ha solo "Nome contatto"**, niente numero. Quando inserisci "Gianfranco" la extension cade nella branch search-based (`_pageSendWhatsApp`) perché `isPhoneNumber` è false.
+2. **La search-based send non verifica l'header** della chat aperta dopo il click: se la search non aggiorna in tempo (Lexical lento) o trova un titolo che "include" il target tra più contatti, viene usata la chat sbagliata o quella già aperta.
+3. La hard-guard introdotta in 5.10.15 funziona **solo se viene passato un numero** — e oggi dal form non c'è modo di passarlo.
 
-2. LinkedIn: guardia anti-destinatario sbagliato
-- In `public/linkedin-extension/actions.js` / `hybrid-ops.js`, aggiungere un controllo pre-send: il composer può essere usato solo se la tab è ancora sul profilo/thread aperto dal target richiesto.
-- Mantenere il click finale non forzato/già prudente: se il composer non è sicuramente del destinatario corretto, fallisce invece di inviare.
+## Cosa cambio (solo i punti minimi necessari)
 
-3. WhatsApp: usare sempre il campo del test
-- In `public/whatsapp-extension/actions.js`, cambiare `sendWhatsAppMessage(phone, text)` per non tentare prima l’invio search-based sulla chat corrente quando `phone` è un numero.
-- Se il campo contiene un numero valido, usare subito `https://web.whatsapp.com/send?phone=...&text=...`, anche se esiste già una tab WhatsApp aperta.
-- Solo se il campo non è un numero, usare la ricerca contatto nella sidebar.
+### 1. `src/components/test-extensions/WhatsAppTest.tsx` — UI test
+- Aggiungere un campo dedicato **"Numero (E.164, es. +393331234567)"** *prima* del campo nome.
+- `testSendMessage`: se il numero è valorizzato → passa `phone: numero` (path hard-guard URL). Altrimenti usa il nome come oggi.
+- Mantenere il `closeActiveChat` esistente per i cambi destinatario nel flusso "per nome".
+- Mostrare nel terminal quale path verrà usato (`URL diretto` vs `Search per nome`).
 
-4. WhatsApp: rimuovere falsa chiusura chat
-- La maschera `WhatsAppTest.tsx` prova a chiamare `closeActiveChat`, ma l’estensione non espone quell’azione: oggi è un no-op mascherato.
-- Sostituire questa dipendenza con log chiaro e comportamento deterministico lato estensione: nuovo destinatario numerico = nuova URL send, non chat corrente.
+### 2. `public/whatsapp-extension/actions.js` — `_pageSendWhatsApp` (path search)
+Aggiungere **verifica header chat** prima di scrivere nel composer:
+- Dopo il click sul candidato, attendere fino a 2.5s che `#main header span[title]` (o `[data-testid="conversation-header"] span[title]`) contenga davvero il `target` (case-insensitive, normalizzato).
+- Se l'header non corrisponde → `resolve({ success: false, error: "Header chat non corrisponde a <target>", needsRemap: false })` **senza** scrivere nel composer (no invio sbagliato).
+- Inoltre: **scegliere il match migliore**, non il primo. Se più chat hanno titolo che include il target, preferire match esatto (lowercased equals) rispetto a substring; in mancanza di esatto, scartare match ambigui (più di un candidato substring) e ritornare errore.
 
-5. Versioni e pacchetti
-- Incrementare le versioni estensioni: LinkedIn `3.9.21`, WhatsApp `5.10.15`.
-- Aggiornare manifest, catalogo e costanti richieste in `src/lib/whatsappExtensionZip.ts`.
-- Rigenerare gli zip statici e i fallback `public/linkedin-extension.zip` / `public/whatsapp-extension.zip`.
-
-6. Verifica
-- Controllare che il payload dalla maschera contenga il destinatario inserito.
-- Verificare staticamente che LinkedIn non possa riusare una pagina attiva diversa da Gianfranco.
-- Verificare staticamente che WhatsApp con numero usi sempre URL `/send?phone=<numero>` e non la chat aperta precedente.
-
-File previsti:
-- `public/linkedin-extension/tab-manager.js`
-- `public/linkedin-extension/actions.js`
-- `public/linkedin-extension/manifest.json`
-- `public/whatsapp-extension/actions.js`
+### 3. Version bump WhatsApp `5.10.15 → 5.10.16`
 - `public/whatsapp-extension/manifest.json`
-- `src/components/test-extensions/WhatsAppTest.tsx` solo per log/UX, senza cambiare logica app
-- `src/lib/whatsappExtensionZip.ts`
+- `src/lib/whatsappExtensionZip.ts` (costante `WHATSAPP_EXTENSION_REQUIRED_VERSION`)
 - `public/chrome-extensions/catalog.json`
-- zip estensioni in `public/chrome-extensions/...` e fallback in `public/`
+- Ricostruzione `public/whatsapp-extension.zip` + `public/chrome-extensions/whatsapp/whatsapp-extension-5.10.16.zip`
+
+## Cosa NON tocco
+
+- `tab-manager.js`, `verifySession`, `readUnread`, Optimus, sync-guard, hooks di invio in produzione (`useSendWhatsApp`/orchestratori): l'invio prod usa già `phone` E.164 dal CRM, quindi la hard-guard URL già lo copre.
+- Niente refactor di `sendWhatsAppMessage`. Solo il path search guadagna il check header.
+
+## Risultato atteso
+
+- Inserendo il numero E.164 nel test → invio garantito al destinatario via URL `/send?phone=...`, nessuna possibilità di finire sulla chat attiva.
+- Inserendo solo il nome → se l'header non matcha dopo il click, l'invio viene **bloccato con errore esplicito** invece di scrivere nella chat sbagliata.
