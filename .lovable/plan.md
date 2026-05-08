@@ -1,37 +1,74 @@
-## Problema
+## Verifica logica attuale
 
-Nel test estensioni → WhatsApp, il messaggio finisce nella **prima chat trovata** invece che al destinatario indicato. Cause concomitanti:
+Il problema è confermato: nel test WhatsApp l’elenco “Seleziona contatto” non arriva dal database.
 
-1. **Il form ha solo "Nome contatto"**, niente numero. Quando inserisci "Gianfranco" la extension cade nella branch search-based (`_pageSendWhatsApp`) perché `isPhoneNumber` è false.
-2. **La search-based send non verifica l'header** della chat aperta dopo il click: se la search non aggiorna in tempo (Lexical lento) o trova un titolo che "include" il target tra più contatti, viene usata la chat sbagliata o quella già aperta.
-3. La hard-guard introdotta in 5.10.15 funziona **solo se viene passato un numero** — e oggi dal form non c'è modo di passarlo.
+Oggi succede questo:
 
-## Cosa cambio (solo i punti minimi necessari)
+```text
+Leggi Messaggi → estensione legge la sidebar WhatsApp → estrae solo nome chat + ora
+Dropdown test → usa solo c.contact
+Invia WA → manda quel nome come campo phone
+Estensione → se non è un numero, cerca quel nome nella sidebar WhatsApp
+```
 
-### 1. `src/components/test-extensions/WhatsAppTest.tsx` — UI test
-- Aggiungere un campo dedicato **"Numero (E.164, es. +393331234567)"** *prima* del campo nome.
-- `testSendMessage`: se il numero è valorizzato → passa `phone: numero` (path hard-guard URL). Altrimenti usa il nome come oggi.
-- Mantenere il `closeActiveChat` esistente per i cambi destinatario nel flusso "per nome".
-- Mostrare nel terminal quale path verrà usato (`URL diretto` vs `Search per nome`).
+Quindi l’elenco è “cieco”: non contiene telefono, id contatto, origine CRM, né collegamento al record reale. Per “Gianfranco” sta cercando una stringa dentro WhatsApp Web, non il Gianfranco del CRM.
 
-### 2. `public/whatsapp-extension/actions.js` — `_pageSendWhatsApp` (path search)
-Aggiungere **verifica header chat** prima di scrivere nel composer:
-- Dopo il click sul candidato, attendere fino a 2.5s che `#main header span[title]` (o `[data-testid="conversation-header"] span[title]`) contenga davvero il `target` (case-insensitive, normalizzato).
-- Se l'header non corrisponde → `resolve({ success: false, error: "Header chat non corrisponde a <target>", needsRemap: false })` **senza** scrivere nel composer (no invio sbagliato).
-- Inoltre: **scegliere il match migliore**, non il primo. Se più chat hanno titolo che include il target, preferire match esatto (lowercased equals) rispetto a substring; in mancanza di esatto, scartare match ambigui (più di un candidato substring) e ritornare errore.
+Ho verificato anche i dati reali: nel database esiste il contatto corretto:
 
-### 3. Version bump WhatsApp `5.10.15 → 5.10.16`
-- `public/whatsapp-extension/manifest.json`
-- `src/lib/whatsappExtensionZip.ts` (costante `WHATSAPP_EXTENSION_REQUIRED_VERSION`)
-- `public/chrome-extensions/catalog.json`
-- Ricostruzione `public/whatsapp-extension.zip` + `public/chrome-extensions/whatsapp/whatsapp-extension-5.10.16.zip`
+```text
+imported_contacts
+nome: gianfranco cristiano / transport management srl
+phone/mobile: +393341987225
+email: gianfranco@tmwe.it
+```
 
-## Cosa NON tocco
+Ci sono anche altri “Gianfranco”, quindi il solo nome è ambiguo e non deve essere usato per inviare.
 
-- `tab-manager.js`, `verifySession`, `readUnread`, Optimus, sync-guard, hooks di invio in produzione (`useSendWhatsApp`/orchestratori): l'invio prod usa già `phone` E.164 dal CRM, quindi la hard-guard URL già lo copre.
-- Niente refactor di `sendWhatsAppMessage`. Solo il path search guadagna il check header.
+## Mappa impatto
+
+Nodo critico: invio WhatsApp.
+
+Cosa fa oggi:
+- il test può inviare per numero diretto oppure per nome chat;
+- il path per numero usa `/send?phone=...` ed è quello più sicuro;
+- il path per nome dipende dalla sidebar WhatsApp ed è fragile/ambiguo.
+
+Cosa non va toccato:
+- orchestratori di produzione;
+- coda outreach;
+- backfill/sync WhatsApp;
+- `check-inbox`, `email-imap-proxy`, `mark-imap-seen`;
+- logica di invio email/AI/editorial review.
+
+## Piano di intervento minimo
+
+1. Separare chiaramente due liste nel test WhatsApp:
+   - “Chat lette da WhatsApp Web” = diagnostica, solo nomi chat, non affidabile per invio;
+   - “Destinatari dal database” = lista reale con nome, azienda, telefono/mobile, sorgente.
+
+2. Aggiungere una ricerca database nel test:
+   - campo ricerca nome/azienda/email/telefono;
+   - lookup su `imported_contacts`, `partner_contacts`, `partners`, `business_cards`;
+   - mostrare solo record con telefono/mobile usabile come destinatari primari;
+   - evidenziare record senza telefono come “non inviabile”.
+
+3. Quando selezioni un destinatario dal database:
+   - compilare automaticamente il numero E.164 nel campo numero;
+   - l’invio usa sempre il path diretto `/send?phone=...`;
+   - nel terminal mostrare sorgente, nome, azienda e numero scelto.
+
+4. Bloccare il path ambiguo per nome nel test, oppure tenerlo solo come fallback diagnostico esplicito:
+   - se manca il numero, non inviare automaticamente;
+   - mostrare errore: “serve un numero, il nome chat non garantisce il destinatario”.
+
+5. Sistemare il bridge test dove serve:
+   - il content script oggi non permette alcune azioni già presenti nella UI (`remapSendDom`, `closeActiveChat`), quindi vanno allineate le action consentite;
+   - non cambiare il flusso produzione, solo la pagina Test Estensioni e il manifest/zip WhatsApp.
+
+6. Version bump WhatsApp:
+   - `5.10.17 → 5.10.18`;
+   - aggiornare catalogo e ZIP.
 
 ## Risultato atteso
 
-- Inserendo il numero E.164 nel test → invio garantito al destinatario via URL `/send?phone=...`, nessuna possibilità di finire sulla chat attiva.
-- Inserendo solo il nome → se l'header non matcha dopo il click, l'invio viene **bloccato con errore esplicito** invece di scrivere nella chat sbagliata.
+Nel test, cercando “Gianfranco” vedrai il record reale con `+393341987225`; selezionandolo, il messaggio partirà via numero diretto e non tramite ricerca nome nella sidebar WhatsApp.

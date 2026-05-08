@@ -10,6 +10,7 @@ import { WHATSAPP_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
+import { searchWaRecipients, type WaTestRecipient } from "@/data/whatsappTestLookup";
 
 interface FoundContact {
   contact: string;
@@ -20,10 +21,13 @@ export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
   const [sendPhone, setSendPhone] = useState("");
-  const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
   const [lastSentTo, setLastSentTo] = useState<string | null>(null);
+  const [dbQuery, setDbQuery] = useState("");
+  const [dbResults, setDbResults] = useState<WaTestRecipient[]>([]);
+  const [dbSearching, setDbSearching] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<WaTestRecipient | null>(null);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -148,17 +152,19 @@ export function WhatsAppTest() {
     const phoneRaw = sendPhone.trim();
     const cleanedPhone = phoneRaw.replace(/[^0-9+]/g, "");
     const hasPhone = cleanedPhone.replace(/^\+/, "").length >= 7;
-    if (!hasPhone && !sendContact.trim()) {
-      log("⚠️ Inserisci un numero E.164 (es. +393331234567) oppure il nome del contatto", "warn");
+    if (!hasPhone) {
+      log("⛔ Serve un numero E.164 (es. +393331234567). Cerca il destinatario nel database qui sotto: il numero verrà compilato automaticamente. L'invio per nome chat non è affidabile e può finire alla persona sbagliata.", "error");
       return;
     }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
-    const target = hasPhone ? cleanedPhone : sendContact.trim();
-    const path = hasPhone ? "URL diretto /send?phone=" : "Search per nome";
-    log(`📤 Invio WhatsApp a "${target}" via ${path}: "${sendText.slice(0, 60)}..."`);
+    const target = cleanedPhone;
+    if (selectedRecipient) {
+      log(`🎯 Destinatario CRM: ${selectedRecipient.name}${selectedRecipient.company ? " — " + selectedRecipient.company : ""} [${selectedRecipient.source}] → ${target}`, "info");
+    }
+    log(`📤 Invio WhatsApp a "${target}" via URL diretto /send?phone=: "${sendText.slice(0, 60)}..."`);
     // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
     // all'estensione di chiudere la chat aperta — così non riusa la conversazione
     // precedente per errore.
@@ -181,10 +187,42 @@ export function WhatsAppTest() {
 
   const resetSendForm = () => {
     setSendPhone("");
-    setSendContact("");
     setFoundContacts([]);
     setLastSentTo(null);
+    setSelectedRecipient(null);
+    setDbQuery("");
+    setDbResults([]);
     log("🔄 Reset destinatario: numero, nome, dropdown contatti e memoria ultimo invio azzerati.", "info");
+  };
+
+  const runDbSearch = async () => {
+    const q = dbQuery.trim();
+    if (q.length < 2) {
+      log("⚠️ Scrivi almeno 2 caratteri (nome, azienda, email o telefono)", "warn");
+      return;
+    }
+    setDbSearching(true);
+    try {
+      const results = await searchWaRecipients(q, 25);
+      setDbResults(results);
+      const withPhone = results.filter(r => r.bestPhone).length;
+      log(`🔎 Trovati ${results.length} record nel database (${withPhone} con telefono inviabile)`, results.length > 0 ? "ok" : "warn");
+    } catch (e) {
+      log(`❌ Ricerca database fallita: ${e instanceof Error ? e.message : String(e)}`, "error");
+    } finally {
+      setDbSearching(false);
+    }
+  };
+
+  const pickRecipient = (r: WaTestRecipient) => {
+    setSelectedRecipient(r);
+    if (r.bestPhone) {
+      setSendPhone(r.bestPhone);
+      log(`✅ Destinatario selezionato: ${r.name}${r.company ? " — " + r.company : ""} → ${r.bestPhone}`, "ok");
+    } else {
+      setSendPhone("");
+      log(`⛔ ${r.name} non ha telefono nel database (${r.source}). Aggiorna il record o scegli un altro destinatario.`, "error");
+    }
   };
 
   const testRawDom = async () => {
@@ -317,17 +355,63 @@ export function WhatsAppTest() {
           className="flex-1"
         />
       </div>
-      <div className="flex gap-2">
-        {foundContacts.length > 0 ? (
-          <select value={sendContact} onChange={(e) => setSendContact(e.target.value)} className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={!!sendPhone.trim()}>
-            <option value="">— Seleziona contatto —</option>
-            {foundContacts.map((c, i) => (<option key={i} value={c.contact}>{c.contact}{c.time ? ` (${c.time})` : ""}</option>))}
-          </select>
-        ) : (
-          <Input value={sendContact} onChange={(e) => setSendContact(e.target.value)} placeholder="Nome contatto (usato solo se il numero è vuoto)" className="flex-1" disabled={!!sendPhone.trim()} />
+      <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
+        <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database (CRM)</div>
+        <div className="flex gap-2">
+          <Input
+            value={dbQuery}
+            onChange={(e) => setDbQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runDbSearch(); }}
+            placeholder="Nome, azienda, email o telefono (es. Gianfranco)"
+            className="flex-1"
+          />
+          <Button onClick={runDbSearch} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
+          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario e ricerca">🔄 Reset</Button>
+        </div>
+        {dbResults.length > 0 && (
+          <div className="max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
+            {dbResults.map((r) => {
+              const selected = selectedRecipient?.id === r.id && selectedRecipient?.source === r.source;
+              return (
+                <button
+                  key={`${r.source}-${r.id}`}
+                  type="button"
+                  onClick={() => pickRecipient(r)}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors ${selected ? "bg-accent/40" : ""} ${!r.bestPhone ? "opacity-60" : ""}`}
+                  disabled={!r.bestPhone}
+                  title={!r.bestPhone ? "Nessun telefono in DB — non inviabile" : "Usa questo destinatario"}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{r.name || "(senza nome)"} {r.company && <span className="text-muted-foreground font-normal">— {r.company}</span>}</div>
+                      <div className="text-muted-foreground truncate">
+                        {r.bestPhone ? <span className="text-green-500">📱 {r.bestPhone}</span> : <span className="text-red-500">⛔ no phone</span>}
+                        {r.email && <span> · ✉️ {r.email}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">{r.source.replace("_", " ")}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
-        <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario, dropdown contatti e memoria ultimo invio">🔄 Reset destinatario</Button>
+        {selectedRecipient && (
+          <div className="text-xs text-muted-foreground">
+            Destinatario attivo: <strong>{selectedRecipient.name}</strong>
+            {selectedRecipient.company ? ` — ${selectedRecipient.company}` : ""}
+            {selectedRecipient.bestPhone ? ` → ${selectedRecipient.bestPhone}` : " (no phone)"}
+          </div>
+        )}
       </div>
+      {foundContacts.length > 0 && (
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">📨 Chat lette da WhatsApp Web ({foundContacts.length}) — diagnostica, NON inviabili (manca il numero)</summary>
+          <ul className="mt-2 space-y-1 pl-4 list-disc">
+            {foundContacts.slice(0, 20).map((c, i) => (<li key={i}>{c.contact}{c.time ? ` (${c.time})` : ""}</li>))}
+          </ul>
+        </details>
+      )}
       <div className="flex gap-2">
         <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1" />
         <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
