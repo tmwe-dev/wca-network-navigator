@@ -20,6 +20,7 @@ import { getSecurityHeaders } from "../_shared/securityHeaders.ts";
 import { startMetrics, endMetrics, logEdgeError } from "../_shared/monitoring.ts";
 import { normalizeContent } from "../_shared/contentNormalizer.ts";
 import { safeWrap } from "../_shared/promptSanitizer.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface RequestBody {
   message_id: string;
