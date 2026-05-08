@@ -84,13 +84,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.17",
+    "latestVersion": "3.9.18",
     "items": [
+      {
+        "version": "3.9.18",
+        "filename": "linkedin-extension-3.9.18.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.18.zip",
+        "current": true,
+        "note": "Fix invio: textbox cercato in shadow DOM, attesa thread + readyState, polling esteso a 20s."
+      },
       {
         "version": "3.9.17",
         "filename": "linkedin-extension-3.9.17.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.17.zip",
-        "current": true,
+        "current": false,
         "note": "Fix invio: guardia URL accetta /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado)"
       },
       {

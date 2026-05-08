@@ -197,8 +197,21 @@ var HybridOps = globalThis.HybridOps || (function () {
           // Poll up to 8s for the message textbox to appear after the dialog opens.
           // If still missing, try clicking the profile-scoped "Messaggia"/"Message"
           // button (including the "Altro/More" menu), then poll again.
+          // Walk the DOM including open shadow roots.
+          function deepQueryAll(selector, root) {
+            const out = [];
+            const r = root || document;
+            try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+            const all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+            for (const el of all) {
+              if (el.shadowRoot) {
+                try { out.push.apply(out, deepQueryAll(selector, el.shadowRoot)); } catch (e) {}
+              }
+            }
+            return out;
+          }
           function findBox() {
-            const boxes = Array.from(document.querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']"));
+            const boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
             return boxes.find(function (el) {
               const visible = el.offsetParent !== null || el.getClientRects().length > 0;
               if (!visible) return false;
@@ -236,9 +249,16 @@ var HybridOps = globalThis.HybridOps || (function () {
           }
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
           return (async function () {
+            // Wait for full page load + thread container before polling textbox.
+            for (let i = 0; i < 20 && document.readyState !== "complete"; i++) await sleep(250);
+            for (let i = 0; i < 40; i++) {
+              if (document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) break;
+              await sleep(500);
+            }
             let msgBox = findBox();
             if (!msgBox) {
-              for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              // Up to 20s polling (was 8s).
+              for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
             }
             if (!msgBox) {
               const mb = findMessageBtn();
@@ -264,7 +284,13 @@ var HybridOps = globalThis.HybridOps || (function () {
               const probe = {
                 href: location.href,
                 contenteditable: document.querySelectorAll("[contenteditable='true']").length,
+                contenteditableDeep: deepQueryAll("[contenteditable='true']").length,
                 roleTextbox: document.querySelectorAll("[role='textbox']").length,
+                roleTextboxDeep: deepQueryAll("[role='textbox']").length,
+                shadowHosts: Array.from(document.querySelectorAll("*")).filter(function (e) { return !!e.shadowRoot; }).length,
+                iframes: document.querySelectorAll("iframe").length,
+                msgFormContainers: document.querySelectorAll(".msg-form, [class*='msg-form'], [class*='msg-thread'], [class*='msg-convo']").length,
+                readyState: document.readyState,
                 msgOverlay: document.querySelectorAll(".msg-overlay-conversation-bubble, [class*='msg-overlay']").length,
                 dialogs: document.querySelectorAll("[role='dialog']").length,
                 dialogText: (document.querySelector("[role='dialog']")?.innerText || "").slice(0, 200),

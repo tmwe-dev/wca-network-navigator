@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.17",
-  "description": "Fix invio: la guardia URL accetta anche /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado).",
+  "version": "3.9.18",
+  "description": "Fix invio: textbox cercato anche in shadow DOM, attesa thread + readyState, polling esteso a 20s, probe DOM piu ricco.",
   "permissions": [
     "cookies",
     "tabs",

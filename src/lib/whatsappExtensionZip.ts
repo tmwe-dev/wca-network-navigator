@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.13";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.17";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.18";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.2";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -106,13 +106,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.17",
+    latestVersion: "3.9.18",
     items: [
+      {
+        version: "3.9.18",
+        filename: "linkedin-extension-3.9.18.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.18.zip",
+        current: true,
+        note: "Fix invio: textbox cercato in shadow DOM, attesa thread + readyState, polling esteso a 20s.",
+      },
       {
         version: "3.9.17",
         filename: "linkedin-extension-3.9.17.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.17.zip",
-        current: true,
+        current: false,
         note: "Fix invio: guardia URL accetta /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado)",
       },
       {
