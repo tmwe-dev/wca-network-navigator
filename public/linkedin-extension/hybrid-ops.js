@@ -260,6 +260,22 @@ var HybridOps = globalThis.HybridOps || (function () {
             });
           }
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          // P12 — Anti-double-overlay guard: ritorna true se esiste già un
+          // composer/overlay LinkedIn aperto. In quel caso NON dobbiamo
+          // ri-cliccare "Messaggia"/"Message" perché LinkedIn aprirebbe una
+          // SECONDA finestra (anti-pattern che fa scattare i radar antifrode).
+          function hasOpenComposer() {
+            try {
+              var scopes = deepQueryAll(
+                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              );
+              for (var i = 0; i < scopes.length; i++) {
+                var s = scopes[i];
+                if (s.offsetParent !== null || s.getClientRects().length > 0) return true;
+              }
+            } catch (e) {}
+            return false;
+          }
           return (async function () {
             // Wait for full page load + thread container before polling textbox.
             for (let i = 0; i < 20 && document.readyState !== "complete"; i++) await sleep(250);
@@ -274,18 +290,22 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             if (!msgBox) {
               const mb = findMessageBtn();
-              if (mb && mb.offsetParent !== null) {
+              if (mb && mb.offsetParent !== null && !hasOpenComposer()) {
                 mb.click();
+                for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              } else if (hasOpenComposer()) {
+                // Composer già aperto altrove: aspetta che diventi raggiungibile
+                // dallo scope corretto invece di aprirne un secondo.
                 for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
               }
             }
             if (!msgBox) {
               const more = findMoreBtn();
-              if (more) {
+              if (more && !hasOpenComposer()) {
                 more.click();
                 await sleep(800);
                 const mb = findMessageBtn();
-                if (mb) {
+                if (mb && !hasOpenComposer()) {
                   mb.click();
                   for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
                 }
