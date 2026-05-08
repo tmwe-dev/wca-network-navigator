@@ -19,6 +19,7 @@ interface FoundContact {
 export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
+  const [sendPhone, setSendPhone] = useState("");
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
@@ -144,26 +145,34 @@ export function WhatsAppTest() {
   };
 
   const testSendMessage = async () => {
-    if (!sendContact.trim()) { log("⚠️ Inserisci il nome del contatto WhatsApp", "warn"); return; }
+    const phoneRaw = sendPhone.trim();
+    const cleanedPhone = phoneRaw.replace(/[^0-9+]/g, "");
+    const hasPhone = cleanedPhone.replace(/^\+/, "").length >= 7;
+    if (!hasPhone && !sendContact.trim()) {
+      log("⚠️ Inserisci un numero E.164 (es. +393331234567) oppure il nome del contatto", "warn");
+      return;
+    }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
-    log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
+    const target = hasPhone ? cleanedPhone : sendContact.trim();
+    const path = hasPhone ? "URL diretto /send?phone=" : "Search per nome";
+    log(`📤 Invio WhatsApp a "${target}" via ${path}: "${sendText.slice(0, 60)}..."`);
     // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
     // all'estensione di chiudere la chat aperta — così non riusa la conversazione
     // precedente per errore.
-    if (lastSentTo && lastSentTo !== sendContact.trim()) {
+    if (lastSentTo && lastSentTo !== target) {
       try {
         await waMsg("closeActiveChat", {}, 5000);
-        log(`🧹 Chat precedente chiusa (destinatario cambiato: ${lastSentTo} → ${sendContact})`, "info");
+        log(`🧹 Chat precedente chiusa (destinatario cambiato: ${lastSentTo} → ${target})`, "info");
       } catch { /* opzionale, l'estensione potrebbe non supportarlo */ }
     }
-    const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
+    const r = await waMsg("sendWhatsApp", { phone: target, text: sendText }, 60000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
-      setLastSentTo(sendContact.trim());
+      setLastSentTo(target);
     } else {
       log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
@@ -171,10 +180,11 @@ export function WhatsAppTest() {
   };
 
   const resetSendForm = () => {
+    setSendPhone("");
     setSendContact("");
     setFoundContacts([]);
     setLastSentTo(null);
-    log("🔄 Reset destinatario: campo vuoto, dropdown contatti svuotato, memoria ultimo invio cancellata. Rifai 📨 Leggi Messaggi per ripopolare.", "info");
+    log("🔄 Reset destinatario: numero, nome, dropdown contatti e memoria ultimo invio azzerati.", "info");
   };
 
   const testRawDom = async () => {
@@ -300,13 +310,21 @@ export function WhatsAppTest() {
         <div className="ml-auto flex items-center"><SyncGuardIndicator channel="whatsapp" /></div>
       </div>
       <div className="flex gap-2">
+        <Input
+          value={sendPhone}
+          onChange={(e) => setSendPhone(e.target.value)}
+          placeholder="Numero E.164 (es. +393331234567) — preferito"
+          className="flex-1"
+        />
+      </div>
+      <div className="flex gap-2">
         {foundContacts.length > 0 ? (
-          <select value={sendContact} onChange={(e) => setSendContact(e.target.value)} className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <select value={sendContact} onChange={(e) => setSendContact(e.target.value)} className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={!!sendPhone.trim()}>
             <option value="">— Seleziona contatto —</option>
             {foundContacts.map((c, i) => (<option key={i} value={c.contact}>{c.contact}{c.time ? ` (${c.time})` : ""}</option>))}
           </select>
         ) : (
-          <Input value={sendContact} onChange={(e) => setSendContact(e.target.value)} placeholder="Nome contatto (prima fai 📨 Leggi Messaggi)" className="flex-1" />
+          <Input value={sendContact} onChange={(e) => setSendContact(e.target.value)} placeholder="Nome contatto (usato solo se il numero è vuoto)" className="flex-1" disabled={!!sendPhone.trim()} />
         )}
         <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario, dropdown contatti e memoria ultimo invio">🔄 Reset destinatario</Button>
       </div>
