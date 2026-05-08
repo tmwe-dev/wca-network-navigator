@@ -51,10 +51,25 @@ export async function invokeEdge<T = unknown>(
 
   let result: Awaited<ReturnType<typeof supabase.functions.invoke>>;
   try {
-    result = await supabase.functions.invoke(functionName, {
-      body: body as Record<string, unknown> | undefined,
-      headers,
-    });
+    // Retry su 503 BOOT_ERROR (cold-start transitorio durante batch paralleli):
+    // 2 tentativi extra con backoff 400ms / 1200ms.
+    let attempt = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      result = await supabase.functions.invoke(functionName, {
+        body: body as Record<string, unknown> | undefined,
+        headers,
+      });
+      const errCtx = (result.error as unknown as { context?: { status?: number } } | null)?.context;
+      const status = errCtx?.status;
+      if (result.error && status === 503 && attempt < 2) {
+        attempt++;
+        log.warn("retrying after 503 BOOT_ERROR", { functionName, context, attempt });
+        await new Promise((r) => setTimeout(r, attempt === 1 ? 400 : 1200));
+        continue;
+      }
+      break;
+    }
   } catch (err) {
     log.warn("invoke threw", { functionName, context, err });
     Sentry.addBreadcrumb({ category: "edge-function", message: `${functionName} threw`, level: "error", data: { functionName, context } });
