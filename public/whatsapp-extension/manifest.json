@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.14",
-  "description": "Insert cascade with DOM verify: paste → execCommand → textContent. No duplicate, no failed send.",
+  "version": "5.10.15",
+  "description": "Hard guard destinatario: numero telefono = sempre URL /send?phone=, mai riuso chat aperta. Search-based solo per nomi non numerici.",
   "permissions": [
     "tabs",
     "activeTab",
