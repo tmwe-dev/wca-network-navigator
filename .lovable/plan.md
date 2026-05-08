@@ -1,30 +1,30 @@
-## Obiettivo
-Nella tab "Test LinkedIn" (`/test-extensions`) aggiungere 3 pulsanti di test, uno per ciascun metodo di click sul pulsante "Invia". Così possiamo provarli isolatamente e capire quale funziona meglio nel composer corrente, senza che la cascata di fallback nasconda quale metodo ha vinto.
+Problema trovato dopo 3 giri di audit:
 
-## I 3 metodi
-1. **Click fisico simulato** — `scrollIntoView` + sequenza `pointerdown / mousedown / pointerup / mouseup / click` con coordinate reali sul bottone "Invia". Più affidabile contro listener React/Draft.js.
-2. **Form submit** — `requestSubmit()` (con fallback `dispatchEvent(submit)`) sul `<form class="msg-form">` genitore del composer. Bypassa il bottone, attiva l'handler React di submit.
-3. **Scorciatoia tastiera** — `Ctrl+Enter` (e fallback `Cmd+Enter` su Mac) sulla textbox. Shortcut nativo LinkedIn.
+- UI test: invia correttamente `{ url, message, method }` con `method = physical_click | form_submit | keyboard_shortcut`.
+- `content.js`: accetta `sendMessageWithMethod` nella whitelist, ma non copia `data.method` nel messaggio inoltrato al background.
+- `background.js`: chiama già `Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method)`.
+- `actions.js`: riceve `msg.method` vuoto e risponde correttamente `method mancante`.
+- `hybrid-ops.js`: supporta già i tre metodi e li passa allo script LinkedIn.
+- ZIP `3.9.25`: contiene lo stesso errore, quindi anche scaricando la 3.9.25 il parametro non passa.
 
-Ogni metodo, dopo l'azione, verifica per ~1.5s che la textbox si svuoti (come già fa P13). Ritorna `success` solo se la textbox si è davvero svuotata, altrimenti errore esplicito col nome del metodo, così nei log si vede subito chi vince.
+Piano di fix minimo:
 
-## Modifiche
+1. In `public/linkedin-extension/content.js`, aggiungere solo l’inoltro del campo:
+   `if (data.method) msg.method = data.method;`
 
-### Estensione (LinkedIn `3.9.25`)
-- `public/linkedin-extension/hybrid-ops.js`: aggiungere `sendMessageWithMethod(tabId, message, method)` accanto a `sendMessage`. Riusa la stessa logica di apertura composer + scrittura testo (P3+P5+P13 wake-up), ma il blocco di click usa **solo** il metodo passato (`physical_click` | `form_submit` | `keyboard_shortcut`). Niente cascata. Se la textbox non si svuota → errore con `attempted_method: <nome>`.
-- `public/linkedin-extension/actions.js`: aggiungere handler messaggio `sendMessageWithMethod` che instrada al nuovo helper.
-- `public/linkedin-extension/manifest.json`: bump `3.9.24` → `3.9.25`.
-- `public/chrome-extensions/catalog.json` + `src/lib/whatsappExtensionZip.ts`: bump versione richiesta.
-- Rebuild ZIP `public/linkedin-extension.zip` e `public/chrome-extensions/linkedin/linkedin-extension-3.9.25.zip`.
+2. Alzare la release LinkedIn a `3.9.26` per non confonderla con la 3.9.25 già difettosa:
+   - `public/linkedin-extension/manifest.json`
+   - `public/chrome-extensions/catalog.json`
+   - `src/lib/whatsappExtensionZip.ts`
+   - pagina/pannello Settings già collegati alla costante.
 
-### UI test
-- `src/components/test-extensions/LinkedInTest.tsx`: nel pannello "📤 Test Invio Messaggio LinkedIn", sotto al pulsante esistente "Invia LI" (lasciato com'è, è la cascata completa), aggiungere una riga con 3 pulsanti:
-  - `🖱️ Click fisico` → chiama `liMsg("sendMessageWithMethod", { url, message, method: "physical_click" })`
-  - `📋 Form submit` → metodo `form_submit`
-  - `⌨️ Ctrl+Enter` → metodo `keyboard_shortcut`
-  Ognuno passa per `runWithCooldown`, logga il metodo usato e mostra `success`/errore distinti, così confrontiamo i risultati nel terminal.
+3. Ricostruire entrambi gli ZIP:
+   - `public/chrome-extensions/linkedin/linkedin-extension-3.9.26.zip`
+   - `public/linkedin-extension.zip`
 
-## Cosa NON cambia
-- `sendMessage` originale resta intatto (cascata AX → AI Learn → structural+P13). I 3 nuovi pulsanti sono diagnostici, non sostituiscono il flusso produzione.
-- Nessuna modifica a guard, cooldown, anti-double-overlay, o pipeline esterne.
-- Nessun refactor opportunistico.
+4. Verifica finale:
+   - controllare dentro entrambi gli ZIP che `manifest.json` sia `3.9.26`;
+   - controllare dentro entrambi gli ZIP che `content.js` contenga `msg.method = data.method`;
+   - controllare che Settings mostri/scarichi `linkedin-extension-3.9.26.zip`.
+
+Risultato atteso: i tre test non falliranno più con `method mancante`; arriveranno al vero test del click (`physical_click`, `form_submit`, `keyboard_shortcut`).

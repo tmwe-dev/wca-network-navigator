@@ -111,6 +111,7 @@
       const msg = { source: "li-content-bridge", action: data.action };
       if (data.url) msg.url = data.url;
       if (data.message) msg.message = data.message;
+      if (data.method) msg.method = data.method;
       if (data.note !== undefined) msg.note = data.note;
       if (data.query) msg.query = data.query;
       if (data.threadUrl) msg.threadUrl = data.threadUrl;
