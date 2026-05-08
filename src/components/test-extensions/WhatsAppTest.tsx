@@ -357,17 +357,63 @@ export function WhatsAppTest() {
           className="flex-1"
         />
       </div>
-      <div className="flex gap-2">
-        {foundContacts.length > 0 ? (
-          <select value={sendContact} onChange={(e) => setSendContact(e.target.value)} className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={!!sendPhone.trim()}>
-            <option value="">— Seleziona contatto —</option>
-            {foundContacts.map((c, i) => (<option key={i} value={c.contact}>{c.contact}{c.time ? ` (${c.time})` : ""}</option>))}
-          </select>
-        ) : (
-          <Input value={sendContact} onChange={(e) => setSendContact(e.target.value)} placeholder="Nome contatto (usato solo se il numero è vuoto)" className="flex-1" disabled={!!sendPhone.trim()} />
+      <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
+        <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database (CRM)</div>
+        <div className="flex gap-2">
+          <Input
+            value={dbQuery}
+            onChange={(e) => setDbQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runDbSearch(); }}
+            placeholder="Nome, azienda, email o telefono (es. Gianfranco)"
+            className="flex-1"
+          />
+          <Button onClick={runDbSearch} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
+          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario e ricerca">🔄 Reset</Button>
+        </div>
+        {dbResults.length > 0 && (
+          <div className="max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
+            {dbResults.map((r) => {
+              const selected = selectedRecipient?.id === r.id && selectedRecipient?.source === r.source;
+              return (
+                <button
+                  key={`${r.source}-${r.id}`}
+                  type="button"
+                  onClick={() => pickRecipient(r)}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors ${selected ? "bg-accent/40" : ""} ${!r.bestPhone ? "opacity-60" : ""}`}
+                  disabled={!r.bestPhone}
+                  title={!r.bestPhone ? "Nessun telefono in DB — non inviabile" : "Usa questo destinatario"}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{r.name || "(senza nome)"} {r.company && <span className="text-muted-foreground font-normal">— {r.company}</span>}</div>
+                      <div className="text-muted-foreground truncate">
+                        {r.bestPhone ? <span className="text-green-500">📱 {r.bestPhone}</span> : <span className="text-red-500">⛔ no phone</span>}
+                        {r.email && <span> · ✉️ {r.email}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">{r.source.replace("_", " ")}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
-        <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario, dropdown contatti e memoria ultimo invio">🔄 Reset destinatario</Button>
+        {selectedRecipient && (
+          <div className="text-xs text-muted-foreground">
+            Destinatario attivo: <strong>{selectedRecipient.name}</strong>
+            {selectedRecipient.company ? ` — ${selectedRecipient.company}` : ""}
+            {selectedRecipient.bestPhone ? ` → ${selectedRecipient.bestPhone}` : " (no phone)"}
+          </div>
+        )}
       </div>
+      {foundContacts.length > 0 && (
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">📨 Chat lette da WhatsApp Web ({foundContacts.length}) — diagnostica, NON inviabili (manca il numero)</summary>
+          <ul className="mt-2 space-y-1 pl-4 list-disc">
+            {foundContacts.slice(0, 20).map((c, i) => (<li key={i}>{c.contact}{c.time ? ` (${c.time})` : ""}</li>))}
+          </ul>
+        </details>
+      )}
       <div className="flex gap-2">
         <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1" />
         <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
