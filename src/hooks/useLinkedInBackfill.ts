@@ -64,7 +64,7 @@ export function useLinkedInBackfill() {
   const startBackfill = useCallback(async () => {
     if (runningRef.current) return;
     // Single-op guard
-    let guard: import("@/lib/syncGuard").GuardToken;
+    let guard!: import("@/lib/syncGuard").GuardToken;
     try {
       guard = tryAcquire("linkedin", "Backfill");
     } catch (e) {

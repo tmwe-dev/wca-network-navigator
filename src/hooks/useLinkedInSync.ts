@@ -64,7 +64,7 @@ export function useLinkedInSync() {
       return;
     }
     // Single-op guard
-    let guard: import("@/lib/syncGuard").GuardToken;
+    let guard!: import("@/lib/syncGuard").GuardToken;
     try {
       guard = tryAcquire("linkedin", "Lettura inbox");
     } catch (e) {
