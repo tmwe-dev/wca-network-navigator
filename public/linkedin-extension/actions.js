@@ -908,6 +908,19 @@ var Actions = globalThis.Actions || (function () {
       const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
       await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
       await TabManager.sleep(3000);
+      try {
+        const openThread = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            const link = Array.from(document.querySelectorAll("a[href*='/messaging/thread/']")).find(function (a) {
+              return a.offsetParent !== null || a.getClientRects().length > 0;
+            });
+            if (link) { link.click(); return true; }
+            return false;
+          },
+        });
+        if (openThread[0] && openThread[0].result) await TabManager.sleep(3500);
+      } catch (e) { console.debug("[LI remap] open first thread:", e?.message); }
       const messagingSchema = await AILearn.learnFromAI(tab.id, "messaging", Config.getUrl(), Config.getKey());
 
       // 3) Re-learn profile (schema usato per click "Message"/"Connect")
