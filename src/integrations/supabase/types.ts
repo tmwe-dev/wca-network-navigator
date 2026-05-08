@@ -2307,6 +2307,63 @@ export type Database = {
           },
         ]
       }
+      ai_test_scenarios: {
+        Row: {
+          ai_scope: string
+          assertions: Json
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_shared: boolean
+          name: string
+          owner_id: string
+          payload: Json
+          priority: number
+          tags: string[]
+          target_function: string
+          updated_at: string
+        }
+        Insert: {
+          ai_scope?: string
+          assertions?: Json
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_shared?: boolean
+          name: string
+          owner_id?: string
+          payload?: Json
+          priority?: number
+          tags?: string[]
+          target_function: string
+          updated_at?: string
+        }
+        Update: {
+          ai_scope?: string
+          assertions?: Json
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_shared?: boolean
+          name?: string
+          owner_id?: string
+          payload?: Json
+          priority?: number
+          tags?: string[]
+          target_function?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_token_usage: {
         Row: {
           cost_estimate: number | null

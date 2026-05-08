@@ -60,7 +60,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     title: "AI Staff",
     items: [
       { label: "AI Arena 3D",          path: "/v2/ai-arena" },
-      { label: "AI Lab Test",          path: "/v2/ai-staff/lab" },
+      { label: "AI Test Hub",          path: "/v2/ai-test-hub" },
       { label: "AI Staff Hub",         path: "/v2/ai-staff" },
       { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
     ],
