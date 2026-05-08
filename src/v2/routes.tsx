@@ -98,6 +98,8 @@ const ProposalsReviewPage = lazy(() => import("./ui/pages/prompt-lab/ProposalsRe
 const PromptCatalogPage = lazy(() => import("./ui/pages/PromptCatalogPage"));
 const PromptReaderPage = lazy(() => import("./ui/pages/prompt-lab/PromptReaderPage"));
 const AiInteractionLogPage = lazy(() => import("./ui/pages/AiInteractionLogPage"));
+const RubricaWhatsAppPage = lazy(() => import("./ui/pages/RubricaWhatsAppPage").then((m) => ({ default: m.RubricaWhatsAppPage })));
+const RubricaLinkedInPage = lazy(() => import("./ui/pages/RubricaLinkedInPage").then((m) => ({ default: m.RubricaLinkedInPage })));
 const DPAPage = lazy(() => import("./ui/pages/DPAPage").then((m) => ({ default: m.DPAPage })));
 const GuidedOnboardingPage = lazy(() => import("./ui/pages/GuidedOnboardingPage").then((m) => ({ default: m.GuidedOnboardingPage })));
 const AgentPersonaEditorPage = lazy(() => import("./ui/pages/AgentPersonaEditorPage").then((m) => ({ default: m.AgentPersonaEditorPage })));
@@ -231,6 +233,8 @@ export function V2Routes(): React.ReactElement {
 
           {/* ── Cestinone: unica coda pre-invio ── */}
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
+          <Route path="rubrica/whatsapp" element={guardedPage(RubricaWhatsAppPage, "RubricaWA")} />
+          <Route path="rubrica/linkedin" element={guardedPage(RubricaLinkedInPage, "RubricaLI")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
 

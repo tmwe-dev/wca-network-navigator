@@ -68,5 +68,9 @@ export const v2Keys = {
     partnerDetail: (partnerId?: string) => ["v2", "partner", partnerId] as const,
     dashboard: ["v2", "dashboard", "metrics"] as const,
     agentCapabilities: ["v2", "agent-capabilities"] as const,
+    rubrica: {
+      whatsapp: ["v2", "rubrica", "whatsapp"] as const,
+      linkedin: ["v2", "rubrica", "linkedin"] as const,
+    },
   },
 } as const;

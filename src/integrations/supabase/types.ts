@@ -3402,6 +3402,7 @@ export type Database = {
           email_date: string | null
           folder: string | null
           from_address: string | null
+          from_name: string | null
           hidden_by_rule: boolean | null
           id: string
           imap_flags: string | null
@@ -3425,6 +3426,7 @@ export type Database = {
           subject: string | null
           thread_id: string | null
           to_address: string | null
+          to_name: string | null
           uidvalidity: number | null
           user_id: string
         }
@@ -3443,6 +3445,7 @@ export type Database = {
           email_date?: string | null
           folder?: string | null
           from_address?: string | null
+          from_name?: string | null
           hidden_by_rule?: boolean | null
           id?: string
           imap_flags?: string | null
@@ -3466,6 +3469,7 @@ export type Database = {
           subject?: string | null
           thread_id?: string | null
           to_address?: string | null
+          to_name?: string | null
           uidvalidity?: number | null
           user_id: string
         }
@@ -3484,6 +3488,7 @@ export type Database = {
           email_date?: string | null
           folder?: string | null
           from_address?: string | null
+          from_name?: string | null
           hidden_by_rule?: boolean | null
           id?: string
           imap_flags?: string | null
@@ -3507,6 +3512,7 @@ export type Database = {
           subject?: string | null
           thread_id?: string | null
           to_address?: string | null
+          to_name?: string | null
           uidvalidity?: number | null
           user_id?: string
         }
@@ -7390,6 +7396,107 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      linkedin_addresses: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          display_name: string | null
+          first_seen_at: string
+          headline: string | null
+          id: string
+          last_direction: string | null
+          last_message_at: string | null
+          last_seen_at: string
+          linked_partner_contact_id: string | null
+          linked_partner_id: string | null
+          messages_in_count: number
+          messages_out_count: number
+          notes: string | null
+          operator_id: string | null
+          profile_slug: string
+          profile_url: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_name?: string | null
+          first_seen_at?: string
+          headline?: string | null
+          id?: string
+          last_direction?: string | null
+          last_message_at?: string | null
+          last_seen_at?: string
+          linked_partner_contact_id?: string | null
+          linked_partner_id?: string | null
+          messages_in_count?: number
+          messages_out_count?: number
+          notes?: string | null
+          operator_id?: string | null
+          profile_slug: string
+          profile_url?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_name?: string | null
+          first_seen_at?: string
+          headline?: string | null
+          id?: string
+          last_direction?: string | null
+          last_message_at?: string | null
+          last_seen_at?: string
+          linked_partner_contact_id?: string | null
+          linked_partner_id?: string | null
+          messages_in_count?: number
+          messages_out_count?: number
+          notes?: string | null
+          operator_id?: string | null
+          profile_slug?: string
+          profile_url?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_addresses_linked_partner_contact_id_fkey"
+            columns: ["linked_partner_contact_id"]
+            isOneToOne: false
+            referencedRelation: "partner_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_addresses_linked_partner_id_fkey"
+            columns: ["linked_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_addresses_linked_partner_id_fkey"
+            columns: ["linked_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_addresses_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       linkedin_flow_items: {
         Row: {
@@ -11439,6 +11546,107 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_addresses: {
+        Row: {
+          chat_thread_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          display_name: string | null
+          first_seen_at: string
+          handle: string
+          id: string
+          last_direction: string | null
+          last_message_at: string | null
+          last_seen_at: string
+          linked_partner_contact_id: string | null
+          linked_partner_id: string | null
+          messages_in_count: number
+          messages_out_count: number
+          notes: string | null
+          operator_id: string | null
+          phone_e164: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_thread_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_name?: string | null
+          first_seen_at?: string
+          handle: string
+          id?: string
+          last_direction?: string | null
+          last_message_at?: string | null
+          last_seen_at?: string
+          linked_partner_contact_id?: string | null
+          linked_partner_id?: string | null
+          messages_in_count?: number
+          messages_out_count?: number
+          notes?: string | null
+          operator_id?: string | null
+          phone_e164?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_thread_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_name?: string | null
+          first_seen_at?: string
+          handle?: string
+          id?: string
+          last_direction?: string | null
+          last_message_at?: string | null
+          last_seen_at?: string
+          linked_partner_contact_id?: string | null
+          linked_partner_id?: string | null
+          messages_in_count?: number
+          messages_out_count?: number
+          notes?: string | null
+          operator_id?: string | null
+          phone_e164?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_addresses_linked_partner_contact_id_fkey"
+            columns: ["linked_partner_contact_id"]
+            isOneToOne: false
+            referencedRelation: "partner_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_addresses_linked_partner_id_fkey"
+            columns: ["linked_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_addresses_linked_partner_id_fkey"
+            columns: ["linked_partner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_addresses_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_documents: {
         Row: {
           created_at: string
@@ -12184,6 +12392,32 @@ export type Database = {
         Returns: number
       }
       update_mission_progress: { Args: { p_mission_id: string }; Returns: Json }
+      upsert_linkedin_address: {
+        Args: {
+          p_direction: string
+          p_display_name: string
+          p_headline: string
+          p_message_at: string
+          p_operator_id: string
+          p_profile_slug: string
+          p_profile_url: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      upsert_whatsapp_address: {
+        Args: {
+          p_chat_thread_id: string
+          p_direction: string
+          p_display_name: string
+          p_handle: string
+          p_message_at: string
+          p_operator_id: string
+          p_phone_e164: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       activity_status: "pending" | "in_progress" | "completed" | "cancelled"
