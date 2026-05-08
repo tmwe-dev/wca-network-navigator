@@ -464,6 +464,7 @@ ${bodyBlock}`;
               website: sd.intel?.website ?? null,
               role_guess: sd.intel?.role_guess ?? null,
             };
+            void recordStage("scouted", { known: !!sd.known });
           }
         } catch (_se) {
           // scout fallito → procediamo senza intel
@@ -483,6 +484,7 @@ ${bodyBlock}`;
             sender_intel: senderIntel,
           },
         });
+        void recordStage("classified");
       } catch (_e) {
         // fail-safe: la classificazione legacy resta valida anche senza Funnemail
       }
@@ -504,6 +506,7 @@ ${bodyBlock}`;
             user_id: body.user_id,
           },
         });
+        void recordStage("routed");
       } catch (_e) {
         // fail-safe: routing è fire-and-forget, errori non bloccano nulla
       }
@@ -578,6 +581,7 @@ ${bodyBlock}`;
     }
 
     endMetrics(metrics, true, 200);
+    if (channel === "email") void recordStage("completed", { post_classification: !!postClassResult, funnemail: !!funnemailResult });
     return new Response(JSON.stringify({
       success: true,
       classification: result.classification,
