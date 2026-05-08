@@ -2,7 +2,6 @@
 // activity update + autopilot/needs_human side-effects.
 // Estratto 1:1 da index.ts. Comportamento identico.
 
-import { loadOperativePrompts } from "../../_shared/operativePromptsLoader.ts";
 import {
   CLASSIFICATIONS,
   SENTIMENTS,
@@ -10,6 +9,7 @@ import {
   type ClassifyResult,
   type RequestBody,
 } from "./types.ts";
+import { buildClassificationPrompt } from "./aiPromptBuilder.ts";
 
 // deno-lint-ignore no-explicit-any
 type Sb = any;
@@ -20,7 +20,6 @@ export async function runAiClassification(
 ): Promise<{ result: ClassifyResult; model: string }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const model = "google/gemini-3-flash-preview";
-  const { message_id, channel, body_text, from_address, subject } = body;
 
   let result: ClassifyResult = {
     classification: "neutral",
@@ -33,59 +32,7 @@ export async function runAiClassification(
 
   if (!LOVABLE_API_KEY) return { result, model };
 
-  const channelHint = channel === "whatsapp"
-    ? "This is a WhatsApp message (short, informal)."
-    : channel === "linkedin"
-    ? "This is a LinkedIn message (professional networking)."
-    : "This is an email reply (business communication).";
-
-  const fallbackSystemPrompt = `You are a B2B inbound message classifier for a logistics CRM.
-${channelHint}
-
-Classify the message and extract structured metadata using the provided tool.
-Consider the channel context when evaluating tone and intent.`;
-
-  let promptLabBlock = "";
-  let hasSystemFromLab = false;
-  if (body.user_id) {
-    try {
-      const opResult = await loadOperativePrompts(supabase, body.user_id, {
-        scope: "classification",
-        channel: channel as "email" | "whatsapp" | "linkedin",
-        extraTags: ["system", "inbound"],
-        includeUniversal: true,
-        limit: 6,
-      });
-      if (opResult.block) {
-        promptLabBlock = opResult.block;
-        hasSystemFromLab = (opResult.appliedNames ?? []).some((n) => n === "Inbound Message System");
-      }
-    } catch (e) {
-      console.warn("[classify-inbound-message] prompt lab load failed:", (e as Error).message);
-    }
-  }
-  const finalSystemPrompt = hasSystemFromLab
-    ? `${channelHint}\n\n${promptLabBlock}`
-    : `${fallbackSystemPrompt}${promptLabBlock ? `\n\n${promptLabBlock}` : ""}`;
-
-  const { normalizeContent } = await import("../../_shared/contentNormalizer.ts");
-  const { safeWrap } = await import("../../_shared/promptSanitizer.ts");
-  const channelSource: "email-inbound" | "whatsapp-message" | "linkedin-message" =
-    channel === "whatsapp" ? "whatsapp-message"
-    : channel === "linkedin" ? "linkedin-message"
-    : "email-inbound";
-  const subjNorm = normalizeContent(subject || "", { source: channelSource, maxChars: 300 }).text;
-  const bodyNorm = normalizeContent(body_text || "", { source: channelSource, maxChars: 3000 });
-  const { block: bodyBlock } = safeWrap(bodyNorm.text, "INBOUND BODY", {
-    source: channelSource,
-    policy: "redact",
-  });
-
-  const userPrompt = `Channel: ${channel}
-From: ${from_address}
-Subject: ${subjNorm || "(none)"}
-Body:
-${bodyBlock}`;
+  const { systemPrompt: finalSystemPrompt, userPrompt } = await buildClassificationPrompt(supabase, body);
 
   try {
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -140,7 +87,6 @@ ${bodyBlock}`;
       }
     } else {
       result.reasoning = `AI error: ${aiResp.status}`;
-      void message_id; // referenced for future log enrichment
     }
   } catch (aiErr) {
     result.reasoning = `AI exception: ${aiErr instanceof Error ? aiErr.message : String(aiErr)}`;
