@@ -16,14 +16,25 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const target = profileUrl.replace(/\/$/, "");
+    // P1 — Thread URL detection: se l'URL è un thread di messaggistica, il
+    // bottone "Messaggia" non esiste. Saltiamo clickMessage e andiamo dritti
+    // a sendMessage, che cerca direttamente la textbox del composer.
+    const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
       const tab = await TabManager.getLinkedInTab(target);
+      // P1/P9 — Forziamo la tab attiva e in focus prima di scrivere.
+      try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { /* ignore */ }
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-      const clickResult = await HybridOps.clickMessage(tab.id);
-      if (!clickResult || !clickResult.success) {
-        return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
+      if (!isThreadUrl) {
+        const clickResult = await HybridOps.clickMessage(tab.id);
+        if (!clickResult || !clickResult.success) {
+          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
+        }
+        await TabManager.sleep(3000);
+      } else {
+        // Thread già aperto: diamo solo il tempo al composer di montarsi.
+        await TabManager.sleep(1500);
       }
-      await TabManager.sleep(3000);
       const sendResult = await HybridOps.sendMessage(tab.id, message);
       return { tabId: tab.id, result: sendResult };
     }
