@@ -37,7 +37,7 @@ interface StepRange { min: number; max: number }
 interface Settings { [k: string]: StepRange }
 
 const DEFAULTS: Record<GuardStepKind, StepRange> = {
-  ping:           { min: 5_000,  max: 5_000 },
+  ping:           { min: 300,    max: 300 },
   cookie:         { min: 5_000,  max: 5_000 },
   open:           { min: 4_000,  max: 6_000 },
   read:           { min: 2_000,  max: 3_000 },
