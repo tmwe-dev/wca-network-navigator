@@ -141,8 +141,6 @@ export function FunnemailMailCard({
   const countryCode = partner?.country_code ?? null;
   const emailAddress = message.from_address?.match(/<(.+?)>/)?.[1] || message.from_address || "";
   const funnemailFolder = meta.funnemail_folder_label ?? meta.folder ?? meta.category ?? null;
-  const category = meta.category ?? null;
-  const senderIntel = meta.sender_intel ?? null;
   const claimedByMe = !!claim && !!myUserId && claim.claimed_by === myUserId;
   const claimedByOther = !!claim && !claimedByMe;
   const claimMinutes = claim ? Math.max(0, Math.round((Date.now() - new Date(claim.claimed_at).getTime()) / 60000)) : 0;
