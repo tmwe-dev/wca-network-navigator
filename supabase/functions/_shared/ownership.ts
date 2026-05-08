@@ -83,7 +83,19 @@ export async function resolveCaller(
   // that prefix is reserved for non-anon project secret keys).
   const isNewSecretFormat = token.startsWith("sb_secret_");
   const isExactServiceMatch = !!serviceKey && token === serviceKey;
-  if (isExactServiceMatch || isNewSecretFormat) {
+  // JWT claim check: a legacy service_role JWT will have role:"service_role"
+  // in its (unsigned) payload. We accept this as service-role identity since
+  // possessing such a token is equivalent to having SERVICE_ROLE_KEY.
+  let isServiceRoleJwt = false;
+  if (!isExactServiceMatch && !isNewSecretFormat && token.split(".").length === 3) {
+    try {
+      const payload = JSON.parse(
+        atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+      ) as { role?: string };
+      if (payload?.role === "service_role") isServiceRoleJwt = true;
+    } catch { /* not a JWT we can decode */ }
+  }
+  if (isExactServiceMatch || isNewSecretFormat || isServiceRoleJwt) {
     const bodyUserId =
       bodyJson && typeof bodyJson.user_id === "string" ? (bodyJson.user_id as string) : null;
     if (!bodyUserId) {

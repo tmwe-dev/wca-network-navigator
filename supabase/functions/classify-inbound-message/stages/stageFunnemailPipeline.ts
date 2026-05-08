@@ -42,7 +42,7 @@ export async function runFunnemailScoutAndClassify(
         };
         void recordStage("scouted", { known: !!sd.known });
       }
-    } catch (_se) { /* scout fallito */ }
+    } catch (_se) { /* scout fallito, fail-safe */ }
 
     await supabase.functions.invoke("funnemail-classify", {
       headers: internalHeaders(),
