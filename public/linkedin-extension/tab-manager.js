@@ -157,6 +157,25 @@ var TabManager = globalThis.TabManager || (function () {
   async function getLinkedInTab(url, skipNavigateIfSameDomain) {
     await loadOwnership();
 
+    // Always prefer a LinkedIn tab already open outside the automation window.
+    // This is the canonical path: no new windows, no hidden pages.
+    try {
+      const userTabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+      const userTab = userTabs && userTabs.find(function (t) { return t.windowId !== _automationWindowId; });
+      if (userTab) {
+        _liTabId = userTab.id;
+        markOwned(_liTabId);
+        console.log("[LI Tab] Reusing existing user LinkedIn tab #" + _liTabId);
+        if (skipNavigateIfSameDomain && userTab.url && /linkedin\.com/i.test(userTab.url) && urlMatchesTarget(userTab.url, url)) {
+          if (userTab.status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForLoad(_liTabId, 20000);
+        return { id: _liTabId, reused: false };
+      }
+    } catch (e) { /* ignore */ }
+
     // Try cached owned main tab
     if (_liTabId !== null) {
       try {
@@ -198,13 +217,14 @@ var TabManager = globalThis.TabManager || (function () {
       }
     } catch (e) { /* ignore */ }
 
-    // Service worker may have restarted: also check the automation window
-    // for a previously owned tab before creating a new one.
+    // Service worker may have restarted: also check an already-known
+    // automation window, but DO NOT create one just to query it.
     try {
-      const winId = await getOrCreateAutomationWindow();
-      if (winId !== null) {
+      if (_automationWindowId !== null) {
+        const win = await chrome.windows.get(_automationWindowId).catch(function () { return null; });
+        if (win) {
         const tabsInWin = await chrome.tabs.query({
-          windowId: winId,
+          windowId: _automationWindowId,
           url: "*://*.linkedin.com/*",
         });
         if (tabsInWin && tabsInWin[0]) {
@@ -218,6 +238,7 @@ var TabManager = globalThis.TabManager || (function () {
           await chrome.tabs.update(_liTabId, { url: url });
           await waitForLoad(_liTabId, 20000);
           return { id: _liTabId, reused: false };
+        }
         }
       }
     } catch (queryErr) {
@@ -239,7 +260,9 @@ var TabManager = globalThis.TabManager || (function () {
   // ── OPTIMUS V2.1 (FOCUS-SAFE): activateAndStabilize ──
   // Same contract as WA: NEVER activate a tab in the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
-    await ensureTabInAutomationWindow(tabId);
+    // Do NOT create/move tabs just to stabilize. If the user already has
+    // LinkedIn open, keep that tab exactly where it is and probe DOM as-is.
+    await loadOwnership();
 
     let activatedInAutomation = false;
     try {
