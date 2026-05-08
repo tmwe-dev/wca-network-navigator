@@ -147,7 +147,11 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
       if (candidateName && candidateName.length > 2 && candidateName.length < 60 && !/^http/i.test(candidateName)) {
         // Save previous thread if we have one
         if (currentName && (currentPreview || currentUrl)) {
-          threads.push({ name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl });
+          threads.push({
+            name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl,
+            profileUrl: null, linkedinId: null, profileId: null, threadId: null, lastActivity: null,
+            method: "firescrape", confidence: 0.5,
+          });
         }
         currentName = candidateName;
         currentPreview = "";
@@ -191,7 +195,11 @@ function parseInboxMarkdown(markdown: string): BridgeResponse["threads"] {
 
   // Don't forget the last thread
   if (currentName && (currentPreview || currentUrl)) {
-    threads.push({ name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl });
+    threads.push({
+      name: currentName, lastMessage: currentPreview, unread: currentUnread, threadUrl: currentUrl,
+      profileUrl: null, linkedinId: null, profileId: null, threadId: null, lastActivity: null,
+      method: "firescrape", confidence: 0.5,
+    });
   }
 
   return threads;
