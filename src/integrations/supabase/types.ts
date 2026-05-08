@@ -6517,6 +6517,117 @@ export type Database = {
         }
         Relationships: []
       }
+      funnemail_routing_rules: {
+        Row: {
+          conditions: Json
+          confidence_threshold: number
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          last_matched_at: string | null
+          match_count: number
+          name: string
+          priority: number
+          target_group_id: string | null
+          target_group_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conditions?: Json
+          confidence_threshold?: number
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_matched_at?: string | null
+          match_count?: number
+          name: string
+          priority?: number
+          target_group_id?: string | null
+          target_group_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conditions?: Json
+          confidence_threshold?: number
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          last_matched_at?: string | null
+          match_count?: number
+          name?: string
+          priority?: number
+          target_group_id?: string | null
+          target_group_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      funnemail_scout_cache: {
+        Row: {
+          cached_at: string
+          company_type: string | null
+          confidence: number | null
+          country: string | null
+          created_at: string
+          email_address: string | null
+          email_domain: string
+          evidence: Json
+          expires_at: string
+          id: string
+          is_known_partner: boolean
+          partner_id: string | null
+          role_guess: string | null
+          scout_source: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          cached_at?: string
+          company_type?: string | null
+          confidence?: number | null
+          country?: string | null
+          created_at?: string
+          email_address?: string | null
+          email_domain: string
+          evidence?: Json
+          expires_at?: string
+          id?: string
+          is_known_partner?: boolean
+          partner_id?: string | null
+          role_guess?: string | null
+          scout_source?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          cached_at?: string
+          company_type?: string | null
+          confidence?: number | null
+          country?: string | null
+          created_at?: string
+          email_address?: string | null
+          email_domain?: string
+          evidence?: Json
+          expires_at?: string
+          id?: string
+          is_known_partner?: boolean
+          partner_id?: string | null
+          role_guess?: string | null
+          scout_source?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       funnemail_sender_intel: {
         Row: {
           company_type: string | null
