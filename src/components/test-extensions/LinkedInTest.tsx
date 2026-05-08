@@ -25,6 +25,8 @@ export function LinkedInTest() {
   const [profileUrl, setProfileUrl] = useState("https://www.linkedin.com/in/");
   const [sendUrl, setSendUrl] = useState("");
   const [sendText, setSendText] = useState("Ciao, test da WCA Partner Connect 🚀");
+  const [threadUrl, setThreadUrl] = useState("");
+  const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const actionTimesRef = useRef<number[]>([]);
 
@@ -325,6 +327,44 @@ export function LinkedInTest() {
     }
   });
 
+  // P0.5 — Diagnostic: leggi un singolo thread (Optimus → AX → structural).
+  const testReadThread = () => runWithCooldown(async () => {
+    if (!threadUrl.trim()) { log("⚠️ Inserisci l'URL del thread LinkedIn", "warn"); return; }
+    log(`💬 Lettura thread: ${threadUrl}`);
+    const r = await liMsg("readLinkedInThread", { threadUrl }, 60000);
+    const messages = (r?.messages || []) as Array<Record<string, unknown>>;
+    if (r?.success && messages.length) {
+      log(`✅ ${messages.length} messaggi trovati (method=${r.method || "?"})`, "ok");
+      const counts = { inbound: 0, outbound: 0, unknown: 0 };
+      messages.forEach((m) => {
+        const d = String(m.direction || "unknown") as keyof typeof counts;
+        if (d in counts) counts[d]++;
+      });
+      log(`  📊 inbound=${counts.inbound} outbound=${counts.outbound} unknown=${counts.unknown}`, "info");
+      messages.slice(-5).forEach((m) => {
+        const arrow = m.direction === "outbound" ? "→" : m.direction === "inbound" ? "←" : "?";
+        log(`  ${arrow} [${String(m.sender || "—").slice(0, 20)}] ${String(m.text || "").slice(0, 80)}`, "info");
+      });
+    } else {
+      log(`⚠️ Nessun messaggio. Risposta: ${JSON.stringify(r, null, 2).slice(0, 400)}`, "warn");
+    }
+  });
+
+  const testBackfillThread = () => runWithCooldown(async () => {
+    if (!threadUrl.trim()) { log("⚠️ Inserisci l'URL del thread LinkedIn", "warn"); return; }
+    log(`📜 Backfill thread (max 20 scroll): ${threadUrl}`);
+    if (lastKnownText) log(`  Stop su testo: "${lastKnownText.slice(0, 60)}"`, "info");
+    const r = await liMsg("backfillLinkedInThread", { threadUrl, lastKnownText, maxScrolls: 20 }, 180000);
+    const messages = (r?.messages || []) as Array<Record<string, unknown>>;
+    if (r?.success) {
+      log(`✅ ${messages.length} messaggi totali · ${r.scrollCount || 0} scroll · foundLast=${r.foundLast ? "sì" : "no"} · method=${r.method || "?"}`, "ok");
+      messages.slice(0, 3).forEach((m) => log(`  📩 [${String(m.sender || "—").slice(0, 20)}] ${String(m.text || "").slice(0, 80)}`, "info"));
+      if (messages.length > 3) log(`  … (${messages.length - 3} altri messaggi)`, "info");
+    } else {
+      log(`❌ Backfill fallito: ${r?.error || JSON.stringify(r)}`, "error");
+    }
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
@@ -353,6 +393,28 @@ export function LinkedInTest() {
       <div className="flex gap-2">
         <Input value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://www.linkedin.com/in/nome-profilo" className="flex-1" />
         <Button onClick={testExtractProfile} disabled={running} size="sm">👤 Estrai Profilo</Button>
+      </div>
+
+      <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">💬 Test Lettura Thread (diagnostico — NON salva nulla)</p>
+        <div className="flex gap-2">
+          <Input
+            value={threadUrl}
+            onChange={(e) => setThreadUrl(e.target.value)}
+            placeholder="URL thread LinkedIn (es. https://www.linkedin.com/messaging/thread/...)"
+            className="flex-1 text-sm"
+          />
+          <Button onClick={testReadThread} disabled={running} size="sm">💬 Leggi Thread</Button>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={lastKnownText}
+            onChange={(e) => setLastKnownText(e.target.value)}
+            placeholder="(opzionale) testo dell'ultimo messaggio noto — il backfill si ferma quando lo trova"
+            className="flex-1 text-sm"
+          />
+          <Button onClick={testBackfillThread} disabled={running} size="sm" variant="outline">📜 Backfill Thread</Button>
+        </div>
       </div>
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
