@@ -162,4 +162,3 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }
 });
-// redeploy bump 1778267314
