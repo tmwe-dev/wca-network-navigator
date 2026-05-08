@@ -17,6 +17,24 @@ var TabManager = globalThis.TabManager || (function () {
       if (data.li_automation_window) _automationWindowId = data.li_automation_window;
       if (Array.isArray(data.li_owned_tabs)) _ownedTabIds = new Set(data.li_owned_tabs);
       if (data.li_main_tab) _liTabId = data.li_main_tab;
+      // Defensive cleanup: drop owned tabs that aren't LinkedIn anymore
+      try {
+        const ids = Array.from(_ownedTabIds);
+        for (const tid of ids) {
+          try {
+            const t = await chrome.tabs.get(tid);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/linkedin\.com/i.test(u)) _ownedTabIds.delete(tid);
+          } catch { _ownedTabIds.delete(tid); }
+        }
+        if (_liTabId !== null) {
+          try {
+            const t = await chrome.tabs.get(_liTabId);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/linkedin\.com/i.test(u)) _liTabId = null;
+          } catch { _liTabId = null; }
+        }
+      } catch { /* ignore */ }
     } catch (e) { /* ignore */ }
   }
 

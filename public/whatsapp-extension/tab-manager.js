@@ -34,6 +34,20 @@ var TabManager = globalThis.TabManager || (function () {
       const data = await chrome.storage.session.get(["wa_automation_window", "wa_owned_tabs"]);
       if (data.wa_automation_window) _automationWindowId = data.wa_automation_window;
       if (Array.isArray(data.wa_owned_tabs)) _ownedWaTabIds = new Set(data.wa_owned_tabs);
+      // Defensive cleanup: drop any owned tabs that are not WA tabs anymore
+      // (about:blank, chrome://newtab, closed tabs, etc.)
+      try {
+        const ids = Array.from(_ownedWaTabIds);
+        for (const tid of ids) {
+          try {
+            const t = await chrome.tabs.get(tid);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/^https?:\/\/(web\.whatsapp\.com|.*\.whatsapp\.com)/i.test(u)) {
+              _ownedWaTabIds.delete(tid);
+            }
+          } catch { _ownedWaTabIds.delete(tid); }
+        }
+      } catch { /* ignore */ }
     } catch (e) { /* session storage may be unavailable */ }
   }
 
