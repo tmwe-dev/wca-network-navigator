@@ -1485,6 +1485,78 @@ var Actions = globalThis.Actions || (function () {
     }
   }
 
+  // ══════════════════════════════════════════════
+  // REMAP SEND DOM — Manuale: AI rilegge il DOM e salva
+  // selettori freschi per search_box / chat_item / composer / send_button / chat_header.
+  // Nessun auto-retry: solo su click esplicito dell'operatore.
+  // ══════════════════════════════════════════════
+  async function remapSendDom() {
+    try {
+      const r = await TabManager.getOrCreateWaTab();
+      await TabManager.ensureTabVisibleAndWait(r.tab.id, 1500);
+      await TabManager.sleep(r.reused ? 800 : 3000);
+
+      // 1) Snapshot della sidebar
+      const snap = await Optimus.snapshotPage(r.tab.id, "#pane-side", 8, 8000);
+      if (!snap || !snap.ok) return { success: false, error: "snapshot failed: " + (snap && snap.error || "unknown") };
+
+      // 2) Chiedi piano a optimus-analyze (page_type send_form)
+      const planRes = await Optimus.getPlan({
+        channel: "whatsapp",
+        pageType: "send_form",
+        snapshot: snap.snapshot,
+        hash: snap.hash,
+        previousPlanFailed: true,
+        failureContext: "manual remap requested by operator",
+      });
+      if (!planRes || planRes.success === false) {
+        return { success: false, error: "optimus failed: " + (planRes && (planRes.error || planRes.code) || "unknown") };
+      }
+      const plan = planRes.plan || planRes.data && planRes.data.plan || planRes;
+      const sels = plan && plan.selectors;
+      if (!sels || typeof sels !== "object") return { success: false, error: "plan has no selectors", rawPlan: plan };
+
+      // 3) Validazione: i 3 campi obbligatori devono esserci
+      const required = ["search_box", "composer", "send_button"];
+      const missing = [];
+      for (const k of required) {
+        if (!sels[k] || !sels[k].primary) missing.push(k);
+      }
+      if (missing.length > 0) {
+        return { success: false, error: "missing required selectors: " + missing.join(", "), plan: plan };
+      }
+
+      const fields = {};
+      ["search_box", "chat_item", "chat_header", "composer", "send_button"].forEach(function (k) {
+        if (sels[k]) fields[k] = { primary: sels[k].primary || null, fallback: sels[k].fallback || null, confidence: sels[k].confidence || null };
+      });
+
+      // 4) Salva nel chrome.storage
+      const savedAt = Date.now();
+      await chrome.storage.local.set({
+        wa_send_plan: {
+          plan: { selectors: fields },
+          savedAt: savedAt,
+          domHash: snap.hash,
+          planVersion: planRes.plan_version || null,
+          confidence: planRes.confidence || null,
+        },
+      });
+
+      return {
+        success: true,
+        savedAt: savedAt,
+        domHash: snap.hash,
+        fields: fields,
+        planVersion: planRes.plan_version || null,
+        cached: planRes.cached || false,
+        aiLatencyMs: planRes.ai_latency_ms || null,
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     verifySession: verifySession,
     readUnreadMessages: readUnreadMessages,
@@ -1492,6 +1564,7 @@ var Actions = globalThis.Actions || (function () {
     readThread: readThread,
     backfillChat: backfillChat,
     diagnostic: diagnostic,
+    remapSendDom: remapSendDom,
   };
 })();
 globalThis.Actions = Actions;
