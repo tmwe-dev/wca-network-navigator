@@ -189,7 +189,42 @@ var Actions = globalThis.Actions || (function () {
       if (result && result.hasQR) return { success: true, authenticated: false, reason: "qr_required", diagnostic: diag };
       // Confirm-popup di WhatsApp (es. "WhatsApp aperto su un altro browser - Usa qui")
       if (result && Array.isArray(result.dataTestIds) && result.dataTestIds.indexOf("confirm-popup") !== -1) {
-        return { success: true, authenticated: false, reason: "confirm_popup", message: "WhatsApp Web mostra un popup di conferma (probabilmente 'Usa qui' / sessione aperta altrove). Apri la tab di WhatsApp Web e chiudi il popup, poi riprova.", diagnostic: diag };
+        // Auto-dismiss: clicca "Usa qui" / "Use here" per riprendere la sessione
+        // sul tab dell'estensione invece di lasciare l'utente bloccato.
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: waTab.id },
+            func: function () {
+              try {
+                var popup = document.querySelector('[data-testid="confirm-popup"]')
+                  || document.querySelector('[data-animate-modal-popup="true"]');
+                if (!popup) return false;
+                var btns = popup.querySelectorAll('button, [role="button"]');
+                for (var i = 0; i < btns.length; i++) {
+                  var t = (btns[i].innerText || btns[i].textContent || "").trim().toLowerCase();
+                  if (/usa qui|use here|usar aqu|utiliser ici|hier verwenden|continuar|continue/.test(t)) {
+                    btns[i].click();
+                    return true;
+                  }
+                }
+                // Fallback: ultimo bottone primario del popup
+                if (btns.length) { btns[btns.length - 1].click(); return true; }
+                return false;
+              } catch (e) { return false; }
+            },
+          });
+          await TabManager.sleep(2500);
+          // Re-probe dopo il click
+          const after = await Discovery.waitForRenderableWaUi(waTab.id, 3, [1000, 1500, 2000]);
+          const diag2 = Discovery.compactDiscovery(after);
+          if (after && after.sidebar) return { success: true, authenticated: true, method: "sidebar-after-popup", diagnostic: diag2 };
+          if ((after && after.chatItems || 0) > 0) return { success: true, authenticated: true, method: "chat-items-after-popup", diagnostic: diag2 };
+          if (after && (after.hasComposeBox || (after.textboxCount || 0) > 0)) return { success: true, authenticated: true, method: "compose-after-popup", diagnostic: diag2 };
+          if (Discovery.hasShellSignals(after)) return { success: true, authenticated: true, method: "shell-after-popup", diagnostic: diag2 };
+          return { success: true, authenticated: false, reason: "confirm_popup", message: "Popup 'Usa qui' rilevato e cliccato, ma WhatsApp non si è ancora stabilizzato. Riprova fra qualche secondo.", diagnostic: diag2 };
+        } catch (e) {
+          return { success: true, authenticated: false, reason: "confirm_popup", message: "WhatsApp Web mostra un popup di conferma ('Usa qui'). Click automatico fallito: " + (e && e.message ? e.message : String(e)), diagnostic: diag };
+        }
       }
       if (result && (result.hasLoadingScreen || !result.appLoaded || result.bodyChildCount < 3)) return { success: true, authenticated: false, reason: "loading", diagnostic: diag };
       if (result && result.sidebar) return { success: true, authenticated: true, method: "sidebar:" + (result.sidebarSelector || "discovered"), diagnostic: diag };
