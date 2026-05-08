@@ -21,38 +21,12 @@ var Actions = globalThis.Actions || (function () {
     // a sendMessage, che cerca direttamente la textbox del composer.
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
-      const tab = await TabManager.getLinkedInTab(target);
-      // P1/P9 — Forziamo la tab attiva e in focus prima di scrivere.
-      try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { /* ignore */ }
+      const tab = await TabManager.getLinkedInTab(target, true);
+      // P14 — Focus-safe + composer reuse: non attiviamo la tab LinkedIn e non
+      // chiudiamo overlay esistenti. Se il composer è già aperto sulla pagina
+      // corretta, va usato quello; chiuderlo o ri-cliccare "Messaggia" apre una
+      // seconda chat/naviga fuori pagina.
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-      // P11 — Anti-mis-recipient: chiudiamo eventuali msg-overlay-conversation-bubble
-      // (chat fluttuanti) di conversazioni precedenti, altrimenti il composer
-      // trovato da sendMessage potrebbe essere quello della chat aperta prima
-      // (ad es. la pagina che era attiva quando il test è partito).
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function () {
-            try {
-              var overlays = document.querySelectorAll(
-                ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
-              );
-              for (var i = 0; i < overlays.length; i++) {
-                var ov = overlays[i];
-                // Cerca pulsante chiudi dentro l'overlay
-                var closeBtn = ov.querySelector(
-                  "button[aria-label*='hiudi' i], button[aria-label*='lose' i], button[data-control-name*='close' i]"
-                );
-                if (closeBtn) { try { closeBtn.click(); } catch (e) {} continue; }
-                try { ov.remove(); } catch (e) {}
-              }
-              return true;
-            } catch (e) { return false; }
-          },
-        });
-      } catch (e) { /* best-effort */ }
-      // Attendi che gli overlay vengano rimossi dal DOM
-      await TabManager.sleep(400);
       // P11 — Verifica URL: dopo navigate dobbiamo essere sul profilo richiesto
       // (o su un /messaging/thread/ derivato). Altrimenti abortiamo.
       try {
@@ -65,15 +39,34 @@ var Actions = globalThis.Actions || (function () {
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
         }
       } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-      if (!isThreadUrl) {
+      let composerAlreadyOpen = false;
+      try {
+        const composerProbe = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            var scopes = document.querySelectorAll(
+              ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
+            );
+            for (var i = 0; i < scopes.length; i++) {
+              var scope = scopes[i];
+              var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
+              if (!visible) continue;
+              if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
+            }
+            return false;
+          },
+        });
+        composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
+      } catch (e) { composerAlreadyOpen = false; }
+      if (!isThreadUrl && !composerAlreadyOpen) {
         const clickResult = await HybridOps.clickMessage(tab.id);
         if (!clickResult || !clickResult.success) {
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
         }
         await TabManager.sleep(3000);
       } else {
-        // Thread già aperto: diamo solo il tempo al composer di montarsi.
-        await TabManager.sleep(1500);
+        // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
+        await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
       }
       const sendResult = await HybridOps.sendMessage(tab.id, message);
       return { tabId: tab.id, result: sendResult };
