@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
 import {
+  downloadPartnerConnectExtensionZip,
   downloadLinkedInExtensionZip,
   downloadWhatsAppExtensionZip,
+  PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
   WHATSAPP_EXTENSION_REQUIRED_VERSION,
   LINKEDIN_EXTENSION_REQUIRED_VERSION,
 } from "@/lib/whatsappExtensionZip";
@@ -57,14 +59,15 @@ export function ExtensionsTab() {
               </div>
               <div>
                 <p className="text-sm font-medium">Partner Connect</p>
-                <p className="text-xs text-muted-foreground">Scraping, Deep Search, Hydra Memory</p>
+                <p className="text-xs text-muted-foreground">Scraping, Deep Search, Hydra Memory · ultima v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              void downloadGenericZip("/partner-connect-extension.zip", "partner-connect-extension.zip", "Partner Connect scaricato!")
-                .catch(() => toast.error("File non disponibile"));
+              void downloadPartnerConnectExtensionZip()
+                .then(() => toast.success("Partner Connect scaricato!"))
+                .catch((e) => toast.error(e instanceof Error ? e.message : "File non disponibile"));
             }}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
         </CardContent>
