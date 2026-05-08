@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.11",
-  "description": "Send fix: typing via execCommand insertText (Lexical) + poll-enabled send button + Enter fallback.",
+  "version": "5.10.12",
+  "description": "Single-tab fix: no automation windows, reuse existing WhatsApp tab, guard concurrent tab creation.",
   "permissions": [
     "tabs",
     "activeTab",
