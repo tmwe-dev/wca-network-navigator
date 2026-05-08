@@ -1,11 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
+import { Download, Zap, MessageCircle, Linkedin, Mail, FileText, Globe } from "lucide-react";
 import {
+  downloadEmailExtensionZip,
   downloadPartnerConnectExtensionZip,
   downloadLinkedInExtensionZip,
+  downloadRaExtensionZip,
   downloadWhatsAppExtensionZip,
+  downloadWcaExtensionZip,
+  EMAIL_EXTENSION_REQUIRED_VERSION,
   PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+  RA_EXTENSION_REQUIRED_VERSION,
+  WCA_EXTENSION_REQUIRED_VERSION,
   WHATSAPP_EXTENSION_REQUIRED_VERSION,
   LINKEDIN_EXTENSION_REQUIRED_VERSION,
 } from "@/lib/whatsappExtensionZip";
@@ -14,21 +20,6 @@ import { createLogger } from "@/lib/log";
 import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
 
 const log = createLogger("ExtensionsTab");
-
-async function downloadGenericZip(path: string, filename: string, successMessage: string) {
-  const response = await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" });
-  if (!response.ok) throw new Error("Download failed");
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success(successMessage);
-}
 
 export function ExtensionsTab() {
   return (
