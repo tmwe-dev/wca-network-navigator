@@ -6,6 +6,15 @@
 
 var HybridOps = globalThis.HybridOps || (function () {
 
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise(function (_, reject) {
+        setTimeout(function () { reject(new Error(label + " timeout " + ms + "ms")); }, ms);
+      }),
+    ]);
+  }
+
   // ── InputNative: replaces execCommand for contenteditable ──
   function nativeInsertText(text) {
     // Use InputEvent API where available (modern Chrome)
@@ -170,14 +179,14 @@ var HybridOps = globalThis.HybridOps || (function () {
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
     // Level 1: AX Tree
     try {
-      const axResult = await AXTree.typeMessage(tabId, message);
+      const axResult = await withTimeout(AXTree.typeMessage(tabId, message), 6500, "AX typeMessage");
       if (axResult && axResult.success) return axResult;
     } catch (e) { console.warn("[LI-Hybrid] AX Tree message failed:", e.message); }
 
     // Level 2: AI Learn
     try {
       let schema = await AILearn.getCached("messaging");
-      if (!schema && Config.isReady()) schema = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
+      if (!schema && Config.isReady()) schema = await withTimeout(AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey()), 8000, "AI Learn messaging");
       if (schema) {
         const learnRes = await chrome.scripting.executeScript({
           target: { tabId: tabId },
@@ -389,7 +398,7 @@ var HybridOps = globalThis.HybridOps || (function () {
   // ── Click Message button ──
   async function clickMessage(tabId) {
     try {
-      const axResult = await AXTree.clickMessageButton(tabId);
+      const axResult = await withTimeout(AXTree.clickMessageButton(tabId), 6500, "AX clickMessage");
       if (axResult && axResult.success) return axResult;
     } catch (err) { console.debug("[LI Hybrid]", err?.message); }
     try {
