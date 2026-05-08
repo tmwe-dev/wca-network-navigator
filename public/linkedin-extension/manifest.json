@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.12",
-  "description": "LinkedIn deep inbox harvest: più thread visibili, ID/profile URL e link contatto-specifici.",
+  "version": "3.9.13",
+  "description": "Fix extractProfile: scoped a <main>, blacklist nav (no più 'Nome: 0 notifiche'), headline+location anche da AX tree.",
   "permissions": [
     "cookies",
     "tabs",

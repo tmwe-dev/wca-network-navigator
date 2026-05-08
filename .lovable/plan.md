@@ -1,41 +1,78 @@
-## Causa del rallentamento iniziale
+## Diagnosi (causa esatta del bug "Nome: 0 notifiche")
 
-Nel sync WhatsApp (e LinkedIn), prima ancora di chiamare l'estensione, il codice fa una pausa cooldown obbligatoria di **5 secondi fissi** (step `ping` in `syncGuard`):
+In `public/linkedin-extension/ax-tree.js` la funzione `extractProfile(tabId)` fa così:
 
-```ts
-// useWhatsAppAdaptiveSync.ts riga 193
-await throttle("whatsapp", "ping", "Ping estensione");
-const sidebarRes = await listSidebarChats();
+```js
+const h1 = findOne(nodes, "heading");
+if (h1 && h1.name) result.name = h1.name.value;
 ```
 
-`syncGuard.DEFAULTS.ping = { min: 5000, max: 5000 }` → 5s morti all'inizio di ogni download, prima che parta qualunque azione visibile. Stessa cosa per LinkedIn (riga 101 di `useLinkedInSync.ts` e 72 di `useLinkedInBackfill.ts`).
+Cioè prende **il primo `heading`** trovato nell'AX tree dell'INTERA pagina. Su LinkedIn, la barra di navigazione globale espone l'icona "Notifiche" come elemento di livello heading con aria-label tipo "0 notifiche". Quindi quel `findOne` agguanta la **nav**, non il profilo, e `result.name = "0 notifiche"`.
 
-È esattamente il "molto rallentato all'inizio" che hai notato: prima questo cooldown non c'era / non bloccava lo start, ora sì.
+In più la stessa funzione **non estrae** né `headline` né `location`: li lascia `null`, e il render UI li mostra come `?`.
 
-Il resto della sequenza (open chat, read, pausa tra chat) è invariato e va lasciato così — è quello che protegge da ban WA/LI.
+Il fallback strutturale in `hybrid-ops.js` (che invece ha `document.querySelector("h1")` con headline) **non viene mai raggiunto**, perché AX Tree restituisce un `name` non vuoto ("0 notifiche") e l'orchestratore considera il livello 1 riuscito.
 
-## Fix proposto (minimo, locale, reversibile)
+Risultato visibile in test:
+```
+Nome: 0 notifiche
+Headline: ?
+Location: ?
+```
 
-Solo 2 modifiche, niente refactor, niente tocchi a invio/dedup/DB/auth:
+Anche la URL nel "Seleziona contatto" risulta vuota perché su DB il profilo non viene mai salvato con dati validi (nome inquinato → record scartato/duplicato).
 
-1. **`src/lib/syncGuard.ts`** — abbassare il default del solo step `ping` da `5000` a `300` ms (jitter min/max uguali). Resta uno step tracciato (l'indicatore "poliziotto" continua a vederlo), ma non blocca più l'avvio.
-   - Nessuna modifica agli altri step (open, read, betweenThreads, scroll, close): le protezioni anti-ban restano identiche.
-   - L'utente può comunque alzarlo via `localStorage.sync_guard_settings_v1` (la regola "mai sotto i default" continua a valere col nuovo default più basso).
+---
 
-2. **Nessuna modifica all'estensione Chrome** (no nuovo ZIP, no reinstallazione richiesta). Il fix è 100% lato app.
+## Cosa cambia (solo extension LinkedIn — codice app intoccato)
 
-## Cosa NON tocco
+Tre interventi chirurgici, tutti dentro `public/linkedin-extension/`. Niente refactor, niente modifiche all'app React, ai DAL, all'auth, agli edge.
 
-- `useWhatsAppAdaptiveSync` (logica sync, cursor, dedup, salvataggio)
-- `useLinkedInSync` / `useLinkedInBackfill`
-- estensione WhatsApp v5.10.10 e LinkedIn v3.9.10 (restano installate, nessun re-deploy)
-- `tab-manager.js`, `actions.js`, `background.js` dell'estensione
-- throttle `betweenThreads` (15-20s tra chat) — fondamentale anti-ban, lasciato com'è
-- throttle `open`/`read` per ogni chat — invariati
+### 1) `ax-tree.js` → `extractProfile`: pesca dentro `<main>` e ignora la nav
 
-## Verifica dopo il fix
+- Cambiare la ricerca da "primo heading di tutto l'AX tree" a "primo heading **discendente del nodo `main`/`pv-top-card`**".
+- Aggiungere un filtro anti-rumore: scartare `name` che matchano `/^\d+\s*(notif|messag|conness|invit)/i` o `/^(notif|messag|search|cerca|home|rete|lavoro|jobs)/i`.
+- Estrarre anche `headline` e `location` dall'AX tree, cercando i due primi `StaticText` sotto lo stesso heading "Nome".
 
-- Il primo download parte entro ~300ms invece che 5s.
-- I tempi tra una chat e l'altra restano gli stessi di adesso.
-- Il pannello "syncGuard" continua a mostrare lo step "Ping estensione" (solo molto più breve).
-- Nessun cambio di comportamento su invio messaggi, lettura, dedup.
+### 2) `ax-tree.js` → contratto di "successo"
+
+Considerare `axResult` valido solo se `name` è presente **e non matcha la blacklist**. Se non è valido, ritornare `null` così che `hybrid-ops.js` proceda al livello 2 (AI Learn) e poi al livello 3 (structural fallback).
+
+### 3) `hybrid-ops.js` → fallback strutturale più robusto
+
+Sostituire il generico `document.querySelector("h1")` con selettori scoped al top-card del profilo:
+
+- Nome: `main h1.inline.t-24, main section.pv-top-card h1, main h1`
+- Headline: `main .text-body-medium.break-words`
+- Location: `main .text-body-small.inline.t-black--light.break-words`
+- Photo: `main img.pv-top-card-profile-picture__image, main img[class*='profile-picture']`
+
+Stesso filtro blacklist anti-nav applicato anche qui.
+
+---
+
+## Bump versione + distribuzione
+
+- `public/linkedin-extension/manifest.json` → 3.9.13
+- Nuovo zip `public/chrome-extensions/linkedin/linkedin-extension-3.9.13.zip` rigenerato + sostituito anche `public/linkedin-extension.zip` (lo scarica il pulsante in topbar).
+- `public/chrome-extensions/catalog.json` → `latestVersion: 3.9.13`, marcata `current: true`; 3.9.12 → `current: false`.
+- `src/lib/whatsappExtensionZip.ts` → `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.13"` (unica riga toccata fuori dall'extension, serve solo a far apparire il banner di update).
+
+---
+
+## QA prima di dire "fatto"
+
+1. Reinstallare 3.9.13 e ripetere `extractProfile` su `https://www.linkedin.com/in/sreyashbhandari8a360012/`.
+2. Atteso: `name` = nome reale, `headline` valorizzato, `location` valorizzata, `profileUrl` = URL passato.
+3. Verificare nel log testuale che non compaia più "0 notifiche".
+4. Test secondario su un altro profilo a caso per evitare regressioni.
+5. Confermare che `sendMessage` (già funzionante in 3.9.12) continui a funzionare — non lo tocchiamo.
+
+---
+
+## Cosa NON tocco (per esplicita richiesta)
+
+- Nessun file in `src/`, `supabase/`, `edge functions`.
+- Nessuna modifica a `WhatsApp extension`, `actions.js` LinkedIn, auth, RLS, queue, AI, DAL.
+- Nessun refactor di `hybrid-ops.js` oltre alle due funzioni citate.
+- Nessuna modifica al pulsante di download in topbar (continuerà a scaricare lo zip aggiornato in automatico).

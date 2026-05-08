@@ -100,14 +100,44 @@ var HybridOps = globalThis.HybridOps || (function () {
         target: { tabId: tabId },
         func: function () {
           const result = { name: null, headline: null, location: null, about: null, photoUrl: null, profileUrl: window.location.href, connectionStatus: "unknown" };
-          const h1 = document.querySelector("h1");
-          if (h1) result.name = h1.textContent.trim();
-          if (h1 && h1.nextElementSibling) {
-            const next = h1.nextElementSibling;
-            if (next.textContent.trim().length > 3 && next.textContent.trim().length < 200) {
-              result.headline = next.textContent.trim();
-            }
+          function isNavNoise(s) {
+            if (!s) return true;
+            const t = String(s).trim();
+            if (!t || t.length < 2) return true;
+            if (/^\d+\s*(notif|messag|conness|invit|new|nuov)/i.test(t)) return true;
+            if (/^(notifiche|notifications|messaging|messaggistica|search|cerca|home|rete|network|lavoro|jobs|me|tu|profilo|premium)$/i.test(t)) return true;
+            return false;
           }
+          const main = document.querySelector("main") || document.body;
+          // Nome: scoped al top-card del profilo, mai alla nav.
+          const h1Candidates = Array.from(main.querySelectorAll(
+            "section.pv-top-card h1, h1.inline.t-24, h1.text-heading-xlarge, h1"
+          ));
+          for (let i = 0; i < h1Candidates.length; i++) {
+            const t = (h1Candidates[i].textContent || "").trim().replace(/\s+/g, " ");
+            if (!isNavNoise(t) && t.length >= 2 && t.length <= 120) { result.name = t; break; }
+          }
+          // Headline (sotto il nome).
+          const headlineEl = main.querySelector(
+            "section.pv-top-card .text-body-medium.break-words, .pv-text-details__left-panel .text-body-medium, .text-body-medium.break-words"
+          );
+          if (headlineEl) {
+            const t = (headlineEl.textContent || "").trim().replace(/\s+/g, " ");
+            if (!isNavNoise(t) && t.length >= 3 && t.length <= 200) result.headline = t;
+          }
+          // Location.
+          const locEl = main.querySelector(
+            "section.pv-top-card .text-body-small.inline.t-black--light.break-words, .pv-text-details__left-panel .text-body-small, .text-body-small.inline.t-black--light.break-words"
+          );
+          if (locEl) {
+            const t = (locEl.textContent || "").trim().replace(/\s+/g, " ");
+            if (!isNavNoise(t) && t.length >= 2 && t.length <= 200) result.location = t;
+          }
+          // Photo.
+          const photo = main.querySelector(
+            "img.pv-top-card-profile-picture__image, img[class*='profile-picture'], img[alt*='photo'], img[alt*='foto']"
+          );
+          if (photo && photo.src) result.photoUrl = photo.src;
           const allBtns = Array.from(document.querySelectorAll("button")).filter(function (b) { return b.offsetParent !== null; });
           for (let i = 0; i < allBtns.length; i++) {
             const t = allBtns[i].textContent.trim().toLowerCase();
