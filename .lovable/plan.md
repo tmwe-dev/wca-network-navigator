@@ -1,76 +1,41 @@
-## Audit sintetico
+## Causa del rallentamento iniziale
 
-### 1) I due selettori in alto sono tecnicamente diversi, ma oggi sono presentati male
+Nel sync WhatsApp (e LinkedIn), prima ancora di chiamare l'estensione, il codice fa una pausa cooldown obbligatoria di **5 secondi fissi** (step `ping` in `syncGuard`):
 
-**Selettore operatore** (`OperatorSelector`)
-- Serve solo agli amministratori.
-- Cambia la vista CRM/app: “io”, “un altro operatore”, oppure “tutti gli operatori”.
-- Non c’entra con la casella email da cui leggi o scrivi.
-
-**Selettore casella** (`MailboxSelector`)
-- Serve a scegliere la casella di posta attiva: personale, booking, amministrazione, operativo, ecc.
-- È visibile a chi ha più di una casella accessibile.
-- Non cambia la visibilità globale degli operatori.
-
-**Problema reale:** Luca vede entrambi perché è admin e ha più caselle; per un utente non-admin resta solo il selettore casella. Ma nell’header sembrano due “account selector” uguali, quindi confondono.
-
-### 2) Il bug della tab bianca è confermato nel codice
-
-In entrambe le estensioni esiste ancora questo schema:
-
-```text
-chrome.windows.create({ url: "about:blank", ... })
-poi chrome.tabs.create({ url: WhatsApp/LinkedIn, windowId: automationWindow })
+```ts
+// useWhatsAppAdaptiveSync.ts riga 193
+await throttle("whatsapp", "ping", "Ping estensione");
+const sidebarRes = await listSidebarChats();
 ```
 
-Quindi quando l’estensione crea la finestra di automazione, Chrome apre una finestra con una tab `about:blank`; poi viene aggiunta una seconda tab con WhatsApp o LinkedIn. Questo spiega esattamente quello che descrivi: una pagina bianca + una pagina WA/LI nella stessa finestra. È fragile perché le operazioni successive possono stabilizzare o leggere la tab sbagliata, oppure rimanere agganciate a un placeholder.
+`syncGuard.DEFAULTS.ping = { min: 5000, max: 5000 }` → 5s morti all'inizio di ogni download, prima che parta qualunque azione visibile. Stessa cosa per LinkedIn (riga 101 di `useLinkedInSync.ts` e 72 di `useLinkedInBackfill.ts`).
 
-## Piano di intervento
+È esattamente il "molto rallentato all'inizio" che hai notato: prima questo cooldown non c'era / non bloccava lo start, ora sì.
 
-### A) Rendere chiara la barra in alto senza duplicare sistemi
+Il resto della sequenza (open chat, read, pausa tra chat) è invariato e va lasciato così — è quello che protegge da ban WA/LI.
 
-1. **Unificare la presentazione in un solo blocco “Contesto operativo”** nell’header.
-   - Riga/trigger unico, non due controlli separati visivamente.
-   - Dentro al menu: sezione “Visibilità” e sezione “Casella”.
+## Fix proposto (minimo, locale, reversibile)
 
-2. **Regole UI:**
-   - Utente normale: vede solo le sue caselle disponibili (`Personale`, `Booking`, `Amministrazione`, ecc.).
-   - Luca/admin: vede anche “Visibilità: tutti gli operatori / singolo operatore”.
-   - Le due funzioni restano distinte internamente, ma la UI le presenta come un unico contesto, non come due selettori concorrenti.
+Solo 2 modifiche, niente refactor, niente tocchi a invio/dedup/DB/auth:
 
-3. **Nessuna modifica alla logica business:**
-   - Mantengo `ActiveOperatorContext` per visibilità operatori.
-   - Mantengo `ActiveMailboxContext` per casella email.
-   - Cambio solo la composizione UI nell’header per evitare confusione.
+1. **`src/lib/syncGuard.ts`** — abbassare il default del solo step `ping` da `5000` a `300` ms (jitter min/max uguali). Resta uno step tracciato (l'indicatore "poliziotto" continua a vederlo), ma non blocca più l'avvio.
+   - Nessuna modifica agli altri step (open, read, betweenThreads, scroll, close): le protezioni anti-ban restano identiche.
+   - L'utente può comunque alzarlo via `localStorage.sync_guard_settings_v1` (la regola "mai sotto i default" continua a valere col nuovo default più basso).
 
-### B) Correggere la gestione tab WA/LinkedIn
+2. **Nessuna modifica all'estensione Chrome** (no nuovo ZIP, no reinstallazione richiesta). Il fix è 100% lato app.
 
-1. **Eliminare la creazione della finestra con `about:blank`.**
-   - Quando serve una nuova tab, creare direttamente la tab target con URL reale:
-     - `https://web.whatsapp.com`
-     - `https://www.linkedin.com/...`
-   - Se Chrome obbliga una finestra, la prima tab deve essere già WA/LI, non `about:blank`.
+## Cosa NON tocco
 
-2. **Non marcare mai `about:blank` come tab posseduta.**
-   - Oggi il placeholder può finire negli owned tab.
-   - Dopo la correzione, gli owned tab devono contenere solo URL validi WA/LI.
+- `useWhatsAppAdaptiveSync` (logica sync, cursor, dedup, salvataggio)
+- `useLinkedInSync` / `useLinkedInBackfill`
+- estensione WhatsApp v5.10.10 e LinkedIn v3.9.10 (restano installate, nessun re-deploy)
+- `tab-manager.js`, `actions.js`, `background.js` dell'estensione
+- throttle `betweenThreads` (15-20s tra chat) — fondamentale anti-ban, lasciato com'è
+- throttle `open`/`read` per ogni chat — invariati
 
-3. **Pulizia difensiva all’avvio:**
-   - Se nello storage sessione esistono tab possedute con `about:blank`, `chrome://newtab`, URL vuoti o non WA/LI, rimuoverle dal set.
-   - Questo evita che vecchie installazioni continuino a portarsi dietro stato sporco.
+## Verifica dopo il fix
 
-4. **Lookup tab più rigido:**
-   - WhatsApp deve selezionare solo tab con `web.whatsapp.com`.
-   - LinkedIn deve selezionare solo tab con `linkedin.com`.
-   - Mai usare tab bianca come fallback operativo.
-
-5. **Packaging:**
-   - Incrementare versioni estensioni.
-   - Rigenerare `public/whatsapp-extension.zip` e `public/linkedin-extension.zip`.
-
-### C) Verifica finale
-
-1. Controllare staticamente che non restino `windows.create({ url: "about:blank" })` nelle due estensioni.
-2. Controllare che non restino percorsi che marcano `about:blank` come tab owned.
-3. Controllare che l’header monti un solo controllo di contesto operativo al posto dei due selettori separati.
-4. Consegnare le nuove versioni delle estensioni con istruzione di ricarica.
+- Il primo download parte entro ~300ms invece che 5s.
+- I tempi tra una chat e l'altra restano gli stessi di adesso.
+- Il pannello "syncGuard" continua a mostrare lo step "Ping estensione" (solo molto più breve).
+- Nessun cambio di comportamento su invio messaggi, lettura, dedup.
