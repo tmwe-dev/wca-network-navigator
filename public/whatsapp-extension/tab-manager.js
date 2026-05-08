@@ -163,16 +163,20 @@ var TabManager = globalThis.TabManager || (function () {
         }
       }
       saveOwnership();
-      // Step 2: look in the automation window only
+      // Step 2: look in an already-known automation window only.
+      // Do NOT create a window just to query for existing tabs.
       if (_automationWindowId !== null) {
         try {
-          const tabs = await chrome.tabs.query({
-            windowId: _automationWindowId,
-            url: "https://web.whatsapp.com/*",
-          });
-          if (tabs && tabs[0]) {
-            markOwned(tabs[0].id);
-            return tabs[0];
+          const win = await chrome.windows.get(_automationWindowId).catch(function () { return null; });
+          if (win) {
+            const tabs = await chrome.tabs.query({
+              windowId: _automationWindowId,
+              url: "https://web.whatsapp.com/*",
+            });
+            if (tabs && tabs[0]) {
+              markOwned(tabs[0].id);
+              return tabs[0];
+            }
           }
         } catch (e) { /* window gone */ }
       }
