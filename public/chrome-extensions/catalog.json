@@ -105,13 +105,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.27",
+    "latestVersion": "3.9.28",
     "items": [
+      {
+        "version": "3.9.28",
+        "filename": "linkedin-extension-3.9.28.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.28.zip",
+        "current": true,
+        "note": "P0 — Dedup chiave composita (mai solo nome), AX Tree honest (direction unknown + low confidence), method/confidence su ogni thread/messaggio."
+      },
       {
         "version": "3.9.27",
         "filename": "linkedin-extension-3.9.27.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.27.zip",
-        "current": true,
+        "current": false,
         "note": "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer."
       },
       {
