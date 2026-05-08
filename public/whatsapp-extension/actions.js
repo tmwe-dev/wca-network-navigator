@@ -1148,28 +1148,7 @@ var Actions = globalThis.Actions || (function () {
             H.qsDeep('[data-testid="conversation-compose-box-input"]') ||
             H.qsDeep('[data-testid="compose-box-input"]');
           if (!composer) { resolve({ success: false, error: "Composer not found", needsRemap: true }); return; }
-          // Lexical-safe insert: usa DataTransfer + insertFromPaste UNA sola volta.
-          // NON usare modernClearAndType qui: imposta anche textContent dopo
-          // beforeinput, e Lexical risincronizza producendo testo DUPLICATO.
-          composer.focus();
-          try {
-            const _sel = window.getSelection();
-            if (composer.childNodes.length > 0) {
-              const _r = document.createRange();
-              _r.selectNodeContents(composer);
-              _sel.removeAllRanges();
-              _sel.addRange(_r);
-              composer.dispatchEvent(new InputEvent("beforeinput", {
-                inputType: "deleteContentBackward", bubbles: true, cancelable: true, composed: true,
-              }));
-            }
-          } catch (e) { /* ignore */ }
-          const _dt = new DataTransfer();
-          _dt.setData("text/plain", messageText);
-          composer.dispatchEvent(new InputEvent("beforeinput", {
-            inputType: "insertFromPaste", data: messageText, dataTransfer: _dt,
-            bubbles: true, cancelable: true, composed: true,
-          }));
+          H.modernClearAndType(composer, messageText);
           const sendBtn = tryPlan("send_button") ||
             H.qsDeep('[data-testid="send"]') ||
             H.qsDeep('button[aria-label*="send" i]') ||
