@@ -61,6 +61,7 @@ export function ExtensionsTab() {
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="partner-connect" />
         </CardContent>
       </Card>
 
@@ -146,16 +147,66 @@ export function ExtensionsTab() {
               </div>
               <div>
                 <p className="text-sm font-medium">Email Client Universale</p>
-                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche</p>
+                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche · ultima v{EMAIL_EXTENSION_REQUIRED_VERSION}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              void downloadGenericZip("/email-extension.zip", "email-extension.zip", "Email Client scaricato!")
+              void downloadEmailExtensionZip()
+                .then(() => toast.success("Email Client scaricato!"))
                 .catch(() => toast.error("File non disponibile"));
             }}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{EMAIL_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="email" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">ReportAziende Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Acquisizione dati e sincronizzazione cookie · ultima v{RA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadRaExtensionZip()
+                .then(() => toast.success("ReportAziende scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{RA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="ra" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Globe className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">WCA Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Login automatico, cookie e contatti WCA · ultima v{WCA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadWcaExtensionZip()
+                .then(() => toast.success("WCA Cookie Sync scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{WCA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="wca" />
         </CardContent>
       </Card>
     </div>
