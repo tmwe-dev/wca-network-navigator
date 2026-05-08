@@ -21,7 +21,6 @@ export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
   const [sendPhone, setSendPhone] = useState("");
-  const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
   const [lastSentTo, setLastSentTo] = useState<string | null>(null);
@@ -188,7 +187,6 @@ export function WhatsAppTest() {
 
   const resetSendForm = () => {
     setSendPhone("");
-    setSendContact("");
     setFoundContacts([]);
     setLastSentTo(null);
     setSelectedRecipient(null);
