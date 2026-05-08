@@ -159,6 +159,15 @@ var HybridOps = globalThis.HybridOps || (function () {
 
   // ── Send message ──
   async function sendMessage(tabId, message) {
+    // Guardia URL: la tab deve essere ancora su una pagina profilo /in/<slug>.
+    // Se è derivata (es. /messaging/, /feed/) abortiamo: il caller può ri-navigare e ritentare.
+    try {
+      const tabInfo = await chrome.tabs.get(tabId);
+      const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+      if (!/linkedin\.com\/(in|pub)\//i.test(currentUrl)) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab non e su /in/<slug> (" + currentUrl + ")");
+      }
+    } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
     // Level 1: AX Tree
     try {
       const axResult = await AXTree.typeMessage(tabId, message);
