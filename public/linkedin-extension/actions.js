@@ -83,6 +83,48 @@ var Actions = globalThis.Actions || (function () {
     return result;
   }
 
+  // DIAGNOSTIC ONLY — apre composer poi delega a HybridOps.sendMessageWithMethod
+  // per testare singolarmente i 3 metodi di click. method = "physical_click" |
+  // "form_submit" | "keyboard_shortcut".
+  async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
+    if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
+    if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
+    if (!method) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "method mancante");
+    const target = profileUrl.replace(/\/$/, "");
+    const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
+    const tab = await TabManager.getLinkedInTab(target, true);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    let composerAlreadyOpen = false;
+    try {
+      const composerProbe = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          var scopes = document.querySelectorAll(
+            ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
+          );
+          for (var i = 0; i < scopes.length; i++) {
+            var scope = scopes[i];
+            var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
+            if (!visible) continue;
+            if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
+          }
+          return false;
+        },
+      });
+      composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
+    } catch (e) { composerAlreadyOpen = false; }
+    if (!isThreadUrl && !composerAlreadyOpen) {
+      const clickResult = await HybridOps.clickMessage(tab.id);
+      if (!clickResult || !clickResult.success) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
+      }
+      await TabManager.sleep(3000);
+    } else {
+      await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
+    }
+    return await HybridOps.sendMessageWithMethod(tab.id, message, method);
+  }
+
   async function sendConnectionRequest(profileUrl, note) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
     const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
@@ -989,6 +1031,7 @@ var Actions = globalThis.Actions || (function () {
   return {
     extractProfileByUrl: extractProfileByUrl,
     sendLinkedInMessage: sendLinkedInMessage,
+    sendLinkedInMessageWithMethod: sendLinkedInMessageWithMethod,
     sendConnectionRequest: sendConnectionRequest,
     searchProfile: searchProfile,
     readInbox: readInbox,

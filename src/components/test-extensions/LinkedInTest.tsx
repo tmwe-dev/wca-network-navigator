@@ -207,6 +207,25 @@ export function LinkedInTest() {
     }
   });
 
+  // ── DIAGNOSTIC: 3 metodi di click isolati ──
+  // Permette di capire quale meccanismo di click sul pulsante "Invia"
+  // funziona meglio nel composer LinkedIn corrente, senza che la cascata
+  // di fallback nasconda quale metodo ha effettivamente vinto.
+  const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut", emoji: string, label: string) => runWithCooldown(async () => {
+    if (!sendUrl.trim()) { log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn"); return; }
+    if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    log(`${emoji} Test metodo: ${label} (${method})`);
+    log(`  Destinatario: ${sendUrl}`, "info");
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 90000);
+    if (r?.success) {
+      log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
+    } else {
+      const errStr = String(r?.error || JSON.stringify(r));
+      const attempted = (r as Record<string, unknown>)?.attempted_method as string | undefined;
+      log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
+    }
+  });
+
   const testDiagnosticDom = () => runWithCooldown(async () => {
     log("🔬 Diagnostica DOM LinkedIn Messaging...");
     const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
@@ -371,6 +390,12 @@ export function LinkedInTest() {
         <div className="flex gap-2">
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
           <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia LI</Button>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50 mt-1">
+          <span className="text-[11px] text-muted-foreground self-center mr-1">🧪 Test isolati click invio:</span>
+          <Button onClick={() => testSendWithMethod("physical_click", "🖱️", "Click fisico")} disabled={running} size="sm" variant="outline" title="pointerdown/mousedown/click con coordinate reali">🖱️ Click fisico</Button>
+          <Button onClick={() => testSendWithMethod("form_submit", "📋", "Form submit")} disabled={running} size="sm" variant="outline" title="form.requestSubmit() sul .msg-form">📋 Form submit</Button>
+          <Button onClick={() => testSendWithMethod("keyboard_shortcut", "⌨️", "Ctrl+Enter")} disabled={running} size="sm" variant="outline" title="Ctrl+Enter (Cmd+Enter su Mac)">⌨️ Ctrl+Enter</Button>
         </div>
       </div>
       <Terminal logs={logs} />

@@ -620,9 +620,199 @@ var HybridOps = globalThis.HybridOps || (function () {
     } catch (e) { return { success: false, error: e.message }; }
   }
 
+  // ────────────────────────────────────────────────────────────────────
+  // sendMessageWithMethod — DIAGNOSTIC ONLY
+  // Apre composer + scrive testo (stessa logica di sendMessage P3+P5+P13),
+  // ma il click sull'invio usa SOLO il metodo richiesto. Niente cascata.
+  //   method = "physical_click" | "form_submit" | "keyboard_shortcut"
+  // Usato dai pulsanti di test in /test-extensions per capire quale dei
+  // tre metodi funziona meglio nel composer LinkedIn corrente.
+  // ────────────────────────────────────────────────────────────────────
+  async function sendMessageWithMethod(tabId, message, method) {
+    const allowed = ["physical_click", "form_submit", "keyboard_shortcut"];
+    if (allowed.indexOf(method) === -1) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "invalid_method: " + method);
+    }
+    try {
+      const tabInfo = await chrome.tabs.get(tabId);
+      const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+      if (!/linkedin\.com\/(in|pub|messaging)\//i.test(currentUrl)) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: " + currentUrl);
+      }
+    } catch (e) { /* tolleriamo */ }
+
+    try {
+      const fbRes = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: function (msg, methodName) {
+          function deepQueryAll(selector, root) {
+            const out = [];
+            const r = root || document;
+            try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+            const all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+            for (const el of all) {
+              if (el.shadowRoot) {
+                try { out.push.apply(out, deepQueryAll(selector, el.shadowRoot)); } catch (e) {}
+              }
+            }
+            return out;
+          }
+          function findBox() {
+            var scopes = deepQueryAll(
+              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+            );
+            for (var s = 0; s < scopes.length; s++) {
+              var scope = scopes[s];
+              var boxes = scope.querySelectorAll(
+                "[contenteditable='true'], div[role='textbox'], [role='textbox']"
+              );
+              for (var i = 0; i < boxes.length; i++) {
+                var el = boxes[i];
+                var visible = el.offsetParent !== null || el.getClientRects().length > 0;
+                if (visible) return el;
+              }
+            }
+            return null;
+          }
+          function findSendBtn() {
+            var scopes = document.querySelectorAll(
+              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble"
+            );
+            for (var s = 0; s < scopes.length; s++) {
+              var scope = scopes[s];
+              var btns = scope.querySelectorAll("button, [role='button']");
+              for (var i = 0; i < btns.length; i++) {
+                var b = btns[i];
+                if (!(b.offsetParent !== null || b.getClientRects().length > 0)) continue;
+                if (b.disabled || b.getAttribute("aria-disabled") === "true") continue;
+                var cls = (b.className && typeof b.className === "string") ? b.className : "";
+                var al = (b.getAttribute("aria-label") || "").trim();
+                var t = (b.textContent || "").trim();
+                var typ = (b.getAttribute("type") || "").toLowerCase();
+                if (/msg-form__send-button|msg-form__send|send-button/i.test(cls)) return b;
+                if (/^(send|invia|invia messaggio|send message)$/i.test(al)) return b;
+                if (/^(send|invia)$/i.test(t)) return b;
+                if (typ === "submit" && /msg-form/i.test(scope.className || "")) return b;
+              }
+            }
+            return null;
+          }
+          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+          return (async function () {
+            // Wait composer + textbox
+            for (let i = 0; i < 20 && document.readyState !== "complete"; i++) await sleep(250);
+            for (let i = 0; i < 40; i++) {
+              if (document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) break;
+              await sleep(500);
+            }
+            let msgBox = findBox();
+            for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+            if (!msgBox) return { success: false, error: "no_textbox_found", attempted_method: methodName };
+
+            // Write text (P5 + P13 wake-up)
+            msgBox.focus();
+            try {
+              var sel0 = window.getSelection();
+              if (sel0) { sel0.selectAllChildren(msgBox); }
+              document.execCommand("selectAll", false, null);
+              document.execCommand("delete", false, null);
+              document.execCommand("insertText", false, msg);
+            } catch (e) {
+              msgBox.textContent = msg;
+              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
+            }
+            try {
+              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true, cancelable: true }));
+              msgBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+              msgBox.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
+              msgBox.dispatchEvent(new Event("change", { bubbles: true }));
+            } catch (e) { /* best-effort */ }
+
+            async function textboxCleared() {
+              for (let i = 0; i < 15; i++) {
+                await sleep(100);
+                var current = (msgBox.innerText || msgBox.textContent || "").trim();
+                if (!current) return true;
+              }
+              return false;
+            }
+
+            // Wait for send button (only needed for physical_click)
+            let sendBtn = null;
+            for (let i = 0; i < 80; i++) {
+              sendBtn = findSendBtn();
+              if (sendBtn) break;
+              await sleep(100);
+            }
+
+            // ── Apply ONLY the requested method ──
+            if (methodName === "physical_click") {
+              if (!sendBtn) return { success: false, error: "send_button_not_found", attempted_method: methodName };
+              try {
+                sendBtn.scrollIntoView({ block: "center", inline: "center" });
+                await sleep(80);
+                var rect = sendBtn.getBoundingClientRect();
+                var cx = rect.left + rect.width / 2;
+                var cy = rect.top + rect.height / 2;
+                var opts = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, button: 0 };
+                try { sendBtn.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                sendBtn.dispatchEvent(new MouseEvent("mousedown", opts));
+                try { sendBtn.dispatchEvent(new PointerEvent("pointerup", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                sendBtn.dispatchEvent(new MouseEvent("mouseup", opts));
+                sendBtn.dispatchEvent(new MouseEvent("click", opts));
+              } catch (e) {
+                return { success: false, error: "physical_click_threw: " + e.message, attempted_method: methodName };
+              }
+            } else if (methodName === "form_submit") {
+              var form = msgBox.closest("form") || document.querySelector(".msg-form, [class*='msg-form'] form, form.msg-form");
+              if (!form) return { success: false, error: "msg_form_not_found", attempted_method: methodName };
+              try {
+                if (typeof form.requestSubmit === "function") {
+                  form.requestSubmit();
+                } else {
+                  form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                }
+              } catch (e) {
+                return { success: false, error: "form_submit_threw: " + e.message, attempted_method: methodName };
+              }
+            } else if (methodName === "keyboard_shortcut") {
+              try {
+                msgBox.focus();
+                var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
+                var keyOpts = {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac,
+                  bubbles: true, cancelable: true, composed: true,
+                };
+                msgBox.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
+                msgBox.dispatchEvent(new KeyboardEvent("keypress", keyOpts));
+                msgBox.dispatchEvent(new KeyboardEvent("keyup", keyOpts));
+              } catch (e) {
+                return { success: false, error: "keyboard_shortcut_threw: " + e.message, attempted_method: methodName };
+              }
+            }
+
+            var cleared = await textboxCleared();
+            if (!cleared) {
+              return { success: false, error: "textbox_not_cleared", attempted_method: methodName };
+            }
+            return { success: true, method: methodName };
+          })();
+        },
+        args: [message, method],
+      });
+      const fbResult = fbRes[0] && fbRes[0].result;
+      return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_result");
+    } catch (e) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message);
+    }
+  }
+
   return {
     extractProfile: extractProfile,
     sendMessage: sendMessage,
+    sendMessageWithMethod: sendMessageWithMethod,
     clickConnect: clickConnect,
     clickMessage: clickMessage,
     addNote: addNote,
