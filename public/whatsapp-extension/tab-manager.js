@@ -218,9 +218,10 @@ var TabManager = globalThis.TabManager || (function () {
       if (winId === null) return false;
       const tab = await chrome.tabs.get(tabId);
       if (tab.windowId === winId) return true;
-      // Move it — this happens silently and does NOT steal focus
-      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
-      return true;
+      // SAFETY: do NOT move tabs that live in a user window — moving them
+      // into a minimized window puts WA Web in throttled/hidden state and
+      // breaks readInbox/scraping. Reuse the tab IN PLACE instead.
+      return false;
     } catch (e) {
       console.debug("[WA TabMgr] ensureTabInAutomationWindow:", e?.message);
       return false;

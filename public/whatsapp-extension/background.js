@@ -215,26 +215,5 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-// ── Auto-minimize watcher: if the WA automation window ever gets restored
-// (focus change, OS event, etc.), force it back to minimized + unfocused.
-try {
-  chrome.windows.onFocusChanged.addListener(async function (focusedId) {
-    try {
-      if (typeof TabManager === "undefined" || !TabManager.getAutomationWindowId) return;
-      const autoId = TabManager.getAutomationWindowId();
-      if (autoId === null || autoId === undefined) return;
-      if (focusedId === autoId) {
-        // The automation window grabbed focus — push it back down.
-        try { await chrome.windows.update(autoId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
-      } else {
-        // Keep it minimized regardless.
-        try {
-          const w = await chrome.windows.get(autoId);
-          if (w && w.state !== "minimized") {
-            await chrome.windows.update(autoId, { state: "minimized" });
-          }
-        } catch (e) { /* ignore */ }
-      }
-    } catch (e) { /* ignore */ }
-  });
-} catch (e) { /* ignore */ }
+// NOTE: rimosso watcher onFocusChanged — riminimizzava la automation window
+// in continuazione e mandava in throttle WhatsApp Web (timeout readUnread).
