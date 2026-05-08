@@ -203,6 +203,25 @@ var TabManager = globalThis.TabManager || (function () {
       console.debug("[LI Tab] query owned tabs failed:", queryErr?.message);
     }
 
+    // Fallback: reuse a user-opened linkedin.com tab if available.
+    // Creating a fresh tab would skip the user's existing session and may hit
+    // a re-auth/checkpoint flow. Adopt the user's tab instead.
+    try {
+      const userTabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+      if (userTabs && userTabs[0]) {
+        _liTabId = userTabs[0].id;
+        markOwned(_liTabId);
+        console.log("[LI Tab] Adopted user-opened tab #" + _liTabId);
+        if (skipNavigateIfSameDomain && userTabs[0].url && urlMatchesTarget(userTabs[0].url, url)) {
+          if (userTabs[0].status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForLoad(_liTabId, 20000);
+        return { id: _liTabId, reused: false };
+      }
+    } catch (e) { /* ignore */ }
+
     // Create new in automation window
     const tab = await safeCreate({ url: url, active: false });
     _liTabId = tab.id;
