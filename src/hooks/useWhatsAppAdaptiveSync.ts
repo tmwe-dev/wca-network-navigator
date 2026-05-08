@@ -27,6 +27,7 @@ import {
   getChannelContactCursors,
   upsertChannelMessageDedup,
 } from "@/data/channelMessages";
+import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const log = createLogger("useWhatsAppAdaptiveSync");
 
@@ -163,6 +164,19 @@ export function useWhatsAppAdaptiveSync() {
     if (readingRef.current) return;
     if (!mountedRef.current) return;
 
+    let guard;
+    try {
+      guard = tryAcquire("whatsapp", "Sincronizza");
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+        }
+        toast.warning("WhatsApp: un'operazione è già in corso, attendi.");
+        return;
+      }
+      throw e;
+    }
     setIsReading(true);
     setProgress(null);
     try {
@@ -182,6 +196,7 @@ export function useWhatsAppAdaptiveSync() {
       }
 
       // 1. Snapshot sidebar (all chats, no unread filter)
+      await throttle("whatsapp", "ping", "Ping estensione");
       const sidebarRes = await listSidebarChats();
       if (!sidebarRes.success) {
         toast.error(`WhatsApp: ${sidebarRes.error || "errore lettura sidebar"}`);
@@ -242,8 +257,10 @@ export function useWhatsAppAdaptiveSync() {
         if (!mountedRef.current) break;
         const { name, cursorMs } = queue[i];
         try {
+          await throttle("whatsapp", "open", `Apri chat: ${name}`);
           const threadRes = await readThread(name, MAX_MESSAGES_PER_THREAD);
           if (threadRes.success && Array.isArray(threadRes.messages)) {
+            await throttle("whatsapp", "read", `Leggo messaggi: ${name}`);
             const newCount = await saveThreadMessages(
               name,
               threadRes.messages as ThreadMessage[],
@@ -261,7 +278,9 @@ export function useWhatsAppAdaptiveSync() {
           }
         }
         setProgress({ current: i + 1, total: queue.length, newMessages: totalNew });
-        if (i < queue.length - 1) await sleep(PAUSE_BETWEEN_THREADS_MS);
+        if (i < queue.length - 1) {
+          await throttle("whatsapp", "betweenThreads", "Pausa tra chat");
+        }
       }
 
       if (totalNew > 0) {
@@ -289,6 +308,7 @@ export function useWhatsAppAdaptiveSync() {
         setIsReading(false);
         setProgress(null);
       }
+      guard.release();
     }
   }, [listSidebarChats, readThread, loadCursors, saveThreadMessages, queryClient, focusedChat]);
 
@@ -296,6 +316,18 @@ export function useWhatsAppAdaptiveSync() {
   const syncSingleThread = useCallback(async (contact: string): Promise<number> => {
     if (!isAvailable || !isAuthenticated) return 0;
     if (readingRef.current) return 0;
+    let guard;
+    try {
+      guard = tryAcquire("whatsapp", `Chat: ${contact}`);
+    } catch (e) {
+      if (e instanceof SyncGuardBusyError) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sync-guard-blocked", { detail: { channel: "whatsapp" } }));
+        }
+        return 0;
+      }
+      throw e;
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return 0;
@@ -312,8 +344,10 @@ export function useWhatsAppAdaptiveSync() {
       const lower = contact.toLowerCase().trim();
       const cursorMs = await getChannelContactCursor(userId, "whatsapp", lower);
 
+      await throttle("whatsapp", "open", `Apri chat: ${contact}`);
       const threadRes = await readThread(contact, 60);
       if (!threadRes.success || !Array.isArray(threadRes.messages)) return 0;
+      await throttle("whatsapp", "read", `Leggo messaggi: ${contact}`);
       const newCount = await saveThreadMessages(
         contact,
         threadRes.messages as ThreadMessage[],
@@ -335,6 +369,8 @@ export function useWhatsAppAdaptiveSync() {
         await markSessionExpired("whatsapp", err instanceof Error ? err.message : String(err));
       }
       return 0;
+    } finally {
+      guard.release();
     }
   }, [isAvailable, isAuthenticated, readThread, saveThreadMessages, queryClient]);
 
