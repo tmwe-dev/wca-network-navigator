@@ -6,6 +6,7 @@ import { OptimusBadge } from "@/components/outreach/OptimusBadge";
 import { useLinkedInSync } from "@/hooks/useLinkedInSync";
 import { useLinkedInMessagingBridge } from "@/hooks/useLinkedInMessagingBridge";
 import { useLinkedInBackfill } from "@/hooks/useLinkedInBackfill";
+import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 
 /**
  * LinkedInToolbar — parità visiva con WhatsAppToolbar/EmailToolbar.
@@ -28,6 +29,7 @@ export function LinkedInToolbar() {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-1">
+        <SyncGuardIndicator channel="linkedin" />
         <Button
           size="sm"
           variant="outline"
