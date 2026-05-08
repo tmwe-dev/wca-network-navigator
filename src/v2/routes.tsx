@@ -233,6 +233,8 @@ export function V2Routes(): React.ReactElement {
 
           {/* ── Cestinone: unica coda pre-invio ── */}
           <Route path="cestinone" element={guardedPage(CestinonePage, "Cestinone")} />
+          <Route path="rubrica/whatsapp" element={guardedPage(RubricaWhatsAppPage, "RubricaWA")} />
+          <Route path="rubrica/linkedin" element={guardedPage(RubricaLinkedInPage, "RubricaLI")} />
           <Route path="todo" element={<Navigate to="/v2/cestinone" replace />} />
           <Route path="approvals" element={<Navigate to="/v2/cestinone" replace />} />
 
