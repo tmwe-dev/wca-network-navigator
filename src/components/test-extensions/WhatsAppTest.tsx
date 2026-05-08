@@ -368,7 +368,7 @@ export function WhatsAppTest() {
             placeholder="Nome, azienda, email o telefono (es. Gianfranco)"
             className="flex-1"
           />
-          <Button onClick={runDbSearch} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
+          <Button onClick={() => runDbSearch()} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
           <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario e ricerca">🔄 Reset</Button>
         </div>
         {dbResults.length > 0 && (
