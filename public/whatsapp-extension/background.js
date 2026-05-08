@@ -134,6 +134,23 @@ var ACTION_HANDLERS = {
     });
     return true;
   },
+
+  remapSendDom: function (msg, sendResponse) {
+    TabManager.enqueueAction(async function () {
+      try { sendResponse(await Actions.remapSendDom()); }
+      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message)); }
+    });
+    return true;
+  },
+
+  getSendPlan: function (msg, sendResponse) {
+    chrome.storage.local.get("wa_send_plan").then(function (r) {
+      sendResponse({ success: true, plan: r.wa_send_plan || null });
+    }).catch(function (err) {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  },
 };
 
 // ── Single message listener ──
