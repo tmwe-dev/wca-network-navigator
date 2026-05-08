@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.0",
-  "description": "Optimus V2.1 — automation window isolation (no focus stealing), stabilize+unified extract+AI relearn, direct-first edge function, multi-segnale scoring",
+  "version": "5.10.1",
+  "description": "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable). Automation window isolation, stabilize+unified extract+AI relearn.",
   "permissions": [
     "tabs",
     "activeTab",
