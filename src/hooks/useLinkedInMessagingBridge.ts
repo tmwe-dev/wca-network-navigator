@@ -9,11 +9,35 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("useLinkedInMessagingBridge");
 
+// P0.3 — Threads e messages portano gli ID reali fino al consumer (sync).
+export type LinkedInThreadDTO = {
+  name: string;
+  threadUrl: string | null;
+  profileUrl: string | null;
+  linkedinId: string | null;
+  profileId: string | null;
+  threadId: string | null;
+  unread: boolean | null;
+  lastMessage: string | null;
+  lastActivity: string | null;
+  method?: "optimus" | "structural" | "ax_tree" | string;
+  confidence?: number;
+};
+export type LinkedInMessageDTO = {
+  text: string;
+  sender: string | null;
+  timestamp: string | null;
+  direction: "inbound" | "outbound" | "unknown" | string;
+  method?: "optimus" | "structural" | "ax_tree" | string;
+  confidence?: number;
+};
 type BridgeResponse = {
   success: boolean;
   error?: string;
-  threads?: Array<{ name: string; lastMessage: string; unread: boolean; threadUrl: string }>;
-  messages?: Array<{ text: string; sender: string; timestamp: string; direction: string }>;
+  threads?: LinkedInThreadDTO[];
+  messages?: LinkedInMessageDTO[];
+  method?: string;
+  confidence?: number;
   [key: string]: unknown;
 };
 
