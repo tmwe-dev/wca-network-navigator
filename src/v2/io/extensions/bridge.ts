@@ -6,9 +6,16 @@
  *   ext    → webapp ←  window.postMessage({ direction, action, requestId, response })
  *
  * Tre canali, ognuno con la sua coppia di direction:
- *   FireScrape  : from-webapp-fs  / from-extension-fs
- *   WhatsApp    : from-webapp-wa  / from-extension-wa
- *   LinkedIn    : from-webapp     / from-extension
+ *   FireScrape  : from-webapp-fs  / from-extension-fs   (Partner Connect)
+ *   WhatsApp    : from-webapp-wa  / from-extension-wa   (WhatsApp Direct Send)
+ *   LinkedIn    : from-webapp-li  / from-extension-li   (LinkedIn Cookie Sync)
+ *
+ * NOTA — Canale LinkedIn:
+ * LinkedIn passa SOLO dall'estensione dedicata "LinkedIn Cookie Sync"
+ * (canale from-webapp-li). Partner Connect non gestisce LinkedIn: il suo
+ * relay storico verso linkedin.com è incompleto (nessun content script
+ * registrato sul dominio) e ora risponde con errore esplicito su azioni
+ * LinkedIn-specific. Vedi anche `useLinkedInExtensionBridge` per l'API completa.
  *
  * Ogni response è un oggetto `{ success: boolean, error?: string, ...data }`.
  * Quando `success: true` i campi extra sono i dati restituiti dall'azione.
@@ -24,7 +31,7 @@ interface DirectionPair {
 const DIRECTIONS: Record<ExtensionTarget, DirectionPair> = {
   firescrape: { out: "from-webapp-fs", in: "from-extension-fs" },
   whatsapp:   { out: "from-webapp-wa", in: "from-extension-wa" },
-  linkedin:   { out: "from-webapp",    in: "from-extension"    },
+  linkedin:   { out: "from-webapp-li", in: "from-extension-li" },
 };
 
 const DEFAULT_TIMEOUT_MS = 30_000;
