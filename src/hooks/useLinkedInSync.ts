@@ -13,10 +13,7 @@ import { createLogger } from "@/lib/log";
 
 const log = createLogger("useLinkedInSync");
 import { toast } from "sonner";
-import {
-  upsertChannelMessageDedup,
-  getChannelContactCursors,
-} from "@/data/channelMessages";
+import { upsertChannelMessageDedup } from "@/data/channelMessages";
 import { queryKeys } from "@/lib/queryKeys";
 
 const LI_UI_LABELS = new Set([
