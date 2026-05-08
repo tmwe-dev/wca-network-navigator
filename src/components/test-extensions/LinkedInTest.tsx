@@ -485,6 +485,42 @@ export function LinkedInTest() {
         </div>
       </div>
       <Terminal logs={logs} />
+      {quality && (
+        <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-muted-foreground">📊 Qualità ultima sync LinkedIn</p>
+            <span className="text-muted-foreground">{new Date(quality.at).toLocaleTimeString()}</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div><span className="text-muted-foreground">Thread visti:</span> <b>{quality.rawCandidates}</b></div>
+            <div><span className="text-muted-foreground">Thread accettati:</span> <b>{quality.threadsAccepted}</b></div>
+            <div><span className="text-muted-foreground">Messaggi salvati:</span> <b>{quality.messagesAccepted}</b></div>
+            <div><span className="text-muted-foreground">Confidence media:</span> <b>{(quality.avgConfidence * 100).toFixed(0)}%</b></div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(quality.methods).filter(([, v]) => v > 0).map(([k, v]) => (
+              <span key={k} className="px-2 py-0.5 rounded bg-primary/10 text-primary">{k}: {v}</span>
+            ))}
+          </div>
+          {(Object.entries(quality.threadsDropped).some(([, v]) => v > 0) || Object.entries(quality.messagesDropped).some(([, v]) => v > 0)) && (
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(quality.threadsDropped).filter(([, v]) => v > 0).map(([k, v]) => (
+                <span key={`t-${k}`} className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500">thread/{k}: {v}</span>
+              ))}
+              {Object.entries(quality.messagesDropped).filter(([, v]) => v > 0).map(([k, v]) => (
+                <span key={`m-${k}`} className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500">msg/{k}: {v}</span>
+              ))}
+            </div>
+          )}
+          {quality.warnings.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {quality.warnings.map((w) => (
+                <span key={w} className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-500">⚠ {w}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
