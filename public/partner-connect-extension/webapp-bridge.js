@@ -107,6 +107,27 @@
   // This function is left stubbed for reference only.
 
   // ── LinkedIn relay (from-webapp → background.js) ──
+  //
+  // NOTA — Partner Connect NON gestisce LinkedIn.
+  // L'estensione dedicata "LinkedIn Cookie Sync" (canale from-webapp-li)
+  // è l'unico canale ufficiale per send/read/test LinkedIn. Il relay
+  // storico qui sotto restava incompleto: chrome.tabs.sendMessage verso
+  // un tab LinkedIn fallisce sempre perché Partner Connect non inietta
+  // nessun content script su linkedin.com.
+  //
+  // Per non rompere il canale `from-webapp` usato da WCA Network Navigator
+  // (extractContacts, verifySession, preflightTest, ping), neutralizziamo
+  // SOLO le azioni chiaramente LinkedIn-specific: rispondiamo subito con
+  // errore esplicito invece di tentare un relay rotto. Tutto il resto
+  // continua a fluire come prima.
+  var LI_BLOCKED_ACTIONS = [
+    "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
+    "searchProfile", "readLinkedInInbox", "readLinkedInThread",
+    "backfillLinkedInThread", "syncCookie", "autoLogin",
+    "learnDom", "diagnosticLinkedInDom", "remapSendDom", "getSendPlan",
+    "setConfig",
+  ];
+
   function relayLinkedIn(data) {
     if (!isExtensionAlive()) {
       alive = false;
@@ -123,6 +144,23 @@
         response: { success: true, version: "3.4.2" },
       });
       post({ direction: "from-extension", action: "contentScriptReady" });
+      return;
+    }
+
+    // Hard short-circuit per azioni LinkedIn-specific: questo canale è
+    // delegato all'estensione dedicata. Niente più sendMessage al vuoto.
+    if (LI_BLOCKED_ACTIONS.indexOf(data.action) !== -1) {
+      post({
+        direction: "from-extension",
+        action: data.action,
+        requestId: data.requestId,
+        response: {
+          success: false,
+          error: "linkedin_handled_by_dedicated_extension",
+          errorCode: "LI_DELEGATED",
+          hint: "Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).",
+        },
+      });
       return;
     }
 
@@ -186,5 +224,5 @@
   // Announce bridges (FS + LinkedIn only; WhatsApp is handled by dedicated extension)
   post({ direction: "from-extension-fs", action: "contentScriptReady" });
   post({ direction: "from-extension", action: "contentScriptReady" });
-  console.log("[Bridge] Unified webapp bridge loaded — v3.4.2 (FS + LI)");
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.3 (FS only; LinkedIn delegated to dedicated extension)");
 })();
