@@ -88,7 +88,12 @@ export function WhatsAppTest() {
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
     log("🔑 Verifica sessione WhatsApp Web...");
-    const r = await waMsg("verifySession", {}, 30000);
+    let r = await waMsg("verifySession", {}, 60000);
+    if (!r?.success && /timeout/i.test(String(r?.error || ""))) {
+      log("⏳ Timeout: attendo 3s e riprovo una volta...", "warn");
+      await new Promise((res) => setTimeout(res, 3000));
+      r = await waMsg("verifySession", {}, 60000);
+    }
     log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
     setRunning(false);
   };
