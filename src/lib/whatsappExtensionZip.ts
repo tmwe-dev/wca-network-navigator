@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.13";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.16";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.17";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -102,13 +102,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.16",
+    latestVersion: "3.9.17",
     items: [
+      {
+        version: "3.9.17",
+        filename: "linkedin-extension-3.9.17.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.17.zip",
+        current: true,
+        note: "Fix invio: guardia URL accetta /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado)",
+      },
       {
         version: "3.9.16",
         filename: "linkedin-extension-3.9.16.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.16.zip",
-        current: true,
+        current: false,
         note: "Diagnostica invio: probe DOM read-only quando textbox non trovato (overlay/dialog/contenteditable counts).",
       },
       {

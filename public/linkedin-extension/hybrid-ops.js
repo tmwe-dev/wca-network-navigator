@@ -164,8 +164,8 @@ var HybridOps = globalThis.HybridOps || (function () {
     try {
       const tabInfo = await chrome.tabs.get(tabId);
       const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
-      if (!/linkedin\.com\/(in|pub)\//i.test(currentUrl)) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab non e su /in/<slug> (" + currentUrl + ")");
+      if (!/linkedin\.com\/(in|pub|messaging)\//i.test(currentUrl)) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab fuori da profilo/messaging (" + currentUrl + ")");
       }
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
     // Level 1: AX Tree
