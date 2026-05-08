@@ -326,6 +326,58 @@ var Actions = globalThis.Actions || (function () {
     }).filter(function (t) { return !!t.name; });
   }
 
+  async function harvestInboxUrls(tabId) {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: function () {
+        function cleanText(v) { return String(v || "").replace(/\s+/g, " ").trim(); }
+        function cleanUrl(v) {
+          if (!v) return "";
+          try { return new URL(String(v), location.origin).href.split("?")[0].replace(/\/$/, ""); }
+          catch (e) { return String(v).split("?")[0].replace(/\/$/, ""); }
+        }
+        var out = [];
+        var cards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"], li');
+        cards.forEach(function (card) {
+          var text = cleanText(card.textContent).slice(0, 240);
+          if (!text || text.length < 2) return;
+          var name = "";
+          var h = card.querySelector('h3, h4, [class*="msg-conversation-card__participant-names"], [class*="participant"]');
+          if (h) name = cleanText(h.textContent);
+          if (!name) {
+            var img = card.querySelector('img[alt]');
+            if (img) name = cleanText(img.getAttribute('alt')).replace(/'s profile photo|foto del profilo|profile photo/ig, "").trim();
+          }
+          if (!name) {
+            var spans = card.querySelectorAll('span[aria-hidden="true"], span');
+            for (var i = 0; i < Math.min(spans.length, 8); i++) {
+              var s = cleanText(spans[i].textContent);
+              if (s.length > 1 && s.length < 80 && !/^\d{1,2}[:/.]/.test(s)) { name = s; break; }
+            }
+          }
+          var threadA = card.querySelector('a[href*="/messaging/thread/"], a[href*="/messaging/"]');
+          var profileA = card.querySelector('a[href*="/in/"]');
+          var threadUrl = cleanUrl(threadA && threadA.getAttribute('href'));
+          var profileUrl = cleanUrl(profileA && profileA.getAttribute('href'));
+          if ((threadUrl || profileUrl) && (name || text)) out.push({ name: name, text: text, threadUrl: threadUrl, profileUrl: profileUrl });
+        });
+        return out;
+      },
+    });
+    return (results[0] && results[0].result) || [];
+  }
+
+  function findUrlForName(urlMap, name) {
+    var n = String(name || "").toLowerCase().replace(/\s+/g, " ").trim();
+    if (!n) return null;
+    for (var i = 0; i < urlMap.length; i++) {
+      var candidateName = String(urlMap[i].name || "").toLowerCase().replace(/\s+/g, " ").trim();
+      var candidateText = String(urlMap[i].text || "").toLowerCase().replace(/\s+/g, " ").trim();
+      if ((candidateName && (candidateName === n || candidateName.indexOf(n) !== -1 || n.indexOf(candidateName) !== -1)) || candidateText.indexOf(n) !== -1) return urlMap[i];
+    }
+    return null;
+  }
+
   function mapOptimusThreadMessages(items) {
     return items.map(function (it) {
       const sender = it.message_sender || it.sender || it.sender_name || "";
