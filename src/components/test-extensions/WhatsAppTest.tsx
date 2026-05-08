@@ -22,6 +22,7 @@ export function WhatsAppTest() {
   const [sendContact, setSendContact] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
+  const [lastSentTo, setLastSentTo] = useState<string | null>(null);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
@@ -149,14 +150,31 @@ export function WhatsAppTest() {
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
     log(`📤 Invio WhatsApp a "${sendContact}": "${sendText.slice(0, 60)}..."`);
+    // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
+    // all'estensione di chiudere la chat aperta — così non riusa la conversazione
+    // precedente per errore.
+    if (lastSentTo && lastSentTo !== sendContact.trim()) {
+      try {
+        await waMsg("closeActiveChat", {}, 5000);
+        log(`🧹 Chat precedente chiusa (destinatario cambiato: ${lastSentTo} → ${sendContact})`, "info");
+      } catch { /* opzionale, l'estensione potrebbe non supportarlo */ }
+    }
     const r = await waMsg("sendWhatsApp", { phone: sendContact, text: sendText }, 60000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
+      setLastSentTo(sendContact.trim());
     } else {
       log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
     setRunning(false);
+  };
+
+  const resetSendForm = () => {
+    setSendContact("");
+    setFoundContacts([]);
+    setLastSentTo(null);
+    log("🔄 Reset destinatario: campo vuoto, dropdown contatti svuotato, memoria ultimo invio cancellata. Rifai 📨 Leggi Messaggi per ripopolare.", "info");
   };
 
   const testRawDom = async () => {
@@ -290,6 +308,7 @@ export function WhatsAppTest() {
         ) : (
           <Input value={sendContact} onChange={(e) => setSendContact(e.target.value)} placeholder="Nome contatto (prima fai 📨 Leggi Messaggi)" className="flex-1" />
         )}
+        <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario, dropdown contatti e memoria ultimo invio">🔄 Reset destinatario</Button>
       </div>
       <div className="flex gap-2">
         <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1" />
