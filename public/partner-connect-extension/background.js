@@ -598,10 +598,15 @@ async function handleGoogleSearch(msg) {
 // 1. SCRAPE
 // ============================================================
 async function handleScrape(msg) {
-  // Se è disponibile il background tab (navigate background appena fatto), preferiscilo
+  // Se il caller ha passato un URL esplicito, naviga il background tab a
+  // quell'URL e scrappa lì (nessun focus stealing, nessuna interferenza
+  // con il tab attivo dell'utente — es. editor Lovable).
   let tabId = null;
   let url = null;
-  if (BackgroundTab.tabId !== null) {
+  if (msg.url && isValidHttpUrl(msg.url)) {
+    tabId = await BackgroundTab.navigate(msg.url);
+    url = msg.url;
+  } else if (BackgroundTab.tabId !== null) {
     try {
       const bt = await chrome.tabs.get(BackgroundTab.tabId);
       if (bt && bt.url && !/^about:/.test(bt.url)) { tabId = bt.id; url = bt.url; }
