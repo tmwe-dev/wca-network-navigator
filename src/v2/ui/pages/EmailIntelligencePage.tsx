@@ -19,6 +19,7 @@ const FunnemailTab = lazy(() => import("@/components/email-intelligence/Funnemai
 const JobLedgerTab = lazy(() => import("@/components/email-intelligence/JobLedgerTab"));
 const RoutingRulesTab = lazy(() => import("@/components/email-intelligence/RoutingRulesTab"));
 const ScoutCacheTab = lazy(() => import("@/components/email-intelligence/ScoutCacheTab"));
+const EvalSetTab = lazy(() => import("@/components/email-intelligence/EvalSetTab"));
 
 function TabFallback() {
   return <div className="flex items-center justify-center h-64"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
@@ -120,6 +121,7 @@ export function EmailIntelligencePage(): React.ReactElement {
           <FlatTabTrigger value="job-ledger">Job Ledger</FlatTabTrigger>
           <FlatTabTrigger value="routing-rules">Routing Rules</FlatTabTrigger>
           <FlatTabTrigger value="scout-cache">Scout Cache</FlatTabTrigger>
+          <FlatTabTrigger value="eval-set">Eval Set</FlatTabTrigger>
         </TabsList>
 
         <TabsContent value="manual" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
@@ -145,6 +147,9 @@ export function EmailIntelligencePage(): React.ReactElement {
         </TabsContent>
         <TabsContent value="scout-cache" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
           <Suspense fallback={<TabFallback />}><ScoutCacheTab /></Suspense>
+        </TabsContent>
+        <TabsContent value="eval-set" className="flex-1 mt-2 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col px-2 md:px-3">
+          <Suspense fallback={<TabFallback />}><EvalSetTab /></Suspense>
         </TabsContent>
       </Tabs>
     </div>
