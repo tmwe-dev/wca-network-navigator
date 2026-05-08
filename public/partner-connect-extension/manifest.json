@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Partner Connect",
-  "version": "3.4.2",
-  "description": "Fix Scrape URL: handleScrape ora rispetta msg.url (background tab navigato all'URL richiesto invece di scrappare il tab attivo).",
+  "version": "3.4.3",
+  "description": "LinkedIn delegato all'estensione dedicata LinkedIn Cookie Sync: relay LinkedIn-specific risponde subito con LI_DELEGATED invece di sendMessage al vuoto.",
   "permissions": [
     "activeTab",
     "scripting",
