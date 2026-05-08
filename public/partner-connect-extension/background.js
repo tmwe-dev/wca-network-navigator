@@ -273,7 +273,30 @@ async function handleWaRelay(msg) {
 // ============================================================
 // LINKEDIN TAB RELAY
 // ============================================================
+//
+// NOTA — LinkedIn è delegato all'estensione "LinkedIn Cookie Sync"
+// (canale from-webapp-li). Questo handler resta come fallback per
+// chiamate legacy ma le azioni LinkedIn-specific vengono respinte
+// subito con errore esplicito invece di tentare chrome.tabs.sendMessage
+// verso una tab linkedin.com dove Partner Connect non inietta alcun
+// content script.
+const LI_BLOCKED_ACTIONS = new Set([
+  'sendMessage', 'sendMessageWithMethod', 'sendConnectionRequest',
+  'searchProfile', 'readLinkedInInbox', 'readLinkedInThread',
+  'backfillLinkedInThread', 'syncCookie', 'autoLogin',
+  'learnDom', 'diagnosticLinkedInDom', 'remapSendDom', 'getSendPlan',
+  'setConfig',
+]);
+
 async function handleLiRelay(msg) {
+  if (LI_BLOCKED_ACTIONS.has(msg.liAction)) {
+    return {
+      success: false,
+      error: 'linkedin_handled_by_dedicated_extension',
+      errorCode: 'LI_DELEGATED',
+      hint: 'Usa il canale from-webapp-li (estensione LinkedIn Cookie Sync).',
+    };
+  }
   const tabs = await chrome.tabs.query({ url: '*://www.linkedin.com/*' });
   if (!tabs.length) {
     return { success: false, error: 'LinkedIn non è aperto.' };
