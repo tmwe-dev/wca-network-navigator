@@ -301,8 +301,10 @@ var TabManager = globalThis.TabManager || (function () {
       const existing = await getBestExistingWaTab();
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
-        // Make sure it lives in the automation window
-        await ensureTabInAutomationWindow(existing.id);
+        // NB: do NOT force-move the tab into the automation window.
+        // If the user has WhatsApp Web open in their own window we reuse it
+        // in place — moving it creates the perception of "a new window
+        // appearing" and steals the user's tab.
         return { tab: existing, reused: true };
       }
     } catch (err) { console.debug("[WA Tab]", err?.message); }
