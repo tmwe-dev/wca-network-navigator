@@ -198,13 +198,14 @@ var TabManager = globalThis.TabManager || (function () {
       }
     } catch (e) { /* ignore */ }
 
-    // Service worker may have restarted: also check the automation window
-    // for a previously owned tab before creating a new one.
+    // Service worker may have restarted: also check an already-known
+    // automation window, but DO NOT create one just to query it.
     try {
-      const winId = await getOrCreateAutomationWindow();
-      if (winId !== null) {
+      if (_automationWindowId !== null) {
+        const win = await chrome.windows.get(_automationWindowId).catch(function () { return null; });
+        if (win) {
         const tabsInWin = await chrome.tabs.query({
-          windowId: winId,
+          windowId: _automationWindowId,
           url: "*://*.linkedin.com/*",
         });
         if (tabsInWin && tabsInWin[0]) {
@@ -218,6 +219,7 @@ var TabManager = globalThis.TabManager || (function () {
           await chrome.tabs.update(_liTabId, { url: url });
           await waitForLoad(_liTabId, 20000);
           return { id: _liTabId, reused: false };
+        }
         }
       }
     } catch (queryErr) {
