@@ -6,18 +6,30 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.28";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.29";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
+export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
+export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
+export const WCA_EXTENSION_REQUIRED_VERSION = "3.0";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
 const PARTNER_CONNECT_EXTENSION_CURRENT_FILENAME = `partner-connect-extension-${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}.zip`;
+const EMAIL_EXTENSION_CURRENT_FILENAME = `email-extension-${EMAIL_EXTENSION_REQUIRED_VERSION}.zip`;
+const RA_EXTENSION_CURRENT_FILENAME = `ra-extension-${RA_EXTENSION_REQUIRED_VERSION}.zip`;
+const WCA_EXTENSION_CURRENT_FILENAME = `wca-extension-${WCA_EXTENSION_REQUIRED_VERSION}.zip`;
 const WHATSAPP_EXTENSION_CURRENT_PATH = `/chrome-extensions/whatsapp/${WHATSAPP_EXTENSION_CURRENT_FILENAME}`;
 const LINKEDIN_EXTENSION_CURRENT_PATH = `/chrome-extensions/linkedin/${LINKEDIN_EXTENSION_CURRENT_FILENAME}`;
 const PARTNER_CONNECT_EXTENSION_CURRENT_PATH = `/chrome-extensions/partner-connect/${PARTNER_CONNECT_EXTENSION_CURRENT_FILENAME}`;
+const EMAIL_EXTENSION_CURRENT_PATH = `/chrome-extensions/email/${EMAIL_EXTENSION_CURRENT_FILENAME}`;
+const RA_EXTENSION_CURRENT_PATH = `/chrome-extensions/ra/${RA_EXTENSION_CURRENT_FILENAME}`;
+const WCA_EXTENSION_CURRENT_PATH = `/chrome-extensions/wca/${WCA_EXTENSION_CURRENT_FILENAME}`;
 const WHATSAPP_EXTENSION_FALLBACK_PATH = "/whatsapp-extension.zip";
 const LINKEDIN_EXTENSION_FALLBACK_PATH = "/linkedin-extension.zip";
 const PARTNER_CONNECT_EXTENSION_FALLBACK_PATH = "/partner-connect-extension.zip";
+const EMAIL_EXTENSION_FALLBACK_PATH = "/email-extension.zip";
+const RA_EXTENSION_FALLBACK_PATH = "/ra-extension.zip";
+const WCA_EXTENSION_FALLBACK_PATH = "/wca-extension.zip";
 const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
@@ -127,13 +139,27 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.27",
+    latestVersion: "3.9.29",
     items: [
+      {
+        version: "3.9.29",
+        filename: "linkedin-extension-3.9.29.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.29.zip",
+        current: true,
+        note: "P1/P2 — ReadThread e backfill robusti, dedup stabile, ID reali e pannello qualità sync.",
+      },
+      {
+        version: "3.9.28",
+        filename: "linkedin-extension-3.9.28.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.28.zip",
+        current: false,
+        note: "P0 — Dedup chiave composita (mai solo nome), AX Tree honest, method/confidence su thread e messaggi.",
+      },
       {
         version: "3.9.27",
         filename: "linkedin-extension-3.9.27.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.27.zip",
-        current: true,
+        current: false,
         note: "P15.2 — Fix avvio test: il diagnostico naviga al profilo richiesto prima di cercare il composer.",
       },
       {
@@ -278,9 +304,68 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
       },
     ],
   },
+  "partner-connect": {
+    title: "Partner Connect",
+    latestVersion: "3.4.3",
+    items: [
+      {
+        version: "3.4.3",
+        filename: "partner-connect-extension-3.4.3.zip",
+        path: "/chrome-extensions/partner-connect/partner-connect-extension-3.4.3.zip",
+        current: true,
+        note: "Partner Connect 3.4.3 — canale LinkedIn disabilitato: LinkedIn passa solo da LinkedIn Cookie Sync.",
+      },
+      {
+        version: "3.4.2",
+        filename: "partner-connect-extension-3.4.2.zip",
+        path: "/chrome-extensions/partner-connect/partner-connect-extension-3.4.2.zip",
+        current: false,
+        note: "Archivio.",
+      },
+    ],
+  },
+  email: {
+    title: "Email Client Universale",
+    latestVersion: "5.0.0",
+    items: [
+      {
+        version: "5.0.0",
+        filename: "email-extension-5.0.0.zip",
+        path: "/chrome-extensions/email/email-extension-5.0.0.zip",
+        current: true,
+        note: "Universal Communication Hub — pannello laterale email e canali.",
+      },
+    ],
+  },
+  ra: {
+    title: "ReportAziende Cookie Sync",
+    latestVersion: "1.0",
+    items: [
+      {
+        version: "1.0",
+        filename: "ra-extension-1.0.zip",
+        path: "/chrome-extensions/ra/ra-extension-1.0.zip",
+        current: true,
+        note: "Login automatico e sincronizzazione cookie per ReportAziende.it.",
+      },
+    ],
+  },
+  wca: {
+    title: "WCA Cookie Sync",
+    latestVersion: "3.0",
+    items: [
+      {
+        version: "3.0",
+        filename: "wca-extension-3.0.zip",
+        path: "/chrome-extensions/wca/wca-extension-3.0.zip",
+        current: true,
+        note: "Login automatico, sincronizzazione cookie ed estrazione contatti WCA.",
+      },
+    ],
+  },
 };
 
-export type ExtensionCatalogChannel = "whatsapp" | "linkedin";
+export type ExtensionCatalogChannel = "partner-connect" | "whatsapp" | "linkedin" | "email" | "ra" | "wca";
 
 export interface ExtensionCatalogItem {
   version: string;
@@ -297,8 +382,12 @@ export interface ExtensionCatalogSection {
 }
 
 export interface ExtensionCatalog {
+  "partner-connect"?: ExtensionCatalogSection;
   whatsapp?: ExtensionCatalogSection;
   linkedin?: ExtensionCatalogSection;
+  email?: ExtensionCatalogSection;
+  ra?: ExtensionCatalogSection;
+  wca?: ExtensionCatalogSection;
 }
 
 async function fetchStaticAsset(assetPath: string, fallbackPaths: string[] = []) {
@@ -453,5 +542,32 @@ export async function downloadPartnerConnectExtensionZip() {
     PARTNER_CONNECT_EXTENSION_CURRENT_FILENAME,
     [PARTNER_CONNECT_EXTENSION_FALLBACK_PATH],
     PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+  );
+}
+
+export async function downloadEmailExtensionZip() {
+  return downloadStaticExtensionZip(
+    EMAIL_EXTENSION_CURRENT_PATH,
+    EMAIL_EXTENSION_CURRENT_FILENAME,
+    [EMAIL_EXTENSION_FALLBACK_PATH],
+    EMAIL_EXTENSION_REQUIRED_VERSION,
+  );
+}
+
+export async function downloadRaExtensionZip() {
+  return downloadStaticExtensionZip(
+    RA_EXTENSION_CURRENT_PATH,
+    RA_EXTENSION_CURRENT_FILENAME,
+    [RA_EXTENSION_FALLBACK_PATH],
+    RA_EXTENSION_REQUIRED_VERSION,
+  );
+}
+
+export async function downloadWcaExtensionZip() {
+  return downloadStaticExtensionZip(
+    WCA_EXTENSION_CURRENT_PATH,
+    WCA_EXTENSION_CURRENT_FILENAME,
+    [WCA_EXTENSION_FALLBACK_PATH],
+    WCA_EXTENSION_REQUIRED_VERSION,
   );
 }
