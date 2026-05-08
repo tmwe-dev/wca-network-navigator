@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.1",
-  "description": "Optimus V2.1 — verifySession con reason strutturate (auth_required/checkpoint/loading), automation window isolation, direct-first AI, dedup inbox",
-  "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage"],
+  "version": "3.9.2",
+  "description": "Optimus V2.1 — bridge AI cookie-sync ora trova la webapp anche dentro iframe (editor Lovable). verifySession con reason strutturate, dedup inbox.",
+  "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage", "webNavigation"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
   "background": {
     "service_worker": "background.js"

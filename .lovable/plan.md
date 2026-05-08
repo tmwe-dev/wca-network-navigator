@@ -1,57 +1,63 @@
-## Obiettivo
+## Problema
 
-Replicare su LinkedIn la stessa serie di validazioni e robustezza appena verificate su WhatsApp, così che il pannello Test possa essere passato in verde con la stessa fluidità (ping → sessione → cookie → inbox → invio → guard sequence/concorrenza), senza toccare la logica di invio reale né il backfill.
+`Sync cookie li_at` torna `success:false / "Apri il Cockpit (lovable.app) per autorizzare le chiamate AI"`.
 
-## Scope (cosa cambia, cosa NO)
+Due cause concorrenti:
 
-In scope:
-- `src/components/test-extensions/LinkedInTest.tsx` — `testSession` con timeout esteso, retry singolo su timeout e messaggi leggibili (auth required, checkpoint, loading).
-- `public/linkedin-extension/auth.js` — `verifySession` ritorna `reason` strutturate (`auth_required`, `checkpoint`, `loading`, `unknown_state`) invece di restituire solo booleano/JSON grezzo.
-- Bump versione `manifest.json` LI + ri-zip estensione (`/public/linkedin-extension.zip`) come fatto per Partner Connect.
-- Allineamento del flusso `runWithCooldown`/`SyncGuardIndicator`: nessuna modifica al `syncGuard`, solo riuso.
+1. **Estensione stale**: il ping risponde `v3.9.0`. La zip aggiornata `3.9.1` non è ancora installata sul tuo Chrome (il messaggio mostrato è quello vecchio, oggi nei sorgenti dice "Assicurati che il Cockpit sia aperto…").
+2. **Bug architetturale**: `AiBridge.findWebappTab()` chiama `chrome.tabs.query({})` e filtra per `tab.url`. Dentro l'editor Lovable la webapp vive in un **iframe** (`id-preview--*.lovable.app`) il cui parent è `lovable.dev/projects/...`. `tabs.query` espone solo l'URL top-level → la webapp è lì ma non viene trovata. Stesso problema potenzialmente in qualunque host che embedda la preview.
 
-NON in scope:
-- Hooks reali di sync/backfill (`useLinkedInSync`, `useLinkedInBackfill`) — non vengono toccati.
-- Edge functions, DAL, persistenza messaggi.
-- Logica invio messaggi (`sendMessage`).
+Il content script invece **viene** iniettato nell'iframe (manifest ha `all_frames:true` + `match_origin_as_fallback:true`), quindi il bridge funziona — basta scoprirlo via frame, non via tab URL.
 
-## Modifiche puntuali
+## Fix mirato
 
-### 1. `auth.js` — `verifySession` strutturato
-Oggi ritorna `{ success, authenticated, ... }` con poco contesto. Aggiungiamo:
-- `reason: "auth_required"` se la pagina mostra il login form.
-- `reason: "checkpoint"` se LI mostra challenge/2FA/security check (selettori `#captcha-internal`, `input[name="pin"]`, URL contiene `/checkpoint/`).
-- `reason: "loading"` se la SPA non è ancora montata (no nav, no main).
-- `reason: "unknown_state"` come fallback.
-- Conserva i campi attuali per non rompere chi già usa la response.
+### A. `public/linkedin-extension/ai-bridge.js` — `findWebappTab` → `findWebappTarget`
 
-### 2. `LinkedInTest.tsx` — `testSession` resiliente
-Stesso pattern adottato per WA:
-- timeout 60s invece di 30s,
-- 1 retry automatico dopo 3s solo se errore matcha `/timeout/i`,
-- log leggibile per `auth_required` ("🔐 Devi loggarti su linkedin.com"), `checkpoint` ("🛡️ LinkedIn richiede verifica/captcha — completa nella tab e riprova"), `loading` ("⏳ LinkedIn ancora in caricamento").
-- Comportamento invariato per gli altri pulsanti.
+Cambia la lookup per supportare iframe:
 
-### 3. Versione estensione LI
-- `public/linkedin-extension/manifest.json` da `3.9.0` → `3.9.1` (patch coerente con il fix `verifySession`).
-- Ri-pacchettizzare `public/linkedin-extension.zip` con `nix run nixpkgs#zip`.
-- Nessun cambiamento al required version client se non già strettamente vincolato (verifica in `WHATSAPP_EXTENSION_REQUIRED_VERSION` equivalente per LI: se esiste `LINKEDIN_EXTENSION_REQUIRED_VERSION`, aggiornare; altrimenti lasciare).
+```text
+1. Lista tutti i tab (no filtro URL).
+2. Per ciascun tab → chrome.webNavigation.getAllFrames({tabId}).
+3. Trova il primo frame con URL matchante lovable.app / lovableproject.com / localhost / 127.0.0.1.
+4. Ritorna { tabId, frameId }.
+5. Preferisci il tab attivo a parità di match.
+```
 
-## QA
+Sostituisci la chiamata `chrome.tabs.sendMessage(tab.id, msg)` con `chrome.tabs.sendMessage(tabId, msg, { frameId })` così il messaggio arriva esattamente all'iframe giusto e non a content script estranei.
 
-Sequenza da eseguire dopo l'implementazione (manuale, sul pannello Test → tab LinkedIn):
-1. 🔌 Ping → versione attesa.
-2. 🔑 Sessione → su tab LinkedIn loggata: `authenticated: true`. Su tab non loggata: log "Devi loggarti".
-3. 🍪 Sync Cookie → ok.
-4. 📨 Leggi Inbox → lista thread.
-5. 🛡️ Verifica Controllo → throttle ping/open/read/betweenThreads in sequenza.
-6. 🚦 Test Concorrenza → secondo acquire bloccato come previsto.
+Aggiorna anche `manifest.json` aggiungendo `"webNavigation"` ai `permissions` (oggi non c'è).
 
-## Rischi
+### B. Messaggio errore più chiaro
 
-- Cambiare la shape della response di `verifySession` rompe chi legge solo `authenticated`. Mitigazione: aggiungiamo `reason` ma manteniamo `authenticated` e `success` invariati.
-- Bump manifest richiede re-load dell'estensione in Chrome (stessa procedura già nota).
+Quando davvero nessun tab/iframe corrisponde, ritorna:
+`"Nessuna scheda Cockpit trovata. Apri https://*.lovable.app o l'editor Lovable in un tab e riprova."` con `code: "NO_WEBAPP_TAB"`.
 
-## Out of scope esplicito
+### C. Bump versione + ri-zip
 
-Backfill reale dei thread LI e qualunque scrittura su DB restano invariati: si valida solo la catena ping/sessione/lettura/guard come per WA.
+- `public/linkedin-extension/manifest.json`: `3.9.1` → `3.9.2`.
+- `public/linkedin-extension/background.js`: ping → `"3.9.2"`.
+- Rigenera `public/linkedin-extension.zip`.
+- Salva copia versionata in `public/chrome-extensions/linkedin/linkedin-extension-3.9.2.zip`.
+
+### D. Allineamento WhatsApp (stesso bug)
+
+`public/whatsapp-extension/ai-bridge.js` ha **identica** logica `findWebappTab`. Stesso fix lì, bump WA `5.10.0` → `5.10.1`, ri-zip. Senza questo, appena testerai sync WA dall'editor avrai lo stesso errore.
+
+## QA dopo l'implementazione
+
+Reinstalla entrambe le estensioni in `chrome://extensions` (Carica decompresso o Aggiorna), poi sul pannello Test:
+
+1. **LinkedIn → Ping** → deve rispondere `v3.9.2`.
+2. **LinkedIn → Sync Cookie** → atteso `success:true, saved:true`. Verifica in DB che `app_settings.linkedin_li_at` sia stato aggiornato (timestamp recente).
+3. **WhatsApp → Ping** → `v5.10.1`. Sync analogo se applicabile.
+4. **Sequenza completa LI** ping → session → cookie → autoLogin → inbox: nessun errore "NO_WEBAPP_TAB".
+
+## NON in scope
+
+- Nessuna modifica a `useLinkedInSync`, parser profilo, edge function `save-linkedin-cookie`, RLS o auth.
+- Nessun refactor di `syncGuard` o `useAiExtractBridgeListener` (la logica lato webapp resta identica, il bridge consegna il messaggio nello stesso modo, solo a un frame invece che a un tab).
+- Bug parser profilo "0 notifiche" e dropdown contatti senza URL → restano fuori (li hai esclusi).
+
+## Rischio
+
+Basso. La modifica è tutta dentro `ai-bridge.js`. Aggiungere `webNavigation` ai permission richiede reinstall esplicito ma è già scontato (stiamo bumpando la versione).

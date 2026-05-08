@@ -18,16 +18,32 @@ var AiBridge = globalThis.AiBridge || (function () {
   async function findWebappTab() {
     try {
       const tabs = await chrome.tabs.query({});
+      // Search across ALL frames in each tab — the webapp may live in an iframe
+      // (e.g. id-preview--*.lovable.app embedded inside lovable.dev editor).
+      const matchUrl = (u) => !!u && (
+        /https:\/\/[^/]+\.lovable\.app\//i.test(u) ||
+        /https:\/\/[^/]+\.lovableproject\.com\//i.test(u) ||
+        /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(u)
+      );
       const candidates = [];
       for (const t of tabs) {
-        if (!t.url) continue;
-        if (
-          /https:\/\/[^/]+\.lovable\.app\//i.test(t.url) ||
-          /https:\/\/[^/]+\.lovableproject\.com\//i.test(t.url) ||
-          /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(t.url)
-        ) {
-          candidates.push(t);
+        if (!t || typeof t.id !== "number") continue;
+        // Quick path: top-level URL matches
+        if (matchUrl(t.url)) {
+          candidates.push({ tabId: t.id, frameId: 0, active: !!t.active });
+          continue;
         }
+        // Slow path: scan frames (requires "webNavigation" permission)
+        try {
+          const frames = await chrome.webNavigation.getAllFrames({ tabId: t.id });
+          if (!frames) continue;
+          for (const f of frames) {
+            if (matchUrl(f.url)) {
+              candidates.push({ tabId: t.id, frameId: f.frameId, active: !!t.active });
+              break;
+            }
+          }
+        } catch (e) { /* tab may be closed / no permission */ }
       }
       if (candidates.length === 0) return null;
       for (const c of candidates) if (c.active) return c;
@@ -37,16 +53,16 @@ var AiBridge = globalThis.AiBridge || (function () {
   }
 
   async function sendRequest(direction, responseDirection, payload) {
-    let tab = await findWebappTab();
-    if (!tab) {
+    let target = await findWebappTab();
+    if (!target) {
       // Retry once after 2 seconds if no tab found initially
       await new Promise(r => setTimeout(r, 2000));
-      tab = await findWebappTab();
+      target = await findWebappTab();
     }
-    if (!tab) {
+    if (!target) {
       return {
         success: false,
-        error: "Assicurati che il Cockpit (lovable.app) sia aperto in un tab e ricaricato di recente.",
+        error: "Nessuna scheda Cockpit trovata. Apri https://*.lovable.app o l'editor Lovable in un tab e riprova.",
         code: "NO_WEBAPP_TAB",
       };
     }
@@ -61,13 +77,13 @@ var AiBridge = globalThis.AiBridge || (function () {
     });
 
     try {
-      await chrome.tabs.sendMessage(tab.id, {
+      await chrome.tabs.sendMessage(target.tabId, {
         action: "aiBridgeRequest",
         direction: direction,
         responseDirection: responseDirection,
         requestId: requestId,
         payload: payload || {},
-      });
+      }, { frameId: target.frameId });
     } catch (err) {
       const entry = _pending.get(requestId);
       if (entry) {
