@@ -34,6 +34,20 @@ var TabManager = globalThis.TabManager || (function () {
       const data = await chrome.storage.session.get(["wa_automation_window", "wa_owned_tabs"]);
       if (data.wa_automation_window) _automationWindowId = data.wa_automation_window;
       if (Array.isArray(data.wa_owned_tabs)) _ownedWaTabIds = new Set(data.wa_owned_tabs);
+      // Defensive cleanup: drop any owned tabs that are not WA tabs anymore
+      // (about:blank, chrome://newtab, closed tabs, etc.)
+      try {
+        const ids = Array.from(_ownedWaTabIds);
+        for (const tid of ids) {
+          try {
+            const t = await chrome.tabs.get(tid);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/^https?:\/\/(web\.whatsapp\.com|.*\.whatsapp\.com)/i.test(u)) {
+              _ownedWaTabIds.delete(tid);
+            }
+          } catch { _ownedWaTabIds.delete(tid); }
+        }
+      } catch { /* ignore */ }
     } catch (e) { /* session storage may be unavailable */ }
   }
 
@@ -57,7 +71,10 @@ var TabManager = globalThis.TabManager || (function () {
 
   // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
   // This window lives off-screen / minimized and never steals focus.
-  async function getOrCreateAutomationWindow() {
+  // IMPORTANT: we open it directly on web.whatsapp.com so the window
+  // never contains a stray about:blank tab (which used to confuse the
+  // tab-lookup logic and cause "blank tab + WA tab" pairs).
+  async function getOrCreateAutomationWindow(initialUrl) {
     await loadOwnership();
     // Validate cached window
     if (_automationWindowId !== null) {
@@ -70,8 +87,11 @@ var TabManager = globalThis.TabManager || (function () {
     }
     // Create a NEW minimized window for automation
     try {
+      const startUrl = initialUrl && /^https?:\/\//i.test(initialUrl)
+        ? initialUrl
+        : "https://web.whatsapp.com/";
       const win = await chrome.windows.create({
-        url: "about:blank",
+        url: startUrl,
         focused: false,
         state: "minimized",
         type: "normal",
@@ -86,11 +106,15 @@ var TabManager = globalThis.TabManager || (function () {
           await chrome.windows.update(userWin.id, { focused: true });
         }
       } catch (e) { /* ignore */ }
-      // Remove the placeholder about:blank tab once the window exists
+      // The first tab is already a real WA tab (or the requested URL).
+      // Mark it owned ONLY if it points to a valid WA URL — never own about:blank.
       try {
         if (win.tabs && win.tabs[0]) {
-          // Keep it as a placeholder — we'll close it after we have a real WA tab
-          markOwned(win.tabs[0].id);
+          const t0 = win.tabs[0];
+          const url0 = t0.pendingUrl || t0.url || startUrl;
+          if (/^https?:\/\/(web\.whatsapp\.com|.*\.whatsapp\.com)/i.test(url0)) {
+            markOwned(t0.id);
+          }
         }
       } catch (e) { /* ignore */ }
       await saveOwnership();
@@ -107,9 +131,20 @@ var TabManager = globalThis.TabManager || (function () {
     for (let i = 0; i < 3; i++) {
       try {
         // Always try to create in the automation window first
-        const winId = await getOrCreateAutomationWindow();
+        const winId = await getOrCreateAutomationWindow(url);
         const opts = { url: url, active: !!active };
         if (winId !== null) opts.windowId = winId;
+        // If the automation window was JUST created with this same URL,
+        // there is already a tab loading it — reuse it instead of opening a duplicate.
+        try {
+          if (winId !== null) {
+            const existing = await chrome.tabs.query({ windowId: winId, url: "https://web.whatsapp.com/*" });
+            if (existing && existing[0]) {
+              markOwned(existing[0].id);
+              return existing[0];
+            }
+          }
+        } catch (e) { /* ignore */ }
         const tab = await chrome.tabs.create(opts);
         markOwned(tab.id);
         return tab;

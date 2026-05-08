@@ -1,111 +1,76 @@
+## Audit sintetico
 
-# Due Rubriche Separate — WhatsApp · LinkedIn
+### 1) I due selettori in alto sono tecnicamente diversi, ma oggi sono presentati male
 
-## Principio
+**Selettore operatore** (`OperatorSelector`)
+- Serve solo agli amministratori.
+- Cambia la vista CRM/app: “io”, “un altro operatore”, oppure “tutti gli operatori”.
+- Non c’entra con la casella email da cui leggi o scrivi.
 
-Email ha già la sua infrastruttura (indirizzi, gruppi, regole, prompt per sender) e **non viene toccata**.
+**Selettore casella** (`MailboxSelector`)
+- Serve a scegliere la casella di posta attiva: personale, booking, amministrazione, operativo, ecc.
+- È visibile a chi ha più di una casella accessibile.
+- Non cambia la visibilità globale degli operatori.
 
-Servono **due nuove rubriche distinte e separate**, una per WhatsApp e una per LinkedIn. Non vanno fuse fra loro né con il CRM. Se un'entry è collegata a un partner o cliente CRM lo mostriamo come **badge informativo**, ma i due elenchi restano fisicamente e visivamente separati.
+**Problema reale:** Luca vede entrambi perché è admin e ha più caselle; per un utente non-admin resta solo il selettore casella. Ma nell’header sembrano due “account selector” uguali, quindi confondono.
 
-I CRM ufficiali (`partner_contacts`, `partners`, business cards / WCA) **non vengono toccati**.
+### 2) Il bug della tab bianca è confermato nel codice
 
----
+In entrambe le estensioni esiste ancora questo schema:
 
-## 1. Due tabelle DB indipendenti
+```text
+chrome.windows.create({ url: "about:blank", ... })
+poi chrome.tabs.create({ url: WhatsApp/LinkedIn, windowId: automationWindow })
+```
 
-### `whatsapp_addresses`
-- `id`, `user_id`, `operator_id`
-- `handle` (numero E.164 normalizzato quando disponibile, altrimenti slug del thread)
-- `phone_e164` nullable
-- `display_name` (es. "Papa Ernesto", "Imane")
-- `chat_thread_id` (id del thread WA quando esposto dal bridge)
-- `first_seen_at`, `last_seen_at`, `messages_in_count`, `messages_out_count`, `last_message_at`, `last_direction`
-- `linked_partner_id`, `linked_partner_contact_id` nullable → solo badge
-- `source` (`auto_inbound` | `auto_outbound` | `manual` | `import`)
-- `notes`, `deleted_at`, `deleted_by`
-- UNIQUE `(user_id, handle)`
+Quindi quando l’estensione crea la finestra di automazione, Chrome apre una finestra con una tab `about:blank`; poi viene aggiunta una seconda tab con WhatsApp o LinkedIn. Questo spiega esattamente quello che descrivi: una pagina bianca + una pagina WA/LI nella stessa finestra. È fragile perché le operazioni successive possono stabilizzare o leggere la tab sbagliata, oppure rimanere agganciate a un placeholder.
 
-### `linkedin_addresses`
-- `id`, `user_id`, `operator_id`
-- `profile_url` (canonical, es. `https://www.linkedin.com/in/<slug>`)
-- `profile_slug`
-- `display_name`
-- `headline` (titolo profilo se visibile)
-- `first_seen_at`, `last_seen_at`, `messages_in_count`, `messages_out_count`, `last_message_at`, `last_direction`
-- `linked_partner_id`, `linked_partner_contact_id` nullable → solo badge
-- `source`, `notes`, `deleted_at`, `deleted_by`
-- UNIQUE `(user_id, profile_slug)`
+## Piano di intervento
 
-Per entrambe:
-- soft-delete via trigger globale già esistente,
-- RLS coerente con `partner_contacts` (visibilità condivisa autenticati, write protetti),
-- index trigram su `display_name` e sull'identificatore.
+### A) Rendere chiara la barra in alto senza duplicare sistemi
 
-## 2. Popolamento automatico (lazy)
+1. **Unificare la presentazione in un solo blocco “Contesto operativo”** nell’header.
+   - Riga/trigger unico, non due controlli separati visivamente.
+   - Dentro al menu: sezione “Visibilità” e sezione “Casella”.
 
-### Aggiunte minime a `channel_messages`
-- `from_name TEXT` e `to_name TEXT` (display name leggibile, separati da `from_address`/`to_address`).
-- Backfill da `raw_payload->>'contact'` per i messaggi WA storici.
+2. **Regole UI:**
+   - Utente normale: vede solo le sue caselle disponibili (`Personale`, `Booking`, `Amministrazione`, ecc.).
+   - Luca/admin: vede anche “Visibilità: tutti gli operatori / singolo operatore”.
+   - Le due funzioni restano distinte internamente, ma la UI le presenta come un unico contesto, non come due selettori concorrenti.
 
-### Sorgenti di upsert
-- **WhatsApp**: `receive-channel-message` (channel=whatsapp) e `send-whatsapp` → upsert in `whatsapp_addresses` con `display_name` da `raw_payload.contact` e `phone_e164`/`handle` quando disponibili.
-- **LinkedIn**: `receive-channel-message` (channel=linkedin) e l'edge function di invio LI → upsert in `linkedin_addresses` con `profile_slug`/`profile_url`.
+3. **Nessuna modifica alla logica business:**
+   - Mantengo `ActiveOperatorContext` per visibilità operatori.
+   - Mantengo `ActiveMailboxContext` per casella email.
+   - Cambio solo la composizione UI nell’header per evitare confusione.
 
-### Estensione bridge WA/LI
-Modifiche additive al payload inviato dal bridge: `from_handle` (numero o slug profilo) e `from_display_name` separati. `tab-manager.js` non viene toccato.
+### B) Correggere la gestione tab WA/LinkedIn
 
-### Backfill
-Script una-tantum che legge `channel_messages` storici e popola le due tabelle. Idempotente, basato su UNIQUE.
+1. **Eliminare la creazione della finestra con `about:blank`.**
+   - Quando serve una nuova tab, creare direttamente la tab target con URL reale:
+     - `https://web.whatsapp.com`
+     - `https://www.linkedin.com/...`
+   - Se Chrome obbliga una finestra, la prima tab deve essere già WA/LI, non `about:blank`.
 
-**Niente auto-creazione di `partner_contacts`** → CRM resta pulito. La promozione a CRM è un click manuale.
+2. **Non marcare mai `about:blank` come tab posseduta.**
+   - Oggi il placeholder può finire negli owned tab.
+   - Dopo la correzione, gli owned tab devono contenere solo URL validi WA/LI.
 
-## 3. Due pagine UI completamente separate
+3. **Pulizia difensiva all’avvio:**
+   - Se nello storage sessione esistono tab possedute con `about:blank`, `chrome://newtab`, URL vuoti o non WA/LI, rimuoverle dal set.
+   - Questo evita che vecchie installazioni continuino a portarsi dietro stato sporco.
 
-Due voci nella sidebar V2, in un nuovo gruppo "Rubriche" (o sotto "Acquisizione & Ricerca"):
+4. **Lookup tab più rigido:**
+   - WhatsApp deve selezionare solo tab con `web.whatsapp.com`.
+   - LinkedIn deve selezionare solo tab con `linkedin.com`.
+   - Mai usare tab bianca come fallback operativo.
 
-- `/v2/rubrica/whatsapp` → **Rubrica WhatsApp**
-- `/v2/rubrica/linkedin` → **Rubrica LinkedIn**
+5. **Packaging:**
+   - Incrementare versioni estensioni.
+   - Rigenerare `public/whatsapp-extension.zip` e `public/linkedin-extension.zip`.
 
-Ogni pagina è un componente a sé, con tabella e colonne dedicate.
+### C) Verifica finale
 
-### Rubrica WhatsApp
-Colonne: Nome visualizzato · Numero (E.164) · Thread · Ultimo messaggio (data + anteprima) · In/Out · Associato a (badge partner se `linked_partner_id`) · Azioni (Apri chat · Scrivi WA · Promuovi a CRM).
-
-### Rubrica LinkedIn
-Colonne: Nome visualizzato · Profilo (link) · Headline · Ultima interazione · In/Out · Associato a · Azioni (Apri profilo · Scrivi LI · Promuovi a CRM).
-
-Ricerca **locale** in ogni pagina (cerca solo nella sua tabella). Niente mescolamento fra i due canali.
-
-## 4. Associazione con CRM (solo badge)
-
-`linked_partner_id` viene popolato così:
-- WhatsApp → match per `phone_e164` su `partner_contacts.direct_phone`/`mobile` (normalizzato E.164).
-- LinkedIn → match su `partner_social_links.url` (linkedin canonical).
-
-Se trovato salviamo l'id come riferimento; se no, resta `null`. In UI mostriamo un badge cliccabile "Partner: Acme S.r.l." che apre la scheda partner. I dati restano nella rubrica del canale, il CRM resta separato.
-
-## 5. Composer (riuso, non nuovo)
-
-- Composer WhatsApp esistente → autocomplete pesca da `whatsapp_addresses`.
-- Composer LinkedIn esistente → autocomplete pesca da `linkedin_addresses`.
-
-Due picker separati, ognuno punta solo alla rubrica del proprio canale. Nessuna logica AI/orchestrator/holding pattern viene toccata.
-
----
-
-## Cosa NON facciamo
-
-- **Non** tocchiamo l'email (indirizzi, gruppi, regole, prompt per sender restano com'è).
-- **Non** fondiamo WhatsApp e LinkedIn in una tabella unica.
-- **Non** creiamo `partner_contacts` automatici.
-- **Non** tocchiamo `check-inbox`, `email-imap-proxy`, `mark-imap-seen`.
-- **Non** modifichiamo `tab-manager.js` delle estensioni (già fixato in v3.9.4 / v5.10.4).
-- **Non** modifichiamo `journalistReview`, holding pattern, AI orchestrators, send pipeline, dispatcher.
-- **Non** rompiamo i nodi critici dei messaggi: ordinamento, dedup, realtime su `channel_messages` restano identici.
-
----
-
-## Conferme
-
-1. Confermi i nomi pagina **"Rubrica WhatsApp"** e **"Rubrica LinkedIn"**?
-2. La **promozione manuale** a CRM (`partner_contacts`) la includiamo nello stesso step o la lasciamo per dopo?
+1. Controllare staticamente che non restino `windows.create({ url: "about:blank" })` nelle due estensioni.
+2. Controllare che non restino percorsi che marcano `about:blank` come tab owned.
+3. Controllare che l’header monti un solo controllo di contesto operativo al posto dei due selettori separati.
+4. Consegnare le nuove versioni delle estensioni con istruzione di ricarica.

@@ -17,6 +17,24 @@ var TabManager = globalThis.TabManager || (function () {
       if (data.li_automation_window) _automationWindowId = data.li_automation_window;
       if (Array.isArray(data.li_owned_tabs)) _ownedTabIds = new Set(data.li_owned_tabs);
       if (data.li_main_tab) _liTabId = data.li_main_tab;
+      // Defensive cleanup: drop owned tabs that aren't LinkedIn anymore
+      try {
+        const ids = Array.from(_ownedTabIds);
+        for (const tid of ids) {
+          try {
+            const t = await chrome.tabs.get(tid);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/linkedin\.com/i.test(u)) _ownedTabIds.delete(tid);
+          } catch { _ownedTabIds.delete(tid); }
+        }
+        if (_liTabId !== null) {
+          try {
+            const t = await chrome.tabs.get(_liTabId);
+            const u = t && (t.pendingUrl || t.url) || "";
+            if (!/linkedin\.com/i.test(u)) _liTabId = null;
+          } catch { _liTabId = null; }
+        }
+      } catch { /* ignore */ }
     } catch (e) { /* ignore */ }
   }
 
@@ -40,7 +58,10 @@ var TabManager = globalThis.TabManager || (function () {
   }
 
   // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
-  async function getOrCreateAutomationWindow() {
+  // Open directly on a real LinkedIn URL so the window never contains
+  // a stray about:blank tab (which used to pair with the real LI tab
+  // and break tab-lookups).
+  async function getOrCreateAutomationWindow(initialUrl) {
     await loadOwnership();
     if (_automationWindowId !== null) {
       try {
@@ -51,8 +72,11 @@ var TabManager = globalThis.TabManager || (function () {
       }
     }
     try {
+      const startUrl = initialUrl && /^https?:\/\//i.test(initialUrl)
+        ? initialUrl
+        : "https://www.linkedin.com/feed/";
       const win = await chrome.windows.create({
-        url: "about:blank",
+        url: startUrl,
         focused: false,
         state: "minimized",
         type: "normal",
@@ -65,7 +89,11 @@ var TabManager = globalThis.TabManager || (function () {
         if (userWin) await chrome.windows.update(userWin.id, { focused: true });
       } catch (e) { /* ignore */ }
       try {
-        if (win.tabs && win.tabs[0]) markOwned(win.tabs[0].id);
+        if (win.tabs && win.tabs[0]) {
+          const t0 = win.tabs[0];
+          const url0 = t0.pendingUrl || t0.url || startUrl;
+          if (/linkedin\.com/i.test(url0)) markOwned(t0.id);
+        }
       } catch (e) { /* ignore */ }
       await saveOwnership();
       return _automationWindowId;
@@ -94,9 +122,20 @@ var TabManager = globalThis.TabManager || (function () {
   // ── Retry-safe tab creation IN AUTOMATION WINDOW ──
   async function safeCreate(options, maxRetries) {
     maxRetries = maxRetries || 3;
-    const winId = await getOrCreateAutomationWindow();
+    const winId = await getOrCreateAutomationWindow(options && options.url);
     const opts = Object.assign({ active: false }, options || {});
     if (winId !== null) opts.windowId = winId;
+    // If the automation window was just created with this URL, reuse the
+    // existing tab instead of opening a duplicate.
+    try {
+      if (winId !== null && opts.url) {
+        const existing = await chrome.tabs.query({ windowId: winId, url: "*://*.linkedin.com/*" });
+        if (existing && existing[0]) {
+          markOwned(existing[0].id);
+          return existing[0];
+        }
+      }
+    } catch (e) { /* ignore */ }
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         const tab = await chrome.tabs.create(opts);

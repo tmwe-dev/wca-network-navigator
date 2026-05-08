@@ -13,8 +13,7 @@ import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "../atoms/Button";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
-import { OperatorSelector } from "@/components/header/OperatorSelector";
-import { MailboxSelector } from "@/components/header/MailboxSelector";
+import { OperationalContextSelector } from "@/components/header/OperationalContextSelector";
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
@@ -110,8 +109,7 @@ export function LayoutHeader({
         <NotificationCenter />
         <ThemePicker variant="icon" />
         <WhatsAppSyncButton />
-        <OperatorSelector />
-        <MailboxSelector />
+        <OperationalContextSelector />
         <HeaderToolsMenu
           onAddContact={onAddContact}
           onAgentDash={onAgentDash}
