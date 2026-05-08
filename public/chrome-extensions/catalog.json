@@ -84,13 +84,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.11",
+    "latestVersion": "3.9.12",
     "items": [
+      {
+        "version": "3.9.12",
+        "filename": "linkedin-extension-3.9.12.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.12.zip",
+        "current": true,
+        "note": "Fix invio: poll textbox 8s + retry click Messaggia + attesa Send abilitato"
+      },
       {
         "version": "3.9.11",
         "filename": "linkedin-extension-3.9.11.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.11.zip",
-        "current": true,
+        "current": false,
         "note": "Deep inbox harvest: più thread, ID e URL profilo contatto-specifici"
       },
       {

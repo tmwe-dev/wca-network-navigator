@@ -155,9 +155,37 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (msg) {
-          const msgBox = document.querySelector("div[role='textbox'][contenteditable='true']")
-            || document.querySelector("[contenteditable='true'][aria-label]");
-          if (!msgBox) return { success: false, error: "Fallback: no textbox found" };
+          // Poll up to 8s for the message textbox to appear after the dialog opens.
+          // If still missing, try clicking a "Messaggia"/"Message" button to open the
+          // composer, then poll again. This handles slow LinkedIn UI loads.
+          function findBox() {
+            return document.querySelector("div[role='textbox'][contenteditable='true']")
+              || document.querySelector("[contenteditable='true'][aria-label*='message' i]")
+              || document.querySelector("[contenteditable='true'][aria-label*='messag' i]");
+          }
+          function findMessageBtn() {
+            return Array.from(document.querySelectorAll("button, a")).find(function (b) {
+              const t = (b.textContent || "").trim();
+              const al = (b.getAttribute("aria-label") || "").trim();
+              return /^(message|messaggia)$/i.test(t)
+                || /^(invia messaggio|send message)$/i.test(t)
+                || /messaggia\s|message\s/i.test(al);
+            });
+          }
+          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          return (async function () {
+            let msgBox = findBox();
+            if (!msgBox) {
+              for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+            }
+            if (!msgBox) {
+              const mb = findMessageBtn();
+              if (mb && mb.offsetParent !== null) {
+                mb.click();
+                for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              }
+            }
+            if (!msgBox) return { success: false, error: "Fallback: no textbox found" };
           msgBox.focus();
           // Use Selection API + InputEvent for text insertion
           let sel = window.getSelection();
@@ -167,11 +195,19 @@ var HybridOps = globalThis.HybridOps || (function () {
           sel = window.getSelection();
           if (sel) { const r = document.createRange(); r.selectNodeContents(msgBox); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
           msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
-          const sendBtn = Array.from(document.querySelectorAll("button")).find(function (b) {
-            return /^(send|invia)$/i.test(b.textContent.trim()) && b.offsetParent !== null;
-          });
-          if (sendBtn) { sendBtn.click(); return { success: true, method: "structural_fallback" }; }
-          return { success: false, error: "Fallback: send button not found" };
+            // Wait for the send button to become enabled (LinkedIn validates async).
+            let sendBtn = null;
+            for (let i = 0; i < 30; i++) {
+              sendBtn = Array.from(document.querySelectorAll("button")).find(function (b) {
+                return /^(send|invia)$/i.test((b.textContent || "").trim())
+                  && b.offsetParent !== null && !b.disabled;
+              });
+              if (sendBtn) break;
+              await sleep(100);
+            }
+            if (sendBtn) { sendBtn.click(); return { success: true, method: "structural_fallback" }; }
+            return { success: false, error: "Fallback: send button not found" };
+          })();
         },
         args: [message],
       });
