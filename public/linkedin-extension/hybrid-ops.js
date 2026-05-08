@@ -623,6 +623,7 @@ var HybridOps = globalThis.HybridOps || (function () {
   return {
     extractProfile: extractProfile,
     sendMessage: sendMessage,
+    sendMessageWithMethod: sendMessageWithMethod,
     clickConnect: clickConnect,
     clickMessage: clickMessage,
     addNote: addNote,
