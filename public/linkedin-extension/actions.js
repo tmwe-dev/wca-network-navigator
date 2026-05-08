@@ -822,9 +822,17 @@ var Actions = globalThis.Actions || (function () {
             const text = bodyEl ? bodyEl.textContent.trim() : "";
             const sender = senderEl ? senderEl.textContent.trim() : "";
             const timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
-            if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
+            if (!text) return;
+            // P0.2 — Direction honest: senza segnali certi, "unknown" (NON "inbound").
+            var cls = String((item.className || "")).toLowerCase();
+            var senderLower = (sender || "").toLowerCase();
+            var direction = "unknown";
+            if (/outbound|from-me|msg-s-event--outbound|msg-s-message-list__event--own/i.test(cls)) direction = "outbound";
+            else if (/inbound|from-them|msg-s-event--inbound/i.test(cls)) direction = "inbound";
+            else if (senderLower === "you" || senderLower === "tu" || senderLower === "me" || senderLower === "io") direction = "outbound";
+            messages.push({ text: text, sender: sender, timestamp: timestamp, direction: direction, method: "structural", confidence: direction === "unknown" ? 0.4 : 0.7 });
           });
-          return { success: true, messages: messages, method: "legacy-structural" };
+          return { success: true, messages: messages, method: "legacy-structural", confidence: 0.6 };
         },
       });
       return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No thread data");
