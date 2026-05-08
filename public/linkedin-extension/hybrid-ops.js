@@ -493,6 +493,16 @@ var HybridOps = globalThis.HybridOps || (function () {
           }
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
           return (async function () {
+            // P12 — Anti-double-overlay: se esiste già un composer/overlay
+            // visibile, NON ri-clicchiamo "Messaggia". Il caller userà il
+            // composer esistente. Aprire una seconda finestra è il pattern
+            // che fa scattare l'antifrode LinkedIn.
+            var existingComposer = document.querySelector(
+              ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
+            );
+            if (existingComposer && (existingComposer.offsetParent !== null || existingComposer.getClientRects().length > 0)) {
+              return { success: true, method: "composer_already_open" };
+            }
             var btn = findProfileMessageBtn(root);
             if (btn) { btn.click(); return { success: true, method: "structural_fallback_main" }; }
             // Tenta "Altro/More" → voce "Messaggia"
