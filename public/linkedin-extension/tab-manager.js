@@ -157,6 +157,25 @@ var TabManager = globalThis.TabManager || (function () {
   async function getLinkedInTab(url, skipNavigateIfSameDomain) {
     await loadOwnership();
 
+    // Always prefer a LinkedIn tab already open outside the automation window.
+    // This is the canonical path: no new windows, no hidden pages.
+    try {
+      const userTabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+      const userTab = userTabs && userTabs.find(function (t) { return t.windowId !== _automationWindowId; });
+      if (userTab) {
+        _liTabId = userTab.id;
+        markOwned(_liTabId);
+        console.log("[LI Tab] Reusing existing user LinkedIn tab #" + _liTabId);
+        if (skipNavigateIfSameDomain && userTab.url && /linkedin\.com/i.test(userTab.url) && urlMatchesTarget(userTab.url, url)) {
+          if (userTab.status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForLoad(_liTabId, 20000);
+        return { id: _liTabId, reused: false };
+      }
+    } catch (e) { /* ignore */ }
+
     // Try cached owned main tab
     if (_liTabId !== null) {
       try {
