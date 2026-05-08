@@ -218,16 +218,15 @@ var TabManager = globalThis.TabManager || (function () {
   // in a window the user is currently working in.
   //
   // Strategy:
-  //   1. Ensure the tab is in our automation window (move it if not).
-  //   2. Activate it ONLY inside the automation window.
-  //   3. The automation window stays minimized/unfocused — Cockpit untouched.
+  //   1. NEVER create/move tabs just to make them visible.
+  //   2. Probe DOM as-is; MV3 scripting works on background tabs with host permission.
+  //   3. Activate only if the tab is already inside a previously known automation window.
   //   4. No restore() is needed because we never touched the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
-    // Move tab to automation window (silent — no focus change)
-    await ensureTabInAutomationWindow(tabId);
+    await loadOwnership();
 
-    // Activate ONLY within the automation window. If the move failed and the
-    // tab is still in a user window, we MUST NOT activate it. Probe DOM as-is.
+    // Activate ONLY if already within the automation window. If the tab is in
+    // a user window, do not move/activate it: probe DOM as-is.
     let activatedInAutomation = false;
     try {
       const tab = await chrome.tabs.get(tabId);
