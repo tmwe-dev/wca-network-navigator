@@ -2,8 +2,7 @@
  * DAL — Funnemail Routing Rules (Sprint 4)
  * Regole composite editabili dall'utente per auto-routing inbound email.
  */
-import { supabase } from "@/integrations/supabase/client";
-import { fromUntyped } from "@/integrations/supabase/supabaseUntyped";
+import { untypedFrom } from "@/lib/supabaseUntyped";
 
 export interface FunnemailRoutingCondition {
   field: "from_address" | "domain" | "subject" | "body";
@@ -31,7 +30,7 @@ export interface FunnemailRoutingRuleRow {
 const TABLE = "funnemail_routing_rules" as const;
 
 export async function listFunnemailRoutingRules(): Promise<FunnemailRoutingRuleRow[]> {
-  const { data, error } = await fromUntyped(supabase, TABLE)
+  const { data, error } = await untypedFrom(TABLE)
     .select("*")
     .order("priority", { ascending: true });
   if (error) throw error;
@@ -41,8 +40,8 @@ export async function listFunnemailRoutingRules(): Promise<FunnemailRoutingRuleR
 export async function upsertFunnemailRoutingRule(
   payload: Partial<FunnemailRoutingRuleRow> & { user_id: string; name: string },
 ): Promise<FunnemailRoutingRuleRow> {
-  const { data, error } = await fromUntyped(supabase, TABLE)
-    .upsert(payload as never)
+  const { data, error } = await untypedFrom(TABLE)
+    .upsert(payload)
     .select("*")
     .single();
   if (error) throw error;
@@ -50,11 +49,11 @@ export async function upsertFunnemailRoutingRule(
 }
 
 export async function deleteFunnemailRoutingRule(id: string): Promise<void> {
-  const { error } = await fromUntyped(supabase, TABLE).delete().eq("id", id);
+  const { error } = await untypedFrom(TABLE).delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function toggleFunnemailRoutingRule(id: string, enabled: boolean): Promise<void> {
-  const { error } = await fromUntyped(supabase, TABLE).update({ enabled } as never).eq("id", id);
+  const { error } = await untypedFrom(TABLE).update({ enabled }).eq("id", id);
   if (error) throw error;
 }
