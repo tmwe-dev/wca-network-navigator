@@ -29,7 +29,7 @@
     "extractProfile", "sendMessage", "sendConnectionRequest",
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
     "backfillLinkedInThread",
-    "diagnosticLinkedInDom", "learnDom", "setConfig",
+    "diagnosticLinkedInDom", "learnDom", "remapSendDom", "getSendPlan", "setConfig",
   ];
 
   // Max payload sizes
