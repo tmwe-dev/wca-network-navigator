@@ -66,13 +66,13 @@ Deno.serve(async (req) => {
   const metrics = startMetrics("funnemail-policy-engine");
 
   try {
-    const auth = await requireInternalOrUser(req);
-    if (auth instanceof Response) {
-      endMetrics(metrics, false, auth.status);
-      return auth;
+    const body = (await req.json().catch(() => ({}))) as ReqBody;
+    const auth = await requireInternalOrUser(req, body.user_id ?? null, headers);
+    if (auth.kind === "error") {
+      endMetrics(metrics, false, 401);
+      return auth.response;
     }
-
-    const body = (await req.json()) as ReqBody;
+    const effectiveUserId = auth.kind === "user" ? auth.userId : (body.user_id ?? null);
     if (!body.message_id || !body.from_address) {
       endMetrics(metrics, false, 400);
       return new Response(JSON.stringify({ error: "missing message_id or from_address" }), { status: 400, headers });
@@ -86,9 +86,9 @@ Deno.serve(async (req) => {
 
     // 1) Per-user override
     let effective: { scope: string; policy: Record<string, unknown> | null } | null = null;
-    if (body.user_id) {
+    if (effectiveUserId) {
       const { data } = await supabase.rpc("resolve_funnemail_policy", {
-        p_user_id: body.user_id,
+        p_user_id: effectiveUserId,
         p_from_address: body.from_address,
         p_group_id: null,
       }).maybeSingle();
