@@ -1,74 +1,161 @@
-Piano LinkedIn unificato — versione finale dopo correzioni utente.
+# LinkedIn Read — Ottimizzazione cascata Optimus → Structural → AX Tree
 
-## Principio guida
+## Principio centrale
+> Il nome non è mai una chiave. La chiave è `threadUrl`, `threadId`, `profileUrl`, `profileId` o `linkedinId`.
 
-Una sola linea per LinkedIn: **canale `from-webapp-li` → estensione dedicata "LinkedIn Cookie Sync"**.
-Partner Connect non gestisce più LinkedIn, neanche apparentemente.
-Backend `send-linkedin` resta intatto ma fuori scope, con nota esplicita.
+Adotto la guida che hai scritto. Spacchetto in 3 sprint (P0 / P1 / P2) per restare nei vincoli (modifiche minime, niente refactor opportunistici, file critici come `check-inbox`/`email-imap-proxy` esclusi). Tutto sotto bandiera **LinkedIn Cookie Sync** (solo file in `public/linkedin-extension/` e hook `src/hooks/useLinkedIn*.ts`).
 
-## Diagnosi confermata
+## File toccati (perimetro chiuso)
+- `public/linkedin-extension/actions.js` (entry: `readInbox`, `readThread`, `backfillThread`)
+- `public/linkedin-extension/ax-tree.js` (declassare confidence)
+- `public/linkedin-extension/manifest.json` (bump 3.9.27 → 3.9.28 alla fine di P0, di nuovo a fine P1)
+- `public/linkedin-extension.zip` + `public/chrome-extensions/linkedin/linkedin-extension-3.9.28.zip` + `catalog.json`
+- `src/lib/whatsappExtensionZip.ts` (versione)
+- `src/hooks/useLinkedInMessagingBridge.ts` (tipi propagati)
+- `src/hooks/useLinkedInSync.ts` (chiave dedup, salvataggio, upsert linkedin_addresses)
+- `src/hooks/useLinkedInBackfill.ts` (no-growth counter)
+- `src/data/linkedinAddresses.ts` (già esistente, solo chiamato)
+- (test UI) un piccolo pannello in pagina diagnostica LinkedIn esistente — niente nuove rotte
 
-1. **LinkedIn Cookie Sync** è il canale buono: usa `chrome.scripting.executeScript` + AX Tree, non ha bisogno di content script su `linkedin.com`.
-2. **Partner Connect `handleLiRelay`** invia `chrome.tabs.sendMessage(liTab.id, { type: "li-command" })` a una tab dove **nessuno ascolta**. Il manifest non inietta nulla su `linkedin.com`. Risultato: 100% fallimento silenzioso ("Receiving end does not exist").
-3. **`send-linkedin`** accoda su `extension_dispatch_queue`, ma nel repo non esiste un consumer LinkedIn. Tutto ciò che passa di lì resta `pending` per sempre.
-4. **Test diagnostici** in Settings: bug `method` patchato in 3.9.26/3.9.27 + tab/composer non coerenti col profilo richiesto patchati in 3.9.27.
+NESSUNA modifica a edge functions email, RLS, journalist review, Partner Connect, send-linkedin, schema DB (l'RPC `upsert_linkedin_address` e la tabella `linkedin_addresses` esistono già — verificato in migration `20260508054531`).
 
-## Step 1 — Validare davvero la baseline 3.9.27
+---
 
-Il ping non basta. Il test diagnostico deve completare in ordine, su un profilo reale:
+## SPRINT P0 (subito, alta priorità) — versione 3.9.28
 
-1. apertura del profilo richiesto (navigazione corretta, non riuso casuale di una tab);
-2. verifica URL profilo corrente (`/in/<slug>` o thread coerente);
-3. apertura del composer corretto (non un overlay di un'altra chat);
-4. rilevamento textbox composer (non search bar, non altro `role=textbox`);
-5. inserimento testo nel textbox;
-6. click/submit/shortcut sul send button → `success: true` **oppure** errore DOM reale e identificato (`send_button_not_found`, `textbox_not_cleared`, `wrong_recipient`, `navigation_drifted`).
+### P0.1 Stop dedup per nome
+File: `public/linkedin-extension/actions.js` (righe 603-605, 658, 677-679) + `src/hooks/useLinkedInSync.ts` (riga 132).
 
-Se uno di questi 6 step fallisce, il problema è dentro l'estensione dedicata e va patchato lì, in `actions.js` / `hybrid-ops.js`, sul ramo specifico dell'errore. Niente refactor della cascata.
+Sostituire `nameKey` con cascata:
+```text
+key = threadUrl || profileUrl || linkedinId || profileId || `${name}|${lastMessage}|${lastActivity}`
+```
 
-Solo se gli step 1-6 reggono si passa allo Step 2.
+### P0.2 AX Tree non finge la direzione
+File: `public/linkedin-extension/ax-tree.js`.
+- `readInbox` AX: `unread = null`, `lastMessage = null`, `confidence ≤ 0.45`.
+- `readThread` AX: per ogni messaggio dove non si distingue mittente → `direction: "unknown"`, `confidence: 0.35`. Mai più `inbound` di default.
 
-## Step 2 — Neutralizzare il relay LinkedIn di Partner Connect
+In `useLinkedInSync.ts`: messaggi `direction === "unknown"` salvati come `inbound` solo se anche il preview thread era unread; altrimenti scartati con warning `ax_tree_direction_unknown`.
 
-Modifica chirurgica e reversibile. Non si rimuovono permessi né content script.
+### P0.3 Propagare gli ID reali fino al DB
+Estendere il payload in `actions.js → readInbox/readThread` con i campi:
+```ts
+type LinkedInThread = {
+  name; threadUrl; profileUrl; linkedinId; profileId; threadId;
+  unread; lastMessage; lastActivity;
+  method: "optimus" | "structural" | "ax_tree";
+  confidence: number;
+};
+type LinkedInMessage = {
+  text; sender; direction; timestamp;
+  threadUrl; threadId; profileUrl; profileId; linkedinId;
+  method; confidence;
+};
+```
+Aggiornare il typing in `useLinkedInMessagingBridge.ts`.
 
-- `public/partner-connect-extension/webapp-bridge.js` — `relayLinkedIn(data)`: rispondere subito con `{ success: false, error: "linkedin_handled_by_dedicated_extension" }`, niente `chrome.runtime.sendMessage` verso il background per LinkedIn.
-- `public/partner-connect-extension/background.js` — `handleLiRelay(msg)`: stessa risposta esplicita immediata, niente `chrome.tabs.sendMessage`.
-- Bump versione Partner Connect, nota changelog: "LinkedIn delegato all'estensione dedicata".
+In `useLinkedInSync.ts` salvare:
+- `from_address` = `profileUrl || linkedinId || profileId` (non più `name`)
+- `from_name` = `name`
+- `thread_id` = `threadId || threadUrl`
+- `email_date` = `parsedTimestamp || created_at`
+- `raw_payload` = `{ profileUrl, profileId, linkedinId, threadUrl, threadId, method, confidence }`
 
-Reversibile: bastano due rimozioni per tornare al comportamento precedente.
+### P0.4 Chiamare `upsert_linkedin_address` durante la sync
+In `useLinkedInSync.ts`, dopo ogni messaggio salvato con successo:
+```ts
+await supabase.rpc("upsert_linkedin_address", { p_user_id, p_operator_id, p_profile_slug, p_profile_url, p_display_name, p_headline: null, p_direction, p_message_at });
+```
+Best-effort: fallimento RPC → warning, non blocca la sync.
 
-## Step 3 — Audit lato webapp
+### P0.5 Test UI diagnostico (3 bottoni)
+Nella pagina diagnostica LinkedIn esistente (cercare quella usata oggi per `Leggi Inbox`):
+1. **Leggi Inbox** → tabella: `name | threadUrl | profileUrl | unread | lastMessage | method | confidence`
+2. **Leggi Thread** → input/select `threadUrl` → tabella: `direction | sender | text | timestamp | method | confidence`
+3. **Backfill Thread** → input `threadUrl + lastKnownText + maxScrolls` → mostra: `messagesFound, stoppedBy, scrolls`
 
-Cercare non solo `direction: "from-webapp"` per azioni LinkedIn, ma **qualsiasi** `postMessage`/`chrome.runtime.sendMessage` che usi azioni tipiche LinkedIn (`sendMessage`, `extractProfile`, `sendConnectionRequest`, `searchProfile`, `readLinkedInInbox`, `readLinkedInThread`) senza il canale `from-webapp-li`.
+Dove la pagina diagnostica non esiste ancora, aggiungo un piccolo pannello in `/v2/...` (rotta che già ospita i bottoni LinkedIn — da identificare nel primo step di build, **senza** creare nuove rotte top-level).
 
-Cercare anche in:
-- `src/hooks/**` (hook bridge);
-- `src/components/**` (dialog/cockpit);
-- `supabase/functions/**` per edge function che producano payload destinati al canale sbagliato (es. tool handlers, agent execute);
-- qualsiasi `chrome.runtime.sendMessage` con `type: "li-relay"`.
+### P0 Done = bump 3.9.28, ZIP rigenerati, sync funzionante con ID reali in DB.
 
-Risultato atteso: zero punti che parlano LinkedIn fuori da `useLinkedInExtensionBridge` (canale `from-webapp-li`).
+---
 
-## Step 4 — Documentazione e protezione
+## SPRINT P1 — versione 3.9.29
 
-- Nota in testa a `webapp-bridge.js` e `background.js` di Partner Connect: "LinkedIn non è gestito qui — vedi LinkedIn Cookie Sync".
-- Nota di memoria progetto: "LinkedIn passa solo da `from-webapp-li`. Partner Connect = scraping / deep search / web automation".
-- **Nota esplicita** sul debito noto: `send-linkedin` accoda in `extension_dispatch_queue` ma non esiste un consumer LinkedIn. Qualunque invio LinkedIn dal backend resta `pending` finché non si decide se costruire il consumer o smontare la coda. **Fuori scope di questo intervento, ma documentato per non riscoprirlo tra due settimane.**
+### P1.1 Structural fallback inbox robusto
+In `actions.js` structural fallback:
+- `detectUnread(card)` con 4 segnali (class, aria, bold, counter)
+- `extractLastMessage(card, name)` con priorità selettori e blacklist label
 
-## Cosa NON si fa adesso
+### P1.2 Structural fallback thread con direzione
+`inferDirection(el, selfName)` come da guida (class outbound/inbound, sender = "you/tu/me/io" o `selfName`). Default `"unknown"` (non più `inbound`).
 
-- Non si replica `HybridOps`/`AXTree` dentro Partner Connect.
-- Non si abilita `externally_connectable` cross-extension.
-- Non si tocca `send-linkedin` né le altre edge function.
-- Non si toccano `check-inbox`, `email-imap-proxy`, `mark-imap-seen`.
-- Non si toccano RLS, journalist review, hard guards AI.
-- Niente refactor opportunistici.
+### P1.3 Backfill scroll-up con no-growth counter
+`useLinkedInBackfill.ts` + parte estensione `backfillThread`:
+- variabili `noGrowthCount`, `prevMessageCount`
+- esci con `stoppedBy = anchor_found | top_reached_no_growth | max_scrolls | timeout`
+- minimo 2-3 cicli senza crescita prima di uscire
 
-## Verifica finale prima di chiudere
+### P1.4 Dedup messaggi stabile
+Sostituire `messageDedup.buildDeterministicId(... + index)` con `buildLinkedInMessageId`:
+```text
+hash("li" | threadId|threadUrl | profileId|linkedinId|profileUrl | direction | normSender | normText | normTimestamp)
+```
+Fallback senza timestamp: `... | nearestVisibleDate | localWindowIndex`. Helper in `src/lib/linkedinDedup.ts` (nuovo file piccolo, scope LI).
 
-1. Test "Click fisico / Form submit / Ctrl+Enter" in Settings completa i 6 step dello Step 1 (o dà errore DOM reale e nominato).
-2. Nessun punto della webapp invia LinkedIn via `direction: "from-webapp"` o `type: "li-relay"`.
-3. `handleLiRelay` di Partner Connect risponde con errore esplicito immediato, mai più `sendMessage` al vuoto.
-4. Versione LinkedIn Cookie Sync mostrata in Settings = ZIP scaricabile = manifest installato (3.9.27).
-5. Memoria/changelog aggiornati con la regola di canale e il debito noto sulla coda.
+### P1.5 Strategia sync allargata
+```ts
+shouldReadThread = thread.unread === true
+  || !threadAlreadySeen(threadId || threadUrl)
+  || previewDiffersFromLastDbMessage(thread.lastMessage)
+  || forceBackfill === true;
+```
+`threadAlreadySeen` e `previewDiffersFromLastDbMessage` interrogano `channel_messages` con cache locale per evitare N+1.
+
+---
+
+## SPRINT P2 — rifinitura (nessun bump versione richiesto, può andare in 3.9.29)
+
+### P2.1 Confidence + warnings nel response extension
+Ogni risposta:
+```ts
+{ success, method, confidence, warnings: string[], counts: { rawCandidates, accepted, dropped } }
+```
+Warning standardizzati: `ax_tree_missing_last_message`, `ax_tree_direction_unknown`, `structural_unread_low_confidence`, `optimus_unavailable`, `profile_url_missing`, `dedup_key_fallback_name_used`.
+
+### P2.2 Snapshot DOM su fallimento
+Già presente in `sendMessage` (probe). Estendere a `readInbox`/`readThread` quando `accepted === 0`.
+
+### P2.3 Pannello qualità sync
+Toast sostituito da piccolo pannello con: thread analizzati, accettati, scartati per motivo, confidence media, % method.
+
+---
+
+## Cosa NON si fa
+- Nessuna modifica a `check-inbox`, `email-imap-proxy`, `mark-imap-seen`
+- Nessuna modifica a Partner Connect (resta v3.4.3 con `LI_DELEGATED`)
+- Nessuna modifica a journalist review / editorial layer
+- Nessuna modifica a schema DB (RPC e tabella esistono)
+- Nessun refactor di Optimus / AILearn (resta percorso primario)
+- Nessuna nuova rotta top-level — il pannello test va dove i bottoni già esistono
+
+## Validazione finale (checklist tua, integrale)
+| Caso | Atteso |
+|---|---|
+| Due contatti con stesso nome | entrambi presenti |
+| Thread con messaggi miei e suoi | direzione corretta |
+| Optimus disattivato | structural fallback ancora utile |
+| AX Tree fallback | dati low-confidence, mai falsi inbound |
+| Thread già letto ma mai salvato | letto almeno una volta |
+| Backfill storico | non esce al primo scroll |
+| Messaggio vecchio letto oggi | mantiene timestamp LinkedIn |
+| Rubrica LinkedIn | nuova riga con `profile_slug` / `profile_url` |
+| Duplicate sync | zero duplicati |
+| Inbox test UI | permette read thread e backfill |
+
+## Reversibilità
+Ogni sprint è un commit isolato; il bump versione è l'ultimo step. Rollback = ripristinare versione precedente nel `manifest.json` e nei ZIP.
+
+## Domanda di approvazione
+Confermi che procediamo **per sprint sequenziali (P0 → P1 → P2)**, ciascuno con bump versione + ZIP + test prima di passare al successivo? Oppure preferisci P0+P1 in un'unica spinta e P2 dopo?

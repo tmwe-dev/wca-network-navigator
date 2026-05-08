@@ -580,6 +580,11 @@ var Actions = globalThis.Actions || (function () {
 
     if (optimus.success) {
       const threads = mapOptimusInboxItems(optimus.items);
+      // P0.3 — Marker method/confidence anche per il ramo Optimus, per uniformità.
+      threads.forEach(function (t) {
+        if (!t.method) t.method = optimus.cached ? "optimus" : "optimus";
+        if (typeof t.confidence !== "number") t.confidence = typeof optimus.confidence === "number" ? optimus.confidence : 0.85;
+      });
       // Post-process: harvest URL dalla pagina e fai match per nome.
       // Optimus spesso non include thread_url/profile_url se il piano cached
       // non aveva quei selettori — qui li recuperiamo direttamente dal DOM.
@@ -597,12 +602,33 @@ var Actions = globalThis.Actions || (function () {
               if (!threads[i].threadId) threads[i].threadId = match.threadId || "";
             }
           }
-          const seenNames = {};
-          threads.forEach(function (t) { seenNames[String(t.name || "").toLowerCase().replace(/\s+/g, " ").trim()] = true; });
+          // P0.1 — Dedup key: mai per nome solo. Usa cascata stabile.
+          // Due "Marco Rossi" diversi devono entrambi sopravvivere.
+          function _dedupKey(t) {
+            return (
+              t.threadUrl ||
+              t.profileUrl ||
+              t.linkedinId ||
+              t.profileId ||
+              ((t.name || "") + "|" + (t.lastMessage || "") + "|" + (t.lastActivity || ""))
+            );
+          }
+          const seenKeys = {};
+          threads.forEach(function (t) { seenKeys[_dedupKey(t)] = true; });
           urlMap.forEach(function (item) {
-            const nameKey = String(item.name || "").toLowerCase().replace(/\s+/g, " ").trim();
-            if (!nameKey || seenNames[nameKey]) return;
-            seenNames[nameKey] = true;
+            var candidate = {
+              name: item.name,
+              threadUrl: item.threadUrl || item.profileUrl || "",
+              profileUrl: item.profileUrl || "",
+              linkedinId: item.linkedinId || "",
+              profileId: item.profileId || "",
+              threadId: item.threadId || "",
+              lastMessage: item.lastMessage || "",
+              lastActivity: "",
+            };
+            var key = _dedupKey(candidate);
+            if (!key || seenKeys[key]) return;
+            seenKeys[key] = true;
             threads.push({
               name: item.name,
               threadUrl: item.threadUrl || item.profileUrl || "",
@@ -613,6 +639,8 @@ var Actions = globalThis.Actions || (function () {
               unread: false,
               lastMessage: item.lastMessage || "",
               lastActivity: "",
+              method: "structural",
+              confidence: 0.7,
             });
           });
         }
@@ -655,7 +683,7 @@ var Actions = globalThis.Actions || (function () {
         func: function () {
           const threads = [];
           const seen = {};
-          const seenNames = {}; // M2: dedup anche per nome
+          const seenKeys = {}; // P0.1 — dedup composite key (threadUrl|profileUrl|linkedinId|profileId|name+lastMsg)
           // M2: pattern per notification badge da filtrare
           var notifPattern = /^\d+\s+\d*\s*(nuov[aoe]|new)\s*(notifich?[ae]?|message|notification)/i;
 
@@ -673,12 +701,24 @@ var Actions = globalThis.Actions || (function () {
             // M2: dedup per threadUrl
             if (threadUrl && seen[threadUrl]) return;
             if (threadUrl) seen[threadUrl] = true;
-            // M2: dedup per nome (se non c'è threadUrl, o se threadUrl diverso ma stesso nome)
-            var nameKey = name.toLowerCase().replace(/\s+/g, " ").trim();
-            if (seenNames[nameKey]) return;
-            seenNames[nameKey] = true;
             var ids = getIds(threadUrl, profileUrl);
-            threads.push({ name: name, threadUrl: threadUrl, profileUrl: profileUrl || "", linkedinId: ids.linkedinId, profileId: ids.profileId, threadId: ids.threadId, unread: unread, lastMessage: lastMsg });
+            // P0.1 — dedup chiave composita (mai solo nome).
+            var dedupKey = threadUrl || profileUrl || ids.linkedinId || ids.profileId || (name.toLowerCase().trim() + "|" + (lastMsg || "").toLowerCase().trim());
+            if (!dedupKey || seenKeys[dedupKey]) return;
+            seenKeys[dedupKey] = true;
+            threads.push({
+              name: name,
+              threadUrl: threadUrl,
+              profileUrl: profileUrl || "",
+              linkedinId: ids.linkedinId,
+              profileId: ids.profileId,
+              threadId: ids.threadId,
+              unread: unread,
+              lastMessage: lastMsg,
+              lastActivity: "",
+              method: "structural",
+              confidence: 0.65,
+            });
           }
 
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
@@ -787,9 +827,17 @@ var Actions = globalThis.Actions || (function () {
             const text = bodyEl ? bodyEl.textContent.trim() : "";
             const sender = senderEl ? senderEl.textContent.trim() : "";
             const timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
-            if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
+            if (!text) return;
+            // P0.2 — Direction honest: senza segnali certi, "unknown" (NON "inbound").
+            var cls = String((item.className || "")).toLowerCase();
+            var senderLower = (sender || "").toLowerCase();
+            var direction = "unknown";
+            if (/outbound|from-me|msg-s-event--outbound|msg-s-message-list__event--own/i.test(cls)) direction = "outbound";
+            else if (/inbound|from-them|msg-s-event--inbound/i.test(cls)) direction = "inbound";
+            else if (senderLower === "you" || senderLower === "tu" || senderLower === "me" || senderLower === "io") direction = "outbound";
+            messages.push({ text: text, sender: sender, timestamp: timestamp, direction: direction, method: "structural", confidence: direction === "unknown" ? 0.4 : 0.7 });
           });
-          return { success: true, messages: messages, method: "legacy-structural" };
+          return { success: true, messages: messages, method: "legacy-structural", confidence: 0.6 };
         },
       });
       return (results[0] && results[0].result) || Config.errorResponse(Config.ERROR.INBOX_FAILED, "No thread data");
