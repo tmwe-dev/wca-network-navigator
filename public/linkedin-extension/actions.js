@@ -580,6 +580,11 @@ var Actions = globalThis.Actions || (function () {
 
     if (optimus.success) {
       const threads = mapOptimusInboxItems(optimus.items);
+      // P0.3 — Marker method/confidence anche per il ramo Optimus, per uniformità.
+      threads.forEach(function (t) {
+        if (!t.method) t.method = optimus.cached ? "optimus" : "optimus";
+        if (typeof t.confidence !== "number") t.confidence = typeof optimus.confidence === "number" ? optimus.confidence : 0.85;
+      });
       // Post-process: harvest URL dalla pagina e fai match per nome.
       // Optimus spesso non include thread_url/profile_url se il piano cached
       // non aveva quei selettori — qui li recuperiamo direttamente dal DOM.
