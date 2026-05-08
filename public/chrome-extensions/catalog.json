@@ -1,14 +1,21 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.1",
+    "latestVersion": "5.10.2",
     "items": [
+      {
+        "version": "5.10.2",
+        "filename": "whatsapp-extension-5.10.2.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.2.zip",
+        "current": true,
+        "note": "Fix selettore search box WA (chat-list-search-container) — invio messaggio ripristinato"
+      },
       {
         "version": "5.10.1",
         "filename": "whatsapp-extension-5.10.1.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.1.zip",
-        "current": true,
-        "note": "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable)"
+        "current": false,
+        "note": "Archivio — bridge AI iframe-aware (search box rotta su WA recente)"
       },
       {
         "version": "5.10.0",
