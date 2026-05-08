@@ -12380,6 +12380,7 @@ export type Database = {
       claim_pending_action: { Args: { _action_id: string }; Returns: boolean }
       cleanup_expired_oauth_state: { Args: never; Returns: undefined }
       cleanup_super_mario_invocations: { Args: never; Returns: number }
+      compare_funnemail_vault_key: { Args: { p_value: string }; Returns: Json }
       count_inbound_activities: { Args: never; Returns: Json }
       cron_job_status: {
         Args: never
@@ -12578,6 +12579,10 @@ export type Database = {
       increment_routing_rule_match: {
         Args: { _rule_id: string }
         Returns: undefined
+      }
+      install_funnemail_vault_key: {
+        Args: { p_value: string }
+        Returns: string
       }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
