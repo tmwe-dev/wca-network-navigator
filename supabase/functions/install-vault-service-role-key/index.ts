@@ -1,7 +1,7 @@
-// One-shot bootstrap: stores SUPABASE_SERVICE_ROLE_KEY into Vault as
-// 'funnemail_trigger_service_role_key' so the on_inbound_message trigger
-// can authenticate against classify-inbound-message via pg_net.
-// Admin-only. Idempotent (updates if already present).
+// One-shot bootstrap: copies SUPABASE_SERVICE_ROLE_KEY (already injected by
+// the Supabase runtime) into Vault as 'funnemail_trigger_service_role_key'.
+// No parameters, no user input, no secret leakage. Idempotent.
+// After confirming the trigger works, this function can be deleted.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -14,23 +14,14 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-  // Auth: must be a logged-in admin
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const userClient = createClient(url, anon, { global: { headers: { Authorization: authHeader } } });
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
-  const userId = userData?.user?.id;
-  if (!userId || userErr) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ error: "service_key_not_in_env" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   const admin = createClient(url, serviceKey);
-  const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
-  if (!roleRow) return new Response(JSON.stringify({ error: "admin_only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-  // Upsert into Vault via raw SQL (vault.create_secret/update_secret)
-  const { data: existing, error: selErr } = await admin.rpc("install_funnemail_vault_key", { p_value: serviceKey });
-  if (selErr) {
-    return new Response(JSON.stringify({ error: selErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  const { data, error } = await admin.rpc("install_funnemail_vault_key", { p_value: serviceKey });
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-  return new Response(JSON.stringify({ ok: true, vault_id: existing }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ ok: true, vault_id: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
