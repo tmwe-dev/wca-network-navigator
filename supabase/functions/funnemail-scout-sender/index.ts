@@ -20,6 +20,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
+import { requireInternalOrUser } from "../_shared/internalAuth.ts";
 
 interface RequestBody {
   from_address: string;
@@ -141,6 +142,17 @@ Deno.serve(async (req) => {
     if (!body?.from_address) {
       return jsonResp({ error: "from_address required" }, 400, cors);
     }
+
+    // Auth: JWT utente o token interno server-to-server
+    const auth = await requireInternalOrUser(req, body.user_id ?? null, cors);
+    if (auth.kind === "error") return auth.response;
+    if (auth.kind === "user") {
+      if (body.user_id && body.user_id !== auth.userId) {
+        return jsonResp({ error: "Forbidden: user_id mismatch" }, 403, cors);
+      }
+      body.user_id = auth.userId;
+    }
+
     const domain = extractDomain(body.from_address);
     if (!domain) {
       return jsonResp({ known: false, partner_id: null, intel: null, reason: "invalid_email" }, 200, cors);
