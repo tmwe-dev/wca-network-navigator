@@ -177,7 +177,7 @@ export function LinkedInTest() {
     log(`📤 Invio messaggio LinkedIn...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    const r = await liMsg("sendMessage", { url: sendUrl, message: sendText }, 30000);
+    const r = await liMsg("sendMessage", { url: sendUrl, message: sendText }, 90000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");

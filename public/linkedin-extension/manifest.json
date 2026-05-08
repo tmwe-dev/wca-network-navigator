@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.18",
-  "description": "Fix invio: textbox cercato anche in shadow DOM, attesa thread + readyState, polling esteso a 20s, probe DOM piu ricco.",
+  "version": "3.9.19",
+  "description": "Fix invio: guard timeout AX/AI per evitare blocco 30s e rimappa DOM su thread reale con compose.",
   "permissions": [
     "cookies",
     "tabs",
