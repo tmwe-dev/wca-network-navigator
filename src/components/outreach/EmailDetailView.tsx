@@ -124,38 +124,8 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex-shrink-0 border-b border-border px-3 py-2 lg:px-4 lg:py-3">
-        {/* Riga 1: identità mittente (full width) */}
-        <div className="flex w-full min-w-0 items-start gap-3">
-          {/* Bandiera + ISO (template canonico app) */}
-          <div className="flex flex-shrink-0 items-start">
-            <CompanyLogo email={message.from_address} name={brand} size={40} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="truncate text-sm font-bold uppercase tracking-wide text-primary">{brand}</span>
-              <CompanyLogoInline email={message.from_address} size={16} />
-              <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
-              {hasDeepSearch && (
-                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Deep Search eseguito" />
-              )}
-              <span
-                className="min-w-0 truncate text-xs text-foreground"
-                title={senderDetail || message.from_address || ""}
-              >
-                {senderDetail || message.from_address}
-              </span>
-              <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
-                {formatDisplayDate(displayDate)}
-              </span>
-            </div>
-            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">
-              {cleanSubject}
-            </h3>
-          </div>
-
-          {/* Azioni primarie a destra, tre puntini sempre visibili */}
-          <div className="flex flex-shrink-0 items-center gap-1">
+        {/* Riga azioni: full width, wrap su viewport stretti */}
+        <div className="mb-2 flex w-full flex-wrap items-center justify-end gap-1">
               {/* Tasto primario: marca come letta e nasconde — l'azione che l'utente fa più spesso */}
               <Button
                 size="sm"
@@ -256,6 +226,35 @@ export function EmailDetailView({ message, onClose, onReclassify, reclassifying 
                 <Eye className="h-3 w-3" />
               </Button>
               <Button size="sm" variant="ghost" onClick={onClose} className="h-7 px-2 text-[11px]">Chiudi</Button>
+        </div>
+
+        {/* Riga identità mittente: full width, subject ha tutto lo spazio */}
+        <div className="flex w-full min-w-0 items-start gap-3">
+          <div className="flex flex-shrink-0 items-start">
+            <CompanyLogo email={message.from_address} name={brand} size={40} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="truncate text-sm font-bold uppercase tracking-wide text-primary">{brand}</span>
+              <CompanyLogoInline email={message.from_address} size={16} />
+              <CountryFlag email={message.from_address} size={16} className="flex-shrink-0" />
+              {hasDeepSearch && (
+                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" aria-label="Deep Search eseguito" />
+              )}
+              <span
+                className="min-w-0 truncate text-xs text-foreground"
+                title={senderDetail || message.from_address || ""}
+              >
+                {senderDetail || message.from_address}
+              </span>
+              <span className="ml-auto whitespace-nowrap text-[11px] text-muted-foreground">
+                {formatDisplayDate(displayDate)}
+              </span>
+            </div>
+            <h3 className="mt-1 break-words text-base font-semibold leading-snug text-foreground">
+              {cleanSubject}
+            </h3>
           </div>
         </div>
 
