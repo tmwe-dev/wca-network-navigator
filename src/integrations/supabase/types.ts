@@ -12579,6 +12579,10 @@ export type Database = {
         Args: { _rule_id: string }
         Returns: undefined
       }
+      install_funnemail_vault_key: {
+        Args: { p_value: string }
+        Returns: string
+      }
       is_email_authorized: { Args: { p_email: string }; Returns: boolean }
       is_operator_admin: { Args: never; Returns: boolean }
       is_org_admin: {
