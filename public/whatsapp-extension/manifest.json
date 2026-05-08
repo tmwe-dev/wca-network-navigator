@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.10",
-  "description": "Optimus V2.2 — Auto-dismiss popup 'Usa qui' (sessione altrove) in verifySession. Rimappa DOM invio manuale.",
+  "version": "5.10.11",
+  "description": "Send fix: typing via execCommand insertText (Lexical) + poll-enabled send button + Enter fallback.",
   "permissions": [
     "tabs",
     "activeTab",
