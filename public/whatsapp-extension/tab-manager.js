@@ -146,18 +146,8 @@ var TabManager = globalThis.TabManager || (function () {
 
   // ── Move tab into the automation window if it isn't already there ──
   async function ensureTabInAutomationWindow(tabId) {
-    try {
-      const winId = await getOrCreateAutomationWindow();
-      if (winId === null) return false;
-      const tab = await chrome.tabs.get(tabId);
-      if (tab.windowId === winId) return true;
-      // Move it — this happens silently and does NOT steal focus
-      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
-      return true;
-    } catch (e) {
-      console.debug("[WA TabMgr] ensureTabInAutomationWindow:", e?.message);
-      return false;
-    }
+    markOwned(tabId);
+    return true;
   }
 
   // ── OPTIMUS V2.1 (FOCUS-SAFE): activateAndStabilize ──
@@ -248,18 +238,21 @@ var TabManager = globalThis.TabManager || (function () {
       const existing = await getBestExistingWaTab();
       if (existing) {
         if (existing.status !== "complete") await waitForLoad(existing.id, 15000);
-        // Make sure it lives in the automation window
         await ensureTabInAutomationWindow(existing.id);
         return { tab: existing, reused: true };
       }
     } catch (err) { console.debug("[WA Tab]", err?.message); }
 
-    // Create fresh in automation window
-    const tab = await safeCreateTab(Config.WA_BASE, false);
-    const loaded = await waitForLoad(tab.id, 30000);
-    if (!loaded) throw new Error("WhatsApp Web non caricato");
-    await sleep(4000);
-    return { tab: tab, reused: false };
+    if (!_creatingWaTabPromise) {
+      _creatingWaTabPromise = (async function () {
+        const tab = await safeCreateTab(Config.WA_BASE, false);
+        const loaded = await waitForLoad(tab.id, 30000);
+        if (!loaded) throw new Error("WhatsApp Web non caricato");
+        await sleep(4000);
+        return { tab: tab, reused: false };
+      })().finally(function () { _creatingWaTabPromise = null; });
+    }
+    return await _creatingWaTabPromise;
   }
 
   // ── Bridge injection ──
