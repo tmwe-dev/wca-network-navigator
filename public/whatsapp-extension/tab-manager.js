@@ -176,7 +176,16 @@ var TabManager = globalThis.TabManager || (function () {
           }
         } catch (e) { /* window gone */ }
       }
-      // We deliberately do NOT reuse user-opened web.whatsapp.com tabs
+      // Fallback: reuse a user-opened web.whatsapp.com tab if available.
+      // Creating a fresh tab in the automation window forces a new login (QR),
+      // which breaks sends when the user is already authenticated elsewhere.
+      try {
+        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+        if (userTabs && userTabs[0]) {
+          markOwned(userTabs[0].id);
+          return userTabs[0];
+        }
+      } catch (e) { /* ignore */ }
       return null;
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
