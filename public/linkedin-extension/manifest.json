@@ -1,10 +1,21 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.9",
-  "description": "Optimus V2.1 — bridge AI cookie-sync, tab inattive senza finestra bianca, fallback profile URL per inbox cards senza thread anchor.",
-  "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage", "webNavigation"],
-  "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
+  "version": "3.9.10",
+  "description": "Optimus V2.1 — inbox URL harvest post-processing: recupera thread/profile URL anche con plan cached senza selettori URL.",
+  "permissions": [
+    "cookies",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "debugger",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://www.linkedin.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -18,7 +29,9 @@
         "http://127.0.0.1:*/*",
         "*://127.0.0.1:*/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true,
