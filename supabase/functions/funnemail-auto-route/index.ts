@@ -166,6 +166,44 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 2b) Sprint 4 — Routing rules composite (AND su sender + content)
+    {
+      const ctx: Record<string, string> = {
+        from_address: addr,
+        domain: dom,
+        subject: lc(body.subject ?? ""),
+        body: lc(body.body_text ?? ""),
+      };
+      const { data: compositeRules } = await supabase
+        .from("funnemail_routing_rules")
+        .select("id, name, conditions, target_group_id, target_group_name, confidence_threshold, priority")
+        .eq("user_id", body.user_id)
+        .eq("enabled", true)
+        .order("priority", { ascending: true });
+      for (const rule of (compositeRules ?? [])) {
+        if (!rule.target_group_id) continue;
+        if (!evalRule(rule.conditions, ctx)) continue;
+        const { data: grp } = await supabase
+          .from("email_sender_groups")
+          .select("id, nome_gruppo, colore, icon")
+          .eq("id", rule.target_group_id)
+          .maybeSingle();
+        if (!grp?.id) continue;
+        await applyRule(supabase, body.user_id, addr, dom, {
+          group_id: grp.id as string,
+          group_name: grp.nome_gruppo as string,
+          group_color: (grp.colore as string) ?? null,
+          group_icon: (grp.icon as string) ?? null,
+        }, `rule:${rule.name}`);
+        await supabase
+          .from("funnemail_routing_rules")
+          .update({ match_count: ((rule as { match_count?: number }).match_count ?? 0) + 1, last_matched_at: new Date().toISOString() })
+          .eq("id", rule.id);
+        endMetrics(metrics, true, 200);
+        return new Response(JSON.stringify({ ok: true, applied: true, source: "composite_rule", rule_id: rule.id, group: grp.nome_gruppo }), { status: 200, headers });
+      }
+    }
+
     // 3) Carica gruppi utente
     const { data: groups } = await supabase
       .from("email_sender_groups")
