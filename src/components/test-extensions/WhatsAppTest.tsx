@@ -94,7 +94,15 @@ export function WhatsAppTest() {
       await new Promise((res) => setTimeout(res, 3000));
       r = await waMsg("verifySession", {}, 60000);
     }
-    log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
+    if (r?.reason === "confirm_popup") {
+      log(`🚧 ${r.message || "WhatsApp Web ha un popup di conferma aperto. Aprilo e chiudi il popup."}`, "error");
+    } else if (r?.reason === "qr_required") {
+      log("📱 QR code richiesto: scansiona WhatsApp Web col telefono.", "warn");
+    } else if (r?.reason === "loading") {
+      log("⏳ WhatsApp Web ancora in caricamento — riprova fra qualche secondo.", "warn");
+    } else {
+      log(`Risultato: ${JSON.stringify(r, null, 2)}`, r?.authenticated ? "ok" : "warn");
+    }
     setRunning(false);
   };
 
