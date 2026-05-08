@@ -1399,6 +1399,7 @@ var Actions = globalThis.Actions || (function () {
           await ensurePageHelpers(tabId);
           var urlResultsFirst = await chrome.scripting.executeScript({
             target: { tabId: tabId },
+            args: [text],
             func: _pageSendUrlFallback,
           });
           return urlResultsFirst && urlResultsFirst[0] ? urlResultsFirst[0].result : { success: false, error: "URL send failed" };
@@ -1432,6 +1433,7 @@ var Actions = globalThis.Actions || (function () {
         await ensurePageHelpers(tab.id);
         var results2 = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
+          args: [text],
           func: _pageSendUrlFallback,
         });
         return results2 && results2[0] ? results2[0].result : { success: false, error: "Nessun risultato" };
