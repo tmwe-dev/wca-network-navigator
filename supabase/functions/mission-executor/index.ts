@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, corsPreflight } from "../_shared/cors.ts";
 import { logSupervisorAudit } from "../_shared/supervisorAudit.ts";
+import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 serve(async (req) => {
   const pre = corsPreflight(req);
@@ -15,12 +16,20 @@ serve(async (req) => {
     });
 
   try {
+    // ── Auth: estrai user_id dal JWT, non dal body (P0 hardening) ──
+    const auth = await requireAuth(req, cors);
+    if (isAuthError(auth)) return auth;
+    const authenticatedUserId = auth.userId;
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { mission_id, user_id } = await req.json();
-    if (!mission_id || !user_id) return json({ error: "mission_id and user_id required" }, 400);
+    const body = await req.json().catch(() => ({}));
+    const mission_id = body?.mission_id;
+    if (!mission_id) return json({ error: "mission_id required" }, 400);
+    // user_id viene SEMPRE dal token, mai dal body
+    const user_id = authenticatedUserId;
 
     // Get mission
     const { data: mission } = await supabase
