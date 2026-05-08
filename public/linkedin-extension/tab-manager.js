@@ -45,7 +45,12 @@ var TabManager = globalThis.TabManager || (function () {
     if (_automationWindowId !== null) {
       try {
         const win = await chrome.windows.get(_automationWindowId);
-        if (win) return _automationWindowId;
+        if (win) {
+          if (win.state !== "minimized") {
+            try { await chrome.windows.update(_automationWindowId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
+          }
+          return _automationWindowId;
+        }
       } catch (e) {
         _automationWindowId = null;
       }
@@ -58,6 +63,7 @@ var TabManager = globalThis.TabManager || (function () {
         type: "normal",
       });
       _automationWindowId = win.id;
+      try { await chrome.windows.update(win.id, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
       // Force user window back to focus (some platforms ignore focused:false)
       try {
         const allWins = await chrome.windows.getAll();
@@ -343,6 +349,7 @@ var TabManager = globalThis.TabManager || (function () {
     getLinkedInTab: getLinkedInTab,
     getTabId: getTabId,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
+    getAutomationWindowId: function () { return _automationWindowId; },
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
