@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.11",
+  "version": "3.9.12",
   "description": "LinkedIn deep inbox harvest: più thread visibili, ID/profile URL e link contatto-specifici.",
   "permissions": [
     "cookies",
