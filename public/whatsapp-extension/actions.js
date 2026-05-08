@@ -1211,14 +1211,44 @@ var Actions = globalThis.Actions || (function () {
             H.qsDeep('[data-testid="compose-box-input"]');
           if (!composer) { resolve({ success: false, error: "Composer not found", needsRemap: true }); return; }
           H.modernClearAndType(composer, messageText);
-          const sendBtn = tryPlan("send_button") ||
-            H.qsDeep('[data-testid="send"]') ||
-            H.qsDeep('button[aria-label*="send" i]') ||
-            H.qsDeep('button[aria-label*="invia" i]') ||
-            H.qsDeep('span[data-icon="send"]')?.closest('button');
-          if (!sendBtn) { resolve({ success: false, error: "Send button not found", needsRemap: true }); return; }
-          sendBtn.click();
-          resolve({ success: true, sent: true, method: plan ? "search+plan" : "search" });
+          // Poll for an enabled send button (WA enables it only after the editor registers the input)
+          const findSendBtn = function () {
+            return tryPlan("send_button") ||
+              H.qsDeep('[data-testid="send"]') ||
+              H.qsDeep('button[aria-label*="send" i]') ||
+              H.qsDeep('button[aria-label*="invia" i]') ||
+              (H.qsDeep('span[data-icon="send"]') && H.qsDeep('span[data-icon="send"]').closest('button'));
+          };
+          let attempts = 0;
+          const maxAttempts = 30; // ~3s
+          const tick = function () {
+            attempts++;
+            const btn = findSendBtn();
+            const enabled = btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
+            if (enabled) {
+              btn.click();
+              resolve({ success: true, sent: true, method: plan ? "search+plan" : "search" });
+              return;
+            }
+            if (attempts >= maxAttempts) {
+              // Fallback: Enter key on composer (WA submits on Enter when textarea-mode)
+              try {
+                const ev = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true });
+                composer.dispatchEvent(ev);
+                composer.dispatchEvent(new KeyboardEvent("keypress", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+                composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+              } catch (e) { /* ignore */ }
+              if (btn) {
+                try { btn.click(); } catch (e) {}
+                resolve({ success: true, sent: true, method: "click-after-enter" });
+              } else {
+                resolve({ success: false, error: "Send button not found/enabled after type", needsRemap: true });
+              }
+              return;
+            }
+            setTimeout(tick, 100);
+          };
+          tick();
         }, 1500);
       }, 1500);
     });
