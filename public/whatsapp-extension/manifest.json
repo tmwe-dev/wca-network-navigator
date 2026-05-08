@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
   "version": "5.10.17",
-  "description": "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.
+  "description": "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.",
   "permissions": [
     "tabs",
     "activeTab",
