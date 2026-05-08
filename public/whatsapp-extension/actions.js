@@ -1148,10 +1148,38 @@ var Actions = globalThis.Actions || (function () {
     if (!composer) return { success: false, error: "Composer not found after URL nav" };
     // Text is already pre-filled by ?text= param in WA Web — just focus & send
     composer.focus();
-    const sendBtn = H.qsDeep('[data-testid="send"]') || H.qsDeep('button[aria-label*="send" i]') || H.qsDeep('button[aria-label*="invia" i]') || H.qsDeep('span[data-icon="send"]')?.closest('button');
-    if (!sendBtn) return { success: false, error: "Send button not found after URL nav" };
-    sendBtn.click();
-    return { success: true, sent: true, method: "url-fallback" };
+    const findSendBtn = function () {
+      return H.qsDeep('[data-testid="send"]') ||
+        H.qsDeep('button[aria-label*="send" i]') ||
+        H.qsDeep('button[aria-label*="invia" i]') ||
+        (H.qsDeep('span[data-icon="send"]') && H.qsDeep('span[data-icon="send"]').closest('button'));
+    };
+    return new Promise(function (resolve) {
+      let attempts = 0;
+      const maxAttempts = 30; // ~3s
+      const tick = function () {
+        attempts++;
+        const btn = findSendBtn();
+        const enabled = btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
+        if (enabled) {
+          btn.click();
+          resolve({ success: true, sent: true, method: "url-fallback" });
+          return;
+        }
+        if (attempts >= maxAttempts) {
+          try {
+            composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+            composer.dispatchEvent(new KeyboardEvent("keypress", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+            composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true }));
+          } catch (e) { /* ignore */ }
+          if (btn) { try { btn.click(); } catch (e) {} resolve({ success: true, sent: true, method: "url-fallback-enter" }); }
+          else resolve({ success: false, error: "Send button not found after URL nav" });
+          return;
+        }
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
   }
 
   // Page-side primary path: search the contact in sidebar then send
