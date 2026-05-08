@@ -306,14 +306,36 @@ export function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
-        {foundThreads.length > 0 ? (
+        {foundThreads.length > 0 && (
           <select value={sendUrl} onChange={(e) => setSendUrl(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option value="">— Seleziona contatto —</option>
+            <option value="">— Seleziona contatto dalla rubrica (o incolla URL sotto) —</option>
             {foundThreads.map((t, i) => (<option key={i} value={t.threadUrl || ""}>{t.name}{t.threadUrl ? "" : " (no URL)"}</option>))}
           </select>
-        ) : (
-          <Input value={sendUrl} onChange={(e) => setSendUrl(e.target.value)} placeholder="URL profilo (prima fai 📨 Leggi Inbox)" className="text-sm" />
         )}
+        <div className="flex gap-2">
+          <Input
+            value={sendUrl}
+            onChange={(e) => setSendUrl(e.target.value)}
+            placeholder="Incolla URL profilo LinkedIn (es. https://www.linkedin.com/in/...)"
+            className="flex-1 text-sm"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (profileUrl && profileUrl !== "https://www.linkedin.com/in/") {
+                setSendUrl(profileUrl);
+                log(`📥 URL copiato dal campo "Estrai Profilo": ${profileUrl}`, "info");
+              } else {
+                log("⚠️ Inserisci prima un URL nel campo 'Estrai Profilo' qui sopra", "warn");
+              }
+            }}
+            title="Copia l'URL dal campo Estrai Profilo qui sopra"
+          >
+            ⬆️ Usa URL sopra
+          </Button>
+        </div>
         <div className="flex gap-2">
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
           <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia LI</Button>
