@@ -239,7 +239,9 @@ var TabManager = globalThis.TabManager || (function () {
   // ── OPTIMUS V2.1 (FOCUS-SAFE): activateAndStabilize ──
   // Same contract as WA: NEVER activate a tab in the user's window.
   async function activateAndStabilize(tabId, maxWaitMs) {
-    await ensureTabInAutomationWindow(tabId);
+    // Do NOT create/move tabs just to stabilize. If the user already has
+    // LinkedIn open, keep that tab exactly where it is and probe DOM as-is.
+    await loadOwnership();
 
     let activatedInAutomation = false;
     try {
