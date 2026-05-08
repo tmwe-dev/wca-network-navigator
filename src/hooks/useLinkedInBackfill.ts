@@ -80,6 +80,45 @@ export function useLinkedInBackfill() {
 
       if (abortRef.current) { setProgress(p => ({ ...p, status: "paused", phase: "idle", pauseReason: "Interrotto manualmente" })); return; }
 
+      // Etichette UI / ghost (definite qui per riuso anche nel save preview)
+      const LI_UI_LABELS = new Set([
+        "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
+        "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
+        "sponsored", "tutti", "filtri", "messages", "unread", "archived",
+      ]);
+      const LI_GHOST_BODIES = new Set([
+        "foto", "video", "audio", "gif", "documento", "allegato",
+        "ha reagito", "ha risposto", "ha ritirato un messaggio",
+        "messaggio rimosso", "image", "attachment",
+      ]);
+
+      // ── STEP 1.5: salva SEMPRE i preview dalla sidebar (anche senza threadUrl) ──
+      // In modalità legacy-structural l'estensione non popola threadUrl → senza
+      // questo step il backfill non scriverebbe MAI nulla in DB.
+      let previewSaved = 0;
+      let withUrl = 0;
+      for (const thread of inboxResult.threads) {
+        if (!thread.name || !thread.lastMessage) continue;
+        if (LI_UI_LABELS.has(thread.name.toLowerCase())) continue;
+        const text = thread.lastMessage.trim();
+        if (text.length < 3 || LI_GHOST_BODIES.has(text.toLowerCase())) continue;
+        if (thread.threadUrl) withUrl++;
+        const extId = buildDeterministicId("li", thread.name, text, "");
+        try {
+          const r = await upsertChannelMessageDedup({
+            user_id: user.id,
+            channel: "linkedin" as never,
+            direction: "inbound" as never,
+            from_address: thread.name,
+            body_text: text,
+            message_id_external: extId,
+            thread_id: thread.threadUrl || null,
+          } as never);
+          if (r.inserted) previewSaved++;
+        } catch { /* ignore single failures */ }
+      }
+      toast.info(`Preview salvati: ${previewSaved}/${inboxResult.threads.length} (${withUrl} con URL thread)`);
+
       // Detect gaps: compare last sidebar message vs last DB message per thread
       const threadsWithGap: { name: string; threadUrl: string; lastDbText: string | null }[] = [];
 
@@ -101,7 +140,15 @@ export function useLinkedInBackfill() {
 
       if (threadsWithGap.length === 0) {
         setProgress(p => ({ ...p, status: "done", phase: "idle" }));
-        toast.success("Tutte le conversazioni LinkedIn sono aggiornate ✅");
+        if (withUrl === 0) {
+          toast.warning(
+            "Nessun thread ha threadUrl (modalità legacy-structural). " +
+            "Apri linkedin.com/messaging e clicca su una chat per popolare gli URL, poi riprova.",
+            { duration: 8000 },
+          );
+        } else {
+          toast.success(`LinkedIn aggiornato (${previewSaved} nuovi preview salvati)`);
+        }
         return;
       }
 
@@ -148,19 +195,6 @@ export function useLinkedInBackfill() {
             messages = [...messages, ...(backfillResult.messages as Record<string, unknown>[])];
           }
         }
-
-        // Etichette UI LinkedIn da NON salvare come contatti
-        const LI_UI_LABELS = new Set([
-          "messaggi", "messaggio", "da leggere", "non letti", "archiviata",
-          "archiviate", "spam", "inmail", "inmails", "sponsorizzato",
-          "sponsored", "tutti", "filtri", "messages", "unread", "archived",
-        ]);
-        // Anteprime/placeholder LinkedIn da scartare
-        const LI_GHOST_BODIES = new Set([
-          "foto", "video", "audio", "gif", "documento", "allegato",
-          "ha reagito", "ha risposto", "ha ritirato un messaggio",
-          "messaggio rimosso", "image", "attachment",
-        ]);
 
         // Step 3: Save all messages to DB via upsert (ignores duplicates)
         let chatRecovered = 0;
