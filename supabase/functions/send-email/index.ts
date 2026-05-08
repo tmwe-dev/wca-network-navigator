@@ -98,29 +98,72 @@ Deno.serve(async (req) => {
 
     const userIdEarly = claimsData.claims.sub as string;
 
-    // ── LOVABLE-58: Idempotency check ─────────────────────────────────
-    // Se la stessa idempotency_key + recipient è già stata "sent",
-    // restituisce il risultato cached evitando il doppio invio.
+    // ── LOVABLE-SH1: Idempotency atomica (race-safe) ─────────────────
+    // Inseriamo SUBITO una riga "sending" con UNIQUE(idempotency_key, recipient_email).
+    // Se due chiamate concorrenti partono con la stessa key+recipient, solo una vince
+    // l'insert; l'altra trova prior e ritorna cached/in-flight.
+    let idempotencyRowId: string | null = null;
     if (idempotency_key) {
-      const { data: prior } = await supabase
+      const { data: inserted, error: insErr } = await supabase
         .from("email_campaign_queue")
-        .select("status, message_id, error_message")
-        .eq("idempotency_key", idempotency_key)
-        .eq("recipient_email", to)
-        .in("status", ["sent", "failed"])
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .insert({
+          user_id: userIdEarly,
+          partner_id: partner_id ?? null,
+          recipient_email: to,
+          subject,
+          html_body: html,
+          status: "sending",
+          idempotency_key,
+        })
+        .select("id")
         .maybeSingle();
-      if (prior?.status === "sent") {
-        
-        return new Response(
-          JSON.stringify({
-            success: true,
-            cached: true,
-            message_id: prior.message_id ?? null,
-          }),
-          { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
-        );
+
+      if (inserted?.id) {
+        idempotencyRowId = inserted.id;
+      } else {
+        // Conflict: una row esiste già per (key, recipient). Recupera lo stato.
+        const isUniqueViolation = insErr?.code === "23505";
+        if (insErr && !isUniqueViolation) {
+          console.error("[send-email] idempotency insert error:", insErr);
+        }
+        const { data: prior } = await supabase
+          .from("email_campaign_queue")
+          .select("id, status, message_id")
+          .eq("idempotency_key", idempotency_key)
+          .eq("recipient_email", to)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (prior?.status === "sent") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              cached: true,
+              message_id: prior.message_id ?? null,
+            }),
+            { status: 200, headers: { ...dynCors, "Content-Type": "application/json" } },
+          );
+        }
+        if (prior?.status === "sending") {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              cached: true,
+              in_flight: true,
+              error: "Send already in flight for this idempotency_key+recipient",
+              retriable: false,
+            }),
+            { status: 409, headers: { ...dynCors, "Content-Type": "application/json" } },
+          );
+        }
+        // status "failed" → permettiamo retry: riusiamo la stessa row aggiornandola
+        if (prior?.id) {
+          idempotencyRowId = prior.id;
+          await supabase
+            .from("email_campaign_queue")
+            .update({ status: "sending", error_message: null })
+            .eq("id", prior.id);
+        }
       }
     }
 
@@ -441,19 +484,15 @@ Deno.serve(async (req) => {
         lower.includes("temporarily") ||
         /\b4\d\d\b/.test(lower); // 4xx generic transient
 
-      // Persist failure if idempotency_key provided so caller can decide
-      if (idempotency_key) {
-        await supabase.from("email_campaign_queue").insert({
-          user_id: userIdEarly,
-          partner_id: partner_id ?? null,
-          recipient_email: to,
-          subject,
-          html_body: html,
-          status: "failed",
-          idempotency_key,
-          error_message: errMsg.slice(0, 1000),
-          failed_at: new Date().toISOString(),
-        });
+      // Mark idempotency row as failed (UPDATE della row "sending" creata pre-send)
+      if (idempotencyRowId) {
+        await supabase.from("email_campaign_queue")
+          .update({
+            status: "failed",
+            error_message: errMsg.slice(0, 1000),
+            failed_at: new Date().toISOString(),
+          })
+          .eq("id", idempotencyRowId);
       }
 
       // ── Audit log (fire-and-forget) ──
@@ -514,19 +553,15 @@ Deno.serve(async (req) => {
     });
     
 
-    // Persist idempotency success record
-    if (idempotency_key) {
-      await supabase.from("email_campaign_queue").insert({
-        user_id: userIdEarly,
-        partner_id: partner_id ?? null,
-        recipient_email: to,
-        subject,
-        html_body: html,
-        status: "sent",
-        idempotency_key,
-        message_id: messageIdExternal,
-        sent_at: new Date().toISOString(),
-      });
+    // Mark idempotency row as sent (UPDATE della row "sending" creata pre-send)
+    if (idempotencyRowId) {
+      await supabase.from("email_campaign_queue")
+        .update({
+          status: "sent",
+          message_id: messageIdExternal,
+          sent_at: new Date().toISOString(),
+        })
+        .eq("id", idempotencyRowId);
     }
 
     // LOVABLE-93: supervisor audit è ora integrato in postSendPipeline
