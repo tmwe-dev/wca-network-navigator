@@ -173,26 +173,6 @@ export function LinkedInInboxView({ operatorUserId }: { operatorUserId?: string 
                 <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(false)} className="h-7 w-7" title="Chiudi lista" aria-label="Chiudi">
                   <PanelLeftClose className="w-3.5 h-3.5" />
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => readNow()} disabled={isReading} className="gap-1 h-7 text-[11px] px-2">
-                  {isReading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                  Leggi
-                </Button>
-                <Badge variant={isAvailable ? "default" : "destructive"} className="text-[9px] gap-0.5 h-5 px-1.5">
-                  {isAvailable ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                  LI
-                </Badge>
-                <Badge variant={isFireScrapeAvailable ? "default" : "secondary"} className="text-[9px] gap-0.5 h-5 px-1.5" title="FireScrape">
-                  {isFireScrapeAvailable ? "🔥" : "⭕"} FS
-                </Badge>
-                {bfProgress.status === "running" || bfProgress.status === "paused" ? (
-                  <Button size="sm" variant="destructive" onClick={stopBackfill} className="gap-1 h-7 text-[11px] px-2">
-                    <Square className="w-3 h-3" /> Stop
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={startBackfill} disabled={!isAvailable} className="gap-1 h-7 text-[11px] px-2" title="Recupera messaggi (1 thread)">
-                    <Download className="w-3 h-3" /> Backfill
-                  </Button>
-                )}
               </div>
 
               {/* Backfill progress */}
