@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.25",
-  "description": "P15 — Diagnostico: 3 metodi di click invio isolati (physical_click, form_submit, keyboard_shortcut).",
+  "version": "3.9.26",
+  "description": "P15.1 — Fix bridge: il content script ora inoltra `method` al background, sbloccando i 3 test diagnostici di click invio.",
   "permissions": [
     "cookies",
     "tabs",
