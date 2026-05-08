@@ -67,6 +67,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "message_id+from_address+user_id required" }), { status: 400, headers });
     }
 
+    // Auth: JWT utente o token interno server-to-server
+    const auth = await requireInternalOrUser(req, body.user_id, headers);
+    if (auth.kind === "error") {
+      endMetrics(metrics, false, 401);
+      return auth.response;
+    }
+    if (auth.kind === "user" && body.user_id !== auth.userId) {
+      endMetrics(metrics, false, 403);
+      return new Response(JSON.stringify({ error: "Forbidden: user_id mismatch" }), { status: 403, headers });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
