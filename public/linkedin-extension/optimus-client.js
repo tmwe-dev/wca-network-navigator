@@ -332,6 +332,41 @@ var Optimus = globalThis.Optimus || (function () {
       }
       const required = Math.max(1, Math.ceil(fieldKeys.length * 0.5));
       if (foundFields < required) { dropped++; continue; }
+
+      // ── Robust fallback for thread_url / profile_url ──
+      // The AI plan often omits a selector for the URL field, or picks a
+      // non-anchor element. Always try to harvest a real LinkedIn link from
+      // inside the item before giving up.
+      try {
+        if (!obj.thread_url) {
+          var anchor = itemEl.querySelector("a[href*='/messaging/thread/']")
+            || itemEl.querySelector("a[href*='/messaging/']");
+          if (anchor && anchor.getAttribute("href")) {
+            obj.thread_url = anchor.getAttribute("href").trim();
+          } else if (itemEl.tagName === "A" && itemEl.getAttribute("href")) {
+            obj.thread_url = itemEl.getAttribute("href").trim();
+          } else {
+            var parentA = itemEl.closest && itemEl.closest("a[href*='/messaging/']");
+            if (parentA && parentA.getAttribute("href")) {
+              obj.thread_url = parentA.getAttribute("href").trim();
+            }
+          }
+        }
+        if (!obj.profile_url) {
+          var pAnchor = itemEl.querySelector("a[href*='/in/']");
+          if (pAnchor && pAnchor.getAttribute("href")) {
+            obj.profile_url = pAnchor.getAttribute("href").trim();
+          }
+        }
+        // Resolve relative URLs to absolute
+        if (obj.thread_url && obj.thread_url.indexOf("http") !== 0) {
+          obj.thread_url = new URL(obj.thread_url, location.origin).href;
+        }
+        if (obj.profile_url && obj.profile_url.indexOf("http") !== 0) {
+          obj.profile_url = new URL(obj.profile_url, location.origin).href;
+        }
+      } catch (e) { /* ignore */ }
+
       items.push(obj);
     }
     return { success: true, items: items, dropped: dropped, candidates: itemEls.length };
