@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.21";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.24";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.2";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -127,13 +127,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.21",
+    latestVersion: "3.9.24",
     items: [
+      {
+        version: "3.9.24",
+        filename: "linkedin-extension-3.9.24.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.24.zip",
+        current: true,
+        note: "P14 — Riusa il composer LinkedIn già aperto: non naviga fuori pagina, non apre una seconda chat, non forza focus; conserva invio P13.",
+      },
       {
         version: "3.9.21",
         filename: "linkedin-extension-3.9.21.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.21.zip",
-        current: true,
+        current: false,
         note: "Anti-mis-recipient: chiude overlay chat fluttuanti e verifica URL profilo prima di clickMessage/sendMessage",
       },
       {
