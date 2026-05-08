@@ -187,5 +187,3 @@ chrome.runtime.onInstalled.addListener(async function () {
 chrome.runtime.onStartup.addListener(async function () {
   await Config.load();
 });
-
-// NOTE: rimosso watcher onFocusChanged — bloccava le operazioni LinkedIn.

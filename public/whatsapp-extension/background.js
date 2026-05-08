@@ -214,6 +214,3 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
     }
   }
 });
-
-// NOTE: rimosso watcher onFocusChanged — riminimizzava la automation window
-// in continuazione e mandava in throttle WhatsApp Web (timeout readUnread).

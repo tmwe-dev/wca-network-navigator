@@ -63,14 +63,7 @@ var TabManager = globalThis.TabManager || (function () {
     if (_automationWindowId !== null) {
       try {
         const win = await chrome.windows.get(_automationWindowId);
-        if (win) {
-          // Always re-minimize on every access — some platforms (macOS in
-          // particular) ignore state:"minimized" or restore the window.
-          if (win.state !== "minimized") {
-            try { await chrome.windows.update(_automationWindowId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
-          }
-          return _automationWindowId;
-        }
+        if (win) return _automationWindowId;
       } catch (e) {
         _automationWindowId = null;
       }
@@ -84,9 +77,6 @@ var TabManager = globalThis.TabManager || (function () {
         type: "normal",
       });
       _automationWindowId = win.id;
-      // Belt-and-suspenders: explicitly minimize right after creation
-      // (some Chromium builds ignore state on create()).
-      try { await chrome.windows.update(win.id, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
       // Some platforms ignore focused:false on create — force unfocus by
       // re-focusing the previously focused window if we know it.
       try {
@@ -218,10 +208,9 @@ var TabManager = globalThis.TabManager || (function () {
       if (winId === null) return false;
       const tab = await chrome.tabs.get(tabId);
       if (tab.windowId === winId) return true;
-      // SAFETY: do NOT move tabs that live in a user window — moving them
-      // into a minimized window puts WA Web in throttled/hidden state and
-      // breaks readInbox/scraping. Reuse the tab IN PLACE instead.
-      return false;
+      // Move it — this happens silently and does NOT steal focus
+      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
+      return true;
     } catch (e) {
       console.debug("[WA TabMgr] ensureTabInAutomationWindow:", e?.message);
       return false;
@@ -378,7 +367,6 @@ var TabManager = globalThis.TabManager || (function () {
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
-    getAutomationWindowId: function () { return _automationWindowId; },
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     isOwned: isOwned,
     activateAndStabilize: activateAndStabilize,

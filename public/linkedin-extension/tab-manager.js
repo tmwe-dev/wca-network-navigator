@@ -45,12 +45,7 @@ var TabManager = globalThis.TabManager || (function () {
     if (_automationWindowId !== null) {
       try {
         const win = await chrome.windows.get(_automationWindowId);
-        if (win) {
-          if (win.state !== "minimized") {
-            try { await chrome.windows.update(_automationWindowId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
-          }
-          return _automationWindowId;
-        }
+        if (win) return _automationWindowId;
       } catch (e) {
         _automationWindowId = null;
       }
@@ -63,7 +58,6 @@ var TabManager = globalThis.TabManager || (function () {
         type: "normal",
       });
       _automationWindowId = win.id;
-      try { await chrome.windows.update(win.id, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
       // Force user window back to focus (some platforms ignore focused:false)
       try {
         const allWins = await chrome.windows.getAll();
@@ -89,9 +83,8 @@ var TabManager = globalThis.TabManager || (function () {
       if (winId === null) return false;
       const tab = await chrome.tabs.get(tabId);
       if (tab.windowId === winId) return true;
-      // SAFETY: do NOT move user tabs into the minimized automation window —
-      // it throttles LinkedIn and breaks read/scrape operations.
-      return false;
+      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
+      return true;
     } catch (e) {
       console.debug("[LI TabMgr] ensureTabInAutomationWindow:", e?.message);
       return false;
@@ -350,7 +343,6 @@ var TabManager = globalThis.TabManager || (function () {
     getLinkedInTab: getLinkedInTab,
     getTabId: getTabId,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
-    getAutomationWindowId: function () { return _automationWindowId; },
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
