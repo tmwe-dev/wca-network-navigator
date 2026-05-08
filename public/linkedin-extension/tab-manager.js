@@ -89,8 +89,9 @@ var TabManager = globalThis.TabManager || (function () {
       if (winId === null) return false;
       const tab = await chrome.tabs.get(tabId);
       if (tab.windowId === winId) return true;
-      await chrome.tabs.move(tabId, { windowId: winId, index: -1 });
-      return true;
+      // SAFETY: do NOT move user tabs into the minimized automation window —
+      // it throttles LinkedIn and breaks read/scrape operations.
+      return false;
     } catch (e) {
       console.debug("[LI TabMgr] ensureTabInAutomationWindow:", e?.message);
       return false;
