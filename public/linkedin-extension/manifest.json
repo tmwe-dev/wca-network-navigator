@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.28",
+  "version": "3.9.29",
   "description": "P0 — Dedup chiave composita (mai solo nome), AX Tree honest (direction unknown + low confidence), method/confidence su ogni thread/messaggio.",
   "permissions": [
     "cookies",
