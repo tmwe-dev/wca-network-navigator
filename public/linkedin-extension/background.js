@@ -187,3 +187,24 @@ chrome.runtime.onInstalled.addListener(async function () {
 chrome.runtime.onStartup.addListener(async function () {
   await Config.load();
 });
+
+// ── Auto-minimize watcher: keep automation window hidden at all times.
+try {
+  chrome.windows.onFocusChanged.addListener(async function (focusedId) {
+    try {
+      if (typeof TabManager === "undefined" || !TabManager.getAutomationWindowId) return;
+      const autoId = TabManager.getAutomationWindowId();
+      if (autoId === null || autoId === undefined) return;
+      if (focusedId === autoId) {
+        try { await chrome.windows.update(autoId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
+      } else {
+        try {
+          const w = await chrome.windows.get(autoId);
+          if (w && w.state !== "minimized") {
+            await chrome.windows.update(autoId, { state: "minimized" });
+          }
+        } catch (e) { /* ignore */ }
+      }
+    } catch (e) { /* ignore */ }
+  });
+} catch (e) { /* ignore */ }
