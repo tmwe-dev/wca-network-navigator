@@ -17,6 +17,7 @@ import { OperationalContextSelector } from "@/components/header/OperationalConte
 import { StatusPill } from "./header/StatusPill";
 import { HeaderToolsMenu } from "./header/HeaderToolsMenu";
 import { WhatsAppSyncButton } from "./header/WhatsAppSyncButton";
+import { DownloadExtensionsButton } from "./header/DownloadExtensionsButton";
 import { ExploreContextHeader } from "./explore/ExploreContextHeader";
 import { NavMenuPopover } from "./NavMenuPopover";
 import { AutoPageTitle } from "./header/AutoPageTitle";
@@ -107,6 +108,7 @@ export function LayoutHeader({
       {/* RIGHT cluster — solo essenziale */}
       <div className="flex items-center gap-0.5 shrink-0">
         <NotificationCenter />
+        <DownloadExtensionsButton />
         <ThemePicker variant="icon" />
         <WhatsAppSyncButton />
         <OperationalContextSelector />
