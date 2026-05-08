@@ -1,40 +1,30 @@
 ## Obiettivo
+Nella tab "Test LinkedIn" (`/test-extensions`) aggiungere 3 pulsanti di test, uno per ciascun metodo di click sul pulsante "Invia". Così possiamo provarli isolatamente e capire quale funziona meglio nel composer corrente, senza che la cascata di fallback nasconda quale metodo ha vinto.
 
-Garantire che, dopo aver scritto il messaggio nel composer LinkedIn, l'estensione invii davvero il messaggio. Oggi il click esiste ma può fallire silenziosamente in due casi:
-1. Il bottone "Invia" rimane disabilitato perché Draft.js non riceve l'evento giusto.
-2. Il polling di 3 secondi scade prima che LinkedIn abiliti il bottone.
+## I 3 metodi
+1. **Click fisico simulato** — `scrollIntoView` + sequenza `pointerdown / mousedown / pointerup / mouseup / click` con coordinate reali sul bottone "Invia". Più affidabile contro listener React/Draft.js.
+2. **Form submit** — `requestSubmit()` (con fallback `dispatchEvent(submit)`) sul `<form class="msg-form">` genitore del composer. Bypassa il bottone, attiva l'handler React di submit.
+3. **Scorciatoia tastiera** — `Ctrl+Enter` (e fallback `Cmd+Enter` su Mac) sulla textbox. Shortcut nativo LinkedIn.
 
-## Cosa cambio (solo `public/linkedin-extension/hybrid-ops.js`, funzione `sendMessage` → fallback Level 3)
+Ogni metodo, dopo l'azione, verifica per ~1.5s che la textbox si svuoti (come già fa P13). Ritorna `success` solo se la textbox si è davvero svuotata, altrimenti errore esplicito col nome del metodo, così nei log si vede subito chi vince.
 
-1. **Forzo Draft.js a riconoscere l'input.** Subito dopo `execCommand("insertText")`, dispatch in sequenza di:
-   - `InputEvent("input", { inputType: "insertText", data: msg, bubbles: true })`
-   - `KeyboardEvent("keydown" / "keyup", { key: " ", bubbles: true })` (un finto carattere innocuo che spesso "sveglia" lo state)
-   - `Event("change", { bubbles: true })`
-   Questo è l'unico modo affidabile per far abilitare il bottone Send su Draft.js quando `execCommand` da solo non basta.
+## Modifiche
 
-2. **Polling più lungo e con verifica esplicita "abilitato".** Da 30×100ms (3s) a 80×100ms (8s), e a ogni iterazione controllo `!btn.disabled && btn.getAttribute("aria-disabled") !== "true"`.
+### Estensione (LinkedIn `3.9.25`)
+- `public/linkedin-extension/hybrid-ops.js`: aggiungere `sendMessageWithMethod(tabId, message, method)` accanto a `sendMessage`. Riusa la stessa logica di apertura composer + scrittura testo (P3+P5+P13 wake-up), ma il blocco di click usa **solo** il metodo passato (`physical_click` | `form_submit` | `keyboard_shortcut`). Niente cascata. Se la textbox non si svuota → errore con `attempted_method: <nome>`.
+- `public/linkedin-extension/actions.js`: aggiungere handler messaggio `sendMessageWithMethod` che instrada al nuovo helper.
+- `public/linkedin-extension/manifest.json`: bump `3.9.24` → `3.9.25`.
+- `public/chrome-extensions/catalog.json` + `src/lib/whatsappExtensionZip.ts`: bump versione richiesta.
+- Rebuild ZIP `public/linkedin-extension.zip` e `public/chrome-extensions/linkedin/linkedin-extension-3.9.25.zip`.
 
-3. **Fallback finale: invio da tastiera.** Se dopo 8s il bottone Send non è abilitato MA la textbox contiene il testo atteso, simulo `Ctrl+Enter` sulla textbox (shortcut nativo LinkedIn per inviare). È l'ultima rete di sicurezza.
+### UI test
+- `src/components/test-extensions/LinkedInTest.tsx`: nel pannello "📤 Test Invio Messaggio LinkedIn", sotto al pulsante esistente "Invia LI" (lasciato com'è, è la cascata completa), aggiungere una riga con 3 pulsanti:
+  - `🖱️ Click fisico` → chiama `liMsg("sendMessageWithMethod", { url, message, method: "physical_click" })`
+  - `📋 Form submit` → metodo `form_submit`
+  - `⌨️ Ctrl+Enter` → metodo `keyboard_shortcut`
+  Ognuno passa per `runWithCooldown`, logga il metodo usato e mostra `success`/errore distinti, così confrontiamo i risultati nel terminal.
 
-4. **Verifica post-click.** Dopo il click (o il Ctrl+Enter), aspetto 1.5s e controllo che la textbox sia vuota (sign che il messaggio è partito davvero). Se è ancora piena, ritorno `{ success: false, error: "send_clicked_but_textbox_not_cleared" }` invece di un falso `success: true`. Così non diciamo più "inviato" senza esserne sicuri.
-
-## Cosa NON tocco
-
-- `clickMessage` e il guard anti-double-overlay (3.9.22) restano invariati.
-- Niente refactor su AX Tree o AI Learn (Level 1 e 2): il fix è chirurgico sul Level 3, l'unico fallback che oggi è in uso reale.
-- Niente modifiche lato app (UI/test/DAL).
-
-## Versione e packaging
-
-- Manifest: `3.9.22` → `3.9.23`.
-- Note catalog: "P13 — Garanzia invio: dispatch eventi per Draft.js, polling Send esteso a 8s, fallback Ctrl+Enter, verifica post-click che la textbox si sia svuotata."
-- Ricreo `linkedin-extension-3.9.23.zip` in `public/chrome-extensions/linkedin/` e aggiorno `public/linkedin-extension.zip` (latest) e `catalog.json`.
-
-## Verifica attesa dopo l'install
-
-Test su Gianfranco:
-- Apre **una sola** chat (guard 3.9.22 già attivo).
-- Scrive il testo.
-- Vedi il bottone Invia abilitarsi entro 1-3 secondi.
-- Click parte automaticamente, la textbox si svuota → ritorno `success: true, method: "structural_fallback"`.
-- Se per qualunque motivo il click non funziona, scatta il Ctrl+Enter; se nemmeno quello svuota la textbox, ricevi un errore esplicito invece di un falso "ok".
+## Cosa NON cambia
+- `sendMessage` originale resta intatto (cascata AX → AI Learn → structural+P13). I 3 nuovi pulsanti sono diagnostici, non sostituiscono il flusso produzione.
+- Nessuna modifica a guard, cooldown, anti-double-overlay, o pipeline esterne.
+- Nessun refactor opportunistico.
