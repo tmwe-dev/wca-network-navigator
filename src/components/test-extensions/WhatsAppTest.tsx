@@ -356,7 +356,10 @@ export function WhatsAppTest() {
         />
       </div>
       <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
-        <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database (CRM)</div>
+        <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database CRM</div>
+        <div className="text-[11px] text-muted-foreground leading-snug">
+          Cerca tra: <strong>imported_contacts</strong> (lead importati), <strong>partner_contacts</strong> (referenti partner), <strong>partners</strong> (aziende partner) e <strong>business_cards</strong> (biglietti da visita OCR). Serve per recuperare il <strong>numero E.164</strong> del destinatario — il nome chat di WhatsApp Web non basta per inviare in modo affidabile.
+        </div>
         <div className="flex gap-2">
           <Input
             value={dbQuery}
@@ -405,11 +408,26 @@ export function WhatsAppTest() {
         )}
       </div>
       {foundContacts.length > 0 && (
-        <details className="text-xs text-muted-foreground">
-          <summary className="cursor-pointer">📨 Chat lette da WhatsApp Web ({foundContacts.length}) — diagnostica, NON inviabili (manca il numero)</summary>
-          <ul className="mt-2 space-y-1 pl-4 list-disc">
-            {foundContacts.slice(0, 20).map((c, i) => (<li key={i}>{c.contact}{c.time ? ` (${c.time})` : ""}</li>))}
-          </ul>
+        <details className="text-xs text-muted-foreground" open>
+          <summary className="cursor-pointer">📨 Chat lette da WhatsApp Web ({foundContacts.length}) — clicca un nome per cercarlo nel CRM e usarlo come destinatario</summary>
+          <div className="mt-2 max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
+            {foundContacts.slice(0, 30).map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setDbQuery(c.contact);
+                  log(`🔎 Cerco "${c.contact}" nel CRM per recuperare il numero...`, "info");
+                  setTimeout(() => { void runDbSearch(); }, 0);
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-accent/50 transition-colors flex items-center justify-between gap-2"
+                title="Cerca questo nome nel CRM per ottenere il telefono"
+              >
+                <span className="truncate">👤 {c.contact}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">{c.time || ""} · cerca →</span>
+              </button>
+            ))}
+          </div>
         </details>
       )}
       <div className="flex gap-2">
