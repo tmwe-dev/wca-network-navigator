@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.3";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.3";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.9";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.8";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,13 +19,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.3",
+    latestVersion: "5.10.9",
     items: [
+      {
+        version: "5.10.9",
+        filename: "whatsapp-extension-5.10.9.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.9.zip",
+        current: true,
+        note: "Tab inattive senza finestra bianca, riusa tab esistenti web.whatsapp.com",
+      },
       {
         version: "5.10.3",
         filename: "whatsapp-extension-5.10.3.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.3.zip",
-        current: true,
+        current: false,
         note: "Rimappa DOM invio manuale (Optimus send_form)",
       },
       {
@@ -60,13 +67,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.3",
+    latestVersion: "3.9.8",
     items: [
+      {
+        version: "3.9.8",
+        filename: "linkedin-extension-3.9.8.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.8.zip",
+        current: true,
+        note: "Tab inattive senza finestra bianca, riusa tab esistenti linkedin.com",
+      },
       {
         version: "3.9.3",
         filename: "linkedin-extension-3.9.3.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.3.zip",
-        current: true,
+        current: false,
         note: "Rimappa DOM invio manuale (Optimus relearn messaging/profile)",
       },
       {
