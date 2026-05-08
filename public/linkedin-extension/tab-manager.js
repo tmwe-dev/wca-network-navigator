@@ -165,7 +165,8 @@ var TabManager = globalThis.TabManager || (function () {
     await loadOwnership();
 
     // Always prefer a LinkedIn tab already open outside the automation window.
-    // This is the canonical path: no new windows, no hidden pages.
+    // P14: if the caller says same-domain reuse is allowed, keep the user on
+    // the current LinkedIn page instead of navigating away.
     try {
       const userTabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
       const userTab = userTabs && userTabs.find(function (t) { return t.windowId !== _automationWindowId; });
@@ -173,7 +174,7 @@ var TabManager = globalThis.TabManager || (function () {
         _liTabId = userTab.id;
         markOwned(_liTabId);
         console.log("[LI Tab] Reusing existing user LinkedIn tab #" + _liTabId);
-        if (skipNavigateIfSameDomain && userTab.url && /linkedin\.com/i.test(userTab.url) && urlMatchesTarget(userTab.url, url)) {
+        if (skipNavigateIfSameDomain && userTab.url && /linkedin\.com/i.test(userTab.url)) {
           if (userTab.status !== "complete") await waitForLoad(_liTabId, 15000);
           return { id: _liTabId, reused: true };
         }
@@ -192,7 +193,7 @@ var TabManager = globalThis.TabManager || (function () {
           // If the user has LinkedIn open in their own window we want to reuse
           // it in place — moving it creates the perception of a "new tab"
           // appearing somewhere else and steals the user's tab.
-          if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url) && urlMatchesTarget(existing.url, url)) {
+          if (skipNavigateIfSameDomain && existing.url && /linkedin\.com/i.test(existing.url)) {
             if (existing.status !== "complete") await waitForLoad(_liTabId, 15000);
             return { id: _liTabId, reused: true };
           }
@@ -214,7 +215,7 @@ var TabManager = globalThis.TabManager || (function () {
         _liTabId = userTabs[0].id;
         markOwned(_liTabId);
         console.log("[LI Tab] Adopted existing LinkedIn tab #" + _liTabId);
-        if (skipNavigateIfSameDomain && userTabs[0].url && urlMatchesTarget(userTabs[0].url, url)) {
+        if (skipNavigateIfSameDomain && userTabs[0].url && /linkedin\.com/i.test(userTabs[0].url)) {
           if (userTabs[0].status !== "complete") await waitForLoad(_liTabId, 15000);
           return { id: _liTabId, reused: true };
         }
@@ -238,7 +239,7 @@ var TabManager = globalThis.TabManager || (function () {
           _liTabId = tabsInWin[0].id;
           markOwned(_liTabId);
           console.log("[LI Tab] Reused owned tab #" + _liTabId);
-          if (skipNavigateIfSameDomain && tabsInWin[0].url && urlMatchesTarget(tabsInWin[0].url, url)) {
+          if (skipNavigateIfSameDomain && tabsInWin[0].url && /linkedin\.com/i.test(tabsInWin[0].url)) {
             if (tabsInWin[0].status !== "complete") await waitForLoad(_liTabId, 15000);
             return { id: _liTabId, reused: true };
           }
