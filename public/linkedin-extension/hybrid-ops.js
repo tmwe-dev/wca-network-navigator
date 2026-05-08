@@ -349,6 +349,14 @@ var HybridOps = globalThis.HybridOps || (function () {
               msgBox.textContent = msg;
               msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
             }
+            // P13 — Sveglia Draft.js: dispatch eventi per forzare l'abilitazione
+            // del bottone Send. execCommand da solo a volte non aggiorna lo state.
+            try {
+              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true, cancelable: true }));
+              msgBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
+              msgBox.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
+              msgBox.dispatchEvent(new Event("change", { bubbles: true }));
+            } catch (e) { /* best-effort */ }
             // Wait for the send button to become enabled (LinkedIn validates async).
             // P4 — Send button robusto: match per classe msg-form__send-button,
             // aria-label Send/Invia, type=submit dentro composer. Esclude
@@ -376,14 +384,53 @@ var HybridOps = globalThis.HybridOps || (function () {
               }
               return null;
             }
+            // P13 — Polling esteso a 8s (era 3s).
             let sendBtn = null;
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 80; i++) {
               sendBtn = findSendBtn();
               if (sendBtn) break;
               await sleep(100);
             }
-            if (sendBtn) { sendBtn.click(); return { success: true, method: "structural_fallback" }; }
-            return { success: false, error: "Fallback: send button not found" };
+            // P13 — Verifica post-click: la textbox deve svuotarsi entro 1.5s,
+            // altrimenti l'invio NON è andato a buon fine (no falso success).
+            async function textboxCleared() {
+              for (let i = 0; i < 15; i++) {
+                await sleep(100);
+                var current = (msgBox.innerText || msgBox.textContent || "").trim();
+                if (!current) return true;
+              }
+              return false;
+            }
+            var clickMethod = null;
+            if (sendBtn) {
+              try { sendBtn.click(); clickMethod = "structural_fallback"; } catch (e) {}
+            }
+            if (!sendBtn || !(await textboxCleared())) {
+              // P13 — Fallback finale: Ctrl+Enter (shortcut nativo LinkedIn).
+              try {
+                msgBox.focus();
+                var ctrlEnterDown = new KeyboardEvent("keydown", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: true, bubbles: true, cancelable: true,
+                });
+                var ctrlEnterUp = new KeyboardEvent("keyup", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: true, bubbles: true, cancelable: true,
+                });
+                msgBox.dispatchEvent(ctrlEnterDown);
+                msgBox.dispatchEvent(ctrlEnterUp);
+                clickMethod = clickMethod || "ctrl_enter_fallback";
+              } catch (e) { /* best-effort */ }
+              if (!(await textboxCleared())) {
+                return {
+                  success: false,
+                  error: sendBtn
+                    ? "send_clicked_but_textbox_not_cleared"
+                    : "Fallback: send button not found",
+                };
+              }
+            }
+            return { success: true, method: clickMethod || "structural_fallback" };
           })();
         },
         args: [message],
