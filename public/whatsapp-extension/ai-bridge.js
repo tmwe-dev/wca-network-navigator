@@ -24,31 +24,45 @@ var AiBridge = globalThis.AiBridge || (function () {
     const timeout = timeoutMs || 30000;
     const requestId = generateId();
 
-    // Find a tab running our webapp to relay through (prefer active tab)
-    let appTab = null;
+    // Find a tab/frame running our webapp (the webapp may live inside an
+    // iframe — e.g. id-preview--*.lovable.app embedded in lovable.dev editor).
+    let target = null;
     try {
+      const matchUrl = (u) => !!u && (
+        /lovable\.app/i.test(u) ||
+        /lovableproject\.com/i.test(u) ||
+        /localhost/i.test(u) ||
+        /127\.0\.0\.1/i.test(u)
+      );
       const tabs = await chrome.tabs.query({});
       const candidates = [];
       for (let i = 0; i < tabs.length; i++) {
-        const url = tabs[i].url || "";
-        if (
-          url.match(/lovable\.app/i) ||
-          url.match(/lovableproject\.com/i) ||
-          url.match(/localhost/i) ||
-          url.match(/127\.0\.0\.1/i)
-        ) {
-          candidates.push(tabs[i]);
+        const t = tabs[i];
+        if (!t || typeof t.id !== "number") continue;
+        if (matchUrl(t.url)) {
+          candidates.push({ tabId: t.id, frameId: 0, active: !!t.active });
+          continue;
         }
+        try {
+          const frames = await chrome.webNavigation.getAllFrames({ tabId: t.id });
+          if (!frames) continue;
+          for (const f of frames) {
+            if (matchUrl(f.url)) {
+              candidates.push({ tabId: t.id, frameId: f.frameId, active: !!t.active });
+              break;
+            }
+          }
+        } catch (e) { /* tab closed or no permission */ }
       }
       if (candidates.length > 0) {
-        appTab = candidates.find((t) => t.active) || candidates[0];
+        target = candidates.find((c) => c.active) || candidates[0];
       }
     } catch (e) {
       console.error("[AiBridge] Tab query failed:", e);
     }
 
-    if (!appTab) {
-      console.warn("[AiBridge] No webapp tab found for bridge relay");
+    if (!target) {
+      console.warn("[AiBridge] No webapp tab/frame found for bridge relay");
       return null;
     }
 
@@ -66,13 +80,13 @@ var AiBridge = globalThis.AiBridge || (function () {
       };
 
       // Send to content script in the webapp tab
-      chrome.tabs.sendMessage(appTab.id, {
+      chrome.tabs.sendMessage(target.tabId, {
         source: "wa-background-bridge",
         type: "ai-bridge-request",
         requestId: requestId,
         functionName: functionName,
         payload: payload,
-      }).catch(function (e) {
+      }, { frameId: target.frameId }).catch(function (e) {
         clearTimeout(timer);
         delete _pendingRequests[requestId];
         console.warn("[AiBridge] sendMessage failed:", e);
