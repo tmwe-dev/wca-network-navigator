@@ -12,6 +12,7 @@ import { PageErrorBoundary } from "@/components/ui/PageErrorBoundary";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { cn } from "@/lib/utils";
 import { createLogger } from "@/lib/log";
+import { downloadPartnerConnectExtensionZip } from "@/lib/whatsappExtensionZip";
 
 const log = createLogger("ConnectionStatusBar");
 
@@ -65,17 +66,8 @@ export function ConnectionStatusBar({ onAiClick: _onAiClick, outreachQueue, nigh
   }, [fsExt.isAvailable]);
 
   const downloadPartnerConnectExtension = useCallback(() => {
-    fetch("/partner-connect-extension.zip")
-      .then((res) => {
-        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "partner-connect-extension.zip";
-        a.click();
-        URL.revokeObjectURL(a.href);
+    downloadPartnerConnectExtensionZip()
+      .then(() => {
         toast({
           title: "🔌 Partner Connect scaricato",
           description: "1) Estrai lo ZIP  2) chrome://extensions → Modalità sviluppatore  3) Carica non pacchettizzata  4) Ricarica questa pagina",

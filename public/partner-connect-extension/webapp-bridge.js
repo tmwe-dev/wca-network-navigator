@@ -50,7 +50,7 @@
         direction: "from-extension-fs",
         action: "ping",
         requestId: data.requestId,
-        response: { success: true, version: "3.4.0", engine: "firescrape" },
+        response: { success: true, version: "3.4.2", engine: "firescrape" },
       });
       post({ direction: "from-extension-fs", action: "contentScriptReady" });
       return;
@@ -120,7 +120,7 @@
         direction: "from-extension",
         action: "ping",
         requestId: data.requestId,
-        response: { success: true, version: "3.4.0" },
+        response: { success: true, version: "3.4.2" },
       });
       post({ direction: "from-extension", action: "contentScriptReady" });
       return;
@@ -186,5 +186,5 @@
   // Announce bridges (FS + LinkedIn only; WhatsApp is handled by dedicated extension)
   post({ direction: "from-extension-fs", action: "contentScriptReady" });
   post({ direction: "from-extension", action: "contentScriptReady" });
-  console.log("[Bridge] Unified webapp bridge loaded — v3.4.1 (FS + LI)");
+  console.log("[Bridge] Unified webapp bridge loaded — v3.4.2 (FS + LI)");
 })();
