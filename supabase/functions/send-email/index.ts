@@ -484,19 +484,15 @@ Deno.serve(async (req) => {
         lower.includes("temporarily") ||
         /\b4\d\d\b/.test(lower); // 4xx generic transient
 
-      // Persist failure if idempotency_key provided so caller can decide
-      if (idempotency_key) {
-        await supabase.from("email_campaign_queue").insert({
-          user_id: userIdEarly,
-          partner_id: partner_id ?? null,
-          recipient_email: to,
-          subject,
-          html_body: html,
-          status: "failed",
-          idempotency_key,
-          error_message: errMsg.slice(0, 1000),
-          failed_at: new Date().toISOString(),
-        });
+      // Mark idempotency row as failed (UPDATE della row "sending" creata pre-send)
+      if (idempotencyRowId) {
+        await supabase.from("email_campaign_queue")
+          .update({
+            status: "failed",
+            error_message: errMsg.slice(0, 1000),
+            failed_at: new Date().toISOString(),
+          })
+          .eq("id", idempotencyRowId);
       }
 
       // ── Audit log (fire-and-forget) ──
@@ -557,19 +553,15 @@ Deno.serve(async (req) => {
     });
     
 
-    // Persist idempotency success record
-    if (idempotency_key) {
-      await supabase.from("email_campaign_queue").insert({
-        user_id: userIdEarly,
-        partner_id: partner_id ?? null,
-        recipient_email: to,
-        subject,
-        html_body: html,
-        status: "sent",
-        idempotency_key,
-        message_id: messageIdExternal,
-        sent_at: new Date().toISOString(),
-      });
+    // Mark idempotency row as sent (UPDATE della row "sending" creata pre-send)
+    if (idempotencyRowId) {
+      await supabase.from("email_campaign_queue")
+        .update({
+          status: "sent",
+          message_id: messageIdExternal,
+          sent_at: new Date().toISOString(),
+        })
+        .eq("id", idempotencyRowId);
     }
 
     // LOVABLE-93: supervisor audit è ora integrato in postSendPipeline
