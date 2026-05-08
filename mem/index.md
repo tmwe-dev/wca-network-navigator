@@ -10,3 +10,4 @@
 - [Brand Voice System](mem://features/brand-voice-system) — Voce TMWE su 4 layer + score deterministico nel journalistReview, telemetria brand_voice_audits
 - [LinkedIn Slow Auto-Sync](mem://features/linkedin-slow-auto-sync) — Auto-sync LI 2-3/giorno via app_settings, cursor per-contatto, no Chat Mode
 - [Funnemail Sprint 1 2026-05-08](mem://reference/funnemail-sprint1-2026-05-08) — Auth hardening 3 edge Funnemail (x-internal-token=SERVICE_ROLE), tabella email_processing_jobs + RPC record_email_processing_job_stage, trigger materialization decisions→message_status e actions→sub_status, DAL emailProcessingJobs.ts
+- [Funnemail Sprint 4 2026-05-08](mem://reference/funnemail-sprint4-2026-05-08) — Scout cache per-utente (funnemail_scout_cache) + routing rules composite (funnemail_routing_rules) con valutazione AND in funnemail-auto-route prima del fallback AI; tab UI Routing Rules + Scout Cache
