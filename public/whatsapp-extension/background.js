@@ -50,7 +50,7 @@ var ACTION_HANDLERS = {
   ping: function (msg, sendResponse) {
     sendResponse({
       success: true,
-      version: "5.10.2",
+      version: "5.10.3",
       modulesLoaded: _modulesLoaded,
     });
     return false;
@@ -134,6 +134,23 @@ var ACTION_HANDLERS = {
     });
     return true;
   },
+
+  remapSendDom: function (msg, sendResponse) {
+    TabManager.enqueueAction(async function () {
+      try { sendResponse(await Actions.remapSendDom()); }
+      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.UNKNOWN, err.message)); }
+    });
+    return true;
+  },
+
+  getSendPlan: function (msg, sendResponse) {
+    chrome.storage.local.get("wa_send_plan").then(function (r) {
+      sendResponse({ success: true, plan: r.wa_send_plan || null });
+    }).catch(function (err) {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  },
 };
 
 // ── Single message listener ──
@@ -174,7 +191,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ── Lifecycle ──
 chrome.runtime.onInstalled.addListener(async function () {
-  console.log("[WhatsApp Extension v5.10.2] Installed — Optimus V2.1 (automation window isolation)");
+  console.log("[WhatsApp Extension v5.10.3] Installed — Optimus V2.1 (automation window isolation)");
   if (typeof Config !== "undefined") {
     await Config.load();
     if (typeof AiExtract !== "undefined") AiExtract.loadSchema().catch(function () {});

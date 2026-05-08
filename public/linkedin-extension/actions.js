@@ -725,6 +725,42 @@ var Actions = globalThis.Actions || (function () {
     return Config.errorResponse(Config.ERROR.AI_LEARN_FAILED, "AI learning failed");
   }
 
+  // ══════════════════════════════════════════════
+  // REMAP SEND DOM — Manuale: invalida la cache "messaging" + "profile"
+  // e forza l'AI a rileggere il DOM ora. Nessun auto-retry: solo on demand.
+  // ══════════════════════════════════════════════
+  async function remapSendDom() {
+    if (!Config.isReady()) return { success: false, error: "Configurazione AI mancante" };
+    try {
+      // 1) Invalida cache schema esistenti
+      await AILearn.clearCache("messaging");
+      await AILearn.clearCache("profile");
+
+      // 2) Re-learn messaging (schema usato da HybridOps.sendMessage)
+      const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+      await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
+      await TabManager.sleep(3000);
+      const messagingSchema = await AILearn.learnFromAI(tab.id, "messaging", Config.getUrl(), Config.getKey());
+
+      // 3) Re-learn profile (schema usato per click "Message"/"Connect")
+      const profTab = await TabManager.getLinkedInTab("https://www.linkedin.com/in/me/", false);
+      await TabManager.ensureTabVisibleAndWait(profTab.id, 1200);
+      await TabManager.sleep(2500);
+      const profileSchema = await AILearn.learnFromAI(profTab.id, "profile", Config.getUrl(), Config.getKey());
+
+      const ok = !!(messagingSchema || profileSchema);
+      return {
+        success: ok,
+        savedAt: Date.now(),
+        messagingFields: messagingSchema ? Object.keys(messagingSchema).filter(function (k) { return k !== "learnedAt" && k !== "pageType"; }) : [],
+        profileFields: profileSchema ? Object.keys(profileSchema).filter(function (k) { return k !== "learnedAt" && k !== "pageType"; }) : [],
+        error: ok ? null : "AI learning failed for both messaging and profile",
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     extractProfileByUrl: extractProfileByUrl,
     sendLinkedInMessage: sendLinkedInMessage,
@@ -735,6 +771,7 @@ var Actions = globalThis.Actions || (function () {
     backfillThread: backfillThread,
     diagnostic: diagnostic,
     learnDom: learnDom,
+    remapSendDom: remapSendDom,
   };
 })();
 globalThis.Actions = Actions;

@@ -229,6 +229,29 @@ export function WhatsAppTest() {
     }
   };
 
+  const testRemapSendDom = async () => {
+    setRunning(true);
+    const ping = await ensureCurrentWaExtension();
+    if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
+    log("🔧 Rimappa DOM invio: l'AI sta studiando la pagina WhatsApp Web...");
+    const r = await waMsg("remapSendDom", {}, 60000);
+    if (r?.success) {
+      const fields = r.fields as Record<string, { primary?: string; fallback?: string; confidence?: number }> | undefined;
+      log(`✅ Mappa salvata (hash ${String(r.domHash || "").slice(0, 8)}, plan v${r.planVersion ?? "?"})`, "ok");
+      if (fields) {
+        for (const [k, v] of Object.entries(fields)) {
+          const conf = typeof v.confidence === "number" ? ` · ${(v.confidence * 100).toFixed(0)}%` : "";
+          log(`  • ${k}: ${v.primary || "—"}${conf}`, "info");
+          if (v.fallback) log(`     ↪ fallback: ${v.fallback}`, "info");
+        }
+      }
+      log("Riprova ora l'invio: il sistema userà i nuovi selettori.", "ok");
+    } else {
+      log(`❌ Rimappatura fallita: ${r?.error || JSON.stringify(r)}`, "error");
+    }
+    setRunning(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -236,6 +259,7 @@ export function WhatsAppTest() {
         <Button onClick={testSession} disabled={running} size="sm">🔑 Sessione</Button>
         <Button onClick={testReadUnread} disabled={running} size="sm">📨 Leggi Messaggi</Button>
         <Button onClick={testRawDom} disabled={running} size="sm" variant="outline">🔍 Diagnostica DOM</Button>
+        <Button onClick={testRemapSendDom} disabled={running} size="sm" variant="outline" title="L'AI rilegge il DOM e salva selettori freschi per l'invio. Usalo se l'invio fallisce dopo un aggiornamento di WhatsApp Web.">🔧 Rimappa DOM invio</Button>
         <Button
           size="sm"
           variant="outline"

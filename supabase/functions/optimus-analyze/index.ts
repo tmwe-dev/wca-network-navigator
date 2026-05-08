@@ -10,7 +10,7 @@ import { requireAuth, isAuthError } from "../_shared/authGuard.ts";
 
 interface AnalyzeInput {
   channel: "whatsapp" | "linkedin";
-  page_type: "sidebar" | "thread" | "inbox" | "messaging";
+  page_type: "sidebar" | "thread" | "inbox" | "messaging" | "send_form";
   dom_snapshot: string;
   dom_hash: string;
   screenshot_base64?: string;
@@ -77,6 +77,32 @@ function channelGuidance(channel: string, pageType: string): string[] {
       "- timestamp: testo con formato temporale (es. \"2h\", \"ieri\", \"15 apr\")",
       "- thread_url: href del link nella riga (contiene /messaging/thread/)",
       "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: participant_name, last_message, timestamp, thread_url.",
+    ];
+  }
+  if (channel === "whatsapp" && pageType === "send_form") {
+    return [
+      "",
+      "GUIDA WHATSAPP SEND_FORM (mappa selettori per INVIARE un messaggio dalla sidebar):",
+      "Devi identificare i selettori CSS che permettono a uno script di: 1) cercare un contatto, 2) aprire la chat trovata, 3) scrivere il messaggio, 4) cliccare il pulsante invio.",
+      "Selettori STABILI da preferire (data-testid, role, aria-label, contenteditable):",
+      "- search_box: la casella di ricerca contatti in cima alla sidebar. Esempi: [data-testid=\"chat-list-search-container\"] [contenteditable=\"true\"], [data-testid=\"chat-list-search\"] [contenteditable=\"true\"], div[contenteditable=\"true\"][role=\"textbox\"][data-tab=\"3\"]",
+      "- chat_item: una riga risultato cliccabile nella lista contatti dopo aver cercato. Esempi: [data-testid=\"cell-frame-container\"], [data-testid=\"chat-cell-wrapper\"], [role=\"listitem\"], [role=\"row\"]",
+      "- chat_header: l'header della chat aperta che contiene il nome del contatto attivo (per verifica). Esempi: #main header span[title], [data-testid=\"conversation-header\"] span[title]",
+      "- composer: la casella di scrittura del messaggio in fondo. Esempi: footer [contenteditable=\"true\"], [data-testid=\"conversation-compose-box-input\"], [data-testid=\"compose-box-input\"]",
+      "- send_button: il pulsante per inviare il messaggio scritto. Esempi: [data-testid=\"send\"], button[aria-label*=\"send\" i], button[aria-label*=\"invia\" i], span[data-icon=\"send\"]",
+      "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: search_box, chat_item, chat_header, composer, send_button.",
+    ];
+  }
+  if (channel === "linkedin" && pageType === "send_form") {
+    return [
+      "",
+      "GUIDA LINKEDIN SEND_FORM (mappa selettori per INVIARE un messaggio in una conversazione aperta):",
+      "- composer: la casella editor del messaggio. Esempi: div[role=\"textbox\"][contenteditable=\"true\"], [contenteditable=\"true\"][aria-label*=\"messag\" i]",
+      "- send_button: il pulsante per inviare. Esempi: button.msg-form__send-button, button[aria-label*=\"send\" i], button con testo esattamente 'Send' o 'Invia'",
+      "- recipient_header: header della conversazione con il nome del destinatario (per verifica). Esempi: .msg-thread__link-to-profile, header [class*=\"profile\"]",
+      "- conversation_item: una conversazione nella lista a sinistra (utile per click). Esempi: li.msg-conversation-listitem, [class*=\"conversation-listitem\"]",
+      "- search_box: la casella di ricerca conversazioni. Esempi: input[placeholder*=\"earch messag\" i], input[aria-label*=\"earch messag\" i]",
+      "I nomi dei campi nell'output DEVONO essere ESATTAMENTE: search_box, conversation_item, recipient_header, composer, send_button.",
     ];
   }
   return [];
@@ -212,7 +238,7 @@ Deno.serve(async (req) => {
     if (!["whatsapp", "linkedin"].includes(body.channel)) {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid channel" }), { status: 400, headers });
     }
-    if (!["sidebar", "thread", "inbox", "messaging"].includes(body.page_type)) {
+    if (!["sidebar", "thread", "inbox", "messaging", "send_form"].includes(body.page_type)) {
       return new Response(JSON.stringify({ error: "VALIDATION_ERROR", message: "invalid page_type" }), { status: 400, headers });
     }
 
