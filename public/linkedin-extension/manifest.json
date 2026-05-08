@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.23",
-  "description": "P13 — Garanzia invio: dispatch eventi per Draft.js, polling Send esteso a 8s, fallback Ctrl+Enter, verifica post-click che la textbox si sia svuotata.",
+  "version": "3.9.24",
+  "description": "P14 — Riusa composer LinkedIn già aperto: niente navigazione fuori pagina, niente nuova chat, niente focus forzato; mantiene garanzia invio P13.",
   "permissions": [
     "cookies",
     "tabs",
