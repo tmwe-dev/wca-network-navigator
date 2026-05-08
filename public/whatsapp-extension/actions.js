@@ -104,32 +104,13 @@ var Actions = globalThis.Actions || (function () {
           }
 
           if (input.getAttribute("contenteditable") === "true") {
-            // Clear via selectAll + deleteContentBackward (Lexical-friendly)
-            try {
-              const sel2 = window.getSelection();
-              const range2 = document.createRange();
-              range2.selectNodeContents(input);
-              sel2.removeAllRanges();
-              sel2.addRange(range2);
-              input.dispatchEvent(new InputEvent("beforeinput", {
-                inputType: "deleteContentBackward", bubbles: true, cancelable: true, composed: true
-              }));
-              input.dispatchEvent(new InputEvent("input", {
-                inputType: "deleteContentBackward", bubbles: true, composed: true
-              }));
-            } catch (e) { /* ignore */ }
-            // Insert text using DataTransfer — Lexical reads from dataTransfer
-            // and updates its internal state ONCE. Do NOT also set textContent
-            // directly: it causes duplicated text on send (Lexical re-syncs).
-            const dt2 = new DataTransfer();
-            dt2.setData("text/plain", text);
+            input.textContent = "";
             input.dispatchEvent(new InputEvent("beforeinput", {
-              inputType: "insertFromPaste", data: text, dataTransfer: dt2,
-              bubbles: true, cancelable: true, composed: true
+              inputType: "insertText", data: text, bubbles: true, cancelable: true, composed: true
             }));
+            input.textContent = text;
             input.dispatchEvent(new InputEvent("input", {
-              inputType: "insertFromPaste", data: text, dataTransfer: dt2,
-              bubbles: true, composed: true
+              inputType: "insertText", data: text, bubbles: true, composed: true
             }));
           } else if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
             const nativeSetter = Object.getOwnPropertyDescriptor(
