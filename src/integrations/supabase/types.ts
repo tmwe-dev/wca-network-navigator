@@ -568,6 +568,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_response_channel_message_id_fkey"
+            columns: ["response_channel_message_id"]
+            isOneToOne: false
+            referencedRelation: "funnemail_brain_v"
+            referencedColumns: ["message_id"]
+          },
+          {
             foreignKeyName: "activities_selected_contact_id_fkey"
             columns: ["selected_contact_id"]
             isOneToOne: false
@@ -5039,6 +5046,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "funnemail_brain_v"
+            referencedColumns: ["message_id"]
+          },
+          {
             foreignKeyName: "email_attachments_operator_id_fkey"
             columns: ["operator_id"]
             isOneToOne: false
@@ -6246,6 +6260,92 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      funnemail_eval_cases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enabled: boolean
+          expected_decision: Json
+          id: string
+          inbound_payload: Json
+          name: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          expected_decision: Json
+          id?: string
+          inbound_payload: Json
+          name: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enabled?: boolean
+          expected_decision?: Json
+          id?: string
+          inbound_payload?: Json
+          name?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      funnemail_eval_runs: {
+        Row: {
+          actual_decision: Json | null
+          case_id: string
+          cost_usd: number | null
+          diff: Json | null
+          error: string | null
+          id: string
+          latency_ms: number | null
+          passed: boolean
+          prompt_version_id: string | null
+          run_at: string
+        }
+        Insert: {
+          actual_decision?: Json | null
+          case_id: string
+          cost_usd?: number | null
+          diff?: Json | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          passed?: boolean
+          prompt_version_id?: string | null
+          run_at?: string
+        }
+        Update: {
+          actual_decision?: Json | null
+          case_id?: string
+          cost_usd?: number | null
+          diff?: Json | null
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          passed?: boolean
+          prompt_version_id?: string | null
+          run_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnemail_eval_runs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "funnemail_eval_cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       funnemail_folders: {
         Row: {
@@ -10298,6 +10398,13 @@ export type Database = {
             referencedRelation: "channel_messages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reply_classifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "funnemail_brain_v"
+            referencedColumns: ["message_id"]
+          },
         ]
       }
       request_logs: {
@@ -11975,6 +12082,33 @@ export type Database = {
           prompt_log_cost: number | null
           prompt_log_tokens_in: number | null
           provider: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      funnemail_brain_v: {
+        Row: {
+          actions_count: number | null
+          actions_ok_count: number | null
+          ai_classification_suggestion: Json | null
+          channel: string | null
+          decision_action: string | null
+          decision_at: string | null
+          decision_confidence: number | null
+          decision_reasoning: string | null
+          from_address: string | null
+          funnemail_status: string | null
+          funnemail_sub_status: string | null
+          job_attempts: number | null
+          job_completed_at: string | null
+          job_last_error: string | null
+          job_stage:
+            | Database["public"]["Enums"]["email_processing_stage"]
+            | null
+          last_action_at: string | null
+          message_id: string | null
+          received_at: string | null
+          subject: string | null
           user_id: string | null
         }
         Relationships: []
