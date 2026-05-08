@@ -18,7 +18,6 @@ export async function runFunnemailScoutAndClassify(
   recordStage: RecordStage,
 ): Promise<void> {
   if (body.channel !== "email") return;
-  console.log(JSON.stringify({ dbg: "fnm_pipeline_enter", message_id: body.message_id, has_user: !!body.user_id }));
   try {
     let senderIntel: unknown = null;
     try {
@@ -31,7 +30,6 @@ export async function runFunnemailScoutAndClassify(
           force: false,
         },
       });
-      console.log(JSON.stringify({ dbg: "fnm_scout_done", message_id: body.message_id, hasData: !!scoutData }));
       if (scoutData) {
         const sd = scoutData as { known?: boolean; partner_id?: string | null; intel?: Record<string, unknown> | null };
         senderIntel = {
@@ -44,9 +42,9 @@ export async function runFunnemailScoutAndClassify(
         };
         void recordStage("scouted", { known: !!sd.known });
       }
-    } catch (se) { console.log(JSON.stringify({ dbg: "fnm_scout_err", err: String(se) })); }
+    } catch (_se) { /* scout fallito, fail-safe */ }
 
-    const cls = await supabase.functions.invoke("funnemail-classify", {
+    await supabase.functions.invoke("funnemail-classify", {
       headers: internalHeaders(),
       body: {
         message_id: body.message_id,
@@ -60,9 +58,8 @@ export async function runFunnemailScoutAndClassify(
         sender_intel: senderIntel,
       },
     });
-    console.log(JSON.stringify({ dbg: "fnm_classify_done", message_id: body.message_id, err: cls?.error ? String(cls.error) : null }));
     void recordStage("classified");
-  } catch (e) { console.log(JSON.stringify({ dbg: "fnm_pipeline_err", err: String(e) })); }
+  } catch (_e) { /* fail-safe */ }
 }
 
 export async function runFunnemailAutoRoute(
@@ -71,9 +68,8 @@ export async function runFunnemailAutoRoute(
   recordStage: RecordStage,
 ): Promise<void> {
   if (body.channel !== "email" || !body.user_id) return;
-  console.log(JSON.stringify({ dbg: "fnm_route_enter", message_id: body.message_id }));
   try {
-    const r = await supabase.functions.invoke("funnemail-auto-route", {
+    await supabase.functions.invoke("funnemail-auto-route", {
       headers: internalHeaders(),
       body: {
         message_id: body.message_id,
@@ -83,7 +79,6 @@ export async function runFunnemailAutoRoute(
         user_id: body.user_id,
       },
     });
-    console.log(JSON.stringify({ dbg: "fnm_route_done", message_id: body.message_id, err: r?.error ? String(r.error) : null }));
     void recordStage("routed");
-  } catch (e) { console.log(JSON.stringify({ dbg: "fnm_route_err", err: String(e) })); }
+  } catch (_e) { /* fail-safe */ }
 }
