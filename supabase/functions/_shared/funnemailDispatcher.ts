@@ -81,11 +81,18 @@ async function tryClaimAction(
     status: string;
     payload: Record<string, unknown>;
     error?: string | null;
+    idempotency_key?: string | null;
   },
 ): Promise<boolean> {
+  // Sprint 3: popola anche action_type (enum) e idempotency_key (default = action).
+  const enriched = {
+    ...row,
+    action_type: row.action,
+    idempotency_key: row.idempotency_key ?? row.action,
+  };
   const { error } = await supabase
     .from("funnemail_actions_log")
-    .insert(row);
+    .insert(enriched);
   if (error) {
     // Codice 23505 = unique violation → già eseguita: non è un errore.
     if ((error as { code?: string }).code === "23505") return false;
