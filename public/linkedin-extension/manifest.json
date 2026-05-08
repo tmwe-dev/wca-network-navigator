@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.16",
-  "description": "Diagnostica invio: probe DOM read-only quando textbox non trovato (overlay/dialog/contenteditable counts).",
+  "version": "3.9.17",
+  "description": "Fix invio: la guardia URL accetta anche /messaging/thread/ (LinkedIn redireziona la tab dopo click Messaggia per contatti 1° grado).",
   "permissions": [
     "cookies",
     "tabs",
