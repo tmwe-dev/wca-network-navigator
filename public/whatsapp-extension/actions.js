@@ -187,6 +187,10 @@ var Actions = globalThis.Actions || (function () {
 
       const diag = Discovery.compactDiscovery(result);
       if (result && result.hasQR) return { success: true, authenticated: false, reason: "qr_required", diagnostic: diag };
+      // Confirm-popup di WhatsApp (es. "WhatsApp aperto su un altro browser - Usa qui")
+      if (result && Array.isArray(result.dataTestIds) && result.dataTestIds.indexOf("confirm-popup") !== -1) {
+        return { success: true, authenticated: false, reason: "confirm_popup", message: "WhatsApp Web mostra un popup di conferma (probabilmente 'Usa qui' / sessione aperta altrove). Apri la tab di WhatsApp Web e chiudi il popup, poi riprova.", diagnostic: diag };
+      }
       if (result && (result.hasLoadingScreen || !result.appLoaded || result.bodyChildCount < 3)) return { success: true, authenticated: false, reason: "loading", diagnostic: diag };
       if (result && result.sidebar) return { success: true, authenticated: true, method: "sidebar:" + (result.sidebarSelector || "discovered"), diagnostic: diag };
       if ((result && result.chatItems || 0) > 0) return { success: true, authenticated: true, method: "chat-items:" + (result.chatItemsMethod || "discovered"), diagnostic: diag };
