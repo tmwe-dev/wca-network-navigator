@@ -7,7 +7,7 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLinkedInMessagingBridge } from "./useLinkedInMessagingBridge";
+import { useLinkedInMessagingBridge, type LinkedInThreadDTO, type LinkedInMessageDTO } from "./useLinkedInMessagingBridge";
 import { buildDeterministicId } from "@/lib/messageDedup";
 import { createLogger } from "@/lib/log";
 
@@ -36,6 +36,37 @@ function isGhostBody(s: string): boolean {
   if (t.length < 3) return true;
   if (/^[0-9]{1,3}$/.test(t)) return true;
   return LI_GHOST_BODIES.has(t);
+}
+
+// P0.3 — Chiave dedup composita: mai solo nome.
+function buildDedupKey(t: LinkedInThreadDTO): string {
+  return (
+    t.threadUrl ||
+    t.profileUrl ||
+    t.linkedinId ||
+    t.profileId ||
+    `${(t.name || "").toLowerCase().trim()}|${(t.lastMessage || "").toLowerCase().trim()}|${t.lastActivity || ""}`
+  );
+}
+
+// Estrae profile_slug stabile da profileUrl /in/<slug> oppure linkedinId.
+function extractProfileSlug(t: LinkedInThreadDTO): string | null {
+  if (t.profileId) return t.profileId;
+  if (t.linkedinId) return t.linkedinId;
+  if (t.profileUrl) {
+    const m = t.profileUrl.match(/\/in\/([^/?#]+)/i);
+    if (m) return decodeURIComponent(m[1]);
+  }
+  if (t.threadUrl) {
+    const m = t.threadUrl.match(/\/in\/([^/?#]+)/i);
+    if (m) return decodeURIComponent(m[1]);
+  }
+  return null;
+}
+
+// P0.3 — Address chiave per channel_messages: ID stabile, mai nome.
+function buildContactAddress(t: LinkedInThreadDTO): string {
+  return t.profileUrl || t.linkedinId || t.profileId || t.threadUrl || `name:${t.name}`;
 }
 
 export function useLinkedInSync() {
@@ -117,34 +148,73 @@ export function useLinkedInSync() {
         return;
       }
 
-      // Dedup garantito da extId stabile (hash testo) — no cursori temporali.
+      // P0.1 — Dedup composita lato sync (oltre a quella già fatta dall'estensione).
+      const seenKeys = new Set<string>();
+      const threads = (result.threads as LinkedInThreadDTO[]).filter((t) => {
+        const k = buildDedupKey(t);
+        if (!k || seenKeys.has(k)) return false;
+        seenKeys.add(k);
+        return true;
+      });
 
       let newMsgs = 0;
-      for (const thread of result.threads) {
+      for (const thread of threads) {
         if (!thread.lastMessage || !thread.name) continue;
         if (isUiLabel(thread.name)) continue;
         if (isGhostBody(thread.lastMessage)) continue;
 
         await throttle("linkedin", "read", `Preview: ${thread.name}`);
         // 1) Salva sempre il preview della sidebar.
-        // Scope dell'ID al threadUrl per evitare collisioni tra thread diversi
-        // con lo stesso testo ("ok", "👍", auto-reply identici, ecc.).
-        const threadScope = thread.threadUrl || `name:${thread.name}`;
+        // P0.3 — Scope su ID reale (threadId/threadUrl), non più solo nome.
+        const threadScope = thread.threadId || thread.threadUrl || thread.profileUrl || `name:${thread.name}`;
         const extIdPreview = buildDeterministicId("li", thread.name, thread.lastMessage, threadScope);
         const tsIso = new Date().toISOString();
+        const contactAddr = buildContactAddress(thread);
+        const profileSlug = extractProfileSlug(thread);
+        const rawPayload = {
+          profileUrl: thread.profileUrl,
+          profileId: thread.profileId,
+          linkedinId: thread.linkedinId,
+          threadUrl: thread.threadUrl,
+          threadId: thread.threadId,
+          method: thread.method ?? null,
+          confidence: thread.confidence ?? null,
+        };
         try {
           const res = await upsertChannelMessageDedup({
             user_id: user.id,
             operator_id: operatorId,
             channel: "linkedin" as never,
             direction: "inbound" as never,
-            from_address: thread.name,
+            from_address: contactAddr,
+            from_name: thread.name,
             body_text: thread.lastMessage,
             message_id_external: extIdPreview,
-            thread_id: thread.threadUrl || null,
+            thread_id: thread.threadId || thread.threadUrl || null,
+            email_date: tsIso,
+            raw_payload: rawPayload as never,
             created_at: tsIso,
           } as never);
-          if (res.inserted) newMsgs++;
+          if (res.inserted) {
+            newMsgs++;
+            // P0.4 — Rubrica LinkedIn (best-effort).
+            if (profileSlug) {
+              try {
+                await supabase.rpc("upsert_linkedin_address" as never, {
+                  p_user_id: user.id,
+                  p_operator_id: operatorId,
+                  p_profile_slug: profileSlug,
+                  p_profile_url: thread.profileUrl ?? null,
+                  p_display_name: thread.name,
+                  p_headline: null,
+                  p_direction: "inbound",
+                  p_message_at: tsIso,
+                } as never);
+              } catch (e) {
+                log.warn("upsert_linkedin_address failed", { error: errMsg(e) });
+              }
+            }
+          }
         } catch (e) {
           log.warn("preview upsert failed", { error: errMsg(e) });
         }
@@ -156,33 +226,66 @@ export function useLinkedInSync() {
             const tr = await readThread(thread.threadUrl);
             if (tr.success && Array.isArray(tr.messages)) {
               await throttle("linkedin", "read", `Leggo messaggi: ${thread.name}`);
-              for (const m of tr.messages) {
+              const msgs = tr.messages as LinkedInMessageDTO[];
+              for (const m of msgs) {
                 const text = String(m.text || "").trim();
                 if (!text || isGhostBody(text)) continue;
-                const direction = (m.direction === "outbound" ? "outbound" : "inbound") as "inbound" | "outbound";
+                // P0.2 — Direction honest. "unknown" da AX/structural: salva come inbound
+                // SOLO se il preview era unread (segnale forte che è arrivato qualcosa).
+                let direction: "inbound" | "outbound";
+                if (m.direction === "outbound") direction = "outbound";
+                else if (m.direction === "inbound") direction = "inbound";
+                else if (thread.unread === true) direction = "inbound";
+                else {
+                  log.debug("skip unknown-direction message", { method: m.method, sender: m.sender });
+                  continue;
+                }
                 // Scope al thread + posizione del messaggio nella conversazione,
                 // così due bolle identiche nello stesso thread restano distinte.
-                const msgScope = `${thread.threadUrl || thread.name}#${tr.messages.indexOf(m)}`;
+                const msgScope = `${thread.threadId || thread.threadUrl || thread.name}#${msgs.indexOf(m)}`;
                 const extId = buildDeterministicId(
                   direction === "outbound" ? "li_out" : "li",
                   thread.name,
                   text,
                   msgScope,
                 );
+                const msgIso = m.timestamp && /\d{4}-\d{2}-\d{2}T/.test(m.timestamp) ? m.timestamp : new Date().toISOString();
                 try {
                   const r = await upsertChannelMessageDedup({
                     user_id: user.id,
                     operator_id: operatorId,
                     channel: "linkedin" as never,
                     direction: direction as never,
-                    from_address: direction === "inbound" ? thread.name : undefined,
-                    to_address: direction === "outbound" ? thread.name : undefined,
+                    from_address: direction === "inbound" ? contactAddr : "me",
+                    to_address: direction === "outbound" ? contactAddr : "me",
+                    from_name: direction === "inbound" ? thread.name : null,
+                    to_name: direction === "outbound" ? thread.name : null,
                     body_text: text,
                     message_id_external: extId,
-                    thread_id: thread.threadUrl,
+                    thread_id: thread.threadId || thread.threadUrl,
+                    email_date: msgIso,
+                    raw_payload: { ...rawPayload, message_method: m.method ?? null, message_confidence: m.confidence ?? null } as never,
                     created_at: new Date().toISOString(),
                   } as never);
-                  if (r.inserted) newMsgs++;
+                  if (r.inserted) {
+                    newMsgs++;
+                    if (profileSlug) {
+                      try {
+                        await supabase.rpc("upsert_linkedin_address" as never, {
+                          p_user_id: user.id,
+                          p_operator_id: operatorId,
+                          p_profile_slug: profileSlug,
+                          p_profile_url: thread.profileUrl ?? null,
+                          p_display_name: thread.name,
+                          p_headline: null,
+                          p_direction: direction,
+                          p_message_at: msgIso,
+                        } as never);
+                      } catch (e) {
+                        log.warn("upsert_linkedin_address (msg) failed", { error: errMsg(e) });
+                      }
+                    }
+                  }
                 } catch (e) {
                   log.warn("thread msg upsert failed", { error: errMsg(e) });
                 }
@@ -199,7 +302,7 @@ export function useLinkedInSync() {
         queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.all });
         if (!silent) toast.success(`${newMsgs} nuovi messaggi LinkedIn salvati`);
       } else if (!silent) {
-        toast.info(`Nessun nuovo messaggio (${result.threads.length} thread analizzati, già in DB o filtrati)`);
+        toast.info(`Nessun nuovo messaggio (${threads.length} thread analizzati, già in DB o filtrati)`);
       }
       window.dispatchEvent(new CustomEvent("li-sync-completed", {
         detail: { newMessages: newMsgs },
