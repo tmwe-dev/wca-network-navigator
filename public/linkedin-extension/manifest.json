@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.4",
+  "version": "3.9.5",
   "description": "Optimus V2.1 — bridge AI cookie-sync, verifySession con reason strutturate, dedup inbox.",
   "permissions": ["cookies", "tabs", "activeTab", "scripting", "debugger", "storage", "webNavigation"],
   "host_permissions": ["https://*.linkedin.com/*", "https://www.linkedin.com/*"],
