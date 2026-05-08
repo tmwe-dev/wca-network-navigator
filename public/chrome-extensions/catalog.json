@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.10",
+    "latestVersion": "5.10.11",
     "items": [
+      {
+        "version": "5.10.11",
+        "filename": "whatsapp-extension-5.10.11.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.11.zip",
+        "current": true,
+        "note": "Fix invio: typing via execCommand (Lexical), poll send button, fallback Enter"
+      },
       {
         "version": "5.10.10",
         "filename": "whatsapp-extension-5.10.10.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.10.zip",
-        "current": true,
+        "current": false,
         "note": "Auto-dismiss popup 'Usa qui' (sessione altrove) durante verifySession"
       },
       {
