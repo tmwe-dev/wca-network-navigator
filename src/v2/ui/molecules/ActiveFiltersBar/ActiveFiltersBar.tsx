@@ -9,7 +9,7 @@
  * Per modificare, l'utente apre la sidebar.
  */
 import * as React from "react";
-import { Filter, Plane } from "lucide-react";
+import { Filter, Plane, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -29,12 +29,15 @@ export interface ActiveFiltersBarProps {
   /** Etichetta a sinistra. Default: "Filtri attivi". */
   label?: string;
   className?: string;
+  /** Se passato, mostra una X su ogni chip per rimuovere il singolo filtro. */
+  onRemove?: (chipKey: string) => void;
 }
 
 export function ActiveFiltersBar({
   chips,
   label = "Filtri attivi",
   className,
+  onRemove,
 }: ActiveFiltersBarProps): React.ReactElement | null {
   if (!chips.length) return null;
   return (
@@ -54,7 +57,7 @@ export function ActiveFiltersBar({
           key={chip.key}
           variant="outline"
           className={cn(
-            "text-[10px] py-0 px-1.5 h-5 flex items-center gap-1",
+            "text-[10px] py-0 pl-1.5 pr-1 h-5 flex items-center gap-1",
             chip.tone === "primary" &&
               "bg-primary/10 text-primary border-primary/30",
             chip.tone === "warning" &&
@@ -65,6 +68,20 @@ export function ActiveFiltersBar({
         >
           {chip.icon === "holding" && <Plane className="w-2.5 h-2.5" />}
           {chip.label}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(chip.key);
+              }}
+              className="ml-0.5 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-foreground/10 transition-colors"
+              aria-label={`Rimuovi filtro ${chip.label}`}
+              title="Rimuovi filtro"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          )}
         </Badge>
       ))}
     </div>
