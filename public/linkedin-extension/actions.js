@@ -989,6 +989,7 @@ var Actions = globalThis.Actions || (function () {
   return {
     extractProfileByUrl: extractProfileByUrl,
     sendLinkedInMessage: sendLinkedInMessage,
+    sendLinkedInMessageWithMethod: sendLinkedInMessageWithMethod,
     sendConnectionRequest: sendConnectionRequest,
     searchProfile: searchProfile,
     readInbox: readInbox,
