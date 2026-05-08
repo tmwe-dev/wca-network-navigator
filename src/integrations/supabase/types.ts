@@ -5974,11 +5974,15 @@ export type Database = {
       funnemail_actions_log: {
         Row: {
           action: string
+          action_type:
+            | Database["public"]["Enums"]["funnemail_action_type"]
+            | null
           created_at: string
           error: string | null
           from_address: string | null
           group_id: string | null
           id: string
+          idempotency_key: string | null
           message_id: string
           partner_id: string | null
           payload: Json
@@ -5987,11 +5991,15 @@ export type Database = {
         }
         Insert: {
           action: string
+          action_type?:
+            | Database["public"]["Enums"]["funnemail_action_type"]
+            | null
           created_at?: string
           error?: string | null
           from_address?: string | null
           group_id?: string | null
           id?: string
+          idempotency_key?: string | null
           message_id: string
           partner_id?: string | null
           payload?: Json
@@ -6000,11 +6008,15 @@ export type Database = {
         }
         Update: {
           action?: string
+          action_type?:
+            | Database["public"]["Enums"]["funnemail_action_type"]
+            | null
           created_at?: string
           error?: string | null
           from_address?: string | null
           group_id?: string | null
           id?: string
+          idempotency_key?: string | null
           message_id?: string
           partner_id?: string | null
           payload?: Json
@@ -6427,6 +6439,45 @@ export type Database = {
           message_id?: string
           reason?: string | null
           to_status?: string
+        }
+        Relationships: []
+      }
+      funnemail_policy: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          enabled: boolean
+          id: string
+          match_value: string | null
+          policy: Json
+          priority: number
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          enabled?: boolean
+          id?: string
+          match_value?: string | null
+          policy?: Json
+          priority?: number
+          scope: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          enabled?: boolean
+          id?: string
+          match_value?: string | null
+          policy?: Json
+          priority?: number
+          scope?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -12428,6 +12479,14 @@ export type Database = {
         Args: { p_action_id: string; p_error?: string; p_success: boolean }
         Returns: undefined
       }
+      resolve_funnemail_policy: {
+        Args: { p_from_address: string; p_group_id?: string; p_user_id: string }
+        Returns: {
+          match_value: string
+          policy: Json
+          scope: string
+        }[]
+      }
       rollback_prompt_to_version: {
         Args: {
           p_prompt_id: string
@@ -12526,6 +12585,15 @@ export type Database = {
         | "completed"
         | "failed"
         | "dlq"
+      funnemail_action_type:
+        | "tag_only"
+        | "deep_search"
+        | "draft_reply"
+        | "crm_update"
+        | "imap_action"
+        | "escalate"
+        | "autoresponder"
+        | "snooze"
       interaction_type: "call" | "email" | "meeting" | "note"
       office_type: "head_office" | "branch"
       partner_type:
@@ -12745,6 +12813,16 @@ export const Constants = {
         "completed",
         "failed",
         "dlq",
+      ],
+      funnemail_action_type: [
+        "tag_only",
+        "deep_search",
+        "draft_reply",
+        "crm_update",
+        "imap_action",
+        "escalate",
+        "autoresponder",
+        "snooze",
       ],
       interaction_type: ["call", "email", "meeting", "note"],
       office_type: ["head_office", "branch"],
