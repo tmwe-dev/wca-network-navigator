@@ -112,6 +112,9 @@ var TabManager = globalThis.TabManager || (function () {
         if (winId !== null) opts.windowId = winId;
         const tab = await chrome.tabs.create(opts);
         markOwned(tab.id);
+        if (winId !== null) {
+          try { await chrome.windows.update(winId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
+        }
         return tab;
       } catch (e) {
         if (i < 2) await sleep(500 * (i + 1));
@@ -151,6 +154,17 @@ var TabManager = globalThis.TabManager || (function () {
   async function getBestExistingWaTab() {
     await loadOwnership();
     try {
+      // Step 0 (PRIORITY): ALWAYS look across ALL Chrome windows for a
+      // web.whatsapp.com tab first. Reuse it in place — never spawn a new
+      // visible tab if the user already has one open.
+      try {
+        const allWa = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+        if (allWa && allWa[0]) {
+          markOwned(allWa[0].id);
+          saveOwnership();
+          return allWa[0];
+        }
+      } catch (e) { /* ignore */ }
       // Step 1: look ONLY among owned tabs
       const owned = Array.from(_ownedWaTabIds);
       for (const tid of owned) {
@@ -176,16 +190,6 @@ var TabManager = globalThis.TabManager || (function () {
           }
         } catch (e) { /* window gone */ }
       }
-      // Fallback: reuse a user-opened web.whatsapp.com tab if available.
-      // Creating a fresh tab in the automation window forces a new login (QR),
-      // which breaks sends when the user is already authenticated elsewhere.
-      try {
-        const userTabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-        if (userTabs && userTabs[0]) {
-          markOwned(userTabs[0].id);
-          return userTabs[0];
-        }
-      } catch (e) { /* ignore */ }
       return null;
     } catch (err) { console.debug("[WA Tab]", err?.message); return null; }
   }
