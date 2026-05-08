@@ -127,6 +127,23 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // ── Job ledger (Sprint 1 Funnemail) ──
+    // Helper fail-safe: registra lo stage corrente del job. Mai blocca.
+    // deno-lint-ignore no-explicit-any
+    const recordStage = async (stage: string, payload: Record<string, unknown> = {}, error?: string) => {
+      try {
+        await (supabase as any).rpc("record_email_processing_job_stage", {
+          p_message_id: message_id,
+          p_user_id: body.user_id ?? null,
+          p_stage: stage,
+          p_payload: payload,
+          p_error: error ?? null,
+        });
+      } catch (_e) { /* fail-safe */ }
+    };
+    // Solo per email: gli altri canali non hanno il pipeline Funnemail.
+    if (channel === "email") void recordStage("received", { channel, from_address });
+
     // ── Idempotency guard ──
     // Il messaggio può essere classificato sia dal trigger DB on_inbound_message
     // sia dal fallback check-inbox/postProcessing. Se esiste già una riga
