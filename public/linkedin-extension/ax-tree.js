@@ -326,7 +326,23 @@ var AXTree = globalThis.AXTree || (function () {
                 seen[parsed.href] = true;
                 let contactName = parsed.name || rawName;
                 if (/^(passa ai|go to|details|dettagli|conversation|conversazione)/i.test(contactName)) contactName = "";
-                if (contactName) threads.push({ name: contactName, threadUrl: parsed.href, unread: false, lastMessage: "" });
+                if (contactName) {
+                  // P0.2 — AX Tree non legge bene unread/lastMessage: dichiarali null + low confidence.
+                  var t = parsed.href.match(/\/messaging\/thread\/([^/?#]+)/i);
+                  threads.push({
+                    name: contactName,
+                    threadUrl: parsed.href,
+                    profileUrl: "",
+                    linkedinId: "",
+                    profileId: "",
+                    threadId: t ? decodeURIComponent(t[1]) : "",
+                    unread: null,
+                    lastMessage: null,
+                    lastActivity: null,
+                    method: "ax_tree",
+                    confidence: 0.45,
+                  });
+                }
               }
             }
           } catch (err) { console.debug("[LI AXTree] prop:", err?.message); }
@@ -372,12 +388,25 @@ var AXTree = globalThis.AXTree || (function () {
           }
           if (name && threadUrl && !seen[threadUrl]) {
             seen[threadUrl] = true;
-            threads.push({ name: name, threadUrl: threadUrl, unread: false, lastMessage: "" });
+            var t2 = threadUrl.match(/\/messaging\/thread\/([^/?#]+)/i);
+            threads.push({
+              name: name,
+              threadUrl: threadUrl,
+              profileUrl: "",
+              linkedinId: "",
+              profileId: "",
+              threadId: t2 ? decodeURIComponent(t2[1]) : "",
+              unread: null,
+              lastMessage: null,
+              lastActivity: null,
+              method: "ax_tree",
+              confidence: 0.45,
+            });
           }
         }
       }
 
-      return { success: true, threads: threads, method: "ax_tree" };
+      return { success: true, threads: threads, method: "ax_tree", confidence: 0.45 };
     });
   }
 
@@ -405,11 +434,19 @@ var AXTree = globalThis.AXTree || (function () {
           }
         }
         if (text.trim()) {
-          messages.push({ text: text.trim(), sender: sender, direction: "inbound", timestamp: new Date().toISOString() });
+          // P0.2 — AX Tree non distingue direzione: "unknown" + low confidence.
+          messages.push({
+            text: text.trim(),
+            sender: sender,
+            direction: "unknown",
+            timestamp: new Date().toISOString(),
+            method: "ax_tree",
+            confidence: 0.35,
+          });
         }
       }
 
-      return { success: true, messages: messages, method: "ax_tree" };
+      return { success: true, messages: messages, method: "ax_tree", confidence: 0.35 };
     });
   }
 
