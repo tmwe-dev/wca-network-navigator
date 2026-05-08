@@ -101,6 +101,9 @@ var TabManager = globalThis.TabManager || (function () {
       try {
         const tab = await chrome.tabs.create(opts);
         markOwned(tab.id);
+        if (winId !== null) {
+          try { await chrome.windows.update(winId, { state: "minimized", focused: false }); } catch (e) { /* ignore */ }
+        }
         return tab;
       } catch (err) {
         if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
@@ -156,6 +159,24 @@ var TabManager = globalThis.TabManager || (function () {
   // ── getLinkedInTab: only reuses OWNED tabs, never user tabs ──
   async function getLinkedInTab(url, skipNavigateIfSameDomain) {
     await loadOwnership();
+
+    // Step 0 (PRIORITY): always search ALL Chrome windows for an existing
+    // linkedin.com tab and reuse it in place. The user expects "use the
+    // tab that is already open" — never spawn a new visible tab.
+    try {
+      const allLi = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+      if (allLi && allLi[0]) {
+        _liTabId = allLi[0].id;
+        markOwned(_liTabId);
+        if (skipNavigateIfSameDomain && allLi[0].url && urlMatchesTarget(allLi[0].url, url)) {
+          if (allLi[0].status !== "complete") await waitForLoad(_liTabId, 15000);
+          return { id: _liTabId, reused: true };
+        }
+        await chrome.tabs.update(_liTabId, { url: url });
+        await waitForLoad(_liTabId, 20000);
+        return { id: _liTabId, reused: false };
+      }
+    } catch (e) { /* ignore */ }
 
     // Try cached owned main tab
     if (_liTabId !== null) {
