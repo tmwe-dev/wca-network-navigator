@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.10",
-  "description": "Optimus V2.1 — inbox URL harvest post-processing: recupera thread/profile URL anche con plan cached senza selettori URL.",
+  "version": "3.9.11",
+  "description": "LinkedIn deep inbox harvest: più thread visibili, ID/profile URL e link contatto-specifici.",
   "permissions": [
     "cookies",
     "tabs",

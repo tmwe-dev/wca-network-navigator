@@ -63,13 +63,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.10",
+    "latestVersion": "3.9.11",
     "items": [
+      {
+        "version": "3.9.11",
+        "filename": "linkedin-extension-3.9.11.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.11.zip",
+        "current": true,
+        "note": "Deep inbox harvest: più thread, ID e URL profilo contatto-specifici"
+      },
       {
         "version": "3.9.10",
         "filename": "linkedin-extension-3.9.10.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.10.zip",
-        "current": true,
+        "current": false,
         "note": "Harvest URL inbox post-Optimus: recupera thread/profile URL anche da plan cached"
       },
       {

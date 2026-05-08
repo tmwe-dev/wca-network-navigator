@@ -1,13 +1,13 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useUpdateActivity } from "@/hooks/useActivities";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { User, AlertTriangle, CheckCircle2, Mail, ArrowRightLeft } from "lucide-react";
+import { User, AlertTriangle, CheckCircle2, Mail, ArrowRightLeft, Linkedin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryKeys";
+import { findPartnerContacts, findPartnerSocialLinks } from "@/data/partnerRelations";
 
 interface ContactPickerProps {
   activityId: string;
@@ -24,6 +24,7 @@ interface PartnerContact {
   title: string | null;
   contact_alias: string | null;
   is_primary: boolean | null;
+  linkedin_url: string | null;
 }
 
 export default function ContactPicker({
@@ -35,13 +36,21 @@ export default function ContactPicker({
     queryKey: queryKeys.partnerContacts.picker(partnerId),
     queryFn: async () => {
       if (!partnerId) return [];
-      const { data, error } = await supabase
-        .from("partner_contacts")
-        .select("id, name, email, title, contact_alias, is_primary")
-        .eq("partner_id", partnerId)
-        .order("is_primary", { ascending: false });
-      if (error) throw error;
-      return (data || []) as PartnerContact[];
+      const [contacts, socialLinks] = await Promise.all([
+        findPartnerContacts(partnerId, "id, name, email, title, contact_alias, is_primary"),
+        findPartnerSocialLinks(partnerId),
+      ]);
+      const linkedinByContact = new Map(
+        socialLinks
+          .filter((link) => link.platform === "linkedin" && link.contact_id && link.url)
+          .map((link) => [link.contact_id as string, link.url as string]),
+      );
+      return contacts
+        .map((contact) => ({
+          ...(contact as unknown as Omit<PartnerContact, "linkedin_url">),
+          linkedin_url: linkedinByContact.get(contact.id) ?? null,
+        }))
+        .sort((a, b) => Number(b.is_primary === true) - Number(a.is_primary === true));
     },
     enabled: !!partnerId,
     staleTime: 30_000,
@@ -230,6 +239,7 @@ function ContactRow({
             {c.contact_alias || c.name}
           </span>
           {c.title && <span className="text-[10px] text-muted-foreground">· {c.title}</span>}
+          {c.linkedin_url && <Linkedin className="w-3 h-3 text-primary shrink-0" />}
         </div>
         {c.email ? (
           <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
