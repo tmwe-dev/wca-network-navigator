@@ -69,6 +69,21 @@ function buildContactAddress(t: LinkedInThreadDTO): string {
   return t.profileUrl || t.linkedinId || t.profileId || t.threadUrl || `name:${t.name}`;
 }
 
+// P1 — Stable message ID: hash dei segnali del messaggio (no indexOf).
+// Re-run dello stesso thread → stesse chiavi → zero duplicati.
+function buildLinkedInMessageScope(
+  thread: LinkedInThreadDTO,
+  m: LinkedInMessageDTO,
+  direction: "inbound" | "outbound",
+): string {
+  const threadKey = thread.threadId || thread.threadUrl || thread.profileUrl || thread.linkedinId || thread.profileId || thread.name;
+  const senderKey = (m.sender || "").trim().toLowerCase();
+  const textKey = (m.text || "").trim().toLowerCase().slice(0, 120);
+  // Timestamp ISO se affidabile, altrimenti omesso (resta stabile su ri-letture nello stesso giorno).
+  const tsKey = m.timestamp && /\d{4}-\d{2}-\d{2}T/.test(m.timestamp) ? m.timestamp : "";
+  return `${threadKey}|${direction}|${senderKey}|${textKey}|${tsKey}`;
+}
+
 export function useLinkedInSync() {
   const [isReading, setIsReading] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
@@ -242,7 +257,7 @@ export function useLinkedInSync() {
                 }
                 // Scope al thread + posizione del messaggio nella conversazione,
                 // così due bolle identiche nello stesso thread restano distinte.
-                const msgScope = `${thread.threadId || thread.threadUrl || thread.name}#${msgs.indexOf(m)}`;
+                const msgScope = buildLinkedInMessageScope(thread, m, direction);
                 const extId = buildDeterministicId(
                   direction === "outbound" ? "li_out" : "li",
                   thread.name,

@@ -884,13 +884,19 @@ var Actions = globalThis.Actions || (function () {
       }
 
       function pushUnique(msg) {
-        var key = (msg.text || "") + "|" + (msg.timestamp || "");
+        // Composite key: sender + text + timestamp (no shifting indices).
+        var key = (msg.sender || "") + "|" + (msg.text || "") + "|" + (msg.timestamp || "");
         if (seen[key]) return false;
         seen[key] = true;
         if (lastKnownText && msg.text && msg.text.trim().toLowerCase() === lastKnownText.trim().toLowerCase()) return "stop";
         allMessages.push(msg);
         return true;
       }
+
+      // P1 — Honest stop: 2 cicli senza crescita = fine reale, non sintomo di scroll lento.
+      var noGrowthCount = 0;
+      var prevMessageCount = 0;
+      var NO_GROWTH_LIMIT = 3;
 
       // Loop: extract → scroll up → extract
       var scrollDelays = [1.5, 2, 2.5, 3, 1.5, 2, 3, 2.5, 1.5, 2];
@@ -943,7 +949,14 @@ var Actions = globalThis.Actions || (function () {
                 var text = bodyEl ? bodyEl.textContent.trim() : "";
                 var sender = senderEl ? senderEl.textContent.trim() : "";
                 var timestamp = timeEl ? (timeEl.getAttribute("datetime") || timeEl.textContent.trim()) : new Date().toISOString();
-                if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: "inbound" });
+              // P1 — Direction honest in legacy backfill: senza segnali certi → "unknown".
+              var clsBack = String((item.className || "")).toLowerCase();
+              var senderLowerBack = (sender || "").toLowerCase();
+              var dirBack = "unknown";
+              if (/outbound|from-me|msg-s-event--outbound|msg-s-message-list__event--own/i.test(clsBack)) dirBack = "outbound";
+              else if (/inbound|from-them|msg-s-event--inbound/i.test(clsBack)) dirBack = "inbound";
+              else if (senderLowerBack === "you" || senderLowerBack === "tu" || senderLowerBack === "me" || senderLowerBack === "io") dirBack = "outbound";
+              if (text) messages.push({ text: text, sender: sender, timestamp: timestamp, direction: dirBack, method: "legacy-structural-backfill", confidence: dirBack === "unknown" ? 0.4 : 0.65 });
               });
               return { success: true, messages: messages };
             },
@@ -958,6 +971,18 @@ var Actions = globalThis.Actions || (function () {
         }
 
         if (foundLast) break;
+
+        // P1 — Honest stop: nessuna crescita per N cicli = abbiamo davvero raggiunto il top.
+        if (allMessages.length === prevMessageCount) {
+          noGrowthCount++;
+          if (noGrowthCount >= NO_GROWTH_LIMIT) {
+            console.log("[LI Backfill] No growth for " + NO_GROWTH_LIMIT + " cycles, stopping.");
+            break;
+          }
+        } else {
+          noGrowthCount = 0;
+          prevMessageCount = allMessages.length;
+        }
 
         // Scroll up to load older messages
         var scrollRes = await chrome.scripting.executeScript({
