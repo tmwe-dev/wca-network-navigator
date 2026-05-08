@@ -1,84 +1,103 @@
 
-# Fix invio LinkedIn — il messaggio finisce nella conversazione sbagliata
+# Bridge senza content script + diagnostica invio LinkedIn
 
-## Diagnosi confermata
+Due interventi separati. Si possono shippare insieme o uno per volta.
 
-L'audit (`.lovable/plan.md` §2 P1 punto 8) aveva segnalato il problema attorno a `findBox`/`nativeInsertText`. Rivedendo il codice ora il difetto vero è in **`clickMessage`** (`public/linkedin-extension/hybrid-ops.js` riga 340-358), non in `sendMessage`.
+## Parte A — Bridge via `externally_connectable` (rimuove la barra Chrome)
 
-### Catena del bug
+### Perché
+Oggi LinkedIn e WhatsApp espongono un `content_script` su `*.lovable.app/*` (e localhost/lovableproject). Quel content script è il bridge: il pannello fa `window.postMessage`, content.js lo intercetta e lo gira a background via `chrome.runtime.sendMessage`. Questa "attività dell'estensione sulla pagina" fa apparire la barra Chrome in cima.
 
-1. `Actions.sendLinkedInMessage(profileUrl, message)` naviga correttamente la tab al profilo (`getLinkedInTab` → `chrome.tabs.update` + `waitForLoad`). ✓
-2. Poi chiama `HybridOps.clickMessage(tabId)`. Il fallback strutturale è:
-   ```js
-   document.querySelectorAll("button, a").find(el =>
-     /^messag|^scrivi/i.test(el.textContent.trim()) && el.offsetParent !== null
-   )
-   ```
-3. La regex `^messag` matcha tre cose, in ordine di apparizione nel DOM:
-   - **"Messaggi"** (link top-nav globale, alto nel DOM) → click → tab naviga a `/messaging/`.
-   - **"Messaggistica"** (variante locale top-nav).
-   - **"Messaggia"** / "Message" (bottone scoped al profilo, più in basso).
+`externally_connectable` permette alla pagina dell'app di chiamare **direttamente** `chrome.runtime.sendMessage(EXT_ID, msg)` senza che venga iniettato nulla nella pagina. Niente content script su lovable.app → niente barra.
+
+### Cosa cambia in dettaglio
+
+1) **Manifest LinkedIn** (`public/linkedin-extension/manifest.json`):
+   - Rimuovere completamente `content_scripts` (resta vuoto).
+   - Aggiungere `"externally_connectable": { "matches": ["https://*.lovable.app/*", "https://*.lovableproject.com/*", "http://localhost/*", "http://127.0.0.1/*"] }`.
+   - Aggiungere `"key": "<chiave pubblica RSA stabile>"` per fissare l'Extension ID (altrimenti l'ID cambia a ogni installazione e l'app non sa chi chiamare).
+   - Bump → `3.10.0`.
+
+2) **Manifest WhatsApp** (`public/whatsapp-extension/manifest.json`): stesso trattamento, bump → `5.11.0`.
+
+3) **Background LinkedIn** (`background.js`):
+   - Aggiungere handler `chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {...})` che riceve i messaggi dall'app.
+   - Lo stesso handler riusa la pipeline esistente: validazione payload (whitelist `ALLOWED_ACTIONS`), validazione origine `sender.origin`, dispatch alle azioni (Actions.*, HybridOps.*).
+   - Riposta via `sendResponse(...)` (return `true` per async).
+   - Rimuovere il relay verso `content.js` (non più necessario per l'app; resta solo per le tab linkedin.com se serve).
+
+4) **Background WhatsApp**: stesso pattern.
+
+5) **content.js LinkedIn/WhatsApp**: NON eliminati. Restano per le tab `linkedin.com` / `web.whatsapp.com` perché lì sono il "braccio" che esegue `executeScript` / parsing DOM. Solo il match `*.lovable.app/*` viene rimosso dal manifest. Niente quindi sull'app.
+
+6) **App lato client** — file `src/components/test-extensions/extensionBridge.ts` e tutti i punti che usano `waMsg/liMsg`:
+   - Esporre due costanti `LI_EXT_ID` e `WA_EXT_ID` (gli ID derivati dalla `key` del manifest).
+   - Nuovo helper `chromeMsg(extId, action, payload, timeout)` che fa `chrome.runtime.sendMessage(extId, {action, ...payload})` con `Promise` + timeout.
+   - `waMsg`/`liMsg` provano **prima** `chromeMsg` (nuovo bridge); se l'estensione non è installata o il browser non espone `chrome.runtime`, **fallback** al vecchio `postMessage` (così le installazioni vecchie continuano a funzionare durante la transizione).
+   - `ensureLiConfig` viene chiamato sul nuovo canale (manda `setConfig` come prima).
+
+7) **Hook esistenti** che usano direttamente `window.postMessage` (`useLinkedInExtensionBridge`, `useLinkedInMessagingBridge`, equivalenti WA): inseriamo lo stesso fallback nel layer di trasporto, niente cambi a chiamanti.
+
+8) **Generazione `key` + Extension ID stabili**:
+   - Generiamo una coppia di chiavi RSA dedicata (una per LI, una per WA) lato dev.
+   - Inseriamo la pubblica in `manifest.json` come `"key": "..."`.
+   - L'Extension ID risultante (deterministico) viene messo in `src/lib/extensionIds.ts` (importato dall'app).
+   - Documentazione in `public/linkedin-extension/README-bridge.md`.
+
+9) **Bump catalog + zip + `whatsappExtensionZip.ts`** (LI 3.10.0, WA 5.11.0). Ricrea zip versionati e overrides `linkedin-extension.zip` / `whatsapp-extension.zip` legacy.
+
+### Effetti collaterali da gestire
+- Il pannello Test richiede ora che l'estensione **aggiornata** sia installata. Se è installata la vecchia (con content_script), il bridge funziona ancora via fallback postMessage (e quindi mostra ancora la barra finché l'utente non aggiorna). Mostriamo nel terminal un messaggio chiaro quando si entra in fallback: `⚠️ Bridge legacy via postMessage (estensione vecchia). Aggiorna a v3.10.0+ per rimuovere la barra Chrome.`
+- L'origin check passa da `event.origin` (postMessage) a `sender.origin` (runtime). Stessa whitelist.
+- Optimus relay (eventi async dal background → app): oggi viaggia via `chrome.runtime.sendMessage` → content.js → `window.postMessage`. Con externally_connectable possiamo aprire un `chrome.runtime.connect(extId)` long-lived dall'app e inviare eventi sul `Port`. Implementato come secondo helper `subscribeExtensionEvents(extId, onEvent)`. Il listener `subscribeOptimusEvents` (oggi basato su `window.addEventListener('message')`) viene esteso per ascoltare anche dal `Port`.
+
+### Fuori scopo
+- Non si tocca FireScrape (resta col bridge attuale finché non chiediamo).
+- Non si tocca la logica DOM/AX su LinkedIn/WhatsApp.
+- Non si tocca `check-inbox`, `email-imap-proxy`, `mark-imap-seen`.
+
+## Parte B — Diagnostica invio LinkedIn (3.9.16, no fix logica)
+
+### Cosa aggiungiamo
+
+1) **Stampa versione PRIMA di ogni invio** in `src/components/test-extensions/LinkedInTest.tsx`: il `testSendMessage` prima del `📤 Invio messaggio LinkedIn...` fa `liMsg("ping")` e logga `🔧 Estensione installata: vX.Y.Z (richiesta: 3.9.16)`. Se mismatch, `error` con istruzioni "rimuovi e ricarica".
+
+2) **Probe DOM dentro `sendMessage`** (`public/linkedin-extension/hybrid-ops.js`): quando il fallback strutturale non trova il textbox, prima del return `success:false` esegue uno `chrome.scripting.executeScript` di **soli reads** che raccoglie:
+   - `document.location.href`
+   - `document.querySelectorAll("[contenteditable='true']").length`
+   - `document.querySelectorAll("[role='textbox']").length`
+   - presenza overlay `document.querySelectorAll(".msg-overlay-conversation-bubble").length`
+   - presenza dialog aperti `document.querySelectorAll("[role='dialog']").length`
+   - testo del primo `[role='dialog']` (max 200 char) per capire se è il dialog di "Premium upgrade" o altro
+   - elenco dei primi 5 button visibili nel dialog (textContent)
    
-   Il primo vince → finisce nell'inbox.
-4. Una volta in `/messaging/`, `sendMessage` trova il textbox della prima conversazione aperta e scrive lì. Messaggio inviato al contatto sbagliato.
-5. Lato app vediamo `success: true` perché tecnicamente il send è avvenuto — la funzione non ha modo di sapere che ha colpito un'altra persona.
+   E lo allega in `error` come stringa JSON. Niente nuove permission.
 
-In più: nelle UI LinkedIn più recenti il bottone "Messaggia" del profilo è **dentro il menu "Altro/More"**. `sendMessage.findMoreBtn` lo apre correttamente, ma `clickMessage` non lo prova e quindi cade sempre nel match della top-nav.
+3) **Stampa probe nel terminal**: `LinkedInTest` quando riceve `error` se contiene `__probe__` lo logga formattato (4-5 righe leggibili) così vediamo a colpo d'occhio cosa è successo.
 
-### Cosa NON è il bug
+4) **Bump → 3.9.16** (manifest, catalog, costante `LINKEDIN_EXTENSION_REQUIRED_VERSION`, zip legacy + versionato).
 
-- **TabManager**: `chrome.tabs.query({ url: "*://*.linkedin.com/*" })` filtra per dominio LinkedIn, quindi è impossibile colpire la tab dell'app web. La navigazione al profilo avviene davvero.
-- **content.js / origin restriction**: ok, indipendente.
-- **`nativeInsertText`**: ok, opera dentro la tab linkedin.com.
-- **Lettura inbox/extractProfile**: già funzionano perché non dipendono da `clickMessage`.
-
-## Fix mirato (cambio piccolo, locale, reversibile)
-
-### 1) `clickMessage` — scope a `main`, esclusione nav, match esatto, supporto "Altro/More"
-
-In `public/linkedin-extension/hybrid-ops.js` sostituire il fallback strutturale di `clickMessage` con la stessa logica già usata in `sendMessage.findMessageBtn` + `findMoreBtn`:
-
-- Cercare SOLO dentro `document.querySelector("main")` (esclude top-nav globale).
-- Per ogni candidato, escludere se è dentro un `nav`, `header[role='banner']`, `[data-test-global-nav]` o il selettore `.global-nav`.
-- Match testuale **esatto** (`^(messaggia|message)$` per `textContent`; allargare con `aria-label` `^(messaggia|message)$`).
-- Se non trovato, aprire il menu "Altro/More" (regex già esistente in `findMoreBtn`), aspettare 800ms, ricercare il bottone "Messaggia" come voce `[role='menuitem']`.
-- Se ancora non trovato → ritornare `success:false` con error chiaro `"Profile-scoped message button not found"`.
-
-### 2) `sendMessage` — guardia URL pre-invio
-
-Prima del polling `findBox`, verificare che la tab sia ancora su una pagina profilo `/in/<slug>` (no `/messaging/`, no `/feed/`). Se non lo è → ritornare `success:false` con `"navigation_drifted"`. Questo blocca casi residui dove qualcosa naviga via durante il flow.
-
-In `Actions.sendLinkedInMessage`, se la guardia scatta, ri-navigare al `profileUrl` e rifare un solo retry di `clickMessage` + `sendMessage`. Se anche questo fallisce, errore esplicito.
-
-### 3) Bump versione estensione → 3.9.15
-
-- `public/linkedin-extension/manifest.json` → `version: "3.9.15"`, description: "Fix invio LinkedIn: il bottone Messaggia ora è scoped al profilo, niente più match con la top-nav inbox".
-- `src/lib/whatsappExtensionZip.ts` → `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.15"`.
-- `public/chrome-extensions/catalog.json` → aggiungere voce 3.9.15 `current: true`, marcare 3.9.14 `current: false`.
-- Rebuild `.zip` (sia `linkedin-extension-3.9.15.zip` sia `linkedin-extension.zip` legacy).
-
-### 4) Niente altro
-
-- Non tocco `getLinkedInTab`, non tocco `nativeInsertText`, non tocco gli hook lato app.
-- Nessun cambio al flusso di lettura inbox (già funzionante).
-- Nessun cambio agli hard limits, RLS, CORS, edge functions.
-
-## Test atteso dopo il fix
-
-1. Reinstallare estensione 3.9.15.
-2. Aprire `LinkedIn Test`, incollare URL profilo `https://www.linkedin.com/in/gianfranco-cristiano-12513434/`.
-3. Inviare messaggio test.
-4. Verifica visiva: la tab LinkedIn (anche se inattiva) deve restare sull'URL `/in/gianfranco-cristiano-12513434/` e aprire il dialog di messaggio in basso a destra (overlay del profilo), NON andare in `/messaging/`.
-5. Il messaggio appare nella conversazione del profilo target (ricontrollare aprendo l'inbox manualmente).
+Nessun cambio alla logica di click/findBox: prima i log, poi (in un giro successivo) decidiamo l'eventuale correzione mirata in base ai dati raccolti.
 
 ## File toccati
 
-- `public/linkedin-extension/hybrid-ops.js` — fix `clickMessage` + guardia URL in `sendMessage`.
-- `public/linkedin-extension/manifest.json` — bump 3.9.15.
-- `public/linkedin-extension/` → rebuild zip.
-- `public/chrome-extensions/catalog.json` — aggiungi 3.9.15.
-- `public/chrome-extensions/linkedin/linkedin-extension-3.9.15.zip` — nuovo.
-- `public/linkedin-extension.zip` — rebuild legacy.
-- `src/lib/whatsappExtensionZip.ts` — `LINKEDIN_EXTENSION_REQUIRED_VERSION`.
+**Parte A:**
+- `public/linkedin-extension/manifest.json`, `public/linkedin-extension/background.js`, `public/whatsapp-extension/manifest.json`, `public/whatsapp-extension/background.js`
+- `src/components/test-extensions/extensionBridge.ts`
+- `src/lib/extensionIds.ts` (nuovo)
+- `src/lib/whatsappExtensionZip.ts` (bump versioni)
+- `public/chrome-extensions/catalog.json`
+- nuovi zip versionati + override legacy
+- `public/linkedin-extension/README-bridge.md` (nuovo)
 
-Nessuna modifica a edge functions, DB, RLS, hook React, UI, journalistReview.
+**Parte B:**
+- `src/components/test-extensions/LinkedInTest.tsx`
+- `public/linkedin-extension/hybrid-ops.js`
+- manifest LI 3.9.16 → 3.10.0 (Parte A include già il bump più alto)
+- catalog + zip
+
+## Ordine consigliato
+1. **Parte B** prima (cambio piccolo, ti dà subito dati per capire perché `no textbox found`).
+2. **Parte A** dopo (refactor più grande che merita una PR a sé).
+
+Posso shippare solo B, solo A, o entrambe in sequenza nello stesso turno. Parte A include anche la rimozione della barra dall'estensione WhatsApp.

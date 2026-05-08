@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { liMsg } from "./extensionBridge";
+import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
@@ -160,6 +161,19 @@ export function LinkedInTest() {
   const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    // Pre-flight: verifica versione estensione installata
+    try {
+      const pong = await liMsg("ping", {}, 4000) as { success?: boolean; version?: string };
+      const installed = pong?.version || "?";
+      const required = LINKEDIN_EXTENSION_REQUIRED_VERSION;
+      if (installed !== required) {
+        log(`⚠️ Estensione installata: v${installed} — richiesta v${required}. Rimuovi la vecchia da chrome://extensions e ricarica lo zip aggiornato.`, "warn");
+      } else {
+        log(`🔧 Estensione installata: v${installed} (OK)`, "info");
+      }
+    } catch {
+      log(`⚠️ Ping estensione fallito — installata?`, "warn");
+    }
     log(`📤 Invio messaggio LinkedIn...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
@@ -168,7 +182,25 @@ export function LinkedInTest() {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
     } else {
-      log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
+      const errStr = String(r?.error || JSON.stringify(r));
+      // Estrai eventuale probe diagnostico
+      const probeMatch = errStr.match(/__probe__=(\{.*\})$/);
+      if (probeMatch) {
+        log(`❌ Invio fallito: ${errStr.slice(0, errStr.indexOf("__probe__")).trim()}`, "error");
+        try {
+          const probe = JSON.parse(probeMatch[1]) as Record<string, unknown>;
+          log(`🔬 DOM probe:`, "info");
+          log(`  • URL: ${probe.href}`, "info");
+          log(`  • contenteditable: ${probe.contenteditable} | role=textbox: ${probe.roleTextbox}`, "info");
+          log(`  • msg-overlay: ${probe.msgOverlay} | dialog aperti: ${probe.dialogs} | <main>: ${probe.hasMain}`, "info");
+          if (probe.dialogText) log(`  • Dialog text: "${String(probe.dialogText).slice(0, 120)}"`, "info");
+          if (Array.isArray(probe.dialogButtons) && probe.dialogButtons.length) {
+            log(`  • Dialog buttons: ${(probe.dialogButtons as string[]).join(" | ")}`, "info");
+          }
+        } catch { /* ignora parse */ }
+      } else {
+        log(`❌ Invio fallito: ${errStr}`, "error");
+      }
       if (String(r?.error || "").includes("timeout")) {
         log("💡 Suggerimento: assicurati che il tab LinkedIn sia attivo e visibile", "warn");
       }
