@@ -425,7 +425,14 @@ var Actions = globalThis.Actions || (function () {
           const modernCards = document.querySelectorAll('[class*="msg-conversation-card"], [class*="msg-convo-wrapper"], [data-control-name*="conversation"]');
           modernCards.forEach(function (card) {
             const link = card.querySelector("a[href*='/messaging/']") || card.closest("a[href*='/messaging/']");
-            const threadUrl = link ? (link.href || "") : "";
+            let threadUrl = link ? (link.href || "") : "";
+            // Fallback: many cards no longer expose a messaging anchor;
+            // use the participant profile URL instead so the contact has
+            // a usable target in the UI.
+            if (!threadUrl) {
+              const pLink = card.querySelector("a[href*='/in/']");
+              if (pLink && pLink.href) threadUrl = pLink.href;
+            }
             let name = "";
             const h3 = card.querySelector("h3");
             if (h3) name = h3.textContent.replace(/\s+/g, " ").trim();
