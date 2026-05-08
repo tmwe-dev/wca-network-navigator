@@ -391,6 +391,12 @@ export function LinkedInTest() {
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
           <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia LI</Button>
         </div>
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50 mt-1">
+          <span className="text-[11px] text-muted-foreground self-center mr-1">🧪 Test isolati click invio:</span>
+          <Button onClick={() => testSendWithMethod("physical_click", "🖱️", "Click fisico")} disabled={running} size="sm" variant="outline" title="pointerdown/mousedown/click con coordinate reali">🖱️ Click fisico</Button>
+          <Button onClick={() => testSendWithMethod("form_submit", "📋", "Form submit")} disabled={running} size="sm" variant="outline" title="form.requestSubmit() sul .msg-form">📋 Form submit</Button>
+          <Button onClick={() => testSendWithMethod("keyboard_shortcut", "⌨️", "Ctrl+Enter")} disabled={running} size="sm" variant="outline" title="Ctrl+Enter (Cmd+Enter su Mac)">⌨️ Ctrl+Enter</Button>
+        </div>
       </div>
       <Terminal logs={logs} />
     </div>
