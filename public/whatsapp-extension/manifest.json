@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.5",
+  "version": "5.10.6",
   "description": "Optimus V2.2 — Rimappa DOM invio manuale: l'AI riapprende selettori send (search/composer/sendBtn) on-demand e li cacha in chrome.storage.",
   "permissions": [
     "tabs",
