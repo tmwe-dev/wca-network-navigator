@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
     const body = await req.json();
-    const { channel, direction, from_address, to_address, body_text, body_html, subject, partner_id, contact_id, dispatch_id, message_id_external } = body;
+    const { channel, direction, from_address, to_address, from_name, to_name, body_text, body_html, subject, partner_id, contact_id, dispatch_id, message_id_external, chat_thread_id, profile_url, headline } = body;
 
     if (!channel || !direction) {
       return new Response(JSON.stringify({ error: "channel and direction required" }), {
@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
     if (message_id_external) row.message_id_external = message_id_external;
     if (body_html) row.body_html = body_html;
     if (subject) row.subject = subject;
+    if (from_name) row.from_name = from_name;
+    if (to_name) row.to_name = to_name;
 
     if (!message_id_external) {
       console.warn(`[receive-channel-message] Missing message_id_external for ${direction} ${channel} (legacy fallback)`);
@@ -99,6 +101,46 @@ Deno.serve(async (req) => {
 
     const msgId = msgRows?.[0]?.id ?? null;
     const wasDuplicate = message_id_external && (!msgRows || msgRows.length === 0);
+
+    // ── Rubrica auto-population (lazy, fire-and-forget) ───────────────
+    if (!wasDuplicate) {
+      try {
+        const counterpartyAddr = direction === "inbound" ? from_address : to_address;
+        const counterpartyName = direction === "inbound" ? from_name : to_name;
+        const nowIso = new Date().toISOString();
+        if (channel === "whatsapp" && counterpartyAddr) {
+          const phone = String(counterpartyAddr).replace(/[^\d+]/g, "");
+          await supabase.rpc("upsert_whatsapp_address", {
+            p_user_id: user.id,
+            p_operator_id: operator_id,
+            p_handle: String(counterpartyAddr),
+            p_phone_e164: phone.startsWith("+") ? phone : (phone ? `+${phone}` : null),
+            p_display_name: counterpartyName ?? null,
+            p_chat_thread_id: chat_thread_id ?? null,
+            p_direction: direction,
+            p_message_at: nowIso,
+          });
+        } else if (channel === "linkedin" && counterpartyAddr) {
+          const url = String(counterpartyAddr);
+          const slugMatch = url.match(/linkedin\.com\/in\/([^/?#]+)/i);
+          const slug = slugMatch ? slugMatch[1] : url.replace(/[^a-z0-9-]/gi, "").toLowerCase();
+          if (slug) {
+            await supabase.rpc("upsert_linkedin_address", {
+              p_user_id: user.id,
+              p_operator_id: operator_id,
+              p_profile_slug: slug,
+              p_profile_url: profile_url ?? (slugMatch ? url : null),
+              p_display_name: counterpartyName ?? null,
+              p_headline: headline ?? null,
+              p_direction: direction,
+              p_message_at: nowIso,
+            });
+          }
+        }
+      } catch (rubricaErr) {
+        console.warn("[receive-channel-message] Rubrica upsert failed (non-fatal):", rubricaErr);
+      }
+    }
 
     // If outbound delivery confirmation, update dispatch queue
     if (direction === "outbound" && dispatch_id && !wasDuplicate) {
