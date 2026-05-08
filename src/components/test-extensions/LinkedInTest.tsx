@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Terminal, type LogEntry, ts } from "./Terminal";
 import { liMsg } from "./extensionBridge";
+import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
