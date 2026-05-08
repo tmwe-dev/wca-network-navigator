@@ -27,18 +27,6 @@ var Actions = globalThis.Actions || (function () {
       // corretta, va usato quello; chiuderlo o ri-cliccare "Messaggia" apre una
       // seconda chat/naviga fuori pagina.
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-      // P11 — Verifica URL: dopo navigate dobbiamo essere sul profilo richiesto
-      // (o su un /messaging/thread/ derivato). Altrimenti abortiamo.
-      try {
-        const tabInfo = await chrome.tabs.get(tab.id);
-        const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
-        const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-        const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-        const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
-        if (!isThreadUrl && !onTarget && !onThread) {
-          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
-        }
-      } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
       let composerAlreadyOpen = false;
       try {
         const composerProbe = await chrome.scripting.executeScript({
@@ -58,6 +46,18 @@ var Actions = globalThis.Actions || (function () {
         });
         composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
       } catch (e) { composerAlreadyOpen = false; }
+      // P11 — Verifica URL: dopo navigate dobbiamo essere sul profilo richiesto
+      // (o su un /messaging/thread/ derivato). Altrimenti abortiamo.
+      try {
+        const tabInfo = await chrome.tabs.get(tab.id);
+        const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+        const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
+        const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
+        const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
+        if (!isThreadUrl && !onTarget && !onThread && !composerAlreadyOpen) {
+          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
+        }
+      } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
       if (!isThreadUrl && !composerAlreadyOpen) {
         const clickResult = await HybridOps.clickMessage(tab.id);
         if (!clickResult || !clickResult.success) {
