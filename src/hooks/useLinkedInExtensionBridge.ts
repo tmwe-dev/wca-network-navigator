@@ -144,13 +144,13 @@ export function useLinkedInExtensionBridge() {
 
   const sendDirectMessage = useCallback(
     (profileUrl: string, message: string) =>
-      sendMessage("sendMessage", { url: profileUrl, message }, 60000),
+      sendMessage("sendMessage", { url: profileUrl, message }, 120000),
     [sendMessage]
   );
 
   const sendConnectionRequest = useCallback(
     (profileUrl: string, note?: string) =>
-      sendMessage("sendConnectionRequest", { url: profileUrl, note: note || "" }, 60000),
+      sendMessage("sendConnectionRequest", { url: profileUrl, note: note || "" }, 120000),
     [sendMessage]
   );
 

@@ -78,6 +78,19 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
     if (liBridge.isAvailable) {
       setSending(true);
       try {
+        // P6 — Auth check prima dell'invio: se non autenticato evitiamo
+        // tentativi silenziosi e copia immediatamente negli appunti.
+        const auth = await liBridge.ensureAuthenticated(0);
+        if (!auth.ok) {
+          navigator.clipboard.writeText(plainText);
+          toast({
+            title: "LinkedIn non autenticato",
+            description: "Login a LinkedIn richiesto. Messaggio copiato negli appunti.",
+            variant: "destructive",
+          });
+          if (profileUrl) window.open(profileUrl, "_blank");
+          return;
+        }
         const res = await liBridge.sendDirectMessage(profileUrl, plainText);
         if (res.success) {
           toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
