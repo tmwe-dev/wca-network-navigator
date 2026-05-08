@@ -1,39 +1,42 @@
-# Fix container Funnemail Inbox reader
+Obiettivo: impedire che LinkedIn/WhatsApp usino la tab o chat già attiva come destinatario, e far rispettare sempre il campo compilato nella maschera Test Estensioni.
 
-## Problema osservato
-Nello screenshot di `/v2/inbox`, l'oggetto della mail ("Candidatura spontanea - logistica") va a capo **una lettera per riga**. Anche "Tutte" nella sidebar è strozzata, ma il caso grave è il pannello di lettura.
+Piano di intervento minimo:
 
-## Causa
-In `src/components/outreach/EmailDetailView.tsx` (riga 128) la riga 1 dell'header è:
+1. LinkedIn: isolamento tab per destinatario
+- In `public/linkedin-extension/tab-manager.js`, modificare la logica di riuso tab: se arriva un URL profilo preciso come `https://www.linkedin.com/in/gianfranco-cristiano-12513434/`, non deve “adottare” una tab LinkedIn già aperta e restare sulla pagina attiva.
+- Deve riusare solo una tab già allineata allo stesso profilo, oppure navigare esplicitamente al target ricevuto.
+- Dopo la navigazione, verificare che l’URL corrente corrisponda al profilo richiesto prima di cliccare “Messaggia”. Se non corrisponde, bloccare l’invio con errore chiaro.
 
-```
-[avatar 40px]  [identità + subject  flex-1 min-w-0]  [barra azioni  flex-shrink-0]
-```
+2. LinkedIn: guardia anti-destinatario sbagliato
+- In `public/linkedin-extension/actions.js` / `hybrid-ops.js`, aggiungere un controllo pre-send: il composer può essere usato solo se la tab è ancora sul profilo/thread aperto dal target richiesto.
+- Mantenere il click finale non forzato/già prudente: se il composer non è sicuramente del destinatario corretto, fallisce invece di inviare.
 
-La barra azioni di destra contiene 9 bottoni (Letto/Rispondi/ReplyAll/Inoltra/DeepSearch/ImageOff/Safe/Faithful/Chiudi) ed è marcata `flex-shrink-0`. A 1111px di viewport, con sidebar globale + colonna lista (~32%), al reader restano ~700px: la barra azioni occupa quasi tutto, lasciando alla colonna identità ~40-60px → l'`<h3>` con `break-words` va a capo per ogni glifo.
+3. WhatsApp: usare sempre il campo del test
+- In `public/whatsapp-extension/actions.js`, cambiare `sendWhatsAppMessage(phone, text)` per non tentare prima l’invio search-based sulla chat corrente quando `phone` è un numero.
+- Se il campo contiene un numero valido, usare subito `https://web.whatsapp.com/send?phone=...&text=...`, anche se esiste già una tab WhatsApp aperta.
+- Solo se il campo non è un numero, usare la ricerca contatto nella sidebar.
 
-Inoltre `senderDetail` e brand sono sulla stessa riga dell'azioni (gap-x-2 wrap), quindi quando l'azioni-bar è larga schiaccia tutto.
+4. WhatsApp: rimuovere falsa chiusura chat
+- La maschera `WhatsAppTest.tsx` prova a chiamare `closeActiveChat`, ma l’estensione non espone quell’azione: oggi è un no-op mascherato.
+- Sostituire questa dipendenza con log chiaro e comportamento deterministico lato estensione: nuovo destinatario numerico = nuova URL send, non chat corrente.
 
-## Cosa cambia (UI-only, nessuna logica)
-File unico: `src/components/outreach/EmailDetailView.tsx`
+5. Versioni e pacchetti
+- Incrementare le versioni estensioni: LinkedIn `3.9.21`, WhatsApp `5.10.15`.
+- Aggiornare manifest, catalogo e costanti richieste in `src/lib/whatsappExtensionZip.ts`.
+- Rigenerare gli zip statici e i fallback `public/linkedin-extension.zip` / `public/whatsapp-extension.zip`.
 
-1. **Spostare la barra azioni su una riga propria** sopra (o sotto) la riga identità, in modo che identità + subject usino l'intera larghezza del pannello.
-2. La nuova riga azioni:
-   - `flex flex-wrap items-center gap-1 justify-end`
-   - rimossa `flex-shrink-0` rigido (i bottoni possono wrappare se serve)
-   - mantiene esattamente gli stessi bottoni, handler, varianti, titoli — niente cambi di logica
-3. La riga identità diventa: `[avatar] [brand + senderDetail + data + h3 subject]` su `flex-1 min-w-0`, così l'`<h3>` ha tutta la larghezza disponibile e non spezza più per lettera.
-4. Mantiene `truncate` su brand/senderDetail e `break-words` su subject (ora finalmente utili invece di pittoreschi).
-5. Riga 2 metadata (3 colonne) e Dettagli tecnici restano invariati.
+6. Verifica
+- Controllare che il payload dalla maschera contenga il destinatario inserito.
+- Verificare staticamente che LinkedIn non possa riusare una pagina attiva diversa da Gianfranco.
+- Verificare staticamente che WhatsApp con numero usi sempre URL `/send?phone=<numero>` e non la chat aperta precedente.
 
-## Out of scope
-- Nessuna modifica a `FunnemailMailList`, `FunnemailInboxPage`, hook, DAL, edge functions.
-- Nessuna modifica al comportamento dei bottoni (mark-as-read, navigate, viewMode, blockRemote, deep search).
-- Nessun refactor della classificazione, attachments, EmailHtmlFrame.
-- La sidebar sinistra ("Tutte"/"Assegna gruppo") non viene toccata in questo intervento — è un secondo problema (colonna lista pinch-out a viewport stretto). Se vuoi, lo affronto in un secondo passaggio dedicato dopo aver verificato il fix del reader.
-
-## Verifica
-- Aprire `/v2/inbox`, selezionare la mail "Candidatura spontanea - logistica".
-- Subject su una riga (o al massimo 2 word-wrap), non più per-lettera.
-- Bottoni azioni allineati a destra; su viewport < 900px wrappano sotto invece di schiacciare l'identità.
-- Light + dark mode invariati (uso degli stessi token/`variant`).
+File previsti:
+- `public/linkedin-extension/tab-manager.js`
+- `public/linkedin-extension/actions.js`
+- `public/linkedin-extension/manifest.json`
+- `public/whatsapp-extension/actions.js`
+- `public/whatsapp-extension/manifest.json`
+- `src/components/test-extensions/WhatsAppTest.tsx` solo per log/UX, senza cambiare logica app
+- `src/lib/whatsappExtensionZip.ts`
+- `public/chrome-extensions/catalog.json`
+- zip estensioni in `public/chrome-extensions/...` e fallback in `public/`
