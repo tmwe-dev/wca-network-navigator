@@ -207,6 +207,25 @@ export function LinkedInTest() {
     }
   });
 
+  // ── DIAGNOSTIC: 3 metodi di click isolati ──
+  // Permette di capire quale meccanismo di click sul pulsante "Invia"
+  // funziona meglio nel composer LinkedIn corrente, senza che la cascata
+  // di fallback nasconda quale metodo ha effettivamente vinto.
+  const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut", emoji: string, label: string) => runWithCooldown(async () => {
+    if (!sendUrl.trim()) { log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn"); return; }
+    if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    log(`${emoji} Test metodo: ${label} (${method})`);
+    log(`  Destinatario: ${sendUrl}`, "info");
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 90000);
+    if (r?.success) {
+      log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
+    } else {
+      const errStr = String(r?.error || JSON.stringify(r));
+      const attempted = (r as Record<string, unknown>)?.attempted_method as string | undefined;
+      log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
+    }
+  });
+
   const testDiagnosticDom = () => runWithCooldown(async () => {
     log("🔬 Diagnostica DOM LinkedIn Messaging...");
     const r = await liMsg("diagnosticLinkedInDom", {}, 35000);
