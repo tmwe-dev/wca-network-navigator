@@ -72,18 +72,12 @@ var TabManager = globalThis.TabManager || (function () {
   async function safeCreateTab(url, active) {
     for (let i = 0; i < 3; i++) {
       try {
-        // Always try to create in the automation window first
-        const winId = await getOrCreateAutomationWindow();
-        const opts = { url: url, active: !!active };
-        if (winId !== null) opts.windowId = winId;
-        const tab = await chrome.tabs.create(opts);
+        const tab = await chrome.tabs.create({ url: url, active: !!active });
         markOwned(tab.id);
         return tab;
       } catch (e) {
         if (i < 2) await sleep(500 * (i + 1));
         else {
-          // Last resort: create without windowId (background tab in current window)
-          // BUT we still mark it owned so we don't steal focus from it
           const tab = await chrome.tabs.create({ url: url, active: false });
           markOwned(tab.id);
           return tab;
@@ -129,20 +123,7 @@ var TabManager = globalThis.TabManager || (function () {
         }
       }
       saveOwnership();
-      // Step 2: look in the automation window only
-      if (_automationWindowId !== null) {
-        try {
-          const tabs = await chrome.tabs.query({
-            windowId: _automationWindowId,
-            url: "https://web.whatsapp.com/*",
-          });
-          if (tabs && tabs[0]) {
-            markOwned(tabs[0].id);
-            return tabs[0];
-          }
-        } catch (e) { /* window gone */ }
-      }
-      // Fallback: reuse a user-opened web.whatsapp.com tab if available.
+      // Step 2: reuse any user-opened web.whatsapp.com tab if available.
       // Creating a fresh tab in the automation window forces a new login (QR),
       // which breaks sends when the user is already authenticated elsewhere.
       try {
