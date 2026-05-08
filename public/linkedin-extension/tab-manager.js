@@ -91,14 +91,14 @@ var TabManager = globalThis.TabManager || (function () {
   // ── Retry-safe tab creation IN AUTOMATION WINDOW ──
   async function safeCreate(options, maxRetries) {
     maxRetries = maxRetries || 3;
-    const winId = await getOrCreateAutomationWindow(options && options.url);
+    await loadOwnership();
+    _automationWindowId = null;
     const opts = Object.assign({ active: false }, options || {});
-    if (winId !== null) opts.windowId = winId;
-    // If the automation window was just created with this URL, reuse the
-    // existing tab instead of opening a duplicate.
+    delete opts.windowId;
+    // Reuse any existing LinkedIn tab before opening a new inactive tab.
     try {
-      if (winId !== null && opts.url) {
-        const existing = await chrome.tabs.query({ windowId: winId, url: "*://*.linkedin.com/*" });
+      if (opts.url) {
+        const existing = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
         if (existing && existing[0]) {
           markOwned(existing[0].id);
           return existing[0];
@@ -114,7 +114,6 @@ var TabManager = globalThis.TabManager || (function () {
         if (attempt < maxRetries - 1 && /cannot be edited/i.test(err.message)) {
           await sleep(500 * (attempt + 1));
         } else {
-          // Last resort: create without windowId
           const tab = await chrome.tabs.create({ url: opts.url, active: false });
           markOwned(tab.id);
           return tab;
