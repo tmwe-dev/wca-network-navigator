@@ -3,9 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink,
+  Loader2, CheckCircle2, Globe, RefreshCw, ExternalLink, Download,
   ClipboardPaste, XCircle, KeyRound,
 } from "lucide-react";
+import { toast } from "sonner";
+import { downloadWcaExtensionZip, WCA_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
 
 interface WcaTabProps {
   isWcaOk: boolean;
@@ -75,6 +77,13 @@ export function WcaTab({ isWcaOk, verifying, onVerify, cookieInput, setCookieInp
         <div className="mt-3 space-y-3">
           <Card>
             <CardContent className="pt-4 space-y-3">
+              <Button className="w-full" variant="outline" size="sm" onClick={() => {
+                void downloadWcaExtensionZip()
+                  .then(() => toast.success(`WCA Cookie Sync v${WCA_EXTENSION_REQUIRED_VERSION} scaricato!`))
+                  .catch(() => toast.error("File non disponibile"));
+              }}>
+                <Download className="w-4 h-4 mr-2" /> Scarica Estensione WCA v{WCA_EXTENSION_REQUIRED_VERSION}
+              </Button>
               <Button className="w-full" variant="outline" size="sm" onClick={() => window.open("https://www.wcaworld.com/MemberSection", "_blank")}>
                 <ExternalLink className="w-4 h-4 mr-2" /> Apri WCA World
               </Button>

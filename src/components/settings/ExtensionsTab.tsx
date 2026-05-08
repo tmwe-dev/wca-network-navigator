@@ -1,11 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Zap, MessageCircle, Linkedin, Mail } from "lucide-react";
+import { Download, Zap, MessageCircle, Linkedin, Mail, FileText, Globe } from "lucide-react";
 import {
+  downloadEmailExtensionZip,
   downloadPartnerConnectExtensionZip,
   downloadLinkedInExtensionZip,
+  downloadRaExtensionZip,
   downloadWhatsAppExtensionZip,
+  downloadWcaExtensionZip,
+  EMAIL_EXTENSION_REQUIRED_VERSION,
   PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+  RA_EXTENSION_REQUIRED_VERSION,
+  WCA_EXTENSION_REQUIRED_VERSION,
   WHATSAPP_EXTENSION_REQUIRED_VERSION,
   LINKEDIN_EXTENSION_REQUIRED_VERSION,
 } from "@/lib/whatsappExtensionZip";
@@ -14,21 +20,6 @@ import { createLogger } from "@/lib/log";
 import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
 
 const log = createLogger("ExtensionsTab");
-
-async function downloadGenericZip(path: string, filename: string, successMessage: string) {
-  const response = await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" });
-  if (!response.ok) throw new Error("Download failed");
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success(successMessage);
-}
 
 export function ExtensionsTab() {
   return (
@@ -70,6 +61,7 @@ export function ExtensionsTab() {
               <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="partner-connect" />
         </CardContent>
       </Card>
 
@@ -155,16 +147,66 @@ export function ExtensionsTab() {
               </div>
               <div>
                 <p className="text-sm font-medium">Email Client Universale</p>
-                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche</p>
+                <p className="text-xs text-muted-foreground">Download IMAP, auto-discovery, sync e notifiche · ultima v{EMAIL_EXTENSION_REQUIRED_VERSION}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              void downloadGenericZip("/email-extension.zip", "email-extension.zip", "Email Client scaricato!")
+              void downloadEmailExtensionZip()
+                .then(() => toast.success("Email Client scaricato!"))
                 .catch(() => toast.error("File non disponibile"));
             }}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica ZIP
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{EMAIL_EXTENSION_REQUIRED_VERSION}
             </Button>
           </div>
+          <ExtensionDownloadCatalog channel="email" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">ReportAziende Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Acquisizione dati e sincronizzazione cookie · ultima v{RA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadRaExtensionZip()
+                .then(() => toast.success("ReportAziende scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{RA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="ra" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Globe className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">WCA Cookie Sync</p>
+                <p className="text-xs text-muted-foreground">Login automatico, cookie e contatti WCA · ultima v{WCA_EXTENSION_REQUIRED_VERSION}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              void downloadWcaExtensionZip()
+                .then(() => toast.success("WCA Cookie Sync scaricato!"))
+                .catch(() => toast.error("File non disponibile"));
+            }}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Scarica v{WCA_EXTENSION_REQUIRED_VERSION}
+            </Button>
+          </div>
+          <ExtensionDownloadCatalog channel="wca" />
         </CardContent>
       </Card>
     </div>

@@ -7,21 +7,30 @@ import { useState } from "react";
 import { Download, Search, MessageSquare, Linkedin, Mail, FileText, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ExtensionDownloadCatalog } from "@/components/settings/ExtensionDownloadCatalog";
 import {
+  downloadEmailExtensionZip,
   downloadLinkedInExtensionZip,
   downloadPartnerConnectExtensionZip,
+  downloadRaExtensionZip,
+  downloadWcaExtensionZip,
+  downloadWhatsAppExtensionZip,
+  EMAIL_EXTENSION_REQUIRED_VERSION,
   LINKEDIN_EXTENSION_REQUIRED_VERSION,
   PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+  RA_EXTENSION_REQUIRED_VERSION,
+  WCA_EXTENSION_REQUIRED_VERSION,
+  WHATSAPP_EXTENSION_REQUIRED_VERSION,
+  type ExtensionCatalogChannel,
 } from "@/lib/whatsappExtensionZip";
 
-type ExtId = "partner-connect" | "whatsapp" | "linkedin" | "email" | "ra";
+type ExtId = ExtensionCatalogChannel;
 
 interface ExtensionDef {
   id: ExtId;
   name: string;
   description: string;
-  zipPath: string;
-  filename?: string;
+  filename: string;
   icon: typeof Download;
   badge?: string;
 }
@@ -31,41 +40,60 @@ const EXTENSIONS: ExtensionDef[] = [
     id: "partner-connect",
     name: "Partner Connect",
     description: "Bridge per Deep Search legacy (batch enrichment client-side, scraping Google/LinkedIn/Maps a costo zero).",
-    zipPath: `/chrome-extensions/partner-connect/partner-connect-extension-${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}.zip`,
+    filename: `partner-connect-extension-${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Search,
     badge: `v${PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "whatsapp",
-    name: "WhatsApp Stealth Sync",
+    name: "WhatsApp Direct Send",
     description: "Sync conversazioni WhatsApp Web con il CRM, invio messaggi multimodali e backfill cursor persistente.",
-    zipPath: "/whatsapp-extension.zip",
+    filename: `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: MessageSquare,
+    badge: `v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "linkedin",
-    name: "LinkedIn Stealth Sync",
-    description: "Sync messaggi LinkedIn, dispatch outreach e bypass manuale per inviti/connessioni.",
-    zipPath: `/chrome-extensions/linkedin/linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
+    name: "LinkedIn Cookie Sync",
+    description: "ReadInbox, readThread, backfill, dedup e sync messaggi LinkedIn con ID reali.",
     filename: `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Linkedin,
     badge: `v${LINKEDIN_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "email",
-    name: "Email Auto-Discover",
+    name: "Email Client Universale",
     description: "Discover automatico account email e notifier inbound per il sistema di Email Intelligence.",
-    zipPath: "/email-extension.zip",
+    filename: `email-extension-${EMAIL_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Mail,
+    badge: `v${EMAIL_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "ra",
     name: "ReportAziende",
     description: "Acquisizione dati anagrafici e visure da ReportAziende per arricchimento prospect italiani.",
-    zipPath: "/ra-extension.zip",
+    filename: `ra-extension-${RA_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: FileText,
+    badge: `v${RA_EXTENSION_REQUIRED_VERSION}`,
+  },
+  {
+    id: "wca",
+    name: "WCA Cookie Sync",
+    description: "Login automatico, sincronizzazione cookie ed estrazione contatti WCA.",
+    filename: `wca-extension-${WCA_EXTENSION_REQUIRED_VERSION}.zip`,
+    icon: FileText,
+    badge: `v${WCA_EXTENSION_REQUIRED_VERSION}`,
   },
 ];
+
+const DOWNLOADERS: Record<ExtId, () => Promise<void>> = {
+  "partner-connect": downloadPartnerConnectExtensionZip,
+  whatsapp: downloadWhatsAppExtensionZip,
+  linkedin: downloadLinkedInExtensionZip,
+  email: downloadEmailExtensionZip,
+  ra: downloadRaExtensionZip,
+  wca: downloadWcaExtensionZip,
+};
 
 export default function ExtensionsPanel() {
   const [downloading, setDownloading] = useState<ExtId | null>(null);
@@ -75,30 +103,9 @@ export default function ExtensionsPanel() {
     if (downloading) return;
     setDownloading(ext.id);
     try {
-      if (ext.id === "partner-connect") {
-        await downloadPartnerConnectExtensionZip();
-        setCompleted((prev) => new Set(prev).add(ext.id));
-        toast.success(`${ext.name} scaricata`, { description: "Decomprimi lo ZIP e caricalo in chrome://extensions" });
-        return;
-      }
-      if (ext.id === "linkedin") {
-        await downloadLinkedInExtensionZip();
-        setCompleted((prev) => new Set(prev).add(ext.id));
-        toast.success(`${ext.name} scaricata`, { description: `File: ${ext.filename ?? ext.zipPath}` });
-        return;
-      }
-      const res = await fetch(ext.zipPath);
-      if (!res.ok) throw new Error(`Download fallito (HTTP ${res.status})`);
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${ext.id}-extension.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
+      await DOWNLOADERS[ext.id]();
       setCompleted((prev) => new Set(prev).add(ext.id));
-      toast.success(`${ext.name} scaricata`, { description: "Decomprimi lo ZIP e caricalo in chrome://extensions" });
+      toast.success(`${ext.name} scaricata`, { description: `File: ${ext.filename}` });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore download";
       toast.error(`Download ${ext.name} fallito`, { description: msg });
@@ -140,7 +147,10 @@ export default function ExtensionsPanel() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{ext.description}</p>
-                {ext.filename && <p className="mt-1 font-mono text-xs font-semibold text-primary">{ext.filename}</p>}
+                <p className="mt-1 font-mono text-xs font-semibold text-primary">{ext.filename}</p>
+                <div className="mt-3">
+                  <ExtensionDownloadCatalog channel={ext.id} />
+                </div>
               </div>
               <Button
                 size="sm"

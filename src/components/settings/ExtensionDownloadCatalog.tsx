@@ -23,11 +23,14 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
   const [downloading, setDownloading] = useState(false);
   const isDownloadable = item.current;
   const fallbackPaths = item.current
-    ? item.filename.startsWith("whatsapp-extension-")
-      ? ["/whatsapp-extension.zip"]
-      : item.filename.startsWith("linkedin-extension-")
-        ? ["/linkedin-extension.zip"]
-        : []
+    ? [
+        item.filename.startsWith("partner-connect-extension-") ? "/partner-connect-extension.zip" : null,
+        item.filename.startsWith("whatsapp-extension-") ? "/whatsapp-extension.zip" : null,
+        item.filename.startsWith("linkedin-extension-") ? "/linkedin-extension.zip" : null,
+        item.filename.startsWith("email-extension-") ? "/email-extension.zip" : null,
+        item.filename.startsWith("ra-extension-") ? "/ra-extension.zip" : null,
+        item.filename.startsWith("wca-extension-") ? "/wca-extension.zip" : null,
+      ].filter((path): path is string => Boolean(path))
     : [];
 
   return (
