@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.21",
-  "description": "Anti-mis-recipient: chiude overlay chat fluttuanti e verifica URL profilo prima di clickMessage/sendMessage. Mai più invio alla pagina sbagliata.",
+  "version": "3.9.22",
+  "description": "P12 — Anti-double-overlay guard: clickMessage e sendMessage rifiutano di cliccare 'Messaggia' se un composer/overlay è già aperto. Niente più due finestre LinkedIn aperte contemporaneamente.",
   "permissions": [
     "cookies",
     "tabs",
