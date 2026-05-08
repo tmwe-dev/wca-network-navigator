@@ -60,7 +60,7 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     title: "AI Staff",
     items: [
       { label: "AI Arena 3D",          path: "/v2/ai-arena" },
-      { label: "AI Test Hub",          path: "/v2/ai-test-hub" },
+      { label: "Lab & Verifiche",      path: "/v2/lab" },
       { label: "AI Staff Hub",         path: "/v2/ai-staff" },
       { label: "KB Supervisor",        path: "/v2/ai-staff/kb-supervisor" },
     ],
@@ -106,14 +106,9 @@ export const SECONDARY_NAV: readonly SecondaryNavGroup[] = [
     items: [
       { label: "Admin Users",          path: "/v2/settings/admin-users" },
       { label: "Alert Routing",        path: "/v2/settings/alert-routing" },
-      { label: "Design System",        path: "/v2/design-system-preview" },
-      { label: "Diagnostics",          path: "/v2/settings/diagnostics" },
-      { label: "E2E Status",           path: "/v2/settings/e2e-status" },
       { label: "Email Download",       path: "/v2/settings/email-download" },
       { label: "Guida",                path: "/v2/guida" },
-      { label: "Observability",        path: "/v2/settings/observability" },
       { label: "System Health",        path: "/v2/settings/health" },
-      { label: "Telemetry",            path: "/v2/settings/telemetry" },
     ],
   },
 ] as const;
