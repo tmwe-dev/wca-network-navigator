@@ -18,6 +18,19 @@ interface FoundThread {
   threadUrl?: string;
 }
 
+interface SyncQualitySummary {
+  newMessages: number;
+  rawCandidates: number;
+  threadsAccepted: number;
+  threadsDropped: Record<string, number>;
+  messagesAccepted: number;
+  messagesDropped: Record<string, number>;
+  methods: Record<string, number>;
+  avgConfidence: number;
+  warnings: string[];
+  at: number;
+}
+
 export function LinkedInTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
@@ -28,6 +41,7 @@ export function LinkedInTest() {
   const [threadUrl, setThreadUrl] = useState("");
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
+  const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
@@ -49,6 +63,16 @@ export function LinkedInTest() {
       }
     });
   }, [log]);
+
+  // P2.3 — Pannello qualità sync: ascolta `li-sync-completed`.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<SyncQualitySummary>).detail;
+      if (detail && typeof detail === "object" && "rawCandidates" in detail) setQuality(detail);
+    };
+    window.addEventListener("li-sync-completed", handler as EventListener);
+    return () => window.removeEventListener("li-sync-completed", handler as EventListener);
+  }, []);
 
   const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
 
