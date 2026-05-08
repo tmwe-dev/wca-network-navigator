@@ -217,7 +217,7 @@ var AXTree = globalThis.AXTree || (function () {
     return await withDebugger(tabId, async function (tid) {
       let nodes = await getFullTree(tid);
       // Find textbox (contenteditable message input)
-      let textbox = findOne(nodes, "textbox", /write a message|scrivi un messaggio/i);
+      let textbox = findOne(nodes, "textbox", /write a message|scrivi un messaggio|messaggio|message/i);
       if (!textbox) textbox = findOne(nodes, "textbox");
       if (!textbox || !textbox.backendDOMNodeId) return { success: false, error: "AX: Message textbox not found" };
 
@@ -226,11 +226,11 @@ var AXTree = globalThis.AXTree || (function () {
       await insertText(tid, text);
 
       // Find Send button
-      let sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
+      let sendBtn = findOne(nodes, "button", /^send$|^invia$|send message|invia messaggio/i);
       if (!sendBtn) {
         // Re-fetch tree after typing (DOM may have changed)
         nodes = await getFullTree(tid);
-        sendBtn = findOne(nodes, "button", /^send$|^invia$/i);
+        sendBtn = findOne(nodes, "button", /^send$|^invia$|send message|invia messaggio/i);
       }
       if (sendBtn && sendBtn.backendDOMNodeId) {
         await clickNode(tid, sendBtn.backendDOMNodeId);

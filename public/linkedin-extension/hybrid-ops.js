@@ -186,20 +186,43 @@ var HybridOps = globalThis.HybridOps || (function () {
         target: { tabId: tabId },
         func: function (msg) {
           // Poll up to 8s for the message textbox to appear after the dialog opens.
-          // If still missing, try clicking a "Messaggia"/"Message" button to open the
-          // composer, then poll again. This handles slow LinkedIn UI loads.
+          // If still missing, try clicking the profile-scoped "Messaggia"/"Message"
+          // button (including the "Altro/More" menu), then poll again.
           function findBox() {
-            return document.querySelector("div[role='textbox'][contenteditable='true']")
-              || document.querySelector("[contenteditable='true'][aria-label*='message' i]")
-              || document.querySelector("[contenteditable='true'][aria-label*='messag' i]");
+            const boxes = Array.from(document.querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']"));
+            return boxes.find(function (el) {
+              const visible = el.offsetParent !== null || el.getClientRects().length > 0;
+              if (!visible) return false;
+              const text = [
+                el.getAttribute("aria-label") || "",
+                el.getAttribute("aria-placeholder") || "",
+                el.getAttribute("data-placeholder") || "",
+                el.getAttribute("placeholder") || "",
+                el.className || "",
+                el.closest("[class*='msg-form'], .msg-form, [role='dialog']") ? " msg-form" : "",
+              ].join(" ");
+              return el.getAttribute("role") === "textbox"
+                || /message|messag|messaggio|scrivi|invia|write|msg-form/i.test(text);
+            }) || null;
           }
           function findMessageBtn() {
-            return Array.from(document.querySelectorAll("button, a")).find(function (b) {
+            const root = document.querySelector("main") || document.body;
+            return Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']")).find(function (b) {
+              if (!(b.offsetParent !== null || b.getClientRects().length > 0)) return false;
               const t = (b.textContent || "").trim();
               const al = (b.getAttribute("aria-label") || "").trim();
               return /^(message|messaggia)$/i.test(t)
-                || /^(invia messaggio|send message)$/i.test(t)
-                || /messaggia\s|message\s/i.test(al);
+                || /^(messaggio|scrivi|invia messaggio|send message)$/i.test(t)
+                || /messaggia|messaggio|message|send message/i.test(al);
+            });
+          }
+          function findMoreBtn() {
+            const root = document.querySelector("main") || document.body;
+            return Array.from(root.querySelectorAll("button, [role='button']")).find(function (b) {
+              if (!(b.offsetParent !== null || b.getClientRects().length > 0)) return false;
+              const t = (b.textContent || "").trim();
+              const al = (b.getAttribute("aria-label") || "").trim();
+              return /^(more|altro|più)$/i.test(t) || /^(more actions|altro|più azioni)/i.test(al);
             });
           }
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -213,6 +236,18 @@ var HybridOps = globalThis.HybridOps || (function () {
               if (mb && mb.offsetParent !== null) {
                 mb.click();
                 for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              }
+            }
+            if (!msgBox) {
+              const more = findMoreBtn();
+              if (more) {
+                more.click();
+                await sleep(800);
+                const mb = findMessageBtn();
+                if (mb) {
+                  mb.click();
+                  for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+                }
               }
             }
             if (!msgBox) return { success: false, error: "Fallback: no textbox found" };

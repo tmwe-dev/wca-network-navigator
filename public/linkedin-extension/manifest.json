@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.13",
-  "description": "Fix extractProfile: scoped a <main>, blacklist nav (no più 'Nome: 0 notifiche'), headline+location anche da AX tree.",
+  "version": "3.9.14",
+  "description": "Fix invio LinkedIn: textbox composer più robusto, supporto dialog e menu Altro/More.",
   "permissions": [
     "cookies",
     "tabs",
