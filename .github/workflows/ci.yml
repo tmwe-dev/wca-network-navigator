@@ -25,13 +25,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - name: Lint public/ extensions (informational)
-        run: npm run lint:public || true
+        run: npm run lint:public
       - name: Typecheck public/ extensions (informational)
-        run: npm run typecheck:public || true
+        run: npm run typecheck:public
       - name: Debt budget check
         run: npm run debt:check
       - name: Security audit
-        run: npm audit --production --audit-level=high || true
+        run: npm audit --production --audit-level=high
 
   test:
     runs-on: ubuntu-latest
@@ -86,7 +86,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run E2E tests
-        run: npx playwright test --reporter=html || true
+        run: npx playwright test --reporter=html
         env:
           BASE_URL: http://localhost:5173
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
