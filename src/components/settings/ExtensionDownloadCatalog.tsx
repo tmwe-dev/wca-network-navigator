@@ -21,6 +21,7 @@ interface ExtensionDownloadCatalogProps {
 
 function VersionRow({ item }: { item: ExtensionCatalogItem }) {
   const [downloading, setDownloading] = useState(false);
+  const isDownloadable = item.current;
   const fallbackPaths = item.current
     ? item.filename.startsWith("whatsapp-extension-")
       ? ["/whatsapp-extension.zip"]
@@ -42,11 +43,12 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
       <Button
         variant="outline"
         size="sm"
-        disabled={downloading}
+        disabled={downloading || !isDownloadable}
         onClick={async () => {
+          if (!isDownloadable) return;
           setDownloading(true);
           try {
-            await downloadStaticExtensionZip(item.path, item.filename, fallbackPaths);
+            await downloadStaticExtensionZip(item.path, item.filename, fallbackPaths, item.version);
             toast.success(`Scaricato ${item.filename}`);
           } catch (error) {
             log.warn("download failed", { error: error instanceof Error ? error.message : String(error), item });
@@ -57,7 +59,7 @@ function VersionRow({ item }: { item: ExtensionCatalogItem }) {
         }}
       >
         {downloading ? <Loader2 className="animate-spin" /> : <Download />}
-        Scarica
+        {isDownloadable ? "Scarica" : "Archivio"}
       </Button>
     </div>
   );
