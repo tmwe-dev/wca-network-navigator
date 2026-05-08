@@ -239,10 +239,17 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             return null;
           }
+          function isInGlobalNav(el) {
+            return !!(el.closest("nav") ||
+                      el.closest("header[role='banner']") ||
+                      el.closest("[data-test-global-nav]") ||
+                      el.closest(".global-nav"));
+          }
           function findMessageBtn() {
             const root = document.querySelector("main") || document.body;
             return Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']")).find(function (b) {
               if (!(b.offsetParent !== null || b.getClientRects().length > 0)) return false;
+              if (isInGlobalNav(b)) return false;
               const t = (b.textContent || "").trim();
               const al = (b.getAttribute("aria-label") || "").trim();
               return /^(message|messaggia)$/i.test(t)
@@ -290,7 +297,7 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             if (!msgBox) {
               const mb = findMessageBtn();
-              if (mb && mb.offsetParent !== null && !hasOpenComposer()) {
+              if (mb && mb.tagName !== "A" && mb.offsetParent !== null && !hasOpenComposer()) {
                 mb.click();
                 for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
               } else if (hasOpenComposer()) {
@@ -305,7 +312,7 @@ var HybridOps = globalThis.HybridOps || (function () {
                 more.click();
                 await sleep(800);
                 const mb = findMessageBtn();
-                if (mb && !hasOpenComposer()) {
+                if (mb && mb.tagName !== "A" && !hasOpenComposer()) {
                   mb.click();
                   for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
                 }
