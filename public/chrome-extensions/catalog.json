@@ -105,13 +105,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.22",
+    "latestVersion": "3.9.24",
     "items": [
+      {
+        "version": "3.9.24",
+        "filename": "linkedin-extension-3.9.24.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.24.zip",
+        "current": true,
+        "note": "P14 — Riusa il composer LinkedIn già aperto: non naviga fuori pagina, non apre una seconda chat, non forza focus; conserva invio P13."
+      },
       {
         "version": "3.9.22",
         "filename": "linkedin-extension-3.9.22.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.22.zip",
-        "current": true,
+        "current": false,
         "note": "P12 — Anti-double-overlay: clickMessage/sendMessage rifiutano di cliccare 'Messaggia' se un composer è già aperto. Niente più due finestre LinkedIn aperte contemporaneamente."
       },
       {
