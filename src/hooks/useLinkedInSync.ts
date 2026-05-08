@@ -173,10 +173,34 @@ export function useLinkedInSync() {
       });
 
       let newMsgs = 0;
+      // P2.1 — Counters & warnings per pannello qualità sync.
+      const stats = {
+        rawCandidates: Array.isArray(result.threads) ? result.threads.length : 0,
+        threadsAccepted: 0,
+        threadsDropped: { ui_label: 0, ghost_body: 0, dup_key: 0, missing_name: 0 },
+        messagesAccepted: 0,
+        messagesDropped: { ax_tree_direction_unknown: 0, ghost_body: 0, empty_text: 0 },
+        methods: { optimus: 0, structural: 0, ax_tree: 0, unknown: 0 } as Record<string, number>,
+        confidenceSum: 0,
+        confidenceCount: 0,
+        warnings: [] as string[],
+      };
+      const addWarn = (w: string) => { if (!stats.warnings.includes(w)) stats.warnings.push(w); };
+      const tallyMethod = (m?: string | null) => {
+        const k = (m || "unknown").toLowerCase();
+        const bucket = k.startsWith("optimus") ? "optimus" : k.includes("ax") ? "ax_tree" : k.includes("structural") ? "structural" : "unknown";
+        stats.methods[bucket] = (stats.methods[bucket] || 0) + 1;
+      };
       for (const thread of threads) {
-        if (!thread.lastMessage || !thread.name) continue;
-        if (isUiLabel(thread.name)) continue;
-        if (isGhostBody(thread.lastMessage)) continue;
+        if (!thread.name) { stats.threadsDropped.missing_name++; continue; }
+        if (isUiLabel(thread.name)) { stats.threadsDropped.ui_label++; continue; }
+        if (!thread.lastMessage || isGhostBody(thread.lastMessage)) { stats.threadsDropped.ghost_body++; continue; }
+        stats.threadsAccepted++;
+        tallyMethod(thread.method);
+        if (typeof thread.confidence === "number") { stats.confidenceSum += thread.confidence; stats.confidenceCount++; }
+        if (!thread.profileUrl && !thread.linkedinId && !thread.profileId) addWarn("profile_url_missing");
+        if (thread.method === "ax_tree") addWarn("ax_tree_missing_last_message");
+        if (thread.method === "structural" && thread.unread === undefined) addWarn("structural_unread_low_confidence");
 
         await throttle("linkedin", "read", `Preview: ${thread.name}`);
         // 1) Salva sempre il preview della sidebar.
@@ -253,6 +277,8 @@ export function useLinkedInSync() {
                 else if (thread.unread === true) direction = "inbound";
                 else {
                   log.debug("skip unknown-direction message", { method: m.method, sender: m.sender });
+                  stats.messagesDropped.ax_tree_direction_unknown++;
+                  addWarn("ax_tree_direction_unknown");
                   continue;
                 }
                 // Scope al thread + posizione del messaggio nella conversazione,
@@ -284,6 +310,9 @@ export function useLinkedInSync() {
                   } as never);
                   if (r.inserted) {
                     newMsgs++;
+                    stats.messagesAccepted++;
+                    tallyMethod(m.method);
+                    if (typeof m.confidence === "number") { stats.confidenceSum += m.confidence; stats.confidenceCount++; }
                     if (profileSlug) {
                       try {
                         await supabase.rpc("upsert_linkedin_address" as never, {
@@ -319,8 +348,22 @@ export function useLinkedInSync() {
       } else if (!silent) {
         toast.info(`Nessun nuovo messaggio (${threads.length} thread analizzati, già in DB o filtrati)`);
       }
+      const avgConfidence = stats.confidenceCount > 0 ? stats.confidenceSum / stats.confidenceCount : 0;
+      const summary = {
+        newMessages: newMsgs,
+        rawCandidates: stats.rawCandidates,
+        threadsAccepted: stats.threadsAccepted,
+        threadsDropped: stats.threadsDropped,
+        messagesAccepted: stats.messagesAccepted,
+        messagesDropped: stats.messagesDropped,
+        methods: stats.methods,
+        avgConfidence,
+        warnings: stats.warnings,
+        at: Date.now(),
+      };
+      log.info("li sync summary", summary);
       window.dispatchEvent(new CustomEvent("li-sync-completed", {
-        detail: { newMessages: newMsgs },
+        detail: summary,
       }));
       window.dispatchEvent(new CustomEvent("channel-sync-done", { detail: { channel: "linkedin" } }));
       setLastSyncAt(Date.now());
