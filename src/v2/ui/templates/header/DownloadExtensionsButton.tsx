@@ -6,14 +6,30 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  LINKEDIN_EXTENSION_REQUIRED_VERSION,
+  WHATSAPP_EXTENSION_REQUIRED_VERSION,
+} from "@/lib/whatsappExtensionZip";
 
+// Sempre file VERSIONATI: il filename cambia a ogni release, quindi non si scontra
+// mai con un .zip vecchio già scaricato dall'utente, e bypassa la cache HTTP.
 const FILES: Array<{ url: string; name: string; label: string }> = [
-  { url: "/whatsapp-extension.zip", name: "whatsapp-extension.zip", label: "WhatsApp" },
-  { url: "/linkedin-extension.zip", name: "linkedin-extension.zip", label: "LinkedIn" },
+  {
+    url: `/chrome-extensions/whatsapp/whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`,
+    name: `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`,
+    label: `WhatsApp v${WHATSAPP_EXTENSION_REQUIRED_VERSION}`,
+  },
+  {
+    url: `/chrome-extensions/linkedin/linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
+    name: `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
+    label: `LinkedIn v${LINKEDIN_EXTENSION_REQUIRED_VERSION}`,
+  },
 ];
 
 async function downloadOne(url: string, filename: string): Promise<void> {
-  const res = await fetch(url, { cache: "no-store" });
+  // Cache-buster via query: alcuni proxy ignorano cache:no-store sul fetch.
+  const bust = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  const res = await fetch(bust, { cache: "no-store" });
   if (!res.ok) throw new Error(`${filename}: HTTP ${res.status}`);
   const blob = await res.blob();
   const href = URL.createObjectURL(blob);
