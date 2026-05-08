@@ -57,51 +57,20 @@ var TabManager = globalThis.TabManager || (function () {
     return new Promise(function (r) { setTimeout(r, ms); });
   }
 
-  // ── Get or create the dedicated AUTOMATION WINDOW (non-focused) ──
-  // Open directly on a real LinkedIn URL so the window never contains
-  // a stray about:blank tab (which used to pair with the real LI tab
-  // and break tab-lookups).
+  // ── Legacy automation window API ──
+  // Disabled: creating a separate window can spawn a blank placeholder tab and
+  // closes the extension popup. New tabs are now created as inactive tabs in
+  // the current browser window, after reusing any existing LinkedIn tab.
   async function getOrCreateAutomationWindow(initialUrl) {
     await loadOwnership();
-    if (_automationWindowId !== null) {
-      try {
-        const win = await chrome.windows.get(_automationWindowId);
-        if (win) return _automationWindowId;
-      } catch (e) {
-        _automationWindowId = null;
-      }
-    }
     try {
-      const startUrl = initialUrl && /^https?:\/\//i.test(initialUrl)
-        ? initialUrl
-        : "https://www.linkedin.com/feed/";
-      const win = await chrome.windows.create({
-        url: startUrl,
-        focused: false,
-        state: "minimized",
-        type: "normal",
-      });
-      _automationWindowId = win.id;
-      // Force user window back to focus (some platforms ignore focused:false)
-      try {
-        const allWins = await chrome.windows.getAll();
-        const userWin = allWins.find(function (w) { return w.id !== win.id && w.type === "normal"; });
-        if (userWin) await chrome.windows.update(userWin.id, { focused: true });
-      } catch (e) { /* ignore */ }
-      try {
-        if (win.tabs && win.tabs[0]) {
-          const t0 = win.tabs[0];
-          const url0 = t0.pendingUrl || t0.url || startUrl;
-          if (/linkedin\.com/i.test(url0)) markOwned(t0.id);
-        }
-      } catch (e) { /* ignore */ }
-      await saveOwnership();
-      return _automationWindowId;
-    } catch (e) {
-      console.warn("[LI TabMgr] Failed to create automation window:", e?.message);
       _automationWindowId = null;
-      return null;
+      await chrome.storage.session.remove(["li_automation_window"]);
+      await saveOwnership();
+    } catch (e) {
+      _automationWindowId = null;
     }
+    return null;
   }
 
   // ── Move tab into automation window (silent, no focus change) ──
