@@ -36,7 +36,8 @@ export function useNavBadgeCountsV2() {
     queryKey: ["v2", "nav-badge-counts"],
     queryFn: async (): Promise<NavBadgeCounts> => {
       const PENDING = ["pending", "queued", "scheduled"];
-      const COCKPIT = ["pending", "queued"];
+      // campaign_jobs.status enum: pending|in_progress|completed|skipped (no 'queued')
+      const COCKPIT = ["pending"];
 
       const [cestRes, cockpitRes, inboxRes, funnemailRes, agendaRes] =
         await Promise.all([
