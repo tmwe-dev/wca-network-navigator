@@ -168,6 +168,34 @@ Deno.serve(async (req) => {
 
     // 1) Cache check (skip se force)
     if (!body.force) {
+      // 1a) Cache utente-specifica (Sprint 4)
+      if (body.user_id) {
+        const { data: userCached } = await sb
+          .from("funnemail_scout_cache")
+          .select("*")
+          .eq("user_id", body.user_id)
+          .or(`email_address.ilike.${body.from_address},and(email_address.is.null,email_domain.eq.${domain})`)
+          .gt("expires_at", new Date().toISOString())
+          .order("cached_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (userCached) {
+          return jsonResp({
+            known: !!userCached.is_known_partner,
+            partner_id: userCached.partner_id,
+            intel: {
+              company_type: userCached.company_type,
+              country: userCached.country,
+              website: userCached.website,
+              role_guess: userCached.role_guess,
+              evidence: userCached.evidence ?? {},
+            },
+            cached: true,
+            cache_scope: "user",
+          }, 200, cors);
+        }
+      }
+      // 1b) Cache globale legacy (fallback)
       const { data: cached } = await sb
         .from("funnemail_sender_intel")
         .select("*")
@@ -186,6 +214,7 @@ Deno.serve(async (req) => {
             evidence: cached.evidence ?? {},
           },
           cached: true,
+          cache_scope: "global",
         }, 200, cors);
       }
     }
@@ -234,6 +263,28 @@ Deno.serve(async (req) => {
         scout_source: intel.scout_source,
         expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
       }, { onConflict: "email_domain" });
+
+    // 4b) Cache per-utente (Sprint 4) — non bloccante
+    if (body.user_id) {
+      try {
+        await sb
+          .from("funnemail_scout_cache")
+          .upsert({
+            user_id: body.user_id,
+            email_domain: domain,
+            email_address: null,
+            is_known_partner: intel.is_known_partner,
+            partner_id: intel.partner_id,
+            company_type: intel.company_type,
+            country: intel.country,
+            website: intel.website,
+            role_guess: intel.role_guess,
+            evidence: intel.evidence,
+            scout_source: intel.scout_source,
+            expires_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
+          }, { onConflict: "user_id,email_domain,email_address" });
+      } catch (_) { /* fail-safe */ }
+    }
 
     return jsonResp({
       known: intel.is_known_partner,
