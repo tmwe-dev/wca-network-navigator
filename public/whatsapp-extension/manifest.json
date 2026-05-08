@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WCA WhatsApp Bridge v5.10",
-  "version": "5.10.13",
-  "description": "Dedup fix: trust execCommand insertText, no fallback paste when insert succeeded (no more duplicated messages).",
+  "version": "5.10.14",
+  "description": "Insert cascade with DOM verify: paste → execCommand → textContent. No duplicate, no failed send.",
   "permissions": [
     "tabs",
     "activeTab",
