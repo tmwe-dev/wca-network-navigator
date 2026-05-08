@@ -377,6 +377,7 @@ var TabManager = globalThis.TabManager || (function () {
     getBestExistingWaTab: getBestExistingWaTab,
     getOrCreateWaTab: getOrCreateWaTab,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
+    getAutomationWindowId: function () { return _automationWindowId; },
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     isOwned: isOwned,
     activateAndStabilize: activateAndStabilize,

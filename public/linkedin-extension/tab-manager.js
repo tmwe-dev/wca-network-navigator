@@ -349,6 +349,7 @@ var TabManager = globalThis.TabManager || (function () {
     getLinkedInTab: getLinkedInTab,
     getTabId: getTabId,
     getOrCreateAutomationWindow: getOrCreateAutomationWindow,
+    getAutomationWindowId: function () { return _automationWindowId; },
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
