@@ -43,6 +43,7 @@ const SUB_LABELS: Record<string, string> = {
   sorting: "Approvazioni",
   agents: "Agenti",
   "prompt-lab": "Prompt Lab",
+  lab: "Lab & Verifiche",
   kb: "Knowledge Base",
   "kb-supervisor": "Knowledge Base",
   control: "AI Control",

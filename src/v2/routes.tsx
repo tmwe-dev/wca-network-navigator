@@ -45,6 +45,7 @@ const DiagnosticsPage = lazy(() => import("./ui/pages/DiagnosticsPage").then((m)
 const ImportPage = lazy(() => import("./ui/pages/ImportPage").then((m) => ({ default: m.ImportPage })));
 const StaffPage = lazy(() => import("./ui/pages/StaffPage").then((m) => ({ default: m.StaffPage })));
 const AiTestHubPage = lazy(() => import("./ui/pages/AiTestHubPage").then((m) => ({ default: m.AiTestHubPage })));
+const LabPage = lazy(() => import("./ui/pages/LabPage").then((m) => ({ default: m.LabPage })));
 const KnowledgeBasePage = lazy(() => import("./ui/pages/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
 const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })));
 const InreachPage = lazy(() => import("./ui/pages/InreachPage").then((m) => ({ default: m.InreachPage })));
@@ -304,6 +305,8 @@ export function V2Routes(): React.ReactElement {
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
           <Route path="ai-staff/lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
           <Route path="ai-test-hub" element={guardedPage(AiTestHubPage, "AiTestHub")} />
+          {/* Lab & Verifiche — hub unificato (scenari, e2e, diagnostica, telemetria, ext, design) */}
+          <Route path="lab" element={guardedPage(LabPage, "Lab")} />
           {/* Legacy → canonical /v2/email/forge */}
           <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
           <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
