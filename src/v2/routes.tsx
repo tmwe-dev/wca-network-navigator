@@ -44,7 +44,7 @@ const SettingsPage = lazy(() => import("./ui/pages/SettingsPage").then((m) => ({
 const DiagnosticsPage = lazy(() => import("./ui/pages/DiagnosticsPage").then((m) => ({ default: m.DiagnosticsPage })));
 const ImportPage = lazy(() => import("./ui/pages/ImportPage").then((m) => ({ default: m.ImportPage })));
 const StaffPage = lazy(() => import("./ui/pages/StaffPage").then((m) => ({ default: m.StaffPage })));
-const AILabPage = lazy(() => import("./ui/pages/AILabPage").then((m) => ({ default: m.AILab })));
+const AiTestHubPage = lazy(() => import("./ui/pages/AiTestHubPage").then((m) => ({ default: m.AiTestHubPage })));
 const KnowledgeBasePage = lazy(() => import("./ui/pages/KnowledgeBasePage").then((m) => ({ default: m.KnowledgeBasePage })));
 const KBSupervisorPage = lazy(() => import("./ui/pages/KBSupervisorPage").then((m) => ({ default: m.KBSupervisorPage })));
 const InreachPage = lazy(() => import("./ui/pages/InreachPage").then((m) => ({ default: m.InreachPage })));
@@ -302,7 +302,8 @@ export function V2Routes(): React.ReactElement {
           {/* AI Staff + figli */}
           <Route path="ai-staff" element={guardedPage(StaffPage, "AIStaff")} />
           <Route path="ai-staff/kb-supervisor" element={guardedPage(KBSupervisorPage, "KBSupervisor")} />
-          <Route path="ai-staff/lab" element={guardedPage(AILabPage, "AILab")} />
+          <Route path="ai-staff/lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
+          <Route path="ai-test-hub" element={guardedPage(AiTestHubPage, "AiTestHub")} />
           {/* Legacy → canonical /v2/email/forge */}
           <Route path="ai-staff/email-forge" element={<Navigate to="/v2/email/forge" replace />} />
           <Route path="ai-staff/prompt-lab" element={guardedPage(PromptLabPage, "PromptLab")} />
@@ -319,7 +320,7 @@ export function V2Routes(): React.ReactElement {
           <Route path="staff" element={<Navigate to="/v2/ai-staff" replace />} />
           <Route path="knowledge-base" element={<Navigate to="/v2/settings/kb" replace />} />
           <Route path="kb-supervisor" element={<Navigate to="/v2/settings/kb" replace />} />
-          <Route path="ai-lab" element={<Navigate to="/v2/ai-staff/lab" replace />} />
+          <Route path="ai-lab" element={<Navigate to="/v2/ai-test-hub" replace />} />
 
           {/* Research */}
           <Route path="research" element={guardedPage(RADashboardPage, "Research")} />
