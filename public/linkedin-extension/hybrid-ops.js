@@ -259,7 +259,22 @@ var HybridOps = globalThis.HybridOps || (function () {
                 }
               }
             }
-            if (!msgBox) return { success: false, error: "Fallback: no textbox found" };
+            if (!msgBox) {
+              // ── Diagnostic probe (read-only DOM snapshot) ──
+              const probe = {
+                href: location.href,
+                contenteditable: document.querySelectorAll("[contenteditable='true']").length,
+                roleTextbox: document.querySelectorAll("[role='textbox']").length,
+                msgOverlay: document.querySelectorAll(".msg-overlay-conversation-bubble, [class*='msg-overlay']").length,
+                dialogs: document.querySelectorAll("[role='dialog']").length,
+                dialogText: (document.querySelector("[role='dialog']")?.innerText || "").slice(0, 200),
+                dialogButtons: Array.from(document.querySelectorAll("[role='dialog'] button"))
+                  .slice(0, 5)
+                  .map(function (b) { return (b.textContent || "").trim().slice(0, 40); }),
+                hasMain: !!document.querySelector("main"),
+              };
+              return { success: false, error: "Fallback: no textbox found __probe__=" + JSON.stringify(probe) };
+            }
           msgBox.focus();
           // Use Selection API + InputEvent for text insertion
           let sel = window.getSelection();
