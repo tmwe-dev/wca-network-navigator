@@ -397,10 +397,10 @@ var HybridOps = globalThis.HybridOps || (function () {
 
   // ── Click Message button ──
   async function clickMessage(tabId) {
-    try {
-      const axResult = await withTimeout(AXTree.clickMessageButton(tabId), 6500, "AX clickMessage");
-      if (axResult && axResult.success) return axResult;
-    } catch (err) { console.debug("[LI Hybrid]", err?.message); }
+    // P2 — AX Tree DISABILITATO per clickMessage: cerca globalmente e finisce
+    // per cliccare "Messaging/Messaggi" della top-nav, navigando l'utente in
+    // /messaging/ invece di aprire il composer del profilo. Usiamo solo il
+    // fallback strutturale che filtra dentro <main> ed esclude la global-nav.
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
