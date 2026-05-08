@@ -7,7 +7,12 @@ import { useState } from "react";
 import { Download, Search, MessageSquare, Linkedin, Mail, FileText, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { downloadPartnerConnectExtensionZip, PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip";
+import {
+  downloadLinkedInExtensionZip,
+  downloadPartnerConnectExtensionZip,
+  LINKEDIN_EXTENSION_REQUIRED_VERSION,
+  PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION,
+} from "@/lib/whatsappExtensionZip";
 
 type ExtId = "partner-connect" | "whatsapp" | "linkedin" | "email" | "ra";
 
@@ -16,6 +21,7 @@ interface ExtensionDef {
   name: string;
   description: string;
   zipPath: string;
+  filename?: string;
   icon: typeof Download;
   badge?: string;
 }
@@ -40,8 +46,10 @@ const EXTENSIONS: ExtensionDef[] = [
     id: "linkedin",
     name: "LinkedIn Stealth Sync",
     description: "Sync messaggi LinkedIn, dispatch outreach e bypass manuale per inviti/connessioni.",
-    zipPath: "/linkedin-extension.zip",
+    zipPath: `/chrome-extensions/linkedin/linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
+    filename: `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`,
     icon: Linkedin,
+    badge: `v${LINKEDIN_EXTENSION_REQUIRED_VERSION}`,
   },
   {
     id: "email",
@@ -71,6 +79,12 @@ export default function ExtensionsPanel() {
         await downloadPartnerConnectExtensionZip();
         setCompleted((prev) => new Set(prev).add(ext.id));
         toast.success(`${ext.name} scaricata`, { description: "Decomprimi lo ZIP e caricalo in chrome://extensions" });
+        return;
+      }
+      if (ext.id === "linkedin") {
+        await downloadLinkedInExtensionZip();
+        setCompleted((prev) => new Set(prev).add(ext.id));
+        toast.success(`${ext.name} scaricata`, { description: `File: ${ext.filename ?? ext.zipPath}` });
         return;
       }
       const res = await fetch(ext.zipPath);
@@ -126,6 +140,7 @@ export default function ExtensionsPanel() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{ext.description}</p>
+                {ext.filename && <p className="mt-1 font-mono text-xs font-semibold text-primary">{ext.filename}</p>}
               </div>
               <Button
                 size="sm"

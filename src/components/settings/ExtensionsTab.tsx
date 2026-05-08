@@ -120,6 +120,9 @@ export function ExtensionsTab() {
                 <p className="text-xs text-muted-foreground">
                   Login automatico e invio messaggi LinkedIn · ultima v{LINKEDIN_EXTENSION_REQUIRED_VERSION}
                 </p>
+                <p className="mt-1 font-mono text-xs font-semibold text-primary">
+                  linkedin-extension-{LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip
+                </p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={async () => {
