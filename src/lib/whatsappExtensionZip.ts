@@ -5,7 +5,7 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.11";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.12";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.11";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,13 +19,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.11",
+    latestVersion: "5.10.12",
     items: [
+      {
+        version: "5.10.12",
+        filename: "whatsapp-extension-5.10.12.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.12.zip",
+        current: true,
+        note: "Fix finestre duplicate: niente automation window, riuso tab WhatsApp esistente, lock creazione tab",
+      },
       {
         version: "5.10.11",
         filename: "whatsapp-extension-5.10.11.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.11.zip",
-        current: true,
+        current: false,
         note: "Fix invio: typing via execCommand (Lexical), poll send button, fallback Enter",
       },
       {

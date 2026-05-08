@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.11",
+    "latestVersion": "5.10.12",
     "items": [
+      {
+        "version": "5.10.12",
+        "filename": "whatsapp-extension-5.10.12.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.12.zip",
+        "current": true,
+        "note": "Fix finestre duplicate: niente automation window, riuso tab WhatsApp esistente, lock creazione tab"
+      },
       {
         "version": "5.10.11",
         "filename": "whatsapp-extension-5.10.11.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.11.zip",
-        "current": true,
+        "current": false,
         "note": "Fix invio: typing via execCommand (Lexical), poll send button, fallback Enter"
       },
       {
