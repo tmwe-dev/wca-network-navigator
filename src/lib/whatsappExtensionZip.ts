@@ -5,8 +5,8 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.2";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.2";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.3";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.3";
 
 const WHATSAPP_EXTENSION_CURRENT_FILENAME = `whatsapp-extension-${WHATSAPP_EXTENSION_REQUIRED_VERSION}.zip`;
 const LINKEDIN_EXTENSION_CURRENT_FILENAME = `linkedin-extension-${LINKEDIN_EXTENSION_REQUIRED_VERSION}.zip`;
@@ -19,13 +19,20 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.2",
+    latestVersion: "5.10.3",
     items: [
+      {
+        version: "5.10.3",
+        filename: "whatsapp-extension-5.10.3.zip",
+        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.3.zip",
+        current: true,
+        note: "Rimappa DOM invio manuale (Optimus send_form)",
+      },
       {
         version: "5.10.2",
         filename: "whatsapp-extension-5.10.2.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.2.zip",
-        current: true,
+        current: false,
         note: "Fix selettore search box WA (chat-list-search-container)",
       },
       {
@@ -53,13 +60,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.2",
+    latestVersion: "3.9.3",
     items: [
+      {
+        version: "3.9.3",
+        filename: "linkedin-extension-3.9.3.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.3.zip",
+        current: true,
+        note: "Rimappa DOM invio manuale (Optimus relearn messaging/profile)",
+      },
       {
         version: "3.9.2",
         filename: "linkedin-extension-3.9.2.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.2.zip",
-        current: true,
+        current: false,
         note: "Optimus V2.1 — bridge AI ora trova la webapp anche dentro iframe (editor Lovable)",
       },
       {
