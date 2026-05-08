@@ -25,6 +25,46 @@ var Actions = globalThis.Actions || (function () {
       // P1/P9 — Forziamo la tab attiva e in focus prima di scrivere.
       try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { /* ignore */ }
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      // P11 — Anti-mis-recipient: chiudiamo eventuali msg-overlay-conversation-bubble
+      // (chat fluttuanti) di conversazioni precedenti, altrimenti il composer
+      // trovato da sendMessage potrebbe essere quello della chat aperta prima
+      // (ad es. la pagina che era attiva quando il test è partito).
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            try {
+              var overlays = document.querySelectorAll(
+                ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              );
+              for (var i = 0; i < overlays.length; i++) {
+                var ov = overlays[i];
+                // Cerca pulsante chiudi dentro l'overlay
+                var closeBtn = ov.querySelector(
+                  "button[aria-label*='hiudi' i], button[aria-label*='lose' i], button[data-control-name*='close' i]"
+                );
+                if (closeBtn) { try { closeBtn.click(); } catch (e) {} continue; }
+                try { ov.remove(); } catch (e) {}
+              }
+              return true;
+            } catch (e) { return false; }
+          },
+        });
+      } catch (e) { /* best-effort */ }
+      // Attendi che gli overlay vengano rimossi dal DOM
+      await TabManager.sleep(400);
+      // P11 — Verifica URL: dopo navigate dobbiamo essere sul profilo richiesto
+      // (o su un /messaging/thread/ derivato). Altrimenti abortiamo.
+      try {
+        const tabInfo = await chrome.tabs.get(tab.id);
+        const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+        const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
+        const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
+        const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
+        if (!isThreadUrl && !onTarget && !onThread) {
+          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
+        }
+      } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
       if (!isThreadUrl) {
         const clickResult = await HybridOps.clickMessage(tab.id);
         if (!clickResult || !clickResult.success) {
