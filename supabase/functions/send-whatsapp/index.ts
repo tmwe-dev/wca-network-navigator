@@ -211,7 +211,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    
+    // ── Rubrica auto-populate (non-fatal) ──────────────────────────────
+    try {
+      const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", user.id).maybeSingle();
+      const operator_id = opRow?.id ?? null;
+      if (operator_id && recipient) {
+        const phone = String(recipient).replace(/[^\d+]/g, "");
+        await supabase.rpc("upsert_whatsapp_address", {
+          p_user_id: user.id,
+          p_operator_id: operator_id,
+          p_handle: String(recipient),
+          p_phone_e164: phone.startsWith("+") ? phone : (phone ? `+${phone}` : null),
+          p_display_name: body.recipient_name ?? null,
+          p_chat_thread_id: null,
+          p_direction: "outbound",
+          p_message_at: new Date().toISOString(),
+        });
+      }
+    } catch (rubricaErr) {
+      console.warn("[send-whatsapp] Rubrica upsert failed (non-fatal):", rubricaErr);
+    }
 
     if (partner_id) {
       await supabase.from("activities").insert({

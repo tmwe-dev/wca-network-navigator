@@ -255,7 +255,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    
+    // ── Rubrica auto-populate (non-fatal) ──────────────────────────────
+    try {
+      const { data: opRow } = await supabase.from("operators").select("id").eq("user_id", user.id).maybeSingle();
+      const operator_id = opRow?.id ?? null;
+      if (operator_id && recipient) {
+        const url = String(recipient);
+        const slugMatch = url.match(/linkedin\.com\/in\/([^/?#]+)/i);
+        const slug = slugMatch ? slugMatch[1] : url.replace(/[^a-z0-9-]/gi, "").toLowerCase();
+        if (slug) {
+          await supabase.rpc("upsert_linkedin_address", {
+            p_user_id: user.id,
+            p_operator_id: operator_id,
+            p_profile_slug: slug,
+            p_profile_url: slugMatch ? url : null,
+            p_display_name: body.recipient_name ?? null,
+            p_headline: null,
+            p_direction: "outbound",
+            p_message_at: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (rubricaErr) {
+      console.warn("[send-linkedin] Rubrica upsert failed (non-fatal):", rubricaErr);
+    }
 
     return new Response(JSON.stringify({
       success: true,
