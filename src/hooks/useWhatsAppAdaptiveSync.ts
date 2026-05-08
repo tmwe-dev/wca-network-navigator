@@ -43,8 +43,6 @@ const WA_GHOST_BODIES = new Set([
   "posizione", "contatto", "messaggio", "messaggio eliminato",
 ]);
 const MAX_MESSAGES_PER_THREAD = 200;
-// Stagger thread reads to reduce burst risk
-const PAUSE_BETWEEN_THREADS_MS = 800;
 const MAX_THREADS_PER_RUN = 40;
 
 function isAuthError(err: unknown): boolean {
@@ -60,10 +58,6 @@ function detectDirection(text: string): { direction: "inbound" | "outbound"; cle
     }
   }
   return { direction: "inbound", cleanText: text };
-}
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 interface SidebarChat {
