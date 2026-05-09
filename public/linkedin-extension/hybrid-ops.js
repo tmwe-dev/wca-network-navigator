@@ -404,7 +404,28 @@ var HybridOps = globalThis.HybridOps || (function () {
               if (!hasText()) {
                 try { document.execCommand("insertText", false, text); } catch (e) {}
               }
-              // STEP 3 — Fallback duro: textContent + InputEvent composed
+              // STEP 3 — Backup writer funzionante: Selection API + text node.
+              // Scrive visibilmente nel composer senza cliccare Invia.
+              if (!hasText()) {
+                try {
+                  var sel = window.getSelection();
+                  if (sel) {
+                    sel.selectAllChildren(input);
+                    sel.deleteFromDocument();
+                  }
+                  input.appendChild(document.createTextNode(text));
+                  sel = window.getSelection();
+                  if (sel) {
+                    var rr = document.createRange();
+                    rr.selectNodeContents(input);
+                    rr.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(rr);
+                  }
+                  input.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true, composed: true }));
+                } catch (e) { /* ignore */ }
+              }
+              // STEP 4 — Fallback duro: textContent + InputEvent composed
               if (!hasText()) {
                 try {
                   input.textContent = text;
