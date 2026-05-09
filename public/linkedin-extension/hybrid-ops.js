@@ -15,6 +15,48 @@ var HybridOps = globalThis.HybridOps || (function () {
     ]);
   }
 
+  function isMacPlatform() {
+    return new Promise(function (resolve) {
+      try { chrome.runtime.getPlatformInfo(function (info) { resolve(info && info.os === "mac"); }); }
+      catch (e) { resolve(false); }
+    });
+  }
+
+  async function composerCleared(tabId, timeoutMs) {
+    try {
+      const res = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: function (maxWait) {
+          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          function findBox() {
+            var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+            for (var s = 0; s < scopes.length; s++) {
+              var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var i = 0; i < boxes.length; i++) {
+                var el = boxes[i];
+                if (el.offsetParent !== null || el.getClientRects().length > 0) return el;
+              }
+            }
+            return null;
+          }
+          return (async function () {
+            var loops = Math.max(1, Math.ceil((maxWait || 3000) / 150));
+            for (var i = 0; i < loops; i++) {
+              var box = findBox();
+              if (!box) return true;
+              var current = (box.innerText || box.textContent || "").trim();
+              if (!current) return true;
+              await sleep(150);
+            }
+            return false;
+          })();
+        },
+        args: [timeoutMs || 3000],
+      });
+      return !!(res && res[0] && res[0].result);
+    } catch (e) { return false; }
+  }
+
   // ── InputNative: replaces execCommand for contenteditable ──
   function nativeInsertText(text) {
     // Use InputEvent API where available (modern Chrome)
