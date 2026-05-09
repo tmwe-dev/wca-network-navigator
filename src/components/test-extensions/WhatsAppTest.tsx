@@ -439,7 +439,22 @@ export function WhatsAppTest() {
       )}
       <div className="flex gap-2">
         <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1" />
-        <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia WA</Button>
+        {(() => {
+          const digits = sendPhone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
+          const phoneOk = digits.length >= 7;
+          const textOk = sendText.trim().length > 0;
+          const disabled = running || !phoneOk || !textOk;
+          const tip = !phoneOk
+            ? "Numero mancante o troppo corto: cerca il destinatario nel DB qui sopra"
+            : !textOk
+            ? "Inserisci il testo del messaggio"
+            : `Invia a +${digits}`;
+          return (
+            <Button onClick={testSendMessage} disabled={disabled} size="sm" variant="default" title={tip}>
+              📤 Invia WA{phoneOk ? ` → +${digits}` : ""}
+            </Button>
+          );
+        })()}
       </div>
       <Terminal logs={logs} />
     </div>
