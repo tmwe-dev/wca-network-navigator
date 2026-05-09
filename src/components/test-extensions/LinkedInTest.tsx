@@ -234,10 +234,10 @@ export function LinkedInTest() {
     } catch {
       log(`⚠️ Ping estensione fallito — installata?`, "warn");
     }
-    log(`📤 Invio messaggio LinkedIn...`);
+    log(`📤 Invio messaggio LinkedIn (test veloce: composer già aperto)...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    const r = await liMsg("sendMessage", { url: sendUrl, message: sendText }, 90000);
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method: "physical_click" }, 12000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -261,8 +261,8 @@ export function LinkedInTest() {
       } else {
         log(`❌ Invio fallito: ${errStr}`, "error");
       }
-      if (String(r?.error || "").includes("timeout")) {
-        log("💡 Suggerimento: assicurati che il tab LinkedIn sia attivo e visibile", "warn");
+      if (/timeout|composer_not_open|no_textbox/i.test(String(r?.error || ""))) {
+        log("💡 Apri manualmente la chat LinkedIn con il campo messaggio visibile, poi riprova.", "warn");
       }
     }
   });
