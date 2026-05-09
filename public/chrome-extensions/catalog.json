@@ -105,14 +105,30 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.48",
+    "latestVersion": "3.9.50",
     "items": [
+      {
+        "version": "3.9.50",
+        "filename": "linkedin-extension-3.9.50.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.50.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Due modalità composer: background_existing_composer (default safe, fail in ~4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground). Niente più attesa cieca 30s in background."
+      },
+      {
+        "version": "3.9.49",
+        "filename": "linkedin-extension-3.9.49.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.49.zip",
+        "releaseDate": "2026-05-09",
+        "current": false,
+        "notes": "Pipeline UNICA send/diagnostic: gate reale (HybridOps.waitForMessageComposer) anche nel path standard, write/send separati."
+      },
       {
         "version": "3.9.48",
         "filename": "linkedin-extension-3.9.48.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Fix composer gate stile WhatsApp: aspetta pagina pronta + textbox reale prima di copiare/inviare; fallback produzione solo dopo timeout diagnostico."
       },
       {
