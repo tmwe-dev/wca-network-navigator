@@ -1,13 +1,20 @@
 {
   "whatsapp": {
     "title": "WhatsApp Direct Send",
-    "latestVersion": "5.10.17",
+    "latestVersion": "5.10.18",
     "items": [
+      {
+        "version": "5.10.18",
+        "filename": "whatsapp-extension-5.10.18.zip",
+        "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
+        "current": true,
+        "note": "Quick win latenza: poll composer al posto di sleep(3s), skip reload se tab già sul send?phone= corretto, riallinea sempre il composer al testo. Whitelist remapSendDom. Target invio <1.5s."
+      },
       {
         "version": "5.10.17",
         "filename": "whatsapp-extension-5.10.17.zip",
         "path": "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
-        "current": true,
+        "current": false,
         "note": "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato."
       },
       {
