@@ -1073,7 +1073,8 @@ var Actions = globalThis.Actions || (function () {
   }
 
   async function diagnostic() {
-    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.UNKNOWN, "Diagnostica DOM");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
@@ -1119,7 +1120,8 @@ var Actions = globalThis.Actions || (function () {
   async function learnDom(pageType) {
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
     const url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
-    const tab = await TabManager.getLinkedInTab(url, false);
+    const tab = await TabManager.getLinkedInTab(url, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Learn DOM");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
     const schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
@@ -1139,7 +1141,8 @@ var Actions = globalThis.Actions || (function () {
       await AILearn.clearCache("profile");
 
       // 2) Re-learn messaging (schema usato da HybridOps.sendMessage)
-      const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+      const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+      if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Rimappa DOM invio");
       await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
       await TabManager.sleep(3000);
       try {
@@ -1158,7 +1161,8 @@ var Actions = globalThis.Actions || (function () {
       const messagingSchema = await AILearn.learnFromAI(tab.id, "messaging", Config.getUrl(), Config.getKey());
 
       // 3) Re-learn profile (schema usato per click "Message"/"Connect")
-      const profTab = await TabManager.getLinkedInTab("https://www.linkedin.com/in/me/", false);
+      const profTab = await TabManager.getLinkedInTab("https://www.linkedin.com/in/me/", false, false);
+      if (!profTab || !profTab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Rimappa DOM profilo");
       await TabManager.ensureTabVisibleAndWait(profTab.id, 1200);
       await TabManager.sleep(2500);
       const profileSchema = await AILearn.learnFromAI(profTab.id, "profile", Config.getUrl(), Config.getKey());
