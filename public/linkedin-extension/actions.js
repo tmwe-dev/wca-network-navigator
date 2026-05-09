@@ -121,9 +121,9 @@ var Actions = globalThis.Actions || (function () {
     return result;
   }
 
-  // DIAGNOSTIC ONLY — apre composer poi delega a HybridOps.sendMessageWithMethod
-  // per testare singolarmente i 3 metodi di click. method = "physical_click" |
-  // "form_submit" | "keyboard_shortcut".
+  // DIAGNOSTIC ONLY — manual-test path: usa SOLO il composer LinkedIn già aperto.
+  // Niente navigazione, niente click "Messaggia", niente apertura composer: se la
+  // chat non è pronta fallisce subito. Questo evita loop/click ripetuti su LinkedIn.
   async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
@@ -131,14 +131,12 @@ var Actions = globalThis.Actions || (function () {
     const target = profileUrl.replace(/\/$/, "");
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
-    const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-    // P21 — Come sopra: navighiamo sempre al target per evitare clickMessage
-    // sulla pagina sbagliata. allowCreate=false mantiene il no-new-tab.
-    const tab = await TabManager.getLinkedInTab(target, false, false);
+    // Manual diagnostic: riusa qualunque tab LinkedIn già aperta senza navigarla.
+    const tab = await TabManager.getLinkedInTab(target, true, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }
-    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    await TabManager.ensureTabVisibleAndWait(tab.id, 600);
     let composerAlreadyOpen = false;
     try {
       const composerProbe = await chrome.scripting.executeScript({
@@ -166,26 +164,13 @@ var Actions = globalThis.Actions || (function () {
     } catch (e) { currentUrl = ""; }
 
     const currentClean = currentUrl.split("?")[0].replace(/\/$/, "");
-    const onRequestedThread = isThreadUrl && currentClean === targetClean;
-    const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-    const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
-
-    if ((isThreadUrl && !onRequestedThread) || (!isThreadUrl && !onTarget && !onThread && !composerAlreadyOpen)) {
-      try { await chrome.tabs.update(tab.id, { url: target }); } catch (e) { /* ignore */ }
-      await TabManager.waitForLoad(tab.id, 20000);
-      await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-      composerAlreadyOpen = false;
+    if (isThreadUrl && currentClean !== targetClean) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_thread_open: il test manuale non naviga; apri il thread richiesto e riprova");
     }
-
-    if (!isThreadUrl && !composerAlreadyOpen) {
-      const clickResult = await HybridOps.clickMessage(tab.id);
-      if (!clickResult || !clickResult.success) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found");
-      }
-      await TabManager.sleep(3000);
-    } else {
-      await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
+    if (!composerAlreadyOpen) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: apri manualmente la chat LinkedIn con il campo messaggio visibile e riprova");
     }
+    await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
   }
 

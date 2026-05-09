@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.39",
-  "description": "Diagnostic fast-path: i metodi di click su /test-extensions partono istantaneamente sul composer LinkedIn già aperto. Invio produttivo invariato.",
+  "version": "3.9.40",
+  "description": "Manual test safe-path: ripristina il writer stabile nel composer già aperto e limita il diagnostico all'ultimo miglio senza navigare o ricliccare Messaggia.",
   "permissions": [
     "cookies",
     "tabs",
