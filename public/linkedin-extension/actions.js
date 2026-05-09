@@ -51,8 +51,16 @@ var Actions = globalThis.Actions || (function () {
       globalThis.__lvLiCoreInflight = { url: targetClean, msg: message, at: now };
     } catch (e) { /* best-effort */ }
 
-    // 1) Naviga focus-safe la tab LinkedIn esistente al target.
-    var tab = await TabManager.getLinkedInTab(target, false, false);
+    // 1) Tab LinkedIn: in background NON navigare via dal composer già aperto.
+    // Se la chat è già aperta (backup funzionante), la scrittura deve usare
+    // quella tab. Solo interactive può navigare/aprire il profilo e cliccare.
+    var tab = null;
+    var openedComposerTab = null;
+    if (mode === "background_existing_composer") {
+      openedComposerTab = await findLinkedInTabWithOpenComposer(targetClean);
+      if (openedComposerTab && openedComposerTab.id) tab = { id: openedComposerTab.id, reused: true };
+    }
+    if (!tab) tab = await TabManager.getLinkedInTab(target, false, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; l'invio non apre nuove tab e non cambia pagina");
     }
@@ -78,14 +86,15 @@ var Actions = globalThis.Actions || (function () {
       var currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
       var targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
       var onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-      if (!isThreadUrl && !onTarget) {
+      if (!isThreadUrl && !onTarget && !(mode === "background_existing_composer" && openedComposerTab)) {
         console.warn("[LI Core] wrong_recipient", { wanted: targetSlug, currentUrl: currentUrl });
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")");
       }
     } catch (e) { /* tolleriamo */ }
 
-    // 4) Pulisci overlay stale (chat fluttuanti precedenti).
-    try {
+    // 4) Pulisci overlay stale (solo interactive). In background non chiudere
+    // mai il composer già aperto: è proprio il prerequisito della modalità.
+    if (mode === "interactive_open_composer") try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: function () {
