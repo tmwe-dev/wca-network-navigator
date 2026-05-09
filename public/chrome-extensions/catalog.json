@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.43",
+    "latestVersion": "3.9.44",
     "items": [
+      {
+        "version": "3.9.44",
+        "filename": "linkedin-extension-3.9.44.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.44.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Background mode: i test diagnostici aprono da soli il composer focus-safe; nessun intervento manuale richiesto."
+      },
       {
         "version": "3.9.43",
         "filename": "linkedin-extension-3.9.43.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.43.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Composer-first fast test: Invia LI e i test isolati usano la tab con composer visibile, senza navigare e senza timeout 90s."
       },
       {
