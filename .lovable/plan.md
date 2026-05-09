@@ -1,39 +1,82 @@
-# Piano implementazione v3.9.38
+## Problema (verificato)
+
+I pulsanti diagnostici "🎯 CDP click" e "⌨️ Ctrl+Enter" della pagina test LinkedIn aspettano sempre ~25-30 secondi anche quando la chat è già aperta e visibile. Causa: dentro `sendMessageWithMethod` (in `public/linkedin-extension/hybrid-ops.js`) ci sono cicli di attesa pensati per "aprire da zero" il composer, che si sommano a 50+ secondi nel caso peggiore e a ~25-30s nel caso medio:
+
+- 20 × 250ms attesa `document.readyState`
+- 40 × 500ms attesa selettore `.msg-form`
+- 40 × 500ms retry `findBox()` per il textbox
+- 80 × 100ms retry `findSendBtn()` (solo per physical_click)
+- 15 × 100ms verifica `textboxCleared`
+- timeout esterno hard-coded a 25.000ms
+- cooldown UI fra un test e l'altro: 5 secondi
+
+In più la cascata CDP fa scorrere ANCHE quando il primo metodo già ha scritto il testo, perché il check `textbox_cleared` è troppo aggressivo. Risultato: l'utente preme un bottone, aspetta 30s, riprova, altri 30s. Inaccettabile per un pannello diagnostico.
+
+WhatsApp invece scrive e clicca in <1s perché parte dal presupposto che la chat sia aperta.
 
 ## Obiettivo
-Eliminare la regressione "non scrive il testo" rimuovendo definitivamente l'AX/AI writer dal percorso di invio produzione e rendendo il DOM writer deterministico con errori diagnostici chiari. Ridurre rumore log WhatsApp DOM learning.
 
-## Modifiche
+Allineare il comportamento dei test LinkedIn a quello di WhatsApp: **quando l'utente preme un metodo di click, l'azione parte immediatamente sulla finestra LinkedIn già aperta**. Niente "apertura composer a freddo", niente polling da minuti, niente cooldown lunghi. Se la finestra non è pronta, fallisce subito con messaggio chiaro (≤2s) invece di tenere bloccato il pannello.
 
-### 1. `public/linkedin-extension/hybrid-ops.js` — `HybridOps.sendMessage`
-- Rimuovere ogni residuo di `AILearn.typeMessageWithSchema` / `AXTree.typeMessage` dal percorso produttivo. AX usato solo per diagnostica passiva (read-only), mai per scrivere.
-- Sequenza unica deterministica:
-  1. `clickMessage` (già scoped al `section.pv-top-card`)
-  2. Localizza composer (`div.msg-form__contenteditable[contenteditable="true"]`)
-  3. `focus()` → svuota (`select all + delete`) → `execCommand('insertText', false, text)` con fallback `InputEvent` paste-like
-  4. **Verifica testuale**: `composer.textContent.trim() === text.trim()` → se no, errore `text_not_committed_to_composer` con dump diagnostico (innerHTML length, focus state)
-  5. **Verifica Send button**: trova bottone `button.msg-form__send-button:not([disabled])` → se disabilitato dopo 800ms, errore `send_button_not_enabled_after_write`
-  6. CDP physical click sul Send button; fallback Ctrl/Cmd+Enter solo se click CDP fallisce
-- Commento esplicito in testa alla funzione: politica "single writer, no AX in production".
+Il path produttivo `sendMessage` (cascata completa, retry, robustezza) NON viene toccato. Tocchiamo solo i pulsanti diagnostici di `/test-extensions`.
 
-### 2. `src/hooks/useWhatsAppDomLearning.ts`
-- `learn()` catch: passare da `log.error("learning error", {message})` a `log.warn("learning skipped", {reason, isAvailable, hasResult})` con diagnostica strutturata (motivo: timeout, no schema, extension unreachable). Non blocca, non rumoreggia in console come errore.
+## Modifiche (UI + extension diagnostico)
 
-### 3. Versione e packaging
-- `public/linkedin-extension/manifest.json` → `"version": "3.9.38"`, descrizione aggiornata.
-- Rigenerare `public/linkedin-extension.zip` e `public/chrome-extensions/linkedin/linkedin-extension-3.9.38.zip` con `nix run nixpkgs#zip`.
-- `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json`: 3.9.38 = current, 3.9.37 = inactive.
-- Validare manifest JSON parse prima di zippare.
+### 1. `public/linkedin-extension/hybrid-ops.js` — `sendMessageWithMethod`
+
+Trasformare la funzione in **fast-path**: presuppone che la tab LinkedIn sia attiva e il composer aperto.
+
+- Rimuovere il loop `readyState` (5s → 0).
+- Ridurre `findBox()` a max 6 × 100ms = 600ms; se non c'è, errore immediato `composer_not_open_assume_already_visible`.
+- Ridurre `findSendBtn()` a max 8 × 100ms = 800ms.
+- Ridurre `textboxCleared` a 8 × 75ms = 600ms (sufficiente per registrare l'invio riuscito).
+- Abbassare il timeout esterno da 25.000ms a **4.000ms** per i metodi DOM (`physical_click`, `form_submit`, `keyboard_shortcut`) e a **6.000ms** per i metodi CDP (che hanno round-trip debugger).
+- Per i metodi CDP, eseguire il click CDP **direttamente** senza passare prima dallo script in-page con `pending_cdp` (oggi è un round-trip extra inutile): se il composer è visibile, esegui subito `AXTree.clickSendButtonPhysical` / `AXTree.pressCtrlEnter`, poi verifica `composerCleared` con timeout 1500ms.
+- Mantenere intatta la scrittura del testo (cascata paste/insertText/textContent — già veloce).
+
+### 2. `src/components/test-extensions/LinkedInTest.tsx`
+
+- `LI_COOLDOWN_MS`: ridurre da 5000ms a **1000ms** per i test diagnostici di click. (Non tocchiamo i cooldown del produttivo.)
+- `testSendWithMethod`: timeout RPC da 90.000ms a **8.000ms**. Se scade, messaggio chiaro: "Finestra LinkedIn non pronta — assicurati che il composer sia aperto e visibile, poi ripremi".
+- Aggiungere prima del test un check rapido (1s) che la tab LinkedIn esiste e ha messaging aperto; altrimenti messaggio "apri prima la chat" senza consumare il cooldown.
+
+### 3. `public/linkedin-extension/manifest.json` + packaging
+
+- Bump `3.9.38` → `3.9.39`, descrizione: "Diagnostic fast-path: methods run instantly on the open composer".
+- Rigenerare `linkedin-extension.zip` e `linkedin-extension-3.9.39.zip`.
+- Aggiornare `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json` (3.9.39 = current).
 
 ## Vincoli (intoccabili)
-- No nuove tab LinkedIn (`allowCreate=false` ovunque).
-- No nuovi composer.
-- Bridge WhatsApp non toccato.
-- `clickMessage` resta scoped al `section.pv-top-card` (fix P22 v3.9.37 preservato).
-- `readThread`/`backfillThread` con `isProfileUrl=false` resta (fix P22 v3.9.37 preservato).
-- Nessuna scorciatoia di invio se la verifica testuale fallisce: errore esplicito, mai invio "alla cieca".
+
+- `HybridOps.sendMessage` produttivo: NON modificare timeout, cascata o verifiche.
+- WhatsApp bridge: non toccato.
+- `clickMessage` scoped a `section.pv-top-card` (fix P22): preservato.
+- Niente nuovi tab, niente nuovi composer, `allowCreate=false`.
+- Editorial review pipeline: non toccata (riguarda produzione, non i test).
+- Nessuna modifica a logica di invio reale: i test diagnostici restano diagnostici.
 
 ## Verifica post-deploy (richiesta all'utente)
-1. `chrome://extensions` → rimuovi 3.9.37 → carica 3.9.38.
-2. Test sequenza: Leggi thread → Backfill → Invio "test12".
-3. Conferma: testo presente nel composer + Send button attivo + 1 sola tab LinkedIn + 1 solo overlay.
+
+1. `chrome://extensions` → rimuovi 3.9.38 → carica 3.9.39.
+2. Apri una chat LinkedIn (qualsiasi profilo) e lascia il composer visibile.
+3. Su `/test-extensions/linkedin` premi "🎯 CDP click" → atteso: invio o errore in **≤2s**.
+4. Premi subito dopo "⌨️ Ctrl+Enter" → cooldown 1s, esegue subito.
+5. Se chiudi la chat e premi un metodo: errore chiaro entro 2s ("composer non aperto").
+
+## Dettaglio tecnico (per QA)
+
+| Parametro | Oggi | Dopo |
+|---|---|---|
+| Timeout esterno DOM methods | 25.000ms | 4.000ms |
+| Timeout esterno CDP methods | 25.000ms | 6.000ms |
+| Loop readyState | 5.000ms | rimosso |
+| Loop msg-form wait | 20.000ms | rimosso |
+| Loop findBox | 20.000ms | 600ms |
+| Loop findSendBtn | 8.000ms | 800ms |
+| textboxCleared | 1.500ms | 600ms |
+| Cooldown UI test | 5.000ms | 1.000ms |
+| RPC timeout client | 90.000ms | 8.000ms |
+| CDP round-trip extra | sì (pending_cdp) | no (diretto) |
+
+Tempo atteso per click "happy path": ~300-800ms. Tempo massimo "errore composer chiuso": ~2s.
+
