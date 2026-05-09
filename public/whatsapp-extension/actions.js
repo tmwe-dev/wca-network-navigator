@@ -1183,9 +1183,12 @@ var Actions = globalThis.Actions || (function () {
         const composer = findComposer();
         if (composer) {
           composer.focus();
-          // If composer is empty (text not pre-filled by ?text=), type it ourselves.
+          // Riallineamento robusto: se il composer contiene un testo diverso
+          // (es. residuo di un invio precedente allo stesso numero), lo
+          // riscriviamo. Se è vuoto, lo riempiamo. Se coincide già col
+          // messaggio richiesto, non tocchiamo nulla.
           const current = (composer.textContent || "").trim();
-          if (!current && messageText) {
+          if (messageText && current !== messageText.trim()) {
             try { H.modernClearAndType(composer, messageText); } catch (e) {}
           }
           startSendLoop(composer);
