@@ -264,6 +264,17 @@ var AXTree = globalThis.AXTree || (function () {
     });
   }
 
+  async function clickSendButtonPhysical(tabId) {
+    return await withDebugger(tabId, async function (tid) {
+      let nodes = await getFullTree(tid);
+      let sendBtn = findOne(nodes, "button", /^send$|^invia$|send message|invia messaggio/i);
+      if (!sendBtn) sendBtn = findOne(nodes, "button", /send|invia/i);
+      if (!sendBtn || !sendBtn.backendDOMNodeId) return { success: false, error: "AX: Send button not found" };
+      const clicked = await clickNodePhysical(tid, sendBtn.backendDOMNodeId);
+      return { success: clicked, method: "cdp_physical_click" };
+    });
+  }
+
   // Click Connect button
   async function clickConnect(tabId) {
     return await withDebugger(tabId, async function (tid) {
@@ -495,9 +506,11 @@ var AXTree = globalThis.AXTree || (function () {
     insertText: insertText,
     typeText: typeText,
     pressEnter: pressEnter,
+    pressCtrlEnter: pressCtrlEnter,
     extractProfile: extractProfile,
     clickMessageButton: clickMessageButton,
     typeMessage: typeMessage,
+    clickSendButtonPhysical: clickSendButtonPhysical,
     clickConnect: clickConnect,
     addNote: addNote,
     readInbox: readInbox,
