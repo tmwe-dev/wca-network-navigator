@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.46",
+    "latestVersion": "3.9.47",
     "items": [
+      {
+        "version": "3.9.47",
+        "filename": "linkedin-extension-3.9.47.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.47.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Fix composer_not_open: fallback automatico a HybridOps.sendMessage (writer produzione, attesa textbox 20s + cascata invio) quando il composer non si monta."
+      },
       {
         "version": "3.9.46",
         "filename": "linkedin-extension-3.9.46.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.46.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Fix profile_not_ready: pacchetto rigenerato con attesa tab complete, polling Messaggia esteso e click ottimistico."
       },
       {

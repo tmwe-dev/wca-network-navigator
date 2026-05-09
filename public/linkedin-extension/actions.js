@@ -229,14 +229,31 @@ var Actions = globalThis.Actions || (function () {
         const probe = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: function () {
-            var scopes = document.querySelectorAll(
+            // Deep query (include shadow roots) come fa HybridOps.sendMessageWithMethod.
+            function deepQueryAll(selector, root) {
+              var out = [];
+              var r = root || document;
+              try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+              var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+              for (var i = 0; i < all.length; i++) {
+                if (all[i].shadowRoot) {
+                  try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
+                }
+              }
+              return out;
+            }
+            var scopes = deepQueryAll(
               ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
             );
             for (var i = 0; i < scopes.length; i++) {
               var scope = scopes[i];
               var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
               if (!visible) continue;
-              if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
+              var boxes = scope.querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var j = 0; j < boxes.length; j++) {
+                var el = boxes[j];
+                if (el.offsetParent !== null || el.getClientRects().length > 0) return true;
+              }
             }
             return false;
           },
@@ -341,7 +358,21 @@ var Actions = globalThis.Actions || (function () {
       }
     }
     if (!composerAlreadyOpen) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: impossibile aprire il composer in background, ritenta");
+      // FALLBACK ROBUSTO (v3.9.47): invece di fallire con `composer_not_open`,
+      // deleghiamo al writer produzione `HybridOps.sendMessage` che ha già
+      // attesa textbox 20s + click "Messaggia"/"Altro" + cascata invio
+      // (physical click → form submit → Ctrl/Cmd+Enter → CDP). Nessun rischio
+      // di doppio invio: il metodo diagnostico non ha ancora scritto nulla.
+      console.warn("[LI Send] composer_not_open → fallback HybridOps.sendMessage");
+      var fallbackResult = await HybridOps.sendMessage(tab.id, message);
+      if (fallbackResult && fallbackResult.success) {
+        return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_not_open", attempted_method: method });
+      }
+      var fbErr = (fallbackResult && fallbackResult.error) || "unknown";
+      return Config.errorResponse(
+        Config.ERROR.MESSAGE_FAILED,
+        "composer_not_open + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")"
+      );
     }
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);

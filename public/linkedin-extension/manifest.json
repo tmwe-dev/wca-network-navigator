@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.46",
-  "description": "LinkedIn background send focus-safe: attende il profilo, prova click ottimistico e diagnostica profile_not_ready.",
+  "version": "3.9.47",
+  "description": "Fix composer_not_open: fallback robusto a HybridOps.sendMessage (writer produzione 20s + cascata invio) quando il composer è lento a montare.",
   "permissions": [
     "cookies",
     "tabs",
