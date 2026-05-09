@@ -33,6 +33,21 @@ export function WhatsAppTest() {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
+  // Pre-compila destinatario dall'ultimo invio test riuscito (localStorage).
+  // Così non serve cercare di nuovo il contatto a ogni apertura.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("wa_test_last_recipient");
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { phone?: string; name?: string; company?: string };
+      if (saved?.phone) {
+        setSendPhone(saved.phone);
+        setLastSentTo(saved.phone);
+        log(`📌 Destinatario di default: ${saved.name || saved.phone}${saved.company ? " — " + saved.company : ""} (${saved.phone}). Cambialo solo se vuoi testare un altro numero.`, "info");
+      }
+    } catch { /* ignore */ }
+  }, [log]);
+
   // Stream eventi Optimus nel terminal in tempo reale
   useEffect(() => {
     return subscribeOptimusEvents((e) => {
@@ -186,6 +201,15 @@ export function WhatsAppTest() {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
       setLastSentTo(target);
+      // Persisti ultimo destinatario per i test successivi (no DB lookup richiesto).
+      try {
+        localStorage.setItem("wa_test_last_recipient", JSON.stringify({
+          phone: target,
+          name: selectedRecipient?.name || null,
+          company: selectedRecipient?.company || null,
+          savedAt: new Date().toISOString(),
+        }));
+      } catch { /* ignore */ }
     } else {
       log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
