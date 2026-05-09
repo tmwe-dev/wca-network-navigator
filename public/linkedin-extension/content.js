@@ -26,7 +26,7 @@
   // Allowed actions whitelist
   const ALLOWED_ACTIONS = [
     "ping", "verifySession", "syncCookie", "autoLogin",
-    "extractProfile", "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
+    "extractProfile", "sendMessage", "sendMessageWithMethod", "probeComposer", "sendConnectionRequest",
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
     "backfillLinkedInThread",
     "diagnosticLinkedInDom", "learnDom", "remapSendDom", "getSendPlan", "setConfig",
