@@ -415,6 +415,36 @@ var HybridOps = globalThis.HybridOps || (function () {
               }
               return null;
             }
+            function firePhysicalClick(el) {
+              if (!el) return false;
+              try {
+                el.scrollIntoView({ block: "center", inline: "center" });
+                var rect = el.getBoundingClientRect();
+                var cx = rect.left + rect.width / 2;
+                var cy = rect.top + rect.height / 2;
+                var opts = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, button: 0 };
+                try { el.dispatchEvent(new PointerEvent("pointerover", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mouseover", opts));
+                try { el.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mousedown", opts));
+                try { el.dispatchEvent(new PointerEvent("pointerup", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mouseup", opts));
+                el.dispatchEvent(new MouseEvent("click", opts));
+                try { el.click(); } catch (e) {}
+                return true;
+              } catch (e) {
+                try { el.click(); return true; } catch (e2) { return false; }
+              }
+            }
+            function submitComposer() {
+              try {
+                var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form");
+                if (!form) return false;
+                if (typeof form.requestSubmit === "function") form.requestSubmit();
+                else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                return true;
+              } catch (e) { return false; }
+            }
             // P13 — Polling esteso a 8s (era 3s).
             let sendBtn = null;
             for (let i = 0; i < 80; i++) {
@@ -434,21 +464,30 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             var clickMethod = null;
             if (sendBtn) {
-              try { sendBtn.click(); clickMethod = "structural_fallback"; } catch (e) {}
+              if (firePhysicalClick(sendBtn)) clickMethod = "physical_click";
             }
             if (!sendBtn || !(await textboxCleared())) {
-              // P13 — Fallback finale: Ctrl+Enter (shortcut nativo LinkedIn).
+              if (submitComposer()) clickMethod = clickMethod || "form_submit_fallback";
+            }
+            if (!(await textboxCleared())) {
+              // P13 — Fallback finale: Ctrl/Cmd+Enter (shortcut nativo LinkedIn).
               try {
                 msgBox.focus();
+                var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
                 var ctrlEnterDown = new KeyboardEvent("keydown", {
                   key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: true, bubbles: true, cancelable: true,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
+                });
+                var ctrlEnterPress = new KeyboardEvent("keypress", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
                 });
                 var ctrlEnterUp = new KeyboardEvent("keyup", {
                   key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: true, bubbles: true, cancelable: true,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
                 });
                 msgBox.dispatchEvent(ctrlEnterDown);
+                msgBox.dispatchEvent(ctrlEnterPress);
                 msgBox.dispatchEvent(ctrlEnterUp);
                 clickMethod = clickMethod || "ctrl_enter_fallback";
               } catch (e) { /* best-effort */ }
@@ -734,24 +773,38 @@ var HybridOps = globalThis.HybridOps || (function () {
             for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
             if (!msgBox) return { success: false, error: "no_textbox_found", attempted_method: methodName };
 
-            // Write text (P5 + P13 wake-up)
-            msgBox.focus();
-            try {
-              var sel0 = window.getSelection();
-              if (sel0) { sel0.selectAllChildren(msgBox); }
-              document.execCommand("selectAll", false, null);
-              document.execCommand("delete", false, null);
-              document.execCommand("insertText", false, msg);
-            } catch (e) {
-              msgBox.textContent = msg;
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
-            }
-            try {
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true, cancelable: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
-              msgBox.dispatchEvent(new Event("change", { bubbles: true }));
-            } catch (e) { /* best-effort */ }
+            // Write text with the same WA-aligned verified cascade used by production sendMessage.
+            (function modernClearAndType(input, text) {
+              try { input.focus(); } catch (e) {}
+              try { if (typeof input.click === "function") input.click(); } catch (e) {}
+              try {
+                var r = document.createRange();
+                r.selectNodeContents(input);
+                var s2 = window.getSelection();
+                s2.removeAllRanges();
+                s2.addRange(r);
+                document.execCommand("delete", false);
+              } catch (e) {}
+              function hasText() {
+                var tc = (input.textContent || "");
+                return tc.indexOf(text) !== -1 || tc.trim() === text.trim();
+              }
+              if (!hasText()) {
+                try {
+                  var dt = new DataTransfer();
+                  dt.setData("text/plain", text);
+                  input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+                } catch (e) {}
+              }
+              if (!hasText()) { try { document.execCommand("insertText", false, text); } catch (e) {} }
+              if (!hasText()) {
+                try {
+                  input.textContent = text;
+                  input.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true, composed: true }));
+                } catch (e) {}
+              }
+            })(msgBox, msg);
+            try { msgBox.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) { /* best-effort */ }
 
             async function textboxCleared() {
               for (let i = 0; i < 15; i++) {

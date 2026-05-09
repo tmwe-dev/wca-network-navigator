@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.30",
-  "description": "P15 — Send LinkedIn allineato a WhatsApp: writer cascata paste→execCommand→textContent con verifica DOM + tab activate + chiusura overlay stale.",
+  "version": "3.9.31",
+  "description": "P16 — Thread test usa URL fisso/profilo e click invio LinkedIn con physical click + form submit + Ctrl/Cmd Enter fallback.",
   "permissions": [
     "cookies",
     "tabs",
