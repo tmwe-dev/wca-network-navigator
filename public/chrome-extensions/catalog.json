@@ -105,8 +105,15 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.41",
+    "latestVersion": "3.9.42",
     "items": [
+      {
+        "version": "3.9.42",
+        "filename": "linkedin-extension-3.9.42.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.42.zip",
+        "releaseDate": "2026-05-09",
+        "notes": "Ultimo miglio: native btn.click() + form.requestSubmit() fallback; anti-doppio-invio 2s; rimosso ensureTabVisibleAndWait dal path diagnostico"
+      },
       {
         "version": "3.9.41",
         "filename": "linkedin-extension-3.9.41.zip",

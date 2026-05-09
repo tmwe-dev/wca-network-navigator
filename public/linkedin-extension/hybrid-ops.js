@@ -816,17 +816,6 @@ var HybridOps = globalThis.HybridOps || (function () {
                 if (visible) return el;
               }
             }
-            var allBoxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox'], textarea");
-            for (var j = 0; j < allBoxes.length; j++) {
-              var box = allBoxes[j];
-              var boxVisible = box.offsetParent !== null || box.getClientRects().length > 0 || box.offsetWidth || box.offsetHeight;
-              if (!boxVisible) continue;
-              if (box.closest && box.closest("nav, header[role='banner'], .global-nav, [data-test-global-nav]")) continue;
-              var parent = box.closest && box.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [class*='msg-thread'], [class*='msg-convo']");
-              if (!parent) continue;
-              var text = [box.getAttribute("aria-label") || "", box.getAttribute("data-placeholder") || "", box.getAttribute("placeholder") || "", String(box.className || ""), String(parent.className || "")].join(" ");
-              if (/msg|message|messag|scrivi|write|invia|send|reply|rispondi/i.test(text)) return box;
-            }
             return null;
           }
           function findSendBtn() {
@@ -962,6 +951,22 @@ var HybridOps = globalThis.HybridOps || (function () {
                 try { sendBtn.dispatchEvent(new PointerEvent("pointerup", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
                 sendBtn.dispatchEvent(new MouseEvent("mouseup", opts));
                 sendBtn.dispatchEvent(new MouseEvent("click", opts));
+                // v3.9.42 — ULTIMO MIGLIO: gli eventi sintetici da soli non
+                // attivano sempre il React handler di LinkedIn. Aggiungiamo il
+                // .click() nativo (HTMLElement.click) come trigger primario,
+                // e in fallback un form.requestSubmit() solo se il composer
+                // non si svuota nei 600ms successivi.
+                try { sendBtn.click(); } catch (e) {}
+                await sleep(250);
+                var stillFull = (msgBox.innerText || msgBox.textContent || "").trim().length > 0;
+                if (stillFull) {
+                  try {
+                    var formFb = sendBtn.closest("form") || msgBox.closest("form");
+                    if (formFb && typeof formFb.requestSubmit === "function") {
+                      formFb.requestSubmit(sendBtn);
+                    }
+                  } catch (e) {}
+                }
               } catch (e) {
                 return { success: false, error: "physical_click_threw: " + e.message, attempted_method: methodName };
               }

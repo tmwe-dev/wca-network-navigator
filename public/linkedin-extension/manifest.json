@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.41",
+  "version": "3.9.42",
   "description": "Diagnostic tab picker: i test manuali usano la tab LinkedIn che ha davvero il composer visibile, senza navigare o ricliccare Messaggia.",
   "permissions": [
     "cookies",
