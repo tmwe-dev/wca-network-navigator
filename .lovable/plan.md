@@ -1,102 +1,103 @@
+Audit 1 — Tab/navigation
 
-# Allineare LinkedIn al pattern WhatsApp (e recuperare il backup funzionante)
+Problema certo:
+- `TabManager.getLinkedInTab()` dice “no new tab”, ma in realtà marca come owned qualsiasi tab LinkedIn esistente e poi può navigarla con `chrome.tabs.update({ url })`.
+- Questo evita `active:true`, quindi non ruba focus, ma cambia comunque la pagina LinkedIn aperta dall’utente.
+- Inoltre `safeCreate()` esiste ancora e può creare una tab inattiva se qualche chiamata usa `allowCreate !== false`; nel flusso invio oggi è disattivato, ma il codice resta una fonte di regressione.
+- Il caso più grave è `readThread/backfillThread`: se l’URL è un profilo, chiamano `getLinkedInTab(threadUrl, isProfileUrl, false)`. Con `isProfileUrl=true`, `skipNavigateIfSameDomain=true`, quindi può riusare una pagina LinkedIn già aperta senza navigare al profilo target. Poi `clickMessage()` lavora sulla pagina sbagliata o sul composer già aperto.
 
-## Diagnosi
+Effetto osservabile:
+- “Leggi thread” su profilo può leggere il thread/composer già aperto, non necessariamente quello richiesto.
+- “Backfill thread” stesso rischio.
+- La navigazione automatica al profilo ha risolto “button not found” ma ha reintrodotto cambio pagina/comportamenti incrociati.
 
-WhatsApp funziona perché segue un pattern affidabile e auto-verificato:
+Audit 2 — Doppio composer / doppia pagina interna
 
-1. **Helper unificato `__waH`** installato una volta per tab, con `qsDeep` (deep query attraverso shadow DOM) e `modernClearAndType` con **cascata verificata**: paste ClipboardEvent → execCommand insertText → textContent + InputEvent. Dopo ogni step controlla che il testo sia davvero nel DOM. Niente duplicazioni, niente invii a vuoto.
-2. **Apertura chat deterministica**: per i numeri E.164 naviga sempre a `/send?phone=…&text=…` (hard guard contro la chat sbagliata).
-3. **Verifica header chat** prima di scrivere (`headerMatches`): se l'header non corrisponde al destinatario, blocca.
-4. **Polling Send button** con check `aria-disabled` e fallback Enter sul composer.
+Problema certo:
+- La guardia `composerAlreadyOpen` è troppo generica: cerca `.msg-form`, `[role='dialog']`, overlay e qualsiasi composer visibile.
+- Se esiste già un composer aperto, il codice salta `clickMessage()` e scrive nel composer esistente, senza verificare che sia del destinatario corrente.
+- Se invece non lo riconosce, `clickMessage()` clicca “Invia messaggio/Messaggia” e LinkedIn apre un secondo composer. Questo spiega lo screenshot: due finestre messaggio aperte dentro LinkedIn.
 
-LinkedIn oggi NON segue questo pattern:
+Punto specifico:
+- In `HybridOps.clickMessage()`, se trova un composer qualunque ritorna `success: true, method: "composer_already_open"`.
+- In `Actions.sendLinkedInMessage()`, quel successo viene trattato come se fosse il composer corretto.
+- Manca una regola “un solo composer valido per quel destinatario”: o riuso verificato per nome/URL/thread, o chiusura dei composer stale, o abort diagnostico. Oggi è un riuso cieco.
 
-- `hybrid-ops.js → sendMessage` scrive con `execCommand("insertText")` + dispatch finto di `keydown space` per "svegliare" Draft.js. Su Draft.js moderno non basta: l'EditorState resta vuoto, Send rimane `aria-disabled`, il polling scade e il testo resta orfano nella casella.
-- Non c'è verifica reale tipo `hasText()` come in WA: l'estensione assume che il testo sia entrato e prosegue.
-- Non c'è cascata di metodi (paste → execCommand → InputEvent) con check DOM tra uno e l'altro.
-- `actions.js` corrente (post P14 "focus-safe") **non** attiva la tab e **non** chiude gli overlay precedenti. La versione di backup (`actions.primoTentativoLinkedInRiuscito.bak.js`) li chiudeva e attivava la tab → infatti funzionava, ma con doppio click (`clickMessage` + `sendMessage` che apriva un secondo overlay) → da qui il "due messaggi".
+Audit 3 — Invio testo scritto ma non spedito
 
-## Obiettivo
+Problema certo:
+- La produzione prova prima `AXTree.typeMessage()`. Questo inserisce testo e clicca il primo bottone AX “Send/Invia” trovato.
+- Se AX scrive ma non invia, la fallback DOM può riscrivere/gestire uno stato già contaminato.
+- Il metodo DOM verifica il successo solo guardando se la textbox si svuota. È meglio di prima, ma non basta: se il click non è trusted o React/LinkedIn non aggiorna lo stato, il testo resta lì e il metodo fallisce dopo aver lasciato il composer pieno.
+- I metodi diagnostici `form_submit` e `keyboard_shortcut` usano eventi sintetici (`SubmitEvent`, `KeyboardEvent`) che LinkedIn può ignorare. Il metodo più promettente resta CDP/physical click perché produce input più vicino a un evento reale.
 
-Allineare LinkedIn al pattern WhatsApp mantenendo le protezioni anti-doppio-invio già introdotte (P12 anti-double-overlay, P14 focus-safe) ma recuperando l'affidabilità del backup.
+Packaging/versioni
 
-## Piano di intervento
+Verificato:
+- `manifest.json` è JSON valido.
+- `public/linkedin-extension.zip` e `public/chrome-extensions/linkedin/linkedin-extension-3.9.36.zip` contengono manifest valido v3.9.36.
+- Non ci sono `.bak` dentro gli zip.
 
-### 1. Helper condiviso `__liH` (nuovo, su `content.js` LinkedIn)
+Problema residuo:
+- Nel sorgente c’è ancora `actions.primoTentativoLinkedInRiuscito.bak.js`, non incluso nello zip ma presente nel tree. Non rompe l’estensione installata, però confonde audit/grep e aumenta rischio di copiare codice vecchio.
 
-Specchio di `__waH`, installato una volta per tab via `executeScript`. Funzioni:
+Piano minimo di correzione
 
-- `qsDeep(sel)` / `qsaDeep(sel)` — deep query con shadow DOM (copia da WA).
-- `modernClearAndType(el, text)` — **identica cascata WA** con verifica `hasText()` dopo ogni step:
-  1. focus + selectAll + delete
-  2. **STEP 1**: ClipboardEvent paste con `DataTransfer text/plain` (Draft.js gestisce paste nativamente e aggiorna l'EditorState)
-  3. **STEP 2**: `execCommand("insertText")` se paste non ha attecchito
-  4. **STEP 3**: fallback duro `textContent = text` + `InputEvent("input", { inputType:"insertText", data, composed:true })`
-  5. dopo ogni step: `if (hasText()) break`
+1. Introdurre un contratto unico per tab LinkedIn
+- Nessuna azione LinkedIn deve creare tab nuove durante test/invio/lettura.
+- Se non esiste già una tab LinkedIn: errore esplicito.
+- Separare due modalità:
+  - `reuseOnlyNoNavigate`: usa la tab corrente senza cambiare pagina, per azioni diagnostiche non distruttive.
+  - `navigateExistingOnly`: naviga solo una tab LinkedIn già esistente, mai create, mai active:true.
+- Applicare esplicitamente questa scelta a `sendMessage`, `readThread`, `backfillThread`, `extractProfile`.
 
-### 2. Riscrivere `hybrid-ops.js → sendMessage` Level 3 (structural fallback)
+2. Bloccare il riuso cieco del composer
+- Prima di scrivere, rilevare tutti i composer aperti.
+- Se più di uno è aperto: non scrivere alla cieca.
+- Per profilo target:
+  - preferire apertura del composer dal bottone profilo target;
+  - se esiste già un composer, verificarne header/nome contro il target quando disponibile;
+  - se non verificabile, chiudere solo i composer stale oppure abortire con errore diagnostico chiaro.
+- Obiettivo: mai scrivere nel composer sbagliato e mai aprire due composer.
 
-Sostituire il blocco righe 343-440 con:
+3. Rendere l’invio deterministico e non regressivo
+- Disabilitare AX come primo metodo di produzione per invio, perché può scrivere ma non spedire e lascia stato sporco.
+- Produzione: usare una sequenza unica e osservabile:
+  1. trova textbox scoped al composer valido;
+  2. pulisce e scrive testo;
+  3. attende bottone `Invia` abilitato;
+  4. prova CDP physical click sul bottone;
+  5. verifica svuotamento textbox;
+  6. solo se fallisce, prova CDP Ctrl/Cmd+Enter;
+  7. se ancora fallisce, lascia errore senza dichiarare successo.
+- Lasciare `form_submit` e `keyboard_shortcut` solo come diagnostici, non fallback produzione.
 
-- `msgBox.focus()`
-- `__liH.modernClearAndType(msgBox, message)` (rimuove tutto l'attuale execCommand + dispatch finti)
-- Polling Send button **identico al pattern WA** (`startSendLoop`):
-  - max ~8s @ 100ms
-  - check `!disabled && aria-disabled !== "true"`
-  - quando abilitato → `btn.click()` + verifica `textboxCleared()` (già esiste, max 1.5s)
-  - se non si svuota → fallback Ctrl+Enter (già esiste)
-  - se ancora no → `success: false` con error chiaro
+4. Sistemare `readThread` e `backfillThread`
+- Se riceve `/messaging/thread/...`: navigare alla thread esatta su tab esistente.
+- Se riceve `/in/...`: non usare `skipNavigateIfSameDomain=true`; deve andare al profilo target o dichiarare che sta leggendo il composer già aperto solo se verificato.
+- Nel test UI, `Backfill thread` non deve chiedere URL se esiste `sendUrl` fisso valido: il fallback già esiste lato UI, ma il background rifiuta se `threadUrl` arriva vuoto. Va garantito che il target risolto venga sempre passato.
 
-I livelli AX Tree e AI Learn restano invariati (sono già alternative valide quando presenti).
+5. Pulizia anti-regressione
+- Non toccare WhatsApp.
+- Non toccare funzioni email/IMAP.
+- Non cambiare architettura UI.
+- Rimuovere dal pacchetto qualsiasi riferimento vecchio non necessario e rigenerare zip con versione nuova.
+- Validare prima del rilascio:
+  - manifest JSON valido;
+  - zip contiene solo file runtime;
+  - nessun `chrome.tabs.create` raggiungibile dai flussi di test LinkedIn;
+  - nessun `active:true` nei flussi LinkedIn;
+  - produzione non usa `form.requestSubmit()`;
+  - produzione non dichiara successo se textbox non si svuota.
 
-### 3. Recuperare le parti utili del backup `actions.primoTentativoLinkedInRiuscito.bak.js`
+File da toccare solo dopo approvazione
 
-Riportare nel `actions.js` corrente, **senza** reintrodurre il doppio invio:
+- `public/linkedin-extension/tab-manager.js`
+- `public/linkedin-extension/actions.js`
+- `public/linkedin-extension/hybrid-ops.js`
+- `public/linkedin-extension/manifest.json`
+- `public/chrome-extensions/catalog.json`
+- `src/lib/whatsappExtensionZip.ts`
+- rigenerazione zip LinkedIn
 
-- **Activate tab + focus** prima di scrivere (`chrome.tabs.update(tab.id, { active: true })` + `ensureTabVisibleAndWait`). Il P14 focus-safe veniva da un'esigenza diversa; per il send manuale serve la tab attiva o il composer non riceve davvero input nativi.
-- **Close stale overlays**: prima di cercare il composer chiude le `msg-overlay-conversation-bubble` di chat precedenti (questo evita il "wrong recipient" e il "secondo messaggio" del backup).
-- **Mantenere P12 anti-double-overlay**: se esiste già un composer aperto sulla pagina target, NON cliccare di nuovo "Messaggia" (resta com'è).
-- **Header verification**: prima di scrivere, leggere l'header del thread/composer (`#thread-detail h2`, `aria-label` del dialog, o nome contatto) e confrontarlo col profilo target. Se non matcha, abortire con errore esplicito (mutua dal pattern `awaitHeader` di WA, righe 1311-1322).
-
-### 4. Allineare la fase di "ricerca address" (apertura chat)
-
-Su WhatsApp il path E.164 è hard-coded all'URL `/send?phone=`. L'equivalente LinkedIn:
-
-- Se `profileUrl` è già un thread (`/messaging/thread/...`) → vai diretto, salta `clickMessage` (già fatto).
-- Se è un profilo `/in/...` → naviga, **chiudi overlay stale**, verifica `current URL contains slug`, poi `clickMessage` UNA volta (con guard `hasOpenComposer()`).
-- Aggiungere retry SINGOLO con re-navigation se la guardia URL intercetta drift (già nel backup, è sano — solo 1 retry per evitare doppi invii).
-
-### 5. Test e verifica
-
-- Riprendere la maschera di test (`WhatsAppTest` + `LinkedInTest`) con destinatario fisso (già implementato).
-- Test sequenza: 
-  1. Send su LI con tab già aperta sul profilo → atteso: composer scritto, Send abilitato, click, textbox svuotata.
-  2. Send su LI con tab su feed → atteso: navigazione + retry singolo + send.
-  3. Send su thread `/messaging/thread/...` → atteso: skip clickMessage, scrivi e invia.
-- Verificare che NON parta mai un doppio invio (regressione storica del backup).
-
-## File toccati
-
-```text
-public/linkedin-extension/content.js          → installa __liH (helper condiviso, copia da WA)
-public/linkedin-extension/hybrid-ops.js       → riscrive sendMessage Level 3 con __liH.modernClearAndType
-public/linkedin-extension/actions.js          → re-introduce activate tab + close stale overlays + header verify
-public/linkedin-extension/manifest.json       → bump versione (es. 3.9.30)
-```
-
-Nessuna modifica a edge function, DAL, UI, AI, prompt. Intervento isolato all'estensione browser (nodo critico "comunicazione esterna" → modifiche minime, locali, reversibili: la versione attuale resta come fallback in git).
-
-## Dettagli tecnici chiave
-
-**Perché il paste funziona dove execCommand fallisce su Draft.js**: Draft.js registra un handler `onPaste` sul root contenteditable che chiama `editor.update()` con il nuovo content tramite `Modifier.replaceText`. Questo aggiorna l'EditorState interno e di conseguenza il bottone Send viene abilitato. `execCommand("insertText")` tocca solo il DOM, non l'EditorState.
-
-**Perché la verifica `hasText()` step-by-step**: evita doppia scrittura ("ciaociao") quando uno step ha funzionato e il successivo riapplica. È esattamente il fix che ha stabilizzato WA.
-
-**Perché chiudere gli overlay stale**: senza chiusura, `findBox()` trova la textbox della chat fluttuante precedente (P11 antifrode + wrong recipient). Era proprio quello che generava il "due messaggi" nel backup.
-
-## Risultato atteso
-
-- LinkedIn manda il messaggio al primo tentativo, una volta sola, con Send realmente abilitato.
-- Stesso comportamento di WhatsApp: una sola maschera, un solo click, un solo invio.
-- Errori espliciti (no false positive) se composer non scrivibile o header non corrisponde.
+Questo piano è volutamente minimale: prima stabilizziamo tab/composer/invio, poi si torna ai test dei tre click.
