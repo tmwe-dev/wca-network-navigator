@@ -1,40 +1,30 @@
-## Problema
+Diagnosi secca: l’errore ora non è più il packaging né `profile_not_ready`. Il flusso arriva al click, ma `sendLinkedInMessageWithMethod` pretende che il composer sia già visibile prima di chiamare `HybridOps.sendMessageWithMethod`. Su LinkedIn il click su “Messaggia” può aprire il composer come overlay lento, dialog senza textbox iniziale, o thread `/messaging/thread/`; il probe attuale in `actions.js` è troppo stretto e fallisce prima che il writer robusto di `hybrid-ops.js` possa intervenire.
 
-Sul tab background, la pagina profilo LinkedIn non sempre finisce di renderizzare entro i **6 s** (20×300 ms) di polling attuale di `probeMessageButton`. Quando scade, l'estensione esce con `profile_not_ready` **senza nemmeno tentare il click**. Risultato: errore anche quando in realtà LinkedIn era a un soffio dal montare il bottone.
+Modifica proposta, unica e chirurgica:
 
-Inoltre il probe attuale è "tutto o niente": non aspetta che la tab sia in stato `complete`, e la heuristic `messaggi|message|...` può non matchare la lingua corrente (es. UI inglese senza match esatto del bottone profile-action principale).
+1. In `public/linkedin-extension/actions.js`, solo dentro `sendLinkedInMessageWithMethod`:
+   - sostituire il fail immediato `composer_not_open` con un fallback controllato verso `HybridOps.sendMessage(tab.id, message)`.
+   - Motivo: `HybridOps.sendMessage` ha già il percorso robusto: aspetta il textbox fino a ~20s, tenta click “Messaggia”, tenta menu “Altro”, scrive il testo, trova il bottone Invia, poi usa click/form/Ctrl-Enter/CDP fallback. È esattamente il percorso che serve quando il composer non si monta subito.
+   - Non duplico invii: il fallback parte solo se `composerAlreadyOpen === false`, quindi il metodo diagnostico non ha ancora scritto né inviato nulla.
 
-## Cosa cambio (solo `sendLinkedInMessageWithMethod` in `public/linkedin-extension/actions.js`)
+2. Sempre in `actions.js`, rendere `probeComposer()` più realistico:
+   - usare deep query con shadow root come fa `HybridOps.sendMessageWithMethod`.
+   - riconoscere composer solo se c’è una textbox visibile, non solo dialog/overlay.
+   - aggiungere diagnostica nell’errore finale solo se anche il fallback fallisce.
 
-Modifica chirurgica, isolata al test/invio "with method". Non tocco `sendLinkedInMessage` (outreach reale) né hybrid-ops/manifest.
+3. Packaging obbligatorio:
+   - bump versione LinkedIn a `3.9.47`.
+   - aggiornare `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json`.
+   - rigenerare `public/chrome-extensions/linkedin/linkedin-extension-3.9.47.zip` e `public/linkedin-extension.zip`.
+   - verificare dentro lo ZIP che ci sia davvero il fallback a `HybridOps.sendMessage`.
 
-### 1. Attesa "tab complete" prima del polling
-Subito dopo `ensureTabVisibleAndWait`, polling fino a 4 s su `chrome.tabs.get(tab.id).status === "complete"`. Dà al renderer il tempo di finire la navigazione anche in background, prima di iniziare a cercare il bottone.
+Cosa NON tocco:
+- nessuna rubrica, DB, dedup, KPI, statistiche outbound.
+- nessun cambio a `sendLinkedInMessage` produzione.
+- nessun cambio a Partner Connect.
+- nessun invio doppio: fallback solo prima di scrivere testo.
 
-### 2. Polling profilo più lungo e più tollerante
-- Da **6 s (20×300 ms)** a **15 s (30×500 ms)**: tab in background montano lenti.
-- `probeMessageButton`: oltre al testo, accettare anche **`a[href*='/messaging/compose']`**, **`a[href*='/messaging/thread/']`** scoped al main, e **`button[data-control-name*='message' i]`**. Estendere la regex con `messaggio`, `mensagem`, `wiadomość`.
-- Considerare "ready" anche se compare uno dei `pv-top-card` / `artdeco-card` con un `button` qualunque visibile + il bottone Connetti/Segui (segno che la hero card è renderizzata): in quel caso lo "More" potrebbe contenere il messaggio.
-
-### 3. Tentativo ottimistico anche se il probe scade
-Se dopo 15 s il bottone non è "visto" dal probe ma la tab è `complete`, **provare comunque** `HybridOps.clickMessage` una volta. `clickMessage` ha il suo scoping interno e a volte trova il bottone nascosto in un menu "More". Se anche quel click fallisce, allora ritornare `profile_not_ready` con il messaggio attuale. Così non penalizziamo i casi al limite.
-
-### 4. Messaggio errore più informativo
-Includere lo `status` ultimo della tab e la lunghezza dell'URL corrente nell'errore (es. `profile_not_ready (status=loading, url=/in/gianfranco-...)`), così se ricapita capiamo subito se è un problema di rete o di selettori.
-
-## Cosa NON tocco
-
-- `sendLinkedInMessage` (outreach reale, già funzionante).
-- `HybridOps.clickMessage` / `hybrid-ops.js`.
-- Manifest, versione estensione (resta **3.9.45**), background.js, ZIP. Solo reload card in `chrome://extensions`.
-- Hard guard `wrong_recipient`, dedup, rubrica, trigger DB.
-
-## File toccati
-
-- `public/linkedin-extension/actions.js` — solo dentro `sendLinkedInMessageWithMethod` (righe ~196–270).
-
-## Verifica
-
-1. Reload estensione in `chrome://extensions` (no rimuovi/reinstalla).
-2. `/test-extensions` → "Invia LI" sul profilo Gianfranco con tab LinkedIn aperta su feed.
-3. Atteso: o invio OK, o errore parlante con `status` + URL invece del generico `profile_not_ready`.
+Esito atteso:
+- `Invia LI` non si ferma più a `composer_not_open` quando il composer è lento.
+- Se LinkedIn impedisce davvero il composer, l’errore successivo sarà diagnostico dal writer robusto (`Fallback: no textbox found __probe__=...`) invece del generico “ritenta”.
+- Dopo approvazione: scaricare/reinstallare la nuova estensione `3.9.47`.
