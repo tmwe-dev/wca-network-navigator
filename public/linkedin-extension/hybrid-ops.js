@@ -879,6 +879,27 @@ var HybridOps = globalThis.HybridOps || (function () {
                 } catch (e) {}
               }
               if (!hasText()) { try { document.execCommand("insertText", false, text); } catch (e) {} }
+              // Backup writer 3.9.37: Selection API + text node. Questo è il
+              // punto stabile che scriveva nel campo; l'ultimo miglio resta separato.
+              if (!hasText()) {
+                try {
+                  var sel = window.getSelection();
+                  if (sel) {
+                    sel.selectAllChildren(input);
+                    sel.deleteFromDocument();
+                  }
+                  input.appendChild(document.createTextNode(text));
+                  sel = window.getSelection();
+                  if (sel) {
+                    var rr = document.createRange();
+                    rr.selectNodeContents(input);
+                    rr.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(rr);
+                  }
+                  input.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true, composed: true }));
+                } catch (e) {}
+              }
               if (!hasText()) {
                 try {
                   input.textContent = text;
@@ -887,6 +908,12 @@ var HybridOps = globalThis.HybridOps || (function () {
               }
             })(msgBox, msg);
             try { msgBox.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) { /* best-effort */ }
+
+            var writtenText = (msgBox.innerText || msgBox.textContent || "").trim();
+            var expectedText = String(msg || "").trim();
+            if (!expectedText || (writtenText.indexOf(expectedText) === -1 && writtenText !== expectedText)) {
+              return { success: false, error: "text_not_written", attempted_method: methodName, wrote_length: writtenText.length };
+            }
 
             async function textboxCleared() {
               // FAST-PATH: 8 × 75ms = 600ms (era 1.5s).
