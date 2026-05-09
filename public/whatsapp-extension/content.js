@@ -26,7 +26,7 @@
   var ALLOWED_ACTIONS = [
     "ping", "setConfig", "verifySession", "sendWhatsApp",
     "readUnread", "learnDom", "diagnosticDom", "readThread",
-    "backfillChat",
+    "backfillChat", "remapSendDom",
   ];
 
   var MAX_STRING_LENGTH = 5000;
