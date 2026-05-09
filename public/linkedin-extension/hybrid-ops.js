@@ -340,28 +340,52 @@ var HybridOps = globalThis.HybridOps || (function () {
               };
               return { success: false, error: "Fallback: no textbox found __probe__=" + JSON.stringify(probe) };
             }
-            // P5 — Scrittura affidabile: il composer LinkedIn (Draft.js) NON
-            // rileva appendChild manuale, lo state interno non aggiorna e il
-            // bottone Send resta disabilitato. document.execCommand è
-            // deprecato ma è l'unico metodo che aggiorna lo state React/Draft.
-            msgBox.focus();
+            // ── WA-aligned writer: cascata paste → execCommand → textContent
+            // con verifica DOM reale dopo ogni step (nessun doppio invio).
+            // Specchio di __waH.modernClearAndType in WhatsApp actions.js.
+            (function modernClearAndType(input, text) {
+              try { input.focus(); } catch (e) {}
+              try { if (typeof input.click === "function") input.click(); } catch (e) {}
+              // Clear current contents via selectAll + delete
+              try {
+                var r = document.createRange();
+                r.selectNodeContents(input);
+                var s2 = window.getSelection();
+                s2.removeAllRanges();
+                s2.addRange(r);
+                document.execCommand("delete", false);
+              } catch (e) { /* ignore */ }
+              function hasText() {
+                var tc = (input.textContent || "");
+                return tc.indexOf(text) !== -1 || tc.trim() === text.trim();
+              }
+              // STEP 1 — ClipboardEvent paste (Draft.js handler nativo aggiorna EditorState)
+              if (!hasText()) {
+                try {
+                  var dt = new DataTransfer();
+                  dt.setData("text/plain", text);
+                  var evt = new ClipboardEvent("paste", {
+                    clipboardData: dt, bubbles: true, cancelable: true,
+                  });
+                  input.dispatchEvent(evt);
+                } catch (e) { /* ignore */ }
+              }
+              // STEP 2 — execCommand insertText (legacy ma update Draft.js in alcuni build)
+              if (!hasText()) {
+                try { document.execCommand("insertText", false, text); } catch (e) {}
+              }
+              // STEP 3 — Fallback duro: textContent + InputEvent composed
+              if (!hasText()) {
+                try {
+                  input.textContent = text;
+                  input.dispatchEvent(new InputEvent("input", {
+                    inputType: "insertText", data: text, bubbles: true, composed: true,
+                  }));
+                } catch (e) { /* ignore */ }
+              }
+            })(msgBox, msg);
+            // Ping aggiuntivo per forzare validazione del bottone Send (no keydown finto).
             try {
-              var sel0 = window.getSelection();
-              if (sel0) { sel0.selectAllChildren(msgBox); }
-              document.execCommand("selectAll", false, null);
-              document.execCommand("delete", false, null);
-              document.execCommand("insertText", false, msg);
-            } catch (e) {
-              // Fallback estremo
-              msgBox.textContent = msg;
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
-            }
-            // P13 — Sveglia Draft.js: dispatch eventi per forzare l'abilitazione
-            // del bottone Send. execCommand da solo a volte non aggiorna lo state.
-            try {
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true, cancelable: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
               msgBox.dispatchEvent(new Event("change", { bubbles: true }));
             } catch (e) { /* best-effort */ }
             // Wait for the send button to become enabled (LinkedIn validates async).
