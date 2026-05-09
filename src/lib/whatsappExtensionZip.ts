@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.50";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.51";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.50",
+    latestVersion: "3.9.51",
     items: [
+      {
+        version: "3.9.51",
+        filename: "linkedin-extension-3.9.51.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.51.zip",
+        current: true,
+        note: "Fix background composer: passa mode dal bridge, non naviga via dal composer già aperto e non chiude overlay in background. Ripristina scrittura dai backup mantenendo interactive opt-in.",
+      },
       {
         version: "3.9.50",
         filename: "linkedin-extension-3.9.50.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.50.zip",
-        current: true,
+        current: false,
         note: "Due modalità composer: background_existing_composer (default safe, fail in ~4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground). Niente più attesa cieca 30s in background; UI test con probe + selettore modalità.",
       },
       {
