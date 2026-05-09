@@ -455,34 +455,33 @@ var Actions = globalThis.Actions || (function () {
       if (!clickResult || !clickResult.success) {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
       }
-      // Attendi montaggio composer fino a 8s (poll 250ms).
-      for (let i = 0; i < 32; i++) {
-        await TabManager.sleep(250);
-        if (await probeComposer()) { composerAlreadyOpen = true; break; }
-      }
+      const gateAfterClick = await waitForComposerReady(30000);
+      composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
-      // Thread URL: il composer monta da solo, dagli un attimo.
-      for (let i = 0; i < 12; i++) {
-        await TabManager.sleep(250);
-        if (await probeComposer()) { composerAlreadyOpen = true; break; }
-      }
+      // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
+      const threadGate = await waitForComposerReady(30000);
+      composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
-      // FALLBACK ROBUSTO (v3.9.47): invece di fallire con `composer_not_open`,
-      // deleghiamo al writer produzione `HybridOps.sendMessage` che ha già
-      // attesa textbox 20s + click "Messaggia"/"Altro" + cascata invio
-      // (physical click → form submit → Ctrl/Cmd+Enter → CDP). Nessun rischio
-      // di doppio invio: il metodo diagnostico non ha ancora scritto nulla.
-      console.warn("[LI Send] composer_not_open → fallback HybridOps.sendMessage");
-      var fallbackResult = await HybridOps.sendMessage(tab.id, message);
-      if (fallbackResult && fallbackResult.success) {
-        return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_not_open", attempted_method: method });
-      }
-      var fbErr = (fallbackResult && fallbackResult.error) || "unknown";
+      // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
+      // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
+      // che comunque scrive esclusivamente dopo aver trovato la textbox.
+      const finalGate = await waitForComposerReady(30000);
+      if (finalGate && finalGate.success) {
+        composerAlreadyOpen = true;
+      } else {
+        console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
+        var fallbackResult = await HybridOps.sendMessage(tab.id, message);
+        if (fallbackResult && fallbackResult.success) {
+          return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
+        }
+        var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
+        var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
       return Config.errorResponse(
         Config.ERROR.MESSAGE_FAILED,
-        "composer_not_open + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")"
+        "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
       );
+      }
     }
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
