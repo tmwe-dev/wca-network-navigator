@@ -740,11 +740,13 @@ var HybridOps = globalThis.HybridOps || (function () {
 
   // ────────────────────────────────────────────────────────────────────
   // sendMessageWithMethod — DIAGNOSTIC ONLY
-  // Apre composer + scrive testo (stessa logica di sendMessage P3+P5+P13),
-  // ma il click sull'invio usa SOLO il metodo richiesto. Niente cascata.
+  // FAST-PATH (v3.9.39): presuppone che il composer sia GIÀ aperto e visibile
+  // nella tab LinkedIn attiva. Niente attesa "apri da zero", niente polling lunghi.
+  // Se il composer non c'è, fallisce in <1s con messaggio chiaro.
   //   method = "physical_click" | "form_submit" | "keyboard_shortcut"
-  // Usato dai pulsanti di test in /test-extensions per capire quale dei
-  // tre metodi funziona meglio nel composer LinkedIn corrente.
+  //          | "cdp_physical_click" | "cdp_ctrl_enter"
+  // Per i metodi CDP eseguiamo direttamente la chiamata debugger, senza il
+  // round-trip "pending_cdp" (che oggi raddoppia la latenza).
   // ────────────────────────────────────────────────────────────────────
   async function sendMessageWithMethod(tabId, message, method) {
     const allowed = ["physical_click", "form_submit", "keyboard_shortcut", "cdp_physical_click", "cdp_ctrl_enter"];
@@ -760,6 +762,9 @@ var HybridOps = globalThis.HybridOps || (function () {
     } catch (e) { /* tolleriamo */ }
 
     try {
+      const isCdp = (method === "cdp_physical_click" || method === "cdp_ctrl_enter");
+      // Budget: 4s per metodi DOM in-page, 6s per metodi CDP (debugger round-trip).
+      const externalTimeout = isCdp ? 6000 : 4000;
       const fbRes = await withTimeout(chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (msg, methodName) {
@@ -818,15 +823,16 @@ var HybridOps = globalThis.HybridOps || (function () {
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
           return (async function () {
-            // Wait composer + textbox
-            for (let i = 0; i < 20 && document.readyState !== "complete"; i++) await sleep(250);
-            for (let i = 0; i < 40; i++) {
-              if (document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) break;
-              await sleep(500);
-            }
+            // FAST-PATH: composer atteso già aperto. Max ~600ms di tolleranza.
             let msgBox = findBox();
-            for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
-            if (!msgBox) return { success: false, error: "no_textbox_found", attempted_method: methodName };
+            for (let i = 0; i < 6 && !msgBox; i++) { await sleep(100); msgBox = findBox(); }
+            if (!msgBox) {
+              return {
+                success: false,
+                error: "composer_not_open: apri la chat LinkedIn (composer visibile) e ripremi",
+                attempted_method: methodName,
+              };
+            }
 
             // Write text with the same WA-aligned verified cascade used by production sendMessage.
             (function modernClearAndType(input, text) {
@@ -862,8 +868,9 @@ var HybridOps = globalThis.HybridOps || (function () {
             try { msgBox.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) { /* best-effort */ }
 
             async function textboxCleared() {
-              for (let i = 0; i < 15; i++) {
-                await sleep(100);
+              // FAST-PATH: 8 × 75ms = 600ms (era 1.5s).
+              for (let i = 0; i < 8; i++) {
+                await sleep(75);
                 var current = (msgBox.innerText || msgBox.textContent || "").trim();
                 if (!current) return true;
               }
@@ -873,7 +880,8 @@ var HybridOps = globalThis.HybridOps || (function () {
             // Wait for send button only for click-based diagnostics.
             let sendBtn = null;
             if (methodName === "physical_click") {
-              for (let i = 0; i < 80; i++) {
+              // FAST-PATH: 8 × 100ms = 800ms (era 8s).
+              for (let i = 0; i < 8; i++) {
                 sendBtn = findSendBtn();
                 if (sendBtn) break;
                 await sleep(100);
@@ -931,7 +939,9 @@ var HybridOps = globalThis.HybridOps || (function () {
                 return { success: false, error: "keyboard_shortcut_threw: " + e.message, attempted_method: methodName };
               }
             } else if (methodName === "cdp_physical_click" || methodName === "cdp_ctrl_enter") {
-              return { success: false, pending_cdp: true, attempted_method: methodName };
+              // FAST-PATH: il dispatcher esterno eseguirà la chiamata CDP direttamente.
+              // Qui il testo è già scritto nel composer, niente altro da fare in-page.
+              return { success: false, pending_cdp: true, attempted_method: methodName, text_written: true };
             }
 
             var cleared = await textboxCleared();
@@ -942,16 +952,16 @@ var HybridOps = globalThis.HybridOps || (function () {
           })();
         },
         args: [message, method],
-      }), 25000, "sendMessageWithMethod " + method);
+      }), externalTimeout, "sendMessageWithMethod " + method);
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
         const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
-        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) return { success: true, method: "cdp_physical_click" };
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) return { success: true, method: "cdp_physical_click" };
         return { success: false, error: (cdpClick && cdpClick.error) || "cdp_physical_click_failed", attempted_method: "cdp_physical_click" };
       }
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
         const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
-        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
         return { success: false, error: "cdp_ctrl_enter_textbox_not_cleared", attempted_method: "cdp_ctrl_enter" };
       }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_result");
