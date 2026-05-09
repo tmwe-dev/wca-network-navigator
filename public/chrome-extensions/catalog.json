@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.47",
+    "latestVersion": "3.9.48",
     "items": [
+      {
+        "version": "3.9.48",
+        "filename": "linkedin-extension-3.9.48.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Fix composer gate stile WhatsApp: aspetta pagina pronta + textbox reale prima di copiare/inviare; fallback produzione solo dopo timeout diagnostico."
+      },
       {
         "version": "3.9.47",
         "filename": "linkedin-extension-3.9.47.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.47.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Fix composer_not_open: fallback automatico a HybridOps.sendMessage (writer produzione, attesa textbox 20s + cascata invio) quando il composer non si monta."
       },
       {
