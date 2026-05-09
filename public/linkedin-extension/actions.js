@@ -798,8 +798,15 @@ var Actions = globalThis.Actions || (function () {
 
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
-    const tab = await TabManager.getLinkedInTab(threadUrl, false);
+    const isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
+    const tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    if (isProfileUrl) {
+      try {
+        const opened = await HybridOps.clickMessage(tab.id);
+        if (opened && opened.success) await TabManager.sleep(1500);
+      } catch (err) { console.debug("[LI Actions] profile readThread open composer:", err?.message); }
+    }
     await TabManager.sleep(2500);
 
     // ── Optimus-first ──
@@ -873,8 +880,15 @@ var Actions = globalThis.Actions || (function () {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "threadUrl richiesto");
 
     try {
-      var tab = await TabManager.getLinkedInTab(threadUrl, false);
+      var isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
+      var tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      if (isProfileUrl) {
+        try {
+          var opened = await HybridOps.clickMessage(tab.id);
+          if (opened && opened.success) await TabManager.sleep(1500);
+        } catch (err) { console.debug("[LI Actions] profile backfill open composer:", err?.message); }
+      }
       await TabManager.sleep(2500);
 
       var threadSelector = '[class*="msg-s-message-list"], [class*="msg-thread"], main, [role="main"]';
