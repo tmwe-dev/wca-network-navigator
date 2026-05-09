@@ -105,13 +105,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.31",
+    "latestVersion": "3.9.32",
     "items": [
+      {
+        "version": "3.9.32",
+        "filename": "linkedin-extension-3.9.32.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.32.zip",
+        "current": true,
+        "note": "P17 — Invio focus-safe: non attiva né porta davanti la tab LinkedIn durante l'invio; l'operatore resta sulla webapp."
+      },
       {
         "version": "3.9.31",
         "filename": "linkedin-extension-3.9.31.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.31.zip",
-        "current": true,
+        "current": false,
         "note": "P16 — Thread test usa URL fisso/profilo; invio finale con physical click + form submit + Ctrl/Cmd Enter fallback."
       },
       {

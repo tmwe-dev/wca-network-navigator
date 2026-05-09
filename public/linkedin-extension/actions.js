@@ -22,9 +22,9 @@ var Actions = globalThis.Actions || (function () {
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
       const tab = await TabManager.getLinkedInTab(target, true);
-      // P15 — Allineamento WA: attiviamo la tab e portiamola in focus prima di
-      // scrivere (Draft.js valida input nativi solo su tab attiva).
-      try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { /* ignore */ }
+      // P17 — Focus-safe come WhatsApp: NON attiviamo mai la tab LinkedIn
+      // durante l'invio. L'utente deve restare sulla webapp e continuare a lavorare.
+      // La scrittura/click avvengono via chrome.scripting in background.
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
       // P15 — Chiudi SOLO le chat fluttuanti stale (msg-overlay-conversation-bubble)
       // di conversazioni precedenti. NON tocchiamo .msg-form della pagina /messaging
