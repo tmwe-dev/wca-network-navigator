@@ -464,21 +464,30 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             var clickMethod = null;
             if (sendBtn) {
-              try { sendBtn.click(); clickMethod = "structural_fallback"; } catch (e) {}
+              if (firePhysicalClick(sendBtn)) clickMethod = "physical_click";
             }
             if (!sendBtn || !(await textboxCleared())) {
-              // P13 — Fallback finale: Ctrl+Enter (shortcut nativo LinkedIn).
+              if (submitComposer()) clickMethod = clickMethod || "form_submit_fallback";
+            }
+            if (!(await textboxCleared())) {
+              // P13 — Fallback finale: Ctrl/Cmd+Enter (shortcut nativo LinkedIn).
               try {
                 msgBox.focus();
+                var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
                 var ctrlEnterDown = new KeyboardEvent("keydown", {
                   key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: true, bubbles: true, cancelable: true,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
+                });
+                var ctrlEnterPress = new KeyboardEvent("keypress", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
                 });
                 var ctrlEnterUp = new KeyboardEvent("keyup", {
                   key: "Enter", code: "Enter", keyCode: 13, which: 13,
-                  ctrlKey: true, bubbles: true, cancelable: true,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
                 });
                 msgBox.dispatchEvent(ctrlEnterDown);
+                msgBox.dispatchEvent(ctrlEnterPress);
                 msgBox.dispatchEvent(ctrlEnterUp);
                 clickMethod = clickMethod || "ctrl_enter_fallback";
               } catch (e) { /* best-effort */ }
