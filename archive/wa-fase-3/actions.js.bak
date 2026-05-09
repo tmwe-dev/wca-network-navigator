@@ -1183,12 +1183,9 @@ var Actions = globalThis.Actions || (function () {
         const composer = findComposer();
         if (composer) {
           composer.focus();
-          // Riallineamento robusto: se il composer contiene un testo diverso
-          // (es. residuo di un invio precedente allo stesso numero), lo
-          // riscriviamo. Se è vuoto, lo riempiamo. Se coincide già col
-          // messaggio richiesto, non tocchiamo nulla.
+          // If composer is empty (text not pre-filled by ?text=), type it ourselves.
           const current = (composer.textContent || "").trim();
-          if (messageText && current !== messageText.trim()) {
+          if (!current && messageText) {
             try { H.modernClearAndType(composer, messageText); } catch (e) {}
           }
           startSendLoop(composer);
@@ -1375,73 +1372,6 @@ var Actions = globalThis.Actions || (function () {
     });
   }
 
-  // ──────────────────────────────────────────────
-  // Quick-win Step 1: poll page-side per composer ready.
-  // Sostituisce sleep(3s/4s) ciechi nel ramo URL fallback.
-  // Ritorna { ready, reason? } dove reason ∈ "invalid_phone" | "timeout".
-  // Ogni 150ms esegue un piccolo executeScript che ispeziona DOM (riusa
-  // i selettori di _pageSendUrlFallback / __waH).
-  // ──────────────────────────────────────────────
-  async function waitForComposerReady(tabId, maxMs) {
-    var start = Date.now();
-    var STEP = 150;
-    while (Date.now() - start < maxMs) {
-      try {
-        var probe = await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          func: function () {
-            try {
-              var H = window.__waH;
-              if (!H || typeof H.qsDeep !== "function") {
-                // Probe minimo se gli helper non sono ancora installati
-                var c = document.querySelector('footer [contenteditable="true"]')
-                  || document.querySelector('[data-testid="conversation-compose-box-input"]');
-                return { composerPresent: !!c, sendBtnMounted: false, invalidPhonePopup: false, helpers: false };
-              }
-              var composer = H.qsDeep('footer [contenteditable="true"][data-tab]')
-                || H.qsDeep('footer [contenteditable="true"]')
-                || H.qsDeep('[data-testid="conversation-compose-box-input"]')
-                || H.qsDeep('[data-testid="compose-box-input"]');
-              var sendBtn = H.qsDeep('[data-testid="send"]')
-                || H.qsDeep('button[aria-label*="send" i]')
-                || H.qsDeep('button[aria-label*="invia" i]');
-              // Popup "phone number shared via url is invalid" → fail-fast.
-              var popupOk = H.qsDeep('[data-testid="popup-controls-ok"]');
-              var invalidPhonePopup = false;
-              if (popupOk) {
-                var dialog = popupOk.closest('[role="dialog"]') || document.querySelector('[role="dialog"]');
-                var dialogText = dialog ? (dialog.textContent || "").toLowerCase() : "";
-                if (
-                  dialogText.indexOf("phone number") >= 0 ||
-                  dialogText.indexOf("invalid") >= 0 ||
-                  dialogText.indexOf("numero di telefono") >= 0 ||
-                  dialogText.indexOf("non valido") >= 0
-                ) {
-                  invalidPhonePopup = true;
-                }
-              }
-              return {
-                composerPresent: !!composer,
-                sendBtnMounted: !!sendBtn,
-                invalidPhonePopup: invalidPhonePopup,
-                helpers: true,
-              };
-            } catch (e) {
-              return { composerPresent: false, sendBtnMounted: false, invalidPhonePopup: false, error: String(e && e.message || e) };
-            }
-          },
-        });
-        var res = probe && probe[0] ? probe[0].result : null;
-        if (res && res.invalidPhonePopup) return { ready: false, reason: "invalid_phone" };
-        if (res && res.composerPresent) return { ready: true };
-      } catch (e) {
-        // executeScript può fallire se la tab sta navigando: ignoriamo e ritentiamo.
-      }
-      await TabManager.sleep(STEP);
-    }
-    return { ready: false, reason: "timeout" };
-  }
-
   async function sendWhatsAppMessage(phone, text) {
     try {
       // Determine if input is a phone number or contact name
@@ -1463,42 +1393,10 @@ var Actions = globalThis.Actions || (function () {
         if (isPhoneNumber) {
           var numericPhoneFirst = cleanPhone.replace(/^\+/, "");
           var sendUrlFirst = Config.WA_BASE + "/send?phone=" + numericPhoneFirst + "&text=" + encodeURIComponent(text);
-
-          // Quick-win Step 3: se la tab è GIÀ sul send corretto e il composer
-          // è pronto, saltiamo del tutto il reload (~3-6s di guadagno).
-          var currentUrl = existingTabs[0].url || "";
-          var currentPhone = "";
-          try {
-            var qIdx = currentUrl.indexOf("?");
-            if (qIdx >= 0) {
-              var qs = new URLSearchParams(currentUrl.slice(qIdx + 1));
-              currentPhone = (qs.get("phone") || "").replace(/[^0-9]/g, "");
-            }
-          } catch (e) { /* ignore */ }
-
-          var samePhoneReady = false;
-          if (currentPhone && currentPhone === numericPhoneFirst && existingTabs[0].status === "complete") {
-            var probe = await waitForComposerReady(tabId, 1500);
-            if (probe && probe.ready) samePhoneReady = true;
-            if (probe && probe.reason === "invalid_phone") {
-              return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
-            }
-          }
-
-          if (!samePhoneReady) {
-            await chrome.tabs.update(tabId, { url: sendUrlFirst });
-            await TabManager.waitForLoad(tabId, 15000);
-            // Quick-win Step 1: poll composer al posto di sleep(3000) cieco.
-            var ready = await waitForComposerReady(tabId, 5000);
-            if (!ready.ready) {
-              if (ready.reason === "invalid_phone") {
-                return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
-              }
-              return { success: false, error: "Composer non pronto entro 5s dopo navigate", errorCode: "COMPOSER_TIMEOUT" };
-            }
-            await ensurePageHelpers(tabId);
-          }
-
+          await chrome.tabs.update(tabId, { url: sendUrlFirst });
+          await TabManager.waitForLoad(tabId, 15000);
+          await TabManager.sleep(3000);
+          await ensurePageHelpers(tabId);
           var urlResultsFirst = await chrome.scripting.executeScript({
             target: { tabId: tabId },
             args: [text],
@@ -1531,14 +1429,7 @@ var Actions = globalThis.Actions || (function () {
         var tab = await TabManager.safeCreateTab(url, false);
         var loaded = await TabManager.waitForLoad(tab.id, 30000);
         if (!loaded) { await TabManager.safeRemoveTab(tab.id); return { success: false, error: "WA non caricato" }; }
-        // Quick-win Step 1 (cold tab): poll composer fino a 7s al posto di sleep(4000).
-        var readyCold = await waitForComposerReady(tab.id, 7000);
-        if (!readyCold.ready) {
-          if (readyCold.reason === "invalid_phone") {
-            return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
-          }
-          return { success: false, error: "Composer non pronto entro 7s su nuova tab", errorCode: "COMPOSER_TIMEOUT" };
-        }
+        await TabManager.sleep(4000);
         await ensurePageHelpers(tab.id);
         var results2 = await chrome.scripting.executeScript({
           target: { tabId: tab.id },

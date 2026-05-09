@@ -5,7 +5,7 @@ import {
   EMBEDDED_WHATSAPP_EXTENSION_ZIP_VERSION,
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
-export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.18";
+export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
 export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.29";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
@@ -35,20 +35,13 @@ const EXTENSION_CATALOG_PATH = "/chrome-extensions/catalog.json";
 export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   whatsapp: {
     title: "WhatsApp Direct Send",
-    latestVersion: "5.10.18",
+    latestVersion: "5.10.17",
     items: [
-      {
-        version: "5.10.18",
-        filename: "whatsapp-extension-5.10.18.zip",
-        path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.18.zip",
-        current: true,
-        note: "Quick win latenza: poll composer al posto di sleep(3s), skip reload se tab già sul send?phone= corretto, riallinea sempre il composer al testo. Whitelist remapSendDom. Target invio <1.5s.",
-      },
       {
         version: "5.10.17",
         filename: "whatsapp-extension-5.10.17.zip",
         path: "/chrome-extensions/whatsapp/whatsapp-extension-5.10.17.zip",
-        current: false,
+        current: true,
         note: "URL fallback robusto: aspetta composer fino a 12s, riempie testo se WA non lo pre-carica, dismiss popup. Risolve invio fallito quando ?text= non viene applicato.",
       },
       {
