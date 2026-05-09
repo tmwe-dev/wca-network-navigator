@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.50",
-  "description": "Due modalità composer: background_existing_composer (default safe, fail veloce in 4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground e apre composer). Niente attesa cieca 30s in background.",
+  "version": "3.9.51",
+  "description": "Fix background composer: passa mode dal bridge, non naviga via dal composer già aperto e non chiude overlay in background. Ripristina scrittura dai backup mantenendo interactive opt-in.",
   "permissions": [
     "cookies",
     "tabs",

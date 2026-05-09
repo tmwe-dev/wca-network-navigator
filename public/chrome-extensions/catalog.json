@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.50",
+    "latestVersion": "3.9.51",
     "items": [
+      {
+        "version": "3.9.51",
+        "filename": "linkedin-extension-3.9.51.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.51.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Fix background composer: passa mode dal bridge, non naviga via dal composer già aperto e non chiude overlay in background. Ripristina scrittura dai backup mantenendo interactive opt-in."
+      },
       {
         "version": "3.9.50",
         "filename": "linkedin-extension-3.9.50.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.50.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Due modalità composer: background_existing_composer (default safe, fail in ~4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground). Niente più attesa cieca 30s in background."
       },
       {
