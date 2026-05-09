@@ -12,6 +12,9 @@ import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const LI_COOLDOWN_MS = 5000;
+// Fast-path cooldown per i pulsanti diagnostici di click (CDP, physical, ctrl+enter, form_submit).
+// Il composer è già aperto: non c'è bisogno di 5s di cooldown fra un test e l'altro.
+const LI_DIAGNOSTIC_COOLDOWN_MS = 1000;
 const LI_FIXED_RECIPIENT_KEY = "li_test_fixed_recipient";
 
 interface StoredLiTestRecipient {
@@ -107,13 +110,13 @@ export function LinkedInTest() {
     return candidates.find(isValidLinkedInTestUrl) || "";
   }, [lastKnownText, profileUrl, sendUrl, threadUrl]);
 
-  const runWithCooldown = useCallback(async (fn: () => Promise<void>) => {
+  const runWithCooldown = useCallback(async (fn: () => Promise<void>, cooldownMs: number = LI_COOLDOWN_MS) => {
     setRunning(true);
     actionTimesRef.current.push(Date.now());
     actionTimesRef.current = actionTimesRef.current.filter(t => Date.now() - t < 3600000);
     try { await fn(); } finally {
-      log(`⏳ Cooldown ${LI_COOLDOWN_MS / 1000}s...`, "info");
-      setCooldown(LI_COOLDOWN_MS / 1000);
+      log(`⏳ Cooldown ${cooldownMs / 1000}s...`, "info");
+      setCooldown(Math.max(1, Math.round(cooldownMs / 1000)));
       const interval = setInterval(() => {
         setCooldown(prev => {
           if (prev <= 1) { clearInterval(interval); setRunning(false); return 0; }
@@ -271,17 +274,21 @@ export function LinkedInTest() {
   const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut" | "cdp_physical_click" | "cdp_ctrl_enter", emoji: string, label: string) => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
-    log(`${emoji} Test metodo: ${label} (${method})`);
+    log(`${emoji} Test metodo: ${label} (${method}) — fast-path, composer deve essere aperto`);
     log(`  Destinatario: ${sendUrl}`, "info");
-    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 90000);
+    // Fast-path: 8s totali (4s DOM + margine RPC). Se la finestra non è pronta, fail veloce.
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 8000);
     if (r?.success) {
       log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
     } else {
       const errStr = String(r?.error || JSON.stringify(r));
       const attempted = (r as Record<string, unknown>)?.attempted_method as string | undefined;
       log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
+      if (/timeout|composer_not_open|no_textbox/i.test(errStr)) {
+        log("💡 Apri prima la chat LinkedIn nella tab dedicata (composer visibile), poi ripremi il pulsante.", "warn");
+      }
     }
-  });
+  }, LI_DIAGNOSTIC_COOLDOWN_MS);
 
   const testDiagnosticDom = () => runWithCooldown(async () => {
     log("🔬 Diagnostica DOM LinkedIn Messaging...");
