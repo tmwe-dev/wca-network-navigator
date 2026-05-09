@@ -105,13 +105,20 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.38",
+    "latestVersion": "3.9.39",
     "items": [
+      {
+        "version": "3.9.39",
+        "filename": "linkedin-extension-3.9.39.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.39.zip",
+        "current": true,
+        "note": "Diagnostic fast-path: i pulsanti CDP/Ctrl+Enter/physical_click su /test-extensions partono istantaneamente sul composer LinkedIn già aperto (≤2s). Invio produttivo invariato."
+      },
       {
         "version": "3.9.38",
         "filename": "linkedin-extension-3.9.38.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.38.zip",
-        "current": true,
+        "current": false,
         "note": "P23 — Single writer policy: AX/AI rimossi dal percorso di invio. Solo DOM writer deterministico (paste/execCommand/textContent) + cascata click. Nessun writer parallelo, fallimenti espliciti."
       },
       {
