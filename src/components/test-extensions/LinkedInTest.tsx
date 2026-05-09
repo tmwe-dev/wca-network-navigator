@@ -55,10 +55,6 @@ export function LinkedInTest() {
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
-  // v3.9.50 — modalità composer (default safe background).
-  const [composerMode, setComposerMode] = useState<"background_existing_composer" | "interactive_open_composer">(
-    "background_existing_composer"
-  );
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
@@ -222,18 +218,6 @@ export function LinkedInTest() {
     }
   });
 
-  const testProbeComposer = () => runWithCooldown(async () => {
-    log("🔬 Probe composer LinkedIn (4s, focus-safe, nessun click su 'Messaggia')...");
-    const r = await liMsg("probeComposer", { url: sendUrl.trim() || profileUrl.trim() }, 8000) as Record<string, unknown>;
-    if (r?.success) {
-      log(`✅ Composer LinkedIn aperto su tab ${r.tabId} (${String(r.tabUrl || "").slice(0, 80)})`, "ok");
-    } else {
-      const errStr = String(r?.error || JSON.stringify(r));
-      log(`❌ Composer non aperto: ${errStr}`, "error");
-      log("💡 Apri manualmente la chat LinkedIn col destinatario e lascia il box messaggio visibile, poi riprova.", "warn");
-    }
-  });
-
   const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
@@ -304,10 +288,9 @@ export function LinkedInTest() {
   const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut" | "cdp_physical_click" | "cdp_ctrl_enter", emoji: string, label: string) => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
-    log(`${emoji} Test metodo: ${label} (${method}) — mode=${composerMode}`);
+    log(`${emoji} Test metodo: ${label} (${method})`);
     log(`  Destinatario: ${sendUrl}`, "info");
-    const timeoutMs = composerMode === "background_existing_composer" ? 12000 : 45000;
-    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method, mode: composerMode }, timeoutMs);
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 45000);
     if (r?.success) {
       log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
     } else {
@@ -316,10 +299,6 @@ export function LinkedInTest() {
       log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
       if (/no_existing_linkedin_tab/i.test(errStr)) {
         log("💡 Apri almeno una tab LinkedIn (qualsiasi pagina) e riprova: l'estensione la userà in background.", "warn");
-      } else if (/composer_not_open_background_mode/i.test(errStr)) {
-        log("💡 Apri manualmente la chat LinkedIn col destinatario (background mode) o passa a Interactive.", "warn");
-      } else if (/open_composer_failed_interactive|composer_gate_failed_interactive/i.test(errStr)) {
-        log("💡 Il bottone Messaggia non è apparso sul profilo (forse non sei collegato o il profilo non accetta messaggi).", "warn");
       }
     }
   }, LI_DIAGNOSTIC_COOLDOWN_MS);
