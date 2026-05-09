@@ -18,24 +18,24 @@ var Actions = globalThis.Actions || (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // sendLinkedInMessageCore — pipeline UNICA (v3.9.49)
-  // Usata sia da sendLinkedInMessage (UI/produzione) sia da
-  // sendLinkedInMessageWithMethod (diagnostico Test Estensioni).
-  // Sequenza:
-  //   1) getLinkedInTab focus-safe (no nuova tab, no foreground)
-  //   2) ensureTabVisibleAndWait + attesa tab.status=complete
-  //   3) hard URL guard sul profilo richiesto
-  //   4) cleanup overlay stale
-  //   5) probeComposer
-  //   6) se non aperto e non isThreadUrl → polling profilo + clickMessage
-  //   7) HybridOps.waitForMessageComposer(tabId, 30000) — GATE REALE
-  //   8) se gate fallisce → return composer_gate_failed (NIENTE fallback writer)
-  //   9) writer: HybridOps.sendMessageWithMethod (se method) | HybridOps.sendMessage
+  // sendLinkedInMessageCore — pipeline UNICA (v3.9.50)
+  // DUE MODALITA' esplicite:
+  //   - "background_existing_composer" (DEFAULT, safe):
+  //       NON attiva la tab, NON clicca "Messaggia", NON apre overlay.
+  //       Probe rapido (≤4s). Se composer non aperto → fail veloce con
+  //       istruzione chiara. Niente attesa cieca 30s.
+  //   - "interactive_open_composer" (opt-in):
+  //       Porta la tab LinkedIn in foreground, clicca "Messaggia",
+  //       waitForMessageComposer(30s), poi invia.
   // ──────────────────────────────────────────────────────────────────
   async function sendLinkedInMessageCore(opts) {
     var profileUrl = opts && opts.profileUrl;
     var message = opts && opts.message;
     var method = opts && opts.method;
+    var mode = (opts && opts.mode) || "background_existing_composer";
+    if (mode !== "background_existing_composer" && mode !== "interactive_open_composer") {
+      mode = "background_existing_composer";
+    }
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     var target = profileUrl.replace(/\/$/, "");
@@ -183,40 +183,56 @@ var Actions = globalThis.Actions || (function () {
 
     var composerAlreadyOpen = await probeComposer();
 
-    // 7) Se composer non aperto e non thread URL: aspetta bottone "Messaggia"
-    //    e clicca (con retry). NIENTE sleep(3000) cieco.
-    if (!composerAlreadyOpen && !isThreadUrl) {
-      var profileReady = await probeMessageButton();
-      for (var k = 0; k < 30 && !profileReady && !composerAlreadyOpen; k++) {
-        await TabManager.sleep(500);
-        profileReady = await probeMessageButton();
-        if (!profileReady) composerAlreadyOpen = await probeComposer();
+    if (mode === "background_existing_composer") {
+      // SAFE BACKGROUND: niente click "Messaggia", niente attesa 30s.
+      // Polling breve (max ~4s) per dare tempo al composer già aperto di
+      // diventare visibile dopo la navigazione focus-safe della tab.
+      if (!composerAlreadyOpen) {
+        for (var bk = 0; bk < 8 && !composerAlreadyOpen; bk++) {
+          await TabManager.sleep(500);
+          composerAlreadyOpen = await probeComposer();
+        }
       }
       if (!composerAlreadyOpen) {
-        var clickResult = await HybridOps.clickMessage(tab.id);
-        if (!clickResult || !clickResult.success) {
-          await TabManager.sleep(1500);
-          clickResult = await HybridOps.clickMessage(tab.id);
+        return Config.errorResponse(
+          Config.ERROR.MESSAGE_FAILED,
+          "composer_not_open_background_mode: apri manualmente la chat LinkedIn con il destinatario, lascia il box messaggio visibile e riprova. Oppure usa la modalità interactive (porta LinkedIn in primo piano)."
+        );
+      }
+    } else {
+      // INTERACTIVE: porta tab in foreground, clicca Messaggia se serve,
+      // poi attendi composer fino a 30s.
+      try { await TabManager.bringTabToFront(tab.id); } catch (e) { /* best-effort */ }
+      if (!composerAlreadyOpen && !isThreadUrl) {
+        var profileReady = await probeMessageButton();
+        for (var k = 0; k < 30 && !profileReady && !composerAlreadyOpen; k++) {
+          await TabManager.sleep(500);
+          profileReady = await probeMessageButton();
+          if (!profileReady) composerAlreadyOpen = await probeComposer();
         }
-        if (!clickResult || !clickResult.success) {
-          var shortUrl = (lastTabUrl || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 80);
+        if (!composerAlreadyOpen) {
+          var clickResult = await HybridOps.clickMessage(tab.id);
+          if (!clickResult || !clickResult.success) {
+            await TabManager.sleep(1500);
+            clickResult = await HybridOps.clickMessage(tab.id);
+          }
+          if (!clickResult || !clickResult.success) {
+            var shortUrl = (lastTabUrl || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 80);
+            return Config.errorResponse(
+              Config.ERROR.MESSAGE_FAILED,
+              "open_composer_failed_interactive: " + ((clickResult && clickResult.error) || "bottone Messaggia non trovato") + " (status=" + lastTabStatus + ", url=" + shortUrl + ")"
+            );
+          }
+        }
+        var gate = await HybridOps.waitForMessageComposer(tab.id, 30000);
+        if (!gate || !gate.success) {
+          var diag = (gate && gate.diagnostic) ? " gate=" + JSON.stringify(gate.diagnostic) : "";
           return Config.errorResponse(
             Config.ERROR.MESSAGE_FAILED,
-            "open_composer_failed: " + ((clickResult && clickResult.error) || "bottone Messaggia non trovato") + " (status=" + lastTabStatus + ", url=" + shortUrl + ")"
+            "composer_gate_failed_interactive: " + ((gate && gate.error) || "no_textbox") + " (status=" + lastTabStatus + ")" + diag
           );
         }
       }
-    }
-
-    // 8) GATE REALE stile WhatsApp — aspetta textbox visibile + interattiva.
-    //    Se fallisce: STOP diagnostico, niente fallback writer.
-    var gate = await HybridOps.waitForMessageComposer(tab.id, 30000);
-    if (!gate || !gate.success) {
-      var diag = (gate && gate.diagnostic) ? " gate=" + JSON.stringify(gate.diagnostic) : "";
-      return Config.errorResponse(
-        Config.ERROR.MESSAGE_FAILED,
-        "composer_gate_failed: " + ((gate && gate.error) || "no_textbox") + " (status=" + lastTabStatus + ")" + diag
-      );
     }
 
     // 9) Writer (write/send separati dentro HybridOps).
@@ -226,8 +242,8 @@ var Actions = globalThis.Actions || (function () {
     return await HybridOps.sendMessage(tab.id, message);
   }
 
-  async function sendLinkedInMessage(profileUrl, message) {
-    var result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message });
+  async function sendLinkedInMessage(profileUrl, message, mode) {
+    var result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message, mode: mode });
     // Recovery una sola volta su navigation_drifted.
     if (result && !result.success && /navigation_drifted/i.test(result.error || "")) {
       try {
@@ -235,9 +251,38 @@ var Actions = globalThis.Actions || (function () {
         if (t && t.id) await chrome.tabs.update(t.id, { url: profileUrl.replace(/\/$/, "") });
       } catch (e) { /* ignore */ }
       await TabManager.sleep(2500);
-      result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message });
+      result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message, mode: mode });
     }
     return result;
+  }
+
+  // Probe-only handler: verifica se c'è un composer LinkedIn già aperto su
+  // una qualsiasi tab LinkedIn (focus-safe, senza navigare né cliccare).
+  // Usato dal Test Estensioni per isolare il fallimento "open composer".
+  async function probeComposerOnly(profileUrl) {
+    var target = (profileUrl || "").replace(/\/$/, "");
+    var tab = null;
+    try {
+      if (target) tab = await TabManager.getLinkedInTab(target, false, false);
+    } catch (e) { /* ignore */ }
+    if (!tab || !tab.id) {
+      // Fallback: prima tab LinkedIn disponibile.
+      try {
+        var tabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
+        if (tabs && tabs[0]) tab = tabs[0];
+      } catch (e) { /* ignore */ }
+    }
+    if (!tab || !tab.id) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome.");
+    }
+    var gate = await HybridOps.waitForMessageComposer(tab.id, 4000);
+    return {
+      success: !!(gate && gate.success),
+      tabId: tab.id,
+      tabUrl: tab.url || tab.pendingUrl || "",
+      mode: "probe_only",
+      gate: gate || null,
+    };
   }
 
   async function findLinkedInTabWithOpenComposer(targetClean) {
@@ -281,7 +326,8 @@ var Actions = globalThis.Actions || (function () {
 
   async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
     if (!method) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "method mancante");
-    return await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message, method: method });
+    var mode = arguments.length > 3 ? arguments[3] : undefined;
+    return await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message, method: method, mode: mode });
   }
 
   async function sendConnectionRequest(profileUrl, note) {
@@ -1291,6 +1337,7 @@ var Actions = globalThis.Actions || (function () {
     extractProfileByUrl: extractProfileByUrl,
     sendLinkedInMessage: sendLinkedInMessage,
     sendLinkedInMessageWithMethod: sendLinkedInMessageWithMethod,
+    probeComposerOnly: probeComposerOnly,
     sendConnectionRequest: sendConnectionRequest,
     searchProfile: searchProfile,
     readInbox: readInbox,
