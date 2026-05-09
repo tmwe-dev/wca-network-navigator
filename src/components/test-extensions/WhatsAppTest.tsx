@@ -415,9 +415,12 @@ export function WhatsAppTest() {
         <Input
           value={sendPhone}
           onChange={(e) => setSendPhone(e.target.value)}
-          placeholder="Numero E.164 (es. +393331234567) — preferito"
+          placeholder="Numero fisso test WhatsApp E.164 (es. +393331234567)"
           className="flex-1"
         />
+        <Button onClick={pinFixedRecipient} disabled={running} size="sm" variant="secondary" title="Salva questo numero come destinatario fisso dei test WhatsApp">
+          📌 Fissa test
+        </Button>
       </div>
       <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
         <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database CRM</div>
@@ -433,7 +436,7 @@ export function WhatsAppTest() {
             className="flex-1"
           />
           <Button onClick={() => runDbSearch()} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
-          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario e ricerca">🔄 Reset</Button>
+          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Resetta la sessione e ricarica il destinatario fisso">🔄 Reset</Button>
         </div>
         {dbResults.length > 0 && (
           <div className="max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
@@ -502,7 +505,7 @@ export function WhatsAppTest() {
           const textOk = sendText.trim().length > 0;
           const disabled = running || !phoneOk || !textOk;
           const tip = !phoneOk
-            ? "Numero mancante o troppo corto: cerca il destinatario nel DB qui sopra"
+            ? "Numero fisso mancante o troppo corto: inseriscilo e premi Fissa test"
             : !textOk
             ? "Inserisci il testo del messaggio"
             : `Invia a +${digits}`;
