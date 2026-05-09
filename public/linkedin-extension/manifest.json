@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.43",
-  "description": "Diagnostic composer-first: i test invio scelgono la tab con composer visibile e falliscono velocemente senza navigare.",
+  "version": "3.9.44",
+  "description": "Background mode: i test diagnostici aprono il composer da soli (focus-safe) e poi eseguono il metodo scelto. L'operatore non deve più aprire la chat manualmente.",
   "permissions": [
     "cookies",
     "tabs",
