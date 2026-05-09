@@ -1396,10 +1396,42 @@ var Actions = globalThis.Actions || (function () {
         if (isPhoneNumber) {
           var numericPhoneFirst = cleanPhone.replace(/^\+/, "");
           var sendUrlFirst = Config.WA_BASE + "/send?phone=" + numericPhoneFirst + "&text=" + encodeURIComponent(text);
-          await chrome.tabs.update(tabId, { url: sendUrlFirst });
-          await TabManager.waitForLoad(tabId, 15000);
-          await TabManager.sleep(3000);
-          await ensurePageHelpers(tabId);
+
+          // Quick-win Step 3: se la tab è GIÀ sul send corretto e il composer
+          // è pronto, saltiamo del tutto il reload (~3-6s di guadagno).
+          var currentUrl = existingTabs[0].url || "";
+          var currentPhone = "";
+          try {
+            var qIdx = currentUrl.indexOf("?");
+            if (qIdx >= 0) {
+              var qs = new URLSearchParams(currentUrl.slice(qIdx + 1));
+              currentPhone = (qs.get("phone") || "").replace(/[^0-9]/g, "");
+            }
+          } catch (e) { /* ignore */ }
+
+          var samePhoneReady = false;
+          if (currentPhone && currentPhone === numericPhoneFirst && existingTabs[0].status === "complete") {
+            var probe = await waitForComposerReady(tabId, 1500);
+            if (probe && probe.ready) samePhoneReady = true;
+            if (probe && probe.reason === "invalid_phone") {
+              return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
+            }
+          }
+
+          if (!samePhoneReady) {
+            await chrome.tabs.update(tabId, { url: sendUrlFirst });
+            await TabManager.waitForLoad(tabId, 15000);
+            // Quick-win Step 1: poll composer al posto di sleep(3000) cieco.
+            var ready = await waitForComposerReady(tabId, 5000);
+            if (!ready.ready) {
+              if (ready.reason === "invalid_phone") {
+                return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
+              }
+              return { success: false, error: "Composer non pronto entro 5s dopo navigate", errorCode: "COMPOSER_TIMEOUT" };
+            }
+            await ensurePageHelpers(tabId);
+          }
+
           var urlResultsFirst = await chrome.scripting.executeScript({
             target: { tabId: tabId },
             args: [text],
@@ -1432,7 +1464,14 @@ var Actions = globalThis.Actions || (function () {
         var tab = await TabManager.safeCreateTab(url, false);
         var loaded = await TabManager.waitForLoad(tab.id, 30000);
         if (!loaded) { await TabManager.safeRemoveTab(tab.id); return { success: false, error: "WA non caricato" }; }
-        await TabManager.sleep(4000);
+        // Quick-win Step 1 (cold tab): poll composer fino a 7s al posto di sleep(4000).
+        var readyCold = await waitForComposerReady(tab.id, 7000);
+        if (!readyCold.ready) {
+          if (readyCold.reason === "invalid_phone") {
+            return { success: false, error: "Numero non su WhatsApp (popup invalid-phone)", errorCode: "INVALID_PHONE" };
+          }
+          return { success: false, error: "Composer non pronto entro 7s su nuova tab", errorCode: "COMPOSER_TIMEOUT" };
+        }
         await ensurePageHelpers(tab.id);
         var results2 = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
