@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.37",
-  "description": "P22 — clickMessage scoped al top-card profilo, readThread/backfill su profilo navigano sempre al target, AX typeMessage disabilitato in invio produzione.",
+  "version": "3.9.38",
+  "description": "P23 — Single writer policy: AX/AI rimossi dal percorso di invio produzione, solo DOM writer deterministico (paste/execCommand/textContent) + cascata click (physical/submit/Ctrl-Enter). Nessun writer parallelo.",
   "permissions": [
     "cookies",
     "tabs",

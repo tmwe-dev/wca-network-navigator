@@ -219,26 +219,14 @@ var HybridOps = globalThis.HybridOps || (function () {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab fuori da profilo/messaging (" + currentUrl + ")");
       }
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-    // P22 — AX Tree typeMessage DISABILITATO in produzione: scriveva nel composer
-    // ma il click "Send" sul bottone AX spesso non veniva accettato da React,
-    // lasciando lo stato sporco e facendo fallire i fallback successivi senza
-    // recovery pulito. La sequenza affidabile è: DOM scoped writer + CDP physical
-    // click sul bottone Invia (cascata gestita più sotto).
-
-    // Level 2: AI Learn (mantenuto: scrive ma demanda al click in produzione)
-    try {
-      let schema = await AILearn.getCached("messaging");
-      if (!schema && Config.isReady()) schema = await withTimeout(AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey()), 8000, "AI Learn messaging");
-      if (schema) {
-        const learnRes = await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          func: AILearn.typeMessageWithSchema,
-          args: [schema, message],
-        });
-        const learnResult = learnRes[0] && learnRes[0].result;
-        if (learnResult && learnResult.success && await composerCleared(tabId, 2500)) return learnResult;
-      }
-    } catch (e) { console.warn("[LI-Hybrid] AI Learn message failed:", e.message); }
+    // P23 — POLITICA SINGLE WRITER (no AX/AI in produzione):
+    //   1) clickMessage scoped (gestito dal caller / structural fallback)
+    //   2) DOM writer deterministico (paste → execCommand → textContent)
+    //   3) verifica testuale composer (hasText)
+    //   4) verifica Send button abilitato
+    //   5) physical click → form submit → Ctrl/Cmd+Enter (cascata sotto)
+    // AX/AILearn restano definiti SOLO come read-only/diagnostica.
+    // NESSUN writer parallelo: una sola fonte di scrittura, fallimento esplicito.
 
     // Level 3: Structural fallback with native input
     try {
