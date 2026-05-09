@@ -415,6 +415,36 @@ var HybridOps = globalThis.HybridOps || (function () {
               }
               return null;
             }
+            function firePhysicalClick(el) {
+              if (!el) return false;
+              try {
+                el.scrollIntoView({ block: "center", inline: "center" });
+                var rect = el.getBoundingClientRect();
+                var cx = rect.left + rect.width / 2;
+                var cy = rect.top + rect.height / 2;
+                var opts = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, button: 0 };
+                try { el.dispatchEvent(new PointerEvent("pointerover", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mouseover", opts));
+                try { el.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mousedown", opts));
+                try { el.dispatchEvent(new PointerEvent("pointerup", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
+                el.dispatchEvent(new MouseEvent("mouseup", opts));
+                el.dispatchEvent(new MouseEvent("click", opts));
+                try { el.click(); } catch (e) {}
+                return true;
+              } catch (e) {
+                try { el.click(); return true; } catch (e2) { return false; }
+              }
+            }
+            function submitComposer() {
+              try {
+                var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form");
+                if (!form) return false;
+                if (typeof form.requestSubmit === "function") form.requestSubmit();
+                else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                return true;
+              } catch (e) { return false; }
+            }
             // P13 — Polling esteso a 8s (era 3s).
             let sendBtn = null;
             for (let i = 0; i < 80; i++) {
