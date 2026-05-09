@@ -219,13 +219,13 @@ var HybridOps = globalThis.HybridOps || (function () {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab fuori da profilo/messaging (" + currentUrl + ")");
       }
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-    // Level 1: AX Tree
-    try {
-      const axResult = await withTimeout(AXTree.typeMessage(tabId, message), 6500, "AX typeMessage");
-      if (axResult && axResult.success && await composerCleared(tabId, 2500)) return axResult;
-    } catch (e) { console.warn("[LI-Hybrid] AX Tree message failed:", e.message); }
+    // P22 — AX Tree typeMessage DISABILITATO in produzione: scriveva nel composer
+    // ma il click "Send" sul bottone AX spesso non veniva accettato da React,
+    // lasciando lo stato sporco e facendo fallire i fallback successivi senza
+    // recovery pulito. La sequenza affidabile è: DOM scoped writer + CDP physical
+    // click sul bottone Invia (cascata gestita più sotto).
 
-    // Level 2: AI Learn
+    // Level 2: AI Learn (mantenuto: scrive ma demanda al click in produzione)
     try {
       let schema = await AILearn.getCached("messaging");
       if (!schema && Config.isReady()) schema = await withTimeout(AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey()), 8000, "AI Learn messaging");
