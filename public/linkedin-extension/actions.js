@@ -26,7 +26,13 @@ var Actions = globalThis.Actions || (function () {
     // a sendMessage, che cerca direttamente la textbox del composer.
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
-      const tab = await TabManager.getLinkedInTab(target, true, false);
+      // P21 — Come backup funzionante: NON usiamo skipNavigateIfSameDomain.
+      // Se la tab LinkedIn esiste ma è su /messaging/inbox o su un altro
+      // profilo, dobbiamo navigarla al target (chrome.tabs.update con solo
+      // {url} NON attiva la tab, quindi resta focus-safe). Senza questo,
+      // clickMessage gira sulla pagina sbagliata e fallisce con
+      // "Profile-scoped message button not found".
+      const tab = await TabManager.getLinkedInTab(target, false, false);
       if (!tab || !tab.id) {
         return { tabId: null, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; l'invio non apre nuove tab e non cambia pagina") };
       }
