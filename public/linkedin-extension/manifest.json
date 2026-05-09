@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.32",
-  "description": "P17 — Invio LinkedIn focus-safe: non attiva né porta davanti la tab Chrome durante l'invio.",
+  "version": "3.9.33",
+  "description": "P18 — Invio LinkedIn non apre nuove tab e non attiva Chrome: usa solo una tab LinkedIn già esistente.",
   "permissions": [
     "cookies",
     "tabs",

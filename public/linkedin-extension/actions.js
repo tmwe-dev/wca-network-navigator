@@ -21,7 +21,10 @@ var Actions = globalThis.Actions || (function () {
     // a sendMessage, che cerca direttamente la textbox del composer.
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
-      const tab = await TabManager.getLinkedInTab(target, true);
+      const tab = await TabManager.getLinkedInTab(target, true, false);
+      if (!tab || !tab.id) {
+        return { tabId: null, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; l'invio non apre nuove tab e non cambia pagina") };
+      }
       // P17 — Focus-safe come WhatsApp: NON attiviamo mai la tab LinkedIn
       // durante l'invio. L'utente deve restare sulla webapp e continuare a lavorare.
       // La scrittura/click avvengono via chrome.scripting in background.
