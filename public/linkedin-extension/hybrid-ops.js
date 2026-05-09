@@ -951,6 +951,22 @@ var HybridOps = globalThis.HybridOps || (function () {
                 try { sendBtn.dispatchEvent(new PointerEvent("pointerup", Object.assign({ pointerType: "mouse", pointerId: 1, isPrimary: true }, opts))); } catch (e) {}
                 sendBtn.dispatchEvent(new MouseEvent("mouseup", opts));
                 sendBtn.dispatchEvent(new MouseEvent("click", opts));
+                // v3.9.42 — ULTIMO MIGLIO: gli eventi sintetici da soli non
+                // attivano sempre il React handler di LinkedIn. Aggiungiamo il
+                // .click() nativo (HTMLElement.click) come trigger primario,
+                // e in fallback un form.requestSubmit() solo se il composer
+                // non si svuota nei 600ms successivi.
+                try { sendBtn.click(); } catch (e) {}
+                await sleep(250);
+                var stillFull = (msgBox.innerText || msgBox.textContent || "").trim().length > 0;
+                if (stillFull) {
+                  try {
+                    var formFb = sendBtn.closest("form") || msgBox.closest("form");
+                    if (formFb && typeof formFb.requestSubmit === "function") {
+                      formFb.requestSubmit(sendBtn);
+                    }
+                  } catch (e) {}
+                }
               } catch (e) {
                 return { success: false, error: "physical_click_threw: " + e.message, attempted_method: methodName };
               }
