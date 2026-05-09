@@ -202,31 +202,15 @@ var Actions = globalThis.Actions || (function () {
     const target = profileUrl.replace(/\/$/, "");
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
-    // Manual diagnostic: riusa qualunque tab LinkedIn già aperta senza navigarla.
-    const tab = await TabManager.getLinkedInTab(target, true, false);
+    // Manual diagnostic: scegli PRIMA la tab che contiene davvero il composer.
+    // Non naviga, non clicca Messaggia, non apre tab: se non c'è composer fallisce veloce.
+    const composerTab = await findLinkedInTabWithOpenComposer(target);
+    const tab = composerTab.tab;
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }
     await TabManager.ensureTabVisibleAndWait(tab.id, 600);
-    let composerAlreadyOpen = false;
-    try {
-      const composerProbe = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: function () {
-          var scopes = document.querySelectorAll(
-            ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
-          );
-          for (var i = 0; i < scopes.length; i++) {
-            var scope = scopes[i];
-            var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
-            if (!visible) continue;
-            if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
-          }
-          return false;
-        },
-      });
-      composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
-    } catch (e) { composerAlreadyOpen = false; }
+    let composerAlreadyOpen = !!(composerTab.probe && composerTab.probe.found);
 
     let currentUrl = "";
     try {
@@ -239,7 +223,7 @@ var Actions = globalThis.Actions || (function () {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_thread_open: il test manuale non naviga; apri il thread richiesto e riprova");
     }
     if (!composerAlreadyOpen) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: apri manualmente la chat LinkedIn con il campo messaggio visibile e riprova");
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: apri manualmente la chat LinkedIn con il campo messaggio visibile e riprova (tab controllate: " + (composerTab.tabsChecked || 0) + ")");
     }
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
