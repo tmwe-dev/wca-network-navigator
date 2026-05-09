@@ -195,6 +195,20 @@ var Actions = globalThis.Actions || (function () {
     }
     // 2) Focus-safe ready (non porta la tab in foreground).
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
+    // background il renderer monta più lento; senza questa attesa il probe
+    // del bottone Messaggia parte troppo presto.
+    let lastTabStatus = "unknown";
+    let lastTabUrl = "";
+    for (let i = 0; i < 16; i++) {
+      try {
+        const ti = await chrome.tabs.get(tab.id);
+        lastTabStatus = (ti && ti.status) || "unknown";
+        lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || "";
+        if (lastTabStatus === "complete") break;
+      } catch (e) { /* ignore */ }
+      await TabManager.sleep(250);
+    }
     // 2.bis) HARD GUARD destinatario: dopo navigate la tab DEVE essere sul
     // profilo richiesto (`/in/<slug>`) o su un thread URL esplicito passato
     // dal chiamante. Senza questo check, se la tab era già aperta su una
@@ -240,12 +254,28 @@ var Actions = globalThis.Actions || (function () {
         const r = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: function () {
+            // Selettori strutturali (più affidabili del testo).
+            var structural = document.querySelectorAll(
+              "a[href*='/messaging/compose'], a[href*='/messaging/thread/']," +
+              " button[data-control-name*='message' i]," +
+              " .pv-top-card button, .pvs-profile-actions button, .artdeco-card button[aria-label]"
+            );
+            for (var i = 0; i < structural.length; i++) {
+              var s = structural[i];
+              var lab = ((s.getAttribute("aria-label") || "") + " " + (s.textContent || "")).toLowerCase();
+              var vis = s.offsetParent !== null || s.getClientRects().length > 0;
+              if (!vis) continue;
+              if (/messaggi|message|messa|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(lab)) return true;
+              // Se è un anchor di compose/thread, basta la presenza visibile.
+              if (s.tagName === "A") return true;
+            }
+            // Fallback testuale globale.
             var btns = document.querySelectorAll("button, a[role='button']");
-            for (var i = 0; i < btns.length; i++) {
-              var b = btns[i];
+            for (var j = 0; j < btns.length; j++) {
+              var b = btns[j];
               var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).toLowerCase();
-              if (!label) continue;
-              if (/messaggi|message|messa|invia messaggio|nachricht|enviar mensaje|envoyer un message/i.test(label)) {
+              if (!label.trim()) continue;
+              if (/messaggi|message|messa|invia messaggio|nachricht|enviar mensaje|envoyer un message|mensagem|wiadomo/i.test(label)) {
                 var visible = b.offsetParent !== null || b.getClientRects().length > 0;
                 if (visible) return true;
               }
@@ -258,13 +288,33 @@ var Actions = globalThis.Actions || (function () {
     }
     if (!composerAlreadyOpen && !isThreadUrl) {
       let profileReady = await probeMessageButton();
-      for (let i = 0; i < 20 && !profileReady && !composerAlreadyOpen; i++) {
-        await TabManager.sleep(300);
+      // Polling esteso: 30 × 500ms = 15s.
+      for (let i = 0; i < 30 && !profileReady && !composerAlreadyOpen; i++) {
+        await TabManager.sleep(500);
         profileReady = await probeMessageButton();
         if (!profileReady) composerAlreadyOpen = await probeComposer();
       }
       if (!profileReady && !composerAlreadyOpen) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "profile_not_ready: profilo LinkedIn non ancora pronto in background, riprova");
+        // Tentativo ottimistico: clickMessage ha scoping interno che a volte
+        // trova il bottone anche quando il probe esterno non lo vede.
+        try {
+          const ti = await chrome.tabs.get(tab.id);
+          lastTabStatus = (ti && ti.status) || lastTabStatus;
+          lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || lastTabUrl;
+        } catch (e) { /* ignore */ }
+        const optimistic = await HybridOps.clickMessage(tab.id);
+        if (!optimistic || !optimistic.success) {
+          var shortUrl = (lastTabUrl || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 80);
+          return Config.errorResponse(
+            Config.ERROR.MESSAGE_FAILED,
+            "profile_not_ready: profilo LinkedIn non pronto in background (status=" + lastTabStatus + ", url=" + shortUrl + "), riprova"
+          );
+        }
+        // Click ottimistico riuscito: passiamo direttamente al polling composer.
+        for (let i = 0; i < 32; i++) {
+          await TabManager.sleep(250);
+          if (await probeComposer()) { composerAlreadyOpen = true; break; }
+        }
       }
     }
     // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
