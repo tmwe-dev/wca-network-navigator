@@ -193,6 +193,20 @@ var Actions = globalThis.Actions || (function () {
     }
     // 2) Focus-safe ready (non porta la tab in foreground).
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    // 2.bis) HARD GUARD destinatario: dopo navigate la tab DEVE essere sul
+    // profilo richiesto (`/in/<slug>`) o su un thread URL esplicito passato
+    // dal chiamante. Senza questo check, se la tab era già aperta su una
+    // chat diversa, mandavamo al destinatario sbagliato.
+    try {
+      const tabInfo = await chrome.tabs.get(tab.id);
+      const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+      const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
+      const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
+      if (!isThreadUrl && !onTarget) {
+        console.warn("[LI Send] wrong_recipient (withMethod)", { wanted: targetSlug, currentUrl: currentUrl });
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")");
+      }
+    } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
     // 3) Probe composer.
     async function probeComposer() {
       try {
