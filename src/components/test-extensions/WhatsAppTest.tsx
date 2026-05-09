@@ -34,45 +34,13 @@ function normalizeWaTestPhone(raw: string): string | null {
   return cleaned.startsWith("+") ? cleaned : `+${digits}`;
 }
 
-// ──────────────────────────────────────────────────────────
-// Quick-win Step 2: cache 15s del ping estensione WA per evitare
-// il round-trip serializzato prima di ogni invio.
-// L'heartbeat dal content script ("contentScriptReady") aggiorna
-// solo il timestamp di vitalità; un ping reale rimane necessario
-// per la prima volta o quando il risultato cached è scaduto/invalido.
-// ──────────────────────────────────────────────────────────
-const PING_CACHE_TTL_MS = 15000;
-let lastWaPingAt = 0;
-let lastWaPingResult: { success: boolean; version?: string; outdated?: boolean; error?: string } | null = null;
-let waHeartbeatBound = false;
-function bindWaHeartbeatOnce() {
-  if (waHeartbeatBound || typeof window === "undefined") return;
-  waHeartbeatBound = true;
-  window.addEventListener("message", (e: MessageEvent) => {
-    if (e.source !== window) return;
-    const d = e.data as { direction?: string; action?: string } | null;
-    if (!d || d.direction !== "from-extension-wa") return;
-    if (d.action === "contentScriptReady") {
-      // Heartbeat: l'estensione è viva. Aggiorniamo solo il timestamp,
-      // NON il risultato (la version va sempre confermata da un ping reale).
-      lastWaPingAt = Date.now();
-    } else if (d.action === "extensionDead") {
-      lastWaPingAt = 0;
-      lastWaPingResult = null;
-    }
-  });
-}
-
 export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
   const [sendPhone, setSendPhone] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
-  // lastSentTo è scritto ma non più letto: serviva al closeActiveChat (rimosso
-  // con Step 3+1 che riallineano automaticamente numero+composer). Conservato
-  // come setter per eventuale telemetria futura.
-  const [, setLastSentTo] = useState<string | null>(null);
+  const [lastSentTo, setLastSentTo] = useState<string | null>(null);
   const [dbQuery, setDbQuery] = useState("");
   const [dbResults, setDbResults] = useState<WaTestRecipient[]>([]);
   const [dbSearching, setDbSearching] = useState(false);
@@ -120,31 +88,12 @@ export function WhatsAppTest() {
   const isExpectedWaVersion = (version?: string) => version === WHATSAPP_EXTENSION_REQUIRED_VERSION;
 
   const ensureCurrentWaExtension = async () => {
-    bindWaHeartbeatOnce();
-    // Cache hit: ping recente con esito noto → niente round-trip.
-    const fresh = lastWaPingResult && (Date.now() - lastWaPingAt) < PING_CACHE_TTL_MS;
-    let pingObj: Record<string, unknown> | null = null;
-    if (fresh && lastWaPingResult) {
-      pingObj = { success: lastWaPingResult.success, version: lastWaPingResult.version, error: lastWaPingResult.error };
-    } else {
-      const ping = await waMsg("ping", {}, 5000);
-      pingObj = ping as Record<string, unknown>;
-      if (ping?.success) {
-        lastWaPingAt = Date.now();
-        lastWaPingResult = {
-          success: true,
-          version: (ping as Record<string, unknown>).version as string | undefined,
-        };
-      } else {
-        lastWaPingResult = null;
-        lastWaPingAt = 0;
-      }
-    }
-    if (!pingObj?.success) {
-      log(`❌ Estensione WhatsApp non raggiungibile: ${(pingObj?.error as string) || JSON.stringify(pingObj)}`, "error");
+    const ping = await waMsg("ping", {}, 5000);
+    if (!ping?.success) {
+      log(`❌ Estensione WhatsApp non raggiungibile: ${ping?.error || JSON.stringify(ping)}`, "error");
       return null;
     }
-    const version = pingObj.version as string | undefined;
+    const version = ping.version as string | undefined;
     if (!isExpectedWaVersion(version)) {
       if (version === "3.4.0") {
         log(`⚠️ Hai installata Partner Connect (v3.4.0) che risponde al posto della WhatsApp extension. Rimuovi Partner Connect o aggiornala alla v3.4.1+`, "error");
@@ -152,9 +101,9 @@ export function WhatsAppTest() {
         log(`⚠️ Estensione v${version} ancora installata in Chrome. Serve la v${WHATSAPP_EXTENSION_REQUIRED_VERSION}.`, "error");
         log(`AZIONE: chrome://extensions → RIMUOVI la v${version} (non solo disattiva) → scarica nuovo ZIP → estrai in CARTELLA NUOVA → 'Carica estensione non pacchettizzata'.`, "warn");
       }
-      return { ...pingObj, outdated: true };
+      return { ...ping, outdated: true };
     }
-    return pingObj;
+    return ping;
   };
 
   const testPing = async () => {
@@ -254,9 +203,15 @@ export function WhatsAppTest() {
       log(`🎯 Destinatario CRM: ${selectedRecipient.name}${selectedRecipient.company ? " — " + selectedRecipient.company : ""} [${selectedRecipient.source}] → ${target}`, "info");
     }
     log(`📤 Invio WhatsApp a "${target}" via URL diretto /send?phone=: "${sendText.slice(0, 60)}..."`);
-    // Nota: closeActiveChat rimosso. Step 3 (skip URL reload) riallinea già
-    // numero+testo dell'URL /send?phone=, e Step 1 (waitForComposerReady)
-    // fa fail-fast su numero invalido, rendendo il close superfluo.
+    // Se il destinatario è cambiato rispetto all'ultimo invio, chiediamo
+    // all'estensione di chiudere la chat aperta — così non riusa la conversazione
+    // precedente per errore.
+    if (lastSentTo && lastSentTo !== target) {
+      try {
+        await waMsg("closeActiveChat", {}, 5000);
+        log(`🧹 Chat precedente chiusa (destinatario cambiato: ${lastSentTo} → ${target})`, "info");
+      } catch { /* opzionale, l'estensione potrebbe non supportarlo */ }
+    }
     const r = await waMsg("sendWhatsApp", { phone: target, text: sendText }, 60000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
