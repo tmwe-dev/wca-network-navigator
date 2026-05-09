@@ -121,7 +121,46 @@ var Actions = globalThis.Actions || (function () {
     return result;
   }
 
-  // DIAGNOSTIC ONLY — manual-test path: usa SOLO il composer LinkedIn già aperto.
+  async function findLinkedInTabWithOpenComposer(targetClean) {
+    let tabs = [];
+    try { tabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" }); } catch (e) { tabs = []; }
+    let best = null;
+    for (let i = 0; i < tabs.length; i++) {
+      const t = tabs[i];
+      if (!t || !t.id) continue;
+      try {
+        const probe = await chrome.scripting.executeScript({
+          target: { tabId: t.id },
+          func: function (targetUrl) {
+            function isVisible(el) { return !!(el && (el.offsetParent !== null || el.getClientRects().length > 0)); }
+            var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+            var visibleScopes = 0;
+            var textboxes = 0;
+            for (var s = 0; s < scopes.length; s++) {
+              if (!isVisible(scopes[s])) continue;
+              visibleScopes++;
+              var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var b = 0; b < boxes.length; b++) if (isVisible(boxes[b])) textboxes++;
+            }
+            var clean = location.href.split("?")[0].replace(/\/$/, "");
+            var target = String(targetUrl || "");
+            var score = 0;
+            if (textboxes > 0) score += 100;
+            if (/linkedin\.com\/messaging\/thread\//i.test(clean)) score += 30;
+            if (target && clean === target) score += 20;
+            if (document.hasFocus()) score += 5;
+            return { hasComposer: textboxes > 0, score: score, url: location.href, visibleScopes: visibleScopes, textboxes: textboxes, title: document.title };
+          },
+          args: [targetClean],
+        });
+        const r = probe && probe[0] && probe[0].result;
+        if (r && r.hasComposer && (!best || r.score > best.score)) best = { id: t.id, score: r.score, probe: r };
+      } catch (e) { /* tab non iniettabile/discarded: ignora */ }
+    }
+    return best;
+  }
+
+  // DIAGNOSTIC ONLY — manual-test path: usa SOLO un composer LinkedIn già aperto.
   // Niente navigazione, niente click "Messaggia", niente apertura composer: se la
   // chat non è pronta fallisce subito. Questo evita loop/click ripetuti su LinkedIn.
   async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
@@ -142,8 +181,11 @@ var Actions = globalThis.Actions || (function () {
       }
       globalThis.__lvLiDiagInflight = { url: targetClean, msg: message, at: now };
     } catch (e) { /* best-effort */ }
-    // Manual diagnostic: riusa qualunque tab LinkedIn già aperta senza navigarla.
-    const tab = await TabManager.getLinkedInTab(target, true, false);
+    // Manual diagnostic: scegli la tab LinkedIn che ha davvero il composer visibile.
+    // Non basta "prima tab LinkedIn": con più pagine aperte finivamo sulla tab sbagliata
+    // e il test restava appeso/falliva pur avendo una chat pronta altrove.
+    const composerTab = await findLinkedInTabWithOpenComposer(targetClean);
+    const tab = composerTab || await TabManager.getLinkedInTab(target, true, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }

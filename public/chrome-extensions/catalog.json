@@ -105,20 +105,29 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.42",
+    "latestVersion": "3.9.43",
     "items": [
+      {
+        "version": "3.9.43",
+        "filename": "linkedin-extension-3.9.43.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.43.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Composer-first fast test: Invia LI e i test isolati usano la tab con composer visibile, senza navigare e senza timeout 90s."
+      },
       {
         "version": "3.9.42",
         "filename": "linkedin-extension-3.9.42.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.42.zip",
         "releaseDate": "2026-05-09",
-        "notes": "Ultimo miglio: native btn.click() + form.requestSubmit() fallback; anti-doppio-invio 2s; rimosso ensureTabVisibleAndWait dal path diagnostico"
+        "current": false,
+        "notes": "Archivio — ultimo miglio con native btn.click() + form.requestSubmit(), ma path standard ancora troppo lento."
       },
       {
         "version": "3.9.41",
         "filename": "linkedin-extension-3.9.41.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.41.zip",
-        "current": true,
+        "current": false,
         "note": "Diagnostic tab picker: i test manuali scelgono la tab LinkedIn che ha davvero il composer visibile, senza navigare o ricliccare Messaggia."
       },
       {

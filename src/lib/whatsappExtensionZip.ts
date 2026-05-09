@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.42";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.43";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,14 +139,21 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.42",
+    latestVersion: "3.9.43",
     items: [
+      {
+        version: "3.9.43",
+        filename: "linkedin-extension-3.9.43.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.43.zip",
+        current: true,
+        note: "Composer-first fast test: Invia LI e i test isolati usano la tab con composer visibile, senza navigare e senza timeout 90s.",
+      },
       {
         version: "3.9.42",
         filename: "linkedin-extension-3.9.42.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.42.zip",
-        current: true,
-        note: "Diagnostic tab picker: i test manuali scelgono la tab LinkedIn che ha davvero il composer visibile, senza navigare o ricliccare Messaggia.",
+        current: false,
+        note: "Archivio — ultimo miglio con native click/requestSubmit; ancora lento sul path sendMessage standard.",
       },
       {
         version: "3.9.40",
