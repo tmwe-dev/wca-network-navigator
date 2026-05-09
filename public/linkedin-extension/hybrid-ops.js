@@ -222,7 +222,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     // Level 1: AX Tree
     try {
       const axResult = await withTimeout(AXTree.typeMessage(tabId, message), 6500, "AX typeMessage");
-      if (axResult && axResult.success) return axResult;
+      if (axResult && axResult.success && await composerCleared(tabId, 2500)) return axResult;
     } catch (e) { console.warn("[LI-Hybrid] AX Tree message failed:", e.message); }
 
     // Level 2: AI Learn
@@ -236,7 +236,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           args: [schema, message],
         });
         const learnResult = learnRes[0] && learnRes[0].result;
-        if (learnResult && learnResult.success) return learnResult;
+        if (learnResult && learnResult.success && await composerCleared(tabId, 2500)) return learnResult;
       }
     } catch (e) { console.warn("[LI-Hybrid] AI Learn message failed:", e.message); }
 
