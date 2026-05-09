@@ -84,15 +84,18 @@ var Actions = globalThis.Actions || (function () {
         });
         composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
       } catch (e) { composerAlreadyOpen = false; }
-      // P11 — Verifica URL: dopo navigate dobbiamo essere sul profilo richiesto
-      // (o su un /messaging/thread/ derivato). Altrimenti abortiamo.
+      // P11 — Verifica URL stretta: dopo navigate dobbiamo essere ESATTAMENTE
+      // sul profilo richiesto (/in/<slug>). Niente scorciatoia "qualsiasi
+      // /messaging/thread/ va bene": se la tab era già su una chat diversa,
+      // si mandava al destinatario sbagliato. Abortiamo anche se il composer
+      // è "già aperto" su un thread non verificato.
       try {
         const tabInfo = await chrome.tabs.get(tab.id);
         const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
         const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
         const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-        const onThread = /linkedin\.com\/messaging\/thread\//i.test(currentUrl);
-        if (!isThreadUrl && !onTarget && !onThread && !composerAlreadyOpen) {
+        if (!isThreadUrl && !onTarget) {
+          console.warn("[LI Send] wrong_recipient", { wanted: targetSlug, currentUrl: currentUrl });
           return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
         }
       } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
