@@ -549,6 +549,18 @@ var HybridOps = globalThis.HybridOps || (function () {
       });
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.success) return fbResult;
+      try {
+        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: "cdp_physical_click_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP physical click failed:", e.message); }
+      try {
+        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: cdpKey.method + "_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP Ctrl/Cmd+Enter failed:", e.message); }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
   }
