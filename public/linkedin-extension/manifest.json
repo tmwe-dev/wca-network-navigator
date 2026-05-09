@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.33",
-  "description": "P18 — Invio LinkedIn non apre nuove tab e non attiva Chrome: usa solo una tab LinkedIn già esistente.",
+  "version": "3.9.34",
+  "description": "P19 — Tutte le azioni LinkedIn sono no-new-tab; invio con fallback CDP reali per click e Ctrl+Enter.",
   "permissions": [
     "cookies",
     "tabs",

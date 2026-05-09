@@ -5,9 +5,14 @@
 
 var Actions = globalThis.Actions || (function () {
 
+  function noExistingLinkedInTab(errorCode, actionLabel) {
+    return Config.errorResponse(errorCode, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; " + actionLabel + " non apre nuove tab e non cambia pagina");
+  }
+
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
-    const tab = await TabManager.getLinkedInTab(url);
+    const tab = await TabManager.getLinkedInTab(url, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.EXTRACTION_FAILED, "Estrai profilo");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     return await HybridOps.extractProfile(tab.id);
   }
@@ -178,7 +183,8 @@ var Actions = globalThis.Actions || (function () {
 
   async function sendConnectionRequest(profileUrl, note) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
-    const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""), false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.CONNECT_FAILED, "Collegati");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickConnect(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, (clickResult && clickResult.error) || "Connect button not found");
@@ -207,7 +213,8 @@ var Actions = globalThis.Actions || (function () {
   async function searchProfile(query) {
     if (!query) return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Query mancante");
     const searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
-    const tab = await TabManager.getLinkedInTab(searchUrl);
+    const tab = await TabManager.getLinkedInTab(searchUrl, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.SEARCH_FAILED, "Search");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(3000);
     try {
@@ -597,7 +604,8 @@ var Actions = globalThis.Actions || (function () {
 
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
-    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Leggi Inbox");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
@@ -805,7 +813,8 @@ var Actions = globalThis.Actions || (function () {
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
     const isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
-    const tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
+    const tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Leggi Thread");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     if (isProfileUrl) {
       try {
@@ -887,7 +896,8 @@ var Actions = globalThis.Actions || (function () {
 
     try {
       var isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
-      var tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
+        var tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl, false);
+        if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Backfill Thread");
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
       if (isProfileUrl) {
         try {
@@ -1063,7 +1073,8 @@ var Actions = globalThis.Actions || (function () {
   }
 
   async function diagnostic() {
-    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.UNKNOWN, "Diagnostica DOM");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
@@ -1109,7 +1120,8 @@ var Actions = globalThis.Actions || (function () {
   async function learnDom(pageType) {
     if (!Config.isReady()) return Config.errorResponse(Config.ERROR.NO_CONFIG, "Configurazione AI mancante");
     const url = pageType === "messaging" ? "https://www.linkedin.com/messaging/" : "https://www.linkedin.com/in/me/";
-    const tab = await TabManager.getLinkedInTab(url, false);
+    const tab = await TabManager.getLinkedInTab(url, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Learn DOM");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
     const schema = await AILearn.learnFromAI(tab.id, pageType || "profile", Config.getUrl(), Config.getKey());
@@ -1129,7 +1141,8 @@ var Actions = globalThis.Actions || (function () {
       await AILearn.clearCache("profile");
 
       // 2) Re-learn messaging (schema usato da HybridOps.sendMessage)
-      const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false);
+      const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+      if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Rimappa DOM invio");
       await TabManager.ensureTabVisibleAndWait(tab.id, 1500);
       await TabManager.sleep(3000);
       try {
@@ -1148,7 +1161,8 @@ var Actions = globalThis.Actions || (function () {
       const messagingSchema = await AILearn.learnFromAI(tab.id, "messaging", Config.getUrl(), Config.getKey());
 
       // 3) Re-learn profile (schema usato per click "Message"/"Connect")
-      const profTab = await TabManager.getLinkedInTab("https://www.linkedin.com/in/me/", false);
+      const profTab = await TabManager.getLinkedInTab("https://www.linkedin.com/in/me/", false, false);
+      if (!profTab || !profTab.id) return noExistingLinkedInTab(Config.ERROR.AI_LEARN_FAILED, "Rimappa DOM profilo");
       await TabManager.ensureTabVisibleAndWait(profTab.id, 1200);
       await TabManager.sleep(2500);
       const profileSchema = await AILearn.learnFromAI(profTab.id, "profile", Config.getUrl(), Config.getKey());

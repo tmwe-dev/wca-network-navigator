@@ -268,7 +268,7 @@ export function LinkedInTest() {
   // Permette di capire quale meccanismo di click sul pulsante "Invia"
   // funziona meglio nel composer LinkedIn corrente, senza che la cascata
   // di fallback nasconda quale metodo ha effettivamente vinto.
-  const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut", emoji: string, label: string) => runWithCooldown(async () => {
+  const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut" | "cdp_physical_click" | "cdp_ctrl_enter", emoji: string, label: string) => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     log(`${emoji} Test metodo: ${label} (${method})`);
@@ -538,6 +538,8 @@ export function LinkedInTest() {
           <Button onClick={() => testSendWithMethod("physical_click", "🖱️", "Click fisico")} disabled={running} size="sm" variant="outline" title="pointerdown/mousedown/click con coordinate reali">🖱️ Click fisico</Button>
           <Button onClick={() => testSendWithMethod("form_submit", "📋", "Form submit")} disabled={running} size="sm" variant="outline" title="form.requestSubmit() sul .msg-form">📋 Form submit</Button>
           <Button onClick={() => testSendWithMethod("keyboard_shortcut", "⌨️", "Ctrl+Enter")} disabled={running} size="sm" variant="outline" title="Ctrl+Enter (Cmd+Enter su Mac)">⌨️ Ctrl+Enter</Button>
+          <Button onClick={() => testSendWithMethod("cdp_physical_click", "🎯", "CDP click")} disabled={running} size="sm" variant="outline" title="Chrome DevTools Protocol: mousePressed/mouseReleased sul bottone Invia">🎯 CDP click</Button>
+          <Button onClick={() => testSendWithMethod("cdp_ctrl_enter", "⌘", "CDP Ctrl+Enter")} disabled={running} size="sm" variant="outline" title="Chrome DevTools Protocol: Ctrl/Cmd+Enter nativo">⌘ CDP Ctrl+Enter</Button>
         </div>
       </div>
       <Terminal logs={logs} />

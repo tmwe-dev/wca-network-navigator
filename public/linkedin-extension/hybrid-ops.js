@@ -15,6 +15,48 @@ var HybridOps = globalThis.HybridOps || (function () {
     ]);
   }
 
+  function isMacPlatform() {
+    return new Promise(function (resolve) {
+      try { chrome.runtime.getPlatformInfo(function (info) { resolve(info && info.os === "mac"); }); }
+      catch (e) { resolve(false); }
+    });
+  }
+
+  async function composerCleared(tabId, timeoutMs) {
+    try {
+      const res = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: function (maxWait) {
+          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          function findBox() {
+            var scopes = document.querySelectorAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+            for (var s = 0; s < scopes.length; s++) {
+              var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var i = 0; i < boxes.length; i++) {
+                var el = boxes[i];
+                if (el.offsetParent !== null || el.getClientRects().length > 0) return el;
+              }
+            }
+            return null;
+          }
+          return (async function () {
+            var loops = Math.max(1, Math.ceil((maxWait || 3000) / 150));
+            for (var i = 0; i < loops; i++) {
+              var box = findBox();
+              if (!box) return true;
+              var current = (box.innerText || box.textContent || "").trim();
+              if (!current) return true;
+              await sleep(150);
+            }
+            return false;
+          })();
+        },
+        args: [timeoutMs || 3000],
+      });
+      return !!(res && res[0] && res[0].result);
+    } catch (e) { return false; }
+  }
+
   // ── InputNative: replaces execCommand for contenteditable ──
   function nativeInsertText(text) {
     // Use InputEvent API where available (modern Chrome)
@@ -180,7 +222,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     // Level 1: AX Tree
     try {
       const axResult = await withTimeout(AXTree.typeMessage(tabId, message), 6500, "AX typeMessage");
-      if (axResult && axResult.success) return axResult;
+      if (axResult && axResult.success && await composerCleared(tabId, 2500)) return axResult;
     } catch (e) { console.warn("[LI-Hybrid] AX Tree message failed:", e.message); }
 
     // Level 2: AI Learn
@@ -194,7 +236,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           args: [schema, message],
         });
         const learnResult = learnRes[0] && learnRes[0].result;
-        if (learnResult && learnResult.success) return learnResult;
+        if (learnResult && learnResult.success && await composerCleared(tabId, 2500)) return learnResult;
       }
     } catch (e) { console.warn("[LI-Hybrid] AI Learn message failed:", e.message); }
 
@@ -507,6 +549,18 @@ var HybridOps = globalThis.HybridOps || (function () {
       });
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.success) return fbResult;
+      try {
+        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: "cdp_physical_click_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP physical click failed:", e.message); }
+      try {
+        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: cdpKey.method + "_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP Ctrl/Cmd+Enter failed:", e.message); }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
   }
@@ -692,7 +746,7 @@ var HybridOps = globalThis.HybridOps || (function () {
   // tre metodi funziona meglio nel composer LinkedIn corrente.
   // ────────────────────────────────────────────────────────────────────
   async function sendMessageWithMethod(tabId, message, method) {
-    const allowed = ["physical_click", "form_submit", "keyboard_shortcut"];
+    const allowed = ["physical_click", "form_submit", "keyboard_shortcut", "cdp_physical_click", "cdp_ctrl_enter"];
     if (allowed.indexOf(method) === -1) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "invalid_method: " + method);
     }
@@ -815,12 +869,14 @@ var HybridOps = globalThis.HybridOps || (function () {
               return false;
             }
 
-            // Wait for send button (only needed for physical_click)
+            // Wait for send button only for click-based diagnostics.
             let sendBtn = null;
-            for (let i = 0; i < 80; i++) {
-              sendBtn = findSendBtn();
-              if (sendBtn) break;
-              await sleep(100);
+            if (methodName === "physical_click") {
+              for (let i = 0; i < 80; i++) {
+                sendBtn = findSendBtn();
+                if (sendBtn) break;
+                await sleep(100);
+              }
             }
 
             // ── Apply ONLY the requested method ──
@@ -868,6 +924,8 @@ var HybridOps = globalThis.HybridOps || (function () {
               } catch (e) {
                 return { success: false, error: "keyboard_shortcut_threw: " + e.message, attempted_method: methodName };
               }
+            } else if (methodName === "cdp_physical_click" || methodName === "cdp_ctrl_enter") {
+              return { success: false, pending_cdp: true, attempted_method: methodName };
             }
 
             var cleared = await textboxCleared();
@@ -880,6 +938,16 @@ var HybridOps = globalThis.HybridOps || (function () {
         args: [message, method],
       });
       const fbResult = fbRes[0] && fbRes[0].result;
+      if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
+        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) return { success: true, method: "cdp_physical_click" };
+        return { success: false, error: (cdpClick && cdpClick.error) || "cdp_physical_click_failed", attempted_method: "cdp_physical_click" };
+      }
+      if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
+        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
+        return { success: false, error: "cdp_ctrl_enter_textbox_not_cleared", attempted_method: "cdp_ctrl_enter" };
+      }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_result");
     } catch (e) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message);
