@@ -231,14 +231,55 @@ var Actions = globalThis.Actions || (function () {
       } catch (e) { return false; }
     }
     let composerAlreadyOpen = await probeComposer();
-    // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia".
+    // 3.bis) Aspetta che il PROFILO sia pronto in background prima di cercare
+    // "Messaggia": tab in background montano il DOM più lentamente. Polling
+    // fino a 6s (20 × 300ms) per la presenza del bottone "Messaggia" oppure
+    // di un composer già aperto. Non si applica ai thread URL.
+    async function probeMessageButton() {
+      try {
+        const r = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            var btns = document.querySelectorAll("button, a[role='button']");
+            for (var i = 0; i < btns.length; i++) {
+              var b = btns[i];
+              var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).toLowerCase();
+              if (!label) continue;
+              if (/messaggi|message|messa|invia messaggio|nachricht|enviar mensaje|envoyer un message/i.test(label)) {
+                var visible = b.offsetParent !== null || b.getClientRects().length > 0;
+                if (visible) return true;
+              }
+            }
+            return false;
+          },
+        });
+        return !!(r[0] && r[0].result);
+      } catch (e) { return false; }
+    }
     if (!composerAlreadyOpen && !isThreadUrl) {
-      const clickResult = await HybridOps.clickMessage(tab.id);
+      let profileReady = await probeMessageButton();
+      for (let i = 0; i < 20 && !profileReady && !composerAlreadyOpen; i++) {
+        await TabManager.sleep(300);
+        profileReady = await probeMessageButton();
+        if (!profileReady) composerAlreadyOpen = await probeComposer();
+      }
+      if (!profileReady && !composerAlreadyOpen) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "profile_not_ready: profilo LinkedIn non ancora pronto in background, riprova");
+      }
+    }
+    // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
+    //    con un retry in caso di fallimento transitorio.
+    if (!composerAlreadyOpen && !isThreadUrl) {
+      let clickResult = await HybridOps.clickMessage(tab.id);
+      if (!clickResult || !clickResult.success) {
+        await TabManager.sleep(1500);
+        clickResult = await HybridOps.clickMessage(tab.id);
+      }
       if (!clickResult || !clickResult.success) {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
       }
-      // Attendi montaggio composer fino a 4s (poll 250ms).
-      for (let i = 0; i < 16; i++) {
+      // Attendi montaggio composer fino a 8s (poll 250ms).
+      for (let i = 0; i < 32; i++) {
         await TabManager.sleep(250);
         if (await probeComposer()) { composerAlreadyOpen = true; break; }
       }
