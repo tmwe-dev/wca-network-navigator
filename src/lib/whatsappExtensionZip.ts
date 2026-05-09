@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.34";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.35";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.34",
+    latestVersion: "3.9.35",
     items: [
+      {
+        version: "3.9.35",
+        filename: "linkedin-extension-3.9.35.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.35.zip",
+        current: true,
+        note: "P20 — Form submit bounded/no-navigation: niente requestSubmit, niente tab nuove, niente timeout 90s.",
+      },
       {
         version: "3.9.34",
         filename: "linkedin-extension-3.9.34.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.34.zip",
-        current: true,
+        current: false,
         note: "P19 — Tutte le azioni no-new-tab; invio con fallback CDP reali per click e Ctrl/Cmd+Enter.",
       },
       {

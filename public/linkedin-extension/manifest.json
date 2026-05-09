@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.34",
-  "description": "P19 — Tutte le azioni LinkedIn sono no-new-tab; invio con fallback CDP reali per click e Ctrl+Enter.",
+  "version": "3.9.35",
+  "description": "P20 — Form submit LinkedIn bounded/no-navigation: niente requestSubmit, niente tab nuove, niente timeout 90s.",
   "permissions": [
     "cookies",
     "tabs",
