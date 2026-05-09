@@ -150,13 +150,20 @@ export function WhatsAppTest() {
 
   const testSendMessage = async () => {
     const phoneRaw = sendPhone.trim();
-    const cleanedPhone = phoneRaw.replace(/[^0-9+]/g, "");
-    const hasPhone = cleanedPhone.replace(/^\+/, "").length >= 7;
+    const cleanedDigits = phoneRaw.replace(/[^0-9+]/g, "");
+    const digitsOnly = cleanedDigits.replace(/^\+/, "");
+    const hasPhone = digitsOnly.length >= 7;
     if (!hasPhone) {
-      log("⛔ Serve un numero E.164 (es. +393331234567). Cerca il destinatario nel database qui sotto: il numero verrà compilato automaticamente. L'invio per nome chat non è affidabile e può finire alla persona sbagliata.", "error");
+      if (selectedRecipient && !selectedRecipient.bestPhone) {
+        log(`⛔ Il contatto selezionato "${selectedRecipient.name}" non ha telefono in DB (${selectedRecipient.source}). Aggiorna il record o scegli un altro destinatario qui sotto.`, "error");
+      } else {
+        log("⛔ Campo numero vuoto. Cerca il destinatario nel database qui sotto e clicca su una riga: il numero E.164 verrà compilato automaticamente.", "error");
+      }
       return;
     }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
+    // Auto-prefix "+" se manca (assume E.164 senza segno iniziale)
+    const cleanedPhone = cleanedDigits.startsWith("+") ? cleanedDigits : "+" + digitsOnly;
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
