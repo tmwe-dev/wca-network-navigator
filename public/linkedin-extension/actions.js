@@ -261,6 +261,116 @@ var Actions = globalThis.Actions || (function () {
         return !!(probe[0] && probe[0].result);
       } catch (e) { return false; }
     }
+
+    // v3.9.48 — Gate stile WhatsApp: prima aspetta davvero pagina + campo,
+    // poi permette al writer di copiare/inviare. Questo evita il vecchio errore
+    // “composer non montato”: se il campo non esiste, NON scriviamo nulla.
+    async function waitForComposerReady(maxWaitMs) {
+      try {
+        const res = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function (timeoutMs) {
+            function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+            function deepQueryAll(selector, root) {
+              var out = [];
+              var r = root || document;
+              try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+              var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+              for (var i = 0; i < all.length; i++) {
+                if (all[i].shadowRoot) {
+                  try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
+                }
+              }
+              return out;
+            }
+            function visible(el) { return !!(el && (el.offsetParent !== null || el.getClientRects().length > 0)); }
+            function findBox() {
+              var scopes = deepQueryAll(
+                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              );
+              for (var s = 0; s < scopes.length; s++) {
+                if (!visible(scopes[s])) continue;
+                var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+                for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
+              }
+              return null;
+            }
+            function isInGlobalNav(el) {
+              return !!(el && (el.closest("nav") || el.closest("header[role='banner']") || el.closest("[data-test-global-nav]") || el.closest(".global-nav")));
+            }
+            function hasOpenComposerShell() {
+              var scopes = deepQueryAll(
+                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              );
+              for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
+              return false;
+            }
+            function findMessageBtn() {
+              var root = document.querySelector("main") || document.body;
+              var btns = Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']"));
+              for (var i = 0; i < btns.length; i++) {
+                var b = btns[i];
+                if (!visible(b) || isInGlobalNav(b)) continue;
+                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
+                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message)$/i.test(label)) return b;
+                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(label)) return b;
+              }
+              return null;
+            }
+            function findMoreBtn() {
+              var root = document.querySelector("main") || document.body;
+              var btns = Array.from(root.querySelectorAll("button, [role='button']"));
+              for (var i = 0; i < btns.length; i++) {
+                var b = btns[i];
+                if (!visible(b) || isInGlobalNav(b)) continue;
+                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
+                if (/^(more|altro|più|more actions|più azioni)$/i.test(label)) return b;
+              }
+              return null;
+            }
+            return (async function () {
+              var started = Date.now();
+              var limit = Math.max(12000, timeoutMs || 30000);
+              var clickedMessage = false;
+              var clickedMore = false;
+              var last = { readyState: document.readyState, hasMain: !!document.querySelector("main"), clickedMessage: false, clickedMore: false, shells: 0, boxes: 0 };
+              while (Date.now() - started < limit) {
+                last.readyState = document.readyState;
+                last.hasMain = !!document.querySelector("main");
+                var box = findBox();
+                if (box) return { success: true, method: "wa_style_composer_gate", waitedMs: Date.now() - started };
+                var shells = deepQueryAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+                last.shells = shells.filter(visible).length;
+                last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
+                if (!clickedMessage && !hasOpenComposerShell()) {
+                  var mb = findMessageBtn();
+                  if (mb) {
+                    try { mb.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
+                  }
+                }
+                if (!clickedMessage && !clickedMore && !hasOpenComposerShell() && Date.now() - started > 2500) {
+                  var more = findMoreBtn();
+                  if (more) {
+                    try { more.click(); clickedMore = true; last.clickedMore = true; } catch (e) {}
+                    await sleep(700);
+                    var mb2 = findMessageBtn();
+                    if (mb2) {
+                      try { mb2.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
+                    }
+                  }
+                }
+                await sleep(100);
+              }
+              return { success: false, error: "composer_gate_timeout", waitedMs: Date.now() - started, diagnostic: last };
+            })();
+          },
+          args: [maxWaitMs || 30000],
+        });
+        return (res && res[0] && res[0].result) || { success: false, error: "composer_gate_no_result" };
+      } catch (e) {
+        return { success: false, error: "composer_gate_exception: " + (e && e.message ? e.message : String(e)) };
+      }
+    }
     let composerAlreadyOpen = await probeComposer();
     // 3.bis) Aspetta che il PROFILO sia pronto in background prima di cercare
     // "Messaggia": tab in background montano il DOM più lentamente. Polling
