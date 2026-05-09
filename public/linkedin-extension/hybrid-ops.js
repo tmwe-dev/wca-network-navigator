@@ -773,24 +773,38 @@ var HybridOps = globalThis.HybridOps || (function () {
             for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
             if (!msgBox) return { success: false, error: "no_textbox_found", attempted_method: methodName };
 
-            // Write text (P5 + P13 wake-up)
-            msgBox.focus();
-            try {
-              var sel0 = window.getSelection();
-              if (sel0) { sel0.selectAllChildren(msgBox); }
-              document.execCommand("selectAll", false, null);
-              document.execCommand("delete", false, null);
-              document.execCommand("insertText", false, msg);
-            } catch (e) {
-              msgBox.textContent = msg;
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true }));
-            }
-            try {
-              msgBox.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: msg, bubbles: true, cancelable: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }));
-              msgBox.dispatchEvent(new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }));
-              msgBox.dispatchEvent(new Event("change", { bubbles: true }));
-            } catch (e) { /* best-effort */ }
+            // Write text with the same WA-aligned verified cascade used by production sendMessage.
+            (function modernClearAndType(input, text) {
+              try { input.focus(); } catch (e) {}
+              try { if (typeof input.click === "function") input.click(); } catch (e) {}
+              try {
+                var r = document.createRange();
+                r.selectNodeContents(input);
+                var s2 = window.getSelection();
+                s2.removeAllRanges();
+                s2.addRange(r);
+                document.execCommand("delete", false);
+              } catch (e) {}
+              function hasText() {
+                var tc = (input.textContent || "");
+                return tc.indexOf(text) !== -1 || tc.trim() === text.trim();
+              }
+              if (!hasText()) {
+                try {
+                  var dt = new DataTransfer();
+                  dt.setData("text/plain", text);
+                  input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+                } catch (e) {}
+              }
+              if (!hasText()) { try { document.execCommand("insertText", false, text); } catch (e) {} }
+              if (!hasText()) {
+                try {
+                  input.textContent = text;
+                  input.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true, composed: true }));
+                } catch (e) {}
+              }
+            })(msgBox, msg);
+            try { msgBox.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) { /* best-effort */ }
 
             async function textboxCleared() {
               for (let i = 0; i < 15; i++) {
