@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.48",
-  "description": "Fix composer gate: come WhatsApp aspetta pagina pronta + textbox reale prima di copiare/inviare; fallback solo dopo timeout diagnostico.",
+  "version": "3.9.53",
+  "description": "Restore backup 3.9.48 + anti-doppio-invio: stessa coppia (url, message) entro 4s viene bloccata. Pipeline invariata: navigate focus-safe, clickMessage, attesa composer, writer.",
   "permissions": [
     "cookies",
     "tabs",
