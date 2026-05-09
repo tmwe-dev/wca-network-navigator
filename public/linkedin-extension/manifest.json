@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.36",
-  "description": "P21 — Fix Profile-scoped message button not found: navighiamo sempre al profilo target (focus-safe, no new tab).",
+  "version": "3.9.37",
+  "description": "P22 — clickMessage scoped al top-card profilo, readThread/backfill su profilo navigano sempre al target, AX typeMessage disabilitato in invio produzione.",
   "permissions": [
     "cookies",
     "tabs",
