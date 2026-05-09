@@ -488,9 +488,18 @@ export function LinkedInTest() {
           <Input
             value={sendUrl}
             onChange={(e) => setSendUrl(e.target.value)}
-            placeholder="Incolla URL profilo LinkedIn (es. https://www.linkedin.com/in/...)"
+            placeholder="URL fisso test LinkedIn (profilo /in/... o thread /messaging/thread/...)"
             className="flex-1 text-sm"
           />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={pinFixedRecipient}
+            title="Salva questo URL come destinatario fisso dei test LinkedIn"
+          >
+            📌 Fissa test
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -510,7 +519,7 @@ export function LinkedInTest() {
         </div>
         <div className="flex gap-2">
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
-          <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia LI</Button>
+          <Button onClick={testSendMessage} disabled={running || !sendUrl.trim() || !sendText.trim()} size="sm" variant="default" title={!sendUrl.trim() ? "URL fisso mancante: inseriscilo e premi Fissa test" : "Invia al destinatario fisso LinkedIn"}>📤 Invia LI</Button>
         </div>
         <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50 mt-1">
           <span className="text-[11px] text-muted-foreground self-center mr-1">🧪 Test isolati click invio:</span>
