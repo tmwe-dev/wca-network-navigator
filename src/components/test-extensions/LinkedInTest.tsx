@@ -55,10 +55,6 @@ export function LinkedInTest() {
   const [lastKnownText, setLastKnownText] = useState("");
   const [foundThreads, setFoundThreads] = useState<FoundThread[]>([]);
   const [quality, setQuality] = useState<SyncQualitySummary | null>(null);
-  // v3.9.50 — modalità composer (default safe background).
-  const [composerMode, setComposerMode] = useState<"background_existing_composer" | "interactive_open_composer">(
-    "background_existing_composer"
-  );
   const actionTimesRef = useRef<number[]>([]);
 
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
@@ -222,18 +218,6 @@ export function LinkedInTest() {
     }
   });
 
-  const testProbeComposer = () => runWithCooldown(async () => {
-    log("🔬 Probe composer LinkedIn (4s, focus-safe, nessun click su 'Messaggia')...");
-    const r = await liMsg("probeComposer", { url: sendUrl.trim() || profileUrl.trim() }, 8000) as Record<string, unknown>;
-    if (r?.success) {
-      log(`✅ Composer LinkedIn aperto su tab ${r.tabId} (${String(r.tabUrl || "").slice(0, 80)})`, "ok");
-    } else {
-      const errStr = String(r?.error || JSON.stringify(r));
-      log(`❌ Composer non aperto: ${errStr}`, "error");
-      log("💡 Apri manualmente la chat LinkedIn col destinatario e lascia il box messaggio visibile, poi riprova.", "warn");
-    }
-  });
-
   const testSendMessage = () => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
@@ -304,10 +288,9 @@ export function LinkedInTest() {
   const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut" | "cdp_physical_click" | "cdp_ctrl_enter", emoji: string, label: string) => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
-    log(`${emoji} Test metodo: ${label} (${method}) — mode=${composerMode}`);
+    log(`${emoji} Test metodo: ${label} (${method})`);
     log(`  Destinatario: ${sendUrl}`, "info");
-    const timeoutMs = composerMode === "background_existing_composer" ? 12000 : 45000;
-    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method, mode: composerMode }, timeoutMs);
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 45000);
     if (r?.success) {
       log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
     } else {
@@ -316,10 +299,6 @@ export function LinkedInTest() {
       log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
       if (/no_existing_linkedin_tab/i.test(errStr)) {
         log("💡 Apri almeno una tab LinkedIn (qualsiasi pagina) e riprova: l'estensione la userà in background.", "warn");
-      } else if (/composer_not_open_background_mode/i.test(errStr)) {
-        log("💡 Apri manualmente la chat LinkedIn col destinatario (background mode) o passa a Interactive.", "warn");
-      } else if (/open_composer_failed_interactive|composer_gate_failed_interactive/i.test(errStr)) {
-        log("💡 Il bottone Messaggia non è apparso sul profilo (forse non sei collegato o il profilo non accetta messaggi).", "warn");
       }
     }
   }, LI_DIAGNOSTIC_COOLDOWN_MS);
@@ -560,31 +539,6 @@ export function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">📤 Test Invio Messaggio LinkedIn</p>
-        <div className="flex flex-wrap items-center gap-3 text-xs p-2 rounded border border-border/60 bg-background">
-          <span className="font-medium">Modalità composer:</span>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input
-              type="radio"
-              name="li-composer-mode"
-              checked={composerMode === "background_existing_composer"}
-              onChange={() => setComposerMode("background_existing_composer")}
-            />
-            <span title="Non attiva la tab LinkedIn. Cerca SOLO un composer già aperto. Se non c'è, fail veloce in ~4s.">
-              🪟 Background — composer già aperto (consigliato)
-            </span>
-          </label>
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input
-              type="radio"
-              name="li-composer-mode"
-              checked={composerMode === "interactive_open_composer"}
-              onChange={() => setComposerMode("interactive_open_composer")}
-            />
-            <span title="Porta la tab LinkedIn in primo piano, clicca 'Messaggia', attende il composer fino a 30s.">
-              🎯 Interactive — apre il composer (porta LinkedIn in foreground)
-            </span>
-          </label>
-        </div>
         {foundThreads.length > 0 && (
           <select value={sendUrl} onChange={(e) => setSendUrl(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
             <option value="">— Seleziona contatto dalla rubrica (o incolla URL sotto) —</option>
@@ -626,16 +580,7 @@ export function LinkedInTest() {
         </div>
         <div className="flex gap-2">
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
-          <Button
-            onClick={testProbeComposer}
-            disabled={running}
-            size="sm"
-            variant="secondary"
-            title="Verifica se c'è un composer LinkedIn già aperto. Non clicca, non naviga, non invia."
-          >
-            🔬 Test composer aperto
-          </Button>
-          <Button onClick={testSendMessage} disabled={running || !sendUrl.trim() || !sendText.trim()} size="sm" variant="default" title={!sendUrl.trim() ? "URL fisso mancante: inseriscilo e premi Fissa test" : `Invia al destinatario fisso LinkedIn (mode: ${composerMode})`}>📤 Invia LI</Button>
+          <Button onClick={testSendMessage} disabled={running || !sendUrl.trim() || !sendText.trim()} size="sm" variant="default" title={!sendUrl.trim() ? "URL fisso mancante: inseriscilo e premi Fissa test" : "Invia al destinatario fisso LinkedIn (pipeline backup 3.9.48)"}>📤 Invia LI</Button>
         </div>
         <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50 mt-1">
           <span className="text-[11px] text-muted-foreground self-center mr-1">🧪 Test isolati click invio:</span>
