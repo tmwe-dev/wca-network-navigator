@@ -207,6 +207,9 @@ var Actions = globalThis.Actions || (function () {
     const composerTab = await findLinkedInTabWithOpenComposer(target);
     const tab = composerTab.tab;
     if (!tab || !tab.id) {
+      if (composerTab.tabsChecked > 0) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: ho trovato " + composerTab.tabsChecked + " tab LinkedIn, ma nessuna con composer messaggio visibile");
+      }
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }
     await TabManager.ensureTabVisibleAndWait(tab.id, 600);
