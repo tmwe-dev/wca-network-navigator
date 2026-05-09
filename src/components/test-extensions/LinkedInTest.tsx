@@ -274,18 +274,21 @@ export function LinkedInTest() {
   const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut" | "cdp_physical_click" | "cdp_ctrl_enter", emoji: string, label: string) => runWithCooldown(async () => {
     if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
-    log(`${emoji} Test metodo: ${label} (${method}) — fast-path, composer deve essere aperto`);
+    log(`${emoji} Test metodo: ${label} (${method}) — background mode (l'estensione apre il composer da sola)`);
     log(`  Destinatario: ${sendUrl}`, "info");
-    // Fast-path: 8s totali (4s DOM + margine RPC). Se la finestra non è pronta, fail veloce.
-    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 8000);
+    // Background mode (v3.9.44): l'estensione apre il composer focus-safe; serve più tempo per
+    // navigate + clickMessage + montaggio composer (max ~8s) + invio (~2s).
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method }, 20000);
     if (r?.success) {
       log(`✅ ${label}: messaggio inviato! (method=${r.method || method})`, "ok");
     } else {
       const errStr = String(r?.error || JSON.stringify(r));
       const attempted = (r as Record<string, unknown>)?.attempted_method as string | undefined;
       log(`❌ ${label} fallito${attempted ? ` (attempted=${attempted})` : ""}: ${errStr}`, "error");
-      if (/timeout|composer_not_open|no_textbox/i.test(errStr)) {
-        log("💡 Apri prima la chat LinkedIn nella tab dedicata (composer visibile), poi ripremi il pulsante.", "warn");
+      if (/no_existing_linkedin_tab/i.test(errStr)) {
+        log("💡 Apri almeno una tab LinkedIn (qualsiasi pagina) e riprova: l'estensione la userà in background.", "warn");
+      } else if (/open_composer_failed|composer_not_open/i.test(errStr)) {
+        log("💡 Il bottone Messaggia non è apparso sul profilo (forse non sei collegato o il profilo non accetta messaggi).", "warn");
       }
     }
   }, LI_DIAGNOSTIC_COOLDOWN_MS);
