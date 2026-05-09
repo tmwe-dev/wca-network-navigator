@@ -184,10 +184,12 @@ var Actions = globalThis.Actions || (function () {
       }
       globalThis.__lvLiDiagInflight = { url: targetClean, msg: message, at: now };
     } catch (e) { /* best-effort */ }
-    // 1) Preferisci una tab che ha già il composer aperto sul target.
-    //    Se nessuna, naviga focus-safe la tab LinkedIn esistente al profilo.
-    const composerTab = await findLinkedInTabWithOpenComposer(targetClean);
-    const tab = composerTab || await TabManager.getLinkedInTab(target, false, false);
+    // 1) Naviga SEMPRE focus-safe la tab LinkedIn esistente al target.
+    //    Non preferire più "qualunque composer aperto": se Chrome era già su
+    //    una thread diversa, il test rapido finiva lì. La guardia resta sotto,
+    //    ma prima di bloccare diamo al tab-manager la possibilità di portarsi
+    //    sul profilo/thread richiesto.
+    const tab = await TabManager.getLinkedInTab(target, false, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test non apre nuove tab");
     }

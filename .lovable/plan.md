@@ -4,18 +4,18 @@ Due fix chirurgici, uno alla volta, entrambi reversibili. Nessun refactor, nessu
 
 ---
 
-## Fix 1 — Allineare la versione richiesta a quella installata (3.9.42)
+## Fix 1 — Allineare la versione richiesta a quella installata (3.9.44)
 
-**Sintomo**: l'app ti chiede di installare l'estensione LinkedIn anche se quella che hai già in Chrome (`3.9.42`) funziona e invia.
+**Sintomo**: l'app ti chiede di rimuovere l'estensione LinkedIn anche se quella che hai già in Chrome (`3.9.44`) è quella corretta.
 
-**Causa**: in `src/lib/whatsappExtensionZip.ts` la costante `LINKEDIN_EXTENSION_REQUIRED_VERSION` è impostata a `"3.9.44"`. Tutta la UI (banner test, download button, settings) confronta la versione attiva con questa costante → mismatch → "installa la nuova".
+**Causa corretta dopo test live**: la costante era stata abbassata a `"3.9.42"`, ma l'estensione realmente installata e funzionante è `3.9.44`.
 
 **Modifica unica**:
-- `src/lib/whatsappExtensionZip.ts` riga 9: cambio `"3.9.44"` → `"3.9.42"`.
+- `src/lib/whatsappExtensionZip.ts` riga 9: cambio `"3.9.42"` → `"3.9.44"`.
 
-Lo ZIP `linkedin-extension-3.9.42.zip` è già presente in `public/chrome-extensions/linkedin/` e nel `catalog.json`, quindi il pulsante "Scarica estensioni" continua a funzionare. Le versioni 3.9.43 e 3.9.44 restano in catalogo come storia.
+Lo ZIP `linkedin-extension-3.9.44.zip` è già presente in `public/chrome-extensions/linkedin/` e nel `catalog.json`, quindi il pulsante "Scarica estensioni" continua a funzionare.
 
-**Rollback**: una riga, riportare a `"3.9.44"`.
+**Rollback**: una riga, riportare a `"3.9.42"`.
 
 ---
 
