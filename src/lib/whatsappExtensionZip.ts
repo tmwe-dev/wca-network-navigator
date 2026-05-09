@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.29";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.31";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.29",
+    latestVersion: "3.9.31",
     items: [
+      {
+        version: "3.9.31",
+        filename: "linkedin-extension-3.9.31.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.31.zip",
+        current: true,
+        note: "P16 — Thread test usa URL fisso/profilo; invio finale con physical click + form submit + Ctrl/Cmd Enter fallback.",
+      },
       {
         version: "3.9.29",
         filename: "linkedin-extension-3.9.29.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.29.zip",
-        current: true,
+        current: false,
         note: "P1/P2 — ReadThread e backfill robusti, dedup stabile, ID reali e pannello qualità sync.",
       },
       {
