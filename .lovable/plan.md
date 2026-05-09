@@ -1,68 +1,61 @@
-# Riparazione LinkedIn Test — versione + destinatario
+## Dove stai lavorando tu
 
-Due fix chirurgici, uno alla volta, entrambi reversibili. Nessun refactor, nessun tocco a WhatsApp né alla pipeline outreach.
+Sei sulla pagina **`/test-extensions` → tab LinkedIn**, hai cliccato il bottone **"Invia LI"** (test veloce). Niente di sbagliato da parte tua: è il test che oggi presuppone che la chat LinkedIn sia già aperta nella tab Chrome.
 
----
+## Cosa succede oggi (perché vedi `composer_not_open`)
 
-## Fix 1 — Allineare la versione richiesta a quella installata (3.9.44)
+Il bottone "Invia LI" chiama l'estensione con `sendMessageWithMethod`. Il flusso interno:
 
-**Sintomo**: l'app ti chiede di rimuovere l'estensione LinkedIn anche se quella che hai già in Chrome (`3.9.44`) è quella corretta.
+1. Naviga la tab LinkedIn al profilo `/in/<slug>` in **background** (focus-safe, non porta la tab in primo piano).
+2. Aspetta solo **1,2 s** (`ensureTabVisibleAndWait`).
+3. Cerca il bottone "Messaggia" (`clickMessage`) — su pagina profilo pesante e in tab background spesso non è ancora montato.
+4. Se non lo trova, esce con `open_composer_failed` o, se il click va ma la textbox non monta entro 4 s, esce con `composer_not_open`.
 
-**Causa corretta dopo test live**: la costante era stata abbassata a `"3.9.42"`, ma l'estensione realmente installata e funzionante è `3.9.44`.
+Inoltre il timeout lato webapp è **12 s**, troppo stretto per: navigate + render profilo + click + polling composer.
 
-**Modifica unica**:
-- `src/lib/whatsappExtensionZip.ts` riga 9: cambio `"3.9.42"` → `"3.9.44"`.
+L'invio reale di outreach funziona perché parte da contesti dove la pagina è già caldda; il test diagnostico no.
 
-Lo ZIP `linkedin-extension-3.9.44.zip` è già presente in `public/chrome-extensions/linkedin/` e nel `catalog.json`, quindi il pulsante "Scarica estensioni" continua a funzionare.
+## Cosa propongo (modifica minima, reversibile, isolata al test)
 
-**Rollback**: una riga, riportare a `"3.9.42"`.
+Tutte le modifiche restano dentro `public/linkedin-extension/actions.js` (funzione `sendLinkedInMessageWithMethod`) e nel bridge della pagina test. Nessun tocco a `sendLinkedInMessage` (usato dall'outreach reale) → niente rischi sul flusso che già funziona.
 
----
+### Cambiamenti
 
-## Fix 2 — Bloccare l'invio LinkedIn alla chat sbagliata
+1. **Attesa di "ready" del profilo prima di cercare il bottone Messaggia**
+   - Dopo `ensureTabVisibleAndWait`, polling fino a 6 s (intervalli 300 ms) finché in pagina non compare il bottone `"Messaggia"` (`button[aria-label*='essag' i]` su scope profilo) **oppure** un composer già aperto.
+   - Se scade: messaggio chiaro `profile_not_ready: profilo LinkedIn non ancora pronto in background, riprova` (così l'utente sa che non è colpa sua).
 
-**Sintomo**: il messaggio parte sempre verso la prima conversazione che incontra, ignorando il destinatario `linkedin.com/in/<slug>`.
+2. **Click + retry del bottone Messaggia**
+   - Se il primo `HybridOps.clickMessage` fallisce, attesa 1,5 s e secondo tentativo. Stop al secondo fallimento.
 
-**Causa identificata** in `public/linkedin-extension/actions.js` righe 87-96:
+3. **Polling composer più lungo**
+   - Da 4 s (16×250 ms) a 8 s (32×250 ms) dopo il click. La textbox a volte monta tardi su tab scrollata in background.
 
-```text
-const onTarget = (current URL contiene /in/<slug>)
-const onThread = (current URL combacia /messaging/thread/...)
-if (!onTarget && !onThread) → errore "wrong_recipient"
-```
+4. **Timeout bridge lato webapp**
+   - In `src/components/test-extensions/LinkedInTest.tsx`, alzare il timeout di `liMsg("sendMessageWithMethod", …)` del test veloce da **12 000 ms → 30 000 ms**, allineato al test "isolato" già a 20 s + margine. Stessa modifica solo sul bottone "Invia LI"; gli altri test restano invariati.
 
-Il `|| onThread` è il bug: se la tab LinkedIn riusata è già su **una qualsiasi** thread (es. l'ultima conversazione che l'utente aveva aperto), il check passa e il composer invia lì, anche se non è il destinatario richiesto.
+5. **Log più parlanti nel terminale del test**
+   - In caso di fallimento aggiungere log riga separata: `❌ profile_not_ready` / `❌ open_composer_failed` / `❌ composer_not_open` con il suggerimento concreto (es. "tieni la tab LinkedIn aperta su qualsiasi pagina, anche feed").
 
-A monte, `tab-manager.js` `getLinkedInTab(url, false, false)` riusa la tab utente e fa `chrome.tabs.update(tabId, { url: targetProfileUrl })` (righe 182, 201, 223, 247): la navigazione c'è, ma se il caricamento è ancora in corso o LinkedIn fa una redirect interna verso `/messaging/thread/...`, il check `onThread` chiude un occhio e si invia.
+### Cosa NON tocco
 
-**Modifica unica e localizzata**:
-- `public/linkedin-extension/actions.js`: rimuovo il ramo `onThread` come scorciatoia di validazione. La guardia diventa: **si invia solo se l'URL corrente contiene `/in/<slug-target>`**, altrimenti `wrong_recipient` e nessun click. È la regola che già usavamo nei test e impedisce qualsiasi invio "alla cieca".
-- Nessun cambio a `tab-manager.js`, nessun cambio al composer, nessun cambio al backend.
+- `sendLinkedInMessage` (usato dall'invio reale outreach).
+- Hard guard destinatario (`wrong_recipient`) — resta attivo.
+- Versione estensione (`3.9.44`) — nessuna richiesta all'utente di reinstallare.
+- Nessun cambio a `TabManager`, `HybridOps`, manifest, permessi.
 
-**Cautela aggiuntiva** (zero rischio): nel ramo che riusa la tab utente già su LinkedIn, forzo sempre il `chrome.tabs.update(..., { url: targetProfileUrl })` quando l'URL corrente non contiene già `/in/<slug>`. È il comportamento già attuale, lo rendiamo solo esplicito con un log per debug.
+### Verifica dopo il deploy
 
-**Versioning estensione**: il fix richiede ricostruire lo ZIP. Strategia conservativa concordata con la tua richiesta "non rompere il codice":
-- **NON** bumpiamo a 3.9.45 (perderemmo il match con la 3.9.42 che hai installata).
-- Sovrascriviamo i sorgenti `public/linkedin-extension/actions.js` e bumpiamo il `manifest.json` interno della **3.9.42** patch a `3.9.42` invariato. **Tu non devi reinstallare niente** se non vuoi: il fix di destinatario serve solo quando ricostruisci lo ZIP e lo reinstalli. Per ora la 3.9.42 installata continua col bug del destinatario, ma il sistema **smette di chiederti di aggiornare** (Fix 1).
+1. Tu, dalla pagina `/test-extensions`, premi solo **"Invia LI"** col profilo Gianfranco preimpostato.
+2. La tab LinkedIn può essere su feed/inbox/qualunque profilo: l'estensione naviga, aspetta che il profilo sia pronto, clicca "Messaggia" e invia.
+3. Se la pagina è davvero non pronta (es. LinkedIn ti chiede captcha), vedi un errore esplicito invece del generico `composer_not_open`.
 
-**Decisione che ti chiedo dopo l'approvazione del piano**: dopo Fix 1, vuoi che (a) ricostruiamo lo ZIP `3.9.42` con il fix destinatario e tu lo reinstalli una volta sola, oppure (b) lasciamo stare l'estensione e testiamo il fix destinatario solo quando deciderai di aggiornare?
+### Atomicità
 
-**Rollback Fix 2**: ripristinare la riga `|| onThread` in `actions.js`.
+È **una sola modifica funzionale** (rendere il test veloce auto-aperto), divisa in 5 ritocchi piccoli sullo stesso percorso (`sendLinkedInMessageWithMethod` + un timeout nel componente test). Nessun refactor, nessun side-effect su outreach, sync, AI o DB.
 
----
+## File toccati
 
-## Cosa NON tocco (per non rompere)
-
-- Nessuna modifica a `src/components/test-extensions/LinkedInTest.tsx` (la UI test).
-- Nessuna modifica al codice WhatsApp (estensione, hook, edge function).
-- Nessuna modifica a outreach, holding pattern, scoring, Funnemail.
-- Nessuna migrazione DB.
-- Nessuna nuova memoria scritta finché i due fix non sono verificati live.
-
----
-
-## Ordine di esecuzione (atomico, un fix alla volta)
-
-1. Applico Fix 1.
-2. Tu ricarichi la pagina test e confermi che il banner "installa estensione" è sparito.
-3. Solo dopo conferma, applico Fix 2 e ti chiedo se rigenerare lo ZIP.
+- `public/linkedin-extension/actions.js` — solo `sendLinkedInMessageWithMethod`.
+- `src/components/test-extensions/LinkedInTest.tsx` — solo il timeout del bottone "Invia LI" e i log di errore.
+- ZIP estensione **non** ricostruito: la versione resta 3.9.44, ma il file `actions.js` cambia → serve **un solo "Ricarica" dell'estensione** in `chrome://extensions` (no rimuovi/reinstalla, basta il pulsante reload sulla card).
