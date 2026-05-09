@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.44",
-  "description": "LinkedIn background send focus-safe con hard guard destinatario: naviga al profilo richiesto prima del composer e blocca thread non verificati.",
+  "version": "3.9.45",
+  "description": "LinkedIn background send focus-safe: apre davvero il composer dal profilo e ignora dialog/overlay senza textbox.",
   "permissions": [
     "cookies",
     "tabs",

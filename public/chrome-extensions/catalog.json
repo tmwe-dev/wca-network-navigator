@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.44",
+    "latestVersion": "3.9.45",
     "items": [
+      {
+        "version": "3.9.45",
+        "filename": "linkedin-extension-3.9.45.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.45.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Fix composer_not_open: clickMessage ignora dialog/overlay senza textbox e clicca davvero Messaggia dal profilo."
+      },
       {
         "version": "3.9.44",
         "filename": "linkedin-extension-3.9.44.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.44.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Background mode: i test diagnostici aprono da soli il composer focus-safe; nessun intervento manuale richiesto."
       },
       {

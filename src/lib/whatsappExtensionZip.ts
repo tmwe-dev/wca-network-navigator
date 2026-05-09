@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.44";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.45";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.44",
+    latestVersion: "3.9.45",
     items: [
+      {
+        version: "3.9.45",
+        filename: "linkedin-extension-3.9.45.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.45.zip",
+        current: true,
+        note: "Fix composer_not_open: clickMessage non considera più dialog/overlay senza textbox come composer aperto; clicca davvero Messaggia dal profilo.",
+      },
       {
         version: "3.9.44",
         filename: "linkedin-extension-3.9.44.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.44.zip",
-        current: true,
+        current: false,
         note: "Background mode: i test diagnostici (physical_click, CDP, form_submit, ecc.) aprono da soli il composer focus-safe e poi eseguono il metodo. L'operatore non deve più aprire la chat manualmente.",
       },
       {
