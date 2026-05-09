@@ -234,10 +234,11 @@ export function LinkedInTest() {
     } catch {
       log(`⚠️ Ping estensione fallito — installata?`, "warn");
     }
-    log(`📤 Invio messaggio LinkedIn (test veloce: composer già aperto)...`);
+    log(`📤 Invio messaggio LinkedIn (test veloce, background mode: l'estensione apre il composer da sola)...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method: "physical_click" }, 12000);
+    // Timeout allineato a navigate + ready profilo (≤6s) + click + retry + montaggio composer (≤8s) + invio.
+    const r = await liMsg("sendMessageWithMethod", { url: sendUrl, message: sendText, method: "physical_click" }, 30000);
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
@@ -261,8 +262,13 @@ export function LinkedInTest() {
       } else {
         log(`❌ Invio fallito: ${errStr}`, "error");
       }
-      if (/timeout|composer_not_open|no_textbox/i.test(String(r?.error || ""))) {
-        log("💡 Apri manualmente la chat LinkedIn con il campo messaggio visibile, poi riprova.", "warn");
+      const e = String(r?.error || "");
+      if (/profile_not_ready/i.test(e)) {
+        log("💡 Tieni una tab LinkedIn aperta su qualsiasi pagina (anche feed) e riprova: il profilo non si è caricato in tempo in background.", "warn");
+      } else if (/open_composer_failed/i.test(e)) {
+        log("💡 Il bottone 'Messaggia' non è stato trovato sul profilo. Verifica di non avere captcha/login challenge LinkedIn aperti.", "warn");
+      } else if (/composer_not_open|no_textbox|timeout/i.test(e)) {
+        log("💡 Composer non montato in tempo. Riprova: spesso al secondo tentativo la pagina è già calda.", "warn");
       }
     }
   });
