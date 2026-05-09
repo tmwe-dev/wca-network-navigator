@@ -637,10 +637,15 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function () {
-          // Scope al <main>: esclude la top-nav globale ("Messaggi"/"Messaging"
-          // inbox link) che altrimenti vince per ordine DOM e fa navigare la tab
-          // su /messaging/, finendo per scrivere nella conversazione sbagliata.
-          var root = document.querySelector("main") || document.body;
+          // P22 — Scope al TOP-CARD del profilo aperto, non a tutto <main>.
+          // Senza questo restringimento, su pagine miste (es. profilo che mostra
+          // "Persone che potresti conoscere" o cards adiacenti) trovavamo più
+          // bottoni "Messaggia" e LinkedIn apriva overlay multipli/sbagliati.
+          var root = document.querySelector("section.pv-top-card")
+                   || document.querySelector("[class*='pv-top-card']")
+                   || document.querySelector("main section:first-of-type")
+                   || document.querySelector("main")
+                   || document.body;
           function isInGlobalNav(el) {
             return !!(el.closest("nav") ||
                       el.closest("header[role='banner']") ||
