@@ -131,12 +131,25 @@ var Actions = globalThis.Actions || (function () {
     const target = profileUrl.replace(/\/$/, "");
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
+    // v3.9.42 — Anti-doppio-invio per i test diagnostici manuali.
+    // Se l'utente ri-clicca entro 2s sulla stessa coppia (url, msg), no-op.
+    try {
+      const dedupKey = "li_diag_inflight";
+      const now = Date.now();
+      const stored = (globalThis.__lvLiDiagInflight || null);
+      if (stored && stored.url === targetClean && stored.msg === message && (now - stored.at) < 2000) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "duplicate_send_blocked: invio identico entro 2s, atteso debounce");
+      }
+      globalThis.__lvLiDiagInflight = { url: targetClean, msg: message, at: now };
+    } catch (e) { /* best-effort */ }
     // Manual diagnostic: riusa qualunque tab LinkedIn già aperta senza navigarla.
     const tab = await TabManager.getLinkedInTab(target, true, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }
-    await TabManager.ensureTabVisibleAndWait(tab.id, 600);
+    // v3.9.42 — Niente tab.update / focus shift: lavoriamo sulla tab dove l'utente ha
+    // GIÀ aperto manualmente la chat. ensureTabVisibleAndWait introduce 600ms+ di
+    // attesa e a volte porta in foreground una tab sbagliata.
     let composerAlreadyOpen = false;
     try {
       const composerProbe = await chrome.scripting.executeScript({
