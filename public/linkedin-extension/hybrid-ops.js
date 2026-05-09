@@ -746,7 +746,7 @@ var HybridOps = globalThis.HybridOps || (function () {
   // tre metodi funziona meglio nel composer LinkedIn corrente.
   // ────────────────────────────────────────────────────────────────────
   async function sendMessageWithMethod(tabId, message, method) {
-    const allowed = ["physical_click", "form_submit", "keyboard_shortcut"];
+    const allowed = ["physical_click", "form_submit", "keyboard_shortcut", "cdp_physical_click", "cdp_ctrl_enter"];
     if (allowed.indexOf(method) === -1) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "invalid_method: " + method);
     }
@@ -869,12 +869,14 @@ var HybridOps = globalThis.HybridOps || (function () {
               return false;
             }
 
-            // Wait for send button (only needed for physical_click)
+            // Wait for send button only for click-based diagnostics.
             let sendBtn = null;
-            for (let i = 0; i < 80; i++) {
-              sendBtn = findSendBtn();
-              if (sendBtn) break;
-              await sleep(100);
+            if (methodName === "physical_click") {
+              for (let i = 0; i < 80; i++) {
+                sendBtn = findSendBtn();
+                if (sendBtn) break;
+                await sleep(100);
+              }
             }
 
             // ── Apply ONLY the requested method ──
@@ -922,6 +924,8 @@ var HybridOps = globalThis.HybridOps || (function () {
               } catch (e) {
                 return { success: false, error: "keyboard_shortcut_threw: " + e.message, attempted_method: methodName };
               }
+            } else if (methodName === "cdp_physical_click" || methodName === "cdp_ctrl_enter") {
+              return { success: false, pending_cdp: true, attempted_method: methodName };
             }
 
             var cleared = await textboxCleared();
@@ -934,6 +938,16 @@ var HybridOps = globalThis.HybridOps || (function () {
         args: [message, method],
       });
       const fbResult = fbRes[0] && fbRes[0].result;
+      if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
+        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) return { success: true, method: "cdp_physical_click" };
+        return { success: false, error: (cdpClick && cdpClick.error) || "cdp_physical_click_failed", attempted_method: "cdp_physical_click" };
+      }
+      if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
+        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
+        return { success: false, error: "cdp_ctrl_enter_textbox_not_cleared", attempted_method: "cdp_ctrl_enter" };
+      }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_result");
     } catch (e) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message);
