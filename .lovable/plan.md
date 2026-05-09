@@ -1,69 +1,68 @@
-# Piano: Codex + Volume II in memoria, LinkedIn v3.9.43 (test composer-first)
+# Riparazione LinkedIn Test — versione + destinatario
 
-## Parte A — Memorizzazione manuali (permanente)
+Due fix chirurgici, uno alla volta, entrambi reversibili. Nessun refactor, nessun tocco a WhatsApp né alla pipeline outreach.
 
-1. Copio i due file in repo come fonte di verità consultabile:
-   - `docs/codex/codex_quick_access.md` (la guida operativa)
-   - `docs/codex/volume_II_metodo_enterprise.md` (il metodo)
-2. Aggiungo due voci di memoria persistente:
-   - `mem://standards/codex-cobra-protocol` → "Quando l'utente dice 'segui codex' o 'codex', applicare la checklist di `docs/codex/codex_quick_access.md`: SC:CLASSIFY → routing per intento (§2) → SC:DEFENSE/SC:ROLLBACK/SC:DATA quando attivati → SC:VERB (9 domande) → SC:ANTI → SC:CHANGELOG. Mai saltare SC:CLASSIFY. In dubbio tra due classi, scegli la superiore."
-   - `mem://standards/enterprise-method-volume-ii` → "Riferimento metodo enterprise: `docs/codex/volume_II_metodo_enterprise.md`. Principio madre: prevedibilità > sofisticazione. Validare prima, costruire dopo. Atomicità: una modifica per volta, no refactor opportunistici."
-3. Aggiorno `mem://index.md` (Core + sezione Memories) con i due nuovi rimandi e la regola Core: *"'segui codex' = checklist obbligatoria prima dell'esecuzione"*.
+---
 
-## Parte B — LinkedIn extension v3.9.43 (segui codex)
+## Fix 1 — Allineare la versione richiesta a quella installata (3.9.42)
 
-Applico SC:CLASSIFY → **STANDARD** (modifica locale a un modulo, no schema/auth/pagamenti). Tocca però comportamento osservabile critico (invio messaggi LI), quindi rispetto SC:DEFENSE + SC:ROLLBACK + ANTI.7.5 (no refactor + fix insieme).
+**Sintomo**: l'app ti chiede di installare l'estensione LinkedIn anche se quella che hai già in Chrome (`3.9.42`) funziona e invia.
 
-### Rotta (SC:VERB compresso)
-- **Obiettivo:** ripristinare la scrittura testo come in v3.9.40 (Selection API stabile) e completare l'**ultimo miglio**: il click sul pulsante invio nella stessa scheda già aperta dall'operatore, senza aprire nuove tab, senza cooldown lunghi.
-- **Successo:** in area Test, con chat LI già aperta, premendo "DOM click" il messaggio appare scritto e inviato in <3s; nessuna nuova tab; nessun doppio invio.
-- **Architettura:** `public/linkedin-extension/{actions.js, hybrid-ops.js}` only. WhatsApp invariato. `HybridOps.sendMessage` produzione invariato.
-- **Raggio:** solo path diagnostico (`sendMessageWithMethod`) e writer condiviso `findBox`/`writeText`. Non tocco `clickMessage`, non tocco produzione email/WA.
-- **Difesa:** input non-vuoto, timeout per metodo 8s (non 25s), nessun try/catch generico, log strategico per ogni step, nessuna nuova permission.
+**Causa**: in `src/lib/whatsappExtensionZip.ts` la costante `LINKEDIN_EXTENSION_REQUIRED_VERSION` è impostata a `"3.9.44"`. Tutta la UI (banner test, download button, settings) confronta la versione attiva con questa costante → mismatch → "installa la nuova".
 
-### Modifiche tecniche
+**Modifica unica**:
+- `src/lib/whatsappExtensionZip.ts` riga 9: cambio `"3.9.44"` → `"3.9.42"`.
 
-1. **Reset baseline da v3.9.40** dei due file `actions.js` e `hybrid-ops.js` (writer Selection API funzionante).
-2. **Rimuovere dal path diagnostico**:
-   - `findLinkedInTabWithOpenComposer` (introdotto in 3.9.41, troppo restrittivo).
-   - Ogni `chrome.tabs.update` / `ensureTabVisibleAndWait` / `clickMessage` (causa duplicazioni e attese).
-   - Cooldown 5s tra metodi → ridotto a 800ms (test manuale, non produzione).
-3. **Tab targeting semplice:** usare la **tab attiva corrente** della finestra LinkedIn (`chrome.tabs.query({active:true, url:"*://www.linkedin.com/*"})`); fallback alla prima LI tab. Nessuna scansione/scoring.
-4. **Composer detection robusta** (mantenuta da 3.9.41): `findBox` con `deepQueryAll` su `[contenteditable='true'], [role='textbox']` dentro `.msg-form, [role='dialog']`.
-5. **Ultimo miglio (click invio)** — questo è il pezzo nuovo che mancava in 3.9.40:
-   - Dopo il write, attesa breve (250ms) per abilitazione bottone.
-   - Selezione bottone: `button.msg-form__send-button:not([disabled])` con fallback `button[type='submit']:not([disabled])` dentro `.msg-form`.
-   - Invio per metodo selezionato dall'utente:
-     - `dom_click`: `btn.click()` diretto.
-     - `cdp_physical_click`: invariato ma su `btn` trovato (non più sul composer).
-     - `keyboard_shortcut`: dispatch `keydown` Ctrl+Enter sull'input + fallback `form.requestSubmit()`.
-     - `form_submit`: `btn.closest('form').requestSubmit(btn)`.
-   - Verifica post-invio: il composer si svuota entro 1.5s → success; altrimenti `send_button_no_effect`.
-6. **Anti-doppio invio:** flag `__lvSending` su window per 2s; secondo trigger nello stesso intervallo → no-op con log.
+Lo ZIP `linkedin-extension-3.9.42.zip` è già presente in `public/chrome-extensions/linkedin/` e nel `catalog.json`, quindi il pulsante "Scarica estensioni" continua a funzionare. Le versioni 3.9.43 e 3.9.44 restano in catalogo come storia.
 
-### Versione & packaging
-- Bump a **3.9.42** in `manifest.json`, `whatsappExtensionZip.ts`, `catalog.json`.
-- Rigenero `linkedin-extension-3.9.42.zip` e `public/linkedin-extension.zip`.
+**Rollback**: una riga, riportare a `"3.9.44"`.
 
-### SC:ROLLBACK
-- File toccati: 4 (`actions.js`, `hybrid-ops.js`, `manifest.json`, `whatsappExtensionZip.ts`, `catalog.json`).
-- Rollback: l'utente carica `linkedin-extension-3.9.40.zip` (presente in `public/chrome-extensions/linkedin/`). Nessun effetto irreversibile (solo client-side).
-- Soglia: se al primo test manuale dopo install si verifica doppio invio o nuova tab → STOP, rollback a 3.9.40.
+---
 
-### SC:ANTI check
-- ANTI.7.1 fallback silenziosi: ogni metodo ritorna errore tipizzato, mai swallow.
-- ANTI.7.3 ottimizzazioni copiate: nessuna.
-- ANTI.7.5 refactor + fix: solo fix, nessun refactor.
+## Fix 2 — Bloccare l'invio LinkedIn alla chat sbagliata
 
-## Addendum 2026-05-09 — Audit dopo timeout 90s
+**Sintomo**: il messaggio parte sempre verso la prima conversazione che incontra, ignorando il destinatario `linkedin.com/in/<slug>`.
 
-- **SC:CLASSIFY:** STANDARD con nodo critico invio LinkedIn → modifica minima, locale, reversibile.
-- **Finding:** il pulsante principale `Invia LI` usava ancora `sendMessage` con timeout 90s e path di navigazione/apertura composer; i test isolati potevano agganciare la prima tab LinkedIn invece della tab con composer visibile.
-- **Fix v3.9.43:** `Invia LI` ora usa `sendMessageWithMethod(physical_click)` con timeout 12s; il path diagnostico cerca prima una tab LinkedIn che contiene davvero un composer visibile e non naviga.
-- **Rollback:** zip 3.9.42 e 3.9.40 restano in catalogo; nessun DB/backend toccato.
+**Causa identificata** in `public/linkedin-extension/actions.js` righe 87-96:
 
-### Out of scope (non tocco)
-- WhatsApp extension, edge functions, DB, auth, RLS, produzione outreach, `HybridOps.sendMessage`, `clickMessage`.
+```text
+const onTarget = (current URL contiene /in/<slug>)
+const onThread = (current URL combacia /messaging/thread/...)
+if (!onTarget && !onThread) → errore "wrong_recipient"
+```
 
-## Consegna attesa
-Istruzioni utente: rimuovi v3.9.42, carica **3.9.43** unpacked, apri una chat LI manualmente, in area Test premi "Invia LI" o "Click fisico" → deve scrivere e inviare nella stessa tab o fallire entro pochi secondi con errore esplicito.
+Il `|| onThread` è il bug: se la tab LinkedIn riusata è già su **una qualsiasi** thread (es. l'ultima conversazione che l'utente aveva aperto), il check passa e il composer invia lì, anche se non è il destinatario richiesto.
+
+A monte, `tab-manager.js` `getLinkedInTab(url, false, false)` riusa la tab utente e fa `chrome.tabs.update(tabId, { url: targetProfileUrl })` (righe 182, 201, 223, 247): la navigazione c'è, ma se il caricamento è ancora in corso o LinkedIn fa una redirect interna verso `/messaging/thread/...`, il check `onThread` chiude un occhio e si invia.
+
+**Modifica unica e localizzata**:
+- `public/linkedin-extension/actions.js`: rimuovo il ramo `onThread` come scorciatoia di validazione. La guardia diventa: **si invia solo se l'URL corrente contiene `/in/<slug-target>`**, altrimenti `wrong_recipient` e nessun click. È la regola che già usavamo nei test e impedisce qualsiasi invio "alla cieca".
+- Nessun cambio a `tab-manager.js`, nessun cambio al composer, nessun cambio al backend.
+
+**Cautela aggiuntiva** (zero rischio): nel ramo che riusa la tab utente già su LinkedIn, forzo sempre il `chrome.tabs.update(..., { url: targetProfileUrl })` quando l'URL corrente non contiene già `/in/<slug>`. È il comportamento già attuale, lo rendiamo solo esplicito con un log per debug.
+
+**Versioning estensione**: il fix richiede ricostruire lo ZIP. Strategia conservativa concordata con la tua richiesta "non rompere il codice":
+- **NON** bumpiamo a 3.9.45 (perderemmo il match con la 3.9.42 che hai installata).
+- Sovrascriviamo i sorgenti `public/linkedin-extension/actions.js` e bumpiamo il `manifest.json` interno della **3.9.42** patch a `3.9.42` invariato. **Tu non devi reinstallare niente** se non vuoi: il fix di destinatario serve solo quando ricostruisci lo ZIP e lo reinstalli. Per ora la 3.9.42 installata continua col bug del destinatario, ma il sistema **smette di chiederti di aggiornare** (Fix 1).
+
+**Decisione che ti chiedo dopo l'approvazione del piano**: dopo Fix 1, vuoi che (a) ricostruiamo lo ZIP `3.9.42` con il fix destinatario e tu lo reinstalli una volta sola, oppure (b) lasciamo stare l'estensione e testiamo il fix destinatario solo quando deciderai di aggiornare?
+
+**Rollback Fix 2**: ripristinare la riga `|| onThread` in `actions.js`.
+
+---
+
+## Cosa NON tocco (per non rompere)
+
+- Nessuna modifica a `src/components/test-extensions/LinkedInTest.tsx` (la UI test).
+- Nessuna modifica al codice WhatsApp (estensione, hook, edge function).
+- Nessuna modifica a outreach, holding pattern, scoring, Funnemail.
+- Nessuna migrazione DB.
+- Nessuna nuova memoria scritta finché i due fix non sono verificati live.
+
+---
+
+## Ordine di esecuzione (atomico, un fix alla volta)
+
+1. Applico Fix 1.
+2. Tu ricarichi la pagina test e confermi che il banner "installa estensione" è sparito.
+3. Solo dopo conferma, applico Fix 2 e ti chiedo se rigenerare lo ZIP.
