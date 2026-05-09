@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.49",
-  "description": "Pipeline UNICA send/diagnostic: gate reale (waitForMessageComposer) anche nel path standard, write/send separati, niente sleep(3000), niente cascata fallback su invio.",
+  "version": "3.9.50",
+  "description": "Due modalità composer: background_existing_composer (default safe, fail veloce in 4s se chat non aperta) e interactive_open_composer (opt-in, porta tab in foreground e apre composer). Niente attesa cieca 30s in background.",
   "permissions": [
     "cookies",
     "tabs",
