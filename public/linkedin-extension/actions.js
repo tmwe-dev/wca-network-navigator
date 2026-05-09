@@ -121,7 +121,10 @@ var Actions = globalThis.Actions || (function () {
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
     const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-    const tab = await TabManager.getLinkedInTab(target, true);
+    const tab = await TabManager.getLinkedInTab(target, true, false);
+    if (!tab || !tab.id) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
+    }
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     let composerAlreadyOpen = false;
     try {
