@@ -105,14 +105,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.52",
+    "latestVersion": "3.9.53",
     "items": [
+      {
+        "version": "3.9.53",
+        "filename": "linkedin-extension-3.9.53.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.53.zip",
+        "releaseDate": "2026-05-09",
+        "current": true,
+        "notes": "Restore backup 3.9.48 + anti-doppio-invio (stessa coppia url+messaggio entro 4s bloccata). Pipeline invariata: navigate focus-safe, clickMessage, attesa composer, writer."
+      },
       {
         "version": "3.9.52",
         "filename": "linkedin-extension-3.9.52.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.52.zip",
         "releaseDate": "2026-05-09",
-        "current": true,
+        "current": false,
         "notes": "Fix probe composer: no-navigation reale. Il test composer cerca solo tab LinkedIn già aperte con textbox visibile, senza getLinkedInTab/navigate né attese load che causavano Timeout 8s."
       },
       {

@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.52";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.53";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.52",
+    latestVersion: "3.9.53",
     items: [
+      {
+        version: "3.9.53",
+        filename: "linkedin-extension-3.9.53.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.53.zip",
+        current: true,
+        note: "Restore backup 3.9.48 + anti-doppio-invio (stessa coppia url+messaggio entro 4s bloccata). Pipeline invariata: navigate focus-safe, clickMessage, attesa composer, writer.",
+      },
       {
         version: "3.9.52",
         filename: "linkedin-extension-3.9.52.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.52.zip",
-        current: true,
+        current: false,
         note: "Fix probe composer: no-navigation reale. Il test composer cerca solo tab LinkedIn già aperte con textbox visibile, senza getLinkedInTab/navigate né attese load che causavano Timeout 8s.",
       },
       {

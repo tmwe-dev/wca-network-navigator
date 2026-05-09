@@ -328,24 +328,6 @@ var TabManager = globalThis.TabManager || (function () {
     return !!res.stable || !!res.activatedInAutomation;
   }
 
-  // ── bringTabToFront (interactive mode) ──
-  // Porta esplicitamente la tab LinkedIn in foreground. NON usare in
-  // background mode: rompe il vincolo "non portarmi via dalla webapp".
-  async function bringTabToFront(tabId) {
-    try {
-      const t = await chrome.tabs.get(tabId);
-      if (t && typeof t.windowId === "number") {
-        try { await chrome.windows.update(t.windowId, { focused: true }); } catch (e) {}
-      }
-      try { await chrome.tabs.update(tabId, { active: true }); } catch (e) {}
-      // Piccola attesa per stabilizzazione focus.
-      await sleep(400);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   // ── Operation Queue with dual lanes ──
   let _sessionQueue = Promise.resolve();
   let _actionQueue = Promise.resolve();
@@ -376,7 +358,6 @@ var TabManager = globalThis.TabManager || (function () {
     ensureTabInAutomationWindow: ensureTabInAutomationWindow,
     activateAndStabilize: activateAndStabilize,
     ensureTabVisibleAndWait: ensureTabVisibleAndWait,
-    bringTabToFront: bringTabToFront,
     enqueueSession: enqueueSession,
     enqueueAction: enqueueAction,
     enqueue: enqueue,

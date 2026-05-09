@@ -1,86 +1,39 @@
-# LinkedIn Extension 3.9.50 — Due modalità composer
+Ripristiniamo il comportamento del backup che apriva il composer e scriveva, senza introdurre modalità nuove o logiche diverse.
 
-## Diagnosi confermata
+## Obiettivo
+- Tornare alla pipeline backup LinkedIn che funzionava: naviga focus-safe al profilo, clicca `Messaggia`, aspetta il composer, scrive nel box.
+- Correggere solo il problema noto del backup: doppia scrittura/doppio invio.
+- Non mantenere la logica recente `background_existing_composer` / `interactive_open_composer` come percorso principale.
 
-Il log `composer_gate_timeout 30s` non è un problema di "click Send". È che **LinkedIn in background non monta il composer in modo affidabile**: il click su "Messaggia" sintetico su tab non attiva spesso non apre l'overlay, oppure il textbox non viene mai montato. WhatsApp tollera il background, LinkedIn no.
+## Piano operativo
+1. **Base di ripristino**
+   - Usare come sorgente il backup disponibile in archivio, preferibilmente `linkedin-extension-3.9.48.zip`, perché è l’ultimo backup prima del refactor a due modalità e contiene ancora la pipeline che apriva e scriveva.
+   - Ripristinare i file dell’estensione da quel backup: `actions.js`, `hybrid-ops.js`, `background.js`, `content.js`, `tab-manager.js`, `manifest.json` e gli altri file inclusi nello ZIP.
 
-Continuare a patchare selectors / fallback su `clickMessage` in background è la trappola: ogni patch aggiunge un selector in più ma il modello resta sbagliato.
+2. **Fix minimo sul doppio comportamento**
+   - Aggiungere una guardia anti-doppio invio già all’ingresso di `sendLinkedInMessage`: stessa coppia `url + message` entro una finestra breve viene bloccata.
+   - Nel writer, evitare che più fallback scrivano lo stesso testo due volte: ogni fallback parte solo se il testo non è già presente nel composer.
+   - Non cambiare la strategia di apertura composer: resta quella del backup.
 
-## Decisione
+3. **Ripristino UI test coerente**
+   - Rimuovere dalla UI test LinkedIn le modalità nuove se interferiscono con il flusso.
+   - Il bottone “Invia LinkedIn” deve chiamare il percorso backup standard, non il nuovo percorso a modalità.
+   - Eventuali diagnostiche restano secondarie e non devono modificare il comportamento dell’invio reale.
 
-Separare due modalità esplicite, **default safe**:
+4. **Versione e pacchetto**
+   - Creare una nuova versione, ad esempio `3.9.53`, descritta chiaramente come “restore backup pipeline + anti double write”.
+   - Aggiornare `LINKEDIN_EXTENSION_REQUIRED_VERSION`, `catalog.json` e rigenerare:
+     - `public/linkedin-extension.zip`
+     - `public/chrome-extensions/linkedin/linkedin-extension-3.9.53.zip`
 
-- **`background_existing_composer`** (default): non attiva la tab, non clicca "Messaggia", non apre overlay. Cerca SOLO un composer già aperto. Se non c'è → errore chiaro in 3-4s.
-- **`interactive_open_composer`** (opt-in): porta la tab LinkedIn in foreground, clicca "Messaggia", aspetta composer fino a 30s, invia. Rispetta meno il vincolo "non portarmi via dalla webapp", quindi disabilitato di default.
+5. **Verifica tecnica prima di consegnare**
+   - Controllare nello ZIP finale che il manifest sia `3.9.53`.
+   - Controllare che `actions.js` contenga la pipeline backup e non il percorso primario a due modalità.
+   - Controllare che la guardia anti-duplicato sia presente.
+   - Nessuna modifica a database, inbox, WhatsApp, email, Partner Connect o altre estensioni.
 
-## Modifiche
-
-### 1. `public/linkedin-extension/actions.js` — `sendLinkedInMessageCore`
-
-Aggiungere parametro `mode` (default `"background_existing_composer"`):
-
-```text
-sendLinkedInMessageCore(profileUrl, message, { method, mode })
-  ├─ getLinkedInTab (allowCreate=false, focus-safe) — invariato
-  ├─ se mode === "background_existing_composer":
-  │     ├─ probe = await HybridOps.probeComposer(tab.id, 4000)
-  │     ├─ se !probe.success → errore "composer_not_open_background_mode"
-  │     │       messaggio UI: "Apri la chat LinkedIn con il destinatario,
-  │     │       lascia il box messaggio visibile, poi riprova."
-  │     └─ HybridOps.sendMessage(tab.id, message)
-  └─ se mode === "interactive_open_composer":
-        ├─ TabManager.bringTabToFront(tab.id)
-        ├─ HybridOps.clickMessage(tab.id)
-        ├─ HybridOps.waitForMessageComposer(tab.id, 30000)
-        ├─ se gate fail → errore "composer_gate_failed_interactive"
-        └─ HybridOps.sendMessage(tab.id, message)
-```
-
-Rimuovere dal path background: `findMessageBtn`, `clickMessage`, `findMoreBtn`, gate 30s. Sono proprio i pezzi che falliscono in tab non attiva.
-
-### 2. `public/linkedin-extension/hybrid-ops.js`
-
-- Aggiungere `probeComposer(tabId, maxWaitMs = 4000)`: poll breve di textbox visibile/interagibile usando `deepQueryAll`. Ritorna `{ success, found, diagnostic }`. Niente click, niente apertura overlay.
-- `waitForMessageComposer(tabId, 30000)` resta, usato SOLO da `interactive_open_composer`.
-- `bringTabToFront(tabId)`: helper che fa `chrome.tabs.update(tabId, { active: true })` + `chrome.windows.update(windowId, { focused: true })`. Usato SOLO da modalità interactive.
-
-### 3. `public/linkedin-extension/background.js` (router messaggi)
-
-Accettare `mode` nel payload. Default a `"background_existing_composer"` se assente. Validare valore.
-
-### 4. `src/components/test-extensions/LinkedInTest.tsx`
-
-Sostituire i pulsanti attuali con tre pulsanti distinti per separare i fallimenti:
-
-1. **"Test composer aperto"** — chiama solo `probeComposer` via nuovo handler `linkedin_probe_composer`. Mostra esito (trovato/non trovato) + diagnostic.
-2. **"Invia (background, composer aperto)"** — invio con `mode: "background_existing_composer"`. Default consigliato.
-3. **"Invia (interactive, apre composer)"** — invio con `mode: "interactive_open_composer"`. Avviso UI: "Porterà LinkedIn in primo piano".
-
-Toggle radio sopra ai pulsanti per modalità default. Tooltip esplicativi. Niente cambi a logica thread/backfill.
-
-### 5. Errori e messaggi
-
-Codici nuovi in `Config.ERROR` / messaggi:
-- `composer_not_open_background_mode` → testo UI: *"Apri la chat LinkedIn con il destinatario, lascia il box messaggio visibile, poi riprova. Oppure usa modalità interactive."*
-- `composer_gate_failed_interactive` → diagnostic dettagliato (readyState, btnFound, overlayMounted, textboxFound).
-
-Eliminare il messaggio fuorviante *"Composer non montato in tempo. Riprova: spesso al secondo tentativo la pagina è già calda"* — è un workaround, non una soluzione.
-
-### 6. Packaging
-
-- Bump `manifest.json` → `3.9.50`.
-- Aggiornare `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json`.
-- Rigenerare `public/chrome-extensions/linkedin/linkedin-extension-3.9.50.zip` e `public/linkedin-extension.zip`.
-
-## Fuori scope (non tocco)
-
-- `TabManager.getLinkedInTab` (focus-safe, allowCreate=false) — resta com'è.
-- `readLinkedInThread`, `backfillLinkedInThread`.
-- Rubrica, DB, dedup, KPI, Partner Connect, `check-inbox`, IMAP.
-- WhatsApp extension.
-
-## Cosa cambia per l'utente
-
-- Default safe: se la chat non è aperta, fail in 3-4s con istruzione chiara, senza più timeout 30s.
-- Test UI con 3 pulsanti separati permette di isolare il punto di rottura (probe / write / send) invece di vedere un solo "Timeout 30s" opaco.
-- Modalità interactive disponibile come opt-in per chi accetta il foreground.
+## Cosa NON faccio
+- Non reinvento il flusso LinkedIn.
+- Non aggiungo nuove modalità operative.
+- Non tocco backend, database, inbox, email o WhatsApp.
+- Non riscrivo architettura: ripristino backup + fix locale sul doppio write.

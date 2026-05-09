@@ -219,23 +219,23 @@ var HybridOps = globalThis.HybridOps || (function () {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "navigation_drifted: tab fuori da profilo/messaging (" + currentUrl + ")");
       }
     } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-    // v3.9.49 — WRITE/SEND SEPARATI (single pipeline allineata a WhatsApp).
-    // Il composer DEVE essere stato già aperto e validato dal caller via
-    // HybridOps.waitForMessageComposer. Qui non apriamo nulla, non clicchiamo
-    // "Messaggia", non facciamo polling lungo. Sequenza atomica:
-    //   1) trova textbox (max 1s di tolleranza, gate è già passato)
-    //   2) scrivi testo (cascata writer paste → execCommand → text node → textContent)
-    //   3) verifica textCommitted
-    //   4) attendi sendButtonEnabled (max 3s)
-    //   5) physical click
-    //   6) verifica composer cleared
-    // NIENTE form submit, Ctrl/Cmd+Enter, CDP click come fallback di INVIO:
-    // se il send button non si abilita o il click non fa partire il messaggio,
-    // restituiamo errore esplicito invece di mascherare il problema.
+    // P23 — POLITICA SINGLE WRITER (no AX/AI in produzione):
+    //   1) clickMessage scoped (gestito dal caller / structural fallback)
+    //   2) DOM writer deterministico (paste → execCommand → textContent)
+    //   3) verifica testuale composer (hasText)
+    //   4) verifica Send button abilitato
+    //   5) physical click → form submit → Ctrl/Cmd+Enter (cascata sotto)
+    // AX/AILearn restano definiti SOLO come read-only/diagnostica.
+    // NESSUN writer parallelo: una sola fonte di scrittura, fallimento esplicito.
+
+    // Level 3: Structural fallback with native input
     try {
       const fbRes = await chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (msg) {
+          // Poll up to 8s for the message textbox to appear after the dialog opens.
+          // If still missing, try clicking the profile-scoped "Messaggia"/"Message"
+          // button (including the "Altro/More" menu), then poll again.
           // Walk the DOM including open shadow roots.
           function deepQueryAll(selector, root) {
             const out = [];
@@ -250,6 +250,9 @@ var HybridOps = globalThis.HybridOps || (function () {
             return out;
           }
           function findBox() {
+            // P3 — Textbox scoped: cerchiamo SOLO dentro composer LinkedIn
+            // (msg-form / dialog / overlay-conversation-bubble), mai globale.
+            // Senza questo scope vince la search-bar o un campo filtri.
             var composerScopes = deepQueryAll(
               ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
             );
@@ -266,22 +269,106 @@ var HybridOps = globalThis.HybridOps || (function () {
             }
             return null;
           }
+          function isInGlobalNav(el) {
+            return !!(el.closest("nav") ||
+                      el.closest("header[role='banner']") ||
+                      el.closest("[data-test-global-nav]") ||
+                      el.closest(".global-nav"));
+          }
+          function findMessageBtn() {
+            const root = document.querySelector("main") || document.body;
+            return Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']")).find(function (b) {
+              if (!(b.offsetParent !== null || b.getClientRects().length > 0)) return false;
+              if (isInGlobalNav(b)) return false;
+              const t = (b.textContent || "").trim();
+              const al = (b.getAttribute("aria-label") || "").trim();
+              return /^(message|messaggia)$/i.test(t)
+                || /^(messaggio|scrivi|invia messaggio|send message)$/i.test(t)
+                || /messaggia|messaggio|message|send message/i.test(al);
+            });
+          }
+          function findMoreBtn() {
+            const root = document.querySelector("main") || document.body;
+            return Array.from(root.querySelectorAll("button, [role='button']")).find(function (b) {
+              if (!(b.offsetParent !== null || b.getClientRects().length > 0)) return false;
+              const t = (b.textContent || "").trim();
+              const al = (b.getAttribute("aria-label") || "").trim();
+              return /^(more|altro|più)$/i.test(t) || /^(more actions|altro|più azioni)/i.test(al);
+            });
+          }
           function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+          // P12 — Anti-double-overlay guard: ritorna true se esiste già un
+          // composer/overlay LinkedIn aperto. In quel caso NON dobbiamo
+          // ri-cliccare "Messaggia"/"Message" perché LinkedIn aprirebbe una
+          // SECONDA finestra (anti-pattern che fa scattare i radar antifrode).
+          function hasOpenComposer() {
+            try {
+              var scopes = deepQueryAll(
+                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
+              );
+              for (var i = 0; i < scopes.length; i++) {
+                var s = scopes[i];
+                if (s.offsetParent !== null || s.getClientRects().length > 0) return true;
+              }
+            } catch (e) {}
+            return false;
+          }
           return (async function () {
-            // Tolleranza minima: 1s. Il gate vero è già stato fatto dal caller
-            // (waitForMessageComposer). Se qui non troviamo la box è un errore.
+            // Wait for full page load + thread container before polling textbox.
+            for (let i = 0; i < 20 && document.readyState !== "complete"; i++) await sleep(250);
+            for (let i = 0; i < 40; i++) {
+              if (document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']")) break;
+              await sleep(500);
+            }
             let msgBox = findBox();
-            for (let i = 0; i < 10 && !msgBox; i++) { await sleep(100); msgBox = findBox(); }
             if (!msgBox) {
+              // Up to 20s polling (was 8s).
+              for (let i = 0; i < 40 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+            }
+            if (!msgBox) {
+              const mb = findMessageBtn();
+              if (mb && mb.tagName !== "A" && mb.offsetParent !== null && !hasOpenComposer()) {
+                mb.click();
+                for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              } else if (hasOpenComposer()) {
+                // Composer già aperto altrove: aspetta che diventi raggiungibile
+                // dallo scope corretto invece di aprirne un secondo.
+                for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+              }
+            }
+            if (!msgBox) {
+              const more = findMoreBtn();
+              if (more && !hasOpenComposer()) {
+                more.click();
+                await sleep(800);
+                const mb = findMessageBtn();
+                if (mb && mb.tagName !== "A" && !hasOpenComposer()) {
+                  mb.click();
+                  for (let i = 0; i < 16 && !msgBox; i++) { await sleep(500); msgBox = findBox(); }
+                }
+              }
+            }
+            if (!msgBox) {
+              // ── Diagnostic probe (read-only DOM snapshot) ──
               const probe = {
                 href: location.href,
+                contenteditable: document.querySelectorAll("[contenteditable='true']").length,
                 contenteditableDeep: deepQueryAll("[contenteditable='true']").length,
+                roleTextbox: document.querySelectorAll("[role='textbox']").length,
                 roleTextboxDeep: deepQueryAll("[role='textbox']").length,
+                shadowHosts: Array.from(document.querySelectorAll("*")).filter(function (e) { return !!e.shadowRoot; }).length,
+                iframes: document.querySelectorAll("iframe").length,
                 msgFormContainers: document.querySelectorAll(".msg-form, [class*='msg-form'], [class*='msg-thread'], [class*='msg-convo']").length,
                 readyState: document.readyState,
+                msgOverlay: document.querySelectorAll(".msg-overlay-conversation-bubble, [class*='msg-overlay']").length,
                 dialogs: document.querySelectorAll("[role='dialog']").length,
+                dialogText: (document.querySelector("[role='dialog']")?.innerText || "").slice(0, 200),
+                dialogButtons: Array.from(document.querySelectorAll("[role='dialog'] button"))
+                  .slice(0, 5)
+                  .map(function (b) { return (b.textContent || "").trim().slice(0, 40); }),
+                hasMain: !!document.querySelector("main"),
               };
-              return { success: false, error: "composer_textbox_missing_after_gate __probe__=" + JSON.stringify(probe) };
+              return { success: false, error: "Fallback: no textbox found __probe__=" + JSON.stringify(probe) };
             }
             // ── WA-aligned writer: cascata paste → execCommand → textContent
             // con verifica DOM reale dopo ogni step (nessun doppio invio).
@@ -352,14 +439,7 @@ var HybridOps = globalThis.HybridOps || (function () {
             try {
               msgBox.dispatchEvent(new Event("change", { bubbles: true }));
             } catch (e) { /* best-effort */ }
-            // ── FASE WRITE: verifica testCommitted ──
-            var writtenText = (msgBox.innerText || msgBox.textContent || "").trim();
-            var expectedText = String(msg || "").trim();
-            var textCommitted = !!expectedText && (writtenText.indexOf(expectedText) !== -1 || writtenText === expectedText);
-            if (!textCommitted) {
-              return { success: false, error: "write_failed: text not committed in composer (wrote=" + writtenText.length + " chars)" };
-            }
-            // ── FASE SEND: trova send button abilitato ──
+            // Wait for the send button to become enabled (LinkedIn validates async).
             // P4 — Send button robusto: match per classe msg-form__send-button,
             // aria-label Send/Invia, type=submit dentro composer. Esclude
             // disabled e aria-disabled. Solo dentro composer.
@@ -407,97 +487,99 @@ var HybridOps = globalThis.HybridOps || (function () {
                 try { el.click(); return true; } catch (e2) { return false; }
               }
             }
-            // Polling 3s per attesa enable del send button (LinkedIn valida async).
+            function submitComposer() {
+              try {
+                var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form");
+                if (!form) return false;
+                // Do NOT call requestSubmit(): on LinkedIn it can trigger a real
+                // navigation/unload, leaving chrome.scripting.executeScript hung.
+                // Dispatch only the React/SPA submit listeners, bounded and no-page-change.
+                var evt;
+                try {
+                  evt = new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: findSendBtn() || undefined });
+                } catch (e) {
+                  evt = new Event("submit", { bubbles: true, cancelable: true });
+                }
+                form.dispatchEvent(evt);
+                return true;
+              } catch (e) { return false; }
+            }
+            // P13 — Polling esteso a 8s (era 3s).
             let sendBtn = null;
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 80; i++) {
               sendBtn = findSendBtn();
               if (sendBtn) break;
               await sleep(100);
             }
-            if (!sendBtn) {
-              return { success: false, error: "send_button_not_enabled_after_write: testo committato ma il bottone Send non si è abilitato in 3s" };
-            }
-            // Verifica post-click: la textbox deve svuotarsi entro 2s.
+            // P13 — Verifica post-click: la textbox deve svuotarsi entro 1.5s,
+            // altrimenti l'invio NON è andato a buon fine (no falso success).
             async function textboxCleared() {
-              for (let i = 0; i < 20; i++) {
+              for (let i = 0; i < 15; i++) {
                 await sleep(100);
                 var current = (msgBox.innerText || msgBox.textContent || "").trim();
                 if (!current) return true;
               }
               return false;
             }
-            // SOLO physical click. Niente form submit, Ctrl+Enter, CDP.
-            firePhysicalClick(sendBtn);
-            if (await textboxCleared()) {
-              return { success: true, method: "physical_click" };
+            var clickMethod = null;
+            if (sendBtn) {
+              if (firePhysicalClick(sendBtn)) clickMethod = "physical_click";
             }
-            return { success: false, error: "send_click_failed: bottone Send cliccato ma il composer non si è svuotato in 2s" };
+            if (!sendBtn || !(await textboxCleared())) {
+              if (submitComposer()) clickMethod = clickMethod || "form_submit_fallback";
+            }
+            if (!(await textboxCleared())) {
+              // P13 — Fallback finale: Ctrl/Cmd+Enter (shortcut nativo LinkedIn).
+              try {
+                msgBox.focus();
+                var isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
+                var ctrlEnterDown = new KeyboardEvent("keydown", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
+                });
+                var ctrlEnterPress = new KeyboardEvent("keypress", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
+                });
+                var ctrlEnterUp = new KeyboardEvent("keyup", {
+                  key: "Enter", code: "Enter", keyCode: 13, which: 13,
+                  ctrlKey: !isMac, metaKey: isMac, bubbles: true, cancelable: true, composed: true,
+                });
+                msgBox.dispatchEvent(ctrlEnterDown);
+                msgBox.dispatchEvent(ctrlEnterPress);
+                msgBox.dispatchEvent(ctrlEnterUp);
+                clickMethod = clickMethod || "ctrl_enter_fallback";
+              } catch (e) { /* best-effort */ }
+              if (!(await textboxCleared())) {
+                return {
+                  success: false,
+                  error: sendBtn
+                    ? "send_clicked_but_textbox_not_cleared"
+                    : "Fallback: send button not found",
+                };
+              }
+            }
+            return { success: true, method: clickMethod || "structural_fallback" };
           })();
         },
         args: [message],
       });
       const fbResult = fbRes[0] && fbRes[0].result;
-      return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_writer_result");
+      if (fbResult && fbResult.success) return fbResult;
+      try {
+        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: "cdp_physical_click_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP physical click failed:", e.message); }
+      try {
+        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 3500)) {
+          return { success: true, method: cdpKey.method + "_after_dom", previousError: fbResult && fbResult.error };
+        }
+      } catch (e) { console.warn("[LI-Hybrid] CDP Ctrl/Cmd+Enter failed:", e.message); }
+      return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "All message strategies failed");
     } catch (e) { return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message); }
-  }
-
-  // ── waitForMessageComposer (v3.9.49) ──
-  // Gate stile WhatsApp: polling deep-shadow per textbox visibile + interattiva.
-  // Usato sia dal path standard (sendLinkedInMessage) sia dal diagnostico
-  // (sendLinkedInMessageWithMethod). Sostituisce sleep(3000) ciechi.
-  async function waitForMessageComposer(tabId, maxWaitMs) {
-    try {
-      const res = await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        func: function (timeoutMs) {
-          function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-          function deepQueryAll(selector, root) {
-            var out = [];
-            var r = root || document;
-            try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
-            var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
-            for (var i = 0; i < all.length; i++) {
-              if (all[i].shadowRoot) {
-                try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
-              }
-            }
-            return out;
-          }
-          function visible(el) { return !!(el && (el.offsetParent !== null || el.getClientRects().length > 0)); }
-          function findBox() {
-            var scopes = deepQueryAll(
-              ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
-            );
-            for (var s = 0; s < scopes.length; s++) {
-              if (!visible(scopes[s])) continue;
-              var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-              for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
-            }
-            return null;
-          }
-          return (async function () {
-            var started = Date.now();
-            var limit = Math.max(5000, timeoutMs || 30000);
-            var last = { readyState: document.readyState, hasMain: !!document.querySelector("main"), shells: 0, boxes: 0 };
-            while (Date.now() - started < limit) {
-              last.readyState = document.readyState;
-              last.hasMain = !!document.querySelector("main");
-              var box = findBox();
-              if (box) return { success: true, waitedMs: Date.now() - started };
-              var shells = deepQueryAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
-              last.shells = shells.filter(visible).length;
-              last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-              await sleep(150);
-            }
-            return { success: false, error: "composer_gate_timeout", waitedMs: Date.now() - started, diagnostic: last };
-          })();
-        },
-        args: [maxWaitMs || 30000],
-      });
-      return (res && res[0] && res[0].result) || { success: false, error: "composer_gate_no_result" };
-    } catch (e) {
-      return { success: false, error: "composer_gate_exception: " + (e && e.message ? e.message : String(e)) };
-    }
   }
 
   // ── Click Connect ──
@@ -960,7 +1042,6 @@ var HybridOps = globalThis.HybridOps || (function () {
     extractProfile: extractProfile,
     sendMessage: sendMessage,
     sendMessageWithMethod: sendMessageWithMethod,
-    waitForMessageComposer: waitForMessageComposer,
     clickConnect: clickConnect,
     clickMessage: clickMessage,
     addNote: addNote,

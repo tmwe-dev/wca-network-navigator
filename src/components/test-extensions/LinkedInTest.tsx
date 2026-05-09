@@ -250,18 +250,16 @@ export function LinkedInTest() {
     } catch {
       log(`⚠️ Ping estensione fallito — installata?`, "warn");
     }
-    const modeLabel = composerMode === "background_existing_composer"
-      ? "background — usa SOLO composer già aperto (consigliato, fail veloce)"
-      : "interactive — porta LinkedIn in primo piano e apre il composer";
-    log(`📤 Invio messaggio LinkedIn (mode: ${modeLabel})...`);
+    log(`📤 Invio messaggio LinkedIn (pipeline backup 3.9.48)...`);
     log(`  Destinatario: ${sendUrl}`, "info");
     log(`  Testo: "${sendText.slice(0, 80)}..."`, "info");
-    // Background mode: probe ≤4s + invio. Interactive mode: navigate + click Messaggia + gate 30s + invio.
-    const timeoutMs = composerMode === "background_existing_composer" ? 12000 : 45000;
+    // v3.9.53 — usa il path backup standard sendMessage (navigate focus-safe,
+    // clickMessage, attesa composer, writer). Niente "mode", niente
+    // sendMessageWithMethod nel pulsante principale.
     const r = await liMsg(
-      "sendMessageWithMethod",
-      { url: sendUrl, message: sendText, method: "physical_click", mode: composerMode },
-      timeoutMs,
+      "sendMessage",
+      { url: sendUrl, message: sendText },
+      90000,
     );
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
