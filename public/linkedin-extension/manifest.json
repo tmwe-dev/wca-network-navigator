@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.47",
-  "description": "Fix composer_not_open: fallback robusto a HybridOps.sendMessage (writer produzione 20s + cascata invio) quando il composer è lento a montare.",
+  "version": "3.9.48",
+  "description": "Fix composer gate: come WhatsApp aspetta pagina pronta + textbox reale prima di copiare/inviare; fallback solo dopo timeout diagnostico.",
   "permissions": [
     "cookies",
     "tabs",
