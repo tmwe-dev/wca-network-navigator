@@ -690,10 +690,14 @@ var HybridOps = globalThis.HybridOps || (function () {
             // visibile, NON ri-clicchiamo "Messaggia". Il caller userà il
             // composer esistente. Aprire una seconda finestra è il pattern
             // che fa scattare l'antifrode LinkedIn.
-            var existingComposer = document.querySelector(
+            var existingScopes = document.querySelectorAll(
               ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
             );
-            if (existingComposer && (existingComposer.offsetParent !== null || existingComposer.getClientRects().length > 0)) {
+            for (var es = 0; es < existingScopes.length; es++) {
+              var existingComposer = existingScopes[es];
+              var existingVisible = existingComposer.offsetParent !== null || existingComposer.getClientRects().length > 0;
+              if (!existingVisible) continue;
+              if (!existingComposer.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) continue;
               return { success: true, method: "composer_already_open" };
             }
             var btn = findProfileMessageBtn(root);
