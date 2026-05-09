@@ -604,7 +604,8 @@ var Actions = globalThis.Actions || (function () {
 
   async function readInbox() {
     // Force navigation to inbox list (not a specific thread)
-    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/");
+    const tab = await TabManager.getLinkedInTab("https://www.linkedin.com/messaging/", false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Leggi Inbox");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(2500);
 
@@ -812,7 +813,8 @@ var Actions = globalThis.Actions || (function () {
   async function readThread(threadUrl) {
     if (!threadUrl) return Config.errorResponse(Config.ERROR.INBOX_FAILED, "Thread URL mancante");
     const isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
-    const tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
+    const tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Leggi Thread");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     if (isProfileUrl) {
       try {
@@ -894,7 +896,8 @@ var Actions = globalThis.Actions || (function () {
 
     try {
       var isProfileUrl = /linkedin\.com\/(in|pub)\//i.test(threadUrl);
-      var tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl);
+        var tab = await TabManager.getLinkedInTab(threadUrl, isProfileUrl, false);
+        if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.INBOX_FAILED, "Backfill Thread");
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
       if (isProfileUrl) {
         try {
