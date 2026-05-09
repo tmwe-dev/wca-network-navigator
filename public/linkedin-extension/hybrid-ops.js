@@ -816,17 +816,6 @@ var HybridOps = globalThis.HybridOps || (function () {
                 if (visible) return el;
               }
             }
-            var allBoxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox'], textarea");
-            for (var j = 0; j < allBoxes.length; j++) {
-              var box = allBoxes[j];
-              var boxVisible = box.offsetParent !== null || box.getClientRects().length > 0 || box.offsetWidth || box.offsetHeight;
-              if (!boxVisible) continue;
-              if (box.closest && box.closest("nav, header[role='banner'], .global-nav, [data-test-global-nav]")) continue;
-              var parent = box.closest && box.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [class*='msg-thread'], [class*='msg-convo']");
-              if (!parent) continue;
-              var text = [box.getAttribute("aria-label") || "", box.getAttribute("data-placeholder") || "", box.getAttribute("placeholder") || "", String(box.className || ""), String(parent.className || "")].join(" ");
-              if (/msg|message|messag|scrivi|write|invia|send|reply|rispondi/i.test(text)) return box;
-            }
             return null;
           }
           function findSendBtn() {
