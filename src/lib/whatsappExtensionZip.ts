@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.31";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.33";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,27 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.31",
+    latestVersion: "3.9.33",
     items: [
+      {
+        version: "3.9.33",
+        filename: "linkedin-extension-3.9.33.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.33.zip",
+        current: true,
+        note: "P18 — Invio non invasivo: non apre nuove tab Chrome e non attiva LinkedIn; usa solo una tab LinkedIn già esistente.",
+      },
+      {
+        version: "3.9.32",
+        filename: "linkedin-extension-3.9.32.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.32.zip",
+        current: false,
+        note: "P17 — Invio focus-safe: non attiva né porta davanti la tab LinkedIn durante l'invio; l'operatore resta sulla webapp.",
+      },
       {
         version: "3.9.31",
         filename: "linkedin-extension-3.9.31.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.31.zip",
-        current: true,
+        current: false,
         note: "P16 — Thread test usa URL fisso/profilo; invio finale con physical click + form submit + Ctrl/Cmd Enter fallback.",
       },
       {

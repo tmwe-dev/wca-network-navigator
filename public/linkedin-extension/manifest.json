@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.31",
-  "description": "P16 — Thread test usa URL fisso/profilo e click invio LinkedIn con physical click + form submit + Ctrl/Cmd Enter fallback.",
+  "version": "3.9.33",
+  "description": "P18 — Invio LinkedIn non apre nuove tab e non attiva Chrome: usa solo una tab LinkedIn già esistente.",
   "permissions": [
     "cookies",
     "tabs",

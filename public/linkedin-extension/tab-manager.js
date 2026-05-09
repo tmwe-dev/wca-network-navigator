@@ -161,8 +161,9 @@ var TabManager = globalThis.TabManager || (function () {
   }
 
   // ── getLinkedInTab: only reuses OWNED tabs, never user tabs ──
-  async function getLinkedInTab(url, skipNavigateIfSameDomain) {
+  async function getLinkedInTab(url, skipNavigateIfSameDomain, allowCreate) {
     await loadOwnership();
+    const canCreate = allowCreate !== false;
 
     // Always prefer a LinkedIn tab already open outside the automation window.
     // P14: if the caller says same-domain reuse is allowed, keep the user on
@@ -253,7 +254,12 @@ var TabManager = globalThis.TabManager || (function () {
       console.debug("[LI Tab] query owned tabs failed:", queryErr?.message);
     }
 
-    // Create new in automation window
+    if (!canCreate) {
+      console.warn("[LI Tab] No existing LinkedIn tab and creation disabled for this action");
+      return null;
+    }
+
+    // Create new inactive tab only for explicit non-send actions
     const tab = await safeCreate({ url: url, active: false });
     _liTabId = tab.id;
     saveOwnership();
@@ -275,12 +281,8 @@ var TabManager = globalThis.TabManager || (function () {
     let activatedInAutomation = false;
     try {
       const tab = await chrome.tabs.get(tabId);
-      if (tab.windowId === _automationWindowId) {
-        await chrome.tabs.update(tabId, { active: true });
-        activatedInAutomation = true;
-      } else {
-        console.warn("[LI TabMgr] Tab " + tabId + " not in automation window — skipping activate");
-      }
+      if (tab.windowId === _automationWindowId) activatedInAutomation = false;
+      console.warn("[LI TabMgr] Focus-safe mode — never activating LinkedIn tab during automation");
     } catch (err) { console.debug("[LI Tab] V2.1 activate:", err?.message); }
 
     const startTime = Date.now();
