@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.45";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.46";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -142,10 +142,17 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
     latestVersion: "3.9.45",
     items: [
       {
+        version: "3.9.46",
+        filename: "linkedin-extension-3.9.46.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.46.zip",
+        current: true,
+        note: "Fix profile_not_ready: lo ZIP include davvero attesa tab complete, polling Messaggia esteso e click ottimistico.",
+      },
+      {
         version: "3.9.45",
         filename: "linkedin-extension-3.9.45.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.45.zip",
-        current: true,
+        current: false,
         note: "Fix composer_not_open: clickMessage non considera più dialog/overlay senza textbox come composer aperto; clicca davvero Messaggia dal profilo.",
       },
       {
