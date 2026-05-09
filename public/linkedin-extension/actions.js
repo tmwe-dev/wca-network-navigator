@@ -5,9 +5,14 @@
 
 var Actions = globalThis.Actions || (function () {
 
+  function noExistingLinkedInTab(errorCode, actionLabel) {
+    return Config.errorResponse(errorCode, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; " + actionLabel + " non apre nuove tab e non cambia pagina");
+  }
+
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
-    const tab = await TabManager.getLinkedInTab(url);
+    const tab = await TabManager.getLinkedInTab(url, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.EXTRACTION_FAILED, "Estrai profilo");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     return await HybridOps.extractProfile(tab.id);
   }
@@ -178,7 +183,8 @@ var Actions = globalThis.Actions || (function () {
 
   async function sendConnectionRequest(profileUrl, note) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, "URL profilo mancante");
-    const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""));
+    const tab = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""), false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.CONNECT_FAILED, "Collegati");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     const clickResult = await HybridOps.clickConnect(tab.id);
     if (!clickResult || !clickResult.success) return Config.errorResponse(Config.ERROR.CONNECT_FAILED, (clickResult && clickResult.error) || "Connect button not found");
@@ -207,7 +213,8 @@ var Actions = globalThis.Actions || (function () {
   async function searchProfile(query) {
     if (!query) return Config.errorResponse(Config.ERROR.SEARCH_FAILED, "Query mancante");
     const searchUrl = "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(query);
-    const tab = await TabManager.getLinkedInTab(searchUrl);
+    const tab = await TabManager.getLinkedInTab(searchUrl, false, false);
+    if (!tab || !tab.id) return noExistingLinkedInTab(Config.ERROR.SEARCH_FAILED, "Search");
     await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
     await TabManager.sleep(3000);
     try {
