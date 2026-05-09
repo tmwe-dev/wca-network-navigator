@@ -9,6 +9,77 @@ var Actions = globalThis.Actions || (function () {
     return Config.errorResponse(errorCode, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; " + actionLabel + " non apre nuove tab e non cambia pagina");
   }
 
+  function detectOpenComposerInPage() {
+    function deepQueryAll(selector, root) {
+      var out = [];
+      var r = root || document;
+      try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+      var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].shadowRoot) {
+          try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e2) {}
+        }
+      }
+      return out;
+    }
+    function isVisible(el) {
+      if (!el) return false;
+      var rects = el.getClientRects ? el.getClientRects() : [];
+      if (rects && rects.length > 0) return true;
+      return !!(el.offsetWidth || el.offsetHeight || el.offsetParent);
+    }
+    function isInGlobalNav(el) {
+      return !!(el && el.closest && el.closest("nav, header[role='banner'], .global-nav, [data-test-global-nav]"));
+    }
+    var boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox'], textarea");
+    for (var i = 0; i < boxes.length; i++) {
+      var el = boxes[i];
+      if (!isVisible(el) || isInGlobalNav(el)) continue;
+      var scope = el.closest && el.closest(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [class*='msg-thread'], [class*='msg-convo']");
+      if (!scope || !isVisible(scope)) continue;
+      var haystack = [
+        el.getAttribute("aria-label") || "",
+        el.getAttribute("data-placeholder") || "",
+        el.getAttribute("placeholder") || "",
+        String(el.className || ""),
+        String(scope.className || ""),
+        (scope.textContent || "").slice(0, 500),
+      ].join(" ");
+      if (/msg|message|messag|scrivi|write|invia|send|reply|rispondi/i.test(haystack)) {
+        return { found: true, href: location.href, boxClass: String(el.className || "").slice(0, 120), scopeClass: String(scope.className || "").slice(0, 120) };
+      }
+    }
+    return { found: false, href: location.href, boxes: boxes.length };
+  }
+
+  async function findLinkedInTabWithOpenComposer(targetUrl) {
+    var tabs = [];
+    try { tabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" }); } catch (e) { tabs = []; }
+    if (!tabs || tabs.length === 0) return { tab: null, probe: null, tabsChecked: 0 };
+    var targetSlug = (String(targetUrl || "").match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1] || "";
+    var candidates = [];
+    for (var i = 0; i < tabs.length; i++) {
+      try {
+        var res = await chrome.scripting.executeScript({ target: { tabId: tabs[i].id }, func: detectOpenComposerInPage });
+        var probe = res && res[0] && res[0].result;
+        if (probe && probe.found) candidates.push({ tab: tabs[i], probe: probe });
+      } catch (e2) { /* tab non iniettabile o in caricamento: ignoriamo */ }
+    }
+    if (candidates.length === 0) return { tab: null, probe: null, tabsChecked: tabs.length };
+    candidates.sort(function (a, b) {
+      function score(item) {
+        var url = String((item.tab && (item.tab.url || item.tab.pendingUrl)) || "").toLowerCase();
+        var s = 0;
+        if (item.tab.active) s += 100;
+        if (targetSlug && url.indexOf("/in/" + targetSlug.toLowerCase()) !== -1) s += 50;
+        if (/\/messaging\//i.test(url)) s += 20;
+        return s;
+      }
+      return score(b) - score(a);
+    });
+    return { tab: candidates[0].tab, probe: candidates[0].probe, tabsChecked: tabs.length };
+  }
+
   async function extractProfileByUrl(url) {
     if (!url) return Config.errorResponse(Config.ERROR.EXTRACTION_FAILED, "URL mancante");
     const tab = await TabManager.getLinkedInTab(url, false, false);
