@@ -484,6 +484,20 @@ export function LinkedInTest() {
 
       <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">💬 Test Lettura Thread (diagnostico — NON salva nulla)</p>
+        {foundThreads.length > 0 && (
+          <select
+            value={threadUrl}
+            onChange={(e) => setThreadUrl(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">— Seleziona thread dalla Inbox (popola URL automaticamente) —</option>
+            {foundThreads.map((t, i) => (
+              <option key={i} value={t.threadUrl || ""} disabled={!t.threadUrl}>
+                {t.name}{t.threadUrl ? "" : " (threadUrl mancante dalla lettura inbox)"}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex gap-2">
           <Input
             value={threadUrl}
@@ -491,7 +505,14 @@ export function LinkedInTest() {
             placeholder="URL thread/profilo LinkedIn — se vuoto usa il destinatario fisso"
             className="flex-1 text-sm"
           />
-          <Button onClick={testReadThread} disabled={running} size="sm">💬 Leggi Thread</Button>
+          <Button
+            onClick={testReadThread}
+            disabled={running || !resolveThreadTarget()}
+            size="sm"
+            title={!resolveThreadTarget() ? "threadUrl mancante: seleziona un thread dalla Inbox o incolla un URL" : undefined}
+          >
+            💬 Leggi Thread
+          </Button>
         </div>
         <div className="flex gap-2">
           <Input
@@ -500,7 +521,15 @@ export function LinkedInTest() {
             placeholder="(opzionale) testo dell'ultimo messaggio noto — il backfill si ferma quando lo trova"
             className="flex-1 text-sm"
           />
-          <Button onClick={testBackfillThread} disabled={running} size="sm" variant="outline">📜 Backfill Thread</Button>
+          <Button
+            onClick={testBackfillThread}
+            disabled={running || !resolveThreadTarget()}
+            size="sm"
+            variant="outline"
+            title={!resolveThreadTarget() ? "threadUrl mancante: seleziona un thread dalla Inbox o incolla un URL" : undefined}
+          >
+            📜 Backfill Thread
+          </Button>
         </div>
       </div>
 

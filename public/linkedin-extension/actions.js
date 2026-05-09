@@ -17,109 +17,225 @@ var Actions = globalThis.Actions || (function () {
     return await HybridOps.extractProfile(tab.id);
   }
 
-  async function sendLinkedInMessage(profileUrl, message) {
+  // ──────────────────────────────────────────────────────────────────
+  // sendLinkedInMessageCore — pipeline UNICA (v3.9.49)
+  // Usata sia da sendLinkedInMessage (UI/produzione) sia da
+  // sendLinkedInMessageWithMethod (diagnostico Test Estensioni).
+  // Sequenza:
+  //   1) getLinkedInTab focus-safe (no nuova tab, no foreground)
+  //   2) ensureTabVisibleAndWait + attesa tab.status=complete
+  //   3) hard URL guard sul profilo richiesto
+  //   4) cleanup overlay stale
+  //   5) probeComposer
+  //   6) se non aperto e non isThreadUrl → polling profilo + clickMessage
+  //   7) HybridOps.waitForMessageComposer(tabId, 30000) — GATE REALE
+  //   8) se gate fallisce → return composer_gate_failed (NIENTE fallback writer)
+  //   9) writer: HybridOps.sendMessageWithMethod (se method) | HybridOps.sendMessage
+  // ──────────────────────────────────────────────────────────────────
+  async function sendLinkedInMessageCore(opts) {
+    var profileUrl = opts && opts.profileUrl;
+    var message = opts && opts.message;
+    var method = opts && opts.method;
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
-    const target = profileUrl.replace(/\/$/, "");
-    // P1 — Thread URL detection: se l'URL è un thread di messaggistica, il
-    // bottone "Messaggia" non esiste. Saltiamo clickMessage e andiamo dritti
-    // a sendMessage, che cerca direttamente la textbox del composer.
-    const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
-    async function attempt() {
-      // P21 — Come backup funzionante: NON usiamo skipNavigateIfSameDomain.
-      // Se la tab LinkedIn esiste ma è su /messaging/inbox o su un altro
-      // profilo, dobbiamo navigarla al target (chrome.tabs.update con solo
-      // {url} NON attiva la tab, quindi resta focus-safe). Senza questo,
-      // clickMessage gira sulla pagina sbagliata e fallisce con
-      // "Profile-scoped message button not found".
-      const tab = await TabManager.getLinkedInTab(target, false, false);
-      if (!tab || !tab.id) {
-        return { tabId: null, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; l'invio non apre nuove tab e non cambia pagina") };
+    var target = profileUrl.replace(/\/$/, "");
+    var isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
+    var targetClean = target.split("?")[0].replace(/\/$/, "");
+    // Anti-doppio-invio: stessa coppia (url, msg) entro 2s = no-op.
+    try {
+      var now = Date.now();
+      var stored = (globalThis.__lvLiCoreInflight || null);
+      if (stored && stored.url === targetClean && stored.msg === message && (now - stored.at) < 2000) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "duplicate_send_blocked: invio identico entro 2s");
       }
-      // P17 — Focus-safe come WhatsApp: NON attiviamo mai la tab LinkedIn
-      // durante l'invio. L'utente deve restare sulla webapp e continuare a lavorare.
-      // La scrittura/click avvengono via chrome.scripting in background.
-      await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-      // P15 — Chiudi SOLO le chat fluttuanti stale (msg-overlay-conversation-bubble)
-      // di conversazioni precedenti. NON tocchiamo .msg-form della pagina /messaging
-      // né i [role='dialog'] del profilo: quelli sono il composer corretto.
+      globalThis.__lvLiCoreInflight = { url: targetClean, msg: message, at: now };
+    } catch (e) { /* best-effort */ }
+
+    // 1) Naviga focus-safe la tab LinkedIn esistente al target.
+    var tab = await TabManager.getLinkedInTab(target, false, false);
+    if (!tab || !tab.id) {
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; l'invio non apre nuove tab e non cambia pagina");
+    }
+    // 2) Focus-safe ready (non porta la tab in foreground).
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+
+    // 2.bis) Attendi tab status=complete (max 4s).
+    var lastTabStatus = "unknown";
+    var lastTabUrl = "";
+    for (var i = 0; i < 16; i++) {
       try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function () {
-            try {
-              var overlays = document.querySelectorAll(
-                ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']"
+        var ti = await chrome.tabs.get(tab.id);
+        lastTabStatus = (ti && ti.status) || "unknown";
+        lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || "";
+        if (lastTabStatus === "complete") break;
+      } catch (e) { /* ignore */ }
+      await TabManager.sleep(250);
+    }
+
+    // 3) HARD URL guard: la tab DEVE essere sul profilo richiesto.
+    try {
+      var tabInfo = await chrome.tabs.get(tab.id);
+      var currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
+      var targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
+      var onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
+      if (!isThreadUrl && !onTarget) {
+        console.warn("[LI Core] wrong_recipient", { wanted: targetSlug, currentUrl: currentUrl });
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")");
+      }
+    } catch (e) { /* tolleriamo */ }
+
+    // 4) Pulisci overlay stale (chat fluttuanti precedenti).
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: function () {
+          try {
+            var overlays = document.querySelectorAll(
+              ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']"
+            );
+            for (var i = 0; i < overlays.length; i++) {
+              var ov = overlays[i];
+              var closeBtn = ov.querySelector(
+                "button[aria-label*='hiudi' i], button[aria-label*='lose' i], button[data-control-name*='close' i]"
               );
-              for (var i = 0; i < overlays.length; i++) {
-                var ov = overlays[i];
-                var closeBtn = ov.querySelector(
-                  "button[aria-label*='hiudi' i], button[aria-label*='lose' i], button[data-control-name*='close' i]"
-                );
-                if (closeBtn) { try { closeBtn.click(); } catch (e) {} continue; }
-                try { ov.remove(); } catch (e) {}
-              }
-              return overlays.length;
-            } catch (e) { return 0; }
-          },
-        });
-        await TabManager.sleep(300);
-      } catch (e) { /* best-effort */ }
-      let composerAlreadyOpen = false;
+              if (closeBtn) { try { closeBtn.click(); } catch (e) {} continue; }
+              try { ov.remove(); } catch (e) {}
+            }
+          } catch (e) {}
+        },
+      });
+      await TabManager.sleep(300);
+    } catch (e) { /* best-effort */ }
+
+    // 5) Probe composer (deep-shadow).
+    async function probeComposer() {
       try {
-        const composerProbe = await chrome.scripting.executeScript({
+        var probe = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: function () {
-            var scopes = document.querySelectorAll(
+            function deepQueryAll(selector, root) {
+              var out = [];
+              var r = root || document;
+              try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
+              var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
+              for (var i = 0; i < all.length; i++) {
+                if (all[i].shadowRoot) {
+                  try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
+                }
+              }
+              return out;
+            }
+            var scopes = deepQueryAll(
               ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
             );
             for (var i = 0; i < scopes.length; i++) {
               var scope = scopes[i];
               var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
               if (!visible) continue;
-              if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
+              var boxes = scope.querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var j = 0; j < boxes.length; j++) {
+                var el = boxes[j];
+                if (el.offsetParent !== null || el.getClientRects().length > 0) return true;
+              }
             }
             return false;
           },
         });
-        composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
-      } catch (e) { composerAlreadyOpen = false; }
-      // P11 — Verifica URL stretta: dopo navigate dobbiamo essere ESATTAMENTE
-      // sul profilo richiesto (/in/<slug>). Niente scorciatoia "qualsiasi
-      // /messaging/thread/ va bene": se la tab era già su una chat diversa,
-      // si mandava al destinatario sbagliato. Abortiamo anche se il composer
-      // è "già aperto" su un thread non verificato.
-      try {
-        const tabInfo = await chrome.tabs.get(tab.id);
-        const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
-        const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-        const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-        if (!isThreadUrl && !onTarget) {
-          console.warn("[LI Send] wrong_recipient", { wanted: targetSlug, currentUrl: currentUrl });
-          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")") };
-        }
-      } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-      if (!isThreadUrl && !composerAlreadyOpen) {
-        const clickResult = await HybridOps.clickMessage(tab.id);
-        if (!clickResult || !clickResult.success) {
-          return { tabId: tab.id, result: Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "Message button not found") };
-        }
-        await TabManager.sleep(3000);
-      } else {
-        // Thread/composer già aperto: diamo solo il tempo al composer di montarsi.
-        await TabManager.sleep(composerAlreadyOpen ? 500 : 1500);
-      }
-      const sendResult = await HybridOps.sendMessage(tab.id, message);
-      return { tabId: tab.id, result: sendResult };
+        return !!(probe[0] && probe[0].result);
+      } catch (e) { return false; }
     }
-    let { tabId, result } = await attempt();
-    // Se la guardia URL ha intercettato un drift (es. click finito sulla nav inbox),
-    // forziamo la ri-navigazione al profilo e ritentiamo UNA sola volta.
+
+    // 6) Probe presenza bottone "Messaggia" (per profili in background lenti).
+    async function probeMessageButton() {
+      try {
+        var r = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            var structural = document.querySelectorAll(
+              "a[href*='/messaging/compose'], a[href*='/messaging/thread/'],"
+              + " button[data-control-name*='message' i],"
+              + " .pv-top-card button, .pvs-profile-actions button, .artdeco-card button[aria-label]"
+            );
+            for (var i = 0; i < structural.length; i++) {
+              var s = structural[i];
+              var lab = ((s.getAttribute("aria-label") || "") + " " + (s.textContent || "")).toLowerCase();
+              var vis = s.offsetParent !== null || s.getClientRects().length > 0;
+              if (!vis) continue;
+              if (/messaggi|message|messa|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(lab)) return true;
+              if (s.tagName === "A") return true;
+            }
+            var btns = document.querySelectorAll("button, a[role='button']");
+            for (var j = 0; j < btns.length; j++) {
+              var b = btns[j];
+              var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).toLowerCase();
+              if (!label.trim()) continue;
+              if (/messaggi|message|messa|invia messaggio|nachricht|enviar mensaje|envoyer un message|mensagem|wiadomo/i.test(label)) {
+                var visible = b.offsetParent !== null || b.getClientRects().length > 0;
+                if (visible) return true;
+              }
+            }
+            return false;
+          },
+        });
+        return !!(r[0] && r[0].result);
+      } catch (e) { return false; }
+    }
+
+    var composerAlreadyOpen = await probeComposer();
+
+    // 7) Se composer non aperto e non thread URL: aspetta bottone "Messaggia"
+    //    e clicca (con retry). NIENTE sleep(3000) cieco.
+    if (!composerAlreadyOpen && !isThreadUrl) {
+      var profileReady = await probeMessageButton();
+      for (var k = 0; k < 30 && !profileReady && !composerAlreadyOpen; k++) {
+        await TabManager.sleep(500);
+        profileReady = await probeMessageButton();
+        if (!profileReady) composerAlreadyOpen = await probeComposer();
+      }
+      if (!composerAlreadyOpen) {
+        var clickResult = await HybridOps.clickMessage(tab.id);
+        if (!clickResult || !clickResult.success) {
+          await TabManager.sleep(1500);
+          clickResult = await HybridOps.clickMessage(tab.id);
+        }
+        if (!clickResult || !clickResult.success) {
+          var shortUrl = (lastTabUrl || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 80);
+          return Config.errorResponse(
+            Config.ERROR.MESSAGE_FAILED,
+            "open_composer_failed: " + ((clickResult && clickResult.error) || "bottone Messaggia non trovato") + " (status=" + lastTabStatus + ", url=" + shortUrl + ")"
+          );
+        }
+      }
+    }
+
+    // 8) GATE REALE stile WhatsApp — aspetta textbox visibile + interattiva.
+    //    Se fallisce: STOP diagnostico, niente fallback writer.
+    var gate = await HybridOps.waitForMessageComposer(tab.id, 30000);
+    if (!gate || !gate.success) {
+      var diag = (gate && gate.diagnostic) ? " gate=" + JSON.stringify(gate.diagnostic) : "";
+      return Config.errorResponse(
+        Config.ERROR.MESSAGE_FAILED,
+        "composer_gate_failed: " + ((gate && gate.error) || "no_textbox") + " (status=" + lastTabStatus + ")" + diag
+      );
+    }
+
+    // 9) Writer (write/send separati dentro HybridOps).
+    if (method) {
+      return await HybridOps.sendMessageWithMethod(tab.id, message, method);
+    }
+    return await HybridOps.sendMessage(tab.id, message);
+  }
+
+  async function sendLinkedInMessage(profileUrl, message) {
+    var result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message });
+    // Recovery una sola volta su navigation_drifted.
     if (result && !result.success && /navigation_drifted/i.test(result.error || "")) {
-      try { await chrome.tabs.update(tabId, { url: target }); } catch (e) { /* ignore */ }
+      try {
+        var t = await TabManager.getLinkedInTab(profileUrl.replace(/\/$/, ""), false, false);
+        if (t && t.id) await chrome.tabs.update(t.id, { url: profileUrl.replace(/\/$/, "") });
+      } catch (e) { /* ignore */ }
       await TabManager.sleep(2500);
-      const retry = await attempt();
-      result = retry.result;
+      result = await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message });
     }
     return result;
   }
@@ -163,336 +279,9 @@ var Actions = globalThis.Actions || (function () {
     return best;
   }
 
-  // v3.9.44 — Background mode: il test diagnostico apre da solo il composer
-  // (come l'invio standard) e poi esegue il metodo scelto. L'operatore non
-  // deve più aprire manualmente la chat. Riusa la stessa logica di
-  // sendLinkedInMessage: navigate focus-safe → clickMessage se serve →
-  // attesa composer → HybridOps.sendMessageWithMethod.
   async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
-    if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
-    if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     if (!method) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "method mancante");
-    const target = profileUrl.replace(/\/$/, "");
-    const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
-    const targetClean = target.split("?")[0].replace(/\/$/, "");
-    // Anti-doppio-invio: se l'utente ri-clicca entro 2s sulla stessa coppia (url, msg), no-op.
-    try {
-      const now = Date.now();
-      const stored = (globalThis.__lvLiDiagInflight || null);
-      if (stored && stored.url === targetClean && stored.msg === message && (now - stored.at) < 2000) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "duplicate_send_blocked: invio identico entro 2s, atteso debounce");
-      }
-      globalThis.__lvLiDiagInflight = { url: targetClean, msg: message, at: now };
-    } catch (e) { /* best-effort */ }
-    // 1) Naviga SEMPRE focus-safe la tab LinkedIn esistente al target.
-    //    Non preferire più "qualunque composer aperto": se Chrome era già su
-    //    una thread diversa, il test rapido finiva lì. La guardia resta sotto,
-    //    ma prima di bloccare diamo al tab-manager la possibilità di portarsi
-    //    sul profilo/thread richiesto.
-    const tab = await TabManager.getLinkedInTab(target, false, false);
-    if (!tab || !tab.id) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test non apre nuove tab");
-    }
-    // 2) Focus-safe ready (non porta la tab in foreground).
-    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
-    // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
-    // background il renderer monta più lento; senza questa attesa il probe
-    // del bottone Messaggia parte troppo presto.
-    let lastTabStatus = "unknown";
-    let lastTabUrl = "";
-    for (let i = 0; i < 16; i++) {
-      try {
-        const ti = await chrome.tabs.get(tab.id);
-        lastTabStatus = (ti && ti.status) || "unknown";
-        lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || "";
-        if (lastTabStatus === "complete") break;
-      } catch (e) { /* ignore */ }
-      await TabManager.sleep(250);
-    }
-    // 2.bis) HARD GUARD destinatario: dopo navigate la tab DEVE essere sul
-    // profilo richiesto (`/in/<slug>`) o su un thread URL esplicito passato
-    // dal chiamante. Senza questo check, se la tab era già aperta su una
-    // chat diversa, mandavamo al destinatario sbagliato.
-    try {
-      const tabInfo = await chrome.tabs.get(tab.id);
-      const currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
-      const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-      const onTarget = !!(targetSlug && currentUrl.toLowerCase().includes("/in/" + targetSlug.toLowerCase()));
-      if (!isThreadUrl && !onTarget) {
-        console.warn("[LI Send] wrong_recipient (withMethod)", { wanted: targetSlug, currentUrl: currentUrl });
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_recipient: tab non sul profilo richiesto (" + currentUrl + ")");
-      }
-    } catch (e) { /* se tabs.get fallisce, lasciamo procedere */ }
-    // 3) Probe composer.
-    async function probeComposer() {
-      try {
-        const probe = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function () {
-            // Deep query (include shadow roots) come fa HybridOps.sendMessageWithMethod.
-            function deepQueryAll(selector, root) {
-              var out = [];
-              var r = root || document;
-              try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
-              var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
-              for (var i = 0; i < all.length; i++) {
-                if (all[i].shadowRoot) {
-                  try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
-                }
-              }
-              return out;
-            }
-            var scopes = deepQueryAll(
-              ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
-            );
-            for (var i = 0; i < scopes.length; i++) {
-              var scope = scopes[i];
-              var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
-              if (!visible) continue;
-              var boxes = scope.querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-              for (var j = 0; j < boxes.length; j++) {
-                var el = boxes[j];
-                if (el.offsetParent !== null || el.getClientRects().length > 0) return true;
-              }
-            }
-            return false;
-          },
-        });
-        return !!(probe[0] && probe[0].result);
-      } catch (e) { return false; }
-    }
-
-    // v3.9.48 — Gate stile WhatsApp: prima aspetta davvero pagina + campo,
-    // poi permette al writer di copiare/inviare. Questo evita il vecchio errore
-    // “composer non montato”: se il campo non esiste, NON scriviamo nulla.
-    async function waitForComposerReady(maxWaitMs) {
-      try {
-        const res = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function (timeoutMs) {
-            function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-            function deepQueryAll(selector, root) {
-              var out = [];
-              var r = root || document;
-              try { out.push.apply(out, r.querySelectorAll(selector)); } catch (e) {}
-              var all = r.querySelectorAll ? r.querySelectorAll("*") : [];
-              for (var i = 0; i < all.length; i++) {
-                if (all[i].shadowRoot) {
-                  try { out.push.apply(out, deepQueryAll(selector, all[i].shadowRoot)); } catch (e) {}
-                }
-              }
-              return out;
-            }
-            function visible(el) { return !!(el && (el.offsetParent !== null || el.getClientRects().length > 0)); }
-            function findBox() {
-              var scopes = deepQueryAll(
-                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
-              );
-              for (var s = 0; s < scopes.length; s++) {
-                if (!visible(scopes[s])) continue;
-                var boxes = scopes[s].querySelectorAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
-                for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
-              }
-              return null;
-            }
-            function isInGlobalNav(el) {
-              return !!(el && (el.closest("nav") || el.closest("header[role='banner']") || el.closest("[data-test-global-nav]") || el.closest(".global-nav")));
-            }
-            function hasOpenComposerShell() {
-              var scopes = deepQueryAll(
-                ".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']"
-              );
-              for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
-              return false;
-            }
-            function findMessageBtn() {
-              var root = document.querySelector("main") || document.body;
-              var btns = Array.from(root.querySelectorAll("button, a, [role='button'], [role='menuitem']"));
-              for (var i = 0; i < btns.length; i++) {
-                var b = btns[i];
-                if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
-                if (/^(message|messaggia|messaggio|scrivi|invia messaggio|send message)$/i.test(label)) return b;
-                if (/messaggia|messaggio|message|send message|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(label)) return b;
-              }
-              return null;
-            }
-            function findMoreBtn() {
-              var root = document.querySelector("main") || document.body;
-              var btns = Array.from(root.querySelectorAll("button, [role='button']"));
-              for (var i = 0; i < btns.length; i++) {
-                var b = btns[i];
-                if (!visible(b) || isInGlobalNav(b)) continue;
-                var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).trim().toLowerCase();
-                if (/^(more|altro|più|more actions|più azioni)$/i.test(label)) return b;
-              }
-              return null;
-            }
-            return (async function () {
-              var started = Date.now();
-              var limit = Math.max(12000, timeoutMs || 30000);
-              var clickedMessage = false;
-              var clickedMore = false;
-              var last = { readyState: document.readyState, hasMain: !!document.querySelector("main"), clickedMessage: false, clickedMore: false, shells: 0, boxes: 0 };
-              while (Date.now() - started < limit) {
-                last.readyState = document.readyState;
-                last.hasMain = !!document.querySelector("main");
-                var box = findBox();
-                if (box) return { success: true, method: "wa_style_composer_gate", waitedMs: Date.now() - started };
-                var shells = deepQueryAll(".msg-form, [class*='msg-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
-                last.shells = shells.filter(visible).length;
-                last.boxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']").filter(visible).length;
-                if (!clickedMessage && !hasOpenComposerShell()) {
-                  var mb = findMessageBtn();
-                  if (mb) {
-                    try { mb.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
-                  }
-                }
-                if (!clickedMessage && !clickedMore && !hasOpenComposerShell() && Date.now() - started > 2500) {
-                  var more = findMoreBtn();
-                  if (more) {
-                    try { more.click(); clickedMore = true; last.clickedMore = true; } catch (e) {}
-                    await sleep(700);
-                    var mb2 = findMessageBtn();
-                    if (mb2) {
-                      try { mb2.click(); clickedMessage = true; last.clickedMessage = true; } catch (e) {}
-                    }
-                  }
-                }
-                await sleep(100);
-              }
-              return { success: false, error: "composer_gate_timeout", waitedMs: Date.now() - started, diagnostic: last };
-            })();
-          },
-          args: [maxWaitMs || 30000],
-        });
-        return (res && res[0] && res[0].result) || { success: false, error: "composer_gate_no_result" };
-      } catch (e) {
-        return { success: false, error: "composer_gate_exception: " + (e && e.message ? e.message : String(e)) };
-      }
-    }
-    let composerAlreadyOpen = await probeComposer();
-    // 3.bis) Aspetta che il PROFILO sia pronto in background prima di cercare
-    // "Messaggia": tab in background montano il DOM più lentamente. Polling
-    // fino a 6s (20 × 300ms) per la presenza del bottone "Messaggia" oppure
-    // di un composer già aperto. Non si applica ai thread URL.
-    async function probeMessageButton() {
-      try {
-        const r = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: function () {
-            // Selettori strutturali (più affidabili del testo).
-            var structural = document.querySelectorAll(
-              "a[href*='/messaging/compose'], a[href*='/messaging/thread/']," +
-              " button[data-control-name*='message' i]," +
-              " .pv-top-card button, .pvs-profile-actions button, .artdeco-card button[aria-label]"
-            );
-            for (var i = 0; i < structural.length; i++) {
-              var s = structural[i];
-              var lab = ((s.getAttribute("aria-label") || "") + " " + (s.textContent || "")).toLowerCase();
-              var vis = s.offsetParent !== null || s.getClientRects().length > 0;
-              if (!vis) continue;
-              if (/messaggi|message|messa|nachricht|mensaje|mensagem|wiadomo|envoyer/i.test(lab)) return true;
-              // Se è un anchor di compose/thread, basta la presenza visibile.
-              if (s.tagName === "A") return true;
-            }
-            // Fallback testuale globale.
-            var btns = document.querySelectorAll("button, a[role='button']");
-            for (var j = 0; j < btns.length; j++) {
-              var b = btns[j];
-              var label = ((b.getAttribute("aria-label") || "") + " " + (b.textContent || "")).toLowerCase();
-              if (!label.trim()) continue;
-              if (/messaggi|message|messa|invia messaggio|nachricht|enviar mensaje|envoyer un message|mensagem|wiadomo/i.test(label)) {
-                var visible = b.offsetParent !== null || b.getClientRects().length > 0;
-                if (visible) return true;
-              }
-            }
-            return false;
-          },
-        });
-        return !!(r[0] && r[0].result);
-      } catch (e) { return false; }
-    }
-    if (!composerAlreadyOpen && !isThreadUrl) {
-      let profileReady = await probeMessageButton();
-      // Polling esteso: 30 × 500ms = 15s.
-      for (let i = 0; i < 30 && !profileReady && !composerAlreadyOpen; i++) {
-        await TabManager.sleep(500);
-        profileReady = await probeMessageButton();
-        if (!profileReady) composerAlreadyOpen = await probeComposer();
-      }
-      if (!profileReady && !composerAlreadyOpen) {
-        // Tentativo ottimistico: clickMessage ha scoping interno che a volte
-        // trova il bottone anche quando il probe esterno non lo vede.
-        try {
-          const ti = await chrome.tabs.get(tab.id);
-          lastTabStatus = (ti && ti.status) || lastTabStatus;
-          lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || lastTabUrl;
-        } catch (e) { /* ignore */ }
-        const optimistic = await HybridOps.clickMessage(tab.id);
-        if (!optimistic || !optimistic.success) {
-          var shortUrl = (lastTabUrl || "").replace(/^https?:\/\/[^/]+/, "").slice(0, 80);
-          return Config.errorResponse(
-            Config.ERROR.MESSAGE_FAILED,
-            "profile_not_ready: profilo LinkedIn non pronto in background (status=" + lastTabStatus + ", url=" + shortUrl + "), riprova"
-          );
-        }
-        // Click ottimistico riuscito: passiamo direttamente al polling composer.
-        for (let i = 0; i < 32; i++) {
-          await TabManager.sleep(250);
-          if (await probeComposer()) { composerAlreadyOpen = true; break; }
-        }
-      }
-    }
-    // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
-    //    con un retry in caso di fallimento transitorio.
-    if (!composerAlreadyOpen && !isThreadUrl) {
-      let clickResult = await HybridOps.clickMessage(tab.id);
-      if (!clickResult || !clickResult.success) {
-        await TabManager.sleep(1500);
-        clickResult = await HybridOps.clickMessage(tab.id);
-      }
-      if (!clickResult || !clickResult.success) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
-      }
-      const gateAfterClick = await waitForComposerReady(30000);
-      composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
-    } else if (isThreadUrl && !composerAlreadyOpen) {
-      // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
-      const threadGate = await waitForComposerReady(30000);
-      composerAlreadyOpen = !!(threadGate && threadGate.success);
-    }
-    if (!composerAlreadyOpen) {
-      // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
-      // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
-      // che comunque scrive esclusivamente dopo aver trovato la textbox.
-      const finalGate = await waitForComposerReady(30000);
-      if (finalGate && finalGate.success) {
-        composerAlreadyOpen = true;
-      } else {
-        console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
-        var fallbackResult = await HybridOps.sendMessage(tab.id, message);
-        if (fallbackResult && fallbackResult.success) {
-          return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
-        }
-        var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
-        var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
-      return Config.errorResponse(
-        Config.ERROR.MESSAGE_FAILED,
-        "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
-      );
-      }
-    }
-    await TabManager.sleep(150);
-    return await HybridOps.sendMessageWithMethod(tab.id, message, method);
-  }
-
-  // (legacy block sotto rimosso: la nuova implementazione sopra apre il composer da sola)
-  async function _legacyManualDiagnostic_unused() {
-    let composerAlreadyOpen = false;
-    try {
-    } catch (e) { /* unused */ }
-    return null;
+    return await sendLinkedInMessageCore({ profileUrl: profileUrl, message: message, method: method });
   }
 
   async function sendConnectionRequest(profileUrl, note) {
