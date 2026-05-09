@@ -12,6 +12,16 @@ import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
 const LI_COOLDOWN_MS = 5000;
+const LI_FIXED_RECIPIENT_KEY = "li_test_fixed_recipient";
+
+interface StoredLiTestRecipient {
+  url?: string;
+  savedAt?: string;
+}
+
+function isValidLinkedInTestUrl(raw: string): boolean {
+  return /^https:\/\/(www\.)?linkedin\.com\/(in|messaging\/thread)\//i.test(raw.trim());
+}
 
 interface FoundThread {
   name: string;
@@ -47,6 +57,20 @@ export function LinkedInTest() {
   const log = useCallback((msg: string, type: LogEntry["type"] = "info") => {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LI_FIXED_RECIPIENT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as StoredLiTestRecipient;
+      const fixedUrl = saved?.url?.trim();
+      if (fixedUrl && isValidLinkedInTestUrl(fixedUrl)) {
+        setSendUrl(fixedUrl);
+        setProfileUrl(fixedUrl.includes("/in/") ? fixedUrl : "https://www.linkedin.com/in/");
+        log(`📌 Destinatario FISSO LinkedIn: ${fixedUrl}. Non viene aggiornato dagli invii successivi.`, "info");
+      }
+    } catch { /* ignore */ }
+  }, [log]);
 
   // Stream Optimus events into the LinkedIn terminal
   useEffect(() => {
@@ -185,7 +209,7 @@ export function LinkedInTest() {
   });
 
   const testSendMessage = () => runWithCooldown(async () => {
-    if (!sendUrl.trim()) { log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn"); return; }
+    if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     // Pre-flight: verifica versione estensione installata
     try {
@@ -238,7 +262,7 @@ export function LinkedInTest() {
   // funziona meglio nel composer LinkedIn corrente, senza che la cascata
   // di fallback nasconda quale metodo ha effettivamente vinto.
   const testSendWithMethod = (method: "physical_click" | "form_submit" | "keyboard_shortcut", emoji: string, label: string) => runWithCooldown(async () => {
-    if (!sendUrl.trim()) { log("⚠️ Inserisci l'URL del profilo LinkedIn del destinatario", "warn"); return; }
+    if (!sendUrl.trim()) { log("⚠️ URL fisso LinkedIn mancante: inseriscilo una volta e premi 📌 Fissa test", "warn"); return; }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
     log(`${emoji} Test metodo: ${label} (${method})`);
     log(`  Destinatario: ${sendUrl}`, "info");
@@ -389,6 +413,17 @@ export function LinkedInTest() {
     }
   });
 
+  const pinFixedRecipient = () => {
+    const fixedUrl = sendUrl.trim();
+    if (!isValidLinkedInTestUrl(fixedUrl)) {
+      log("⛔ URL LinkedIn non valido: usa un profilo /in/... o un thread /messaging/thread/...", "error");
+      return;
+    }
+    localStorage.setItem(LI_FIXED_RECIPIENT_KEY, JSON.stringify({ url: fixedUrl, savedAt: new Date().toISOString() } satisfies StoredLiTestRecipient));
+    if (fixedUrl.includes("/in/")) setProfileUrl(fixedUrl);
+    log(`📌 URL LinkedIn FISSO per i test: ${fixedUrl}. Non verrà cambiato dagli invii.`, "ok");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
@@ -453,9 +488,18 @@ export function LinkedInTest() {
           <Input
             value={sendUrl}
             onChange={(e) => setSendUrl(e.target.value)}
-            placeholder="Incolla URL profilo LinkedIn (es. https://www.linkedin.com/in/...)"
+            placeholder="URL fisso test LinkedIn (profilo /in/... o thread /messaging/thread/...)"
             className="flex-1 text-sm"
           />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={pinFixedRecipient}
+            title="Salva questo URL come destinatario fisso dei test LinkedIn"
+          >
+            📌 Fissa test
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -475,7 +519,7 @@ export function LinkedInTest() {
         </div>
         <div className="flex gap-2">
           <Input value={sendText} onChange={(e) => setSendText(e.target.value)} placeholder="Testo del messaggio" className="flex-1 text-sm" />
-          <Button onClick={testSendMessage} disabled={running} size="sm" variant="default">📤 Invia LI</Button>
+          <Button onClick={testSendMessage} disabled={running || !sendUrl.trim() || !sendText.trim()} size="sm" variant="default" title={!sendUrl.trim() ? "URL fisso mancante: inseriscilo e premi Fissa test" : "Invia al destinatario fisso LinkedIn"}>📤 Invia LI</Button>
         </div>
         <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50 mt-1">
           <span className="text-[11px] text-muted-foreground self-center mr-1">🧪 Test isolati click invio:</span>

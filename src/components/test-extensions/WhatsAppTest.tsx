@@ -17,6 +17,23 @@ interface FoundContact {
   time?: string;
 }
 
+const WA_FIXED_RECIPIENT_KEY = "wa_test_fixed_recipient";
+const WA_LEGACY_LAST_RECIPIENT_KEY = "wa_test_last_recipient";
+
+interface StoredWaTestRecipient {
+  phone?: string;
+  name?: string | null;
+  company?: string | null;
+  savedAt?: string;
+}
+
+function normalizeWaTestPhone(raw: string): string | null {
+  const cleaned = raw.trim().replace(/[^0-9+]/g, "");
+  const digits = cleaned.replace(/^\+/, "");
+  if (digits.length < 7) return null;
+  return cleaned.startsWith("+") ? cleaned : `+${digits}`;
+}
+
 export function WhatsAppTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
@@ -33,17 +50,21 @@ export function WhatsAppTest() {
     setLogs((prev) => [...prev, { ts: ts(), msg, type }]);
   }, []);
 
-  // Pre-compila destinatario dall'ultimo invio test riuscito (localStorage).
-  // Così non serve cercare di nuovo il contatto a ogni apertura.
+  // Pre-compila un destinatario FISSO di test. Se esiste solo il vecchio
+  // "ultimo usato", lo migra una sola volta e poi non lo sovrascrive più.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("wa_test_last_recipient");
+      const fixed = localStorage.getItem(WA_FIXED_RECIPIENT_KEY);
+      const raw = fixed || localStorage.getItem(WA_LEGACY_LAST_RECIPIENT_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { phone?: string; name?: string; company?: string };
-      if (saved?.phone) {
-        setSendPhone(saved.phone);
-        setLastSentTo(saved.phone);
-        log(`📌 Destinatario di default: ${saved.name || saved.phone}${saved.company ? " — " + saved.company : ""} (${saved.phone}). Cambialo solo se vuoi testare un altro numero.`, "info");
+      const saved = JSON.parse(raw) as StoredWaTestRecipient;
+      const fixedPhone = saved?.phone ? normalizeWaTestPhone(saved.phone) : null;
+      if (fixedPhone) {
+        const fixedRecipient = { ...saved, phone: fixedPhone, savedAt: saved.savedAt || new Date().toISOString() };
+        if (!fixed) localStorage.setItem(WA_FIXED_RECIPIENT_KEY, JSON.stringify(fixedRecipient));
+        setSendPhone(fixedPhone);
+        setLastSentTo(fixedPhone);
+        log(`📌 Destinatario FISSO WhatsApp: ${saved.name || fixedPhone}${saved.company ? " — " + saved.company : ""} (${fixedPhone}). Non viene aggiornato dagli invii successivi.`, "info");
       }
     } catch { /* ignore */ }
   }, [log]);
@@ -164,21 +185,16 @@ export function WhatsAppTest() {
   };
 
   const testSendMessage = async () => {
-    const phoneRaw = sendPhone.trim();
-    const cleanedDigits = phoneRaw.replace(/[^0-9+]/g, "");
-    const digitsOnly = cleanedDigits.replace(/^\+/, "");
-    const hasPhone = digitsOnly.length >= 7;
-    if (!hasPhone) {
+    const cleanedPhone = normalizeWaTestPhone(sendPhone);
+    if (!cleanedPhone) {
       if (selectedRecipient && !selectedRecipient.bestPhone) {
         log(`⛔ Il contatto selezionato "${selectedRecipient.name}" non ha telefono in DB (${selectedRecipient.source}). Aggiorna il record o scegli un altro destinatario qui sotto.`, "error");
       } else {
-        log("⛔ Campo numero vuoto. Cerca il destinatario nel database qui sotto e clicca su una riga: il numero E.164 verrà compilato automaticamente.", "error");
+        log("⛔ Numero fisso WhatsApp mancante. Inserisci una volta il numero e premi 📌 Fissa test.", "error");
       }
       return;
     }
     if (!sendText.trim()) { log("⚠️ Inserisci il testo del messaggio", "warn"); return; }
-    // Auto-prefix "+" se manca (assume E.164 senza segno iniziale)
-    const cleanedPhone = cleanedDigits.startsWith("+") ? cleanedDigits : "+" + digitsOnly;
     setRunning(true);
     const ping = await ensureCurrentWaExtension();
     if (!ping || (ping as Record<string, unknown>).outdated) { setRunning(false); return; }
@@ -201,19 +217,25 @@ export function WhatsAppTest() {
       log(`✅ Messaggio inviato con successo!`, "ok");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
       setLastSentTo(target);
-      // Persisti ultimo destinatario per i test successivi (no DB lookup richiesto).
-      try {
-        localStorage.setItem("wa_test_last_recipient", JSON.stringify({
-          phone: target,
-          name: selectedRecipient?.name || null,
-          company: selectedRecipient?.company || null,
-          savedAt: new Date().toISOString(),
-        }));
-      } catch { /* ignore */ }
     } else {
       log(`❌ Invio fallito: ${r?.error || JSON.stringify(r)}`, "error");
     }
     setRunning(false);
+  };
+
+  const pinFixedRecipient = () => {
+    const fixedPhone = normalizeWaTestPhone(sendPhone);
+    if (!fixedPhone) { log("⛔ Numero non valido: inserisci un E.164 reale e poi fissalo.", "error"); return; }
+    const fixedRecipient: StoredWaTestRecipient = {
+      phone: fixedPhone,
+      name: selectedRecipient?.name || null,
+      company: selectedRecipient?.company || null,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(WA_FIXED_RECIPIENT_KEY, JSON.stringify(fixedRecipient));
+    setSendPhone(fixedPhone);
+    setLastSentTo(fixedPhone);
+    log(`📌 Numero WhatsApp FISSO per i test: ${fixedPhone}. Non verrà cambiato dagli invii.`, "ok");
   };
 
   const resetSendForm = () => {
@@ -223,7 +245,18 @@ export function WhatsAppTest() {
     setSelectedRecipient(null);
     setDbQuery("");
     setDbResults([]);
-    log("🔄 Reset destinatario: numero, nome, dropdown contatti e memoria ultimo invio azzerati.", "info");
+    try {
+      const raw = localStorage.getItem(WA_FIXED_RECIPIENT_KEY);
+      const saved = raw ? JSON.parse(raw) as StoredWaTestRecipient : null;
+      const fixedPhone = saved?.phone ? normalizeWaTestPhone(saved.phone) : null;
+      if (fixedPhone) {
+        setSendPhone(fixedPhone);
+        setLastSentTo(fixedPhone);
+        log(`🔄 Reset sessione: ripristinato destinatario fisso ${fixedPhone}.`, "info");
+        return;
+      }
+    } catch { /* ignore */ }
+    log("🔄 Reset sessione: nessun destinatario fisso salvato.", "info");
   };
 
   const runDbSearch = async (override?: string) => {
@@ -382,9 +415,12 @@ export function WhatsAppTest() {
         <Input
           value={sendPhone}
           onChange={(e) => setSendPhone(e.target.value)}
-          placeholder="Numero E.164 (es. +393331234567) — preferito"
+          placeholder="Numero fisso test WhatsApp E.164 (es. +393331234567)"
           className="flex-1"
         />
+        <Button onClick={pinFixedRecipient} disabled={running} size="sm" variant="secondary" title="Salva questo numero come destinatario fisso dei test WhatsApp">
+          📌 Fissa test
+        </Button>
       </div>
       <div className="rounded-lg border border-border bg-card/50 p-3 space-y-2">
         <div className="text-xs font-semibold text-muted-foreground">🔎 Cerca destinatario nel database CRM</div>
@@ -400,7 +436,7 @@ export function WhatsAppTest() {
             className="flex-1"
           />
           <Button onClick={() => runDbSearch()} disabled={dbSearching} size="sm" variant="secondary">{dbSearching ? "Cerco…" : "Cerca DB"}</Button>
-          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Svuota destinatario e ricerca">🔄 Reset</Button>
+          <Button onClick={resetSendForm} disabled={running} size="sm" variant="outline" title="Resetta la sessione e ricarica il destinatario fisso">🔄 Reset</Button>
         </div>
         {dbResults.length > 0 && (
           <div className="max-h-64 overflow-auto divide-y divide-border rounded-md border border-border bg-background">
@@ -469,7 +505,7 @@ export function WhatsAppTest() {
           const textOk = sendText.trim().length > 0;
           const disabled = running || !phoneOk || !textOk;
           const tip = !phoneOk
-            ? "Numero mancante o troppo corto: cerca il destinatario nel DB qui sopra"
+            ? "Numero fisso mancante o troppo corto: inseriscilo e premi Fissa test"
             : !textOk
             ? "Inserisci il testo del messaggio"
             : `Invia a +${digits}`;
