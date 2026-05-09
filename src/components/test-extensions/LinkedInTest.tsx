@@ -11,10 +11,10 @@ import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
 
-const LI_COOLDOWN_MS = 5000;
-// Fast-path cooldown per i pulsanti diagnostici di click (CDP, physical, ctrl+enter, form_submit).
-// Il composer è già aperto: non c'è bisogno di 5s di cooldown fra un test e l'altro.
-const LI_DIAGNOSTIC_COOLDOWN_MS = 1000;
+// Area di TEST manuale: l'operatore guida il ritmo, non serve gating anti-throttle
+// di produzione. Cooldown ridotti al minimo per "parti e vai" come WhatsApp test.
+const LI_COOLDOWN_MS = 800;
+const LI_DIAGNOSTIC_COOLDOWN_MS = 300;
 const LI_FIXED_RECIPIENT_KEY = "li_test_fixed_recipient";
 
 interface StoredLiTestRecipient {
