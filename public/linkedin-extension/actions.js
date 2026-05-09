@@ -132,7 +132,9 @@ var Actions = globalThis.Actions || (function () {
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
     const targetSlug = (target.match(/linkedin\.com\/(?:in|pub)\/([^\/?#]+)/i) || [])[1];
-    const tab = await TabManager.getLinkedInTab(target, true, false);
+    // P21 — Come sopra: navighiamo sempre al target per evitare clickMessage
+    // sulla pagina sbagliata. allowCreate=false mantiene il no-new-tab.
+    const tab = await TabManager.getLinkedInTab(target, false, false);
     if (!tab || !tab.id) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
     }
