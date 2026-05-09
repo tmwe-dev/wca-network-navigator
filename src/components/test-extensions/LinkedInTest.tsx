@@ -100,6 +100,13 @@ export function LinkedInTest() {
 
   const actionsLastHour = actionTimesRef.current.filter(t => Date.now() - t < 3600000).length;
 
+  const resolveThreadTarget = useCallback(() => {
+    const candidates = [threadUrl, sendUrl, profileUrl, lastKnownText]
+      .map((value) => value.trim())
+      .filter((value) => value && value !== "https://www.linkedin.com/in/");
+    return candidates.find(isValidLinkedInTestUrl) || "";
+  }, [lastKnownText, profileUrl, sendUrl, threadUrl]);
+
   const runWithCooldown = useCallback(async (fn: () => Promise<void>) => {
     setRunning(true);
     actionTimesRef.current.push(Date.now());
@@ -377,9 +384,11 @@ export function LinkedInTest() {
 
   // P0.5 — Diagnostic: leggi un singolo thread (Optimus → AX → structural).
   const testReadThread = () => runWithCooldown(async () => {
-    if (!threadUrl.trim()) { log("⚠️ Inserisci l'URL del thread LinkedIn", "warn"); return; }
-    log(`💬 Lettura thread: ${threadUrl}`);
-    const r = await liMsg("readLinkedInThread", { threadUrl }, 60000);
+    const targetThreadUrl = resolveThreadTarget();
+    if (!targetThreadUrl) { log("⚠️ Inserisci un URL LinkedIn valido oppure usa il destinatario fisso già salvato", "warn"); return; }
+    if (!threadUrl.trim()) log(`📌 Uso URL LinkedIn già disponibile: ${targetThreadUrl}`, "info");
+    log(`💬 Lettura thread: ${targetThreadUrl}`);
+    const r = await liMsg("readLinkedInThread", { threadUrl: targetThreadUrl }, 60000);
     const messages = (r?.messages || []) as Array<Record<string, unknown>>;
     if (r?.success && messages.length) {
       log(`✅ ${messages.length} messaggi trovati (method=${r.method || "?"})`, "ok");
@@ -399,10 +408,13 @@ export function LinkedInTest() {
   });
 
   const testBackfillThread = () => runWithCooldown(async () => {
-    if (!threadUrl.trim()) { log("⚠️ Inserisci l'URL del thread LinkedIn", "warn"); return; }
-    log(`📜 Backfill thread (max 20 scroll): ${threadUrl}`);
-    if (lastKnownText) log(`  Stop su testo: "${lastKnownText.slice(0, 60)}"`, "info");
-    const r = await liMsg("backfillLinkedInThread", { threadUrl, lastKnownText, maxScrolls: 20 }, 180000);
+    const targetThreadUrl = resolveThreadTarget();
+    if (!targetThreadUrl) { log("⚠️ Inserisci un URL LinkedIn valido oppure usa il destinatario fisso già salvato", "warn"); return; }
+    const stopText = isValidLinkedInTestUrl(lastKnownText) ? "" : lastKnownText;
+    if (!threadUrl.trim()) log(`📌 Uso URL LinkedIn già disponibile: ${targetThreadUrl}`, "info");
+    log(`📜 Backfill thread (max 20 scroll): ${targetThreadUrl}`);
+    if (stopText) log(`  Stop su testo: "${stopText.slice(0, 60)}"`, "info");
+    const r = await liMsg("backfillLinkedInThread", { threadUrl: targetThreadUrl, lastKnownText: stopText, maxScrolls: 20 }, 180000);
     const messages = (r?.messages || []) as Array<Record<string, unknown>>;
     if (r?.success) {
       log(`✅ ${messages.length} messaggi totali · ${r.scrollCount || 0} scroll · foundLast=${r.foundLast ? "sì" : "no"} · method=${r.method || "?"}`, "ok");
