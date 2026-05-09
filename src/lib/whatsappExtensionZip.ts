@@ -139,7 +139,7 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.45",
+    latestVersion: "3.9.46",
     items: [
       {
         version: "3.9.46",
