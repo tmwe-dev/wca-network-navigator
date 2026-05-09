@@ -22,11 +22,35 @@ var Actions = globalThis.Actions || (function () {
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     async function attempt() {
       const tab = await TabManager.getLinkedInTab(target, true);
-      // P14 — Focus-safe + composer reuse: non attiviamo la tab LinkedIn e non
-      // chiudiamo overlay esistenti. Se il composer è già aperto sulla pagina
-      // corretta, va usato quello; chiuderlo o ri-cliccare "Messaggia" apre una
-      // seconda chat/naviga fuori pagina.
+      // P15 — Allineamento WA: attiviamo la tab e portiamola in focus prima di
+      // scrivere (Draft.js valida input nativi solo su tab attiva).
+      try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { /* ignore */ }
       await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+      // P15 — Chiudi SOLO le chat fluttuanti stale (msg-overlay-conversation-bubble)
+      // di conversazioni precedenti. NON tocchiamo .msg-form della pagina /messaging
+      // né i [role='dialog'] del profilo: quelli sono il composer corretto.
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            try {
+              var overlays = document.querySelectorAll(
+                ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']"
+              );
+              for (var i = 0; i < overlays.length; i++) {
+                var ov = overlays[i];
+                var closeBtn = ov.querySelector(
+                  "button[aria-label*='hiudi' i], button[aria-label*='lose' i], button[data-control-name*='close' i]"
+                );
+                if (closeBtn) { try { closeBtn.click(); } catch (e) {} continue; }
+                try { ov.remove(); } catch (e) {}
+              }
+              return overlays.length;
+            } catch (e) { return 0; }
+          },
+        });
+        await TabManager.sleep(300);
+      } catch (e) { /* best-effort */ }
       let composerAlreadyOpen = false;
       try {
         const composerProbe = await chrome.scripting.executeScript({
