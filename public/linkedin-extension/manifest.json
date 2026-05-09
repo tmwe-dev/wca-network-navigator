@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
   "version": "3.9.44",
-  "description": "Hard guard destinatario: si invia SOLO se la tab \u00e8 sul profilo /in/<slug> richiesto. Eliminata la scorciatoia 'qualsiasi thread aperta va bene' che mandava al contatto sbagliato. Versione invariata 3.9.42.",
+  "description": "LinkedIn background send focus-safe con hard guard destinatario: naviga al profilo richiesto prima del composer e blocca thread non verificati.",
   "permissions": [
     "cookies",
     "tabs",
