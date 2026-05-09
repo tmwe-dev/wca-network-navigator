@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.36",
+    latestVersion: "3.9.37",
     items: [
+      {
+        version: "3.9.37",
+        filename: "linkedin-extension-3.9.37.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.37.zip",
+        current: true,
+        note: "P22 — clickMessage scoped al top-card profilo (no overlay multipli), readThread/backfill su profilo navigano sempre al target, AX typeMessage off in invio produzione.",
+      },
       {
         version: "3.9.36",
         filename: "linkedin-extension-3.9.36.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.36.zip",
-        current: true,
+        current: false,
         note: "P20 — Form submit bounded/no-navigation: niente requestSubmit, niente tab nuove, niente timeout 90s.",
       },
       {
