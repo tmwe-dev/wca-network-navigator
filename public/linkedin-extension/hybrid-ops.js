@@ -482,8 +482,16 @@ var HybridOps = globalThis.HybridOps || (function () {
               try {
                 var form = msgBox.closest("form") || document.querySelector("form.msg-form, .msg-form form, [class*='msg-form'] form");
                 if (!form) return false;
-                if (typeof form.requestSubmit === "function") form.requestSubmit();
-                else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                // Do NOT call requestSubmit(): on LinkedIn it can trigger a real
+                // navigation/unload, leaving chrome.scripting.executeScript hung.
+                // Dispatch only the React/SPA submit listeners, bounded and no-page-change.
+                var evt;
+                try {
+                  evt = new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: findSendBtn() || undefined });
+                } catch (e) {
+                  evt = new Event("submit", { bubbles: true, cancelable: true });
+                }
+                form.dispatchEvent(evt);
                 return true;
               } catch (e) { return false; }
             }
@@ -759,7 +767,7 @@ var HybridOps = globalThis.HybridOps || (function () {
     } catch (e) { /* tolleriamo */ }
 
     try {
-      const fbRes = await chrome.scripting.executeScript({
+      const fbRes = await withTimeout(chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: function (msg, methodName) {
           function deepQueryAll(selector, root) {
@@ -901,11 +909,16 @@ var HybridOps = globalThis.HybridOps || (function () {
               var form = msgBox.closest("form") || document.querySelector(".msg-form, [class*='msg-form'] form, form.msg-form");
               if (!form) return { success: false, error: "msg_form_not_found", attempted_method: methodName };
               try {
-                if (typeof form.requestSubmit === "function") {
-                  form.requestSubmit();
-                } else {
-                  form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                // requestSubmit() is intentionally avoided here: it can navigate
+                // the LinkedIn page and strand the injected script until the UI
+                // bridge times out. This test now probes only the SPA submit handler.
+                var evt;
+                try {
+                  evt = new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: findSendBtn() || undefined });
+                } catch (e2) {
+                  evt = new Event("submit", { bubbles: true, cancelable: true });
                 }
+                form.dispatchEvent(evt);
               } catch (e) {
                 return { success: false, error: "form_submit_threw: " + e.message, attempted_method: methodName };
               }
@@ -936,7 +949,7 @@ var HybridOps = globalThis.HybridOps || (function () {
           })();
         },
         args: [message, method],
-      });
+      }), 25000, "sendMessageWithMethod " + method);
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
         const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
