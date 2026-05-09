@@ -270,28 +270,26 @@ var Actions = globalThis.Actions || (function () {
   // Usato dal Test Estensioni per isolare il fallimento "open composer".
   async function probeComposerOnly(profileUrl) {
     var target = (profileUrl || "").replace(/\/$/, "");
-    var tab = null;
-    try {
-      if (target) tab = await TabManager.getLinkedInTab(target, false, false);
-    } catch (e) { /* ignore */ }
-    if (!tab || !tab.id) {
-      // Fallback: prima tab LinkedIn disponibile.
-      try {
-        var tabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" });
-        if (tabs && tabs[0]) tab = tabs[0];
-      } catch (e) { /* ignore */ }
+    var targetClean = target.split("?")[0].replace(/\/$/, "");
+    var found = await findLinkedInTabWithOpenComposer(targetClean);
+    if (found && found.id) {
+      return {
+        success: true,
+        tabId: found.id,
+        tabUrl: (found.probe && found.probe.url) || "",
+        mode: "probe_only_no_navigation",
+        gate: { success: true, method: "instant_existing_composer", diagnostic: found.probe || null },
+      };
     }
-    if (!tab || !tab.id) {
+    var tabs = [];
+    try { tabs = await chrome.tabs.query({ url: "*://*.linkedin.com/*" }); } catch (e) { tabs = []; }
+    if (!tabs || !tabs.length) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome.");
     }
-    var gate = await HybridOps.waitForMessageComposer(tab.id, 4000);
-    return {
-      success: !!(gate && gate.success),
-      tabId: tab.id,
-      tabUrl: tab.url || tab.pendingUrl || "",
-      mode: "probe_only",
-      gate: gate || null,
-    };
+    return Config.errorResponse(
+      Config.ERROR.MESSAGE_FAILED,
+      "composer_not_open_probe: nessun composer LinkedIn visibile nelle tab esistenti; probe no-navigation, nessun click e nessun cambio pagina"
+    );
   }
 
   async function findLinkedInTabWithOpenComposer(targetClean) {

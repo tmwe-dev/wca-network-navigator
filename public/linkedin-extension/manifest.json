@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.51",
-  "description": "Fix background composer: passa mode dal bridge, non naviga via dal composer già aperto e non chiude overlay in background. Ripristina scrittura dai backup mantenendo interactive opt-in.",
+  "version": "3.9.52",
+  "description": "Fix probe composer: no-navigation reale. Il test composer cerca solo tab LinkedIn già aperte con textbox visibile, senza getLinkedInTab/navigate né attese load che causavano Timeout 8s.",
   "permissions": [
     "cookies",
     "tabs",
