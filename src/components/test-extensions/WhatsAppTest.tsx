@@ -69,7 +69,10 @@ export function WhatsAppTest() {
   const [sendPhone, setSendPhone] = useState("");
   const [sendText, setSendText] = useState("Test da WCA Partner Connect 🚀");
   const [foundContacts, setFoundContacts] = useState<FoundContact[]>([]);
-  const [lastSentTo, setLastSentTo] = useState<string | null>(null);
+  // lastSentTo è scritto ma non più letto: serviva al closeActiveChat (rimosso
+  // con Step 3+1 che riallineano automaticamente numero+composer). Conservato
+  // come setter per eventuale telemetria futura.
+  const [, setLastSentTo] = useState<string | null>(null);
   const [dbQuery, setDbQuery] = useState("");
   const [dbResults, setDbResults] = useState<WaTestRecipient[]>([]);
   const [dbSearching, setDbSearching] = useState(false);
