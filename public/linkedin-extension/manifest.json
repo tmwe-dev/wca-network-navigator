@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
   "version": "3.9.36",
-  "description": "P21 — Fix "Profile-scoped message button not found": navighiamo sempre al profilo target (focus-safe, no new tab).",
+  "description": "P21 — Fix Profile-scoped message button not found: navighiamo sempre al profilo target (focus-safe, no new tab).",
   "permissions": [
     "cookies",
     "tabs",
