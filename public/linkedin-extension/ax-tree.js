@@ -102,6 +102,21 @@ var AXTree = globalThis.AXTree || (function () {
     return false;
   }
 
+  // Physical CDP click only: no DOM .click(), no tab activation.
+  async function clickNodePhysical(tabId, backendNodeId) {
+    try {
+      const box = await cdp(tabId, "DOM.getBoxModel", { backendNodeId: backendNodeId });
+      if (!box || !box.model || !box.model.content) return false;
+      const quad = box.model.content;
+      const x = (quad[0] + quad[2] + quad[4] + quad[6]) / 4;
+      const y = (quad[1] + quad[3] + quad[5] + quad[7]) / 4;
+      await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseMoved", x: x, y: y, button: "none" });
+      await cdp(tabId, "Input.dispatchMouseEvent", { type: "mousePressed", x: x, y: y, button: "left", clickCount: 1 });
+      await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseReleased", x: x, y: y, button: "left", clickCount: 1 });
+      return true;
+    } catch (err) { console.debug("[LI AXTree] physical click:", err?.message); return false; }
+  }
+
   // Type text into a focused element
   async function typeText(tabId, text) {
     for (let i = 0; i < text.length; i++) {
@@ -128,6 +143,15 @@ var AXTree = globalThis.AXTree || (function () {
   async function pressEnter(tabId) {
     await cdp(tabId, "Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
     await cdp(tabId, "Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  }
+
+  async function pressCtrlEnter(tabId, isMac) {
+    return await withDebugger(tabId, async function (tid) {
+      const modifiers = isMac ? 4 : 2; // CDP: Ctrl=2, Meta=4
+      await cdp(tid, "Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, modifiers: modifiers });
+      await cdp(tid, "Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, modifiers: modifiers });
+      return { success: true, method: isMac ? "cdp_cmd_enter" : "cdp_ctrl_enter" };
+    });
   }
 
   // ── LinkedIn-specific high-level operations ──
