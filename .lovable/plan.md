@@ -1,4 +1,4 @@
-# Piano: Codex + Volume II in memoria, LinkedIn v3.9.42 (fix ultimo miglio)
+# Piano: Codex + Volume II in memoria, LinkedIn v3.9.43 (test composer-first)
 
 ## Parte A — Memorizzazione manuali (permanente)
 
@@ -10,7 +10,7 @@
    - `mem://standards/enterprise-method-volume-ii` → "Riferimento metodo enterprise: `docs/codex/volume_II_metodo_enterprise.md`. Principio madre: prevedibilità > sofisticazione. Validare prima, costruire dopo. Atomicità: una modifica per volta, no refactor opportunistici."
 3. Aggiorno `mem://index.md` (Core + sezione Memories) con i due nuovi rimandi e la regola Core: *"'segui codex' = checklist obbligatoria prima dell'esecuzione"*.
 
-## Parte B — LinkedIn extension v3.9.42 (segui codex)
+## Parte B — LinkedIn extension v3.9.43 (segui codex)
 
 Applico SC:CLASSIFY → **STANDARD** (modifica locale a un modulo, no schema/auth/pagamenti). Tocca però comportamento osservabile critico (invio messaggi LI), quindi rispetto SC:DEFENSE + SC:ROLLBACK + ANTI.7.5 (no refactor + fix insieme).
 
@@ -55,8 +55,15 @@ Applico SC:CLASSIFY → **STANDARD** (modifica locale a un modulo, no schema/aut
 - ANTI.7.3 ottimizzazioni copiate: nessuna.
 - ANTI.7.5 refactor + fix: solo fix, nessun refactor.
 
+## Addendum 2026-05-09 — Audit dopo timeout 90s
+
+- **SC:CLASSIFY:** STANDARD con nodo critico invio LinkedIn → modifica minima, locale, reversibile.
+- **Finding:** il pulsante principale `Invia LI` usava ancora `sendMessage` con timeout 90s e path di navigazione/apertura composer; i test isolati potevano agganciare la prima tab LinkedIn invece della tab con composer visibile.
+- **Fix v3.9.43:** `Invia LI` ora usa `sendMessageWithMethod(physical_click)` con timeout 12s; il path diagnostico cerca prima una tab LinkedIn che contiene davvero un composer visibile e non naviga.
+- **Rollback:** zip 3.9.42 e 3.9.40 restano in catalogo; nessun DB/backend toccato.
+
 ### Out of scope (non tocco)
 - WhatsApp extension, edge functions, DB, auth, RLS, produzione outreach, `HybridOps.sendMessage`, `clickMessage`.
 
 ## Consegna attesa
-Istruzioni utente: rimuovi v3.9.41, carica **3.9.42** unpacked, apri una chat LI manualmente, in area Test premi "DOM click" → deve scrivere e inviare nella stessa tab in <3s.
+Istruzioni utente: rimuovi v3.9.42, carica **3.9.43** unpacked, apri una chat LI manualmente, in area Test premi "Invia LI" o "Click fisico" → deve scrivere e inviare nella stessa tab o fallire entro pochi secondi con errore esplicito.
