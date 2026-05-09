@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.45",
-  "description": "LinkedIn background send focus-safe: apre davvero il composer dal profilo e ignora dialog/overlay senza textbox.",
+  "version": "3.9.46",
+  "description": "LinkedIn background send focus-safe: attende il profilo, prova click ottimistico e diagnostica profile_not_ready.",
   "permissions": [
     "cookies",
     "tabs",
