@@ -26,7 +26,7 @@
   // Allowed actions whitelist
   const ALLOWED_ACTIONS = [
     "ping", "verifySession", "syncCookie", "autoLogin",
-    "extractProfile", "sendMessage", "sendMessageWithMethod", "probeComposer", "sendConnectionRequest",
+    "extractProfile", "sendMessage", "sendMessageWithMethod", "sendConnectionRequest",
     "searchProfile", "readLinkedInInbox", "readLinkedInThread",
     "backfillLinkedInThread",
     "diagnosticLinkedInDom", "learnDom", "remapSendDom", "getSendPlan", "setConfig",
@@ -112,7 +112,6 @@
       if (data.url) msg.url = data.url;
       if (data.message) msg.message = data.message;
       if (data.method) msg.method = data.method;
-      if (data.mode) msg.mode = data.mode;
       if (data.note !== undefined) msg.note = data.note;
       if (data.query) msg.query = data.query;
       if (data.threadUrl) msg.threadUrl = data.threadUrl;
