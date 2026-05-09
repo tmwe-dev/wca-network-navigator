@@ -1375,6 +1375,73 @@ var Actions = globalThis.Actions || (function () {
     });
   }
 
+  // ──────────────────────────────────────────────
+  // Quick-win Step 1: poll page-side per composer ready.
+  // Sostituisce sleep(3s/4s) ciechi nel ramo URL fallback.
+  // Ritorna { ready, reason? } dove reason ∈ "invalid_phone" | "timeout".
+  // Ogni 150ms esegue un piccolo executeScript che ispeziona DOM (riusa
+  // i selettori di _pageSendUrlFallback / __waH).
+  // ──────────────────────────────────────────────
+  async function waitForComposerReady(tabId, maxMs) {
+    var start = Date.now();
+    var STEP = 150;
+    while (Date.now() - start < maxMs) {
+      try {
+        var probe = await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: function () {
+            try {
+              var H = window.__waH;
+              if (!H || typeof H.qsDeep !== "function") {
+                // Probe minimo se gli helper non sono ancora installati
+                var c = document.querySelector('footer [contenteditable="true"]')
+                  || document.querySelector('[data-testid="conversation-compose-box-input"]');
+                return { composerPresent: !!c, sendBtnMounted: false, invalidPhonePopup: false, helpers: false };
+              }
+              var composer = H.qsDeep('footer [contenteditable="true"][data-tab]')
+                || H.qsDeep('footer [contenteditable="true"]')
+                || H.qsDeep('[data-testid="conversation-compose-box-input"]')
+                || H.qsDeep('[data-testid="compose-box-input"]');
+              var sendBtn = H.qsDeep('[data-testid="send"]')
+                || H.qsDeep('button[aria-label*="send" i]')
+                || H.qsDeep('button[aria-label*="invia" i]');
+              // Popup "phone number shared via url is invalid" → fail-fast.
+              var popupOk = H.qsDeep('[data-testid="popup-controls-ok"]');
+              var invalidPhonePopup = false;
+              if (popupOk) {
+                var dialog = popupOk.closest('[role="dialog"]') || document.querySelector('[role="dialog"]');
+                var dialogText = dialog ? (dialog.textContent || "").toLowerCase() : "";
+                if (
+                  dialogText.indexOf("phone number") >= 0 ||
+                  dialogText.indexOf("invalid") >= 0 ||
+                  dialogText.indexOf("numero di telefono") >= 0 ||
+                  dialogText.indexOf("non valido") >= 0
+                ) {
+                  invalidPhonePopup = true;
+                }
+              }
+              return {
+                composerPresent: !!composer,
+                sendBtnMounted: !!sendBtn,
+                invalidPhonePopup: invalidPhonePopup,
+                helpers: true,
+              };
+            } catch (e) {
+              return { composerPresent: false, sendBtnMounted: false, invalidPhonePopup: false, error: String(e && e.message || e) };
+            }
+          },
+        });
+        var res = probe && probe[0] ? probe[0].result : null;
+        if (res && res.invalidPhonePopup) return { ready: false, reason: "invalid_phone" };
+        if (res && res.composerPresent) return { ready: true };
+      } catch (e) {
+        // executeScript può fallire se la tab sta navigando: ignoriamo e ritentiamo.
+      }
+      await TabManager.sleep(STEP);
+    }
+    return { ready: false, reason: "timeout" };
+  }
+
   async function sendWhatsAppMessage(phone, text) {
     try {
       // Determine if input is a phone number or contact name
