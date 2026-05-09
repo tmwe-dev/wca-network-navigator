@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.48";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.49";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.48",
+    latestVersion: "3.9.49",
     items: [
+      {
+        version: "3.9.49",
+        filename: "linkedin-extension-3.9.49.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.49.zip",
+        current: true,
+        note: "Pipeline UNICA send/diagnostic: gate reale (HybridOps.waitForMessageComposer) anche nel path standard, write/send separati con send_button_not_enabled_after_write, niente sleep(3000), niente fallback writer su gate fail.",
+      },
       {
         version: "3.9.48",
         filename: "linkedin-extension-3.9.48.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.48.zip",
-        current: true,
+        current: false,
         note: "Fix composer gate stile WhatsApp: aspetta pagina pronta + textbox reale prima di copiare/inviare; fallback produzione solo dopo timeout diagnostico.",
       },
       {
