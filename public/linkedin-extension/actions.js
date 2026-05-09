@@ -21,6 +21,18 @@ var Actions = globalThis.Actions || (function () {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
     const target = profileUrl.replace(/\/$/, "");
+    // v3.9.53 — Anti-doppio-invio: blocca stessa coppia (url, msg) entro 4s.
+    // Era il difetto noto del backup 3.9.48. Resta solo questa guardia,
+    // niente cambi di pipeline.
+    try {
+      const targetClean = target.split("?")[0].replace(/\/$/, "");
+      const now = Date.now();
+      const stored = (globalThis.__lvLiInflight || null);
+      if (stored && stored.url === targetClean && stored.msg === message && (now - stored.at) < 4000) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "duplicate_send_blocked: invio identico entro 4s");
+      }
+      globalThis.__lvLiInflight = { url: targetClean, msg: message, at: now };
+    } catch (e) { /* best-effort */ }
     // P1 — Thread URL detection: se l'URL è un thread di messaggistica, il
     // bottone "Messaggia" non esiste. Saltiamo clickMessage e andiamo dritti
     // a sendMessage, che cerca direttamente la textbox del composer.
