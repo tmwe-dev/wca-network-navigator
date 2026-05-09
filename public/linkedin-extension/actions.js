@@ -160,9 +160,11 @@ var Actions = globalThis.Actions || (function () {
     return best;
   }
 
-  // DIAGNOSTIC ONLY — manual-test path: usa SOLO un composer LinkedIn già aperto.
-  // Niente navigazione, niente click "Messaggia", niente apertura composer: se la
-  // chat non è pronta fallisce subito. Questo evita loop/click ripetuti su LinkedIn.
+  // v3.9.44 — Background mode: il test diagnostico apre da solo il composer
+  // (come l'invio standard) e poi esegue il metodo scelto. L'operatore non
+  // deve più aprire manualmente la chat. Riusa la stessa logica di
+  // sendLinkedInMessage: navigate focus-safe → clickMessage se serve →
+  // attesa composer → HybridOps.sendMessageWithMethod.
   async function sendLinkedInMessageWithMethod(profileUrl, message, method) {
     if (!profileUrl) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "URL profilo mancante");
     if (!message) return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "Messaggio mancante");
@@ -170,10 +172,8 @@ var Actions = globalThis.Actions || (function () {
     const target = profileUrl.replace(/\/$/, "");
     const isThreadUrl = /linkedin\.com\/messaging\/thread\//i.test(target);
     const targetClean = target.split("?")[0].replace(/\/$/, "");
-    // v3.9.42 — Anti-doppio-invio per i test diagnostici manuali.
-    // Se l'utente ri-clicca entro 2s sulla stessa coppia (url, msg), no-op.
+    // Anti-doppio-invio: se l'utente ri-clicca entro 2s sulla stessa coppia (url, msg), no-op.
     try {
-      const dedupKey = "li_diag_inflight";
       const now = Date.now();
       const stored = (globalThis.__lvLiDiagInflight || null);
       if (stored && stored.url === targetClean && stored.msg === message && (now - stored.at) < 2000) {
@@ -181,52 +181,68 @@ var Actions = globalThis.Actions || (function () {
       }
       globalThis.__lvLiDiagInflight = { url: targetClean, msg: message, at: now };
     } catch (e) { /* best-effort */ }
-    // Manual diagnostic: scegli la tab LinkedIn che ha davvero il composer visibile.
-    // Non basta "prima tab LinkedIn": con più pagine aperte finivamo sulla tab sbagliata
-    // e il test restava appeso/falliva pur avendo una chat pronta altrove.
+    // 1) Preferisci una tab che ha già il composer aperto sul target.
+    //    Se nessuna, naviga focus-safe la tab LinkedIn esistente al profilo.
     const composerTab = await findLinkedInTabWithOpenComposer(targetClean);
-    const tab = composerTab || await TabManager.getLinkedInTab(target, true, false);
+    const tab = composerTab || await TabManager.getLinkedInTab(target, false, false);
     if (!tab || !tab.id) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test invio non apre nuove tab e non cambia pagina");
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test non apre nuove tab");
     }
-    // v3.9.42 — Niente tab.update / focus shift: lavoriamo sulla tab dove l'utente ha
-    // GIÀ aperto manualmente la chat. ensureTabVisibleAndWait introduce 600ms+ di
-    // attesa e a volte porta in foreground una tab sbagliata.
-    let composerAlreadyOpen = false;
-    try {
-      const composerProbe = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: function () {
-          var scopes = document.querySelectorAll(
-            ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
-          );
-          for (var i = 0; i < scopes.length; i++) {
-            var scope = scopes[i];
-            var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
-            if (!visible) continue;
-            if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
-          }
-          return false;
-        },
-      });
-      composerAlreadyOpen = !!(composerProbe[0] && composerProbe[0].result);
-    } catch (e) { composerAlreadyOpen = false; }
-
-    let currentUrl = "";
-    try {
-      const tabInfo = await chrome.tabs.get(tab.id);
-      currentUrl = (tabInfo && (tabInfo.url || tabInfo.pendingUrl)) || "";
-    } catch (e) { currentUrl = ""; }
-
-    const currentClean = currentUrl.split("?")[0].replace(/\/$/, "");
-    if (isThreadUrl && currentClean !== targetClean) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "wrong_thread_open: il test manuale non naviga; apri il thread richiesto e riprova");
+    // 2) Focus-safe ready (non porta la tab in foreground).
+    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    // 3) Probe composer.
+    async function probeComposer() {
+      try {
+        const probe = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function () {
+            var scopes = document.querySelectorAll(
+              ".msg-form, [class*='msg-form'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], [role='dialog']"
+            );
+            for (var i = 0; i < scopes.length; i++) {
+              var scope = scopes[i];
+              var visible = scope.offsetParent !== null || scope.getClientRects().length > 0;
+              if (!visible) continue;
+              if (scope.querySelector("[contenteditable='true'], div[role='textbox'], [role='textbox']")) return true;
+            }
+            return false;
+          },
+        });
+        return !!(probe[0] && probe[0].result);
+      } catch (e) { return false; }
+    }
+    let composerAlreadyOpen = await probeComposer();
+    // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia".
+    if (!composerAlreadyOpen && !isThreadUrl) {
+      const clickResult = await HybridOps.clickMessage(tab.id);
+      if (!clickResult || !clickResult.success) {
+        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
+      }
+      // Attendi montaggio composer fino a 4s (poll 250ms).
+      for (let i = 0; i < 16; i++) {
+        await TabManager.sleep(250);
+        if (await probeComposer()) { composerAlreadyOpen = true; break; }
+      }
+    } else if (isThreadUrl && !composerAlreadyOpen) {
+      // Thread URL: il composer monta da solo, dagli un attimo.
+      for (let i = 0; i < 12; i++) {
+        await TabManager.sleep(250);
+        if (await probeComposer()) { composerAlreadyOpen = true; break; }
+      }
     }
     if (!composerAlreadyOpen) {
-      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: apri manualmente la chat LinkedIn con il campo messaggio visibile e riprova");
+      return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "composer_not_open: impossibile aprire il composer in background, ritenta");
     }
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
+  }
+
+  // (legacy block sotto rimosso: la nuova implementazione sopra apre il composer da sola)
+  async function _legacyManualDiagnostic_unused() {
+    let composerAlreadyOpen = false;
+    try {
+    } catch (e) { /* unused */ }
+    return null;
   }
 
   async function sendConnectionRequest(profileUrl, note) {
