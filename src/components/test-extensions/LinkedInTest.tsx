@@ -472,7 +472,7 @@ export function LinkedInTest() {
           <Input
             value={threadUrl}
             onChange={(e) => setThreadUrl(e.target.value)}
-            placeholder="URL thread LinkedIn (es. https://www.linkedin.com/messaging/thread/...)"
+            placeholder="URL thread/profilo LinkedIn — se vuoto usa il destinatario fisso"
             className="flex-1 text-sm"
           />
           <Button onClick={testReadThread} disabled={running} size="sm">💬 Leggi Thread</Button>
