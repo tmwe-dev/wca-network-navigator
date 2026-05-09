@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.40";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.41";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.40",
+    latestVersion: "3.9.41",
     items: [
+      {
+        version: "3.9.41",
+        filename: "linkedin-extension-3.9.41.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.41.zip",
+        current: true,
+        note: "Diagnostic tab picker: i test manuali scelgono la tab LinkedIn che ha davvero il composer visibile, senza navigare o ricliccare Messaggia.",
+      },
       {
         version: "3.9.40",
         filename: "linkedin-extension-3.9.40.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.40.zip",
-        current: true,
+        current: false,
         note: "Manual test safe-path: niente navigazione/click Messaggia nei test diagnostici; ripristinato backup writer Selection API che scrive nel composer già aperto, poi solo ultimo miglio.",
       },
       {

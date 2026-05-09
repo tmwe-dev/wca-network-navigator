@@ -42,7 +42,7 @@ Trasformare la funzione in **fast-path**: presuppone che la tab LinkedIn sia att
 
 ### 3. `public/linkedin-extension/manifest.json` + packaging
 
-- Bump `3.9.38` → `3.9.39`, descrizione: "Diagnostic fast-path: methods run instantly on the open composer".
+- Bump `3.9.40` → `3.9.41`, descrizione: "Diagnostic fast-path: methods run instantly on the open composer".
 - Rigenerare `linkedin-extension.zip` e `linkedin-extension-3.9.39.zip`.
 - Aggiornare `src/lib/whatsappExtensionZip.ts` e `public/chrome-extensions/catalog.json` (3.9.39 = current).
 
