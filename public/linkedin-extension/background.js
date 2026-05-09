@@ -74,7 +74,7 @@ const ACTION_HANDLERS = {
 
   sendMessage: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendLinkedInMessage(msg.url, msg.message)); }
+      try { sendResponse(await Actions.sendLinkedInMessage(msg.url, msg.message, msg.mode)); }
       catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
     });
     return true;
@@ -82,7 +82,15 @@ const ACTION_HANDLERS = {
 
   sendMessageWithMethod: function (msg, sendResponse) {
     TabManager.enqueueAction(async function () {
-      try { sendResponse(await Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method)); }
+      try { sendResponse(await Actions.sendLinkedInMessageWithMethod(msg.url, msg.message, msg.method, msg.mode)); }
+      catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
+    });
+    return true;
+  },
+
+  probeComposer: function (msg, sendResponse) {
+    TabManager.enqueueAction(async function () {
+      try { sendResponse(await Actions.probeComposerOnly(msg.url)); }
       catch (err) { sendResponse(Config.errorResponse(Config.ERROR.MESSAGE_FAILED, err.message)); }
     });
     return true;
