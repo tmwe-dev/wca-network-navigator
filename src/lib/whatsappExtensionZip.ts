@@ -6,14 +6,10 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Versione canonica LinkedIn: 3.9.63 — selettori "Messaggia"/"Altro" allargati
-// (CSS-first: message-anywhere-button, data-control-name*='message',
-// /messaging/thread/, aria-label*='essag'/'criv'), retry fino a 3 click su più
-// candidati, fallback "Altro" anticipato a 1.5s dopo 2 tentativi falliti, e
-// diagnostica arricchita (profileLoaded, messageBtnSelectorsHit,
-// visibleButtonsCount, firstButtonLabels, url). Fallback HybridOps.sendMessage
-// e keep-alive invariati.
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.63";
+// Versione canonica LinkedIn: 3.9.65 — wait dinamico LinkedIn SPA su
+// /messaging/thread/new, gate/writer allargati a msg-thread/msg-convo/compose-form
+// e skip doppi click Messaggia quando la tab è già stata reindirizzata in messaging.
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.65";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -153,13 +149,27 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.63",
+    latestVersion: "3.9.65",
     items: [
+      {
+        version: "3.9.65",
+        filename: "linkedin-extension-3.9.65.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.65.zip",
+        current: true,
+        note: "Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il mount reale del composer fino a 25s, salta doppi click Messaggia se la tab è già in messaging e allarga gate/writer agli scope moderni.",
+      },
+      {
+        version: "3.9.64",
+        filename: "linkedin-extension-3.9.64.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.64.zip",
+        current: false,
+        note: "Fast path /messaging/: salta caccia bottoni Messaggia/Altro e aspetta direttamente il composer scansionando l'intero documento.",
+      },
       {
         version: "3.9.63",
         filename: "linkedin-extension-3.9.63.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.63.zip",
-        current: true,
+        current: false,
         note: "Selettori Messaggia/Altro allargati (CSS-first + shadow DOM), retry fino a 3 click su più candidati, fallback Altro anticipato e diagnostica arricchita (firstButtonLabels, url) per intercettare cambi DOM LinkedIn.",
       },
       {
