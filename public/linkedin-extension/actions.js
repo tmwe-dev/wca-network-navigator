@@ -616,6 +616,13 @@ var Actions = globalThis.Actions || (function () {
         return !!(r[0] && r[0].result);
       } catch (e) { return false; }
     }
+    async function currentTabIsMessaging() {
+      try {
+        const ti = await chrome.tabs.get(tab.id);
+        const u = (ti && (ti.url || ti.pendingUrl)) || "";
+        return /linkedin\.com\/messaging\//i.test(u);
+      } catch (e) { return false; }
+    }
     if (!composerAlreadyOpen && !isThreadUrl) {
       let profileReady = await probeMessageButton();
       // 3.9.61 — Diagnostic: 8 × 500ms = 4s (era 15s). I test devono
@@ -651,26 +658,30 @@ var Actions = globalThis.Actions || (function () {
     // 4) Se composer non aperto e non siamo su un thread URL, clicca "Messaggia"
     //    con un retry in caso di fallimento transitorio.
     if (!composerAlreadyOpen && !isThreadUrl) {
-      let clickResult = await HybridOps.clickMessage(tab.id);
-      if (!clickResult || !clickResult.success) {
-        await TabManager.sleep(1500);
-        clickResult = await HybridOps.clickMessage(tab.id);
+      const alreadyInMessaging = await currentTabIsMessaging();
+      if (!alreadyInMessaging) {
+        let clickResult = await HybridOps.clickMessage(tab.id);
+        if (!clickResult || !clickResult.success) {
+          await TabManager.sleep(1500);
+          clickResult = await HybridOps.clickMessage(tab.id);
+        }
+        if (!clickResult || !clickResult.success) {
+          return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
+        }
       }
-      if (!clickResult || !clickResult.success) {
-        return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
-      }
-      // 3.9.61 — Gate diagnostico ridotto a 8s (era 30s).
-      const gateAfterClick = await waitForComposerReady(8000);
+      // 3.9.65 — Gate dinamico per LinkedIn SPA: dopo click può atterrare su
+      // /messaging/thread/new e montare il composer lentamente in background.
+      const gateAfterClick = await waitForComposerReady(25000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
-      // 3.9.61 — Thread URL: gate diagnostico 8s (era 30s).
-      const threadGate = await waitForComposerReady(8000);
+      // 3.9.65 — Thread URL: aspetta la SPA reale, non solo readyState=complete.
+      const threadGate = await waitForComposerReady(25000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
-      // 3.9.61 — Ultimo gate diagnostico: 8s (era 30s). Niente fallback
-      // pesante: il test deve riportare composer_gate_failed in tempi utili.
-      const finalGate = await waitForComposerReady(8000);
+      // 3.9.65 — Ultimo gate adattivo: LinkedIn può avere status=complete ma
+      // DOM messaging ancora non montato. Polliamo la SPA prima di dichiarare fail.
+      const finalGate = await waitForComposerReady(25000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
