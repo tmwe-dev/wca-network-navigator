@@ -411,6 +411,22 @@ var HybridOps = globalThis.HybridOps || (function () {
               };
               return { success: false, error: "Fallback: no textbox found __probe__=" + JSON.stringify(probe) };
             }
+            // 3.9.54 — Cleanup overlay stale: chiude (via bottone X) i bubble
+            // flottanti che NON contengono il msgBox target. Mai chiudere il
+            // composer della pagina profilo o il .msg-form target.
+            try {
+              var targetForm = msgBox.closest(".msg-form, [class*='msg-form']");
+              var targetOverlay = msgBox.closest(".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+              var overlays = document.querySelectorAll(".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation']");
+              for (var oi = 0; oi < overlays.length; oi++) {
+                var ov = overlays[oi];
+                if (ov === targetOverlay) continue;
+                if (targetForm && ov.contains(targetForm)) continue;
+                if (!(ov.offsetParent !== null || ov.getClientRects().length > 0)) continue;
+                var closeBtn = ov.querySelector("[aria-label*='Chiudi'], [aria-label*='Close'], [aria-label*='chiudi'], [aria-label*='close'], button.msg-overlay-bubble-header__control");
+                if (closeBtn) { try { closeBtn.click(); } catch (e) {} }
+              }
+            } catch (e) { /* best-effort */ }
             // ── WA-aligned writer: cascata paste → execCommand → textContent
             // con verifica DOM reale dopo ogni step (nessun doppio invio).
             // Specchio di __waH.modernClearAndType in WhatsApp actions.js.
