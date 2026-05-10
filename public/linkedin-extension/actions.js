@@ -261,12 +261,14 @@ var Actions = globalThis.Actions || (function () {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; il test non apre nuove tab");
     }
     // 2) Focus-safe ready (non porta la tab in foreground).
-    await TabManager.ensureTabVisibleAndWait(tab.id, 1200);
+    // 3.9.59: ridotto da 1200 a 600ms — il poll "complete" sotto copre i casi lenti.
+    await TabManager.ensureTabVisibleAndWait(tab.id, 600);
     // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
     // background il renderer monta più lento; senza questa attesa il probe
     // del bottone Messaggia parte troppo presto.
     let lastTabStatus = "unknown";
     let lastTabUrl = "";
+    // 3.9.59: poll 16×150ms (=2.4s max) invece di 16×250ms (=4s).
     for (let i = 0; i < 16; i++) {
       try {
         const ti = await chrome.tabs.get(tab.id);
@@ -274,7 +276,7 @@ var Actions = globalThis.Actions || (function () {
         lastTabUrl = (ti && (ti.url || ti.pendingUrl)) || "";
         if (lastTabStatus === "complete") break;
       } catch (e) { /* ignore */ }
-      await TabManager.sleep(250);
+      await TabManager.sleep(150);
     }
     // 2.bis) HARD GUARD destinatario: dopo navigate la tab DEVE essere sul
     // profilo richiesto (`/in/<slug>`) o su un thread URL esplicito passato
@@ -516,24 +518,27 @@ var Actions = globalThis.Actions || (function () {
     if (!composerAlreadyOpen && !isThreadUrl) {
       let clickResult = await HybridOps.clickMessage(tab.id);
       if (!clickResult || !clickResult.success) {
-        await TabManager.sleep(1500);
+        // 3.9.59: 1500 → 600ms tra retry clickMessage.
+        await TabManager.sleep(600);
         clickResult = await HybridOps.clickMessage(tab.id);
       }
       if (!clickResult || !clickResult.success) {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
       }
-      const gateAfterClick = await waitForComposerReady(30000);
+      // 3.9.59: 30000 → 8000ms. Il composer LinkedIn appare in 1-3s; oltre 8s
+      // significa che è bloccato e il timeout 45s lato pannello scattava comunque.
+      const gateAfterClick = await waitForComposerReady(8000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
       // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
-      const threadGate = await waitForComposerReady(30000);
+      const threadGate = await waitForComposerReady(8000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
       // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
       // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
       // che comunque scrive esclusivamente dopo aver trovato la textbox.
-      const finalGate = await waitForComposerReady(30000);
+      const finalGate = await waitForComposerReady(8000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
@@ -550,6 +555,7 @@ var Actions = globalThis.Actions || (function () {
       );
       }
     }
+    // 3.9.59: il pre-send dwell 150ms restava utile, lo lasciamo.
     await TabManager.sleep(150);
     return await HybridOps.sendMessageWithMethod(tab.id, message, method);
   }
