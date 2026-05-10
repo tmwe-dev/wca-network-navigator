@@ -11263,6 +11263,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tmwe_customer_snapshot: {
+        Row: {
+          assigned_price_list_id: string | null
+          assigned_price_list_name: string | null
+          created_at: string
+          denomination: string | null
+          is_active: boolean
+          last_synced_at: string
+          raw_payload: Json | null
+          tmwe_client_id: string
+          vat: string | null
+        }
+        Insert: {
+          assigned_price_list_id?: string | null
+          assigned_price_list_name?: string | null
+          created_at?: string
+          denomination?: string | null
+          is_active?: boolean
+          last_synced_at?: string
+          raw_payload?: Json | null
+          tmwe_client_id: string
+          vat?: string | null
+        }
+        Update: {
+          assigned_price_list_id?: string | null
+          assigned_price_list_name?: string | null
+          created_at?: string
+          denomination?: string | null
+          is_active?: boolean
+          last_synced_at?: string
+          raw_payload?: Json | null
+          tmwe_client_id?: string
+          vat?: string | null
+        }
+        Relationships: []
+      }
       tmwe_oauth_state: {
         Row: {
           app_origin: string | null
@@ -11289,6 +11325,51 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      tmwe_partner_links: {
+        Row: {
+          id: string
+          linked_at: string
+          linked_by_user_id: string | null
+          match_confidence: string
+          partner_id: string
+          tmwe_client_id: string
+          tmwe_vat: string | null
+        }
+        Insert: {
+          id?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          match_confidence: string
+          partner_id: string
+          tmwe_client_id: string
+          tmwe_vat?: string | null
+        }
+        Update: {
+          id?: string
+          linked_at?: string
+          linked_by_user_id?: string | null
+          match_confidence?: string
+          partner_id?: string
+          tmwe_client_id?: string
+          tmwe_vat?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tmwe_partner_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tmwe_partner_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "vw_partner_quality_scores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tmwe_proxy_audit: {
         Row: {
@@ -11323,6 +11404,75 @@ export type Database = {
           status_code?: number | null
           tmwe_user_id?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      tmwe_request_audit: {
+        Row: {
+          caller_user_id: string | null
+          created_at: string
+          error_message: string | null
+          id: number
+          identity: string
+          latency_ms: number | null
+          op_name: string
+          partner_id: string | null
+          status: number
+        }
+        Insert: {
+          caller_user_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          identity: string
+          latency_ms?: number | null
+          op_name: string
+          partner_id?: string | null
+          status: number
+        }
+        Update: {
+          caller_user_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          identity?: string
+          latency_ms?: number | null
+          op_name?: string
+          partner_id?: string | null
+          status?: number
+        }
+        Relationships: []
+      }
+      tmwe_revenue_monthly: {
+        Row: {
+          currency: string
+          invoices_count: number
+          month: number
+          revenue_amount: number
+          services_breakdown: Json
+          tmwe_client_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          currency?: string
+          invoices_count?: number
+          month: number
+          revenue_amount?: number
+          services_breakdown?: Json
+          tmwe_client_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          currency?: string
+          invoices_count?: number
+          month?: number
+          revenue_amount?: number
+          services_breakdown?: Json
+          tmwe_client_id?: string
+          updated_at?: string
+          year?: number
         }
         Relationships: []
       }
