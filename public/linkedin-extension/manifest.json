@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.55",
-  "description": "3.9.55 — Path tab READ-ONLY separato (getLinkedInTabForRead): readInbox non dirotta più la tab attiva su /messaging/. Click ottimistico post-Send invariato.",
+  "version": "3.9.56",
+  "description": "3.9.56 — AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry solo su send_button_not_found (no rischio doppio invio). Fallback regex se AI giù. Single writer invariato.",
   "permissions": [
     "cookies",
     "tabs",
