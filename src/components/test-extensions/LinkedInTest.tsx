@@ -247,6 +247,16 @@ export function LinkedInTest() {
     );
     if (r?.success) {
       log(`✅ Messaggio inviato con successo!`, "ok");
+      // 3.9.56 — Diagnostica AI-Verified Click
+      const diag = r as Record<string, unknown>;
+      log(`🧠 AI Verify diag:`, "info");
+      log(`  • verifiedBy: ${String(diag.verifiedBy ?? "?")} | matchedBy: ${String(diag.matchedBy ?? "?")}`, "info");
+      log(`  • clickMethod: ${String(diag.clickMethod ?? diag.method ?? "?")} | verified: ${String(diag.verified ?? "?")}`, "info");
+      log(`  • selectorUsed: ${String(diag.selectorUsed ?? "(regex)")}`, "info");
+      log(`  • schemaSource: ${String(diag.schemaSource ?? "?")} | schemaAgeMs: ${String(diag.schemaAgeMs ?? "?")} | relearned: ${String(diag.relearned ?? false)}`, "info");
+      if (diag.warning) log(`  ⚠️ warning: ${String(diag.warning)}`, "warn");
+      if (diag.suggestion) log(`  💡 ${String(diag.suggestion)}`, "warn");
+      if (diag.cacheInvalidated) log(`  🧹 cache invalidata: ${String(diag.cacheInvalidated)}`, "warn");
       log(`Risposta: ${JSON.stringify(r, null, 2).slice(0, 500)}`, "info");
     } else {
       const errStr = String(r?.error || JSON.stringify(r));

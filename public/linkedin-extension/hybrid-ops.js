@@ -276,17 +276,20 @@ var HybridOps = globalThis.HybridOps || (function () {
     // found. Fallback completo alla regex se AI non disponibile.
     let aiSendSelector = null;
     let schemaSource = "none";
+    let schemaLearnedAt = null;
     try {
       if (typeof AILearn !== "undefined") {
         const cached = await AILearn.getCached("messaging");
         if (cached && cached.sendButtonSelector) {
           aiSendSelector = cached.sendButtonSelector;
           schemaSource = "cache";
+          schemaLearnedAt = cached.learnedAt || null;
         } else if (Config.isReady()) {
           const fresh = await AILearn.learnFromAI(tabId, "messaging", Config.getUrl(), Config.getKey());
           if (fresh && fresh.sendButtonSelector) {
             aiSendSelector = fresh.sendButtonSelector;
             schemaSource = "fresh";
+            schemaLearnedAt = fresh.learnedAt || Date.now();
           }
         }
       }
@@ -751,6 +754,26 @@ var HybridOps = globalThis.HybridOps || (function () {
         if (typeof fbResult.schemaSource === "undefined") fbResult.schemaSource = schemaSource;
         if (typeof fbResult.verifiedBy === "undefined") {
           fbResult.verifiedBy = fbResult.selectorMatched === "ai_schema" ? "ai_schema" : "regex_fallback";
+        }
+        // 3.9.56 — Diagnostica selector + age schema (sempre presenti).
+        if (typeof fbResult.selectorUsed === "undefined") fbResult.selectorUsed = aiSendSelector || null;
+        if (typeof fbResult.schemaAgeMs === "undefined") {
+          fbResult.schemaAgeMs = schemaLearnedAt ? (Date.now() - schemaLearnedAt) : null;
+        }
+        if (typeof fbResult.clickMethod === "undefined") fbResult.clickMethod = fbResult.method || null;
+        // A2 — Su verified=false (click partito ma textbox non svuotato):
+        // invalida la cache messaging così il prossimo invio ricostruisce
+        // lo schema. NESSUN secondo click automatico (single writer).
+        if (fbResult.success === true && fbResult.verified === false) {
+          try {
+            if (typeof AILearn !== "undefined") {
+              await AILearn.clearCache("messaging");
+              fbResult.cacheInvalidated = "messaging";
+            }
+          } catch (e) { /* best-effort */ }
+          if (!fbResult.suggestion) {
+            fbResult.suggestion = "manual_retry: textbox non svuotato dopo click. Cache AI invalidata: prossimo invio rilearn dello schema. Verifica visivamente prima di ritentare.";
+          }
         }
       }
       if (fbResult && fbResult.success) return fbResult;
