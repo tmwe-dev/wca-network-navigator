@@ -119,14 +119,22 @@
   },
   "linkedin": {
     "title": "LinkedIn Cookie Sync",
-    "latestVersion": "3.9.61",
+    "latestVersion": "3.9.62",
     "items": [
+      {
+        "version": "3.9.62",
+        "filename": "linkedin-extension-3.9.62.zip",
+        "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.62.zip",
+        "releaseDate": "2026-05-10",
+        "current": true,
+        "notes": "Ripristina fallback HybridOps.sendMessage quando il gate composer diagnostico fallisce sui metodi DOM (physical_click/form_submit/keyboard). CDP resta fail-fast. Keep-alive e worker tab invariati."
+      },
       {
         "version": "3.9.61",
         "filename": "linkedin-extension-3.9.61.zip",
         "path": "/chrome-extensions/linkedin/linkedin-extension-3.9.61.zip",
         "releaseDate": "2026-05-10",
-        "current": true,
+        "current": false,
         "notes": "Diagnostic fast-path: i pulsanti CDP/Click fisico non restano più appesi 45s. Gate composer ridotti a ~8s e chrome.debugger wrapped con timeout 5s. Pipeline produzione (sendMessage) e keep-alive invariati."
       },
       {
