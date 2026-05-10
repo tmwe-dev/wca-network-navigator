@@ -329,6 +329,36 @@ var Actions = globalThis.Actions || (function () {
               for (var i = 0; i < scopes.length; i++) if (visible(scopes[i])) return true;
               return false;
             }
+            function findComposerBoxAnywhere() {
+              var scoped = deepQueryAll(
+                ".msg-form, [class*='msg-form'], form[class*='msg'], .msg-compose-form, [class*='compose-form'], [role='dialog'], .msg-overlay-conversation-bubble, [class*='msg-overlay-conversation'], .msg-thread, [class*='msg-thread'], [class*='msg-convo']"
+              );
+              for (var s = 0; s < scoped.length; s++) {
+                if (!visible(scoped[s])) continue;
+                var boxes = scoped[s].querySelectorAll(
+                  "[contenteditable='true'], div[role='textbox'], [role='textbox'], [aria-label*='message' i], [aria-label*='messaggio' i], [aria-label*='scrivi' i], [data-placeholder*='message' i], [data-placeholder*='messaggio' i]"
+                );
+                for (var b = 0; b < boxes.length; b++) if (visible(boxes[b])) return boxes[b];
+                if (scoped[s].getAttribute && scoped[s].getAttribute("contenteditable") === "true") return scoped[s];
+              }
+              var allBoxes = deepQueryAll("[contenteditable='true'], div[role='textbox'], [role='textbox']");
+              for (var a = 0; a < allBoxes.length; a++) if (visible(allBoxes[a]) && !isInGlobalNav(allBoxes[a])) return allBoxes[a];
+              return null;
+            }
+            function linkedinSpaReadySnapshot() {
+              var visibleButtons = [];
+              try {
+                visibleButtons = Array.from(document.body.querySelectorAll("button, a, [role='button']")).filter(visible);
+              } catch (e) { visibleButtons = []; }
+              return {
+                readyState: document.readyState,
+                hasMain: !!document.querySelector("main, [role='main']"),
+                hasMessagingShell: !!document.querySelector(".msg-form, [class*='msg-form'], .msg-thread, [class*='msg-thread'], [class*='msg-convo'], [class*='msg-s-message-list'], [class*='msg-conversations']"),
+                loading: !!document.querySelector("[class*='loading'], [aria-busy='true'], .artdeco-loader"),
+                bodyTextLength: ((document.body && document.body.innerText) || "").length,
+                visibleButtonsCount: visibleButtons.length
+              };
+            }
             function resolveLabel(el) {
               var lbl = (el.getAttribute("aria-label") || "");
               var lblBy = el.getAttribute("aria-labelledby");
