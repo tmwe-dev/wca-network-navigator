@@ -111,3 +111,140 @@ export async function tmweDisconnect(): Promise<void> {
   const { error } = await supabase.functions.invoke("tmwe-disconnect", { body: {} });
   if (error) throw error;
 }
+
+/* ============================================================
+ * Partner ⇄ TMWE customer linking (sprint 2026-05-10)
+ * ============================================================ */
+
+export interface TmweCandidate {
+  tmwe_client_id: string;
+  denomination: string | null;
+  vat: string | null;
+  city: string | null;
+  score: number;
+  reason: "exact_vat" | "vies" | "name_fuzzy";
+}
+
+export interface TmwePartnerLink {
+  id: string;
+  partner_id: string;
+  tmwe_client_id: string;
+  tmwe_vat: string | null;
+  match_confidence: "exact_vat" | "vies" | "manual" | "name_fuzzy";
+  linked_by_user_id: string | null;
+  linked_at: string;
+}
+
+export interface TmweCustomerSnapshot {
+  tmwe_client_id: string;
+  denomination: string | null;
+  vat: string | null;
+  is_active: boolean;
+  assigned_price_list_id: string | null;
+  assigned_price_list_name: string | null;
+  last_synced_at: string;
+}
+
+export interface TmweRevenueRow {
+  tmwe_client_id: string;
+  year: number;
+  month: number;
+  revenue_amount: number;
+  currency: string;
+  invoices_count: number;
+  services_breakdown: Record<string, number>;
+}
+
+export async function findTmweCandidates(partnerId: string): Promise<{
+  candidates: TmweCandidate[];
+  partner: { vat: string | null; denomination: string; city: string };
+}> {
+  const { data, error } = await supabase.functions.invoke("tmwe-partner-match", {
+    body: { partner_id: partnerId },
+  });
+  if (error) throw error;
+  return data as { candidates: TmweCandidate[]; partner: { vat: string | null; denomination: string; city: string } };
+}
+
+export async function linkPartnerToTmwe(input: {
+  partner_id: string;
+  tmwe_client_id: string;
+  tmwe_vat?: string | null;
+  match_confidence: TmwePartnerLink["match_confidence"];
+}): Promise<TmwePartnerLink> {
+  const { data, error } = await supabase.functions.invoke("tmwe-partner-link", { body: input });
+  if (error) throw error;
+  return (data as { link: TmwePartnerLink }).link;
+}
+
+export async function unlinkPartnerFromTmwe(partnerId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke("tmwe-partner-link", {
+    body: { partner_id: partnerId, tmwe_client_id: "x", match_confidence: "manual", action: "unlink" },
+  });
+  if (error) throw error;
+}
+
+export async function getTmwePartnerLink(partnerId: string): Promise<TmwePartnerLink | null> {
+  const { data, error } = await tFrom("tmwe_partner_links")
+    .select("id, partner_id, tmwe_client_id, tmwe_vat, match_confidence, linked_by_user_id, linked_at")
+    .eq("partner_id", partnerId).maybeSingle();
+  if (error) throw error;
+  return (data as TmwePartnerLink | null) ?? null;
+}
+
+export async function getTmweSnapshot(clientId: string): Promise<TmweCustomerSnapshot | null> {
+  const { data, error } = await tFrom("tmwe_customer_snapshot")
+    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at")
+    .eq("tmwe_client_id", clientId).maybeSingle();
+  if (error) throw error;
+  return (data as TmweCustomerSnapshot | null) ?? null;
+}
+
+export async function getRevenueLast12Months(clientId: string): Promise<TmweRevenueRow[]> {
+  const { data, error } = await tFrom("tmwe_revenue_monthly")
+    .select("tmwe_client_id, year, month, revenue_amount, currency, invoices_count, services_breakdown")
+    .eq("tmwe_client_id", clientId)
+    .order("year", { ascending: false })
+    .order("month", { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return (data as TmweRevenueRow[] | null) ?? [];
+}
+
+export async function listTmweCustomers(): Promise<Array<TmweCustomerSnapshot & { partner_id: string | null }>> {
+  const { data, error } = await tFrom("tmwe_customer_snapshot")
+    .select("tmwe_client_id, denomination, vat, is_active, assigned_price_list_id, assigned_price_list_name, last_synced_at, tmwe_partner_links(partner_id)")
+    .order("last_synced_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return (data as Array<TmweCustomerSnapshot & { tmwe_partner_links: Array<{ partner_id: string }> }> | null ?? [])
+    .map((row) => ({
+      ...row,
+      partner_id: row.tmwe_partner_links?.[0]?.partner_id ?? null,
+    })) as Array<TmweCustomerSnapshot & { partner_id: string | null }>;
+}
+
+export async function triggerCustomerResync(tmweClientId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke("tmwe-customer-sync", {
+    body: { mode: "single", tmwe_client_id: tmweClientId },
+  });
+  if (error) throw error;
+}
+
+export interface TmweQuoteResult {
+  ok: boolean;
+  price_list_id: string | null;
+  quote: unknown;
+}
+
+export async function lookupTmweQuote(input: {
+  partner_id: string;
+  origin: string;
+  destination: string;
+  weight_kg: number;
+  service_type?: string;
+}): Promise<TmweQuoteResult> {
+  const { data, error } = await supabase.functions.invoke("tmwe-quote-lookup", { body: input });
+  if (error) throw error;
+  return data as TmweQuoteResult;
+}
