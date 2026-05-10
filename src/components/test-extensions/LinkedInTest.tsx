@@ -404,6 +404,8 @@ export function LinkedInTest() {
         log(`  • stats: ${String(stats?.sentToday ?? "?")}/${String(stats?.dailyCap ?? "?")} oggi · burst ${String(stats?.sinceBurst ?? 0)}/${String(stats?.burstSize ?? "?")}`, "info");
         if (gate?.waitedMs) log(`  • cooldown atteso: ${String(gate.waitedMs)}ms`, "info");
       }
+      // Aggiorna pannello status dopo invio
+      void refreshHumanSim(false);
       if (diag.warning) log(`  ⚠️ warning: ${String(diag.warning)}`, "warn");
       if (diag.suggestion) log(`  💡 ${String(diag.suggestion)}`, "warn");
       if (diag.cacheInvalidated) log(`  🧹 cache invalidata: ${String(diag.cacheInvalidated)}`, "warn");
