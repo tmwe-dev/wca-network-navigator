@@ -6,7 +6,7 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.17";
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.55";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.56";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -139,13 +139,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.55",
+    latestVersion: "3.9.56",
     items: [
+      {
+        version: "3.9.56",
+        filename: "linkedin-extension-3.9.56.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.56.zip",
+        current: true,
+        note: "AI-Verified Click: AILearn (read-only) fornisce sendButtonSelector verificato prima del click. Cache-first, relearn+1 retry SOLO se bottone non trovato (zero rischio doppio invio). Fallback regex se AI giù. Single writer e anti-double-send 2s invariati.",
+      },
       {
         version: "3.9.55",
         filename: "linkedin-extension-3.9.55.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.55.zip",
-        current: true,
+        current: false,
         note: "Path tab READ-ONLY separato per readInbox: legge l'inbox in una nuova tab background invece di dirottare la pagina LinkedIn attiva dell'utente. Pipeline sendMessage invariata.",
       },
       {
