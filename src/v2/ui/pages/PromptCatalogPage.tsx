@@ -42,6 +42,7 @@ import {
 import {
   ArrowLeft,
   Library,
+  Play,
   RefreshCw,
   History as HistoryIcon,
   Cpu,
@@ -86,10 +87,18 @@ export default function PromptCatalogPage() {
             — vista unificata di tutti i prompt operativi: versione, autore, orchestratori, input sorgenti.
           </span>
         </div>
-        <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          Aggiorna
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" className="h-8 gap-1.5">
+            <Link to="/v2/prompt-lab/tests">
+              <Play className="h-3.5 w-3.5" />
+              Vai ai test
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Aggiorna
+          </Button>
+        </div>
       </header>
 
       <div className="flex-shrink-0 border-b px-4 py-2 bg-muted/30 flex flex-wrap items-center gap-3">
