@@ -10,19 +10,11 @@ import { LINKEDIN_EXTENSION_REQUIRED_VERSION } from "@/lib/whatsappExtensionZip"
 import { subscribeOptimusEvents } from "@/hooks/useOptimusBridgeListener";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 import { tryAcquire, throttle, SyncGuardBusyError } from "@/lib/syncGuard";
-import {
-  type LinkedInSendStrategy,
-  STRATEGY_LABELS,
-  STRATEGY_DESCRIPTIONS,
-  loadStrategy,
-  saveStrategy,
-  strategyHasTimeout,
-  strategyHasDedup,
-  withClientTimeout,
-  buildIdempotencyKey,
-  isDuplicateKey,
-  rememberKey,
-} from "./linkedinSendStrategies";
+// Le "strategie sperimentali" A/B/C/D sono state rimosse dal flusso
+// principale: con la 3.9.59 il bounded readInbox è interno all'estensione,
+// quindi il timeout client a 12s era controproducente. Il file
+// `linkedinSendStrategies.ts` resta nel repo come riferimento storico ma
+// non viene più importato qui.
 
 // Area di TEST manuale: l'operatore guida il ritmo, non serve gating anti-throttle
 // di produzione. Cooldown ridotti al minimo per "parti e vai" come WhatsApp test.
