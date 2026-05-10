@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WhatsAppTest } from "@/components/test-extensions/WhatsAppTest";
 import { FireScrapeTest } from "@/components/test-extensions/FireScrapeTest";
 import { LinkedInTest } from "@/components/test-extensions/LinkedInTest";
+import { LinkedInMatrixTest } from "@/components/test-extensions/LinkedInMatrixTest";
 import { SyncGuardIndicator } from "@/v2/ui/atoms/SyncGuardIndicator";
 
 export function TestExtensionsContent() {
@@ -13,10 +14,12 @@ export function TestExtensionsContent() {
       <TabsList className="mb-4">
         <TabsTrigger value="whatsapp">💬 WhatsApp</TabsTrigger>
         <TabsTrigger value="linkedin">💼 LinkedIn</TabsTrigger>
+        <TabsTrigger value="linkedin-matrix">🧪 LI Matrix</TabsTrigger>
         <TabsTrigger value="firescrape">🔥 FireScrape</TabsTrigger>
       </TabsList>
       <TabsContent value="whatsapp"><WhatsAppTest /></TabsContent>
       <TabsContent value="linkedin"><LinkedInTest /></TabsContent>
+      <TabsContent value="linkedin-matrix"><LinkedInMatrixTest /></TabsContent>
       <TabsContent value="firescrape"><FireScrapeTest /></TabsContent>
     </Tabs>
   );
