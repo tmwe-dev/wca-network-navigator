@@ -236,7 +236,7 @@ export function LinkedInTest() {
   });
 
   const testReadInbox = () => runWithCooldown(async () => {
-    log("📨 Lettura inbox LinkedIn (worker tab pre-warmed → tipicamente 3-8s)...");
+    log(`📨 Lettura inbox LinkedIn · strategia [${STRATEGY_LABELS[strategy]}]`);
     // Stato worker pre-azione, per capire se l'azione paga un cold start.
     try {
       const pre = await liMsg("ping", {}, 4000) as Record<string, unknown>;
@@ -253,7 +253,17 @@ export function LinkedInTest() {
     }, 15000);
     let r: Record<string, unknown> | undefined;
     try {
-      r = await liMsg("readLinkedInInbox", {}, 90000);
+      if (strategyHasTimeout(strategy)) {
+        const racePromise = liMsg("readLinkedInInbox", {}, 90000) as Promise<Record<string, unknown>>;
+        const out = await withClientTimeout(racePromise, 12_000);
+        if (out === null) {
+          log("⏱️ readInbox: timeout client 12s, lettura saltata. Riprovo al prossimo ciclo.", "warn");
+          return;
+        }
+        r = out;
+      } else {
+        r = await liMsg("readLinkedInInbox", {}, 90000);
+      }
     } finally {
       clearInterval(ticker);
     }
