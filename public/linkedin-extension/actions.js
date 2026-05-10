@@ -691,22 +691,20 @@ var Actions = globalThis.Actions || (function () {
         // pipeline robusta (poll lungo, more-menu, paste/insertText cascade)
         // della 3.9.60. Solo per metodi DOM (non CDP): per i CDP preserviamo
         // il fail-fast diagnostico così l'operatore vede subito il problema.
-        var isCdpMethod = (method === "cdp_physical_click" || method === "cdp_ctrl_enter");
-        if (!isCdpMethod) {
-          console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
-          var fallbackResult = await HybridOps.sendMessage(tab.id, message);
-          if (fallbackResult && fallbackResult.success) {
-            return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
-          }
-          var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
-          return Config.errorResponse(
-            Config.ERROR.MESSAGE_FAILED,
-            "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
-          );
+        // 3.9.66 — Anche per i metodi CDP, se il gate non trova il composer
+        // permettiamo il degrade alla pipeline HybridOps.sendMessage stabile
+        // (3.9.56). Il destinatario è già stato validato sopra (HARD GUARD
+        // /in/<slug> o thread URL esplicito), quindi il fallback non può
+        // mandare al partner sbagliato.
+        console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
+        var fallbackResult = await HybridOps.sendMessage(tab.id, message);
+        if (fallbackResult && fallbackResult.success) {
+          return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
         }
+        var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
         return Config.errorResponse(
           Config.ERROR.MESSAGE_FAILED,
-          "composer_gate_failed_diagnostic: " + ((finalGate && finalGate.error) || "unknown") + " (status=" + lastTabStatus + ")" + gateDiag
+          "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
         );
       }
     }

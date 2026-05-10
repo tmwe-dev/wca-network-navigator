@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.65",
-  "description": "3.9.65 — Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il montaggio reale del composer (msg-form/thread/convo/compose-form) fino a 25s, salta doppi click Messaggia se già reindirizzato in messaging e allarga writer/gate agli scope messaging moderni.",
+  "version": "3.9.66",
+  "description": "3.9.66 — Ripristino flusso baseline 3.9.56 per l'invio: i profili /in/ e /pub/ NON usano più la worker tab persistente (riservata a /messaging/ per la lettura). Click 'Messaggia' avviene di nuovo sulla pagina del profilo. In più, anche per i metodi CDP il gate timeout degrada al fallback stabile HybridOps.sendMessage (destinatario già validato hard guard).",
   "permissions": [
     "cookies",
     "tabs",

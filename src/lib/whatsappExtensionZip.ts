@@ -6,10 +6,11 @@ import {
 } from "@/lib/embeddedWhatsAppExtensionZip";
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
-// Versione canonica LinkedIn: 3.9.65 — wait dinamico LinkedIn SPA su
-// /messaging/thread/new, gate/writer allargati a msg-thread/msg-convo/compose-form
-// e skip doppi click Messaggia quando la tab è già stata reindirizzata in messaging.
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.65";
+// Versione canonica LinkedIn: 3.9.66 — ripristino baseline 3.9.56 per il
+// percorso di scrittura: i profili /in/ e /pub/ NON passano più dalla worker
+// tab (riservata a /messaging/ per la lettura). Fallback HybridOps.sendMessage
+// abilitato anche per i metodi CDP quando il composer gate scade.
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.66";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -149,13 +150,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.65",
+    latestVersion: "3.9.66",
     items: [
+      {
+        version: "3.9.66",
+        filename: "linkedin-extension-3.9.66.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.66.zip",
+        current: true,
+        note: "Ripristino baseline 3.9.56 per l'invio: profili /in/ e /pub/ NON usano più la worker tab (riservata a /messaging/ per la lettura). Fallback HybridOps.sendMessage abilitato anche per metodi CDP quando il composer gate scade.",
+      },
       {
         version: "3.9.65",
         filename: "linkedin-extension-3.9.65.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.65.zip",
-        current: true,
+        current: false,
         note: "Wait dinamico LinkedIn SPA: su /messaging/thread/new aspetta il mount reale del composer fino a 25s, salta doppi click Messaggia se la tab è già in messaging e allarga gate/writer agli scope moderni.",
       },
       {
