@@ -409,7 +409,10 @@ ${html_body}`;
         { role: "system", content: finalSystemPromptWithCalligrafia },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.4,
+      // Funnemail Doctrine 2026-05-10: alzo creatività e penalizzo ripetizioni.
+      temperature: 0.6,
+      frequency_penalty: 0.3,
+      seed: Math.floor(Math.random() * 1_000_000_000),
       timeoutMs: 30000,
       maxRetries: 1,
       max_tokens: maxTokens,

@@ -248,6 +248,11 @@ serve(async (req) => {
       models: [model, "google/gemini-2.5-flash", "openai/gpt-5-mini"],
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 45000, maxRetries: 1, max_tokens: maxTokens, context: "generate-email:" + userId.substring(0, 8),
+      // Funnemail Doctrine 2026-05-10: sblocca varietà per evitare email-fotocopia.
+      temperature: 0.75,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.4,
+      seed: Math.floor(Math.random() * 1_000_000_000),
     });
     const aiLatencyMs = Date.now() - aiStart;
 

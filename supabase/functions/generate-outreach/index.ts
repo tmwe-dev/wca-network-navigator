@@ -289,6 +289,11 @@ DECISION ENGINE (raccomandazione automatica):
       models: [model, "openai/gpt-5-mini"],
       messages: [{ role: "system", content: finalSystemPrompt }, { role: "user", content: userPrompt }],
       timeoutMs: 40000, maxRetries: 1, max_tokens: maxTokens, context: `generate-outreach:${userId.substring(0, 8)}:${ch}/${quality}`,
+      // Funnemail Doctrine 2026-05-10: varietà sui messaggi outreach.
+      temperature: 0.75,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.4,
+      seed: Math.floor(Math.random() * 1_000_000_000),
     });
 
     // ── Credits ──
