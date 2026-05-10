@@ -10,12 +10,12 @@
  *  - linkedin_min_delay_seconds / linkedin_max_delay_seconds
  */
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { isLinkedInProfileUrl, normalizeLinkedInProfileUrl } from "@/lib/linkedinSearch";
 import { toast } from "@/hooks/use-toast";
 import { createLogger } from "@/lib/log";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { buildSchedule, parseTimingFromSettings, estimateBatchDuration, type ChannelTimingConfig } from "@/lib/multichannelTiming";
+import { queueLinkedInForApproval } from "@/lib/messaging/linkedinSender";
 
 const log = createLogger("useBulkLinkedInDispatch");
 
@@ -74,50 +74,25 @@ export function useBulkLinkedInDispatch() {
     let queued = 0;
     let failed = 0;
 
+    // SSOT: tutto il bulk passa da queueLinkedInForApproval (ai_pending_actions).
+    // Iteriamo per rispettare lo slot calcolato per destinatario.
     for (let i = 0; i < toDispatch.length; i++) {
       const t = toDispatch[i];
       setProgress(p => ({ ...p, current: i + 1 }));
-
-      const personalized = messageTemplate
-        .replace(/\{\{name\}\}/gi, t.contactName || "")
-        .replace(/\{\{company\}\}/gi, t.companyName || "")
-        .slice(0, 300);
-
-      const scheduledFor = slots[i].toISOString();
-
-      try {
-        // Bulk LinkedIn = predisposto dal sistema → richiede autorizzazione
-        // (regola: messaggi WA/LI di sistema NON sono istantanei).
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        if (!userId) { failed++; continue; }
-        const { error } = await supabase.from("ai_pending_actions").insert({
-          user_id: userId,
-          partner_id: t.partnerId || null,
-          action_type: "send_linkedin",
-          action_payload: {
-            recipient: t.profileUrl,
-            message_text: personalized,
-            contact_id: t.contactId || null,
-            partner_id: t.partnerId || null,
-            scheduled_for: scheduledFor,
-            contactName: t.contactName,
-            companyName: t.companyName,
-          },
-          reasoning: `Bulk LinkedIn predisposto dal sistema per ${t.contactName || t.profileUrl}. In attesa di autorizzazione.`,
-          confidence: 0.85,
-          source: "bulk_linkedin_dispatch",
-          status: "pending",
-        });
-        if (!error) {
-          queued++;
-        } else {
-          failed++;
-        }
-      } catch (e) {
-        log.warn("dispatch failed", { error: e instanceof Error ? e.message : String(e), profileUrl: t.profileUrl });
-        failed++;
-      }
+      const res = await queueLinkedInForApproval({
+        targets: [{
+          profileUrl: t.profileUrl as string,
+          contactId: t.contactId,
+          partnerId: t.partnerId,
+          contactName: t.contactName,
+          companyName: t.companyName,
+        }],
+        messageOrTemplate: messageTemplate,
+        source: "bulk_linkedin_dispatch",
+        scheduledFor: slots[i].toISOString(),
+      });
+      queued += res.queued;
+      failed += res.failed;
       setProgress(p => ({ ...p, queued, failed }));
     }
 
@@ -130,7 +105,7 @@ export function useBulkLinkedInDispatch() {
     });
 
     return { queued, failed };
-  }, [timing]);
+  }, [timing, settings?.linkedin_bulk_max]);
 
   return { dispatch, sending, progress, timing, previewSchedule };
 }
