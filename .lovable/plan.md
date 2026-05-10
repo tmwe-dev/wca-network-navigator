@@ -1,59 +1,75 @@
-# Fix Polling Loop & Auth Re-render
+## Obiettivo
 
-## Cosa ho trovato (verificato sul codice)
+Ripristinare la build LinkedIn 3.9.56 (la "migliore" per affidabilità d'invio) come versione attiva, e mettere a disposizione nell'area di test del pannello LinkedIn tre strategie alternative — così possiamo provarle in parallelo e scegliere quella che elimina la duplicazione messaggi senza reintrodurre gli hang risolti in 3.9.59.
 
-1. **`src/providers/AuthProvider.tsx:84`** — `setSession(currentSession)` viene chiamato a OGNI evento `onAuthStateChange` (incluso `TOKEN_REFRESHED` ogni ~50min e visibility change). Il riferimento cambia anche quando l'access_token è identico → tutti i consumer del context si ri-renderizzano → React Query rimonta i `refetchInterval`.
+## 1. Rollback effettivo a 3.9.56
 
-2. **`src/hooks/useOperationsCenter.ts:82,98,118`** — 3 query polling ogni **15s** su `agent_tasks`, `email_campaign_queue`, `activities`. **MA** alle righe 122-128 è già attivo `postgres_changes` Realtime sulle stesse 3 tabelle. Polling ridondante puro.
+File toccati (solo questi 5 cambiavano tra 3.9.56 e 3.9.59):
+- `public/linkedin-extension/actions.js` ← versione 3.9.56
+- `public/linkedin-extension/background.js` ← versione 3.9.56
+- `public/linkedin-extension/content.js` ← versione 3.9.56
+- `public/linkedin-extension/tab-manager.js` ← versione 3.9.56
+- `public/linkedin-extension/manifest.json` ← `version: "3.9.56-restore"`
 
-3. **`src/hooks/useUnreadCounts.ts:61`** — 5 HEAD count su `channel_messages` + `partners` + `activities` ogni **60s** + `refetchOnWindowFocus: true`. Accettabile come fallback ma duplica il lavoro che farebbe Realtime.
+Ripacchettizzo:
+- `public/linkedin-extension.zip` (zip "live" servito dal pannello)
+- `public/chrome-extensions/linkedin/linkedin-extension-3.9.56-restore.zip` (archivio versionato)
 
-4. **`src/hooks/useTodayActivities.ts:53`** — polling 30s su `activities`. Sovrapposto a useOperationsCenter.
+Aggiorno:
+- `public/chrome-extensions/catalog.json` → entry `3.9.56-restore` come `latest`
+- `src/lib/whatsappExtensionZip.ts` → riferimento versione corrente
 
-5. **`src/hooks/useActiveProcesses.ts:90`** — polling 10s.
+Effetto: l'estensione installata sarà quella che inviava bene (con la diagnostica AI-Verified Click già presente). Il pre-warm worker tab sparisce: il messaggio "Unknown action: ensureWorkerTab" che vedevi all'inizio era proprio causato dalla 3.9.56 che riceveva chiamate non supportate dal client più recente — gestito al punto 2.
 
-## Modifiche proposte
+## 2. Adattamento client al rollback
 
-### A. AuthProvider — emit stabile (1 file, 5 righe)
-`src/providers/AuthProvider.tsx`: in `applyValidatedSession`, prima di `setSession` confronta per `access_token`:
-```ts
-setSession(prev =>
-  prev?.access_token === currentSession.access_token ? prev : currentSession
-);
-setUser(prev =>
-  prev?.id === currentSession.user.id ? prev : currentSession.user
-);
-```
-Stesso trattamento per `setUnauthenticated` (no-op se già `null`). Elimina i re-render a cascata da `TOKEN_REFRESHED`.
+`src/components/test-extensions/LinkedInTest.tsx` (e altri eventuali punti che invocano `ensureWorkerTab` / pre-warm) devono diventare tolleranti:
 
-### B. useOperationsCenter — togliere polling (Realtime già attivo)
-`src/hooks/useOperationsCenter.ts`: sostituire `refetchInterval: 15_000` → `refetchInterval: false` sulle 3 query. La sottoscrizione Realtime esistente (righe 122-128) gestisce gli aggiornamenti. Mantengo `staleTime: 10_000` come safety net.
+- Se l'estensione risponde `Unknown action: ensureWorkerTab` → il client procede senza pre-warm (non blocca, non logga errore rosso, log informativo "estensione 3.9.56 senza pre-warm: ok").
+- `readInbox` resta invocato come prima; se va in hang il timeout lo gestisce a livello UI (vedi punto 3 per le strategie alternative).
 
-### C. useUnreadCounts — alzare intervallo + Realtime invalidation
-`src/hooks/useUnreadCounts.ts`:
-- `refetchInterval: 120_000` (era 60s)
-- `refetchOnWindowFocus: false`
-- Aggiungere `useEffect` con `supabase.channel().on('postgres_changes', { table: 'channel_messages', event: 'INSERT' }, () => queryClient.invalidateQueries({ queryKey: queryKeys.channelMessages.unreadCounts }))`. Stesso per `activities`.
+Nessuna logica AI/edge function viene toccata.
 
-### D. useTodayActivities — alzare intervallo
-`src/hooks/useTodayActivities.ts`: `refetchInterval: 90_000` (era 30s). Realtime opzionale (già coperto da useOperationsCenter quando montata).
+## 3. Area test: 3 strategie selezionabili
 
-### E. useActiveProcesses — alzare intervallo
-`refetchInterval: 30_000` (era 10s). Da verificare uso (se è una pagina di monitoring live, può restare 10s — ne discutiamo prima di toccare).
+Nel pannello esistente `LinkedInTest.tsx` aggiungo un blocco "Strategia di invio (sperimentale)" con 3 radio-button. La scelta viene salvata in `localStorage` e passata come parametro all'azione di invio. Le tre opzioni:
 
-### F. Iframe `allow="vr ambient-light-sensor battery"` — fuori scope
-Cosmetico. Se vuoi lo cerco e lo pulisco in un follow-up separato (atomicità: fix polling ≠ fix policy iframe).
+### Strategia A — "Pure 3.9.56" (default dopo rollback)
+Comportamento identico a 3.9.56 originale. Nota in UI: "⚠️ può duplicare messaggi nella stessa chat se l'AI re-learn riparte". Serve come baseline di confronto.
 
-## Cosa NON tocco
-- Logica DAL, query keys, schema, RLS.
-- `useCampaignJobs` / `useEmailCampaignQueue` (già `false` o condizionale).
-- Le query effettive (solo metadata di useQuery).
-- Il file `src/integrations/supabase/client.ts`.
+### Strategia B — "3.9.56 + readInbox timeout"
+Wrap client-side: la chiamata `readInbox` viene avvolta in un `Promise.race` con timeout 12s; se scade, l'UI mostra "lettura inbox saltata, riprovo al prossimo ciclo" senza appendere alla chat. Risolve gli hang a 90s visti stamattina senza modificare l'extension.
 
-## Verifica post-fix
-1. Aprire DevTools → Network → filter `channel_messages`. Idle 2 min → attese: ≤1 burst iniziale + invalidazioni Realtime su INSERT reale.
-2. Verificare che il badge unread continui ad aggiornarsi quando arriva una mail (test manuale o INSERT manuale).
-3. `useOperationsCenter` continua a refreshare alla creazione di nuove `agent_tasks` (Realtime).
+### Strategia C — "3.9.56 + anti-duplicazione hard-guard"
+Prima dell'invio, calcolo idempotency key client-side: `sha1(recipientUrl + normalizedText + floor(Date.now()/30000))`. La key viene salvata in `localStorage` con TTL 5 min. Se esiste già → invio bloccato con toast "messaggio identico inviato negli ultimi 30s, salto". Nessuna chiamata all'extension. Risolve la duplicazione anche se il flusso AI-relearn ritenta.
 
-## Domanda aperta
-Su **E** (`useActiveProcesses`), prima di toccare voglio sapere se la pagina che lo usa è un monitor "live" dove 10s è una scelta UX deliberata. Se sì, lo lascio.
+### Strategia D — "B + C combinate"
+Entrambi i guard attivi insieme. Probabilmente la configurazione "definitiva" se A da sola duplica.
+
+UI: 4 radio + un piccolo pannello "Diff vs 3.9.56" che mostra cosa fa ciascuna strategia, così durante i test si capisce subito quale è attiva. Tutto il codice delle strategie vive in un nuovo file `src/components/test-extensions/linkedinSendStrategies.ts` (puro frontend, nessun side-effect su edge function o DB).
+
+## 4. Verifica
+
+- Riavvio dev server, verifico che `LinkedInTest.tsx` compili.
+- Confermo manifest version `3.9.56-restore` nello zip rigenerato (script Python: `unzip -p .../linkedin-extension.zip manifest.json`).
+- Confermo che `catalog.json` punta al nuovo zip e che `whatsappExtensionZip.ts` referenzia la versione corretta.
+
+## 5. Cosa NON tocco
+
+- Edge functions LinkedIn (`from-webapp-li`).
+- DAL, query keys, hook auth, AuthProvider (lasciati come da fix precedente).
+- Memoria `LinkedIn Single Channel Rule` rispettata: continua a passare solo da `from-webapp-li`.
+- Editorial review intatto.
+- WhatsApp extension: non viene toccata.
+
+## Dettagli tecnici
+
+- Versione manifest: stringa `"3.9.56-restore"` (Chrome accetta segmenti alfanumerici nelle versioni dev unpacked).
+- Zip: rigenerato con `nix run nixpkgs#zip` da `public/linkedin-extension/` come da workflow standard.
+- Idempotency key in Strategia C: usa `crypto.subtle.digest('SHA-1', ...)`, fallback a hash deterministico semplice se non disponibile.
+- Le strategie B/C/D sono client-only: zero modifiche all'extension oltre al rollback. Questo permette di switchare tra strategie senza reinstallare l'extension ogni volta.
+
+## Output finale per l'utente
+
+1. Reinstallare l'extension (zip 3.9.56-restore) — istruzioni a video nel pannello.
+2. Aprire `/v2/settings` (o dovunque viva `LinkedInTest.tsx`), selezionare la strategia, fare un invio di prova al destinatario fisso, leggere i log diagnostici già presenti.
