@@ -1223,13 +1223,26 @@ var HybridOps = globalThis.HybridOps || (function () {
         args: [message, method],
       }), externalTimeout, "sendMessageWithMethod " + method);
       const fbResult = fbRes[0] && fbRes[0].result;
+      // 3.9.61 — Hard timeout sui CDP: se chrome.debugger non risponde
+      // (debuggee occupied, attach race, tab discarded), il diagnostic ritorna
+      // un errore esplicito invece di lasciar scadere la UI a 45s.
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
-        const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
+        let cdpClick;
+        try {
+          cdpClick = await withTimeout(AXTree.clickSendButtonPhysical(tabId), 5000, "cdp_physical_click");
+        } catch (e) {
+          return { success: false, error: "cdp_physical_click_timeout_5000ms: " + (e && e.message || String(e)), attempted_method: "cdp_physical_click" };
+        }
         if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) return { success: true, method: "cdp_physical_click" };
         return { success: false, error: (cdpClick && cdpClick.error) || "cdp_physical_click_failed", attempted_method: "cdp_physical_click" };
       }
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
-        const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
+        let cdpKey;
+        try {
+          cdpKey = await withTimeout(AXTree.pressCtrlEnter(tabId, await isMacPlatform()), 5000, "cdp_ctrl_enter");
+        } catch (e) {
+          return { success: false, error: "cdp_ctrl_enter_timeout_5000ms: " + (e && e.message || String(e)), attempted_method: "cdp_ctrl_enter" };
+        }
         if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
         return { success: false, error: "cdp_ctrl_enter_textbox_not_cleared", attempted_method: "cdp_ctrl_enter" };
       }

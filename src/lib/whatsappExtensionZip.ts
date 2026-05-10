@@ -7,9 +7,10 @@ import {
 
 export const WHATSAPP_EXTENSION_REQUIRED_VERSION = "5.10.19";
 // Versione canonica LinkedIn: 3.9.60 (keep-alive service worker MV3 via
-// chrome.alarms ~24s, oltre a bounded readInbox + worker tab persistente).
+// 3.9.61: diagnostic fast-path su sendMessageWithMethod (gate composer 8s,
+// CDP wrapped con timeout 5s) — i pulsanti diagnostici non restano più 45s.
 // Allineata con catalog.json e con lo zip servito dal pulsante download.
-export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.60";
+export const LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.61";
 export const PARTNER_CONNECT_EXTENSION_REQUIRED_VERSION = "3.4.3";
 export const EMAIL_EXTENSION_REQUIRED_VERSION = "5.0.0";
 export const RA_EXTENSION_REQUIRED_VERSION = "1.0";
@@ -149,13 +150,20 @@ export const DEFAULT_EXTENSION_CATALOG: ExtensionCatalog = {
   },
   linkedin: {
     title: "LinkedIn Cookie Sync",
-    latestVersion: "3.9.60",
+    latestVersion: "3.9.61",
     items: [
+      {
+        version: "3.9.61",
+        filename: "linkedin-extension-3.9.61.zip",
+        path: "/chrome-extensions/linkedin/linkedin-extension-3.9.61.zip",
+        current: true,
+        note: "Diagnostic fast-path: i pulsanti CDP/Click fisico non restano più appesi 45s. Gate composer ridotti a ~8s e chrome.debugger wrapped con timeout 5s. Pipeline produzione (sendMessage) e keep-alive invariati.",
+      },
       {
         version: "3.9.60",
         filename: "linkedin-extension-3.9.60.zip",
         path: "/chrome-extensions/linkedin/linkedin-extension-3.9.60.zip",
-        current: true,
+        current: false,
         note: "Keep-alive service worker MV3 via chrome.alarms (~24s): elimina il sleep che ritardava il primo messaggio dopo idle. Bounded readInbox e worker tab persistente invariati.",
       },
       {

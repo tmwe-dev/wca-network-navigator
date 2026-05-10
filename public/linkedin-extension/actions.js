@@ -221,9 +221,10 @@ var Actions = globalThis.Actions || (function () {
     // 2.ter) Aspetta che la tab sia "complete" (max 4s, poll 250ms). In
     // background il renderer monta più lento; senza questa attesa il probe
     // del bottone Messaggia parte troppo presto.
+    // 3.9.61 — Diagnostic budget: max ~2s di attesa "complete" (era 4s).
     let lastTabStatus = "unknown";
     let lastTabUrl = "";
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 8; i++) {
       try {
         const ti = await chrome.tabs.get(tab.id);
         lastTabStatus = (ti && ti.status) || "unknown";
@@ -438,8 +439,9 @@ var Actions = globalThis.Actions || (function () {
     }
     if (!composerAlreadyOpen && !isThreadUrl) {
       let profileReady = await probeMessageButton();
-      // Polling esteso: 30 × 500ms = 15s.
-      for (let i = 0; i < 30 && !profileReady && !composerAlreadyOpen; i++) {
+      // 3.9.61 — Diagnostic: 8 × 500ms = 4s (era 15s). I test devono
+      // fallire rapidamente con motivo chiaro, non restare appesi.
+      for (let i = 0; i < 8 && !profileReady && !composerAlreadyOpen; i++) {
         await TabManager.sleep(500);
         profileReady = await probeMessageButton();
         if (!profileReady) composerAlreadyOpen = await probeComposer();
@@ -460,8 +462,8 @@ var Actions = globalThis.Actions || (function () {
             "profile_not_ready: profilo LinkedIn non pronto in background (status=" + lastTabStatus + ", url=" + shortUrl + "), riprova"
           );
         }
-        // Click ottimistico riuscito: passiamo direttamente al polling composer.
-        for (let i = 0; i < 32; i++) {
+        // 3.9.61 — Polling composer ridotto: 12 × 250ms = 3s (era 8s).
+        for (let i = 0; i < 12; i++) {
           await TabManager.sleep(250);
           if (await probeComposer()) { composerAlreadyOpen = true; break; }
         }
@@ -478,32 +480,26 @@ var Actions = globalThis.Actions || (function () {
       if (!clickResult || !clickResult.success) {
         return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, (clickResult && clickResult.error) || "open_composer_failed: bottone Messaggia non trovato sul profilo");
       }
-      const gateAfterClick = await waitForComposerReady(30000);
+      // 3.9.61 — Gate diagnostico ridotto a 8s (era 30s).
+      const gateAfterClick = await waitForComposerReady(8000);
       composerAlreadyOpen = !!(gateAfterClick && gateAfterClick.success);
     } else if (isThreadUrl && !composerAlreadyOpen) {
-      // Thread URL: aspetta il campo reale come WhatsApp, non un timer fisso.
-      const threadGate = await waitForComposerReady(30000);
+      // 3.9.61 — Thread URL: gate diagnostico 8s (era 30s).
+      const threadGate = await waitForComposerReady(8000);
       composerAlreadyOpen = !!(threadGate && threadGate.success);
     }
     if (!composerAlreadyOpen) {
-      // Ultimo gate stile WhatsApp: apri/attendi il campo disponibile prima di
-      // qualsiasi copia. Se fallisce, solo allora deleghiamo al writer produzione,
-      // che comunque scrive esclusivamente dopo aver trovato la textbox.
-      const finalGate = await waitForComposerReady(30000);
+      // 3.9.61 — Ultimo gate diagnostico: 8s (era 30s). Niente fallback
+      // pesante: il test deve riportare composer_gate_failed in tempi utili.
+      const finalGate = await waitForComposerReady(8000);
       if (finalGate && finalGate.success) {
         composerAlreadyOpen = true;
       } else {
-        console.warn("[LI Send] composer gate timeout → fallback HybridOps.sendMessage", finalGate);
-        var fallbackResult = await HybridOps.sendMessage(tab.id, message);
-        if (fallbackResult && fallbackResult.success) {
-          return Object.assign({}, fallbackResult, { method: (fallbackResult.method || "fallback") + "_after_composer_gate", attempted_method: method });
-        }
-        var fbErr = (fallbackResult && fallbackResult.error) || (finalGate && finalGate.error) || "unknown";
         var gateDiag = finalGate && finalGate.diagnostic ? " gate=" + JSON.stringify(finalGate.diagnostic) : "";
-      return Config.errorResponse(
-        Config.ERROR.MESSAGE_FAILED,
-        "composer_gate_failed + fallback_failed: " + fbErr + " (status=" + lastTabStatus + ")" + gateDiag
-      );
+        return Config.errorResponse(
+          Config.ERROR.MESSAGE_FAILED,
+          "composer_gate_failed_diagnostic: " + ((finalGate && finalGate.error) || "unknown") + " (status=" + lastTabStatus + ")" + gateDiag
+        );
       }
     }
     await TabManager.sleep(150);

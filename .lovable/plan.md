@@ -1,122 +1,115 @@
-## Diagnosi rapida
+## Diagnosi
 
-Ho verificato i file attuali:
+Dai log l’estensione non dorme più:
 
-- L'estensione installata nel tuo log è `v3.9.59`.
-- Il codice dell'app invece ora punta a `3.9.56` / `3.9.56-restore` in più punti.
-- Il catalogo segna `3.9.56-restore` come latest, ma il pulsante download top-bar costruisce il nome `linkedin-extension-3.9.56.zip`, quindi c'è disallineamento.
-- Il fallback `/linkedin-extension.zip` contiene davvero la `3.9.56-restore`, non la `3.9.59`.
-- La lettura inbox viene interrotta dal timeout client a 12s della strategia B/D: con la `3.9.59` questo è controproducente, perché la `3.9.59` ha già il bounded readInbox interno.
-- La UI attuale è troppo manuale: radio A/B/C/D + test isolati + pre-warm + read + send creano confusione e nascondono il problema reale.
+- `ping` risponde subito con `v3.9.60`
+- worker tab pronta e riusata in `12ms`
+- sessione attiva
+- cookie sync OK
+- auto-login OK
+- ricerca profilo OK
+
+Il blocco è solo sull’ultimo miglio dell’invio diagnostico:
+
+```text
+Test metodo: CDP click
+Timeout 45s
+```
+
+Nel codice attuale il flusso `sendMessageWithMethod` è diventato troppo lungo prima di arrivare al test CDP: navigazione worker, attese profilo, probe composer, gate fino a 30s, poi CDP. Quindi il pulsante diagnostico “CDP click” non è più un test isolato rapido: attraversa quasi tutta la pipeline pesante e può consumare i 45s della UI.
 
 ## Piano di intervento
 
-### 1. Riallineare tutto a LinkedIn 3.9.59
+### 1. Non toccare readInbox e keep-alive
 
-Rendo `3.9.59` la versione canonica attiva:
+Lascio invariati:
 
-- `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.59"`
-- `catalog.json` con `3.9.59` come `latestVersion` e `current: true`
-- `/chrome-extensions/linkedin/linkedin-extension-3.9.59.zip` come zip scaricato dal pulsante principale
-- `/linkedin-extension.zip` riallineato alla `3.9.59`
-- `public/linkedin-extension/` riallineata ai sorgenti contenuti nello zip `3.9.59`
+- `readInbox` bounded interno 3.9.59/3.9.60
+- worker tab persistente
+- `chrome.alarms` keep-alive v3.9.60
+- download/catalog/versioning già allineati a `3.9.60`
 
-Risultato: app, catalogo, fallback, download e log versione parlano tutti della stessa build.
+Il problema ora non è “estensione dormiente”, ma invio diagnostico CDP appeso.
 
-### 2. Eliminare la selezione manuale delle strategie dal test principale
+### 2. Separare i test diagnostici dalla pipeline di invio completa
 
-Tolgo il blocco radio A/B/C/D dal pannello operativo principale.
+Modifico `sendLinkedInMessageWithMethod` in modo che per i metodi diagnostici non passi più da tutti i gate lunghi.
 
-Al suo posto metto una sola azione chiara:
+Nuovo comportamento:
 
-- `Esegui diagnostica LinkedIn completa`
+- naviga/usa la worker tab sul destinatario fisso
+- attende solo caricamento breve e deterministico
+- apre il composer se serve con budget breve
+- delega subito a `HybridOps.sendMessageWithMethod`
+- se il composer non si apre, ritorna errore diagnostico leggibile invece di restare appeso
 
-Questa diagnostica farà i controlli in sequenza, senza chiederti di scegliere strategia.
+Target: un test click deve fallire in pochi secondi con motivo preciso, non dopo 45s generici.
 
-### 3. Creare test automatici per ogni funzione critica
+### 3. Mettere timeout interni reali sui CDP
 
-La diagnostica automatica eseguirà e marcherà ogni step come `OK`, `KO`, `TIMEOUT` o `SKIP`:
+Nel ramo `HybridOps.sendMessageWithMethod` aggiungo timeout espliciti anche alle chiamate:
 
-1. Download metadata
-   - verifica che l'app punti alla versione corretta
-   - verifica percorso zip atteso
-   - verifica coerenza tra required version e catalogo
+- `AXTree.clickSendButtonPhysical(tabId)`
+- `AXTree.pressCtrlEnter(tabId, isMac)`
+- verifica `composerCleared(...)`
 
-2. Ping estensione
-   - controlla se l'estensione risponde
-   - confronta versione installata vs versione richiesta
-
-3. Worker tab
-   - esegue `ensureWorkerTab`
-   - misura tempo e stato `ready`
-   - se non supportato, lo segnala come incompatibilità versione
-
-4. Sessione LinkedIn
-   - esegue `verifySession`
-   - distingue login mancante, checkpoint/captcha, cookie mancante, caricamento lento
-
-5. Lettura inbox
-   - chiama `readLinkedInInbox` usando la logica nativa della `3.9.59`
-   - niente timeout client da 12s
-   - timeout UI più realistico e diagnostico, così capiamo se risponde, se torna vuota, o se resta appesa
-
-6. Lettura thread singolo
-   - se inbox produce thread, prova il primo thread utile
-   - se c'è destinatario fisso, prova quello
-
-7. Invio diagnostico non distruttivo dove possibile
-   - non mando messaggi automaticamente senza comando esplicito
-   - verifico invece composer/DOM/capacità metodo quando possibile
-   - l'invio reale resta un pulsante separato e protetto
-
-### 4. Report unico leggibile
-
-Aggiungo un pannello risultati con tabella semplice:
+Così se Chrome debugger/CDP resta bloccato, la risposta torna come:
 
 ```text
-Funzione              Stato      Tempo      Dettaglio
-Download config       OK         -          punta a 3.9.59
-Estensione installata OK         120ms      v3.9.59
-Worker tab            OK         13ms       ready=yes
-Sessione              OK         2.1s       session_active
-Inbox                 KO         45s        timeout interno extension / risposta vuota / errore specifico
-Thread                SKIP       -          inbox non ha restituito thread
+cdp_physical_click_timeout_6000ms
 ```
 
-Sotto la tabella mostro una conclusione automatica:
+invece di lasciare scadere il timeout esterno da 45s.
 
-- `Problema di versione`
-- `Problema download`
-- `Problema sessione LinkedIn`
-- `Problema worker tab`
-- `Problema parser inbox`
-- `Problema invio/composer`
+### 4. Ripristinare una via “produzione stabile” separata dal CDP
 
-### 5. Sistemare il download
+Il pulsante principale `Invia LI` deve continuare a usare `sendMessage`, cioè la pipeline stabile single-writer:
 
-Correggo il pulsante download in modo che non costruisca più un path incoerente.
+- una sola scrittura nel composer
+- anti-double-send
+- click DOM fisico ottimistico
+- nessun fallback multiplo che rischia duplicati
 
-Opzioni tecniche previste:
+I pulsanti CDP restano solo diagnostici, non diventano la strada principale.
 
-- usare direttamente `LINKEDIN_EXTENSION_REQUIRED_VERSION = 3.9.59`, quindi scarica `linkedin-extension-3.9.59.zip`
-- mantenere cache-buster già presente
-- loggare errore leggibile se il fetch fallisce
+### 5. Aggiornare la UI test per non confondere
 
-Così il download scarica la build che l'app richiede davvero.
+Nel pannello LinkedIn:
 
-### 6. Conservare le strategie vecchie solo come diagnostica avanzata nascosta
+- rinomino i pulsanti CDP come diagnostici/fallback, non come strada consigliata
+- mostro nel log la distinzione:
+  - pipeline principale
+  - test click isolato
+  - CDP fallback diagnostico
+- se arriva timeout CDP, suggerisco di provare prima `Invia LI` o `Click fisico`, non di continuare con CDP
 
-Non cancello subito il codice delle strategie, ma lo tolgo dal flusso principale.
+### 6. Versione nuova e pacchetto reinstallabile
 
-Se serve, resta disponibile come area avanzata/collassata, non come scelta obbligatoria per te.
+Creo una nuova build:
+
+- manifest `3.9.61`
+- catalog `latestVersion: 3.9.61`
+- `LINKEDIN_EXTENSION_REQUIRED_VERSION = "3.9.61"`
+- zip `public/chrome-extensions/linkedin/linkedin-extension-3.9.61.zip`
+- fallback `public/linkedin-extension.zip` aggiornato
 
 ### 7. Verifiche finali
 
-Dopo l'implementazione verifico:
+Prima di chiudere verifico:
 
-- zip `3.9.59` presente e manifest corretto
-- catalogo valido JSON
-- costanti versione allineate
-- nessun riferimento principale a `3.9.56` come required/latest
-- pannello test senza selezione manuale A/B/C/D nel percorso principale
-- diagnostica automatica pronta a dirci quale funzione fallisce
+- manifest nello zip = `3.9.61`
+- catalog JSON valido
+- fallback zip contiene la stessa versione
+- nessun riferimento required/latest a `3.9.60` come versione attiva
+- `sendMessageWithMethod` non può più restare 45s senza risposta
+- il keep-alive resta presente
+- readInbox resta bounded
+
+## Risultato atteso
+
+Dopo reinstallazione della `3.9.61`:
+
+- l’estensione resta sveglia come ora
+- i test CDP non dormono più 45s: rispondono OK/KO con errore specifico
+- il flusso principale `Invia LI` resta separato e più sicuro
+- capiamo finalmente se il problema reale è composer, bottone Send, CDP debugger o click DOM

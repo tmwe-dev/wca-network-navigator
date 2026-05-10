@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.60",
-  "description": "3.9.60 — Service worker keep-alive (chrome.alarms ~24s) per evitare il sleep MV3 che ritardava il primo messaggio dopo idle.",
+  "version": "3.9.61",
+  "description": "3.9.61 — Diagnostic fast-path: sendMessageWithMethod usa gate composer brevi (max ~8s) e CDP wrapped con timeout 5s, così i test isolati non restano appesi 45s. Keep-alive worker invariato.",
   "permissions": [
     "cookies",
     "tabs",
