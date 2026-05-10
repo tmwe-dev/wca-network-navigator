@@ -50,12 +50,9 @@ export function OperationalContextSelector(): React.ReactElement | null {
 
   const ActiveMailboxIcon = activeMailbox ? iconForMailbox(activeMailbox) : Inbox;
 
-  // Etichetta sintetica del trigger
-  const operatorLabel = viewingAll
-    ? "Tutti"
-    : isImpersonating && activeOperator
-      ? activeOperator.name
-      : currentOp?.name ?? "Io";
+  // Trigger: mostriamo solo la casella attiva (l'utente loggato è implicito).
+  // Eventuale impersonation/visibilità "tutti" resta visibile via icona Shield
+  // e bordo primario sul bottone.
   const mailboxLabel = activeMailbox?.label ?? "Casella";
 
   return (
