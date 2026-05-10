@@ -1225,17 +1225,68 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
         const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
-        if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) return { success: true, method: "cdp_physical_click" };
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) {
+          const closed = await closeMessagingComposer(tabId);
+          return { success: true, method: "cdp_physical_click", composer_closed: !!closed };
+        }
         return { success: false, error: (cdpClick && cdpClick.error) || "cdp_physical_click_failed", attempted_method: "cdp_physical_click" };
       }
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
         const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
-        if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) return { success: true, method: cdpKey.method || "cdp_ctrl_enter" };
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) {
+          const closed = await closeMessagingComposer(tabId);
+          return { success: true, method: cdpKey.method || "cdp_ctrl_enter", composer_closed: !!closed };
+        }
         return { success: false, error: "cdp_ctrl_enter_textbox_not_cleared", attempted_method: "cdp_ctrl_enter" };
+      }
+      if (fbResult && fbResult.success === true) {
+        const closed = await closeMessagingComposer(tabId);
+        fbResult.composer_closed = !!closed;
       }
       return fbResult || Config.errorResponse(Config.ERROR.MESSAGE_FAILED, "no_result");
     } catch (e) {
       return Config.errorResponse(Config.ERROR.MESSAGE_FAILED, e.message);
+    }
+  }
+
+  // v3.9.56-autoclose — Chiude l'overlay del composer LinkedIn dopo invio
+  // confermato. Garantisce che il prossimo invio parta con composer fresco
+  // e vuoto (no rischio concatenazione testo). La tab LinkedIn resta aperta
+  // (riusata): si chiude SOLO l'overlay messaggi. Best-effort: se fallisce,
+  // il send è comunque success.
+  async function closeMessagingComposer(tabId) {
+    try {
+      const res = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        world: "MAIN",
+        func: function () {
+          try {
+            var bubbles = document.querySelectorAll(
+              ".msg-overlay-conversation-bubble, [class*='msg-overlay-conversation-bubble']"
+            );
+            var closedAny = false;
+            for (var i = 0; i < bubbles.length; i++) {
+              var b = bubbles[i];
+              if (!(b.offsetParent !== null || b.getClientRects().length > 0)) continue;
+              var btn =
+                b.querySelector("button[aria-label*='Chiudi' i]") ||
+                b.querySelector("button[aria-label*='Close' i]") ||
+                b.querySelector(".msg-overlay-bubble-header__controls button:last-of-type");
+              if (btn) {
+                try { btn.click(); closedAny = true; } catch (e) {}
+              }
+            }
+            return { closed: closedAny };
+          } catch (e) {
+            return { closed: false, error: String(e && e.message ? e.message : e) };
+          }
+        },
+      });
+      var r = res && res[0] && res[0].result;
+      return !!(r && r.closed);
+    } catch (e) {
+      console.warn("[LI Send] closeMessagingComposer failed", e);
+      return false;
     }
   }
 
