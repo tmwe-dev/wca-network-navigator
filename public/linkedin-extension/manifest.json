@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Cookie Sync",
-  "version": "3.9.56",
-  "description": "3.9.56-restore \u2014 Build di rollback alla 3.9.56 (la pi\u00f9 affidabile per l'invio). AI-Verified Click + single writer. Pre-warm worker tab e bounded readInbox rimossi.",
+  "version": "3.9.59",
+  "description": "3.9.59 — Bounded readInbox: Optimus/AX non possono più bloccare la lettura per 90s; timeout breve e fallback strutturale deterministico. Persistent Worker Tab invariata.",
   "permissions": [
     "cookies",
     "tabs",
@@ -45,6 +45,5 @@
   "icons": {
     "48": "icon.png",
     "128": "icon.png"
-  },
-  "version_name": "3.9.56-restore"
+  }
 }
