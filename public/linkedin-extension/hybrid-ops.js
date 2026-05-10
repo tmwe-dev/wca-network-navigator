@@ -15,6 +15,39 @@ var HybridOps = globalThis.HybridOps || (function () {
     ]);
   }
 
+  // ── Anti-double-send (3.9.54): blocca stesso messaggio identico
+  // sulla stessa tab+path entro 2s. In-memory (service-worker scope).
+  var _lastSendMap = {};
+  function _hashMsg(s) {
+    s = String(s || "");
+    var h = 0; for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return String(h);
+  }
+  async function _antiDoubleKey(tabId, message) {
+    var path = "";
+    try {
+      var t = await chrome.tabs.get(tabId);
+      var u = new URL(t.url || t.pendingUrl || "about:blank");
+      path = u.hostname + u.pathname;
+    } catch (e) { /* ignore */ }
+    return tabId + "|" + path + "|" + _hashMsg(message);
+  }
+  async function checkAndRegisterAntiDouble(tabId, message) {
+    var key = await _antiDoubleKey(tabId, message);
+    var now = Date.now();
+    var prev = _lastSendMap[key] || 0;
+    if (now - prev < 2000) return { blocked: true, since: now - prev };
+    _lastSendMap[key] = now;
+    // GC light
+    var keys = Object.keys(_lastSendMap);
+    if (keys.length > 200) {
+      for (var i = 0; i < keys.length; i++) {
+        if (now - _lastSendMap[keys[i]] > 60000) delete _lastSendMap[keys[i]];
+      }
+    }
+    return { blocked: false };
+  }
+
   function isMacPlatform() {
     return new Promise(function (resolve) {
       try { chrome.runtime.getPlatformInfo(function (info) { resolve(info && info.os === "mac"); }); }
