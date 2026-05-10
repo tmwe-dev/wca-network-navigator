@@ -23,6 +23,7 @@ import { it } from "date-fns/locale";
 import { queryKeys } from "@/lib/queryKeys";
 import { invokeAi } from "@/lib/ai/invokeAi";
 import { asJsonObject, getJsonField, mergeJsonObject } from "@/lib/typedJson";
+import { useApproveAndDispatch } from "@/hooks/useApproveAndDispatch";
 
 
 import { createLogger } from "@/lib/log";
@@ -51,6 +52,7 @@ const SOURCE_META: Record<string, { icon: typeof Bot; label: string }> = {
 
 export function PendingActionsPanel() {
   const qc = useQueryClient();
+  const { dispatch: dispatchApproved } = useApproveAndDispatch();
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -119,8 +121,20 @@ export function PendingActionsPanel() {
           }
         } catch (e) { /* prompt refinement apply failed */ }
       }
-      // Execute the approved action via pending-action-executor
-      if (action?.action_type !== "prompt_refinement") {
+      // v3.9.56+ pipeline: send_* canalizzati nei bridge browser via
+      // useApproveAndDispatch (LI/WA via estensione, email via send-edge).
+      // Tutti gli altri tipi restano nell'executor server-side.
+      const sendTypes = new Set([
+        "send_email", "send_proposal", "send_whatsapp", "send_linkedin", "linkedin_connect",
+      ]);
+      const at = action?.action_type ?? "";
+      if (sendTypes.has(at)) {
+        try {
+          await dispatchApproved(params.id);
+        } catch (e) {
+          log.error("dispatchApproved failed", { error: e instanceof Error ? e.message : String(e) });
+        }
+      } else if (at !== "prompt_refinement") {
         try {
           const { error: execError } = await supabase.functions.invoke("pending-action-executor", {
             body: { pending_action_id: params.id },

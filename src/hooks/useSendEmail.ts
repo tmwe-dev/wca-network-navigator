@@ -4,26 +4,12 @@
  */
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { invokeEdge } from "@/lib/api/invokeEdge";
 import DOMPurify from "dompurify";
 import { createLogger } from "@/lib/log";
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
 import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendEmail");
-
-/**
- * Stable idempotency key per (destinatario + oggetto + corpo).
- * Stessa bozza inviata due volte di fila → stessa key → DB blocca il duplicato
- * via UNIQUE(idempotency_key, recipient_email) su email_send_log.
- */
-function buildSendIdempotencyKey(to: string, subject: string, body: string): string {
-  const payload = `${to.trim().toLowerCase()}|${subject.trim()}|${body.trim()}`;
-  let hash = 5381;
-  for (let i = 0; i < payload.length; i++) {
-    hash = ((hash << 5) + hash + payload.charCodeAt(i)) >>> 0;
-  }
-  return `send_${hash.toString(36)}_${payload.length}`;
-}
 
 /**
  * Hard guard: il send singolo accetta UN SOLO destinatario.
@@ -43,10 +29,14 @@ function assertSingleRecipient(to: unknown): asserts to is string {
   }
 }
 
+/**
+ * v3.9.56+ pipeline: ogni invio email passa da `ai_pending_actions` →
+ * approvazione manuale → `useApproveAndDispatch` → edge `send-email`.
+ * Niente dispatch diretto qui.
+ */
 export function useSendEmail(draft: DraftState) {
   const [sending, setSending] = useState(false);
-  // LOVABLE-93: Non serve useTrackActivity/useLogAction qui.
-  // La send-email edge function esegue postSendPipeline internamente.
+  const { enqueue } = useEnqueueAction();
 
   const handleSend = async () => {
     if (draft.channel !== "email" || !draft.contactEmail) {
@@ -67,24 +57,26 @@ export function useSendEmail(draft: DraftState) {
         ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'span', 'div'],
         ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
       });
-      const data = await invokeEdge<{ error?: string }>("send-email", {
-        body: {
+      await enqueue({
+        action_type: "send_email",
+        partner_id: null,
+        contact_id: draft.contactId ?? null,
+        email_address: draft.contactEmail,
+        payload: {
           to: draft.contactEmail,
           subject: draft.subject,
           html: sanitizedHtml,
+          body: sanitizedHtml,
+          draft_subject: draft.subject,
+          draft_body: sanitizedHtml,
           attachments: (draft.attachments ?? []).map(a => ({ filename: a.name, path: a.path })),
-          idempotency_key: buildSendIdempotencyKey(draft.contactEmail, draft.subject, sanitizedHtml),
+          contact_id: draft.contactId ?? null,
         },
-        context: "useSendEmail",
+        suggested_content: sanitizedHtml,
+        reasoning: `Email manuale dal cockpit verso ${draft.contactEmail}.`,
+        source: "cockpit",
+        decision_origin: "user_manual",
       });
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Email inviata!", description: `A: ${draft.contactEmail}` });
-      // LOVABLE-93: Tracking è gestito da postSendPipeline dentro send-email edge function.
-      // Non duplicare con useTrackActivity/useLogAction.
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.error("email send failed", { error: msg, to: draft.contactEmail });
-      toast({ title: "Errore invio", description: msg, variant: "destructive" });
     } finally {
       setSending(false);
     }

@@ -3,12 +3,16 @@
  *
  * Routes:
  *  send_email       → invoke send-email
- *  send_whatsapp    → invoke send-whatsapp
- *  send_linkedin    → invoke send-linkedin
  *  schedule_followup→ INSERT outreach_schedules
  *  create_reminder  → INSERT reminders (activity)
  *  update_lead_status → UPDATE partners
  *  send_proposal    → invoke send-email with proposal template
+ *
+ *  NOTE v3.9.56+: send_whatsapp e send_linkedin NON sono più gestiti qui.
+ *  L'invio reale richiede il bridge browser (estensione `from-webapp-li/wa`)
+ *  e avviene client-side via `useApproveAndDispatch`. Lasciato come fallback
+ *  esplicito che restituisce errore così se per sbaglio venisse invocato non
+ *  finisce in dead-letter silenzioso.
  *
  * Logs every execution to supervisor_audit_log.
  */
@@ -224,41 +228,14 @@ async function executeAction(
       return { success: true, action_type: action.action_type, detail: `Email sent to ${payload.to ?? payload.recipient_email}` };
     }
 
-    case "send_whatsapp": {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient: payload.recipient ?? payload.phone ?? payload.to,
-          message_text: payload.message_text ?? payload.message ?? payload.body ?? "",
-          partner_id: action.partner_id ?? payload.partner_id,
-          contact_id: payload.contact_id ?? null,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.text();
-        return { success: false, action_type: action.action_type, detail: `send-whatsapp failed: ${resp.status} ${err}` };
-      }
-      return { success: true, action_type: action.action_type, detail: `WhatsApp sent to ${payload.phone ?? payload.to}` };
-    }
-
-    case "send_linkedin": {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-linkedin`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient: payload.recipient ?? payload.profile_url ?? payload.to,
-          message_text: String(payload.message_text ?? payload.message ?? payload.body ?? "").substring(0, 300),
-          partner_id: action.partner_id ?? payload.partner_id,
-          contact_id: payload.contact_id ?? null,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.text();
-        return { success: false, action_type: action.action_type, detail: `send-linkedin failed: ${resp.status} ${err}` };
-      }
-      return { success: true, action_type: action.action_type, detail: `LinkedIn message sent` };
-    }
+    case "send_whatsapp":
+    case "send_linkedin":
+    case "linkedin_connect":
+      return {
+        success: false,
+        action_type: action.action_type,
+        detail: "Canale browser-only (v3.9.56). Approva da PendingActionsPanel: l'invio parte dal client via estensione.",
+      };
 
     case "schedule_followup": {
       const { error } = await supabase.from("outreach_schedules").insert({

@@ -6,19 +6,23 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useLinkedInExtensionBridge } from "@/hooks/useLinkedInExtensionBridge";
 import { useFireScrapeExtensionBridge } from "@/hooks/useFireScrapeExtensionBridge";
-import { useLogAction } from "@/hooks/useLogAction";
 import { createLogger } from "@/lib/log";
-import { reviewMessage } from "@/lib/messaging/reviewMessage";
+import { useEnqueueAction } from "@/hooks/useEnqueueAction";
 import type { DraftState } from "@/types/cockpit";
 
 const log = createLogger("useSendLinkedIn");
 
+/**
+ * v3.9.56+ pipeline: ogni invio LinkedIn passa da `ai_pending_actions` →
+ * approvazione manuale → `useApproveAndDispatch` → bridge `from-webapp-li`.
+ * Nessun dispatch diretto qui.
+ */
 export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState) => void) {
   const [sending, setSending] = useState(false);
   const [liDmOpen, setLiDmOpen] = useState(false);
   const liBridge = useLinkedInExtensionBridge();
   const pcBridge = useFireScrapeExtensionBridge();
-  const logAction = useLogAction();
+  const { enqueue } = useEnqueueAction();
 
   const findLinkedInProfile = async (): Promise<string> => {
     let profileUrl = draft.contactLinkedinUrl || "";
@@ -72,98 +76,43 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
     }
 
     if (!profileUrl) {
+      if (!liBridge.isAvailable) {
+        setLiDmOpen(true);
+        return;
+      }
       toast({ title: "URL profilo LinkedIn mancante", variant: "destructive" });
       return;
     }
 
-    if (liBridge.isAvailable) {
-      setSending(true);
-      try {
-        // P6 — Auth check prima dell'invio: se non autenticato evitiamo
-        // tentativi silenziosi e copia immediatamente negli appunti.
-        const auth = await liBridge.ensureAuthenticated(0);
-        if (!auth.ok) {
-          navigator.clipboard.writeText(plainText);
-          toast({
-            title: "LinkedIn non autenticato",
-            description: "Login a LinkedIn richiesto. Messaggio copiato negli appunti.",
-            variant: "destructive",
-          });
-          if (profileUrl) window.open(profileUrl, "_blank");
-          return;
-        }
+    if (!plainText) {
+      toast({ title: "Messaggio vuoto", variant: "destructive" });
+      return;
+    }
 
-        // ── EDITORIAL GATE HARD (memoria editorial-review-layer-mandatory) ──
-        let finalText = plainText;
-        try {
-          const review = await reviewMessage({
-            channel: "linkedin",
-            draft: plainText,
-            partnerId: null,
-            contactId: draft.contactId ?? null,
-          });
-          if (review.verdict === "block") {
-            toast({
-              title: "🛑 LinkedIn bloccato dalla review editoriale",
-              description: review.reasoning_summary || "Messaggio non conforme.",
-              variant: "destructive",
-            });
-            setSending(false);
-            return;
-          }
-          if (review.verdict === "pass_with_edits" && review.edited_text) {
-            finalText = review.edited_text;
-            toast({ title: "✏️ LinkedIn corretto dalla review", description: "Inviata la versione editata." });
-          }
-        } catch (revErr) {
-          log.error("LI review failed → fail-closed", { error: revErr instanceof Error ? revErr.message : String(revErr) });
-          toast({ title: "Review LinkedIn non disponibile", description: "Invio annullato per sicurezza.", variant: "destructive" });
-          setSending(false);
-          return;
-        }
-
-        const res = await liBridge.sendDirectMessage(profileUrl, finalText);
-        if (res.success) {
-          toast({ title: "✅ LinkedIn inviato!", description: `A: ${draft.contactName}` });
-          logAction.mutate({
-            channel: "linkedin",
-            sourceType: "imported_contact",
-            sourceId: draft.contactId || crypto.randomUUID(),
-            to: profileUrl,
-            title: `${draft.companyName || "—"} — ${draft.contactName || "contatto"}`,
-            subject: `LinkedIn DM a ${draft.contactName || "contatto"}`,
-            body: finalText,
-            source: "manual",
-          });
-        } else {
-          navigator.clipboard.writeText(plainText);
-          toast({ title: "📋 Messaggio copiato", description: "Apri il profilo LinkedIn e incolla il messaggio." });
-          if (profileUrl) window.open(profileUrl, "_blank");
-        }
-      } catch (err: unknown) {
-        log.warn("LinkedIn send fallback to clipboard", { error: err instanceof Error ? err.message : String(err) });
-        navigator.clipboard.writeText(plainText);
-        toast({ title: "📋 Messaggio copiato negli appunti", description: "Errore nell'invio automatico." });
-        if (profileUrl) window.open(profileUrl, "_blank");
-      } finally {
-        setSending(false);
-      }
-    } else {
-      if (profileUrl) {
-        navigator.clipboard.writeText(plainText);
-        toast({ title: "📋 Messaggio copiato!", description: "Apertura profilo LinkedIn..." });
-        window.open(profileUrl, "_blank");
-      } else {
-        setLiDmOpen(true);
-      }
+    setSending(true);
+    try {
+      await enqueue({
+        action_type: "send_linkedin",
+        partner_id: null,
+        contact_id: draft.contactId ?? null,
+        payload: {
+          recipient: profileUrl,
+          message_text: plainText.slice(0, 300),
+          contact_id: draft.contactId ?? null,
+          contactName: draft.contactName ?? null,
+          companyName: draft.companyName ?? null,
+        },
+        suggested_content: plainText.slice(0, 300),
+        reasoning: `LinkedIn DM manuale dal cockpit verso ${draft.contactName || profileUrl}.`,
+        source: "cockpit",
+        decision_origin: "user_manual",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
   const handleConnectLinkedIn = async () => {
-    if (!liBridge.isAvailable) {
-      toast({ title: "Estensione LinkedIn non rilevata", variant: "destructive" });
-      return;
-    }
     let url = draft.contactLinkedinUrl || "";
     if (!url && draft.contactName) {
       toast({ title: "🔍 Cercando profilo LinkedIn..." });
@@ -181,25 +130,23 @@ export function useSendLinkedIn(draft: DraftState, onDraftChange: (d: DraftState
     }
     setSending(true);
     try {
-      const res = await liBridge.sendConnectionRequest(url, draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300));
-      if (res.success) {
-        toast({ title: "✅ Richiesta di collegamento inviata!" });
-        logAction.mutate({
-          channel: "linkedin",
-          sourceType: "imported_contact",
-          sourceId: draft.contactId || crypto.randomUUID(),
-          to: url,
-          title: `LinkedIn Connect — ${draft.contactName || "contatto"}`,
-          subject: `Richiesta collegamento LinkedIn`,
-          source: "manual",
-          meta: { type: "connection_request" },
-        });
-      } else {
-        toast({ title: "Errore connessione", description: res.error, variant: "destructive" });
-      }
-    } catch (err: unknown) {
-      log.error("LinkedIn connect failed", { error: err instanceof Error ? err.message : String(err) });
-      toast({ title: "Errore invio richiesta", variant: "destructive" });
+      const note = draft.body.replace(/<[^>]+>/g, "").trim().slice(0, 300);
+      await enqueue({
+        action_type: "linkedin_connect",
+        partner_id: null,
+        contact_id: draft.contactId ?? null,
+        payload: {
+          recipient: url,
+          message_text: note,
+          contact_id: draft.contactId ?? null,
+          contactName: draft.contactName ?? null,
+          companyName: draft.companyName ?? null,
+        },
+        suggested_content: note,
+        reasoning: `Richiesta di collegamento LinkedIn manuale verso ${draft.contactName || url}.`,
+        source: "cockpit",
+        decision_origin: "user_manual",
+      });
     } finally {
       setSending(false);
     }
