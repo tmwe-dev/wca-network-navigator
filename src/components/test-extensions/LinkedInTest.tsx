@@ -49,6 +49,14 @@ interface SyncQualitySummary {
   at: number;
 }
 
+type DiagStatus = "pending" | "ok" | "ko" | "warn" | "skip";
+interface DiagStep {
+  name: string;
+  status: DiagStatus;
+  ms?: number;
+  detail?: string;
+}
+
 export function LinkedInTest() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
