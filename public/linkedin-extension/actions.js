@@ -5,6 +5,29 @@
 
 var Actions = globalThis.Actions || (function () {
 
+  function withTimeout(label, ms, work) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve({ success: false, error: label + "_timeout_" + ms + "ms", timedOut: true });
+      }, ms);
+
+      Promise.resolve().then(work).then(function (result) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(result);
+      }, function (err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ success: false, error: (err && err.message) || String(err) });
+      });
+    });
+  }
+
   function noExistingLinkedInTab(errorCode, actionLabel) {
     return Config.errorResponse(errorCode, "no_existing_linkedin_tab: apri LinkedIn una volta in Chrome; " + actionLabel + " non apre nuove tab e non cambia pagina");
   }
