@@ -1238,7 +1238,8 @@ var HybridOps = globalThis.HybridOps || (function () {
       const fbResult = fbRes[0] && fbRes[0].result;
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_physical_click") {
         const cdpClick = await AXTree.clickSendButtonPhysical(tabId);
-        if (cdpClick && cdpClick.success && await composerCleared(tabId, 1500)) {
+        // 3.9.59: composerCleared 1500 → 800ms (textbox si svuota in <500ms).
+        if (cdpClick && cdpClick.success && await composerCleared(tabId, 800)) {
           const closed = await closeMessagingComposer(tabId);
           return { success: true, method: "cdp_physical_click", composer_closed: !!closed };
         }
@@ -1246,7 +1247,7 @@ var HybridOps = globalThis.HybridOps || (function () {
       }
       if (fbResult && fbResult.pending_cdp && fbResult.attempted_method === "cdp_ctrl_enter") {
         const cdpKey = await AXTree.pressCtrlEnter(tabId, await isMacPlatform());
-        if (cdpKey && cdpKey.success && await composerCleared(tabId, 1500)) {
+        if (cdpKey && cdpKey.success && await composerCleared(tabId, 800)) {
           const closed = await closeMessagingComposer(tabId);
           return { success: true, method: cdpKey.method || "cdp_ctrl_enter", composer_closed: !!closed };
         }
