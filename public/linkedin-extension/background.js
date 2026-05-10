@@ -30,6 +30,23 @@ const ACTION_HANDLERS = {
     return false; // sync
   },
 
+  getHumanSimStats: function (_msg, sendResponse) {
+    (async function () {
+      try {
+        if (typeof HumanSimulator === "undefined") {
+          sendResponse({ success: false, error: "human_simulator_not_loaded" });
+          return;
+        }
+        const stats = await HumanSimulator.getStats();
+        const gate = await HumanSimulator.checkRateLimit();
+        sendResponse({ success: true, stats: stats, gate: gate, rules: HumanSimulator.RULES });
+      } catch (e) {
+        sendResponse({ success: false, error: String(e && e.message || e) });
+      }
+    })();
+    return true;
+  },
+
   setConfig: function (msg, sendResponse) {
     Config.save(msg.supabaseUrl, msg.supabaseAnonKey).then(function () {
       sendResponse({ success: true });
