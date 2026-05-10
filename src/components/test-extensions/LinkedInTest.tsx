@@ -343,6 +343,21 @@ export function LinkedInTest() {
       log(`  • clickMethod: ${String(diag.clickMethod ?? diag.method ?? "?")} | verified: ${String(diag.verified ?? "?")}`, "info");
       log(`  • selectorUsed: ${String(diag.selectorUsed ?? "(regex)")}`, "info");
       log(`  • schemaSource: ${String(diag.schemaSource ?? "?")} | schemaAgeMs: ${String(diag.schemaAgeMs ?? "?")} | relearned: ${String(diag.relearned ?? false)}`, "info");
+      // 3.9.57-human-sim — Diagnostica Human Simulator
+      const hs = diag.human_sim as Record<string, unknown> | undefined;
+      if (hs) {
+        log(`🧑 Human Simulator:`, "info");
+        const typing = hs.typing as Record<string, unknown> | undefined;
+        const stats = hs.stats as Record<string, unknown> | undefined;
+        const choreo = hs.profile_choreography as Record<string, unknown> | undefined;
+        const post = hs.post_send as Record<string, unknown> | undefined;
+        const gate = hs.gate as Record<string, unknown> | undefined;
+        log(`  • typing: ${String(typing?.method ?? "?")}${typing?.detail ? ` (typed=${String((typing.detail as Record<string, unknown>).typed ?? "?")} typos=${String((typing.detail as Record<string, unknown>).typos ?? 0)})` : ""}`, "info");
+        log(`  • profile choreography: ${choreo?.scrolled ? `scrolled (${(choreo.steps as unknown[])?.length ?? 0} steps)` : "no scroll"}`, "info");
+        log(`  • post-send dwell: ${String(post?.dwellMs ?? "?")}ms`, "info");
+        log(`  • stats: ${String(stats?.sentToday ?? "?")}/${String(stats?.dailyCap ?? "?")} oggi · burst ${String(stats?.sinceBurst ?? 0)}/${String(stats?.burstSize ?? "?")}`, "info");
+        if (gate?.waitedMs) log(`  • cooldown atteso: ${String(gate.waitedMs)}ms`, "info");
+      }
       if (diag.warning) log(`  ⚠️ warning: ${String(diag.warning)}`, "warn");
       if (diag.suggestion) log(`  💡 ${String(diag.suggestion)}`, "warn");
       if (diag.cacheInvalidated) log(`  🧹 cache invalidata: ${String(diag.cacheInvalidated)}`, "warn");
